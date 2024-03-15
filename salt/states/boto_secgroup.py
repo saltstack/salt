@@ -884,9 +884,9 @@ def _tags_present(
             vpc_name=vpc_name,
         )
         if not sg:
-            ret[
-                "comment"
-            ] = f"{name} security group configuration could not be retrieved."
+            ret["comment"] = (
+                f"{name} security group configuration could not be retrieved."
+            )
             ret["result"] = False
             return ret
         tags_to_add = tags

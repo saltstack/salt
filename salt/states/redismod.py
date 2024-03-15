@@ -74,10 +74,10 @@ def string(name, value, expire=None, expireat=None, **connection_args):
 
     if expireat:
         __salt__["redis.expireat"](name, expireat, **connection_args)
-        ret["changes"]["expireat"] = "Key expires at {}".format(expireat)
+        ret["changes"]["expireat"] = f"Key expires at {expireat}"
     elif expire:
         __salt__["redis.expire"](name, expire, **connection_args)
-        ret["changes"]["expire"] = "TTL set to {} seconds".format(expire)
+        ret["changes"]["expire"] = f"TTL set to {expire} seconds"
 
     return ret
 
@@ -126,7 +126,7 @@ def slaveof(
     sentinel_host=None,
     sentinel_port=None,
     sentinel_password=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Set this redis instance as a slave.
@@ -156,13 +156,13 @@ def slaveof(
     )
     if sentinel_master["master_host"] in __salt__["network.ip_addrs"]():
         ret["result"] = True
-        ret["comment"] = "Minion is the master: {}".format(name)
+        ret["comment"] = f"Minion is the master: {name}"
         return ret
 
     first_master = __salt__["redis.get_master_ip"](**connection_args)
     if first_master == sentinel_master:
         ret["result"] = True
-        ret["comment"] = "Minion already slave of master: {}".format(name)
+        ret["comment"] = f"Minion already slave of master: {name}"
         return ret
 
     if __opts__["test"] is True:
@@ -184,6 +184,6 @@ def slaveof(
         "old": first_master,
         "new": current_master,
     }
-    ret["comment"] = "Minion successfully connected to master: {}".format(name)
+    ret["comment"] = f"Minion successfully connected to master: {name}"
 
     return ret

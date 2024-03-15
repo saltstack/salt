@@ -126,9 +126,9 @@ def grant_access_to_shared_folders_to(name, users=None):
         name=name, users=users
     )
 
-    ret[
-        "comment"
-    ] = "List of users who have access to auto-mounted shared folders was changed"
+    ret["comment"] = (
+        "List of users who have access to auto-mounted shared folders was changed"
+    )
     ret["changes"] = {
         "old": current_state,
         "new": new_state,

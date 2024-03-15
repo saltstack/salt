@@ -1956,9 +1956,9 @@ def saml_provider_present(
             ET.fromstring(saml_metadata_document)
         except OSError as e:
             log.debug(e)
-            ret[
-                "comment"
-            ] = f"SAML document file {name} not found or could not be loaded"
+            ret["comment"] = (
+                f"SAML document file {name} not found or could not be loaded"
+            )
             ret["result"] = False
             return ret
     for provider in __salt__["boto_iam.list_saml_providers"](

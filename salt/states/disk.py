@@ -62,7 +62,7 @@ def _validate_int(name, value, limits=(), strip="%"):
             value = value.strip(" " + strip)
         value = int(value)
     except (TypeError, ValueError):
-        comment += "{} must be an integer ".format(name)
+        comment += f"{name} must be an integer "
     # Must be in range
     else:
         if len(limits) == 2:
@@ -136,10 +136,10 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
                 return ret
         else:
             if used < minimum:
-                ret[
-                    "comment"
-                ] = "Disk used space is below minimum of {0} {2} at {1} {2}".format(
-                    minimum, used, unit
+                ret["comment"] = (
+                    "Disk used space is below minimum of {0} {2} at {1} {2}".format(
+                        minimum, used, unit
+                    )
                 )
                 return ret
     if maximum is not None:
@@ -153,10 +153,10 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
                 return ret
         else:
             if used > maximum:
-                ret[
-                    "comment"
-                ] = "Disk used space is above maximum of {0} {2} at {1} {2}".format(
-                    maximum, used, unit
+                ret["comment"] = (
+                    "Disk used space is above maximum of {0} {2} at {1} {2}".format(
+                        maximum, used, unit
+                    )
                 )
                 return ret
     ret["comment"] = "Disk used space in acceptable range"
@@ -219,7 +219,7 @@ def status(name, maximum=None, minimum=None, absolute=False, free=False):
 
     # Validate name
     if name not in data:
-        ret["comment"] += "Disk mount {} not present. ".format(name)
+        ret["comment"] += f"Disk mount {name} not present. "
         return _status_path(name, ret, minimum, maximum, absolute, free)
     else:
         return _status_mount(name, ret, minimum, maximum, absolute, free, data)

@@ -2,7 +2,6 @@
 The jail module for FreeBSD
 """
 
-
 import os
 import re
 import subprocess
@@ -38,7 +37,7 @@ def start(jail=""):
 
         salt '*' jail.start [<jail name>]
     """
-    cmd = "service jail onestart {}".format(jail)
+    cmd = f"service jail onestart {jail}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -52,7 +51,7 @@ def stop(jail=""):
 
         salt '*' jail.stop [<jail name>]
     """
-    cmd = "service jail onestop {}".format(jail)
+    cmd = f"service jail onestop {jail}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -66,7 +65,7 @@ def restart(jail=""):
 
         salt '*' jail.restart [<jail name>]
     """
-    cmd = "service jail onerestart {}".format(jail)
+    cmd = f"service jail onerestart {jail}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -126,9 +125,7 @@ def show_config(jail):
     """
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
-        jls = subprocess.check_output(
-            ["jls", "-nq", "-j", jail]
-        )  # pylint: disable=minimum-python-version
+        jls = subprocess.check_output(["jls", "-nq", "-j", jail])
         jailopts = salt.utils.args.shlex_split(salt.utils.stringutils.to_unicode(jls))
         for jailopt in jailopts:
             if "=" not in jailopt:
@@ -145,7 +142,7 @@ def show_config(jail):
                         line = salt.utils.stringutils.to_unicode(line)
                         if not line.strip():
                             continue
-                        if not line.startswith("jail_{}_".format(jail)):
+                        if not line.startswith(f"jail_{jail}_"):
                             continue
                         key, value = line.split("=")
                         ret[key.split("_", 2)[2]] = value.split('"')[1]

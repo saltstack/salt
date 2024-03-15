@@ -65,6 +65,7 @@ def ansible_inventory(ansible_inventory_directory, sshd_server):
 
 
 @pytest.mark.requires_sshd_server
+@pytest.mark.timeout_unless_on_windows(240)
 def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     rundir = tmp_path / "rundir"
     rundir.mkdir(exist_ok=True, parents=True)
@@ -117,7 +118,7 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
             except FactoryTimeout:
                 log.debug("%s took longer than %s seconds", name, timeout)
                 if timeout == timeouts[-1]:
-                    pytest.fail("Failed to run {}".format(name))
+                    pytest.fail(f"Failed to run {name}")
             else:
                 assert ret.returncode == 0
                 assert StateResult(ret.data).result is True

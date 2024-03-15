@@ -19,7 +19,6 @@ Its output may be stored in a file or in a grain.
         - output:   "/tmp/query_id.txt"
 """
 
-
 import os.path
 import sys
 
@@ -57,7 +56,7 @@ def run_file(
     saltenv=None,
     check_db_exists=True,
     client_flags=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Execute an arbitrary query on the specified database
@@ -104,7 +103,7 @@ def run_file(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {} is already present".format(database),
+        "comment": f"Database {database} is already present",
     }
 
     if client_flags is None:
@@ -125,7 +124,7 @@ def run_file(
         query_file = __salt__["cp.cache_file"](query_file, saltenv=saltenv or __env__)
 
     if not os.path.exists(query_file):
-        ret["comment"] = "File {} does not exist".format(query_file)
+        ret["comment"] = f"File {query_file} does not exist"
         ret["result"] = False
         return ret
 
@@ -138,7 +137,7 @@ def run_file(
             return ret
 
         ret["result"] = None
-        ret["comment"] = "Database {} is not present".format(database)
+        ret["comment"] = f"Database {database} is not present"
         return ret
 
     # Check if execution needed
@@ -253,7 +252,7 @@ def run(
     overwrite=True,
     check_db_exists=True,
     client_flags=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Execute an arbitrary query on the specified database
@@ -295,7 +294,7 @@ def run(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {} is already present".format(database),
+        "comment": f"Database {database} is already present",
     }
 
     if client_flags is None:
@@ -316,7 +315,7 @@ def run(
             return ret
 
         ret["result"] = None
-        ret["comment"] = "Database {} is not present".format(name)
+        ret["comment"] = f"Database {name} is not present"
         return ret
 
     # Check if execution needed
@@ -414,7 +413,7 @@ def run(
                 else:
                     for col, val in query_result.items():
                         output_file.write(
-                            salt.utils.stringutils.to_str("{}:{}\n".format(col, val))
+                            salt.utils.stringutils.to_str(f"{col}:{val}\n")
                         )
     else:
         ret["changes"]["query"] = "Executed"

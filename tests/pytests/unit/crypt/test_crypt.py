@@ -4,6 +4,7 @@ tests.pytests.unit.test_crypt
 
 Unit tests for salt's crypt module
 """
+
 import uuid
 
 import pytest
@@ -192,4 +193,4 @@ def test_pwdata_decrypt():
         b"\x1a(\x04&yL8\x19s\n\x11\x81\xfd?\xfb2\x80Ll\xa1\xdc\xc9\xb6P\xca\x8d'\x11\xc1"
         b"\x07\xa5\xa1\x058\xc7\xce\xbeb\x92\xbf\x0bL\xec\xdf\xc3M\x83\xfb$\xec\xd5\xf9"
     )
-    assert "1234", salt.crypt.pwdata_decrypt(key_string, pwdata)
+    assert salt.crypt.pwdata_decrypt(key_string, pwdata) == "1234"

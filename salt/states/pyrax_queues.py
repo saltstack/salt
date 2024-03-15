@@ -53,7 +53,7 @@ def present(name, provider):
 
     if not is_present:
         if __opts__["test"]:
-            msg = "Rackspace queue {} is set to be created.".format(name)
+            msg = f"Rackspace queue {name} is set to be created."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -68,10 +68,10 @@ def present(name, provider):
             ret["changes"]["new"] = {"queue": queue}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} Rackspace queue.".format(name)
+            ret["comment"] = f"Failed to create {name} Rackspace queue."
             return ret
     else:
-        ret["comment"] = "{} present.".format(name)
+        ret["comment"] = f"{name} present."
 
     return ret
 
@@ -98,7 +98,7 @@ def absent(name, provider):
 
     if is_present:
         if __opts__["test"]:
-            ret["comment"] = "Rackspace queue {} is set to be removed.".format(name)
+            ret["comment"] = f"Rackspace queue {name} is set to be removed."
             ret["result"] = None
             return ret
         queue = __salt__["cloud.action"]("queues_show", provider=provider, name=name)
@@ -110,8 +110,8 @@ def absent(name, provider):
             ret["changes"]["new"] = {}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} Rackspace queue.".format(name)
+            ret["comment"] = f"Failed to delete {name} Rackspace queue."
     else:
-        ret["comment"] = "{} does not exist.".format(name)
+        ret["comment"] = f"{name} does not exist."
 
     return ret

@@ -487,10 +487,10 @@ def query(
                 try:
                     match_hostname(sockwrap.getpeercert(), hostname)
                 except CertificateError as exc:
-                    ret[
-                        "error"
-                    ] = "The certificate was invalid. Error returned was: {}".format(
-                        pprint.pformat(exc)
+                    ret["error"] = (
+                        "The certificate was invalid. Error returned was: {}".format(
+                            pprint.pformat(exc)
+                        )
                     )
                     return ret
 
@@ -727,10 +727,10 @@ def query(
 
         valid_decodes = ("json", "xml", "yaml", "plain")
         if decode_type not in valid_decodes:
-            ret[
-                "error"
-            ] = "Invalid decode_type specified. Valid decode types are: {}".format(
-                pprint.pformat(valid_decodes)
+            ret["error"] = (
+                "Invalid decode_type specified. Valid decode types are: {}".format(
+                    pprint.pformat(valid_decodes)
+                )
             )
             log.error(ret["error"])
             return ret

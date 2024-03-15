@@ -27,6 +27,7 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function("locale.get_locale")
         self.assertNotIn("Unsupported platform!", locale)
 
+    @pytest.mark.timeout(120)
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
     def test_gen_locale(self):

@@ -117,7 +117,6 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - aptkey: False
 """
 
-
 import sys
 
 import salt.utils.data
@@ -370,15 +369,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        )
 
     if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        )
     if "key_text" in kwargs and ("key_url" in kwargs):
         ret["result"] = False
         ret["comment"] = 'You may not use both "key_url" and "key_text" argument.'
@@ -414,9 +413,9 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            ret["comment"] = (
+                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            )
             return ret
 
     repo = name

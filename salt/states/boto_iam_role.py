@@ -350,9 +350,9 @@ def _instance_profile_associated(name, region=None, key=None, keyid=None, profil
             ret["comment"] = f"Instance profile {name} associated."
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to associate {0} instance profile with {0} role.".format(name)
+            ret["comment"] = (
+                "Failed to associate {0} instance profile with {0} role.".format(name)
+            )
     return ret
 
 
@@ -735,9 +735,9 @@ def _instance_profile_disassociated(
             ret["comment"] = f"Instance profile {name} disassociated."
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to disassociate {0} instance profile from {0} role.".format(
-                name
+            ret["comment"] = (
+                "Failed to disassociate {0} instance profile from {0} role.".format(
+                    name
+                )
             )
     return ret

@@ -4,6 +4,7 @@ tests.pytests.unit.test_config
 
 Unit tests for salt's config modulet
 """
+
 import salt.config
 
 

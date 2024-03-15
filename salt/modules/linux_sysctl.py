@@ -41,7 +41,7 @@ def _which(cmd):
     """
     _cmd = salt.utils.path.which(cmd)
     if not _cmd:
-        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
     return _cmd
 
 
@@ -137,13 +137,13 @@ def assign(name, value):
 
     tran_tab = name.translate("".maketrans("./", "/."))
 
-    sysctl_file = "/proc/sys/{}".format(tran_tab)
+    sysctl_file = f"/proc/sys/{tran_tab}"
     if not os.path.exists(sysctl_file):
-        raise CommandExecutionError("sysctl {} does not exist".format(name))
+        raise CommandExecutionError(f"sysctl {name} does not exist")
 
     ret = {}
     _sysctl = "{}".format(_which("sysctl"))
-    cmd = [_sysctl, "-w", "{}={}".format(name, value)]
+    cmd = [_sysctl, "-w", f"{name}={value}"]
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
@@ -151,14 +151,14 @@ def assign(name, value):
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile(r"^{}\s+=\s+{}$".format(re.escape(name), re.escape(value)))
+    regex = re.compile(rf"^{re.escape(name)}\s+=\s+{re.escape(value)}$")
 
     if not regex.match(out) or "Invalid argument" in str(err):
         if data["retcode"] != 0 and err:
             error = err
         else:
             error = out
-        raise CommandExecutionError("sysctl -w failed: {}".format(error))
+        raise CommandExecutionError(f"sysctl -w failed: {error}")
     new_name, new_value = out.split(" = ", 1)
     ret[new_name] = new_value
     return ret
@@ -238,13 +238,13 @@ def persist(name, value, config=None):
                 else:
                     return "Already set"
 
-            nlines.append("{} = {}\n".format(name, value))
+            nlines.append(f"{name} = {value}\n")
             edited = True
             continue
         else:
             nlines.append(line)
     if not edited:
-        nlines.append("{} = {}\n".format(name, value))
+        nlines.append(f"{name} = {value}\n")
     try:
         with salt.utils.files.fopen(config, "wb") as _fh:
             _fh.writelines(salt.utils.data.encode(nlines))

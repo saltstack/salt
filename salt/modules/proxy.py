@@ -6,7 +6,6 @@ This module allows you to manage proxy settings
     salt '*' network.get_http_proxy
 """
 
-
 import logging
 import re
 
@@ -28,9 +27,7 @@ def __virtual__():
 def _get_proxy_osx(cmd_function, network_service):
     ret = {}
 
-    out = __salt__["cmd.run"](
-        "networksetup -{} {}".format(cmd_function, network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -{cmd_function} {network_service}")
     match = re.match("Enabled: (.*)\nServer: (.*)\nPort: (.*)\n", out)
     if match is not None:
         g = match.groups()
@@ -46,7 +43,7 @@ def _set_proxy_osx(cmd_function, server, port, user, password, network_service):
     )
 
     if user is not None and password is not None:
-        cmd = cmd + " On {} {}".format(user, password)
+        cmd = cmd + f" On {user} {password}"
 
     out = __salt__["cmd.run"](cmd)
 
@@ -111,7 +108,7 @@ def _set_proxy_windows(
 
     server_str = ""
     for t in types:
-        server_str += "{}={}:{};".format(t, server, port)
+        server_str += f"{t}={server}:{port};"
 
     __utils__["reg.set_value"](
         hive="HKEY_CURRENT_USER",
@@ -395,9 +392,7 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         return reg_val.replace("<local>", "").split(";")
 
-    out = __salt__["cmd.run"](
-        "networksetup -getproxybypassdomains {}".format(network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -getproxybypassdomains {network_service}")
 
     return out.split("\n")
 

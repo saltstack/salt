@@ -109,7 +109,7 @@ def _get_version(host, port, user, password):
     # check the InfluxDB version via the HTTP API
     try:
         result = requests.get(
-            "http://{}:{}/ping".format(host, port), auth=(user, password)
+            f"http://{host}:{port}/ping", auth=(user, password), timeout=120
         )
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
@@ -224,7 +224,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     """
     serv = _get_serv(ret=None)
-    sql = "select load from jids where jid = '{}'".format(jid)
+    sql = f"select load from jids where jid = '{jid}'"
 
     log.debug(">> Now in get_load %s", jid)
     data = serv.query(sql)
@@ -240,7 +240,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
 
-    sql = "select id, full_ret from returns where jid = '{}'".format(jid)
+    sql = f"select id, full_ret from returns where jid = '{jid}'"
 
     data = serv.query(sql)
     ret = {}

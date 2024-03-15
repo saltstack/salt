@@ -2,6 +2,7 @@
 tests.pytests.integration.cli.test_salt_cloud
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import pytest
 
 pytest.importorskip("libcloud", reason="salt-cloud requires >= libcloud 0.11.4")

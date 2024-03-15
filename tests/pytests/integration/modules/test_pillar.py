@@ -400,6 +400,7 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 def test_pillar_refresh_pillar_scheduler(salt_master, salt_cli, salt_minion):
     """
     Ensure schedule jobs in pillar are only updated when values change.
@@ -661,7 +662,7 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to start
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/status/*"
+            event_tag = "salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)
@@ -685,7 +686,7 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to stop
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/status/*"
+            event_tag = "salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)

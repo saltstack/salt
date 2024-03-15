@@ -159,7 +159,7 @@ def test_call_fails_salt_thin():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -207,7 +207,7 @@ def test_call_success():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -257,7 +257,7 @@ def test_call_success_parameters():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",

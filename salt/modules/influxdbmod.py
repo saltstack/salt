@@ -66,7 +66,7 @@ def _client(
     influxdb_password=None,
     influxdb_host=None,
     influxdb_port=None,
-    **client_args
+    **client_args,
 ):
     if not influxdb_user:
         influxdb_user = __salt__["config.option"]("influxdb.user", "root")
@@ -84,7 +84,7 @@ def _client(
         port=influxdb_port,
         username=influxdb_user,
         password=influxdb_password,
-        **client_args
+        **client_args,
     )
 
 
@@ -635,7 +635,8 @@ def create_continuous_query(
 
     .. code-block:: bash
 
-        salt '*' influxdb.create_continuous_query mydb cq_month 'SELECT mean(*) INTO mydb.a_month.:MEASUREMENT FROM mydb.a_week./.*/ GROUP BY time(5m), *'"""
+        salt '*' influxdb.create_continuous_query mydb cq_month 'SELECT mean(*) INTO mydb.a_month.:MEASUREMENT FROM mydb.a_week./.*/ GROUP BY time(5m), *'
+    """
     client = _client(**client_args)
     full_query = "CREATE CONTINUOUS QUERY {name} ON {database}"
     if resample_time:
@@ -673,7 +674,7 @@ def drop_continuous_query(database, name, **client_args):
     """
     client = _client(**client_args)
 
-    query = "DROP CONTINUOUS QUERY {} ON {}".format(name, database)
+    query = f"DROP CONTINUOUS QUERY {name} ON {database}"
     client.query(query)
     return True
 
@@ -683,7 +684,7 @@ def _pull_query_results(resultset):
     Parses a ResultSet returned from InfluxDB into a dictionary of results,
     grouped by series names and optional JSON-encoded grouping tags.
     """
-    _results = collections.defaultdict(lambda: {})
+    _results = collections.defaultdict(dict)
     for _header, _values in resultset.items():
         _header, _group_tags = _header
         if _group_tags:

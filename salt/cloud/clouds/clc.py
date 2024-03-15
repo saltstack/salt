@@ -308,7 +308,7 @@ def get_build_status(req_id, nodename):
     counter = 0
     req_id = str(req_id)
     while counter < 10:
-        queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
+        queue = clc.v1.Blueprint.GetStatus(request_id=req_id)
         if queue["PercentComplete"] == 100:
             server_name = queue["Servers"][0]
             creds = get_creds()

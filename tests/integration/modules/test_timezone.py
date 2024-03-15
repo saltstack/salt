@@ -3,6 +3,7 @@ Integration tests for timezone module
 
 Linux and Solaris are supported
 """
+
 import pytest
 
 from tests.support.case import ModuleCase

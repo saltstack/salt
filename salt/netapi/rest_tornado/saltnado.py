@@ -332,12 +332,12 @@ class EventListener:
         Get an event (asynchronous of course) return a future that will get it later
         """
         future = Future()
+        _loop = tornado.ioloop.IOLoop.current()
+        assert _loop
         if callback is not None:
 
             def handle_future(future):
-                tornado.ioloop.IOLoop.current().add_callback(
-                    callback, future
-                )  # pylint: disable=E1102
+                _loop.add_callback(callback, future)  # pylint: disable=not-callable
 
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
@@ -345,7 +345,7 @@ class EventListener:
         self.request_map[request].append((tag, matcher, future))
 
         if timeout:
-            timeout_future = tornado.ioloop.IOLoop.current().call_later(
+            timeout_future = _loop.call_later(
                 timeout, self._timeout_future, tag, matcher, future
             )
             self.timeout_map[future] = timeout_future

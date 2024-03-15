@@ -44,7 +44,7 @@ def test_present():
             ret.update({"comment": comt, "result": None})
             assert lxc.present(name, running=True, clone_from=True) == ret
 
-            comt = "Container '{}' would be stopped".format(name)
+            comt = f"Container '{name}' would be stopped"
             ret.update({"comment": comt, "result": None})
             assert lxc.present(name, running=False, clone_from=True) == ret
 
@@ -69,17 +69,17 @@ def test_absent():
     mock = MagicMock(side_effect=[False, True, True])
     mock_des = MagicMock(return_value={"state": True})
     with patch.dict(lxc.__salt__, {"lxc.exists": mock, "lxc.destroy": mock_des}):
-        comt = "Container '{}' does not exist".format(name)
+        comt = f"Container '{name}' does not exist"
         ret.update({"comment": comt})
         assert lxc.absent(name) == ret
 
         with patch.dict(lxc.__opts__, {"test": True}):
-            comt = "Container '{}' would be destroyed".format(name)
+            comt = f"Container '{name}' would be destroyed"
             ret.update({"comment": comt, "result": None})
             assert lxc.absent(name) == ret
 
         with patch.dict(lxc.__opts__, {"test": False}):
-            comt = "Container '{}' was destroyed".format(name)
+            comt = f"Container '{name}' was destroyed"
             ret.update({"comment": comt, "result": True, "changes": {"state": True}})
             assert lxc.absent(name) == ret
 
@@ -97,7 +97,7 @@ def test_running():
     with patch.dict(
         lxc.__salt__, {"lxc.exists": mock, "lxc.state": mock_t, "lxc.start": mock}
     ):
-        comt = "Container '{}' does not exist".format(name)
+        comt = f"Container '{name}' does not exist"
         ret.update({"comment": comt})
         assert lxc.running(name) == ret
 
@@ -133,7 +133,7 @@ def test_frozen():
     mock = MagicMock(return_value={"state": {"new": "stop"}})
     mock_t = MagicMock(side_effect=["frozen", "stopped", "stopped"])
     with patch.dict(lxc.__salt__, {"lxc.freeze": mock, "lxc.state": mock_t}):
-        comt = "Container '{}' is already frozen".format(name)
+        comt = f"Container '{name}' is already frozen"
         ret.update({"comment": comt})
         assert lxc.frozen(name) == ret
 
@@ -165,11 +165,11 @@ def test_stopped():
     mock = MagicMock(return_value={"state": {"new": "stop"}})
     mock_t = MagicMock(side_effect=[None, "stopped", "frozen", "frozen"])
     with patch.dict(lxc.__salt__, {"lxc.stop": mock, "lxc.state": mock_t}):
-        comt = "Container '{}' does not exist".format(name)
+        comt = f"Container '{name}' does not exist"
         ret.update({"comment": comt})
         assert lxc.stopped(name) == ret
 
-        comt = "Container '{}' is already stopped".format(name)
+        comt = f"Container '{name}' is already stopped"
         ret.update({"comment": comt, "result": True})
         assert lxc.stopped(name) == ret
 
@@ -209,7 +209,7 @@ def test_edited_conf():
     """
     name = "web01"
 
-    comment = "{} lxc.conf will be edited".format(name)
+    comment = f"{name} lxc.conf will be edited"
 
     ret = {"name": name, "result": True, "comment": comment, "changes": {}}
 

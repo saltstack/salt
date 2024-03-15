@@ -6,7 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import salt.modules.parted_partition as parted
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin

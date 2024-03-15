@@ -371,10 +371,10 @@ def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[
-                        minion_id
-                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
-                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    self.deltaproxy_objs[minion_id].req_channel = (
+                        salt.channel.client.AsyncReqChannel.factory(
+                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                        )
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
@@ -398,10 +398,10 @@ def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[
-                        minion_id
-                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
-                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    self.deltaproxy_objs[minion_id].req_channel = (
+                        salt.channel.client.AsyncReqChannel.factory(
+                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                        )
                     )
 
     if _failed:

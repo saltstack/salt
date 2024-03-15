@@ -4,7 +4,6 @@ Support for haproxy
 .. versionadded:: 2014.7.0
 """
 
-
 import logging
 import os
 import stat
@@ -48,9 +47,9 @@ def _get_conn(socket=DEFAULT_SOCKET_URL):
     """
     Get connection to haproxy socket.
     """
-    assert os.path.exists(socket), "{} does not exist.".format(socket)
+    assert os.path.exists(socket), f"{socket} does not exist."
     issock = os.stat(socket).st_mode
-    assert stat.S_ISSOCK(issock), "{} is not a socket.".format(socket)
+    assert stat.S_ISSOCK(issock), f"{socket} is not a socket."
     ha_conn = haproxy.conn.HaPConn(socket)
     return ha_conn
 
@@ -315,6 +314,7 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
         salt '*' haproxy.set_state my_proxy_server my_backend ready
 
     """
+
     # Pulling this in from the latest 0.5 release which is not yet in PyPi.
     # https://github.com/neurogeek/haproxyctl
     class setServerState(haproxy.cmds.Cmd):

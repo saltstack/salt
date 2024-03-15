@@ -4,31 +4,73 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/lint.txt requirements/static/ci/lint.in
 #
-astroid==2.3.3
+astroid==3.1.0
     # via pylint
+certifi==2023.07.22
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   requests
+charset-normalizer==3.2.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   requests
+dill==0.3.8
+    # via pylint
+docker==6.1.3
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/static/ci/lint.in
+idna==3.4
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   requests
 isort==4.3.21
     # via pylint
-lazy-object-proxy==1.4.3
-    # via astroid
 mccabe==0.6.1
     # via pylint
-modernize==0.5
-    # via saltpylint
-pycodestyle==2.10.0
-    # via saltpylint
-pylint==2.4.4
+packaging==23.1
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   docker
+platformdirs==4.0.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   pylint
+pylint==3.1.0
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-saltpylint==2023.8.3
+requests==2.31.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   docker
+saltpylint==2024.2.5
     # via -r requirements/static/ci/lint.in
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
-    #   astroid
+    #   websocket-client
 toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/lint.in
-wrapt==1.11.2
-    # via astroid
+tomli==2.0.1
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   pylint
+tomlkit==0.12.3
+    # via pylint
+typing-extensions==4.8.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   astroid
+    #   pylint
+urllib3==1.26.18
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   docker
+    #   requests
+websocket-client==0.40.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   docker

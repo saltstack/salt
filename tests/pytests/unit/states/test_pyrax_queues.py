@@ -31,7 +31,7 @@ def test_present():
         ]
     )
     with patch.dict(pyrax_queues.__salt__, {"cloud.action": mock_dct}):
-        comt = "{} present.".format(name)
+        comt = f"{name} present."
         ret.update({"comment": comt})
         assert pyrax_queues.present(name, provider) == ret
 

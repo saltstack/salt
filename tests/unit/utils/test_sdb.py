@@ -2,7 +2,6 @@
     :codeauthor: :email:`Vernon Cole <vernondcole@gmail.com>`
 """
 
-
 import os
 
 import salt.utils.sdb as sdb

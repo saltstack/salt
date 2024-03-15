@@ -3,7 +3,6 @@ Create ssh executor system
 """
 
 import base64
-import binascii
 import copy
 import datetime
 import getpass
@@ -527,7 +526,7 @@ class SSH(MultiprocessingStateMixin):
             try:
                 retcode = int(retcode)
             except (TypeError, ValueError):
-                log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+                log.warning("Got an invalid retcode for host '%s': '%s'", host, retcode)
                 retcode = 1
             try:
                 ret = (
@@ -549,7 +548,8 @@ class SSH(MultiprocessingStateMixin):
                     ret.pop("_error", None)
             except Exception as err:  # pylint: disable=broad-except
                 log.error(
-                    f"Error while parsing the command output: {err}",
+                    "Error while parsing the command output: %s",
+                    err,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
                 ret = {
@@ -589,7 +589,7 @@ class SSH(MultiprocessingStateMixin):
             try:
                 retcode = int(retcode)
             except (TypeError, ValueError):
-                log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+                log.warning("Got an invalid retcode for host '%s': '%s'", host, retcode)
                 retcode = 1
             ret["ret"] = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
         except (
@@ -608,7 +608,8 @@ class SSH(MultiprocessingStateMixin):
                 ret["ret"].pop("_error", None)
         except Exception as err:  # pylint: disable=broad-except
             log.error(
-                f"Error while parsing the command output: {err}",
+                "Error while parsing the command output: %s",
+                err,
                 exc_info_on_loglevel=logging.DEBUG,
             )
             ret["ret"] = {
@@ -628,7 +629,7 @@ class SSH(MultiprocessingStateMixin):
         """
         que = multiprocessing.Queue()
         running = {}
-        target_iter = self.targets.__iter__()
+        target_iter = iter(self.targets)
         returned = set()
         rets = set()
         init = False
@@ -783,9 +784,9 @@ class SSH(MultiprocessingStateMixin):
                         data["return"] = data.get("stdout")
                     else:
                         data["return"] = data.get("stderr", data.get("stdout"))
-                data[
-                    "jid"
-                ] = jid  # make the jid in the payload the same as the jid in the tag
+                data["jid"] = (
+                    jid  # make the jid in the payload the same as the jid in the tag
+                )
                 self.event.fire_event(
                     data, salt.utils.event.tagify([jid, "ret", host], "job")
                 )
@@ -869,7 +870,7 @@ class SSH(MultiprocessingStateMixin):
         for ret, retcode in self.handle_ssh():
             host = next(iter(ret))
             if not isinstance(retcode, int):
-                log.warning(f"Host '{host}' returned an invalid retcode: {retcode}")
+                log.warning("Host '%s' returned an invalid retcode: %s", host, retcode)
                 retcode = 1
             final_exit = max(final_exit, retcode)
 
@@ -880,7 +881,9 @@ class SSH(MultiprocessingStateMixin):
                     retcode = int(deploy_retcode)
                 except (TypeError, ValueError):
                     log.warning(
-                        f"Got an invalid deploy retcode for host '{host}': '{retcode}'"
+                        "Got an invalid deploy retcode for host '%s': '%s'",
+                        host,
+                        retcode,
                     )
                     retcode = 1
             final_exit = max(final_exit, retcode)
@@ -923,9 +926,9 @@ class SSH(MultiprocessingStateMixin):
                         data["return"] = data.get("stdout")
                     else:
                         data["return"] = data.get("stderr", data.get("stdout"))
-                data[
-                    "jid"
-                ] = jid  # make the jid in the payload the same as the jid in the tag
+                data["jid"] = (
+                    jid  # make the jid in the payload the same as the jid in the tag
+                )
                 self.event.fire_event(
                     data, salt.utils.event.tagify([jid, "ret", host], "job")
                 )
@@ -1388,7 +1391,8 @@ class Single:
             )
         except (TypeError, ValueError):
             log.warning(
-                f"Wrapper module set invalid value for retcode: '{self.context['retcode']}"
+                "Wrapper module set invalid value for retcode: %s",
+                self.context["retcode"],
             )
             retcode = max(retcode, 1)
 
@@ -1860,7 +1864,7 @@ def ssh_version():
         ["ssh", "-V"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
     try:
-        version_parts = ret[1].split(b",")[0].split(b"_")[1]
+        version_parts = ret[1].split(b",", maxsplit=1)[0].split(b"_")[1]
         parts = []
         for part in version_parts:
             try:

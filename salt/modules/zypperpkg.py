@@ -11,7 +11,6 @@ Package support for openSUSE via the zypper package manager
 
 """
 
-
 import configparser
 import datetime
 import errno
@@ -2353,10 +2352,10 @@ def unhold(name=None, pkgs=None, root=None, **kwargs):
                 lock_ver = lock_ver.lstrip("= ")
             if version and lock_ver != version:
                 ret[target]["result"] = False
-                ret[target][
-                    "comment"
-                ] = "Unable to unhold package {} as it is held with the other version.".format(
-                    target
+                ret[target]["comment"] = (
+                    "Unable to unhold package {} as it is held with the other version.".format(
+                        target
+                    )
                 )
             else:
                 removed.append(target if not lock_ver else f"{target}={lock_ver}")
@@ -2943,10 +2942,10 @@ def download(*packages, **kwargs):
     if pkg_ret:
         failed = [pkg for pkg in packages if pkg not in pkg_ret]
         if failed:
-            pkg_ret[
-                "_error"
-            ] = "The following package(s) failed to download: {}".format(
-                ", ".join(failed)
+            pkg_ret["_error"] = (
+                "The following package(s) failed to download: {}".format(
+                    ", ".join(failed)
+                )
             )
         return pkg_ret
 

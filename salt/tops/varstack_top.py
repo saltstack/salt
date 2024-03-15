@@ -42,7 +42,6 @@ managed by salt as if given from a top.sls file.
 
 """
 
-
 try:
     import varstack
 except ImportError:

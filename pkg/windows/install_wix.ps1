@@ -74,17 +74,15 @@ if ( (Get-WindowsOptionalFeature -Online -FeatureName "NetFx3").State -eq "Enabl
 #-------------------------------------------------------------------------------
 
 Write-Host "Looking for Wix Toolset: " -NoNewline
-# 64bit: {03368010-193D-4AE2-B275-DD2EB32CD427}
-# 32bit: {07188017-A460-4C0D-A386-6B3CEB8E20CD}
-if ((ProductcodeExists "{03368010-193D-4AE2-B275-DD2EB32CD427}") `
-    -or `
-    (ProductcodeExists "{07188017-A460-4C0D-A386-6B3CEB8E20CD}")) {
+$guid_64 = "{A2D09E18-32F8-4E34-946A-33AC8C8303E9}"
+$guid_32 = "{00A0C4F8-9F6C-40FB-A02D-3EAE1D7FD352}"
+if ( (ProductcodeExists $guid_64) -or (ProductcodeExists $guid_32) ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Missing" -ForegroundColor Yellow
 
     Write-Host "Downloading Wix Toolset: " -NoNewline
-    $url = "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe"
+    $url = "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe"
     $file = "$env:TEMP\wix_installer.exe"
     Invoke-WebRequest -Uri $url -OutFile "$file"
     if ( Test-Path -Path "$file" ) {
@@ -95,10 +93,17 @@ if ((ProductcodeExists "{03368010-193D-4AE2-B275-DD2EB32CD427}") `
     }
 
     Write-Host "Installing Wix Toolset: " -NoNewline
-    Start-Process $file -ArgumentList "/install","/quiet","/norestart" -Wait -NoNewWindow
-    if ((ProductcodeExists "{03368010-193D-4AE2-B275-DD2EB32CD427}") `
-    -or `
-    (ProductcodeExists "{07188017-A460-4C0D-A386-6B3CEB8E20CD}")) {
+    $process = Start-Process $file -ArgumentList "/install","/quiet","/norestart" -PassThru -Wait -NoNewWindow
+
+    if ( $process.ExitCode -eq 0 ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Verifying Wix Toolset Installation: " -NoNewline
+    if ( (ProductcodeExists $guid_64) -or (ProductcodeExists $guid_32) ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
         Write-Result "Failed" -ForegroundColor Red

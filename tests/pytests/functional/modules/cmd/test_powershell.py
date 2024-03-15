@@ -87,7 +87,7 @@ def test_cmd_run_all_powershell_string():
 
 def test_cmd_run_encoded_cmd(shell):
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
+    cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)
@@ -97,7 +97,7 @@ def test_cmd_run_encoded_cmd(shell):
 
 def test_cmd_run_all_encoded_cmd(shell):
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
+    cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)

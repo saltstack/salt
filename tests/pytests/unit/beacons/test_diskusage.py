@@ -4,6 +4,7 @@
 
     Disk usage beacon test cases
 """
+
 from collections import namedtuple
 
 import pytest

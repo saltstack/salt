@@ -406,7 +406,7 @@ class Inspector(EnvLoader):
         all_links = list()
         for entry_path in [pth for pth in (allowed or os.listdir("/")) if pth]:
             if entry_path[0] != "/":
-                entry_path = "/{}".format(entry_path)
+                entry_path = f"/{entry_path}"
             if entry_path in ignored or os.path.islink(entry_path):
                 continue
             e_files, e_dirs, e_links = self._get_all_files(entry_path, *ignored)
@@ -490,7 +490,7 @@ class Inspector(EnvLoader):
         Take a snapshot of the system.
         """
         if mode not in self.MODE:
-            raise InspectorSnapshotException("Unknown mode: '{}'".format(mode))
+            raise InspectorSnapshotException(f"Unknown mode: '{mode}'")
 
         if is_alive(self.pidfile):
             raise CommandExecutionError("Inspection already in progress.")
@@ -500,7 +500,7 @@ class Inspector(EnvLoader):
         subprocess.run(
             [
                 "nice",
-                "-{}".format(priority),
+                f"-{priority}",
                 "python",
                 __file__,
                 os.path.dirname(self.pidfile),
@@ -596,7 +596,7 @@ if __name__ == "__main__":
             with salt.utils.files.fopen(
                 os.path.join(pidfile, EnvLoader.PID_FILE), "w"
             ) as fp_:
-                fp_.write("{}\n".format(pid))
+                fp_.write(f"{pid}\n")
             sys.exit(0)
     except OSError as ex:
         sys.exit(1)

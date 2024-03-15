@@ -48,7 +48,6 @@ config:
 :depends: boto3
 """
 
-
 import copy
 import difflib
 import logging

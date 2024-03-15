@@ -4,7 +4,6 @@
     Test cases for salt.modules.launchctl
 """
 
-
 import pytest
 
 import salt.modules.launchctl_service as launchctl

@@ -43,7 +43,6 @@ either passed in as a dict, or a string to pull from pillars or minion config:
 :depends: boto3
 """
 
-
 import difflib
 import logging
 

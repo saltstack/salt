@@ -53,7 +53,7 @@ def _get_date_time_format(dt_string):
             return dt_format
         except ValueError:
             continue
-    msg = "Invalid Date/Time Format: {}".format(dt_string)
+    msg = f"Invalid Date/Time Format: {dt_string}"
     raise SaltInvocationError(msg)
 
 
@@ -237,11 +237,9 @@ def set_zone(time_zone):
         salt '*' timezone.set_zone America/Denver
     """
     if time_zone not in list_zones():
-        raise SaltInvocationError("Invalid Timezone: {}".format(time_zone))
+        raise SaltInvocationError(f"Invalid Timezone: {time_zone}")
 
-    salt.utils.mac_utils.execute_return_success(
-        "systemsetup -settimezone {}".format(time_zone)
-    )
+    salt.utils.mac_utils.execute_return_success(f"systemsetup -settimezone {time_zone}")
 
     return time_zone in get_zone()
 
@@ -303,7 +301,7 @@ def set_using_network_time(enable):
     """
     state = salt.utils.mac_utils.validate_enabled(enable)
 
-    cmd = "systemsetup -setusingnetworktime {}".format(state)
+    cmd = f"systemsetup -setusingnetworktime {state}"
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return state == salt.utils.mac_utils.validate_enabled(get_using_network_time())
@@ -349,7 +347,7 @@ def set_time_server(time_server="time.apple.com"):
 
         salt '*' timezone.set_time_server time.acme.com
     """
-    cmd = "systemsetup -setnetworktimeserver {}".format(time_server)
+    cmd = f"systemsetup -setnetworktimeserver {time_server}"
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return time_server in get_time_server()

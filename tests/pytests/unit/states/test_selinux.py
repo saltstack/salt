@@ -151,14 +151,14 @@ def test_port_policy_present():
         with patch.dict(selinux.__opts__, {"test": False}):
             comt = (
                 f'SELinux policy for "{name}" already present '
-                + f'with specified sel_type "http_cache_port_t", protocol "None" '
-                + f'and port "None".'
+                + 'with specified sel_type "http_cache_port_t", protocol "None" '
+                + 'and port "None".'
             )
             ret.update({"comment": comt, "result": True})
             assert selinux.port_policy_present(name, "http_cache_port_t") == ret
 
             comt = (
-                f'SELinux policy for "name" already present '
+                'SELinux policy for "name" already present '
                 + f'with specified sel_type "http_cache_port_t", protocol "{protocol}" '
                 + f'and port "{port}".'
             )
@@ -337,14 +337,14 @@ def test_port_policy_absent():
         with patch.dict(selinux.__opts__, {"test": False}):
             comt = (
                 f'SELinux policy for "{name}" already absent '
-                + f'with specified sel_type "http_cache_port_t", protocol "None" '
-                + f'and port "None".'
+                + 'with specified sel_type "http_cache_port_t", protocol "None" '
+                + 'and port "None".'
             )
             ret.update({"comment": comt, "changes": {}, "result": True})
             assert selinux.port_policy_absent(name, "http_cache_port_t") == ret
 
             comt = (
-                f'SELinux policy for "name" already absent '
+                'SELinux policy for "name" already absent '
                 + f'with specified sel_type "http_cache_port_t", protocol "{protocol}" '
                 + f'and port "{port}".'
             )

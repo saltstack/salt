@@ -59,7 +59,7 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     """
     version_num = None
-    cmd = "/opt/csw/bin/pkgutil -c --parse --single {}".format(name)
+    cmd = f"/opt/csw/bin/pkgutil -c --parse --single {name}"
     out = __salt__["cmd.run_stdout"](cmd)
     if out:
         version_num = out.split()[2].strip()
@@ -298,7 +298,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
         if pkgver is None:
             targets.append(param)
         else:
-            targets.append("{}-{}".format(param, pkgver))
+            targets.append(f"{param}-{pkgver}")
 
     cmd = "/opt/csw/bin/pkgutil -yu {}".format(" ".join(targets))
     old = list_pkgs()

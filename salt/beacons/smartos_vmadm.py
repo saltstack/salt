@@ -17,6 +17,7 @@ Beacon that fires events on vm state changes
         - interval: 60
         - startup_create_event: True
 """
+
 import logging
 
 import salt.utils.beacons

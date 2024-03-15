@@ -84,7 +84,7 @@ def A(host, nameserver=None):
     dig = ["dig", "+short", str(host), "A"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -116,7 +116,7 @@ def PTR(host, nameserver=None):
     dig = ["dig", "+short", "-x", str(host)]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -145,7 +145,7 @@ def AAAA(host, nameserver=None):
     dig = ["dig", "+short", str(host), "AAAA"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -175,7 +175,7 @@ def CNAME(host, nameserver=None):
     dig = ["dig", "+short", str(host), "CNAME"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -204,7 +204,7 @@ def NS(domain, resolve=True, nameserver=None):
     dig = ["dig", "+short", str(domain), "NS"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -243,7 +243,7 @@ def SPF(domain, record="SPF", nameserver=None):
     cmd = ["dig", "+short", str(domain), record]
 
     if nameserver is not None:
-        cmd.append("@{}".format(nameserver))
+        cmd.append(f"@{nameserver}")
 
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
     # In this case, 0 is not the same as False
@@ -300,7 +300,7 @@ def MX(domain, resolve=False, nameserver=None):
     dig = ["dig", "+short", str(domain), "MX"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
@@ -314,7 +314,7 @@ def MX(domain, resolve=False, nameserver=None):
     stdout = [x.split() for x in cmd["stdout"].split("\n")]
 
     if resolve:
-        return [(lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout]
+        return [[x[0], A(x[1], nameserver)[0]] for x in stdout]
 
     return stdout
 
@@ -334,7 +334,7 @@ def TXT(host, nameserver=None):
     dig = ["dig", "+short", str(host), "TXT"]
 
     if nameserver is not None:
-        dig.append("@{}".format(nameserver))
+        dig.append(f"@{nameserver}")
 
     cmd = __salt__["cmd.run_all"](dig, python_shell=False)
 

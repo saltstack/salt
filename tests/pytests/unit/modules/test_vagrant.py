@@ -2,7 +2,6 @@
     TestCase for the salt.modules.vagrant module.
 """
 
-
 import pytest
 
 import salt.exceptions

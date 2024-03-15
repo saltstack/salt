@@ -40,7 +40,7 @@ def _service_path(name):
     """
     if not SERVICE_DIR:
         raise CommandExecutionError("Could not find service directory.")
-    return "{}/{}".format(SERVICE_DIR, name)
+    return f"{SERVICE_DIR}/{name}"
 
 
 def start(name):
@@ -53,7 +53,7 @@ def start(name):
 
         salt '*' s6.start <service name>
     """
-    cmd = "s6-svc -u {}".format(_service_path(name))
+    cmd = f"s6-svc -u {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -67,7 +67,7 @@ def stop(name):
 
         salt '*' s6.stop <service name>
     """
-    cmd = "s6-svc -d {}".format(_service_path(name))
+    cmd = f"s6-svc -d {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -81,7 +81,7 @@ def term(name):
 
         salt '*' s6.term <service name>
     """
-    cmd = "s6-svc -t {}".format(_service_path(name))
+    cmd = f"s6-svc -t {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -95,7 +95,7 @@ def reload_(name):
 
         salt '*' s6.reload <service name>
     """
-    cmd = "s6-svc -h {}".format(_service_path(name))
+    cmd = f"s6-svc -h {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -109,7 +109,7 @@ def restart(name):
 
         salt '*' s6.restart <service name>
     """
-    cmd = "s6-svc -t {}".format(_service_path(name))
+    cmd = f"s6-svc -t {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -136,7 +136,7 @@ def status(name, sig=None):
 
         salt '*' s6.status <service name>
     """
-    cmd = "s6-svstat {}".format(_service_path(name))
+    cmd = f"s6-svstat {_service_path(name)}"
     out = __salt__["cmd.run_stdout"](cmd)
     try:
         pid = re.search(r"up \(pid (\d+)\)", out).group(1)

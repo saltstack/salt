@@ -7,6 +7,7 @@ or for problem solving if your minion is having problems.
 
 :depends:  - wmi
 """
+
 import ctypes
 import datetime
 import logging
@@ -146,9 +147,6 @@ def __virtual__():
 
     if not HAS_PSUTIL:
         return False, "win_status.py: Requires psutil"
-
-    # Namespace modules from `status.py`
-    global ping_master, time_
 
     return __virtualname__
 
@@ -525,9 +523,7 @@ def master(master=None, connected=True):
         """
         remotes = set()
         try:
-            data = subprocess.check_output(
-                ["netstat", "-n", "-p", "TCP"]
-            )  # pylint: disable=minimum-python-version
+            data = subprocess.check_output(["netstat", "-n", "-p", "TCP"])
         except subprocess.CalledProcessError:
             log.error("Failed netstat")
             raise

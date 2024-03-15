@@ -319,24 +319,26 @@ def test_update_mine():
     """
 
     def config_get_disabled(val, default):
-        return {
+        ret = {
             "base_url": docker_mod.NOTSET,
             "version": docker_mod.NOTSET,
             "docker.url": docker_mod.NOTSET,
             "docker.version": docker_mod.NOTSET,
             "docker.machine": docker_mod.NOTSET,
             "docker.update_mine": False,
-        }[val]
+        }
+        return ret[val]
 
     def config_get_enabled(val, default):
-        return {
+        ret = {
             "base_url": docker_mod.NOTSET,
             "version": docker_mod.NOTSET,
             "docker.url": docker_mod.NOTSET,
             "docker.version": docker_mod.NOTSET,
             "docker.machine": docker_mod.NOTSET,
             "docker.update_mine": True,
-        }[val]
+        }
+        return ret[val]
 
     mine_mock = Mock()
     dunder_salt = {
@@ -937,19 +939,21 @@ def test_compare_container_image_id_resolution():
     """
 
     def _inspect_container_effect(id_):
-        return {
+        ret = {
             "container1": {
                 "Config": {"Image": "realimage:latest"},
                 "HostConfig": {},
             },
             "container2": {"Config": {"Image": "image_id"}, "HostConfig": {}},
-        }[id_]
+        }
+        return ret[id_]
 
     def _inspect_image_effect(id_):
-        return {
+        ret = {
             "realimage:latest": {"Id": "image_id"},
             "image_id": {"Id": "image_id"},
-        }[id_]
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
     inspect_image_mock = MagicMock(side_effect=_inspect_image_effect)
@@ -967,7 +971,7 @@ def test_compare_container_ulimits_order():
     """
 
     def _inspect_container_effect(id_):
-        return {
+        ret = {
             "container1": {
                 "Config": {},
                 "HostConfig": {
@@ -986,7 +990,8 @@ def test_compare_container_ulimits_order():
                     ]
                 },
             },
-        }[id_]
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
@@ -1004,7 +1009,7 @@ def test_compare_container_env_order():
     """
 
     def _inspect_container_effect(id_):
-        return {
+        ret = {
             "container1": {
                 "Config": {},
                 "HostConfig": {"Env": ["FOO=bar", "HELLO=world"]},
@@ -1013,7 +1018,8 @@ def test_compare_container_env_order():
                 "Config": {},
                 "HostConfig": {"Env": ["HELLO=world", "FOO=bar"]},
             },
-        }[id_]
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 

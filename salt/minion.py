@@ -1,6 +1,7 @@
 """
 Routines to set up a minion
 """
+
 import asyncio
 import binascii
 import contextlib
@@ -80,21 +81,19 @@ from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
-HAS_PSUTIL = False
 try:
-    import salt.utils.psutil_compat as psutil
+    import psutil
 
     HAS_PSUTIL = True
 except ImportError:
-    pass
+    HAS_PSUTIL = False
 
-HAS_RESOURCE = False
 try:
     import resource
 
     HAS_RESOURCE = True
 except ImportError:
-    pass
+    HAS_RESOURCE = False
 
 try:
     import salt.utils.win_functions
@@ -1149,11 +1148,13 @@ class MinionManager(MinionBase):
                 self.minions.append(minion)
                 break
             except SaltClientError as exc:
+                minion.destroy()
                 failed = True
                 log.error(
                     "Error while bringing up minion for multi-master. Is "
-                    "master at %s responding?",
+                    "master at %s responding? The error message was %s",
                     minion.opts["master"],
+                    exc,
                     exc_info=True,
                 )
                 last = time.time()
@@ -1161,6 +1162,7 @@ class MinionManager(MinionBase):
                     auth_wait += self.auth_wait
                 await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
+                minion.destroy()
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
                     " unresolveable address. Set 'master' value in minion config.".format(
@@ -1170,6 +1172,7 @@ class MinionManager(MinionBase):
                 log.error(err)
                 break
             except Exception as e:  # pylint: disable=broad-except
+                minion.destroy()
                 failed = True
                 log.critical(
                     "Unexpected error while connecting to %s",
@@ -3281,19 +3284,14 @@ class Minion(MinionBase):
         """
         Tear down the minion
         """
-        if self._running is False:
-            return
-
         self._running = False
         if hasattr(self, "schedule"):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
             self.pub_channel.close()
-            del self.pub_channel
-        if hasattr(self, "req_channel") and self.req_channel:
+        if hasattr(self, "req_channel") and self.req_channel is not None:
             self.req_channel.close()
-            self.req_channel = None
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()
@@ -3695,8 +3693,11 @@ class SyndicManager(MinionBase):
         self.raw_events = []
 
     def reconnect_event_bus(self, something):
+        # XXX: set_event_handler does not return anything!
+        # pylint: disable=assignment-from-no-return
         future = self.local.event.set_event_handler(self._process_event)
         self.io_loop.add_future(future, self.reconnect_event_bus)
+        # pylint: enable=assignment-from-no-return
 
     # Syndic Tune In
     def tune_in(self):
@@ -3716,8 +3717,12 @@ class SyndicManager(MinionBase):
         self.job_rets = {}
         self.raw_events = []
         self._reset_event_aggregation()
+
+        # XXX: set_event_handler does not return anything!
+        # pylint: disable=assignment-from-no-return
         future = self.local.event.set_event_handler(self._process_event)
         self.io_loop.add_future(future, self.reconnect_event_bus)
+        # pylint: enable=assignment-from-no-return
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(

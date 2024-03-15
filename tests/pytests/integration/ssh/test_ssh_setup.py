@@ -1,6 +1,7 @@
 """
 Integration tests for salt-ssh py_versions
 """
+
 import logging
 import os
 import signal

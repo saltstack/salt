@@ -342,7 +342,7 @@ class Shell:
             pardir = os.path.dirname(remote)
             if not pardir:
                 log.warning(
-                    f"Makedirs called on relative filename: '{remote}'. Skipping."
+                    "Makedirs called on relative filename: '%s'. Skipping.", remote
                 )
             else:
                 ret = self.exec_cmd("mkdir -p " + shlex.quote(pardir))

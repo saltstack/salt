@@ -4,7 +4,6 @@
     Test cases for salt.modules.logadm
 """
 
-
 import pytest
 
 import salt.modules.logadm as logadm

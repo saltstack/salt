@@ -1,6 +1,7 @@
 """
     :codeauthor: Jochen Breuer <jbreuer@suse.de>
 """
+
 # pylint: disable=no-value-for-parameter
 import os
 from contextlib import contextmanager

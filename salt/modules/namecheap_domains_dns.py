@@ -26,7 +26,6 @@ file, or in the Pillar data.
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 """
 
-
 CAN_USE_NAMECHEAP = True
 
 

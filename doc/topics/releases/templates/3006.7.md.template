@@ -1,0 +1,14 @@
+(release-3006.7)=
+# Salt 3006.7 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+<!--
+Do not edit the changelog below.
+This is auto generated.
+-->
+## Changelog
+{{ changelog }}

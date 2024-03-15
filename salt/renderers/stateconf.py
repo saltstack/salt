@@ -5,6 +5,7 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 """
+
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
@@ -50,7 +51,7 @@ __opts__ = {
     # name of the state id for the generated start state.
     "stateconf_goal_state": ".goal",
     # name of the state id for the generated goal state.
-    "stateconf_state_func": "stateconf.set"
+    "stateconf_state_func": "stateconf.set",
     # names the state and the state function to be recognized as a special
     # state from which to gather sls file context variables. It should be
     # specified in the 'state.func' notation, and both the state module and
@@ -65,7 +66,7 @@ STATE_FUNC = STATE_NAME = ""
 def __init__(opts):
     global STATE_NAME, STATE_FUNC
     STATE_FUNC = __opts__["stateconf_state_func"]
-    STATE_NAME = STATE_FUNC.split(".")[0]
+    STATE_NAME = STATE_FUNC.split(".", maxsplit=1)[0]
 
 
 MOD_BASENAME = os.path.basename(__file__)
@@ -115,7 +116,7 @@ def render(input, saltenv="base", sls="", argline="", **kws):
             sls,
             context=ctx,
             argline=rt_argline.strip(),
-            **kws
+            **kws,
         )
         high = render_data(tmplout, saltenv, sls, argline=rd_argline.strip())
         return process_high_data(high, extract)
@@ -201,7 +202,7 @@ def render(input, saltenv="base", sls="", argline="", **kws):
             name, rt_argline = (args[1] + " ").split(" ", 1)
             render_template = renderers[name]  # e.g., the mako renderer
         except KeyError as err:
-            raise SaltRenderError("Renderer: {} is not available!".format(err))
+            raise SaltRenderError(f"Renderer: {err} is not available!")
         except IndexError:
             raise INVALID_USAGE_ERROR
 
@@ -427,7 +428,7 @@ EXTENDED_REQUIRE_IN = {}
 #   explicit require_in/watch_in/listen_in/onchanges_in/onfail_in can only contain states after it
 def add_implicit_requires(data):
     def T(sid, state):  # pylint: disable=C0103
-        return "{}:{}".format(sid, state_name(state))
+        return f"{sid}:{state_name(state)}"
 
     states_before = set()
     states_after = set()

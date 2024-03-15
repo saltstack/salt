@@ -20,6 +20,7 @@ The consul module is used to create and manage Consul ACLs
        consul.acl_absent:
          - id: 38AC8470-4A83-4140-8DFD-F924CD32917F
 """
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ def acl_present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": 'ACL "{}" exists and is up to date'.format(name),
+        "comment": f'ACL "{name}" exists and is up to date',
     }
 
     exists = _acl_exists(name, id, token, consul_url)
@@ -180,7 +181,7 @@ def acl_absent(name, id=None, token=None, consul_url="http://localhost:8500"):
         "name": id,
         "changes": {},
         "result": True,
-        "comment": 'ACL "{}" does not exist'.format(id),
+        "comment": f'ACL "{id}" does not exist',
     }
 
     exists = _acl_exists(name, id, token, consul_url)

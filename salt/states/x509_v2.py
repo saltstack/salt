@@ -180,6 +180,7 @@ according to the www policy.
         - require:
           - x509: /etc/pki/www.key
 """
+
 import base64
 import copy
 import datetime
@@ -433,9 +434,9 @@ def certificate_managed(
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -839,9 +840,9 @@ def crl_managed(
 
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -1078,9 +1079,9 @@ def csr_managed(
 
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -1362,9 +1363,9 @@ def private_key_managed(
 
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -1584,9 +1585,9 @@ def _file_managed(name, test=None, **kwargs):
 def _check_file_ret(fret, ret, current):
     if fret["result"] is False:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = f"Could not {'create' if not current else 'update'} file, see file.managed output"
+        ret["comment"] = (
+            f"Could not {'create' if not current else 'update'} file, see file.managed output"
+        )
         ret["changes"] = {}
         return False
     return True

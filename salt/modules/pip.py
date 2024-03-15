@@ -864,9 +864,13 @@ def install(
     if download_cache or cache_dir:
         cmd.extend(
             [
-                "--cache-dir"
-                if salt.utils.versions.compare(ver1=cur_version, oper=">=", ver2="6.0")
-                else "--download-cache",
+                (
+                    "--cache-dir"
+                    if salt.utils.versions.compare(
+                        ver1=cur_version, oper=">=", ver2="6.0"
+                    )
+                    else "--download-cache"
+                ),
                 download_cache or cache_dir,
             ]
         )

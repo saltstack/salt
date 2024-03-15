@@ -73,7 +73,7 @@ def present(
     unix_socket=False,
     password_column=None,
     auth_plugin="mysql_native_password",
-    **connection_args
+    **connection_args,
 ):
     """
     Ensure that the named user is present with the specified properties. A
@@ -117,7 +117,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {}@{} is already present".format(name, host),
+        "comment": f"User {name}@{host} is already present",
     }
 
     passwordless = not any((password, password_hash))
@@ -138,7 +138,7 @@ def present(
                 passwordless=True,
                 unix_socket=unix_socket,
                 password_column=password_column,
-                **connection_args
+                **connection_args,
             ):
                 if allow_passwordless:
                     ret["comment"] += " with passwordless login"
@@ -157,7 +157,7 @@ def present(
             password_hash,
             unix_socket=unix_socket,
             password_column=password_column,
-            **connection_args
+            **connection_args,
         ):
             if auth_plugin == "mysql_native_password":
                 ret["comment"] += " with the desired password"
@@ -180,7 +180,7 @@ def present(
 
         # The user is present, change the password
         if __opts__["test"]:
-            ret["comment"] = "Password for user {}@{} is set to be ".format(name, host)
+            ret["comment"] = f"Password for user {name}@{host} is set to be "
             ret["result"] = None
             if passwordless:
                 ret["comment"] += "cleared"
@@ -198,7 +198,7 @@ def present(
             password_hash,
             allow_passwordless,
             unix_socket,
-            **connection_args
+            **connection_args,
         ):
             ret["comment"] = "Password for user {}@{} has been {}".format(
                 name, host, "cleared" if passwordless else "changed"
@@ -210,7 +210,7 @@ def present(
             )
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] += " ({})".format(err)
+                ret["comment"] += f" ({err})"
             if passwordless and not salt.utils.data.is_true(allow_passwordless):
                 ret["comment"] += (
                     ". Note: allow_passwordless must be True "
@@ -227,7 +227,7 @@ def present(
 
         # The user is not present, make it!
         if __opts__["test"]:
-            ret["comment"] = "User {}@{} is set to be added".format(name, host)
+            ret["comment"] = f"User {name}@{host} is set to be added"
             ret["result"] = None
             if allow_passwordless:
                 ret["comment"] += " with passwordless login"
@@ -247,19 +247,19 @@ def present(
             unix_socket=unix_socket,
             password_column=password_column,
             auth_plugin=auth_plugin,
-            **connection_args
+            **connection_args,
         ):
-            ret["comment"] = "The user {}@{} has been added".format(name, host)
+            ret["comment"] = f"The user {name}@{host} has been added"
             if allow_passwordless:
                 ret["comment"] += " with passwordless login"
             if unix_socket:
                 ret["comment"] += " using unix_socket"
             ret["changes"][name] = "Present"
         else:
-            ret["comment"] = "Failed to create user {}@{}".format(name, host)
+            ret["comment"] = f"Failed to create user {name}@{host}"
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] += " ({})".format(err)
+                ret["comment"] += f" ({err})"
             ret["result"] = False
 
     return ret
@@ -278,10 +278,10 @@ def absent(name, host="localhost", **connection_args):
     if __salt__["mysql.user_exists"](name, host, **connection_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {}@{} is set to be removed".format(name, host)
+            ret["comment"] = f"User {name}@{host} is set to be removed"
             return ret
         if __salt__["mysql.user_remove"](name, host, **connection_args):
-            ret["comment"] = "User {}@{} has been removed".format(name, host)
+            ret["comment"] = f"User {name}@{host} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:

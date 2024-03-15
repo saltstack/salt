@@ -2,7 +2,6 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-
 import pytest
 
 import salt.modules.drac as drac

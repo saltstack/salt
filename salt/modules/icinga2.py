@@ -6,7 +6,6 @@ Module to provide icinga2 compatibility to salt.
 :depends:   - icinga2 server
 """
 
-
 import logging
 
 import salt.utils.path
@@ -71,9 +70,9 @@ def generate_cert(domain):
             "--cn",
             domain,
             "--key",
-            "{}{}.key".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.key",
             "--cert",
-            "{}{}.crt".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.crt",
         ],
         python_shell=False,
     )
@@ -100,11 +99,11 @@ def save_cert(domain, master):
             "pki",
             "save-cert",
             "--key",
-            "{}{}.key".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.key",
             "--cert",
-            "{}{}.cert".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.cert",
             "--trustedcert",
-            "{}trusted-master.crt".format(get_certs_path()),
+            f"{get_certs_path()}trusted-master.crt",
             "--host",
             master,
         ],
@@ -140,13 +139,13 @@ def request_cert(domain, master, ticket, port):
             "--ticket",
             ticket,
             "--key",
-            "{}{}.key".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.key",
             "--cert",
-            "{}{}.crt".format(get_certs_path(), domain),
+            f"{get_certs_path()}{domain}.crt",
             "--trustedcert",
-            "{}trusted-master.crt".format(get_certs_path()),
+            f"{get_certs_path()}trusted-master.crt",
             "--ca",
-            "{}ca.crt".format(get_certs_path()),
+            f"{get_certs_path()}ca.crt",
         ],
         python_shell=False,
     )
@@ -182,7 +181,7 @@ def node_setup(domain, master, ticket):
             "--master_host",
             master,
             "--trustedcert",
-            "{}trusted-master.crt".format(get_certs_path()),
+            f"{get_certs_path()}trusted-master.crt",
         ],
         python_shell=False,
     )

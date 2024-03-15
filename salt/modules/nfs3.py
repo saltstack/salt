@@ -125,8 +125,8 @@ def _write_exports(exports, edict):
             for perms in edict[export]:
                 hosts = perms["hosts"]
                 options = ",".join(perms["options"])
-                line += " {}({})".format(hosts, options)
-            efh.write("{}\n".format(line))
+                line += f" {hosts}({options})"
+            efh.write(f"{line}\n")
 
 
 def reload_exports():

@@ -29,7 +29,6 @@ by adding more tags to the submission.
 
 """
 
-
 import logging
 
 import salt.returners

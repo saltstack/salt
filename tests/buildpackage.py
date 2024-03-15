@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from optparse import OptionGroup, OptionParser
+from optparse import OptionGroup, OptionParser  # pylint: disable=deprecated-module
 
 logging.QUIET = 0
 logging.GARBAGE = 1
@@ -133,7 +133,7 @@ def _init():
     if not opts.platform:
         problems.append("Platform ('os' grain) required")
     if not os.path.isdir(opts.source_dir):
-        problems.append("Source directory {} not found".format(opts.source_dir))
+        problems.append(f"Source directory {opts.source_dir} not found")
     try:
         shutil.rmtree(opts.build_dir)
     except OSError as exc:
@@ -236,7 +236,7 @@ def build_centos(opts):
     log.info("Building CentOS RPM")
     log.info("Detecting major release")
     try:
-        with open("/etc/redhat-release") as fp_:
+        with open("/etc/redhat-release", encoding="utf-8") as fp_:
             redhat_release = fp_.read().strip()
             major_release = int(redhat_release.split()[2].split(".")[0])
     except (ValueError, IndexError):
@@ -245,11 +245,11 @@ def build_centos(opts):
             "contents: '{}'".format(redhat_release)
         )
     except OSError as exc:
-        _abort("{}".format(exc))
+        _abort(f"{exc}")
 
     log.info("major_release: %s", major_release)
 
-    define_opts = ["--define", "_topdir {}".format(os.path.join(opts.build_dir))]
+    define_opts = ["--define", f"_topdir {os.path.join(opts.build_dir)}"]
     build_reqs = ["rpm-build"]
     if major_release == 5:
         python_bin = "python26"
@@ -262,7 +262,7 @@ def build_centos(opts):
     elif major_release == 7:
         build_reqs.extend(["python-devel", "systemd-units"])
     else:
-        _abort("Unsupported major release: {}".format(major_release))
+        _abort(f"Unsupported major release: {major_release}")
 
     # Install build deps
     _run_command(["yum", "-y", "install"] + build_reqs)
@@ -280,7 +280,7 @@ def build_centos(opts):
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
     except AttributeError:
-        _abort("Unable to extract version info from sdist filename '{}'".format(sdist))
+        _abort(f"Unable to extract version info from sdist filename '{sdist}'")
 
     if offset is None:
         salt_pkgver = salt_srcver = base
@@ -299,7 +299,7 @@ def build_centos(opts):
         except OSError:
             pass
         if not os.path.isdir(path):
-            _abort("Unable to make directory: {}".format(path))
+            _abort(f"Unable to make directory: {path}")
 
     # Get sources into place
     build_sources_path = os.path.join(opts.build_dir, "SOURCES")
@@ -322,14 +322,14 @@ def build_centos(opts):
 
     # Prepare SPEC file
     spec_path = os.path.join(opts.build_dir, "SPECS", "salt.spec")
-    with open(opts.spec_file) as spec:
+    with open(opts.spec_file, encoding="utf-8") as spec:
         spec_lines = spec.read().splitlines()
-    with open(spec_path, "w") as fp_:
+    with open(spec_path, "w", encoding="utf-8") as fp_:
         for line in spec_lines:
             if line.startswith("%global srcver "):
-                line = "%global srcver {}".format(salt_srcver)
+                line = f"%global srcver {salt_srcver}"
             elif line.startswith("Version: "):
-                line = "Version: {}".format(salt_pkgver)
+                line = f"Version: {salt_pkgver}"
             fp_.write(line + "\n")
 
     # Do the thing
@@ -346,15 +346,11 @@ def build_centos(opts):
             opts.build_dir,
             "RPMS",
             "noarch",
-            "salt-*{}*.noarch.rpm".format(salt_pkgver),
+            f"salt-*{salt_pkgver}*.noarch.rpm",
         )
     )
     packages.extend(
-        glob.glob(
-            os.path.join(
-                opts.build_dir, "SRPMS", "salt-{}*.src.rpm".format(salt_pkgver)
-            )
-        )
+        glob.glob(os.path.join(opts.build_dir, "SRPMS", f"salt-{salt_pkgver}*.src.rpm"))
     )
     return packages
 
@@ -393,9 +389,9 @@ if __name__ == "__main__":
     elif opts.platform.lower() == "centos":
         artifacts = build_centos(opts)
     else:
-        _abort("Unsupported platform '{}'".format(opts.platform))
+        _abort(f"Unsupported platform '{opts.platform}'")
 
-    msg = "Build complete. Artifacts will be stored in {}".format(opts.artifact_dir)
+    msg = f"Build complete. Artifacts will be stored in {opts.artifact_dir}"
     log.info(msg)
     print(msg)  # pylint: disable=C0325
     for artifact in artifacts:

@@ -6,7 +6,6 @@ See the hjson_ documentation for more information
 .. _hjson: http://laktak.github.io/hjson/
 """
 
-
 try:
     import hjson
 

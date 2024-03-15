@@ -407,7 +407,6 @@ def test_user_exists(conn_args, set_zabbix_version, query_return, mock_login):
     """
 
     module_return = True
-    # pylint: disable=E8128
     query_return(
         {
             "jsonrpc": "2.0",
@@ -464,7 +463,6 @@ def test_user_get(conn_args, set_zabbix_version, query_return, mock_login):
             "type": "3",
         }
     ]
-    # pylint: disable=E8128
     query_return(
         {
             "jsonrpc": "2.0",
@@ -547,7 +545,6 @@ def test_user_getmedia(conn_args, set_zabbix_version, query_return, mock_login):
             "active": "0",
         }
     ]
-    # pylint: disable=E8128
     query_return(
         {
             "jsonrpc": "2.0",
@@ -707,7 +704,6 @@ def test_user_list(conn_args, query_return, mock_login):
             "type": "1",
         },
     ]
-    # pylint: disable=E8128
     query_return(
         {
             "jsonrpc": "2.0",
@@ -924,7 +920,6 @@ def test_usergroup_list(conn_args, query_return, mock_login):
             "users_status": "0",
         },
     ]
-    # pylint: disable=E8128
     query_return(
         {
             "jsonrpc": "2.0",

@@ -58,7 +58,6 @@ State configuration:
       esxdatacenter.datacenter_configured
 """
 
-
 import logging
 from functools import wraps
 

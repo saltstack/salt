@@ -153,18 +153,18 @@ def bootstrap(
         if not img_size:
             raise SaltInvocationError("An img_size must be specified for a sparse file")
         if not mount_dir:
-            mount_dir = "/opt/salt-genesis.{}".format(uuid.uuid4())
+            mount_dir = f"/opt/salt-genesis.{uuid.uuid4()}"
         __salt__["file.mkdir"](mount_dir, "root", "root", "755")
         __salt__["cmd.run"](("fallocate", "-l", img_size, root), python_shell=False)
         _mkpart(root, fs_format, fs_opts, mount_dir)
 
         loop1 = __salt__["cmd.run"]("losetup -f")
         log.debug("First loop device is %s", loop1)
-        __salt__["cmd.run"]("losetup {} {}".format(loop1, root))
+        __salt__["cmd.run"](f"losetup {loop1} {root}")
         loop2 = __salt__["cmd.run"]("losetup -f")
         log.debug("Second loop device is %s", loop2)
         start = str(2048 * 2048)
-        __salt__["cmd.run"]("losetup -o {} {} {}".format(start, loop2, loop1))
+        __salt__["cmd.run"](f"losetup -o {start} {loop2} {loop1}")
         __salt__["mount.mount"](mount_dir, loop2)
 
         _populate_cache(platform, pkg_cache, mount_dir)
@@ -206,13 +206,13 @@ def bootstrap(
     if img_format != "dir":
         blkinfo = __salt__["disk.blkid"](loop2)
         __salt__["file.replace"](
-            "{}/boot/grub/grub.cfg".format(mount_dir),
+            f"{mount_dir}/boot/grub/grub.cfg",
             "ad4103fa-d940-47ca-8506-301d8071d467",  # This seems to be the default
             blkinfo[loop2]["UUID"],
         )
         __salt__["mount.umount"](root)
-        __salt__["cmd.run"]("losetup -d {}".format(loop2))
-        __salt__["cmd.run"]("losetup -d {}".format(loop1))
+        __salt__["cmd.run"](f"losetup -d {loop2}")
+        __salt__["cmd.run"](f"losetup -d {loop1}")
         __salt__["file.rmdir"](mount_dir)
 
 
@@ -225,7 +225,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     __salt__["partition.mklabel"](root, "msdos")
     loop1 = __salt__["cmd.run"]("losetup -f")
     log.debug("First loop device is %s", loop1)
-    __salt__["cmd.run"]("losetup {} {}".format(loop1, root))
+    __salt__["cmd.run"](f"losetup {loop1} {root}")
     part_info = __salt__["partition.list"](loop1)
     start = str(2048 * 2048) + "B"
     end = part_info["info"]["size"]
@@ -235,7 +235,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     loop2 = __salt__["cmd.run"]("losetup -f")
     log.debug("Second loop device is %s", loop2)
     start = start.rstrip("B")
-    __salt__["cmd.run"]("losetup -o {} {} {}".format(start, loop2, loop1))
+    __salt__["cmd.run"](f"losetup -o {start} {loop2} {loop1}")
     _mkfs(loop2, fs_format, fs_opts)
     __salt__["mount.mount"](mount_dir, loop2)
     __salt__["cmd.run"](
@@ -245,14 +245,14 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
             "--debug",
             "--no-floppy",
             "--modules=part_msdos linux",
-            "--boot-directory={}/boot".format(mount_dir),
+            f"--boot-directory={mount_dir}/boot",
             loop1,
         ),
         python_shell=False,
     )
     __salt__["mount.umount"](mount_dir)
-    __salt__["cmd.run"]("losetup -d {}".format(loop2))
-    __salt__["cmd.run"]("losetup -d {}".format(loop1))
+    __salt__["cmd.run"](f"losetup -d {loop2}")
+    __salt__["cmd.run"](f"losetup -d {loop1}")
     return part_info
 
 
@@ -284,7 +284,7 @@ def _populate_cache(platform, pkg_cache, mount_dir):
         return
 
     if platform == "pacman":
-        cache_dir = "{}/var/cache/pacman/pkg".format(mount_dir)
+        cache_dir = f"{mount_dir}/var/cache/pacman/pkg"
 
     __salt__["file.mkdir"](cache_dir, "root", "root", "755")
     __salt__["file.copy"](pkg_cache, cache_dir, recurse=True, remove_existing=True)
@@ -361,14 +361,14 @@ def _bootstrap_yum(
     yum_args = [
         "yum",
         "install",
-        "--installroot={}".format(shlex.quote(root)),
+        f"--installroot={shlex.quote(root)}",
         "-y",
     ] + pkgs
     __salt__["cmd.run"](yum_args, python_shell=False)
 
     if "epel-release" not in exclude_pkgs:
         __salt__["cmd.run"](
-            ("rpm", "--root={}".format(shlex.quote(root)), "-Uvh", epel_url),
+            ("rpm", f"--root={shlex.quote(root)}", "-Uvh", epel_url),
             python_shell=False,
         )
 
@@ -462,9 +462,7 @@ def _bootstrap_deb(
         ),
         env=env,
     )
-    __salt__["cmd.run"](
-        "chroot {root} dpkg --configure -a".format(root=shlex.quote(root)), env=env
-    )
+    __salt__["cmd.run"](f"chroot {shlex.quote(root)} dpkg --configure -a", env=env)
 
 
 def _bootstrap_pacman(
@@ -519,25 +517,23 @@ def _bootstrap_pacman(
         pkgs.remove(pkg)
 
     if img_format != "dir":
-        __salt__["mount.mount"]("{}/proc".format(root), "/proc", fstype="", opts="bind")
-        __salt__["mount.mount"]("{}/dev".format(root), "/dev", fstype="", opts="bind")
+        __salt__["mount.mount"](f"{root}/proc", "/proc", fstype="", opts="bind")
+        __salt__["mount.mount"](f"{root}/dev", "/dev", fstype="", opts="bind")
 
-    __salt__["file.mkdir"](
-        "{}/var/lib/pacman/local".format(root), "root", "root", "755"
-    )
+    __salt__["file.mkdir"](f"{root}/var/lib/pacman/local", "root", "root", "755")
     pac_files = [rf for rf in os.listdir("/etc") if rf.startswith("pacman.")]
     for pac_file in pac_files:
-        __salt__["cmd.run"]("cp -r /etc/{} {}/etc".format(pac_file, shlex.quote(root)))
+        __salt__["cmd.run"](f"cp -r /etc/{pac_file} {shlex.quote(root)}/etc")
     __salt__["file.copy"](
-        "/var/lib/pacman/sync", "{}/var/lib/pacman/sync".format(root), recurse=True
+        "/var/lib/pacman/sync", f"{root}/var/lib/pacman/sync", recurse=True
     )
 
     pacman_args = ["pacman", "--noconfirm", "-r", shlex.quote(root), "-S"] + pkgs
     __salt__["cmd.run"](pacman_args, python_shell=False)
 
     if img_format != "dir":
-        __salt__["mount.umount"]("{}/proc".format(root))
-        __salt__["mount.umount"]("{}/dev".format(root))
+        __salt__["mount.umount"](f"{root}/proc")
+        __salt__["mount.umount"](f"{root}/dev")
 
 
 def _make_nodes(root):
@@ -547,24 +543,24 @@ def _make_nodes(root):
     https://wiki.archlinux.org/index.php/Linux_Containers
     """
     dirs = (
-        ("{}/etc".format(root), "root", "root", "755"),
-        ("{}/dev".format(root), "root", "root", "755"),
-        ("{}/proc".format(root), "root", "root", "755"),
-        ("{}/dev/pts".format(root), "root", "root", "755"),
-        ("{}/dev/shm".format(root), "root", "root", "1755"),
+        (f"{root}/etc", "root", "root", "755"),
+        (f"{root}/dev", "root", "root", "755"),
+        (f"{root}/proc", "root", "root", "755"),
+        (f"{root}/dev/pts", "root", "root", "755"),
+        (f"{root}/dev/shm", "root", "root", "1755"),
     )
 
     nodes = (
-        ("{}/dev/null".format(root), "c", 1, 3, "root", "root", "666"),
-        ("{}/dev/zero".format(root), "c", 1, 5, "root", "root", "666"),
-        ("{}/dev/random".format(root), "c", 1, 8, "root", "root", "666"),
-        ("{}/dev/urandom".format(root), "c", 1, 9, "root", "root", "666"),
-        ("{}/dev/tty".format(root), "c", 5, 0, "root", "root", "666"),
-        ("{}/dev/tty0".format(root), "c", 4, 0, "root", "root", "666"),
-        ("{}/dev/console".format(root), "c", 5, 1, "root", "root", "600"),
-        ("{}/dev/full".format(root), "c", 1, 7, "root", "root", "666"),
-        ("{}/dev/initctl".format(root), "p", 0, 0, "root", "root", "600"),
-        ("{}/dev/ptmx".format(root), "c", 5, 2, "root", "root", "666"),
+        (f"{root}/dev/null", "c", 1, 3, "root", "root", "666"),
+        (f"{root}/dev/zero", "c", 1, 5, "root", "root", "666"),
+        (f"{root}/dev/random", "c", 1, 8, "root", "root", "666"),
+        (f"{root}/dev/urandom", "c", 1, 9, "root", "root", "666"),
+        (f"{root}/dev/tty", "c", 5, 0, "root", "root", "666"),
+        (f"{root}/dev/tty0", "c", 4, 0, "root", "root", "666"),
+        (f"{root}/dev/console", "c", 5, 1, "root", "root", "600"),
+        (f"{root}/dev/full", "c", 1, 7, "root", "root", "666"),
+        (f"{root}/dev/initctl", "p", 0, 0, "root", "root", "600"),
+        (f"{root}/dev/ptmx", "c", 5, 2, "root", "root", "666"),
     )
 
     for path in dirs:
@@ -636,9 +632,9 @@ def _tar(name, root, path=None, compress="bzip2"):
 
     compression, ext = _compress(compress)
 
-    tarfile = "{}/{}.tar.{}".format(path, name, ext)
+    tarfile = f"{path}/{name}.tar.{ext}"
     out = __salt__["archive.tar"](
-        options="{}pcf".format(compression),
+        options=f"{compression}pcf",
         tarfile=tarfile,
         sources=".",
         dest=root,
@@ -663,9 +659,9 @@ def _untar(name, dest=None, path=None, compress="bz2"):
 
     compression, ext = _compress(compress)
 
-    tarfile = "{}/{}.tar.{}".format(path, name, ext)
+    tarfile = f"{path}/{name}.tar.{ext}"
     out = __salt__["archive.tar"](
-        options="{}xf".format(compression),
+        options=f"{compression}xf",
         tarfile=tarfile,
         dest=dest,
     )

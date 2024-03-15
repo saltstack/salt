@@ -4,6 +4,7 @@
 
     PyTest helpers functions
 """
+
 import logging
 import os
 import pathlib
@@ -703,13 +704,17 @@ class EntropyGenerator:
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
-        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        self.current_entropy = int(
+            kernel_entropy_file.read_text(encoding="utf-8").strip()
+        )
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
             log.info("The '%s' file is not avilable", kernel_poolsize_file)
         else:
-            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            self.current_poolsize = int(
+                kernel_poolsize_file.read_text(encoding="utf-8").strip()
+            )
             log.info("Entropy Poolsize: %s", self.current_poolsize)
             # Account for smaller poolsizes using BLAKE2s
             if self.current_poolsize == 256:
@@ -735,7 +740,9 @@ class EntropyGenerator:
                         raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -770,7 +777,9 @@ class EntropyGenerator:
                     check=True,
                 )
                 os.unlink(target_file.name)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -813,7 +822,9 @@ def change_cwd(path):
 @pytest.helpers.register
 def download_file(url, dest, auth=None):
     # NOTE the stream=True parameter below
-    with requests.get(url, allow_redirects=True, stream=True, auth=auth) as r:
+    with requests.get(
+        url, allow_redirects=True, stream=True, auth=auth, timeout=60
+    ) as r:
         r.raise_for_status()
         with salt.utils.files.fopen(dest, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):

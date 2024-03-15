@@ -1,19 +1,21 @@
 import pytest
 
+import salt.modules.test as testmod
 import salt.states.group as group
 import salt.utils.platform
 from tests.support.mock import MagicMock, call, patch
 
-__context__ = {}
-
-
-def ping():
-    ...
-
 
 @pytest.fixture
 def configure_loader_modules():
-    return {group: {"__salt__": {"test.ping": ping}, "__opts__": {"test": False}}}
+
+    return {
+        testmod: {},
+        group: {
+            "__salt__": {"test.ping": testmod.ping},
+            "__opts__": {"test": False},
+        },
+    }
 
 
 def test_present_with_non_unique_gid():

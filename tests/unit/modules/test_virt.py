@@ -1831,18 +1831,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ret = virt._diff_disk_lists(old_disks, new_disks)
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["unchanged"]
             ],
             [],
         )
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["new"]
             ],
             ["/path/to/img3.qcow2", "/path/to/img0.qcow2", "/path/to/img4.qcow2", None],
@@ -1853,9 +1857,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["sorted"]
             ],
             ["/path/to/img3.qcow2", "/path/to/img0.qcow2", "/path/to/img4.qcow2", None],
@@ -1863,9 +1869,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["new"][1].find("target").get("bus"), "virtio")
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["deleted"]
             ],
             [
@@ -3501,9 +3509,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("vm_with_memtune_param", mem=memtune_new_val),
         )
-        self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
-        )
+        self.assertEqual(domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2))
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(
@@ -3569,9 +3575,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("vm_with_memtune_param", mem=max_swap_none),
         )
-        self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
-        )
+        self.assertEqual(domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2))
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(

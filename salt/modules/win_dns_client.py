@@ -118,7 +118,7 @@ def add_dns(ip, interface="Local Area Connection", index=1):
         "dns",
         interface,
         ip,
-        "index={}".format(index),
+        f"index={index}",
         "validate=no",
     ]
 

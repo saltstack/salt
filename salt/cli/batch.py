@@ -90,7 +90,10 @@ class Batch:
         """
         Return the active number of minions to maintain
         """
-        partition = lambda x: float(x) / 100.0 * len(self.minions)
+
+        def partition(x):
+            return float(x) / 100.0 * len(self.minions)
+
         try:
             if isinstance(self.opts["batch"], str) and "%" in self.opts["batch"]:
                 res = partition(float(self.opts["batch"].strip("%")))
@@ -188,7 +191,7 @@ class Batch:
             if next_:
                 if not self.quiet:
                     salt.utils.stringutils.print_cli(
-                        "\nExecuting run on {}\n".format(sorted(next_))
+                        f"\nExecuting run on {sorted(next_)}\n"
                     )
                 # create a new iterator for this batch of minions
                 return_value = self.opts.get("return", self.opts.get("ret", ""))

@@ -110,7 +110,7 @@ def test_minion_reconnection_attempts(
         assert salt_mm_minion_2.is_running()
 
         start_events = event_listener.wait_for_events(
-            [(salt_mm_master_1.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+            [(salt_mm_master_1.id, f"salt/minion/{salt_mm_minion_1.id}/start")],
             timeout=60,
             after_time=start_time,
         )
@@ -123,7 +123,7 @@ def test_minion_reconnection_attempts(
         start_time = time.time()
 
     start_events = event_listener.wait_for_events(
-        [(salt_mm_master_2.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+        [(salt_mm_master_2.id, f"salt/minion/{salt_mm_minion_1.id}/start")],
         timeout=60,
         after_time=start_time,
     )

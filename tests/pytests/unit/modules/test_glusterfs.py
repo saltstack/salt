@@ -5,7 +5,6 @@
     Test cases for salt.modules.glusterfs
 """
 
-
 import pytest
 
 import salt.modules.glusterfs as glusterfs

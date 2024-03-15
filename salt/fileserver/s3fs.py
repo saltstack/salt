@@ -87,7 +87,6 @@ structure::
         s3.s3_sync_on_update: False
 """
 
-
 import datetime
 import logging
 import os
@@ -103,6 +102,8 @@ import salt.utils.hashutils
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
+
+S3_HASH_TYPE = "md5"
 
 
 def envs():
@@ -134,7 +135,7 @@ def update():
                         cached_file_path = _get_cached_file_name(
                             bucket, saltenv, file_path
                         )
-                        log.info("%s - %s : %s", bucket, saltenv, file_path)
+                        log.debug("%s - %s : %s", bucket, saltenv, file_path)
 
                         # load the file from S3 if it's not in the cache or it's old
                         _get_file_from_s3(
@@ -189,7 +190,7 @@ def find_file(path, saltenv="base", **kwargs):
 
 def file_hash(load, fnd):
     """
-    Return an MD5 file hash
+    Return the hash of an object's cached copy
     """
     if "env" in load:
         # "env" is not supported; Use "saltenv".
@@ -208,8 +209,8 @@ def file_hash(load, fnd):
     )
 
     if os.path.isfile(cached_file_path):
-        ret["hsum"] = salt.utils.hashutils.get_hash(cached_file_path)
-        ret["hash_type"] = "md5"
+        ret["hash_type"] = S3_HASH_TYPE
+        ret["hsum"] = salt.utils.hashutils.get_hash(cached_file_path, S3_HASH_TYPE)
 
     return ret
 
@@ -716,11 +717,15 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
 
             if file_etag.find("-") == -1:
                 file_md5 = file_etag
-                cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, "md5")
+                cached_md5 = salt.utils.hashutils.get_hash(
+                    cached_file_path, S3_HASH_TYPE
+                )
 
                 # hashes match we have a cache hit
                 if cached_md5 == file_md5:
                     return
+                else:
+                    log.info("found different hash for file %s, updating...", path)
             else:
                 cached_file_stat = os.stat(cached_file_path)
                 cached_file_size = cached_file_stat.st_size
@@ -756,6 +761,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         https_enable=https_enable,
                     )
                     if ret is not None:
+                        s3_file_mtime = s3_file_size = None
                         for header_name, header_value in ret["headers"].items():
                             name = header_name.strip()
                             value = header_value.strip()
@@ -765,9 +771,8 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                                 )
                             elif str(name).lower() == "content-length":
                                 s3_file_size = int(value)
-                        if (
-                            cached_file_size == s3_file_size
-                            and cached_file_mtime > s3_file_mtime
+                        if (s3_file_size and cached_file_size == s3_file_size) and (
+                            s3_file_mtime and cached_file_mtime > s3_file_mtime
                         ):
                             log.info(
                                 "%s - %s : %s skipped download since cached file size "

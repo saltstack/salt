@@ -21,7 +21,7 @@ def test_echo(salt_ssh_cli, base_env_state_tree_root_dir):
         echo=echo
     )
     state_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(name), state_file, base_env_state_tree_root_dir
+        f"{name}.sls", state_file, base_env_state_tree_root_dir
     )
 
     with state_tempfile:

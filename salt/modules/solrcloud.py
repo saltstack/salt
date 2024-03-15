@@ -314,7 +314,7 @@ def alias_set_collections(alias_name, collections=None, **kwargs):
         "admin/collections?action=CREATEALIAS&name={alias}&wt=json&collections={collections}".format(
             alias=alias_name, collections=", ".join(collections)
         ),
-        **kwargs
+        **kwargs,
     )
 
 
@@ -337,7 +337,7 @@ def collection_reload(collection, **kwargs):
         "admin/collections?action=RELOAD&name={collection}&wt=json".format(
             collection=collection
         ),
-        **kwargs
+        **kwargs,
     )
 
 
@@ -398,7 +398,7 @@ def collection_backup(collection_name, location, backup_name=None, **kwargs):
         raise ValueError("Collection doesn't exists")
 
     if backup_name is not None:
-        backup_name = "&name={}".format(backup_name)
+        backup_name = f"&name={backup_name}"
     else:
         backup_name = ""
 
@@ -406,7 +406,7 @@ def collection_backup(collection_name, location, backup_name=None, **kwargs):
         "{collection}/replication?command=BACKUP&location={location}{backup_name}&wt=json".format(
             collection=collection_name, backup_name=backup_name, location=location
         ),
-        **kwargs
+        **kwargs,
     )
 
 
@@ -436,7 +436,7 @@ def collection_backup_all(location, backup_name=None, **kwargs):
             "{collection}/replication?command=BACKUP&location={location}{backup_name}&wt=json".format(
                 collection=collection_name, backup_name=backup_name, location=location
             ),
-            **kwargs
+            **kwargs,
         )
 
 
@@ -481,7 +481,7 @@ def collection_create(collection_name, options=None, **kwargs):
         "admin/collections?action=CREATE&wt=json&name="
         + collection_name
         + options_string,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -566,5 +566,5 @@ def collection_set_options(collection_name, options, **kwargs):
         "admin/collections?action=MODIFYCOLLECTION&wt=json&collection="
         + collection_name
         + options_string,
-        **kwargs
+        **kwargs,
     )

@@ -41,6 +41,7 @@ Connection module for Amazon Kinesis
 :depends: boto3
 
 """
+
 # keep lint from choking on _get_conn
 # pylint: disable=E0602
 

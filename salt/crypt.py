@@ -83,6 +83,13 @@ if not HAS_M2 and not HAS_CRYPTO:
 log = logging.getLogger(__name__)
 
 
+def clean_key(key):
+    """
+    Clean the key so that it only has unix style line endings (\\n)
+    """
+    return "\n".join(key.strip().splitlines())
+
+
 def read_dropfile(cachedir):
     dfn = os.path.join(cachedir, ".dfn")
     try:
@@ -273,7 +280,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     Load a private key from disk.  `timestamp` above is intended to be the
     timestamp of the file's last modification. This fn is memoized so if it is
     called with the same path and timestamp (the file's last modified time) the
-    second time the result is returned from the memoiziation.  If the file gets
+    second time the result is returned from the memoization.  If the file gets
     modified then the params are different and the key is loaded from disk.
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
@@ -489,7 +496,7 @@ class MasterKeys(dict):
                 )
                 if os.path.isfile(self.sig_path):
                     with salt.utils.files.fopen(self.sig_path) as fp_:
-                        self.pub_signature = fp_.read()
+                        self.pub_signature = clean_key(fp_.read())
                     log.info(
                         "Read %s's signature from %s",
                         os.path.basename(self.pub_path),
@@ -607,7 +614,7 @@ class MasterKeys(dict):
                 with salt.utils.files.fopen(path, "wb+") as wfh:
                     wfh.write(key.publickey().exportKey("PEM"))
         with salt.utils.files.fopen(path) as rfh:
-            return rfh.read()
+            return clean_key(rfh.read())
 
     def get_ckey_paths(self):
         return self.cluster_pub_path, self.cluster_rsa_path
@@ -1011,11 +1018,11 @@ class AsyncAuth:
                         "clean out the keys. The Salt Minion will now exit."
                     )
                     # Add a random sleep here for systems that are using a
-                    # a service manager to immediately restart the service
-                    # to avoid overloading the system
+                    # service manager to immediately restart the service to
+                    # avoid overloading the system
                     time.sleep(random.randint(10, 20))
                     sys.exit(salt.defaults.exitcodes.EX_NOPERM)
-            # has the master returned that its maxed out with minions?
+            # Has the master returned that it's maxed out with minions?
             elif payload["ret"] == "full":
                 return "full"
             else:
@@ -1117,7 +1124,7 @@ class AsyncAuth:
         except Exception:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
-            payload["pub"] = f.read()
+            payload["pub"] = clean_key(f.read())
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):
@@ -1340,11 +1347,9 @@ class AsyncAuth:
         m_pub_exists = os.path.isfile(m_pub_fn)
         if m_pub_exists and master_pub and not self.opts["open_mode"]:
             with salt.utils.files.fopen(m_pub_fn) as fp_:
-                local_master_pub = fp_.read()
+                local_master_pub = clean_key(fp_.read())
 
-            if payload["pub_key"].replace("\n", "").replace(
-                "\r", ""
-            ) != local_master_pub.replace("\n", "").replace("\r", ""):
+            if payload["pub_key"] != local_master_pub:
                 if not self.check_auth_deps(payload):
                     return ""
 

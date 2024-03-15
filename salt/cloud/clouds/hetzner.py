@@ -16,6 +16,7 @@ Use of this module requires the ``key`` parameter to be set.
       driver: hetzner
 
 """
+
 # pylint: disable=invalid-name,function-redefined
 
 

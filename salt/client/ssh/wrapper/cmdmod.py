@@ -8,6 +8,7 @@ SSH wrapper module for the ``cmdmod`` execution module.
     value of the minion setting.
     This is the same for the ``state`` and `cp`` wrappers.
 """
+
 import logging
 import os.path
 import shlex

@@ -22,7 +22,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{} module can only be loaded on SmartOS compute nodes".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded on SmartOS compute nodes",
     )
 
 
@@ -185,9 +185,7 @@ def vm_virt_type(domain):
 
         salt '*' virt.vm_virt_type <domain>
     """
-    ret = __salt__["vmadm.lookup"](
-        search="uuid={uuid}".format(uuid=domain), order="type"
-    )
+    ret = __salt__["vmadm.lookup"](search=f"uuid={domain}", order="type")
     if not ret:
         raise CommandExecutionError("We can't determine the type of this VM")
 
@@ -232,9 +230,7 @@ def get_macs(domain):
         salt '*' virt.get_macs <domain>
     """
     macs = []
-    ret = __salt__["vmadm.lookup"](
-        search="uuid={uuid}".format(uuid=domain), order="nics"
-    )
+    ret = __salt__["vmadm.lookup"](search=f"uuid={domain}", order="nics")
     if not ret:
         raise CommandExecutionError("We can't find the MAC address of this VM")
     else:

@@ -49,7 +49,7 @@ def _parse_numbers(text):
             "Z": "10E21",
             "Y": "10E24",
         }
-        if text[-1] in postPrefixes.keys():
+        if text[-1] in postPrefixes:
             v = decimal.Decimal(text[:-1])
             v = v * decimal.Decimal(postPrefixes[text[-1]])
             return v

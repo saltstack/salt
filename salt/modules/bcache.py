@@ -117,14 +117,14 @@ def attach_(dev=None):
         "attach",
         cache,
         "error",
-        "Error attaching {} to bcache {}".format(dev, cache),
+        f"Error attaching {dev} to bcache {cache}",
     ):
         return False
 
     return _wait(
         lambda: uuid(dev) == cache,
         "error",
-        "{} received attach to bcache {}, but did not comply".format(dev, cache),
+        f"{dev} received attach to bcache {cache}, but did not comply",
     )
 
 
@@ -153,12 +153,12 @@ def detach(dev=None):
         return res if res else None
 
     log.debug("Detaching %s", dev)
-    if not _bcsys(dev, "detach", "goaway", "error", "Error detaching {}".format(dev)):
+    if not _bcsys(dev, "detach", "goaway", "error", f"Error detaching {dev}"):
         return False
     return _wait(
         lambda: uuid(dev) is False,
         "error",
-        "{} received detach, but did not comply".format(dev),
+        f"{dev} received detach, but did not comply",
         300,
     )
 
@@ -203,12 +203,12 @@ def stop(dev=None):
     """
     if dev is not None:
         log.warning("Stopping %s, device will only reappear after reregistering!", dev)
-        if not _bcsys(dev, "stop", "goaway", "error", "Error stopping {}".format(dev)):
+        if not _bcsys(dev, "stop", "goaway", "error", f"Error stopping {dev}"):
             return False
         return _wait(
             lambda: _sysfs_attr(_bcpath(dev)) is False,
             "error",
-            "Device {} did not stop".format(dev),
+            f"Device {dev} did not stop",
             300,
         )
     else:
@@ -271,19 +271,19 @@ def back_make(dev, cache_mode="writeback", force=False, attach=True, bucket_size
     if force:
         cmd += " --wipe-bcache"
 
-    if not _run_all(cmd, "error", "Error creating backing device {}: %s".format(dev)):
+    if not _run_all(cmd, "error", f"Error creating backing device {dev}: %s"):
         return False
     elif not _sysfs_attr(
         "fs/bcache/register",
         _devpath(dev),
         "error",
-        "Error registering backing device {}".format(dev),
+        f"Error registering backing device {dev}",
     ):
         return False
     elif not _wait(
         lambda: _sysfs_attr(_bcpath(dev)) is not False,
         "error",
-        "Backing device {} did not register".format(dev),
+        f"Backing device {dev} did not register",
     ):
         return False
     elif attach:
@@ -370,25 +370,23 @@ def cache_make(
         )
         # if wipe was incomplete & part layout remains the same,
         # this is one condition set where udev would make it accidentally popup again
-        if not _run_all(
-            cmd, "error", "Error creating bcache partitions on {}: %s".format(dev)
-        ):
+        if not _run_all(cmd, "error", f"Error creating bcache partitions on {dev}: %s"):
             return False
-        dev = "{}2".format(dev)
+        dev = f"{dev}2"
 
     # ---------------- Finally, create a cache ----------------
-    cmd = "make-bcache --cache /dev/{} --block {} --wipe-bcache".format(dev, block_size)
+    cmd = f"make-bcache --cache /dev/{dev} --block {block_size} --wipe-bcache"
 
     # Actually bucket_size should always have a value, but for testing 0 is possible as well
     if bucket_size:
-        cmd += " --bucket {}".format(bucket_size)
+        cmd += f" --bucket {bucket_size}"
 
-    if not _run_all(cmd, "error", "Error creating cache {}: %s".format(dev)):
+    if not _run_all(cmd, "error", f"Error creating cache {dev}: %s"):
         return False
     elif not _wait(
         lambda: uuid() is not False,
         "error",
-        "Cache {} seemingly created OK, but FS did not activate".format(dev),
+        f"Cache {dev} seemingly created OK, but FS did not activate",
     ):
         return False
 
@@ -430,7 +428,7 @@ def config_(dev=None, **kwargs):
                 [spath, key],
                 val,
                 "warn",
-                "Failed to update {} with {}".format(os.path.join(spath, key), val),
+                f"Failed to update {os.path.join(spath, key)} with {val}",
             )
         return endres > 0
     else:
@@ -470,7 +468,7 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
                 continue
 
             for spath, sdirs, _ in salt.utils.path.os_walk(
-                "/sys/block/{}".format(block), followlinks=False
+                f"/sys/block/{block}", followlinks=False
             ):
                 if "bcache" in sdirs:
                     bdevs.append(os.path.basename(spath))
@@ -514,7 +512,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     result = {}
 
     if not _sysfs_attr(
-        _bcpath(dev), None, "error", "{} is not a bcache fo any kind".format(dev)
+        _bcpath(dev), None, "error", f"{dev} is not a bcache fo any kind"
     ):
         return False
     elif _bcsys(dev, "set"):
@@ -632,9 +630,9 @@ def super_(dev):
     ret = {}
 
     res = _run_all(
-        "bcache-super-show {}".format(dev),
+        f"bcache-super-show {dev}",
         "error",
-        "Error reading superblock on {}: %s".format(dev),
+        f"Error reading superblock on {dev}: %s",
     )
     if not res:
         return False
@@ -992,18 +990,18 @@ def _wipe(dev):
     else:
         wiper = "blkdiscard"
 
-    wipe_failmsg = "Error wiping {}: %s".format(dev)
+    wipe_failmsg = f"Error wiping {dev}: %s"
     if wiper == "dd":
         blocks = 4
-        cmd = "dd if=/dev/zero of=/dev/{} bs=1M count={}".format(dev, blocks)
+        cmd = f"dd if=/dev/zero of=/dev/{dev} bs=1M count={blocks}"
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
         # Some stuff (<cough>GPT</cough>) writes stuff at the end of a dev as well
-        cmd += " seek={}".format((size / 1024**2) - blocks)
+        cmd += f" seek={(size / 1024**2) - blocks}"
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
     elif wiper == "blkdiscard":
-        cmd = "blkdiscard /dev/{}".format(dev)
+        cmd = f"blkdiscard /dev/{dev}"
         endres += _run_all(cmd, "warn", wipe_failmsg)
         # TODO: fix annoying bug failing blkdiscard by trying to discard 1 sector past blkdev
         endres = 1

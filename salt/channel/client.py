@@ -4,7 +4,6 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
-
 import logging
 import os
 import time
@@ -227,7 +226,7 @@ class AsyncReqChannel:
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
-            cipher = PKCS1_OAEP.new(key)
+            cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
             aes = cipher.decrypt(ret["key"])
 
         # Decrypt using the public key.
@@ -605,14 +604,22 @@ class AsyncPubChannel:
     def _decode_payload(self, payload):
         # we need to decrypt it
         log.trace("Decoding payload: %s", payload)
+        reauth = False
         if payload["enc"] == "aes":
             self._verify_master_signature(payload)
             try:
                 payload["load"] = self.auth.crypticle.loads(payload["load"])
             except salt.crypt.AuthenticationError:
-                yield self.auth.authenticate()
-                payload["load"] = self.auth.crypticle.loads(payload["load"])
-
+                reauth = True
+            if reauth:
+                try:
+                    yield self.auth.authenticate()
+                    payload["load"] = self.auth.crypticle.loads(payload["load"])
+                except salt.crypt.AuthenticationError:
+                    log.error(
+                        "Payload decryption failed even after re-authenticating with master %s",
+                        self.opts["master_ip"],
+                    )
         raise tornado.gen.Return(payload)
 
     def __enter__(self):

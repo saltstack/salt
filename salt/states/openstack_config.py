@@ -8,7 +8,6 @@ Manage OpenStack configuration file settings.
 
 """
 
-
 from salt.exceptions import CommandExecutionError
 
 
@@ -113,7 +112,7 @@ def absent(name, filename, section, parameter=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Value '{}' is set to be deleted.".format(old_value)
+        ret["comment"] = f"Value '{old_value}' is set to be deleted."
         return ret
 
     __salt__["openstack_config.delete"](

@@ -3,6 +3,7 @@
 
     Test cases for salt.modules.nftables
 """
+
 import json
 
 import pytest

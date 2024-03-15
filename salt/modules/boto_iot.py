@@ -45,6 +45,7 @@ The dependencies listed above can be installed via package or pip.
           region: us-east-1
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

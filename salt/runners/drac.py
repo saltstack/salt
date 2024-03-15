@@ -12,7 +12,6 @@ configuration file.
 
 """
 
-
 import logging
 
 try:
@@ -58,7 +57,7 @@ def __connect(hostname, timeout=20, username=None, password=None):
         password = drac_cred.get("password", None)
 
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec
 
     try:
         client.connect(hostname, username=username, password=password, timeout=timeout)

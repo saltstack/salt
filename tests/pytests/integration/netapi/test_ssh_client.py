@@ -8,6 +8,14 @@ from tests.support.mock import patch
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Fedora Linux-39'",
+        reason="Fedora 39 ships with Python 3.12. Test can't run with system Python on 3.12",
+        # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
+        # and it imports `ssl` and checks if the `match_hostname` function is defined, which
+        # has been deprecated since Python 3.7, so, the logic goes into trying to import
+        # backports.ssl-match-hostname which is not installed on the system.
+    ),
 ]
 
 
@@ -135,6 +143,7 @@ def test_ssh_disabled(client, auth_creds):
     assert ret is None
 
 
+@pytest.mark.timeout_unless_on_windows(360)
 def test_shell_inject_ssh_priv(
     client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account
 ):
@@ -144,6 +153,7 @@ def test_shell_inject_ssh_priv(
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
     tgts = ["repo.saltproject.io", "www.zerodayinitiative.com"]
+    ret = None
     for tgt in tgts:
         low = {
             "roster": "cache",
@@ -160,7 +170,9 @@ def test_shell_inject_ssh_priv(
         ret = client.run(low)
         if ret:
             break
+
     assert path.exists() is False
+    assert ret
     assert not ret[tgt]["stdout"]
     assert ret[tgt]["stderr"]
 

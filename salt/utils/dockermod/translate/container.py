@@ -137,7 +137,7 @@ def binds(val, **kwargs):  # pylint: disable=unused-argument
                 val = helpers.split(val)
             except AttributeError:
                 raise SaltInvocationError(
-                    "'{}' is not a dictionary or list of bind definitions".format(val)
+                    f"'{val}' is not a dictionary or list of bind definitions"
                 )
     return val
 
@@ -378,9 +378,7 @@ def port_bindings(val, **kwargs):
                 try:
                     start, end = helpers.get_port_range(container_port)
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for using
-                    # the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 bind_vals = [
                     (_format_port(port_num, proto), None)
                     for port_num in range(start, end + 1)
@@ -403,9 +401,7 @@ def port_bindings(val, **kwargs):
                     cport_start, cport_end = helpers.get_port_range(container_port)
                     hport_start, hport_end = helpers.get_port_range(bind_parts[0])
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for
-                    # using the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 if (hport_end - hport_start) != (cport_end - cport_start):
                     # Port range is mismatched
                     raise SaltInvocationError(
@@ -427,9 +423,7 @@ def port_bindings(val, **kwargs):
                 try:
                     cport_start, cport_end = helpers.get_port_range(container_port)
                 except ValueError as exc:
-                    # Using __str__() to avoid deprecation warning for
-                    # using the message attribute of the ValueError.
-                    raise SaltInvocationError(exc.__str__())
+                    raise SaltInvocationError(str(exc))
                 cport_list = list(range(cport_start, cport_end + 1))
                 if host_port == "":
                     hport_list = [None] * len(cport_list)
@@ -437,9 +431,7 @@ def port_bindings(val, **kwargs):
                     try:
                         hport_start, hport_end = helpers.get_port_range(host_port)
                     except ValueError as exc:
-                        # Using __str__() to avoid deprecation warning for
-                        # using the message attribute of the ValueError.
-                        raise SaltInvocationError(exc.__str__())
+                        raise SaltInvocationError(str(exc))
                     hport_list = list(range(hport_start, hport_end + 1))
 
                     if (hport_end - hport_start) != (cport_end - cport_start):
@@ -453,9 +445,11 @@ def port_bindings(val, **kwargs):
                 bind_vals = [
                     (
                         _format_port(val, proto),
-                        (host_ip,)
-                        if hport_list[idx] is None
-                        else (host_ip, hport_list[idx]),
+                        (
+                            (host_ip,)
+                            if hport_list[idx] is None
+                            else (host_ip, hport_list[idx])
+                        ),
                     )
                     for idx, val in enumerate(cport_list)
                 ]
@@ -509,9 +503,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             if isinstance(val, int):
                 val = [val]
             else:
-                raise SaltInvocationError(
-                    "'{}' is not a valid port definition".format(val)
-                )
+                raise SaltInvocationError(f"'{val}' is not a valid port definition")
     new_ports = set()
     for item in val:
         if isinstance(item, int):
@@ -520,15 +512,11 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
         try:
             item, _, proto = item.partition("/")
         except AttributeError:
-            raise SaltInvocationError(
-                "'{}' is not a valid port definition".format(item)
-            )
+            raise SaltInvocationError(f"'{item}' is not a valid port definition")
         try:
             range_start, range_end = helpers.get_port_range(item)
         except ValueError as exc:
-            # Using __str__() to avoid deprecation warning for using
-            # the "message" attribute of the ValueError.
-            raise SaltInvocationError(exc.__str__())
+            raise SaltInvocationError(str(exc))
         new_ports.update(
             [helpers.get_port_def(x, proto) for x in range(range_start, range_end + 1)]
         )
@@ -633,7 +621,7 @@ def ulimits(val, **kwargs):  # pylint: disable=unused-argument
                 }
             except (TypeError, ValueError):
                 raise SaltInvocationError(
-                    "Limit '{}' contains non-numeric value(s)".format(item)
+                    f"Limit '{item}' contains non-numeric value(s)"
                 )
     return val
 
@@ -655,7 +643,7 @@ def user(val, **kwargs):  # pylint: disable=unused-argument
     if not isinstance(val, (int, str)):
         raise SaltInvocationError("Value must be a username or uid")
     elif isinstance(val, int) and val < 0:
-        raise SaltInvocationError("'{}' is an invalid uid".format(val))
+        raise SaltInvocationError(f"'{val}' is an invalid uid")
     return val
 
 
@@ -674,7 +662,7 @@ def volumes(val, **kwargs):  # pylint: disable=unused-argument
     val = helpers.translate_stringlist(val)
     for item in val:
         if not os.path.isabs(item):
-            raise SaltInvocationError("'{}' is not an absolute path".format(item))
+            raise SaltInvocationError(f"'{item}' is not an absolute path")
     return val
 
 
@@ -691,5 +679,5 @@ def working_dir(val, **kwargs):  # pylint: disable=unused-argument
     except AttributeError:
         is_abs = False
     if not is_abs:
-        raise SaltInvocationError("'{}' is not an absolute path".format(val))
+        raise SaltInvocationError(f"'{val}' is not an absolute path")
     return val

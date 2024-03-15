@@ -4,7 +4,6 @@ Execute a command and read the output as YAMLEX.
 The YAMLEX data is then directly overlaid onto the minion's Pillar data
 """
 
-
 import logging
 
 from salt.serializers.yamlex import deserialize

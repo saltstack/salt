@@ -107,7 +107,7 @@ def _update_nilrt_restart_state():
 
     if os.path.exists(nisysapi_conf_d_path):
         with salt.utils.files.fopen(
-            "{}/sysapi.conf.d.count".format(NILRT_RESTARTCHECK_STATE_PATH), "w"
+            f"{NILRT_RESTARTCHECK_STATE_PATH}/sysapi.conf.d.count", "w"
         ) as fcount:
             fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
 
@@ -135,7 +135,7 @@ def _fingerprint_file(*, filename, fingerprint_dir):
         )
     )
     __salt__["cmd.shell"](
-        "md5sum {} > {}/{}.md5sum".format(filename, fingerprint_dir, filename.name)
+        f"md5sum {filename} > {fingerprint_dir}/{filename.name}.md5sum"
     )
 
 
@@ -532,7 +532,7 @@ def install(
                 else:
                     to_install.append(pkgname)
             else:
-                pkgstr = "{}={}".format(pkgname, version_num)
+                pkgstr = f"{pkgname}={version_num}"
                 cver = old.get(pkgname, "")
                 if (
                     reinstall
@@ -839,15 +839,15 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
         state = _get_state(target)
         if not state:
-            ret[target]["comment"] = "Package {} not currently held.".format(target)
+            ret[target]["comment"] = f"Package {target} not currently held."
         elif state != "hold":
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be held.".format(target)
+                ret[target]["comment"] = f"Package {target} is set to be held."
             else:
                 result = _set_state(target, "hold")
                 ret[target].update(changes=result[target], result=True)
-                ret[target]["comment"] = "Package {} is now being held.".format(target)
+                ret[target]["comment"] = f"Package {target} is now being held."
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is already set to be held.".format(
@@ -902,11 +902,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         state = _get_state(target)
         if not state:
-            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+            ret[target]["comment"] = f"Package {target} does not have a state."
         elif state == "hold":
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret["comment"] = "Package {} is set not to be held.".format(target)
+                ret["comment"] = f"Package {target} is set not to be held."
             else:
                 result = _set_state(target, "ok")
                 ret[target].update(changes=result[target], result=True)
@@ -960,7 +960,7 @@ def _set_state(pkg, state):
     ret = {}
     valid_states = ("hold", "noprune", "user", "ok", "installed", "unpacked")
     if state not in valid_states:
-        raise SaltInvocationError("Invalid state: {}".format(state))
+        raise SaltInvocationError(f"Invalid state: {state}")
     oldstate = _get_state(pkg)
     cmd = ["opkg", "flag"]
     cmd.append(state)
@@ -1222,7 +1222,10 @@ def version_cmp(
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -1466,7 +1469,7 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 refresh_db()
             return ret
 
-    return "Repo {} doesn't exist in the opkg repo lists".format(repo)
+    return f"Repo {repo} doesn't exist in the opkg repo lists"
 
 
 def mod_repo(repo, **kwargs):
@@ -1514,9 +1517,9 @@ def mod_repo(repo, **kwargs):
                 repostr += "src/gz" if source["compressed"] else "src"
             repo_alias = kwargs["alias"] if "alias" in kwargs else repo
             if " " in repo_alias:
-                repostr += ' "{}"'.format(repo_alias)
+                repostr += f' "{repo_alias}"'
             else:
-                repostr += " {}".format(repo_alias)
+                repostr += f" {repo_alias}"
             repostr += " {}".format(kwargs["uri"] if "uri" in kwargs else source["uri"])
             trusted = kwargs.get("trusted")
             repostr = (

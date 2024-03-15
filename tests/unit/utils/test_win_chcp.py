@@ -1,6 +1,7 @@
 """
     Test win_chcp
 """
+
 import pytest
 
 from salt.exceptions import CodePageError

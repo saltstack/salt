@@ -2,7 +2,6 @@
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
 
-
 import os
 
 import pytest
@@ -305,7 +304,7 @@ def test_extracted_when_if_missing_path_exists():
     with patch.object(os.path, "exists", MagicMock(return_value=True)):
         ret = archive.extracted(name, source=source, if_missing=if_missing)
         assert ret["result"], ret
-        assert ret["comment"] == "Path {} exists".format(if_missing)
+        assert ret["comment"] == f"Path {if_missing} exists"
 
 
 def test_clean_parent_conflict():
@@ -453,7 +452,7 @@ def test_skip_files_list_verify_success():
     }
     mock_true = MagicMock(return_value=True)
     mock_false = MagicMock(return_value=False)
-    mock_cached = MagicMock(return_value="{}/{}".format(tmp_dir, source))
+    mock_cached = MagicMock(return_value=f"{tmp_dir}/{source}")
     source_sum = {"hsum": "testhash", "hash_type": "sha256"}
     mock_hash = MagicMock(return_value=source_sum)
     mock_source_list = MagicMock(return_value=(source, None))

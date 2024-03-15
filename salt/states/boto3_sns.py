@@ -356,10 +356,10 @@ def topic_absent(
                     log.debug("Deleted subscription %s for SNS topic %s", sub, TopicArn)
                     something_changed = True
                 else:
-                    ret[
-                        "comment"
-                    ] = "Failed to delete subscription {} for SNS topic {}".format(
-                        sub, TopicArn
+                    ret["comment"] = (
+                        "Failed to delete subscription {} for SNS topic {}".format(
+                            sub, TopicArn
+                        )
                     )
                     ret["result"] = False
                     return ret

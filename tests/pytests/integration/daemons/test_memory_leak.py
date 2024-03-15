@@ -6,18 +6,15 @@ import pytest
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(360),
 ]
 
 
 @pytest.fixture
-def testfile_path(tmp_path):
-    return tmp_path / "testfile"
-
-
-@pytest.fixture
-def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
+def file_add_delete_sls(tmp_path, salt_master):
+    path = tmp_path / "testfile"
     sls_name = "file_add"
-    sls_contents = """
+    sls_contents = f"""
     add_file:
       file.managed:
         - name: {path}
@@ -35,16 +32,13 @@ def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
     echo:
       cmd.run:
         - name: \"echo 'This is a test!'\"
-    """.format(
-        path=testfile_path
-    )
-    with pytest.helpers.temp_file(
-        f"{sls_name}.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    """
+    with salt_master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents):
         yield sls_name
 
 
 @pytest.mark.skip_on_fips_enabled_platform
+@pytest.mark.skip_on_windows(reason="Windows is a spawning platform, won't work")
 @pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work")
 @pytest.mark.flaky(max_runs=4)
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):

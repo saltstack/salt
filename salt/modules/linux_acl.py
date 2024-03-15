@@ -69,7 +69,7 @@ def getfacl(*args, **kwargs):
     if recursive:
         cmd += " -R"
     for dentry in args:
-        cmd += ' "{}"'.format(dentry)
+        cmd += f' "{dentry}"'
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     dentry = ""
     for line in out:
@@ -186,7 +186,7 @@ def wipefacls(*args, **kwargs):
     if recursive:
         cmd += " -R"
     for dentry in args:
-        cmd += ' "{}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False)
     return True
 
@@ -233,10 +233,10 @@ def modfacl(acl_type, acl_name="", perms="", *args, **kwargs):
 
     cmd += " -m"
 
-    cmd = "{} {}:{}:{}".format(cmd, _acl_prefix(acl_type), acl_name, perms)
+    cmd = f"{cmd} {_acl_prefix(acl_type)}:{acl_name}:{perms}"
 
     for dentry in args:
-        cmd += ' "{}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False, raise_err=raise_err)
     return True
 
@@ -265,9 +265,9 @@ def delfacl(acl_type, acl_name="", *args, **kwargs):
 
     cmd += " -x"
 
-    cmd = "{} {}:{}".format(cmd, _acl_prefix(acl_type), acl_name)
+    cmd = f"{cmd} {_acl_prefix(acl_type)}:{acl_name}"
 
     for dentry in args:
-        cmd += ' "{}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False)
     return True

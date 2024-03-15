@@ -90,9 +90,9 @@ def admin_password_present(name, password=None, **kwargs):
     unique_passwords.reverse()
 
     if not unique_passwords:
-        ret[
-            "comment"
-        ] = "Could not find any Zabbix Admin password setting! See documentation."
+        ret["comment"] = (
+            "Could not find any Zabbix Admin password setting! See documentation."
+        )
         return ret
     else:
         desired_password = unique_passwords[0]

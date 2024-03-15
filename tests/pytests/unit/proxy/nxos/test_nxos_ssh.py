@@ -42,7 +42,6 @@ def configure_loader_modules():
 
 
 def test_init():
-
     """UT: nxos module:init method - ssh proxy"""
 
     with patch("salt.proxy.nxos._init_ssh", autospec=True) as init_ssh:
@@ -51,7 +50,6 @@ def test_init():
 
 
 def test_init_opts_none():
-
     """UT: nxos module:init method - __opts__ connection is None"""
 
     with patch("salt.proxy.nxos.__opts__", {"proxy": {"connection": None}}):
@@ -61,7 +59,6 @@ def test_init_opts_none():
 
 
 def test_initialized():
-
     """UT: nxos module:initialized method - ssh proxy"""
 
     with patch("salt.proxy.nxos._initialized_ssh", autospec=True) as initialized_ssh:
@@ -70,7 +67,6 @@ def test_initialized():
 
 
 def test_ping():
-
     """UT: nxos module:ping method - ssh proxy"""
 
     with patch("salt.proxy.nxos._ping_ssh", autospec=True) as ping_ssh:
@@ -79,7 +75,6 @@ def test_ping():
 
 
 def test_grains():
-
     """UT: nxos module:grains method - ssh grains"""
 
     with patch(
@@ -90,7 +85,6 @@ def test_grains():
 
 
 def test_sendline():
-
     """UT: nxos module:sendline method - nxapi"""
 
     command = "show version"
@@ -101,7 +95,6 @@ def test_sendline():
 
 
 def test_proxy_config():
-
     """UT: nxos module:proxy_config method - ssh success path"""
 
     commands = ["feature bgp", "router bgp 65535"]
@@ -113,7 +106,6 @@ def test_proxy_config():
 
 
 def test_proxy_config_save_config():
-
     """UT: nxos module:proxy_config method - ssh success path"""
 
     commands = ["feature bgp", "router bgp 65535"]
@@ -125,7 +117,6 @@ def test_proxy_config_save_config():
 
 
 def test_proxy_config_error():
-
     """UT: nxos module:proxy_config method - CommandExecutionError"""
 
     with patch(
@@ -156,7 +147,6 @@ def test__init_ssh_device_details():
 
 
 def test__init_ssh_opts():
-
     """UT: nxos module:_init_ssh method - successful connectinon"""
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {}):
@@ -174,7 +164,6 @@ def test__init_ssh_opts():
 
 
 def test__init_ssh_prompt():
-
     """UT: nxos module:_init_ssh method - prompt regex"""
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {}):
@@ -198,7 +187,6 @@ def test__init_ssh_prompt():
 
 
 def test__initialized_ssh():
-
     """UT: nxos module:_initialized_ssh method"""
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {"initialized": True}):
@@ -211,7 +199,6 @@ def test__initialized_ssh():
 
 
 def test__parse_output_for_errors():
-
     """UT: nxos module:_parse_output_for_errors method"""
 
     data = "% Incomplete command at '^' marker."
@@ -246,7 +233,6 @@ def test__parse_output_for_errors():
 
 
 def test__init_ssh_raise_exception():
-
     """UT: nxos module:_init_ssh method - raise exception"""
 
     class SSHException(Exception):

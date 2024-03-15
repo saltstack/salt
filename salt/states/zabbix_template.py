@@ -873,10 +873,10 @@ def present(name, params, static_host_list=True, **kwargs):
 
     if not CHANGE_STACK:
         ret["result"] = True
-        ret[
-            "comment"
-        ] = 'Zabbix Template "{}" already exists and corresponds to a definition.'.format(
-            name
+        ret["comment"] = (
+            'Zabbix Template "{}" already exists and corresponds to a definition.'.format(
+                name
+            )
         )
     else:
         tmpl_action = next(

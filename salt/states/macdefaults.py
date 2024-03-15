@@ -58,20 +58,20 @@ def write(name, domain, value, vtype="string", user=None):
         (value in [True, "TRUE", "YES"] and current_value == "1")
         or (value in [False, "FALSE", "NO"] and current_value == "0")
     ):
-        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
+        ret["comment"] += f"{domain} {name} is already set to {value}"
     elif vtype in ["int", "integer"] and safe_cast(current_value, int) == safe_cast(
         value, int
     ):
-        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
+        ret["comment"] += f"{domain} {name} is already set to {value}"
     elif current_value == value:
-        ret["comment"] += "{} {} is already set to {}".format(domain, name, value)
+        ret["comment"] += f"{domain} {name} is already set to {value}"
     else:
         out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
         if out["retcode"] != 0:
             ret["result"] = False
             ret["comment"] = "Failed to write default. {}".format(out["stdout"])
         else:
-            ret["changes"]["written"] = "{} {} is set to {}".format(domain, name, value)
+            ret["changes"]["written"] = f"{domain} {name} is set to {value}"
 
     return ret
 
@@ -96,8 +96,8 @@ def absent(name, domain, user=None):
     out = __salt__["macdefaults.delete"](domain, name, user)
 
     if out["retcode"] != 0:
-        ret["comment"] += "{} {} is already absent".format(domain, name)
+        ret["comment"] += f"{domain} {name} is already absent"
     else:
-        ret["changes"]["absent"] = "{} {} is now absent".format(domain, name)
+        ret["changes"]["absent"] = f"{domain} {name} is now absent"
 
     return ret

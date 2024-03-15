@@ -4,7 +4,6 @@
     Test cases for salt.modules.ret
 """
 
-
 import pytest
 
 import salt.loader

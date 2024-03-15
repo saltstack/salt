@@ -49,7 +49,7 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
     """
     if invalid_kwargs:
         if isinstance(invalid_kwargs, dict):
-            new_invalid = ["{}={}".format(x, y) for x, y in invalid_kwargs.items()]
+            new_invalid = [f"{x}={y}" for x, y in invalid_kwargs.items()]
             invalid_kwargs = new_invalid
     msg = "The following keyword arguments are not valid: {}".format(
         ", ".join(invalid_kwargs)
@@ -236,7 +236,7 @@ def get_function_argspec(func, is_class_method=None):
                             the argspec unless ``is_class_method`` is True.
     """
     if not callable(func):
-        raise TypeError("{} is not a callable".format(func))
+        raise TypeError(f"{func} is not a callable")
 
     while hasattr(func, "__wrapped__"):
         func = func.__wrapped__
@@ -244,7 +244,7 @@ def get_function_argspec(func, is_class_method=None):
     try:
         sig = inspect.signature(func)
     except TypeError:
-        raise TypeError("Cannot inspect argument list for '{}'".format(func))
+        raise TypeError(f"Cannot inspect argument list for '{func}'")
 
     # Build a namedtuple which looks like the result of a Python 2 argspec
     _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
@@ -345,7 +345,10 @@ def split_input(val, mapper=None):
     Take an input value and split it into a list, returning the resulting list
     """
     if mapper is None:
-        mapper = lambda x: x
+
+        def mapper(x):
+            return x
+
     if isinstance(val, list):
         return list(map(mapper, val))
     try:
@@ -466,18 +469,18 @@ def format_call(
                     # In case this is being called for a state module
                     "full",
                     # Not a state module, build the name
-                    "{}.{}".format(fun.__module__, fun.__name__),
+                    f"{fun.__module__}.{fun.__name__}",
                 ),
             )
         else:
             msg = "{} and '{}' are invalid keyword arguments for '{}'".format(
-                ", ".join(["'{}'".format(e) for e in extra][:-1]),
+                ", ".join([f"'{e}'" for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
                     "full",
                     # Not a state module, build the name
-                    "{}.{}".format(fun.__module__, fun.__name__),
+                    f"{fun.__module__}.{fun.__name__}",
                 ),
             )
 
@@ -529,7 +532,8 @@ def parse_function(s):
             key = None
             word = []
         elif token in "]})":
-            if not brackets or token != {"[": "]", "{": "}", "(": ")"}[brackets.pop()]:
+            _tokens = {"[": "]", "{": "}", "(": ")"}
+            if not brackets or token != _tokens[brackets.pop()]:
                 break
             word.append(token)
         elif token == "=" and not brackets:

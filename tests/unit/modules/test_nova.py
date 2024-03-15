@@ -2,7 +2,6 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import salt.modules.nova as nova
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

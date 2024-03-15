@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_powercfg
 """
 
-
 import pytest
 
 import salt.modules.win_powercfg as powercfg
@@ -168,7 +167,7 @@ def test_get_disk_timeout(query_output):
         calls = [
             call("powercfg /getactivescheme", python_shell=False),
             call(
-                "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_DISK" " DISKIDLE",
+                "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_DISK DISKIDLE",
                 python_shell=False,
             ),
         ]

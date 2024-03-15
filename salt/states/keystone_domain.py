@@ -26,7 +26,6 @@ Example States
         - name: domain1
 """
 
-
 __virtualname__ = "keystone_domain"
 
 
@@ -65,7 +64,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = kwargs
-            ret["comment"] = "Domain {} will be created.".format(name)
+            ret["comment"] = f"Domain {name} will be created."
             return ret
 
         kwargs["name"] = name
@@ -79,7 +78,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = changes
-            ret["comment"] = "Domain {} will be updated.".format(name)
+            ret["comment"] = f"Domain {name} will be updated."
             return ret
 
         kwargs["domain_id"] = domain.id
@@ -107,7 +106,7 @@ def absent(name, auth=None):
         if __opts__["test"] is True:
             ret["result"] = None
             ret["changes"] = {"name": name}
-            ret["comment"] = "Domain {} will be deleted.".format(name)
+            ret["comment"] = f"Domain {name} will be deleted."
             return ret
 
         __salt__["keystoneng.domain_delete"](name=domain)

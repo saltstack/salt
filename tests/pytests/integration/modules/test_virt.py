@@ -1,6 +1,7 @@
 """
 Validate the virt module
 """
+
 import logging
 from numbers import Number
 from xml.etree import ElementTree
@@ -15,6 +16,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(120),
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
 
@@ -417,13 +419,11 @@ class TestVirtMigrateTest:
         assert domains == []
 
     def test_ssh_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain, grains
+        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
     ):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
-        if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 3:
-            pytest.skip("Skipping this test on PhotonOS 3")
         ret = salt_cli.run("virt.list_active_vms", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
 

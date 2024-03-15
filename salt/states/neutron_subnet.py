@@ -46,7 +46,6 @@ Example States
         - ip_version: 6
 """
 
-
 __virtualname__ = "neutron_subnet"
 
 

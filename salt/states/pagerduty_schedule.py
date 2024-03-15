@@ -65,7 +65,7 @@ def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):
                 api_key=api_key,
             )
             if u is None:
-                raise Exception("unknown user: {}".format(user))
+                raise Exception(f"unknown user: {user}")
             user["user"]["id"] = u["id"]
     r = __salt__["pagerduty_util.resource_present"](
         "schedules", ["name", "id"], _diff, profile, subdomain, api_key, **kwargs

@@ -4,7 +4,6 @@
     Test cases for salt.modules.hg
 """
 
-
 import pytest
 
 import salt.modules.hg as hg
@@ -97,18 +96,16 @@ def test_status_multiple():
     """
     Test for Status to a given repository (cwd is list)
     """
+
+    def side_effect(*_, **kwargs):
+        if kwargs["cwd"] == "dir 0":
+            return "A file 0\n"
+        if kwargs["cwd"] == "dir 1":
+            return "M file 1"
+
     with patch.dict(
         hg.__salt__,
-        {
-            "cmd.run_stdout": MagicMock(
-                side_effect=(
-                    lambda *args, **kwargs: {
-                        "dir 0": "A file 0\n",
-                        "dir 1": "M file 1",
-                    }[kwargs["cwd"]]
-                )
-            )
-        },
+        {"cmd.run_stdout": MagicMock(side_effect=side_effect)},
     ):
         assert hg.status(["dir 0", "dir 1"]) == {
             "dir 0": {"added": ["file 0"]},

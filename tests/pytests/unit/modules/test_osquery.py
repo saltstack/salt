@@ -4,7 +4,6 @@
     Test cases for salt.modules.osquery
 """
 
-
 import pytest
 
 import salt.modules.osquery as osquery

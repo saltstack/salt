@@ -1,6 +1,7 @@
 """
 These commands are used to generate Salt's manpages.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import shutil
 import sys
 
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 import tools.utils
 
@@ -21,8 +23,8 @@ docs = command_group(
     name="docs",
     help="Manpages tools",
     description=__doc__,
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "base.txt",
             tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
             tools.utils.REPO_ROOT
@@ -32,7 +34,7 @@ docs = command_group(
             / "py{}.{}".format(*sys.version_info)
             / "docs.txt",
         ],
-        "pip_args": [
+        install_args=[
             "--constraint",
             str(
                 tools.utils.REPO_ROOT
@@ -43,7 +45,7 @@ docs = command_group(
                 / "linux.txt"
             ),
         ],
-    },
+    ),
 )
 
 

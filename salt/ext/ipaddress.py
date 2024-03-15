@@ -2162,8 +2162,7 @@ class IPv6Interface(IPv6Address):
         return x
 
     def __str__(self):
-        return '%s/%d' % (super().__str__(),
-                          self._prefixlen)
+        return '%s/%d' % (super(), self._prefixlen)
 
     def __eq__(self, other):
         address_equal = IPv6Address.__eq__(self, other)

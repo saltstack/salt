@@ -4,7 +4,6 @@
     TestCase for salt.modules.smtp
 """
 
-
 import pytest
 
 import salt.modules.smtp as smtp

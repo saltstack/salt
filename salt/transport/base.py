@@ -403,7 +403,7 @@ class PublishClient(Transport):
         """
         raise NotImplementedError
 
-    async def connect(  # pylint: disable=arguments-differ
+    async def connect(  # pylint: disable=arguments-differ,invalid-overridden-method
         self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
     ):
         """

@@ -10,7 +10,6 @@ Manage users with the useradd command
 
 """
 
-
 import copy
 import logging
 
@@ -109,7 +108,7 @@ def add(
     workphone="",
     homephone="",
     createhome=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Add a user to the minion
@@ -219,7 +218,7 @@ def chuid(name, uid):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if uid == pre_info["uid"]:
         return True
     cmd = ["usermod", "-u", uid, name]
@@ -239,7 +238,7 @@ def chgid(name, gid):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if gid == pre_info["gid"]:
         return True
     cmd = ["usermod", "-g", gid, name]
@@ -259,7 +258,7 @@ def chshell(name, shell):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if shell == pre_info["shell"]:
         return True
     cmd = ["usermod", "-s", shell, name]
@@ -290,7 +289,7 @@ def chhome(name, home, persist=False):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if home == pre_info["home"]:
         return True
     cmd = ["usermod", "-d", home]
@@ -458,10 +457,10 @@ def rename(name, new_name):
     """
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
     cmd = ["usermod", "-l", new_name, name]
     __salt__["cmd.run"](cmd, python_shell=False)
     return info(new_name).get("name") == new_name

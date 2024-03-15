@@ -1,6 +1,7 @@
 """
 unit tests for the slack engine
 """
+
 import pytest
 
 import salt.engines.slack as slack

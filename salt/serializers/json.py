@@ -7,7 +7,6 @@
     It's just a wrapper around json (or simplejson if available).
 """
 
-
 import salt.utils.json
 from salt.serializers import DeserializationError, SerializationError
 

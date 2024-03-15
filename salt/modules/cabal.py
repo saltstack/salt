@@ -85,7 +85,7 @@ def install(pkg=None, pkgs=None, user=None, install_global=False, env=None):
         cmd.append("--global")
 
     if pkg:
-        cmd.append('"{}"'.format(pkg))
+        cmd.append(f'"{pkg}"')
     elif pkgs:
         cmd.append('"{}"'.format('" "'.join(pkgs)))
 
@@ -125,7 +125,7 @@ def list_(pkg=None, user=None, installed=False, env=None):
         cmd.append("--installed")
 
     if pkg:
-        cmd.append('"{}"'.format(pkg))
+        cmd.append(f'"{pkg}"')
 
     result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
@@ -160,7 +160,7 @@ def uninstall(pkg, user=None, env=None):
 
     """
     cmd = ["ghc-pkg unregister"]
-    cmd.append('"{}"'.format(pkg))
+    cmd.append(f'"{pkg}"')
 
     result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 

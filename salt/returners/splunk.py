@@ -210,6 +210,7 @@ class http_event_collector:
             data=salt.utils.json.dumps(data),
             headers=headers,
             verify=self.verify_ssl,
+            timeout=120,
         )
 
         # Print debug info if flag set

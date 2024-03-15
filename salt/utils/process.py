@@ -1,6 +1,7 @@
 """
 Functions for daemonizing and otherwise modifying running processes
 """
+
 import contextlib
 import copy
 import errno
@@ -55,7 +56,7 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle("{} {}".format(current.rstrip(), name))
+        setproctitle.setproctitle(f"{current.rstrip()} {name}")
 
 
 def daemonize(redirect_out=True):
@@ -173,7 +174,7 @@ def notify_systemd():
             if notify_socket:
                 # Handle abstract namespace socket
                 if notify_socket.startswith("@"):
-                    notify_socket = "\0{}".format(notify_socket[1:])
+                    notify_socket = f"\0{notify_socket[1:]}"
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
@@ -351,7 +352,7 @@ def set_pidfile(pidfile, user):
             pidfile, user
         )
         log.debug("%s Traceback follows:", msg, exc_info=True)
-        sys.stderr.write("{}\n".format(msg))
+        sys.stderr.write(f"{msg}\n")
         sys.exit(err.errno)
     log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
 
@@ -591,7 +592,7 @@ class ProcessManager:
             # with the tree option will not be able to find them.
             return
 
-        for pid in self._process_map.copy().keys():
+        for pid in self._process_map.copy():
             try:
                 os.kill(pid, signal_)
             except OSError as exc:
@@ -921,9 +922,9 @@ class Process(multiprocessing.Process):
         self.__init__(*args, **kwargs)
         # Override self.__logging_config__ with what's in state
         self.__logging_config__ = logging_config
-        for (function, args, kwargs) in state["after_fork_methods"]:
+        for function, args, kwargs in state["after_fork_methods"]:
             self.register_after_fork_method(function, *args, **kwargs)
-        for (function, args, kwargs) in state["finalize_methods"]:
+        for function, args, kwargs in state["finalize_methods"]:
             self.register_finalize_method(function, *args, **kwargs)
 
     def __getstate__(self):
@@ -943,7 +944,7 @@ class Process(multiprocessing.Process):
             "logging_config": self.__logging_config__,
         }
 
-    def __decorate_run(self, run_func):
+    def __decorate_run(self, run_func):  # pylint: disable=unused-private-member
         @functools.wraps(run_func)
         def wrapped_run_func():
             # Static after fork method, always needs to happen first
@@ -1062,7 +1063,7 @@ class SignalHandlingProcess(Process):
     def _handle_signals(self, signum, sigframe):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:

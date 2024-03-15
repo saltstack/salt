@@ -2,7 +2,6 @@
 Utility functions for use with or in SLS files
 """
 
-
 import os
 import posixpath
 import textwrap

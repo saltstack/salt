@@ -81,7 +81,8 @@ def create_env(user_token, inherit, timeout=1):
             break
     if env is not None:
         return env
-    raise exc
+    if exc is not None:
+        raise exc
 
 
 def runas(cmdLine, username, password=None, cwd=None):

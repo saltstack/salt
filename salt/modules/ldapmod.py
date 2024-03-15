@@ -39,7 +39,6 @@ Salt interface to LDAP commands
     badness may ensue - you have been warned.
 """
 
-
 import logging
 import time
 
@@ -83,7 +82,7 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        value = __salt__["config.option"]("ldap.{}".format(key))
+        value = __salt__["config.option"](f"ldap.{key}")
     return salt.utils.data.decode(value, to_str=True)
 
 
@@ -112,7 +111,7 @@ def search(
     dn=None,  # pylint: disable=C0103
     scope=None,
     attrs=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run an arbitrary LDAP query and return the results.
@@ -191,13 +190,13 @@ class _LDAPConnection:
         self.bindpw = bindpw
 
         if self.uri == "":
-            self.uri = "ldap://{}:{}".format(self.server, self.port)
+            self.uri = f"ldap://{self.server}:{self.port}"
 
         try:
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
-            self.ldap = ldap.initialize("{}".format(self.uri))
+            self.ldap = ldap.initialize(f"{self.uri}")
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
 

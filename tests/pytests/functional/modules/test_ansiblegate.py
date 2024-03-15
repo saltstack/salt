@@ -10,6 +10,7 @@ pytestmark = [
         reason="ansible is not installed",
     ),
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 

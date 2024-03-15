@@ -86,8 +86,8 @@ def send_msg(
                 recipient, name, atts
             )
         else:
-            ret["comment"] = "Sent message to {}: {}".format(recipient, name)
+            ret["comment"] = f"Sent message to {recipient}: {name}"
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to send message to {}: {}".format(recipient, name)
+        ret["comment"] = f"Unable to send message to {recipient}: {name}"
     return ret

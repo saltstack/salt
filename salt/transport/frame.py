@@ -2,7 +2,6 @@
 Helper functions for transport components to handle message framing
 """
 
-
 import salt.utils.msgpack
 
 

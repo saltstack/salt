@@ -5,7 +5,6 @@ Check Host & Service status from Nagios via JSON RPC.
 
 """
 
-
 import http.client
 import logging
 
@@ -98,7 +97,7 @@ def _status_query(query, hostname, enumerate=None, service=None):
     elif result.get("status", None) == http.client.NOT_FOUND:
         ret["error"] = "URL {} was not found.".format(config["url"])
     else:
-        ret["error"] = "Results: {}".format(result.text)
+        ret["error"] = f"Results: {result.text}"
 
     return ret
 

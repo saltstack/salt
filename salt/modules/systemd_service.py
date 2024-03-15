@@ -55,9 +55,6 @@ VALID_UNIT_TYPES = (
 # Define the module's virtual name
 __virtualname__ = "service"
 
-# Disable check for string substitution
-# pylint: disable=E1321
-
 
 def __virtual__():
     """

@@ -14,6 +14,8 @@ def test_system_config(grains):
     """
     if grains["os_family"] == "RedHat":
         if grains["osfinger"] in (
+            "AlmaLinux-8",
+            "AlmaLinux-9",
             "CentOS Stream-8",
             "CentOS Linux-8",
             "CentOS Stream-9",

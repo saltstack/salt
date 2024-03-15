@@ -15,9 +15,9 @@ EXIT_CODE_CMD = STATE_BASE_DIR / "exit_code.cmd"
 
 def _exit_code(code):
     if os.name == "nt":
-        cmd = "cmd /c {} {}".format(EXIT_CODE_CMD, code)
+        cmd = f"cmd /c {EXIT_CODE_CMD} {code}"
     else:
-        cmd = "/usr/bin/env sh {} {}".format(EXIT_CODE_SH, code)
+        cmd = f"/usr/bin/env sh {EXIT_CODE_SH} {code}"
     return cmd
 
 

@@ -40,7 +40,7 @@ importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
-inflect==6.0.4
+inflect==7.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
@@ -107,7 +107,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.15.1
     # via sphinx
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   tempora
@@ -153,6 +153,7 @@ tempora==5.3.0
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   inflect
     #   pydantic
 uc-micro-py==1.0.2
     # via linkify-it-py

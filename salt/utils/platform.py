@@ -1,6 +1,7 @@
 """
 Functions for identifying which platform a machine is
 """
+
 import contextlib
 import multiprocessing
 import os

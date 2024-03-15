@@ -1283,7 +1283,7 @@ fake_info                                 Not found on the installation media
 
 """
     fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/info_fake"
-    fileset_pkg_base_name = os.path.basename("{}".format(fileset_pkg_name))
+    fileset_pkg_base_name = os.path.basename(f"{fileset_pkg_name}")
     dnf_installp_call = MagicMock(
         side_effect=[
             {"retcode": 1, "stdout": "", "stderr": info_fake_dnf_error},
@@ -1347,8 +1347,8 @@ def test_remove_dnf():
     )
     list_pkgs_mock = MagicMock(
         side_effect=[
-            {"{}".format(pkg_name): "{}".format(pkg_name_version)},
-            {"{}".format(pkg_name): ""},
+            {f"{pkg_name}": f"{pkg_name_version}"},
+            {f"{pkg_name}": ""},
         ]
     )
 
@@ -1357,21 +1357,19 @@ def test_remove_dnf():
             aixpkg.__salt__,
             {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
         ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
-            result = aixpkg.remove("{}".format(pkg_name))
+            result = aixpkg.remove(f"{pkg_name}")
             dnf_call.assert_any_call(
-                ["/usr/bin/lslpp", "-Lc", "{}".format(pkg_name)],
+                ["/usr/bin/lslpp", "-Lc", f"{pkg_name}"],
                 python_shell=False,
             )
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf -y remove {}".format(pkg_name),
+                f"/opt/freeware/bin/dnf -y remove {pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
             )
-            expected = {
-                "{}".format(pkg_name): {"old": "{}".format(pkg_name_version), "new": ""}
-            }
+            expected = {f"{pkg_name}": {"old": f"{pkg_name_version}", "new": ""}}
             assert result == expected
 
 
@@ -1468,8 +1466,8 @@ bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS
     )
     list_pkgs_mock = MagicMock(
         side_effect=[
-            {"{}".format(fileset_base_name): "{}".format(fileset_pkg_name_version)},
-            {"{}".format(fileset_base_name): ""},
+            {f"{fileset_base_name}": f"{fileset_pkg_name_version}"},
+            {f"{fileset_base_name}": ""},
         ]
     )
 
@@ -1478,20 +1476,20 @@ bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS
             aixpkg.__salt__,
             {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
         ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
-            result = aixpkg.remove("{}".format(fileset_pkg_name))
+            result = aixpkg.remove(f"{fileset_pkg_name}")
             dnf_call.assert_any_call(
-                ["/usr/bin/lslpp", "-Lc", "{}".format(fileset_pkg_name)],
+                ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
                 python_shell=False,
             )
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             test_name = os.path.basename(fileset_pkg_name)
             dnf_call.assert_any_call(
-                ["/usr/sbin/installp", "-u", "{}".format(fileset_base_name)],
+                ["/usr/sbin/installp", "-u", f"{fileset_base_name}"],
                 python_shell=False,
             )
             expected = {
-                "{}".format(fileset_base_name): {
-                    "old": "{}".format(fileset_pkg_name_version),
+                f"{fileset_base_name}": {
+                    "old": f"{fileset_pkg_name_version}",
                     "new": "",
                 }
             }
@@ -1530,15 +1528,13 @@ lslpp: Fileset info_fake not installed.
     ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
         expected = {
             "changes": {},
-            "errors": [
-                "/usr/bin/lslpp: Fileset {} not installed.".format(fileset_pkg_name)
-            ],
+            "errors": [f"/usr/bin/lslpp: Fileset {fileset_pkg_name} not installed."],
         }
         with pytest.raises(CommandExecutionError) as exc_info:
             result = aixpkg.remove(fileset_pkg_name)
         assert exc_info.value.info == expected, exc_info.value.info
         assert lslpp_call.call_count == 1
         lslpp_call.assert_any_call(
-            ["/usr/bin/lslpp", "-Lc", "{}".format(fileset_pkg_name)],
+            ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
             python_shell=False,
         )

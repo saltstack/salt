@@ -499,9 +499,9 @@ def test_destroy():
                 connect.return_value.servers.get_by_name.return_value = None
                 hetzner.destroy("myvm", "action")
 
-                server = (
-                    connect.return_value.servers.get_by_name.return_value
-                ) = MagicMock()
+                server = connect.return_value.servers.get_by_name.return_value = (
+                    MagicMock()
+                )
 
                 # Stop the server before shutdown but failed
                 hetzner.destroy("myvm", "action")
@@ -540,9 +540,9 @@ def test_resize():
 
                 hetzner.resize("myvm", kwargs, "action")
 
-                server = (
-                    connect.return_value.servers.get_by_name.return_value
-                ) = MagicMock()
+                server = connect.return_value.servers.get_by_name.return_value = (
+                    MagicMock()
+                )
 
                 # Invalid server size
                 with pytest.raises(

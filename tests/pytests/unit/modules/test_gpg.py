@@ -626,7 +626,9 @@ def test_export_public_key_to_file(gpghome):
                     keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True
                 )
                 assert ret == GPG_TEST_PUB_KEY
-                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text(
+                    encoding="utf-8"
+                )
                 assert keyfile_contents == GPG_TEST_PUB_KEY
 
 
@@ -751,7 +753,9 @@ def test_export_secret_key_to_file_with_gpg_passphrase_in_pillar(gpghome):
                     True,
                     passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
-                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text(
+                    encoding="utf-8"
+                )
                 assert keyfile_contents == GPG_TEST_PRIV_KEY
 
 

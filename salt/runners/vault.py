@@ -881,7 +881,7 @@ def clear_cache(master=True, minions=True):
     if minions:
         for minion in cache.list("minions"):
             if minions is True or (isinstance(minions, list) and minion in minions):
-                log.debug(f"Clearing master Vault cache for minion {minion}")
+                log.debug("Clearing master Vault cache for minion %s", minion)
                 cache.flush(f"minions/{minion}/vault")
     return True
 

@@ -1,6 +1,7 @@
 """
 Manage groups on Mac OS 10.7+
 """
+
 import logging
 
 import salt.utils.functools
@@ -57,7 +58,7 @@ def add(name, gid=None, **kwargs):
     ### NOTE: **kwargs isn't used here but needs to be included in this
     ### function for compatibility with the group.present state
     if info(name):
-        raise CommandExecutionError("Group '{}' already exists".format(name))
+        raise CommandExecutionError(f"Group '{name}' already exists")
     if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError("Group name cannot contain whitespace")
     if name.startswith("_"):
@@ -71,7 +72,7 @@ def add(name, gid=None, **kwargs):
     # check if gid is already in use
     gid_list = _list_gids()
     if str(gid) in gid_list:
-        raise CommandExecutionError("gid '{}' already exists".format(gid))
+        raise CommandExecutionError(f"gid '{gid}' already exists")
 
     cmd = ["dseditgroup", "-o", "create"]
     if gid:
@@ -129,7 +130,7 @@ def adduser(group, name):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     """
-    cmd = "dscl . -merge /Groups/{} GroupMembership {}".format(group, name)
+    cmd = f"dscl . -merge /Groups/{group} GroupMembership {name}"
     return __salt__["cmd.retcode"](cmd) == 0
 
 
@@ -148,7 +149,7 @@ def deluser(group, name):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     """
-    cmd = "dscl . -delete /Groups/{} GroupMembership {}".format(group, name)
+    cmd = f"dscl . -delete /Groups/{group} GroupMembership {name}"
     return __salt__["cmd.retcode"](cmd) == 0
 
 
@@ -169,7 +170,7 @@ def members(name, members_list):
     retcode = 1
     grp_info = __salt__["group.info"](name)
     if grp_info and name in grp_info["name"]:
-        cmd = "/usr/bin/dscl . -delete /Groups/{} GroupMembership".format(name)
+        cmd = f"/usr/bin/dscl . -delete /Groups/{name} GroupMembership"
         retcode = __salt__["cmd.retcode"](cmd) == 0
         for user in members_list.split(","):
             cmd = "/usr/bin/dscl . -merge /Groups/{} GroupMembership {}".format(
@@ -254,7 +255,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("Group '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Group '{name}' does not exist")
     if gid == pre_info["gid"]:
         return True
     cmd = ["dseditgroup", "-o", "edit", "-i", gid, name]

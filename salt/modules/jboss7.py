@@ -21,7 +21,6 @@ Example:
 
 """
 
-
 import logging
 import re
 
@@ -91,7 +90,7 @@ def stop_server(jboss_config, host=None):
     if host is None:
         operation = ":shutdown"
     else:
-        operation = '/host="{host}"/:shutdown'.format(host=host)
+        operation = f'/host="{host}"/:shutdown'
     shutdown_result = __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False
     )
@@ -130,7 +129,7 @@ def reload_(jboss_config, host=None):
     if host is None:
         operation = ":reload"
     else:
-        operation = '/host="{host}"/:reload'.format(host=host)
+        operation = f'/host="{host}"/:reload'
     reload_result = __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False
     )
@@ -195,7 +194,7 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
         ),
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
 
     return __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False
@@ -214,7 +213,7 @@ def __get_properties_assignment_string(datasource_properties, ds_resource_descri
 
 
 def __get_single_assignment_string(key, val, ds_attributes):
-    return "{}={}".format(key, __format_value(key, val, ds_attributes))
+    return f"{key}={__format_value(key, val, ds_attributes)}"
 
 
 def __format_value(key, value, ds_attributes):
@@ -228,18 +227,14 @@ def __format_value(key, value, ds_attributes):
             else:
                 return "false"
         else:
-            raise Exception(
-                "Don't know how to convert {} to BOOLEAN type".format(value)
-            )
+            raise Exception(f"Don't know how to convert {value} to BOOLEAN type")
 
     elif type_ == "INT":
         return str(value)
     elif type_ == "STRING":
-        return '"{}"'.format(value)
+        return f'"{value}"'
     else:
-        raise Exception(
-            "Don't know how to format value {} of type {}".format(value, type_)
-        )
+        raise Exception(f"Don't know how to format value {value} of type {type_}")
 
 
 def update_datasource(jboss_config, name, new_properties, profile=None):
@@ -316,7 +311,7 @@ def __get_datasource_resource_description(jboss_config, name, profile=None):
         )
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
     operation_result = __salt__["jboss7_cli.run_operation"](jboss_config, operation)
     if operation_result["outcome"]:
         return operation_result["result"]
@@ -382,7 +377,7 @@ def create_simple_binding(jboss_config, binding_name, value, profile=None):
         )
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
     return __salt__["jboss7_cli.run_operation"](jboss_config, operation)
 
 
@@ -419,7 +414,7 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
         )
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
     return __salt__["jboss7_cli.run_operation"](jboss_config, operation)
 
 
@@ -453,7 +448,7 @@ def __read_simple_binding(jboss_config, binding_name, profile=None):
         binding_name=binding_name
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
     return __salt__["jboss7_cli.run_operation"](jboss_config, operation)
 
 
@@ -475,7 +470,7 @@ def __update_datasource_property(
         value=__format_value(name, value, ds_attributes),
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
 
     return __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False
@@ -488,7 +483,7 @@ def __read_datasource(jboss_config, name, profile=None):
         name=name
     )
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
 
     operation_result = __salt__["jboss7_cli.run_operation"](jboss_config, operation)
 
@@ -525,9 +520,9 @@ def remove_datasource(jboss_config, name, profile=None):
         profile,
     )
 
-    operation = "/subsystem=datasources/data-source={name}:remove".format(name=name)
+    operation = f"/subsystem=datasources/data-source={name}:remove"
     if profile is not None:
-        operation = '/profile="{profile}"'.format(profile=profile) + operation
+        operation = f'/profile="{profile}"' + operation
 
     return __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False
@@ -553,7 +548,7 @@ def deploy(jboss_config, source_file):
         "======================== MODULE FUNCTION: jboss7.deploy, source_file=%s",
         source_file,
     )
-    command = "deploy {source_file} --force ".format(source_file=source_file)
+    command = f"deploy {source_file} --force "
     return __salt__["jboss7_cli.run_command"](
         jboss_config, command, fail_on_error=False
     )
@@ -601,5 +596,5 @@ def undeploy(jboss_config, deployment):
         "======================== MODULE FUNCTION: jboss7.undeploy, deployment=%s",
         deployment,
     )
-    command = "undeploy {deployment} ".format(deployment=deployment)
+    command = f"undeploy {deployment} "
     return __salt__["jboss7_cli.run_command"](jboss_config, command)

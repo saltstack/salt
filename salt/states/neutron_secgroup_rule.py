@@ -28,7 +28,6 @@ Example States
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 """
 
-
 __virtualname__ = "neutron_secgroup_rule"
 
 
@@ -96,7 +95,7 @@ def present(name, auth=None, **kwargs):
     if secgroup is None:
         ret["result"] = False
         ret["changes"] = ({},)
-        ret["comment"] = "Security Group does not exist {}".format(name)
+        ret["comment"] = f"Security Group does not exist {name}"
         return ret
 
     # we have to search through all secgroup rules for a possible match

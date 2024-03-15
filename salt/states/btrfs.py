@@ -97,7 +97,7 @@ def __mount_device(action):
             if device:
                 dest = _mount(device, use_default)
                 if not dest:
-                    msg = "Device {} cannot be mounted".format(device)
+                    msg = f"Device {device} cannot be mounted"
                     ret["comment"].append(msg)
                 kwargs["__dest"] = dest
             ret = action(*args, **kwargs)
@@ -157,7 +157,7 @@ def subvolume_created(
 
     exists = __salt__["btrfs.subvolume_exists"](path)
     if exists:
-        ret["comment"].append("Subvolume {} already present".format(name))
+        ret["comment"].append(f"Subvolume {name} already present")
 
     # Resolve first the test case. The check is not complete, but at
     # least we will report if a subvolume needs to be created. Can
@@ -166,7 +166,7 @@ def subvolume_created(
     if __opts__["test"]:
         ret["result"] = None
         if not exists:
-            ret["changes"][name] = "Subvolume {} will be created".format(name)
+            ret["changes"][name] = f"Subvolume {name} will be created"
         return ret
 
     if not exists:
@@ -174,16 +174,16 @@ def subvolume_created(
         _path = os.path.dirname(path)
         res = __states__["file.directory"](_path, makedirs=True)
         if not res["result"]:
-            ret["comment"].append("Error creating {} directory".format(_path))
+            ret["comment"].append(f"Error creating {_path} directory")
             return ret
 
         try:
             __salt__["btrfs.subvolume_create"](name, dest=__dest, qgroupids=qgroupids)
         except CommandExecutionError:
-            ret["comment"].append("Error creating subvolume {}".format(name))
+            ret["comment"].append(f"Error creating subvolume {name}")
             return ret
 
-        ret["changes"][name] = "Created subvolume {}".format(name)
+        ret["changes"][name] = f"Created subvolume {name}"
 
     # If the volume was already present, we can opt-out the check for
     # default subvolume.
@@ -227,12 +227,12 @@ def subvolume_deleted(name, device, commit=False, __dest=None):
 
     exists = __salt__["btrfs.subvolume_exists"](path)
     if not exists:
-        ret["comment"].append("Subvolume {} already missing".format(name))
+        ret["comment"].append(f"Subvolume {name} already missing")
 
     if __opts__["test"]:
         ret["result"] = None
         if exists:
-            ret["changes"][name] = "Subvolume {} will be removed".format(name)
+            ret["changes"][name] = f"Subvolume {name} will be removed"
         return ret
 
     # If commit is set, we wait until all is over
@@ -242,10 +242,10 @@ def subvolume_deleted(name, device, commit=False, __dest=None):
         try:
             __salt__["btrfs.subvolume_delete"](path, commit=commit)
         except CommandExecutionError:
-            ret["comment"].append("Error removing subvolume {}".format(name))
+            ret["comment"].append(f"Error removing subvolume {name}")
             return ret
 
-        ret["changes"][name] = "Removed subvolume {}".format(name)
+        ret["changes"][name] = f"Removed subvolume {name}"
 
     ret["result"] = True
     return ret
@@ -320,7 +320,7 @@ def properties(name, device, use_default=False, __dest=None, **properties):
         path = name
 
     if not os.path.exists(path):
-        ret["comment"].append("Object {} not found".format(name))
+        ret["comment"].append(f"Object {name} not found")
         return ret
 
     # Convert the booleans to lowercase
@@ -332,14 +332,14 @@ def properties(name, device, use_default=False, __dest=None, **properties):
     try:
         current_properties = __salt__["btrfs.properties"](path)
     except CommandExecutionError as e:
-        ret["comment"].append("Error reading properties from {}".format(name))
-        ret["comment"].append("Current error {}".format(e))
+        ret["comment"].append(f"Error reading properties from {name}")
+        ret["comment"].append(f"Current error {e}")
         return ret
 
     try:
         properties_to_set = _diff_properties(properties, current_properties)
     except KeyError:
-        ret["comment"].append("Some property not found in {}".format(name))
+        ret["comment"].append(f"Some property not found in {name}")
         return ret
 
     if __opts__["test"]:
@@ -347,14 +347,12 @@ def properties(name, device, use_default=False, __dest=None, **properties):
         if properties_to_set:
             ret["changes"] = properties_to_set
         else:
-            msg = "No properties will be changed in {}".format(name)
+            msg = f"No properties will be changed in {name}"
             ret["comment"].append(msg)
         return ret
 
     if properties_to_set:
-        _properties = ",".join(
-            "{}={}".format(k, v) for k, v in properties_to_set.items()
-        )
+        _properties = ",".join(f"{k}={v}" for k, v in properties_to_set.items())
         __salt__["btrfs.properties"](path, set=_properties)
 
         current_properties = __salt__["btrfs.properties"](path)
@@ -366,10 +364,10 @@ def properties(name, device, use_default=False, __dest=None, **properties):
             ret["comment"].append(msg)
             return ret
 
-        ret["comment"].append("Properties changed in {}".format(name))
+        ret["comment"].append(f"Properties changed in {name}")
         ret["changes"] = properties_to_set
     else:
-        ret["comment"].append("Properties not changed in {}".format(name))
+        ret["comment"].append(f"Properties not changed in {name}")
 
     ret["result"] = True
     return ret

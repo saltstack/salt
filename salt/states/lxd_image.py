@@ -28,7 +28,6 @@ Manage LXD images.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -181,7 +180,7 @@ def present(
     if image is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the image
-            msg = 'Would create the image "{}"'.format(name)
+            msg = f'Would create the image "{name}"'
             ret["changes"] = {"created": msg}
             return _unchanged(ret, msg)
 
@@ -259,17 +258,17 @@ def present(
     for k in old_aliases.difference(new_aliases):
         if not __opts__["test"]:
             __salt__["lxd.image_alias_delete"](image, k)
-            alias_changes.append('Removed alias "{}"'.format(k))
+            alias_changes.append(f'Removed alias "{k}"')
         else:
-            alias_changes.append('Would remove alias "{}"'.format(k))
+            alias_changes.append(f'Would remove alias "{k}"')
 
     # New aliases
     for k in new_aliases.difference(old_aliases):
         if not __opts__["test"]:
             __salt__["lxd.image_alias_add"](image, k, "")
-            alias_changes.append('Added alias "{}"'.format(k))
+            alias_changes.append(f'Added alias "{k}"')
         else:
-            alias_changes.append('Would add alias "{}"'.format(k))
+            alias_changes.append(f'Would add alias "{k}"')
 
     if alias_changes:
         ret["changes"]["aliases"] = alias_changes
@@ -277,11 +276,11 @@ def present(
     # Set public
     if public is not None and image.public != public:
         if not __opts__["test"]:
-            ret["changes"]["public"] = "Setting the image public to {!s}".format(public)
+            ret["changes"]["public"] = f"Setting the image public to {public!s}"
             image.public = public
             __salt__["lxd.pylxd_save_object"](image)
         else:
-            ret["changes"]["public"] = "Would set public to {!s}".format(public)
+            ret["changes"]["public"] = f"Would set public to {public!s}"
 
     if __opts__["test"] and ret["changes"]:
         return _unchanged(ret, "Would do {} changes".format(len(ret["changes"].keys())))
@@ -342,15 +341,15 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
         except CommandExecutionError as e:
             return _error(ret, str(e))
         except SaltInvocationError as e:
-            return _success(ret, 'Image "{}" not found.'.format(name))
+            return _success(ret, f'Image "{name}" not found.')
 
     if __opts__["test"]:
-        ret["changes"] = {"removed": 'Image "{}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": f'Image "{name}" would get deleted.'}
         return _success(ret, ret["changes"]["removed"])
 
     __salt__["lxd.image_delete"](image)
 
-    ret["changes"] = {"removed": 'Image "{}" has been deleted.'.format(name)}
+    ret["changes"] = {"removed": f'Image "{name}" has been deleted.'}
     return _success(ret, ret["changes"]["removed"])
 
 

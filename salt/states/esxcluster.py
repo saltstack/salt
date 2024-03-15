@@ -48,7 +48,6 @@ The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
 Module was developed against.
 """
 
-
 import logging
 import sys
 from functools import wraps
@@ -402,11 +401,11 @@ def vsan_datastore_configured(name, datastore_name):
 
         ret.update(
             {
-                "result": True
-                if (not changes_required)
-                else None
-                if __opts__["test"]
-                else True,
+                "result": (
+                    True
+                    if (not changes_required)
+                    else None if __opts__["test"] else True
+                ),
                 "comment": "\n".join(comments),
                 "changes": changes,
             }
@@ -600,13 +599,11 @@ def licenses_configured(name, licenses=None):
 
         ret.update(
             {
-                "result": True
-                if (not needs_changes)
-                else None
-                if __opts__["test"]
-                else False
-                if has_errors
-                else True,
+                "result": (
+                    True
+                    if (not needs_changes)
+                    else None if __opts__["test"] else False if has_errors else True
+                ),
                 "comment": "\n".join(comments),
                 "changes": changes if not __opts__["test"] else {},
             }

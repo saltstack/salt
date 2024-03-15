@@ -95,7 +95,7 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
                 ssl=expected_ssl,
                 tlsAllowInvalidCertificates=expected_allow_invalid,
             ),
-            call().__bool__(),
+            call().__bool__(),  # pylint: disable=unnecessary-dunder-call
             # Not sure why database_names is in the call list given our
             # return_value modifications above - it *should* have removed that
             # from the mock call list, but it didn't. There's probably some
@@ -111,7 +111,7 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
                 ssl=expected_ssl,
                 tlsAllowInvalidCertificates=expected_allow_invalid,
             ),
-            call().__bool__(),
+            call().__bool__(),  # pylint: disable=unnecessary-dunder-call
             call().drop_database("some_database"),
         ]
     )

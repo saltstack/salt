@@ -7,13 +7,14 @@
 
     This is where all the black magic happens on all of salt's CLI tools.
 """
+
 # pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
 import copy
 import getpass
 import logging
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import signal
 import sys

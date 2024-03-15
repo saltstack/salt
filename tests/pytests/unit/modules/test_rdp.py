@@ -4,7 +4,6 @@
     Test cases for salt.modules.rdp
 """
 
-
 import pytest
 
 import salt.modules.rdp as rdp

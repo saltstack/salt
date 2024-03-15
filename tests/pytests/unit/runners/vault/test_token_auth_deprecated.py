@@ -5,7 +5,6 @@ This module only tests a deprecated function, see
 tests/pytests/unit/runners/test_vault.py for the current tests.
 """
 
-
 import logging
 
 import pytest

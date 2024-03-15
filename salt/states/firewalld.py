@@ -102,7 +102,6 @@ with an example output of:
   rule service name="snmp" accept
 """
 
-
 import logging
 
 import salt.utils.path
@@ -204,7 +203,6 @@ def present(
     rich_rules=None,
     prune_rich_rules=False,
 ):
-
     """
     Ensure a zone has specific attributes.
 

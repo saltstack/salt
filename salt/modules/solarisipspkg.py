@@ -539,19 +539,19 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             if getattr(pkg, "items", False):
                 if list(pkg.items())[0][1]:  # version specified
                     pkg2inst.append(
-                        "{}@{}".format(list(pkg.items())[0][0], list(pkg.items())[0][1])
+                        f"{list(pkg.items())[0][0]}@{list(pkg.items())[0][1]}"
                     )
                 else:
                     pkg2inst.append(list(pkg.items())[0][0])
             else:
-                pkg2inst.append("{}".format(pkg))
+                pkg2inst.append(f"{pkg}")
         log.debug("Installing these packages instead of %s: %s", name, pkg2inst)
 
     else:  # install single package
         if version:
-            pkg2inst = "{}@{}".format(name, version)
+            pkg2inst = f"{name}@{version}"
         else:
-            pkg2inst = "{}".format(name)
+            pkg2inst = f"{name}"
 
     cmd = ["pkg", "install", "-v", "--accept"]
     if test:

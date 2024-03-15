@@ -8,7 +8,6 @@ Support for Apache
     Debian-based system is detected.
 """
 
-
 import io
 import logging
 import re
@@ -61,7 +60,7 @@ def version():
 
         salt '*' apache.version
     """
-    cmd = "{} -v".format(_detect_os())
+    cmd = f"{_detect_os()} -v"
     out = __salt__["cmd.run"](cmd).splitlines()
     ret = out[0].split(": ")
     return ret[1]
@@ -77,7 +76,7 @@ def fullversion():
 
         salt '*' apache.fullversion
     """
-    cmd = "{} -V".format(_detect_os())
+    cmd = f"{_detect_os()} -V"
     ret = {}
     ret["compiled_with"] = []
     out = __salt__["cmd.run"](cmd).splitlines()
@@ -106,7 +105,7 @@ def modules():
 
         salt '*' apache.modules
     """
-    cmd = "{} -M".format(_detect_os())
+    cmd = f"{_detect_os()} -M"
     ret = {}
     ret["static"] = []
     ret["shared"] = []
@@ -132,7 +131,7 @@ def servermods():
 
         salt '*' apache.servermods
     """
-    cmd = "{} -l".format(_detect_os())
+    cmd = f"{_detect_os()} -l"
     ret = []
     out = __salt__["cmd.run"](cmd).splitlines()
     for line in out:
@@ -154,7 +153,7 @@ def directives():
 
         salt '*' apache.directives
     """
-    cmd = "{} -L".format(_detect_os())
+    cmd = f"{_detect_os()} -L"
     ret = {}
     out = __salt__["cmd.run"](cmd)
     out = out.replace("\n\t", "\t")
@@ -181,7 +180,7 @@ def vhosts():
 
         salt -t 10 '*' apache.vhosts
     """
-    cmd = "{} -S".format(_detect_os())
+    cmd = f"{_detect_os()} -S"
     ret = {}
     namevhost = ""
     out = __salt__["cmd.run"](cmd)
@@ -222,9 +221,9 @@ def signal(signal=None):
         return
     # Make sure you use the right arguments
     if signal in valid_signals:
-        arguments = " -k {}".format(signal)
+        arguments = f" -k {signal}"
     else:
-        arguments = " {}".format(signal)
+        arguments = f" {signal}"
     cmd = _detect_os() + arguments
     out = __salt__["cmd.run_all"](cmd)
 
@@ -238,7 +237,7 @@ def signal(signal=None):
         ret = out["stdout"].strip()
     # No output for something like: apachectl graceful
     else:
-        ret = 'Command: "{}" completed successfully!'.format(cmd)
+        ret = f'Command: "{cmd}" completed successfully!'
     return ret
 
 
@@ -327,14 +326,12 @@ def server_status(profile="default"):
 
     # Get configuration from pillar
     url = __salt__["config.get"](
-        "apache.server-status:{}:url".format(profile), "http://localhost/server-status"
+        f"apache.server-status:{profile}:url", "http://localhost/server-status"
     )
-    user = __salt__["config.get"]("apache.server-status:{}:user".format(profile), "")
-    passwd = __salt__["config.get"]("apache.server-status:{}:pass".format(profile), "")
-    realm = __salt__["config.get"]("apache.server-status:{}:realm".format(profile), "")
-    timeout = __salt__["config.get"](
-        "apache.server-status:{}:timeout".format(profile), 5
-    )
+    user = __salt__["config.get"](f"apache.server-status:{profile}:user", "")
+    passwd = __salt__["config.get"](f"apache.server-status:{profile}:pass", "")
+    realm = __salt__["config.get"](f"apache.server-status:{profile}:realm", "")
+    timeout = __salt__["config.get"](f"apache.server-status:{profile}:timeout", 5)
 
     # create authentication handler if configuration exists
     if user and passwd:
@@ -380,9 +377,9 @@ def _parse_config(conf, slot=None):
     ret = io.StringIO()
     if isinstance(conf, str):
         if slot:
-            print("{} {}".format(slot, conf), file=ret, end="")
+            print(f"{slot} {conf}", file=ret, end="")
         else:
-            print("{}".format(conf), file=ret, end="")
+            print(f"{conf}", file=ret, end="")
     elif isinstance(conf, list):
         is_section = False
         for item in conf:
@@ -390,12 +387,12 @@ def _parse_config(conf, slot=None):
                 is_section = True
                 slot_this = str(item["this"])
         if is_section:
-            print("<{} {}>".format(slot, slot_this), file=ret)
+            print(f"<{slot} {slot_this}>", file=ret)
             for item in conf:
                 for key, val in item.items():
                     if key != "this":
                         print(_parse_config(val, str(key)), file=ret)
-            print("</{}>".format(slot), file=ret)
+            print(f"</{slot}>", file=ret)
         else:
             for value in conf:
                 print(_parse_config(value, str(slot)), file=ret)
@@ -410,12 +407,12 @@ def _parse_config(conf, slot=None):
         for key, value in conf.items():
             if key != "this":
                 if isinstance(value, str):
-                    print("{} {}".format(key, value), file=ret)
+                    print(f"{key} {value}", file=ret)
                 elif isinstance(value, list):
                     print(_parse_config(value, key), file=ret)
                 elif isinstance(value, dict):
                     print(_parse_config(value, key), file=ret)
-        print("</{}>".format(slot), file=ret)
+        print(f"</{slot}>", file=ret)
 
     ret.seek(0)
     return ret.read()

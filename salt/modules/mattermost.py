@@ -14,7 +14,6 @@ Module for sending messages to Mattermost
           api_url: https://example.com
 """
 
-
 import logging
 
 import salt.utils.json

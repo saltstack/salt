@@ -597,6 +597,6 @@ def owner(*paths, **kwargs):
             else:
                 ret[path] = output.split("by ")[1].strip()
         else:
-            ret[path] = "Error running {}".format(cmd)
+            ret[path] = f"Error running {cmd}"
 
     return ret

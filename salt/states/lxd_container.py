@@ -27,7 +27,6 @@ Manage LXD containers.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -219,7 +218,7 @@ def present(
     if container is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the container
-            msg = 'Would create the container "{}"'.format(name)
+            msg = f'Would create the container "{name}"'
             ret["changes"] = {"created": msg}
             if running is True:
                 msg = msg + " and start it."
@@ -249,7 +248,7 @@ def present(
         except CommandExecutionError as e:
             return _error(ret, str(e))
 
-        msg = 'Created the container "{}"'.format(name)
+        msg = f'Created the container "{name}"'
         ret["changes"] = {"created": msg}
 
         if running is True:
@@ -261,7 +260,7 @@ def present(
                 return _error(ret, str(e))
 
             msg = msg + " and started it."
-            ret["changes"] = {"started": 'Started the container "{}"'.format(name)}
+            ret["changes"] = {"started": f'Started the container "{name}"'}
 
         return _success(ret, msg)
 
@@ -275,18 +274,18 @@ def present(
     # Removed profiles
     for k in old_profiles.difference(new_profiles):
         if not __opts__["test"]:
-            profile_changes.append('Removed profile "{}"'.format(k))
+            profile_changes.append(f'Removed profile "{k}"')
             old_profiles.discard(k)
         else:
-            profile_changes.append('Would remove profile "{}"'.format(k))
+            profile_changes.append(f'Would remove profile "{k}"')
 
     # Added profiles
     for k in new_profiles.difference(old_profiles):
         if not __opts__["test"]:
-            profile_changes.append('Added profile "{}"'.format(k))
+            profile_changes.append(f'Added profile "{k}"')
             old_profiles.add(k)
         else:
-            profile_changes.append('Would add profile "{}"'.format(k))
+            profile_changes.append(f'Would add profile "{k}"')
 
     if profile_changes:
         container_changed = True
@@ -316,7 +315,7 @@ def present(
                 changes["running"] = "Would start the container"
                 return _unchanged(
                     ret,
-                    'Container "{}" would get changed and started.'.format(name),
+                    f'Container "{name}" would get changed and started.',
                 )
             else:
                 container.start(wait=True)
@@ -327,7 +326,7 @@ def present(
                 changes["stopped"] = "Would stopped the container"
                 return _unchanged(
                     ret,
-                    'Container "{}" would get changed and stopped.'.format(name),
+                    f'Container "{name}" would get changed and stopped.',
                 )
             else:
                 container.stop(wait=True)
@@ -342,17 +341,17 @@ def present(
 
         if __opts__["test"]:
             changes["restarted"] = "Would restart the container"
-            return _unchanged(ret, 'Would restart the container "{}"'.format(name))
+            return _unchanged(ret, f'Would restart the container "{name}"')
         else:
             container.restart(wait=True)
-            changes["restarted"] = 'Container "{}" has been restarted'.format(name)
-            return _success(ret, 'Container "{}" has been restarted'.format(name))
+            changes["restarted"] = f'Container "{name}" has been restarted'
+            return _success(ret, f'Container "{name}" has been restarted')
 
     if not container_changed:
         return _success(ret, "No changes")
 
     if __opts__["test"]:
-        return _unchanged(ret, 'Container "{}" would get changed.'.format(name))
+        return _unchanged(ret, f'Container "{name}" would get changed.')
 
     return _success(ret, "{} changes".format(len(ret["changes"].keys())))
 
@@ -411,10 +410,10 @@ def absent(name, stop=False, remote_addr=None, cert=None, key=None, verify_cert=
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _success(ret, 'Container "{}" not found.'.format(name))
+        return _success(ret, f'Container "{name}" not found.')
 
     if __opts__["test"]:
-        ret["changes"] = {"removed": 'Container "{}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": f'Container "{name}" would get deleted.'}
         return _unchanged(ret, ret["changes"]["removed"])
 
     if stop and container.status_code == CONTAINER_STATUS_RUNNING:
@@ -422,7 +421,7 @@ def absent(name, stop=False, remote_addr=None, cert=None, key=None, verify_cert=
 
     container.delete(wait=True)
 
-    ret["changes"]["deleted"] = 'Container "{}" has been deleted.'.format(name)
+    ret["changes"]["deleted"] = f'Container "{name}" has been deleted.'
     return _success(ret, ret["changes"]["deleted"])
 
 
@@ -481,13 +480,13 @@ def running(
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{}" not found'.format(name))
+        return _error(ret, f'Container "{name}" not found')
 
     is_running = container.status_code == CONTAINER_STATUS_RUNNING
 
     if is_running:
         if not restart:
-            return _success(ret, 'The container "{}" is already running'.format(name))
+            return _success(ret, f'The container "{name}" is already running')
         else:
             if __opts__["test"]:
                 ret["changes"]["restarted"] = 'Would restart the container "{}"'.format(
@@ -502,11 +501,11 @@ def running(
                 return _success(ret, ret["changes"]["restarted"])
 
     if __opts__["test"]:
-        ret["changes"]["started"] = 'Would start the container "{}"'.format(name)
+        ret["changes"]["started"] = f'Would start the container "{name}"'
         return _unchanged(ret, ret["changes"]["started"])
 
     container.start(wait=True)
-    ret["changes"]["started"] = 'Started the container "{}"'.format(name)
+    ret["changes"]["started"] = f'Started the container "{name}"'
     return _success(ret, ret["changes"]["started"])
 
 
@@ -563,10 +562,10 @@ def frozen(name, start=True, remote_addr=None, cert=None, key=None, verify_cert=
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{}" not found'.format(name))
+        return _error(ret, f'Container "{name}" not found')
 
     if container.status_code == CONTAINER_STATUS_FROZEN:
-        return _success(ret, 'Container "{}" is alredy frozen'.format(name))
+        return _success(ret, f'Container "{name}" is alredy frozen')
 
     is_running = container.status_code == CONTAINER_STATUS_RUNNING
 
@@ -582,18 +581,18 @@ def frozen(name, start=True, remote_addr=None, cert=None, key=None, verify_cert=
         if __opts__["test"]:
             ret["changes"][
                 "started"
-            ] = 'Would start the container "{}" and freeze it after'.format(name)
+            ] = f'Would start the container "{name}" and freeze it after'
             return _unchanged(ret, ret["changes"]["started"])
         else:
             container.start(wait=True)
-            ret["changes"]["started"] = 'Start the container "{}"'.format(name)
+            ret["changes"]["started"] = f'Start the container "{name}"'
 
     if __opts__["test"]:
-        ret["changes"]["frozen"] = 'Would freeze the container "{}"'.format(name)
+        ret["changes"]["frozen"] = f'Would freeze the container "{name}"'
         return _unchanged(ret, ret["changes"]["frozen"])
 
     container.freeze(wait=True)
-    ret["changes"]["frozen"] = 'Froze the container "{}"'.format(name)
+    ret["changes"]["frozen"] = f'Froze the container "{name}"'
 
     return _success(ret, ret["changes"]["frozen"])
 
@@ -651,17 +650,17 @@ def stopped(name, kill=False, remote_addr=None, cert=None, key=None, verify_cert
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{}" not found'.format(name))
+        return _error(ret, f'Container "{name}" not found')
 
     if container.status_code == CONTAINER_STATUS_STOPPED:
-        return _success(ret, 'Container "{}" is already stopped'.format(name))
+        return _success(ret, f'Container "{name}" is already stopped')
 
     if __opts__["test"]:
-        ret["changes"]["stopped"] = 'Would stop the container "{}"'.format(name)
+        ret["changes"]["stopped"] = f'Would stop the container "{name}"'
         return _unchanged(ret, ret["changes"]["stopped"])
 
     container.stop(force=kill, wait=True)
-    ret["changes"]["stopped"] = 'Stopped the container "{}"'.format(name)
+    ret["changes"]["stopped"] = f'Stopped the container "{name}"'
     return _success(ret, ret["changes"]["stopped"])
 
 
@@ -764,7 +763,7 @@ def migrated(
         pass
 
     if dest_container is not None:
-        return _success(ret, 'Container "{}" exists on the destination'.format(name))
+        return _success(ret, f'Container "{name}" exists on the destination')
 
     if src_verify_cert is None:
         src_verify_cert = verify_cert
@@ -777,13 +776,13 @@ def migrated(
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Source Container "{}" not found'.format(name))
+        return _error(ret, f'Source Container "{name}" not found')
 
     if __opts__["test"]:
-        ret["changes"][
-            "migrated"
-        ] = 'Would migrate the container "{}" from "{}" to "{}"'.format(
-            name, src_remote_addr, remote_addr
+        ret["changes"]["migrated"] = (
+            'Would migrate the container "{}" from "{}" to "{}"'.format(
+                name, src_remote_addr, remote_addr
+            )
         )
         return _unchanged(ret, ret["changes"]["migrated"])
 

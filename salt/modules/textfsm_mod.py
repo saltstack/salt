@@ -195,20 +195,20 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
         log.error("Unable to parse the TextFSM template", exc_info=True)
-        ret[
-            "comment"
-        ] = "Unable to parse the TextFSM template from {}: {}. Please check the logs.".format(
-            template_path, tfte
+        ret["comment"] = (
+            "Unable to parse the TextFSM template from {}: {}. Please check the logs.".format(
+                template_path, tfte
+            )
         )
         return ret
     if not raw_text and raw_text_file:
         log.debug("Trying to read the raw input from %s", raw_text_file)
         raw_text = __salt__["cp.get_file_str"](raw_text_file, saltenv=saltenv)
         if raw_text is False:
-            ret[
-                "comment"
-            ] = "Unable to read from {}. Please specify a valid input file or text.".format(
-                raw_text_file
+            ret["comment"] = (
+                "Unable to read from {}. Please specify a valid input file or text.".format(
+                    raw_text_file
+                )
             )
             log.error(ret["comment"])
             return ret
@@ -393,17 +393,17 @@ def index(
             )
             platform = __grains__.get(platform_grain_name)
             if not platform:
-                ret[
-                    "comment"
-                ] = "Unable to identify the platform name using the {} grain.".format(
-                    platform_grain_name
+                ret["comment"] = (
+                    "Unable to identify the platform name using the {} grain.".format(
+                        platform_grain_name
+                    )
                 )
                 return ret
             log.info("Using platform: %s", platform)
         else:
-            ret[
-                "comment"
-            ] = "No platform specified, no platform grain identifier configured."
+            ret["comment"] = (
+                "No platform specified, no platform grain identifier configured."
+            )
             log.error(ret["comment"])
             return ret
     if not textfsm_path:
@@ -431,10 +431,10 @@ def index(
     )
     log.debug("Cache fun return:\n%s", textfsm_cachedir_ret)
     if not textfsm_cachedir_ret:
-        ret[
-            "comment"
-        ] = "Unable to fetch from {}. Is the TextFSM path correctly specified?".format(
-            textfsm_path
+        ret["comment"] = (
+            "Unable to fetch from {}. Is the TextFSM path correctly specified?".format(
+                textfsm_path
+            )
         )
         log.error(ret["comment"])
         return ret
@@ -457,10 +457,10 @@ def index(
         log.debug("Processing the output from %s", output_file)
         output = __salt__["cp.get_file_str"](output_file, saltenv=saltenv)
         if output is False:
-            ret[
-                "comment"
-            ] = "Unable to read from {}. Please specify a valid file or text.".format(
-                output_file
+            ret["comment"] = (
+                "Unable to read from {}. Please specify a valid file or text.".format(
+                    output_file
+                )
             )
             log.error(ret["comment"])
             return ret
@@ -476,5 +476,5 @@ def index(
         ret["result"] = True
     except clitable.CliTableError as cterr:
         log.error("Unable to proces the CliTable", exc_info=True)
-        ret["comment"] = "Unable to process the output: {}".format(cterr)
+        ret["comment"] = f"Unable to process the output: {cterr}"
     return ret

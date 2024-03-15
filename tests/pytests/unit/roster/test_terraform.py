@@ -1,6 +1,7 @@
 """
 unittests for terraform roster
 """
+
 import pathlib
 
 import pytest

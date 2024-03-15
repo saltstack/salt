@@ -730,7 +730,7 @@ def test_log_created(
     """
     testing_config.update({"log_file": str(log_file)})
     log_file_name = str(log_file)
-    if log_file_name.split(os.sep)[-1] != "log_file":
+    if log_file_name.rsplit(os.sep, maxsplit=1)[-1] != "log_file":
         testing_config.update({log_file_name: str(log_file)})
 
     instance = parser()

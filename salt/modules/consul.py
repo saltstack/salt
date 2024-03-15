@@ -77,7 +77,7 @@ def _query(
         data = None
     else:
         if data is not None:
-            if type(data) != str:
+            if not isinstance(data, str):
                 data = salt.utils.json.dumps(data)
         else:
             data = salt.utils.json.dumps({})
@@ -1560,9 +1560,9 @@ def catalog_register(consul_url=None, token=None, **kwargs):
                 "warning",
                 "critical",
             ):
-                ret[
-                    "message"
-                ] = "Check status must be unknown, passing, warning, or critical."
+                ret["message"] = (
+                    "Check status must be unknown, passing, warning, or critical."
+                )
                 ret["res"] = False
                 return ret
             data["Check"]["Status"] = kwargs["check_status"]

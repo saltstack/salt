@@ -2,7 +2,6 @@
     :codeauthor: Nicole Thomas (nicole@saltstack.com)
 """
 
-
 import logging
 from inspect import FullArgSpec
 

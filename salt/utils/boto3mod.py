@@ -24,7 +24,6 @@ Example Usage:
 .. versionadded:: 2015.8.0
 """
 
-
 import hashlib
 import logging
 import sys
@@ -104,7 +103,7 @@ def _get_profile(service, region, key, keyid, profile):
     if not keyid and _option(service + ".keyid"):
         keyid = _option(service + ".keyid")
 
-    label = "boto_{}:".format(service)
+    label = f"boto_{service}:"
     if keyid:
         hash_string = region + keyid + key
         hash_string = salt.utils.stringutils.to_bytes(hash_string)
@@ -138,9 +137,9 @@ def cache_id(
 
     cxkey, _, _, _ = _get_profile(service, region, key, keyid, profile)
     if sub_resource:
-        cxkey = "{}:{}:{}:id".format(cxkey, sub_resource, name)
+        cxkey = f"{cxkey}:{sub_resource}:{name}:id"
     else:
-        cxkey = "{}:{}:id".format(cxkey, name)
+        cxkey = f"{cxkey}:{name}:id"
 
     if invalidate:
         if cxkey in __context__:
@@ -197,10 +196,10 @@ def get_connection(
             aws_access_key_id=keyid, aws_secret_access_key=key, region_name=region
         )
         if session is None:
-            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
+            raise SaltInvocationError(f'Region "{region}" is not valid.')
         conn = session.client(module)
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
+            raise SaltInvocationError(f'Region "{region}" is not valid.')
     except botocore.exceptions.NoCredentialsError:
         raise SaltInvocationError(
             "No authentication credentials found when "

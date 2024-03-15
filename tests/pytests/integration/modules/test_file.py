@@ -1,6 +1,7 @@
 """
 Tests for the file state
 """
+
 import os
 
 import pytest
@@ -110,7 +111,7 @@ def test_manage_file_verify_ssl(
     )
     if not verify_ssl:
         assert ret.data["changes"] == {"diff": "New file", "mode": "0000"}
-        assert ret.data["comment"] == "File {} updated".format(test_file)
+        assert ret.data["comment"] == f"File {test_file} updated"
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
 

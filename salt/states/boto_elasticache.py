@@ -75,7 +75,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

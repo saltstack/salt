@@ -44,17 +44,19 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
         time.sleep(5)
 
     data = None
-    for i in range(1, 30):
+    for _ in range(1, 30):
         time.sleep(1)
         data = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data
         if data:
             break
 
+    assert data
     assert salt_minion_retry.id in data
     assert data[salt_minion_retry.id] is True
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(180)
 def test_pillar_timeout(salt_master_factory, tmp_path):
     cmd = 'print(\'{"foo": "bar"}\');\n'
 
@@ -106,7 +108,9 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
     )
     cli = master.salt_cli()
     sls_tempfile = master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents)
-    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
+    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), (
+        sls_tempfile
+    ):
         cmd = 'import time; time.sleep(6); print(\'{"foo": "bang"}\');\n'
         with salt.utils.files.fopen(tmp_path / "script.py", "w") as fp:
             fp.write(cmd)

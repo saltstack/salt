@@ -50,7 +50,6 @@ data like so:
     a-secret: "NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]"
 """
 
-
 import logging
 import re
 

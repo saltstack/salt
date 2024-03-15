@@ -4,6 +4,7 @@ tests.pytests.unit.test_syspaths
 
 Unit tests for salt's syspaths module
 """
+
 import pytest
 
 import salt.syspaths

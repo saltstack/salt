@@ -1,6 +1,7 @@
 """
 Testing Jinja filters availablilty via state system
 """
+
 import logging
 import os
 
@@ -1229,6 +1230,7 @@ def filter(request):
     return _filter
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 def test_filter(state, state_tree, filter, grains):
     filter.check_skip(grains)
     with filter(state_tree):

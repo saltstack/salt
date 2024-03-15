@@ -17,6 +17,7 @@ Beacon that fires events on image import/delete.
         - interval: 60
         - startup_import_event: True
 """
+
 import logging
 
 import salt.utils.beacons

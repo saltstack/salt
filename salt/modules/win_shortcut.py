@@ -6,6 +6,7 @@ url shortcuts.
 
 .. versionadded:: 3005
 """
+
 # https://docs.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh
 # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/windows-scripting/f5y78918(v=vs.84)
 import logging
@@ -74,15 +75,17 @@ def get(path):
         salt * shortcut.get path="C:\path\to\shortcut.lnk"
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Shortcut not found: {}".format(path))
+        raise CommandExecutionError(f"Shortcut not found: {path}")
 
     if not path.endswith((".lnk", ".url")):
         _, ext = os.path.splitext(path)
-        raise CommandExecutionError("Invalid file extension: {}".format(ext))
+        raise CommandExecutionError(f"Invalid file extension: {ext}")
 
     # This will load the existing shortcut
     with salt.utils.winapi.Com():
-        shell = win32com.client.Dispatch("WScript.Shell")
+        shell = win32com.client.Dispatch(  # pylint: disable=used-before-assignment
+            "WScript.Shell"
+        )
         shortcut = shell.CreateShortcut(path)
 
         arguments = ""
@@ -101,7 +104,7 @@ def get(path):
             if target:
                 target = salt.utils.path.expand(target)
             else:
-                msg = "Not a valid shortcut: {}".format(path)
+                msg = f"Not a valid shortcut: {path}"
                 log.debug(msg)
                 raise CommandExecutionError(msg)
             if shortcut.Arguments:
@@ -299,11 +302,11 @@ def modify(
         salt * shortcut.modify "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe"
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Shortcut not found: {}".format(path))
+        raise CommandExecutionError(f"Shortcut not found: {path}")
 
     if not path.endswith((".lnk", ".url")):
         _, ext = os.path.splitext(path)
-        raise CommandExecutionError("Invalid file extension: {}".format(ext))
+        raise CommandExecutionError(f"Invalid file extension: {ext}")
 
     return _set_info(
         path=path,
@@ -435,14 +438,14 @@ def create(
     """
     if not path.endswith((".lnk", ".url")):
         _, ext = os.path.splitext(path)
-        raise CommandExecutionError("Invalid file extension: {}".format(ext))
+        raise CommandExecutionError(f"Invalid file extension: {ext}")
 
     if os.path.exists(path):
         if backup:
             log.debug("Backing up: %s", path)
             file, ext = os.path.splitext(path)
             ext = ext.strip(".")
-            backup_path = "{}-{}.{}".format(file, time.time_ns(), ext)
+            backup_path = f"{file}-{time.time_ns()}.{ext}"
             os.rename(path, backup_path)
         elif force:
             log.debug("Removing: %s", path)
@@ -471,11 +474,11 @@ def create(
                 __salt__["file.makedirs"](path=path, owner=user)
             except CommandExecutionError as exc:
                 raise CommandExecutionError(
-                    "Error creating parent directory: {}".format(exc.message)
+                    f"Error creating parent directory: {exc.message}"
                 )
         else:
             raise CommandExecutionError(
-                "Parent directory not present: {}".format(os.path.dirname(path))
+                f"Parent directory not present: {os.path.dirname(path)}"
             )
 
     return _set_info(

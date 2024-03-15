@@ -28,7 +28,6 @@ class _ArgumentParser(argparse.ArgumentParser):
     def __init__(self, action=None, *args, **kwargs):
         super().__init__(*args, prog="oscap", **kwargs)
         self.add_argument("action", choices=["eval"])
-        add_arg = None
         for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
             self.add_argument(*params, **kwparams)
 

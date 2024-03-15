@@ -45,7 +45,6 @@ config:
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -240,10 +239,10 @@ def pool_present(
                 IdentityPoolName
             )
         else:
-            ret[
-                "comment"
-            ] = "An existing identity pool named {} with id {} will be updated.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "An existing identity pool named {} with id {} will be updated.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         ret["result"] = None
         return ret
@@ -267,10 +266,10 @@ def pool_present(
         if r.get("created"):
             updated_identity_pool = r.get("identity_pool")
             IdentityPoolId = updated_identity_pool.get("IdentityPoolId")
-            ret[
-                "comment"
-            ] = "A new identity pool with name {}, id {} is created.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "A new identity pool with name {}, id {} is created.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         else:
             ret["result"] = False
@@ -286,19 +285,19 @@ def pool_present(
 
         if r.get("updated"):
             updated_identity_pool = r.get("identity_pool")
-            ret[
-                "comment"
-            ] = "Existing identity pool with name {}, id {} is updated.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "Existing identity pool with name {}, id {} is updated.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to update an existing identity pool {} {}: {}".format(
-                IdentityPoolName,
-                IdentityPoolId,
-                r["error"].get("message", r["error"]),
+            ret["comment"] = (
+                "Failed to update an existing identity pool {} {}: {}".format(
+                    IdentityPoolName,
+                    IdentityPoolId,
+                    r["error"].get("message", r["error"]),
+                )
             )
             return ret
 
@@ -394,10 +393,10 @@ def pool_absent(
         return ret
 
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "The following matched identity pools will be deleted.\n{}".format(
-            identity_pools
+        ret["comment"] = (
+            "The following matched identity pools will be deleted.\n{}".format(
+                identity_pools
+            )
         )
         ret["result"] = None
         return ret

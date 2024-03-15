@@ -2,6 +2,7 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 """
+
 import errno
 import os
 import random
@@ -14,8 +15,12 @@ import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == "nt":  # pragma: no cover
-    _rename = lambda src, dst: False  # pylint: disable=C0103
-    _rename_atomic = lambda src, dst: False  # pylint: disable=C0103
+
+    def _rename(src, dst):
+        return False
+
+    def _rename_atomic(src, dst):
+        return False
 
     try:
         import ctypes
@@ -90,7 +95,7 @@ if os.name == "nt":  # pragma: no cover
         except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
-            old = "{}-{:08x}".format(dst, random.randint(0, sys.maxint))
+            old = f"{dst}-{random.randint(0, sys.maxint):08x}"
             os.rename(dst, old)
             os.rename(src, dst)
             try:

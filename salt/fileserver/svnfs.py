@@ -30,7 +30,6 @@ This backend assumes a standard svn layout with directories for ``branches``,
     :conf_master:`documentation <svnfs_remotes>` for more information.
 """
 
-
 import copy
 import errno
 import fnmatch
@@ -721,7 +720,7 @@ def _file_lists(load, form):
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
-        except os.error:
+        except OSError:
             log.critical("Unable to make cachedir %s", list_cachedir)
             return []
     list_cache = os.path.join(list_cachedir, "{}.p".format(load["saltenv"]))

@@ -3,6 +3,7 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
 """
+
 # pylint: disable=W0232
 #         class has no __init__ method
 

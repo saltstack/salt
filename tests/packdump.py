@@ -1,6 +1,7 @@
 """
 Simple script to dump the contents of msgpack files to the terminal
 """
+
 # pylint: disable=resource-leakage
 
 import os

@@ -27,6 +27,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd", "vault", "getent"),
     pytest.mark.usefixtures("vault_container_version"),
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 

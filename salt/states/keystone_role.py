@@ -25,7 +25,6 @@ Example States
         - description: 'my group'
 """
 
-
 __virtualname__ = "keystone_role"
 
 

@@ -77,7 +77,6 @@ config:
 
 """
 
-
 import logging
 import os
 
@@ -281,11 +280,11 @@ def present(
     )["domain"]
     if _status.get("ElasticsearchVersion") != str(ElasticsearchVersion):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Failed to update domain: version cannot be modified from {} to {}.".format(
-            _status.get("ElasticsearchVersion"),
-            str(ElasticsearchVersion),
+        ret["comment"] = (
+            "Failed to update domain: version cannot be modified from {} to {}.".format(
+                _status.get("ElasticsearchVersion"),
+                str(ElasticsearchVersion),
+            )
         )
         return ret
     _describe = __salt__["boto_elasticsearch_domain.describe"](

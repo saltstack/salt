@@ -3,7 +3,7 @@
 The setup script for salt
 """
 
-# pylint: disable=file-perms,resource-leakage
+# pylint: disable=file-perms,resource-leakage,deprecated-module
 import setuptools  # isort:skip
 import distutils.dist
 import glob
@@ -181,7 +181,7 @@ else:
 
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
-    with open(requirements_file) as rfh:
+    with open(requirements_file, encoding="utf-8") as rfh:
         for line in rfh.readlines():
             line = line.strip()
             if not line or line.startswith(("#", "-r", "--")):
@@ -260,7 +260,9 @@ class GenerateSaltSyspaths(Command):
             exit(1)
 
         # Write the system paths file
-        open(self.distribution.salt_syspaths_hardcoded_path, "w").write(
+        open(
+            self.distribution.salt_syspaths_hardcoded_path, "w", encoding="utf-8"
+        ).write(
             INSTALL_SYSPATHS_TEMPLATE.format(
                 date=DATE,
                 root_dir=self.distribution.salt_root_dir,
@@ -308,9 +310,9 @@ class WriteSaltSshPackagingFile(Command):
                 exit(1)
 
             # pylint: disable=E0602
-            open(self.distribution.salt_ssh_packaging_file, "w").write(
-                "Packaged for Salt-SSH\n"
-            )
+            open(
+                self.distribution.salt_ssh_packaging_file, "w", encoding="utf-8"
+            ).write("Packaged for Salt-SSH\n")
             # pylint: enable=E0602
 
 
@@ -463,7 +465,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             try:
                 import requests
 
-                req = requests.get(url)
+                req = requests.get(url, timeout=120)
                 if req.status_code == 200:
                     script_contents = req.text.encode(req.encoding)
                 else:
@@ -482,10 +484,11 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                         "Error code: {}".format(req.getcode())
                     )
             try:
-                with open(deploy_path, "w") as fp_:
+                with open(deploy_path, "w", encoding="utf-8") as fp_:
                     fp_.write(script_contents)
             except OSError as err:
-                log.error(f"Failed to write the updated script: {err}")
+                errmsg = f"Failed to write the updated script: {err}"
+                log.error(errmsg)
 
         # Let's the rest of the build command
         Sdist.run(self)

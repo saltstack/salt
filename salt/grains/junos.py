@@ -5,7 +5,6 @@ via salt-proxy-minion. Thus, some grains make sense to get them
 from the minion (PYTHONPATH), but others don't (ip_interfaces)
 """
 
-
 import logging
 
 import salt.utils.platform

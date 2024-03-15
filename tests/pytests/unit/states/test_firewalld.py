@@ -1,6 +1,7 @@
 """
     :codeauthor: Hristo Voyvodov <hristo.voyvodov@redsift.io>
 """
+
 import pytest
 
 import salt.states.firewalld as firewalld

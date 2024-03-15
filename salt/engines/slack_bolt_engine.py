@@ -913,9 +913,9 @@ class SlackClient:
                     if control and (len(msg) > 1) and msg.get("cmdline"):
                         jid = self.run_command_async(msg)
                         log.debug("Submitted a job and got jid: %s", jid)
-                        outstanding[
-                            jid
-                        ] = msg  # record so we can return messages to the caller
+                        outstanding[jid] = (
+                            msg  # record so we can return messages to the caller
+                        )
                         text_msg = "@{}'s job is submitted as salt jid {}".format(
                             msg["user_name"], jid
                         )
@@ -1000,8 +1000,6 @@ class SlackClient:
         if cmd in runner_functions:
             runner = salt.runner.RunnerClient(__opts__)
             log.debug("Command %s will run via runner_functions", cmd)
-            # pylint is tripping
-            # pylint: disable=missing-whitespace-after-comma
             job_id_dict = runner.asynchronous(cmd, {"arg": args, "kwarg": kwargs})
             job_id = job_id_dict["jid"]
 

@@ -2,7 +2,6 @@
     Test cases for salt.modules.syslog_ng
 """
 
-
 import os
 from textwrap import dedent
 

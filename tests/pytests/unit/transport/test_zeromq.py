@@ -2,10 +2,15 @@ import logging
 
 import msgpack
 import pytest
+import zmq.eventloop.future
 
 import salt.config
 import salt.transport.base
 import salt.transport.zeromq
+import salt.utils.platform
+import salt.utils.process
+import salt.utils.stringutils
+from tests.support.mock import AsyncMock, MagicMock
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +58,39 @@ async def test_client_timeout_msg(minion_opts):
         client.close()
 
 
+async def test_client_send_recv_on_cancelled_error(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    mock_future = MagicMock(**{"done.return_value": True})
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.recv.side_effect = zmq.eventloop.future.CancelledError
+        await client._send_recv({"meh": "bah"}, mock_future)
+
+        mock_future.set_exception.assert_not_called()
+    finally:
+        client.close()
+
+
+async def test_client_send_recv_on_exception(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    mock_future = MagicMock(**{"done.return_value": True})
+
+    try:
+        client.socket = None
+        await client._send_recv({"meh": "bah"}, mock_future)
+
+        mock_future.set_exception.assert_not_called()
+    finally:
+        client.close()
+
+
 def test_pub_client_init(minion_opts, io_loop):
     minion_opts["id"] = "minion"
     minion_opts["__role"] = "syndic"
@@ -72,7 +110,7 @@ async def test_unclosed_request_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
 
@@ -90,6 +128,6 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()

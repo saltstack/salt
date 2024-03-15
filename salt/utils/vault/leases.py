@@ -518,8 +518,8 @@ class LeaseStore:
             try:
                 self.renew(lease, increment=increment)
             except (VaultPermissionDeniedError, VaultNotFoundError) as err:
-                log.warning(f"Failed renewing cached lease: {type(err).__name__}")
-                log.debug(f"Lease ID was: {lease}")
+                log.warning("Failed renewing cached lease: %s", type(err).__name__)
+                log.debug("Lease ID was: %s", lease)
                 failed.append(ckey)
         if failed:
             raise VaultException(f"Failed renewing some leases: {list(failed)}")

@@ -1,4 +1,4 @@
 -r base.txt
 -r crypto.txt
 
-pyzmq>=24.0.0
+pyzmq>=25.1.2

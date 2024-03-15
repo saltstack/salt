@@ -203,7 +203,7 @@ def test_secure_password():
                 )
             )
         )
-        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        check_whitespace = re.compile(rf"[{string.whitespace}]")
         assert check_printable.search(ret) is None
         assert check_whitespace.search(ret) is None
         assert ret
@@ -224,7 +224,7 @@ def test_secure_password_all_chars():
             whitespace=True,
             printable=True,
         )
-        check = re.compile(r"[^{}]".format(re.escape(string.printable)))
+        check = re.compile(rf"[^{re.escape(string.printable)}]")
         assert check.search(ret) is None
         assert ret
 
@@ -245,7 +245,7 @@ def test_secure_password_no_has_random():
                 )
             )
         )
-        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        check_whitespace = re.compile(rf"[{string.whitespace}]")
         assert check_printable.search(ret) is None
         assert check_whitespace.search(ret) is None
         assert ret
@@ -259,6 +259,6 @@ def test_secure_password_all_chars_no_has_random():
     """
     with patch("salt.utils.pycrypto.HAS_RANDOM", False):
         ret = salt.utils.pycrypto.secure_password(printable=True)
-        check = re.compile("[^{}]".format(re.escape(string.printable)))
+        check = re.compile(f"[^{re.escape(string.printable)}]")
         assert check.search(ret) is None
         assert ret

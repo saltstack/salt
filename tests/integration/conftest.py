@@ -4,6 +4,7 @@
 
     Integration tests PyTest configuration/fixtures
 """
+
 import logging
 import pathlib
 

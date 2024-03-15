@@ -72,7 +72,7 @@ def installed(name, cyg_arch="x86_64", mirrors=None):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The package {} would have been installed".format(name)
+        ret["comment"] = f"The package {name} would have been installed"
         return ret
 
     if __salt__["cyg.install"](name, cyg_arch=cyg_arch, mirrors=mirrors):
@@ -131,7 +131,7 @@ def removed(name, cyg_arch="x86_64", mirrors=None):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The package {} would have been removed".format(name)
+        ret["comment"] = f"The package {name} would have been removed"
         return ret
     if __salt__["cyg.uninstall"](name, cyg_arch):
         ret["result"] = True

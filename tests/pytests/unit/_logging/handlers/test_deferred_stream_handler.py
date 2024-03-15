@@ -9,6 +9,7 @@ import pytest
 from pytestshellutils.utils.processes import terminate_process
 
 from salt._logging.handlers import DeferredStreamHandler
+from salt._logging.impl import set_lowest_log_level
 from salt.utils.nb_popen import NonBlockingPopen
 from tests.support.helpers import CaptureOutput, dedent
 from tests.support.runtests import RUNTIME_VARS
@@ -20,7 +21,7 @@ def _sync_with_handlers_proc_target():
 
     with CaptureOutput() as stds:
         handler = DeferredStreamHandler(sys.stderr)
-        handler.setLevel(logging.DEBUG)
+        set_lowest_log_level(logging.DEBUG)
         formatter = logging.Formatter("%(message)s")
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
@@ -45,7 +46,7 @@ def _deferred_write_on_flush_proc_target():
 
     with CaptureOutput() as stds:
         handler = DeferredStreamHandler(sys.stderr)
-        handler.setLevel(logging.DEBUG)
+        set_lowest_log_level(logging.DEBUG)
         formatter = logging.Formatter("%(message)s")
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
@@ -126,7 +127,7 @@ def test_deferred_write_on_atexit(tmp_path):
         # Just loop consuming output
         while True:
             if time.time() > max_time:
-                pytest.fail("Script didn't exit after {} second".format(execution_time))
+                pytest.fail(f"Script didn't exit after {execution_time} second")
 
             time.sleep(0.125)
             _out = proc.recv()
@@ -146,7 +147,7 @@ def test_deferred_write_on_atexit(tmp_path):
     finally:
         terminate_process(proc.pid, kill_children=True)
     if b"Foo" not in err:
-        pytest.fail("'Foo' should be in stderr and it's not: {}".format(err))
+        pytest.fail(f"'Foo' should be in stderr and it's not: {err}")
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")

@@ -247,3 +247,44 @@ def test_pub_win32(salt_master_factory):
                 "test.ping",
                 tgt_type="nodegroup",
             )
+
+
+def test_invalid_event_tag_65727(master_opts, caplog):
+    """
+    LocalClient.get_iter_returns handles non return event tags.
+    """
+    minions = ()
+    jid = "0815"
+    raw_return = {"id": "fake-id", "jid": jid, "data": "", "return": "fake-return"}
+    expected_return = {"fake-id": {"ret": "fake-return"}}
+
+    def returns_iter():
+        # Invalid return
+        yield {
+            "tag": "salt/job/0815/return/",
+            "data": {
+                "return": "fpp",
+                "id": "fake-id",
+            },
+        }
+        # Valid return
+        yield {
+            "tag": "salt/job/0815/ret/",
+            "data": {
+                "return": "fpp",
+                "id": "fake-id",
+            },
+        }
+
+    with client.LocalClient(mopts=master_opts) as local_client:
+        # Returning a truthy value, the real method returns a salt returner but it's not used.
+        local_client.returns_for_job = MagicMock(return_value=True)
+        # Mock iter returns, we'll return one invalid and one valid return event.
+        local_client.get_returns_no_block = MagicMock(return_value=returns_iter())
+        with caplog.at_level(logging.DEBUG):
+            # Validate we don't choke on the bad return, the method returns a
+            # valid respons and the invalid event tag is getting logged to
+            # debug.
+            for ret in local_client.get_iter_returns(jid, {"fake-id"}):
+                assert ret == {"fake-id": {"ret": "fpp"}}
+            assert "Skipping non return event: salt/job/0815/return/" in caplog.text

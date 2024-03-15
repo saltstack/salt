@@ -63,7 +63,7 @@ def test_conf_d_path_exists_with_files(tmp_path):
     conf_d_path = tmp_path / "conf.d.path"
     conf_d_path.mkdir(parents=True, exist_ok=True)
     file_one = conf_d_path / "file_one"
-    expected_md5sum = "d41d8cd98f00b204e9800998ecf8427e  {}\n".format(file_one)
+    expected_md5sum = f"d41d8cd98f00b204e9800998ecf8427e  {file_one}\n"
     expected_timestamp = "10000\n"
     file_one.touch()
     os.utime(str(file_one), (int(expected_timestamp), int(expected_timestamp)))

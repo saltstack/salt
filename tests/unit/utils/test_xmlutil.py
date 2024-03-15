@@ -2,6 +2,7 @@
     tests.unit.xmlutil_test
     ~~~~~~~~~~~~~~~~~~~~
 """
+
 import xml.etree.ElementTree as ET
 
 import salt.utils.xmlutil as xml

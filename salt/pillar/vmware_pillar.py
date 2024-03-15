@@ -483,5 +483,5 @@ def _serializer(obj):
     if isinstance(obj, datetime.datetime):
         if obj.utcoffset() is not None:
             obj = obj - obj.utcoffset()
-        return obj.__str__()
+        return str(obj)
     return obj

@@ -120,7 +120,7 @@ def top(**kwargs):
     except ImportError as e:
         if "reclass" in str(e):
             raise SaltInvocationError(
-                "master_tops.reclass: cannot find reclass module in {}".format(sys.path)
+                f"master_tops.reclass: cannot find reclass module in {sys.path}"
             )
         else:
             raise
@@ -128,9 +128,7 @@ def top(**kwargs):
     except TypeError as e:
         if "unexpected keyword argument" in str(e):
             arg = str(e).split()[-1]
-            raise SaltInvocationError(
-                "master_tops.reclass: unexpected option: {}".format(arg)
-            )
+            raise SaltInvocationError(f"master_tops.reclass: unexpected option: {arg}")
         else:
             raise
 
@@ -143,4 +141,4 @@ def top(**kwargs):
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError("master_tops.reclass: {}".format(str(e)))
+        raise SaltInvocationError(f"master_tops.reclass: {str(e)}")

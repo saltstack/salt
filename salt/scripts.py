@@ -1,6 +1,7 @@
 """
 This module contains the function calls to execute command line scripts
 """
+
 import contextlib
 import functools
 import logging
@@ -17,9 +18,6 @@ import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
-
-if sys.version_info < (3,):
-    raise SystemExit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def _handle_signals(client, signum, sigframe):
@@ -483,16 +481,14 @@ def salt_cloud():
     """
     The main function for salt-cloud
     """
-    # Define 'salt' global so we may use it after ImportError. Otherwise,
-    # UnboundLocalError will be raised.
-    global salt  # pylint: disable=W0602
-
     try:
         # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
     except ImportError as e:
         # No salt cloud on Windows
+        import salt.defaults.exitcodes
+
         log.error("Error importing salt cloud: %s", e)
         print("salt-cloud is not available in this system")
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)

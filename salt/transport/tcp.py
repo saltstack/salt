@@ -4,6 +4,7 @@ TCP transport classes
 Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 """
+
 import asyncio
 import asyncio.exceptions
 import errno
@@ -619,7 +620,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         self.clients = []
         self.message_handler = message_handler
 
-    async def handle_stream(  # pylint: disable=arguments-differ
+    async def handle_stream(  # pylint: disable=arguments-differ,invalid-overridden-method
         self,
         stream,
         address,
@@ -1473,7 +1474,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         )
         self.pub_sock.connect(timeout=timeout)
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
         """
@@ -1743,7 +1746,7 @@ class RequestClient(salt.transport.base.RequestClient):
                 await asyncio.sleep(self.backoff)
         return stream
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         if self._stream is None:
             self._connect_called = True
             self._stream = await self.getstream()

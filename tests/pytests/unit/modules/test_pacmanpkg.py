@@ -2,7 +2,6 @@
     :codeauthor: Eric Vz <eric@base10.org>
 """
 
-
 import pytest
 
 import salt.modules.pacmanpkg as pacman
@@ -110,7 +109,7 @@ def test_group_list():
         elif cmd == ["pacman", "-Qg"]:
             return "group-a pkg1\ngroup-b pkg4"
         else:
-            return "Untested command ({}, {})!".format(cmd, kwargs)
+            return f"Untested command ({cmd}, {kwargs})!"
 
     cmdmock = MagicMock(side_effect=cmdlist)
 
@@ -137,7 +136,7 @@ def test_group_info():
         if cmd == ["pacman", "-Sgg", "testgroup"]:
             return "testgroup pkg1\ntestgroup pkg2"
         else:
-            return "Untested command ({}, {})!".format(cmd, kwargs)
+            return f"Untested command ({cmd}, {kwargs})!"
 
     cmdmock = MagicMock(side_effect=cmdlist)
 

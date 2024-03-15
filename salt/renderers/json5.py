@@ -11,7 +11,6 @@ This renderer requires the `json5 python bindings`__, installable via pip.
 .. __: https://pypi.python.org/pypi/json5
 """
 
-
 import logging
 
 try:

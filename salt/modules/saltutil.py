@@ -50,20 +50,18 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-# pylint: enable=import-error,no-name-in-module
+try:
+    import psutil
+
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 # Fix a nasty bug with Win32 Python not supporting all of the standard signals
 try:
     salt_SIGKILL = signal.SIGKILL
 except AttributeError:
     salt_SIGKILL = signal.SIGTERM
-
-
-HAS_PSUTIL = True
-try:
-    import salt.utils.psutil_compat
-except ImportError:
-    HAS_PSUTIL = False
 
 
 __proxyenabled__ = ["*"]
@@ -1549,9 +1547,9 @@ def signal_job(jid, sig):
         if data["jid"] == jid:
             try:
                 if HAS_PSUTIL:
-                    for proc in salt.utils.psutil_compat.Process(
-                        pid=data["pid"]
-                    ).children(recursive=True):
+                    for proc in psutil.Process(pid=data["pid"]).children(
+                        recursive=True
+                    ):
                         proc.send_signal(sig)
                 os.kill(int(data["pid"]), sig)
                 if HAS_PSUTIL is False and "child_pids" in data:
@@ -1646,7 +1644,7 @@ def regen_keys():
         path = os.path.join(__opts__["pki_dir"], fn_)
         try:
             os.remove(path)
-        except os.error:
+        except OSError:
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
@@ -1752,9 +1750,11 @@ def _exec(
         old_ret, fcn_ret = fcn_ret, {}
         for key, value in old_ret.items():
             fcn_ret[key] = {
-                "out": value.get("out", "highstate")
-                if isinstance(value, dict)
-                else "highstate",
+                "out": (
+                    value.get("out", "highstate")
+                    if isinstance(value, dict)
+                    else "highstate"
+                ),
                 "ret": value,
             }
 

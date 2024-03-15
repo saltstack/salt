@@ -59,13 +59,11 @@ def _check_portname(name):
     ports tree.
     """
     if not isinstance(name, str) or "/" not in name:
-        raise SaltInvocationError(
-            "Invalid port name '{}' (category required)".format(name)
-        )
+        raise SaltInvocationError(f"Invalid port name '{name}' (category required)")
 
     path = os.path.join("/usr/ports", name)
     if not os.path.isdir(path):
-        raise SaltInvocationError("Path '{}' does not exist".format(path))
+        raise SaltInvocationError(f"Path '{path}' does not exist")
 
     return path
 
@@ -109,7 +107,7 @@ def _write_options(name, configuration):
         try:
             os.makedirs(dirname)
         except OSError as exc:
-            raise CommandExecutionError("Unable to make {}: {}".format(dirname, exc))
+            raise CommandExecutionError(f"Unable to make {dirname}: {exc}")
 
     with salt.utils.files.fopen(os.path.join(dirname, "options"), "w") as fp_:
         sorted_options = list(conf_ptr)
@@ -270,7 +268,7 @@ def showconfig(name, default=False, dict_return=False):
         error = result
 
     if error:
-        msg = "Error running 'make showconfig' for {}: {}".format(name, error)
+        msg = f"Error running 'make showconfig' for {name}: {error}"
         log.error(msg)
         raise SaltInvocationError(msg)
 
@@ -327,9 +325,7 @@ def config(name, reset=False, **kwargs):
     configuration = showconfig(name, dict_return=True)
 
     if not configuration:
-        raise CommandExecutionError(
-            "Unable to get port configuration for '{}'".format(name)
-        )
+        raise CommandExecutionError(f"Unable to get port configuration for '{name}'")
 
     # Get top-level key for later reference
     pkg = next(iter(configuration))
@@ -345,7 +341,7 @@ def config(name, reset=False, **kwargs):
             )
         )
 
-    bad_vals = ["{}={}".format(x, y) for x, y in opts.items() if y not in ("on", "off")]
+    bad_vals = [f"{x}={y}" for x, y in opts.items() if y not in ("on", "off")]
     if bad_vals:
         raise SaltInvocationError(
             "The following key/value pairs are invalid: {}".format(", ".join(bad_vals))
@@ -396,8 +392,8 @@ def update(extract=False):
     except AttributeError:
         new_port_count = 0
 
-    ret.append("Applied {} new patches".format(patch_count))
-    ret.append("Fetched {} new ports or files".format(new_port_count))
+    ret.append(f"Applied {patch_count} new patches")
+    ret.append(f"Fetched {new_port_count} new ports or files")
 
     if extract:
         result = __salt__["cmd.run_all"](_portsnap() + ["extract"], python_shell=False)

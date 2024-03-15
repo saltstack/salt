@@ -49,7 +49,7 @@ def run_dict(cmd, cwd=None):
 
     if "retcode" not in ret or ret["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(f"Issue executing PowerShell cmd", info=ret)
+        raise CommandExecutionError("Issue executing PowerShell cmd", info=ret)
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
     if ret["stdout"] == "":

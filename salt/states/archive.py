@@ -119,7 +119,7 @@ def _update_checksum(path):
             log.warning(
                 "Failed to update checksum for %s: %s",
                 path,
-                exc.__str__(),
+                exc,
                 exc_info=True,
             )
 
@@ -826,9 +826,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret[
-            "comment"
-        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        ret["comment"] = (
+            'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        )
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -890,9 +890,9 @@ def extracted(
                 # from making this state blow up with a traceback.
                 not_rel = True
             if not_rel:
-                ret[
-                    "comment"
-                ] = f"Value for 'enforce_ownership_on' must be within {name}"
+                ret["comment"] = (
+                    f"Value for 'enforce_ownership_on' must be within {name}"
+                )
                 return ret
 
     if if_missing is not None and os.path.exists(if_missing):
@@ -902,9 +902,9 @@ def extracted(
 
     if user or group:
         if salt.utils.platform.is_windows():
-            ret[
-                "comment"
-            ] = "User/group ownership cannot be enforced on Windows minions"
+            ret["comment"] = (
+                "User/group ownership cannot be enforced on Windows minions"
+            )
             return ret
 
         if user:
@@ -939,9 +939,9 @@ def extracted(
         try:
             __salt__["gpg.verify"]
         except KeyError:
-            ret[
-                "comment"
-            ] = "Cannot verify signatures because the gpg module was not loaded"
+            ret["comment"] = (
+                "Cannot verify signatures because the gpg module was not loaded"
+            )
             return ret
 
     try:
@@ -1061,9 +1061,9 @@ def extracted(
                 )
     else:
         if password:
-            ret[
-                "comment"
-            ] = "The 'password' argument is only supported for zip archives"
+            ret["comment"] = (
+                "The 'password' argument is only supported for zip archives"
+            )
             return ret
 
     if archive_format == "rar":
@@ -1091,9 +1091,9 @@ def extracted(
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret[
-                    "comment"
-                ] = "Invalid value for trim_output, must be True/False or an integer"
+                ret["comment"] = (
+                    "Invalid value for trim_output, must be True/False or an integer"
+                )
                 return ret
 
     if source_hash:
@@ -1173,10 +1173,10 @@ def extracted(
             # salt/states/file.py from being processed through the loader. If
             # that is the case, we have much more important problems as _all_
             # file states would be unavailable.
-            ret[
-                "comment"
-            ] = "Unable to cache {}, file.cached state not available".format(
-                salt.utils.url.redact_http_basic_auth(source_match)
+            ret["comment"] = (
+                "Unable to cache {}, file.cached state not available".format(
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
             )
             return ret
 
@@ -1196,7 +1196,7 @@ def extracted(
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), exc.__str__()
+                salt.utils.url.redact_http_basic_auth(source_match), exc
             )
             log.exception(msg)
             ret["comment"] = msg
@@ -1352,7 +1352,7 @@ def extracted(
                 else:
                     ret["comment"] = (
                         "Failed to check for existence of if_missing path "
-                        "({}): {}".format(if_missing, exc.__str__())
+                        "({}): {}".format(if_missing, exc)
                     )
                     return ret
         else:
@@ -1381,7 +1381,7 @@ def extracted(
                             # that dir will raise an ENOTDIR OSError. So we
                             # expect these and will only abort here if the
                             # error code is something else.
-                            ret["comment"] = exc.__str__()
+                            ret["comment"] = str(exc)
                             return ret
 
             if incorrect_type:
@@ -1430,7 +1430,7 @@ def extracted(
                                 extraction_needed = True
                             except OSError as exc:
                                 if exc.errno != errno.ENOENT:
-                                    errors.append(exc.__str__())
+                                    errors.append(str(exc))
                         if errors:
                             msg = (
                                 "One or more paths existed by were the incorrect "
@@ -1511,7 +1511,7 @@ def extracted(
                     ret["changes"].setdefault("removed", []).append(full_path)
                 except OSError as exc:
                     if exc.errno != errno.ENOENT:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
 
             if errors:
                 msg = (
@@ -1565,7 +1565,7 @@ def extracted(
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, "r")) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))
+                            tar.extractall(salt.utils.stringutils.to_str(name))  # nosec
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]

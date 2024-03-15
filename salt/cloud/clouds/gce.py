@@ -43,6 +43,7 @@ Example Provider Configuration
 :maintainer: Russell Tolle <russ.tolle@gmail.com>
 :depends: libcloud >= 1.0.0
 """
+
 # pylint: disable=function-redefined
 
 import logging
@@ -185,7 +186,7 @@ def get_conn():
         "service_account_private_key", provider, __opts__
     )
     gce = driver(email, private_key, project=project)
-    gce.connection.user_agent_append("{}/{}".format(_UA_PRODUCT, _UA_VERSION))
+    gce.connection.user_agent_append(f"{_UA_PRODUCT}/{_UA_VERSION}")
     return gce
 
 
@@ -543,7 +544,7 @@ def _parse_allow(allow):
         pairs = p.split(":")
         if pairs[0].lower() not in ["tcp", "udp", "icmp"]:
             raise SaltCloudSystemExit(
-                "Unsupported protocol {}. Must be tcp, udp, or icmp.".format(pairs[0])
+                f"Unsupported protocol {pairs[0]}. Must be tcp, udp, or icmp."
             )
         if len(pairs) == 1 or pairs[0].lower() == "icmp":
             seen_protos[pairs[0]] = []
@@ -1698,7 +1699,6 @@ def delete_disk(kwargs=None, call=None):
 
 
 def create_disk(kwargs=None, call=None):
-
     """
     Create a new persistent disk. Must specify `disk_name` and `location`,
     and optionally can specify 'disk_type' as pd-standard or pd-ssd, which
@@ -2014,7 +2014,7 @@ def reboot(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "reboot instance",
-        "salt/cloud/{}/rebooting".format(vm_name),
+        f"salt/cloud/{vm_name}/rebooting",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2025,7 +2025,7 @@ def reboot(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "reboot instance",
-        "salt/cloud/{}/rebooted".format(vm_name),
+        f"salt/cloud/{vm_name}/rebooted",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2056,7 +2056,7 @@ def start(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "start instance",
-        "salt/cloud/{}/starting".format(vm_name),
+        f"salt/cloud/{vm_name}/starting",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2067,7 +2067,7 @@ def start(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "start instance",
-        "salt/cloud/{}/started".format(vm_name),
+        f"salt/cloud/{vm_name}/started",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2096,7 +2096,7 @@ def stop(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "stop instance",
-        "salt/cloud/{}/stopping".format(vm_name),
+        f"salt/cloud/{vm_name}/stopping",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2107,7 +2107,7 @@ def stop(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "stop instance",
-        "salt/cloud/{}/stopped".format(vm_name),
+        f"salt/cloud/{vm_name}/stopped",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2145,12 +2145,12 @@ def destroy(vm_name, call=None):
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-        raise SaltCloudSystemExit("Could not find instance {}.".format(vm_name))
+        raise SaltCloudSystemExit(f"Could not find instance {vm_name}.")
 
     __utils__["cloud.fire_event"](
         "event",
         "delete instance",
-        "salt/cloud/{}/deleting".format(vm_name),
+        f"salt/cloud/{vm_name}/deleting",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2186,11 +2186,11 @@ def destroy(vm_name, call=None):
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-        raise SaltCloudSystemExit("Could not destroy instance {}.".format(vm_name))
+        raise SaltCloudSystemExit(f"Could not destroy instance {vm_name}.")
     __utils__["cloud.fire_event"](
         "event",
         "delete instance",
-        "salt/cloud/{}/deleted".format(vm_name),
+        f"salt/cloud/{vm_name}/deleted",
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2279,7 +2279,7 @@ def create_attach_volumes(name, kwargs, call=None):
     letter = ord("a") - 1
 
     for idx, volume in enumerate(volumes):
-        volume_name = "{}-sd{}".format(name, chr(letter + 2 + idx))
+        volume_name = f"{name}-sd{chr(letter + 2 + idx)}"
 
         volume_dict = {
             "disk_name": volume_name,

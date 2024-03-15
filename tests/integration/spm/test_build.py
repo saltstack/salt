@@ -36,6 +36,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
 
     @pytest.mark.skip_if_binaries_missing("fallocate")
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_spm_build_big_file(self):
         """
         test spm build with a big file

@@ -24,6 +24,7 @@ Connection module for Apache Libcloud DNS management
 
 :depends: apache-libcloud
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

@@ -51,20 +51,20 @@ def value_present(name, xpath, value, **kwargs):
     current_value = __salt__["xml.get_value"](name, xpath)
     if not current_value:
         ret["result"] = False
-        ret["comment"] = "xpath query {} not found in {}".format(xpath, name)
+        ret["comment"] = f"xpath query {xpath} not found in {name}"
         return ret
 
     if current_value != value:
         if kwargs["test"]:
             ret["result"] = None
-            ret["comment"] = "{} will be updated".format(name)
+            ret["comment"] = f"{name} will be updated"
             ret["changes"] = {name: {"old": current_value, "new": value}}
         else:
             results = __salt__["xml.set_value"](name, xpath, value)
             ret["result"] = results
-            ret["comment"] = "{} updated".format(name)
+            ret["comment"] = f"{name} updated"
             ret["changes"] = {name: {"old": current_value, "new": value}}
     else:
-        ret["comment"] = "{} is already present".format(value)
+        ret["comment"] = f"{value} is already present"
 
     return ret

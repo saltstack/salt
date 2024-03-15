@@ -116,7 +116,7 @@ def test_symlink_target_relative_path(file, source):
     Test symlink when the target file is a relative path
     Should throw a SaltInvocationError
     """
-    target = "..{}symlink.lnk".format(os.path.sep)
+    target = f"..{os.path.sep}symlink.lnk"
     with pytest.raises(SaltInvocationError) as exc:
         file.symlink(str(source), str(target))
     assert "Link path must be absolute" in exc.value.message

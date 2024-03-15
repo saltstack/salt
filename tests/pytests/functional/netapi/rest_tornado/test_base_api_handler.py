@@ -95,7 +95,7 @@ async def test_token(http_client):
 
     # send a token as a cookie
     response = await http_client.fetch(
-        "/", headers={"Cookie": "{}=foo".format(saltnado.AUTH_COOKIE_NAME)}
+        "/", headers={"Cookie": f"{saltnado.AUTH_COOKIE_NAME}=foo"}
     )
     token = salt.utils.json.loads(response.body)["token"]
     assert token == "foo"
@@ -105,7 +105,7 @@ async def test_token(http_client):
         "/",
         headers={
             saltnado.AUTH_TOKEN_HEADER: "foo",
-            "Cookie": "{}=bar".format(saltnado.AUTH_COOKIE_NAME),
+            "Cookie": f"{saltnado.AUTH_COOKIE_NAME}=bar",
         },
     )
     token = salt.utils.json.loads(response.body)["token"]

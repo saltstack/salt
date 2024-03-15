@@ -18,6 +18,7 @@ Support for YUM/DNF
 .. versionadded:: 3007.0
     Support for ``dnf5``` on Fedora 39
 """
+
 import configparser
 import contextlib
 import datetime
@@ -394,7 +395,7 @@ def _get_yum_config_value(name, strict_config=True):
     Look for a specific config variable and return its value
     """
     conf = _get_yum_config(strict_config)
-    if name in conf.keys():
+    if name in conf:
         return conf.get(name)
     return None
 
@@ -3123,7 +3124,9 @@ def mod_repo(repo, basedir=None, **kwargs):
         if key in filerepos[repo].copy().keys():
             del filerepos[repo][key]
 
-    _bool_to_str = lambda x: "1" if x else "0"
+    def _bool_to_str(x):
+        return "1" if x else "0"
+
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header

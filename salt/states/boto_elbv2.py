@@ -72,7 +72,6 @@ def create_target_group(
     unhealthy_threshold_count=2,
     **kwargs,
 ):
-
     """
     .. versionadded:: 2017.11.0
 

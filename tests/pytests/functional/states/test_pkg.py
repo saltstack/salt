@@ -19,6 +19,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
@@ -506,7 +507,7 @@ def test_pkg_012_installed_with_wildcard_version(PKG_TARGETS, states, modules):
     )
 
     expected_comment = (
-        "All specified packages are already installed and are at the " "desired version"
+        "All specified packages are already installed and are at the desired version"
     )
     assert ret.result is True
     assert ret.raw[next(iter(ret.raw))]["comment"] == expected_comment

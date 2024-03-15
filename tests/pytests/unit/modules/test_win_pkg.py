@@ -1,6 +1,7 @@
 """
 Tests for the win_pkg module
 """
+
 import logging
 
 import pytest

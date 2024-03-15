@@ -1,6 +1,7 @@
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
+
 import logging
 
 import pytest

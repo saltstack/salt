@@ -53,12 +53,12 @@ def installed(name, enabled=True):
 
         if enabled != is_enabled:
             __salt__["assistive.enable"](name, enabled)
-            ret["comment"] = "Updated enable to {}".format(enabled)
+            ret["comment"] = f"Updated enable to {enabled}"
         else:
             ret["comment"] = "Already in the correct state"
 
     else:
         __salt__["assistive.install"](name, enabled)
-        ret["comment"] = "Installed {} into the assistive access panel".format(name)
+        ret["comment"] = f"Installed {name} into the assistive access panel"
 
     return ret

@@ -96,7 +96,7 @@ def present(
         # del saved_alert_config["_id"]
         for k, v in post_body.items():
             if k not in saved_alert_config:
-                difference.append("{}={} (new)".format(k, v))
+                difference.append(f"{k}={v} (new)")
                 continue
             v2 = saved_alert_config[k]
 
@@ -108,7 +108,7 @@ def present(
                 continue
             if isinstance(v, int) and v == int(v2):
                 continue
-            difference.append("{}='{}' was: '{}'".format(k, v, v2))
+            difference.append(f"{k}='{v}' was: '{v2}'")
     else:
         difference.append("new alert config")
 
@@ -122,10 +122,10 @@ def present(
     if saved_alert_config:  # alert config is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
         if len(difference) == 0:
-            ret["comment"] = "alert config {} present and matching".format(metric_name)
+            ret["comment"] = f"alert config {metric_name} present and matching"
             return ret
         if __opts__["test"]:
-            msg = "alert config {} is to be updated.".format(metric_name)
+            msg = f"alert config {metric_name} is to be updated."
             ret["comment"] = msg
             ret["result"] = "\n".join(difference)
             return ret
@@ -142,7 +142,7 @@ def present(
             )
     else:  # alert config is absent. create it.
         if __opts__["test"]:
-            msg = "alert config {} is to be created.".format(metric_name)
+            msg = f"alert config {metric_name} is to be created."
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -190,10 +190,10 @@ def absent(name, deployment_id, metric_name, api_key=None, profile="telemetry"):
     if is_present:
         alert_id = is_present.get("_id")
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "alert {} is set to be removed from deployment: {}.".format(
-                metric_name, deployment_id
+            ret["comment"] = (
+                "alert {} is set to be removed from deployment: {}.".format(
+                    metric_name, deployment_id
+                )
             )
             ret["result"] = None
             return ret

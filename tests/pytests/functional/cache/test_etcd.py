@@ -21,8 +21,8 @@ pytestmark = [
     scope="module",
     params=(EtcdVersion.v2, EtcdVersion.v3_v2_mode),
     ids=etcd_version_ids,
-)  # pylint: disable=function-redefined
-def etcd_version(request):
+)
+def etcd_version(request):  # pylint: disable=function-redefined
     # The only parameter is True because the salt cache does not use
     # salt/utils/etcd_util.py and if coded for etcd v2
     if request.param and not HAS_ETCD_V2:

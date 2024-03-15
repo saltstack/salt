@@ -90,11 +90,11 @@ class LXCModuleTest(ModuleCase):
             start=False,
         )
 
-        f = "/var/lib/lxc/{}/config".format(self.prefix)
+        f = f"/var/lib/lxc/{self.prefix}/config"
         conf = self.run_function("lxc.read_conf", [f])
 
         # Due to a segfault in lxc-destroy caused by invalid configs,
         # truncate the config.
-        self.run_function("cmd.run", ["truncate -s 0 {}".format(f)])
+        self.run_function("cmd.run", [f"truncate -s 0 {f}"])
 
         self.assertEqual(conf.get("lxc.network.type"), "macvlan")

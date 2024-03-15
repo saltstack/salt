@@ -5,7 +5,6 @@ to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 """
 
-
 import copy
 import logging
 
@@ -272,7 +271,7 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
     try:
         retcode = int(retcode)
     except (TypeError, ValueError):
-        log.warning(f"Got an invalid retcode for host: '{retcode}'")
+        log.warning("Got an invalid retcode for host: '%s'", retcode)
         retcode = 1
 
     if "Permission denied" in stderr:
@@ -308,7 +307,9 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
                     # Ensure a reported local retcode is kept (at least)
                     retcode = max(retcode, remote_retcode)
                 except (TypeError, ValueError):
-                    log.warning(f"Host reported an invalid retcode: '{remote_retcode}'")
+                    log.warning(
+                        "Host reported an invalid retcode: '%s'", remote_retcode
+                    )
                     retcode = max(retcode, 1)
 
             if not isinstance(result, dict):

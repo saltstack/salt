@@ -242,9 +242,7 @@ def _wait_for_status(status_type, object_id, status=None, timeout=500, quiet=Tru
     manager = packet.Manager(auth_token=vm_["token"])
 
     for i in range(0, iterations):
-        get_object = getattr(
-            manager, "get_{status_type}".format(status_type=status_type)
-        )
+        get_object = getattr(manager, f"get_{status_type}")
         obj = get_object(object_id)
 
         if obj.state == status:
@@ -340,7 +338,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{}/creating".format(name),
+        f"salt/cloud/{name}/creating",
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -413,7 +411,7 @@ def create(vm_):
 
         volume = manager.create_volume(
             vm_["project_id"],
-            "{}_storage".format(name),
+            f"{name}_storage",
             vm_.get("storage_tier"),
             vm_.get("storage_size"),
             vm_.get("location"),
@@ -441,7 +439,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{}/created".format(name),
+        f"salt/cloud/{name}/created",
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -580,7 +578,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -606,7 +604,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

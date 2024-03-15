@@ -1472,9 +1472,11 @@ def test_parse_general_names_rejects_invalid(inpt):
 )
 def test_get_dn(inpt, expected):
     expected_parsed = [
-        cx509.RelativeDistinguishedName({x})
-        if not isinstance(x, cx509.RelativeDistinguishedName)
-        else x
+        (
+            cx509.RelativeDistinguishedName({x})
+            if not isinstance(x, cx509.RelativeDistinguishedName)
+            else x
+        )
         for x in expected
     ]
     res = x509._get_dn(inpt)

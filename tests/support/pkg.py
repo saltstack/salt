@@ -111,7 +111,14 @@ class SaltPkgInstall:
 
     @pkg_mngr.default
     def _default_pkg_mngr(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             return "yum"
         elif self.distro_id in ("ubuntu", "debian"):
             ret = self.proc.run("apt-get", "update")
@@ -120,7 +127,14 @@ class SaltPkgInstall:
 
     @rm_pkg.default
     def _default_rm_pkg(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             return "remove"
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
@@ -128,7 +142,14 @@ class SaltPkgInstall:
     @dbg_pkg.default
     def _default_dbg_pkg(self):
         dbg_pkg = None
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             dbg_pkg = "salt-debuginfo"
         elif self.distro_id in ("ubuntu", "debian"):
             dbg_pkg = "salt-dbg"
@@ -144,7 +165,14 @@ class SaltPkgInstall:
             "salt-cloud",
             "salt-minion",
         ]
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             salt_pkgs.append("salt")
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
@@ -256,7 +284,7 @@ class SaltPkgInstall:
                             self.install_dir / "salt-minion.exe"
                         ).exists() and not self.relenv:
                             log.debug(
-                                f"Removing {(self.install_dir / 'salt-minion.exe')}"
+                                "Removing %s", self.install_dir / "salt-minion.exe"
                             )
                             (self.install_dir / "salt-minion.exe").unlink()
 
@@ -524,13 +552,14 @@ class SaltPkgInstall:
             "3006.0"
         )
         distro_name = self.distro_name
-        if distro_name == "centos" or distro_name == "fedora":
+        if distro_name in ("almalinux", "centos", "fedora"):
             distro_name = "redhat"
         root_url = "salt/py3/"
         if self.classic:
             root_url = "py3/"
 
         if self.distro_name in [
+            "almalinux",
             "redhat",
             "centos",
             "amazon",
@@ -646,7 +675,8 @@ class SaltPkgInstall:
                 Pin: origin "repo.saltproject.io"
                 Pin-Priority: 1001
                 """
-                    )
+                    ),
+                    encoding="utf-8",
                 )
                 cmd.append("--allow-downgrades")
             env = os.environ.copy()

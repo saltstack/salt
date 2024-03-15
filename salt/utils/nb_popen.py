@@ -24,14 +24,12 @@ import time
 
 mswindows = sys.platform == "win32"
 
-try:
+if mswindows:
     import msvcrt
 
     import pywintypes
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
-except ImportError:
-    import fcntl
 
 log = logging.getLogger(__name__)
 
@@ -147,8 +145,8 @@ class NonBlockingPopen(subprocess.Popen):
                     return self._close(which)
                 raise
 
-            getattr(self, "{}_buff".format(which)).write(read)
-            getattr(self, "_{}_logger".format(which)).debug(read.rstrip())
+            getattr(self, f"{which}_buff").write(read)
+            getattr(self, f"_{which}_logger").debug(read.rstrip())
             if self.stream_stds:
                 getattr(sys, which).write(read)
 
@@ -180,6 +178,8 @@ class NonBlockingPopen(subprocess.Popen):
             if conn is None:
                 return None
 
+            import fcntl
+
             flags = fcntl.fcntl(conn, fcntl.F_GETFL)
             if not conn.closed:
                 fcntl.fcntl(conn, fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -195,8 +195,8 @@ class NonBlockingPopen(subprocess.Popen):
                 if self.universal_newlines:
                     buff = self._translate_newlines(buff)
 
-                getattr(self, "{}_buff".format(which)).write(buff)
-                getattr(self, "_{}_logger".format(which)).debug(buff.rstrip())
+                getattr(self, f"{which}_buff").write(buff)
+                getattr(self, f"_{which}_logger").debug(buff.rstrip())
                 if self.stream_stds:
                     getattr(sys, which).write(buff)
 

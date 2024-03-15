@@ -26,9 +26,13 @@ def test_load_encoding(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "version,encoding", [((2, 1, 3), False), ((1, 0, 0), False), ((0, 6, 2), True)]
+    "version",
+    [
+        (2, 1, 3),
+        (1, 0, 0),
+    ],
 )
-def test_load_multiple_versions(version, encoding, tmp_path):
+def test_load_multiple_versions(version, tmp_path):
     """
     test when using msgpack on multiple versions that
     we only remove encoding on >= 1.0.0
@@ -47,24 +51,18 @@ def test_load_multiple_versions(version, encoding, tmp_path):
         with patch_dump, patch_load:
             with salt.utils.files.fopen(fname, "wb") as wfh:
                 salt.utils.msgpack.dump(data, wfh, encoding="utf-8")
-                if encoding:
-                    assert "encoding" in mock_dump.call_args.kwargs
-                else:
-                    assert "encoding" not in mock_dump.call_args.kwargs
+                assert "encoding" not in mock_dump.call_args.kwargs
 
             with salt.utils.files.fopen(fname, "rb") as rfh:
                 salt.utils.msgpack.load(rfh, **kwargs)
-                if encoding:
-                    assert "encoding" in mock_load.call_args.kwargs
-                else:
-                    assert "encoding" not in mock_load.call_args.kwargs
+                assert "encoding" not in mock_load.call_args.kwargs
 
 
 @pytest.mark.parametrize(
     "version,exp_kwargs",
     [
+        ((1, 0, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
         ((0, 6, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
-        ((0, 5, 2), {"raw": True, "use_bin_type": True}),
     ],
 )
 def test_sanitize_msgpack_kwargs(version, exp_kwargs):
@@ -80,12 +78,8 @@ def test_sanitize_msgpack_kwargs(version, exp_kwargs):
 @pytest.mark.parametrize(
     "version,exp_kwargs",
     [
+        ((2, 0, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
         ((1, 0, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
-        (
-            (0, 6, 0),
-            {"strict_map_key": True, "use_bin_type": True, "encoding": "utf-8"},
-        ),
-        ((0, 5, 2), {"use_bin_type": True, "encoding": "utf-8"}),
     ],
 )
 def test_sanitize_msgpack_unpack_kwargs(version, exp_kwargs):

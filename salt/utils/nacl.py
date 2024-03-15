@@ -15,9 +15,9 @@ import salt.utils.win_functions
 
 REQ_ERROR = None
 try:
-    import nacl.public
-    import nacl.secret
-except (ImportError, OSError) as e:
+    import nacl.public  # pylint: disable=no-name-in-module
+    import nacl.secret  # pylint: disable=no-name-in-module
+except ImportError:
     REQ_ERROR = (
         "PyNaCl import error, perhaps missing python PyNaCl package or should update."
     )

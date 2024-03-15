@@ -50,9 +50,7 @@ def _psrdp(cmd):
         "-Namespace root\\CIMV2\\TerminalServices -Computer . "
         "-Authentication 6 -ErrorAction Stop"
     )
-    return __salt__["cmd.run"](
-        "{} ; {}".format(rdp, cmd), shell="powershell", python_shell=True
-    )
+    return __salt__["cmd.run"](f"{rdp} ; {cmd}", shell="powershell", python_shell=True)
 
 
 def enable():

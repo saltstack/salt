@@ -91,7 +91,7 @@ class AdaptedConfigurationTestCaseMixin:
             if key not in config_overrides:
                 config_overrides[key] = key
         if "log_file" not in config_overrides:
-            config_overrides["log_file"] = "logs/{}.log".format(config_for)
+            config_overrides["log_file"] = f"logs/{config_for}.log"
         if "user" not in config_overrides:
             config_overrides["user"] = RUNTIME_VARS.RUNNING_TESTS_USER
         config_overrides["root_dir"] = rootdir
@@ -287,9 +287,9 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
             mopts = self.get_config(
                 self._salt_client_config_file_name_, from_scratch=True
             )
-            RUNTIME_VARS.RUNTIME_CONFIGS[
-                "runtime_client"
-            ] = salt.client.get_local_client(mopts=mopts)
+            RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"] = (
+                salt.client.get_local_client(mopts=mopts)
+            )
         return RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"]
 
 
@@ -443,7 +443,7 @@ class SaltReturnAssertsMixin:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
             raise AssertionError(
-                "{} is not dict. Salt returned: {}".format(type(ret).__name__, ret)
+                f"{type(ret).__name__} is not dict. Salt returned: {ret}"
             )
 
     def assertReturnNonEmptySaltType(self, ret):
@@ -478,7 +478,7 @@ class SaltReturnAssertsMixin:
             except (KeyError, TypeError):
                 raise AssertionError(
                     "Could not get ret{} from salt's return: {}".format(
-                        "".join(["['{}']".format(k) for k in keys]), part
+                        "".join([f"['{k}']" for k in keys]), part
                     )
                 )
             while okeys:
@@ -487,7 +487,7 @@ class SaltReturnAssertsMixin:
                 except (KeyError, TypeError):
                     raise AssertionError(
                         "Could not get ret{} from salt's return: {}".format(
-                            "".join(["['{}']".format(k) for k in keys]), part
+                            "".join([f"['{k}']" for k in keys]), part
                         )
                     )
             ret_data.append(ret_item)
@@ -525,9 +525,7 @@ class SaltReturnAssertsMixin:
                     )
                 )
             except (AttributeError, IndexError):
-                raise AssertionError(
-                    "Failed to get result. Salt Returned: {}".format(ret)
-                )
+                raise AssertionError(f"Failed to get result. Salt Returned: {ret}")
 
     def assertSaltNoneReturn(self, ret):
         try:
@@ -542,9 +540,7 @@ class SaltReturnAssertsMixin:
                     )
                 )
             except (AttributeError, IndexError):
-                raise AssertionError(
-                    "Failed to get result. Salt Returned: {}".format(ret)
-                )
+                raise AssertionError(f"Failed to get result. Salt Returned: {ret}")
 
     def assertInSaltComment(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, "comment"):
@@ -633,7 +629,7 @@ class SaltMinionEventAssertsMixin:
         cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
             target=_fetch_events,
             args=(cls.q, opts),
-            name="Process-{}-Queue".format(cls.__name__),
+            name=f"Process-{cls.__name__}-Queue",
         )
         cls.fetch_proc.start()
         # Wait for the event bus to be connected
@@ -670,6 +666,4 @@ class SaltMinionEventAssertsMixin:
             if time.time() - start >= timeout:
                 break
         self.fetch_proc.terminate()
-        raise AssertionError(
-            "Event {} was not received by minion".format(desired_event)
-        )
+        raise AssertionError(f"Event {desired_event} was not received by minion")

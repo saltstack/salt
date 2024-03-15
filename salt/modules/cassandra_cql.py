@@ -220,7 +220,7 @@ def _load_properties(property_name, config_option, set_default=False, default=No
                     config_option,
                 )
                 raise CommandExecutionError(
-                    "ERROR: Cassandra {} cannot be empty.".format(config_option)
+                    f"ERROR: Cassandra {config_option} cannot be empty."
                 )
         return loaded_property
     return property_name
@@ -510,7 +510,7 @@ def cql_query(
         results = session.execute(query)
     except BaseException as e:
         log.error("Failed to execute query: %s\n reason: %s", query, e)
-        msg = "ERROR: Cassandra query failed: {} reason: {}".format(query, e)
+        msg = f"ERROR: Cassandra query failed: {query} reason: {e}"
         raise CommandExecutionError(msg)
 
     if results:
@@ -543,7 +543,7 @@ def cql_query_with_prepare(
     load_balancing_policy=None,
     load_balancing_policy_args=None,
     ssl_options=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run a query on a Cassandra cluster and return a dictionary.
@@ -642,7 +642,7 @@ def cql_query_with_prepare(
             results = session.execute(bound_statement.bind(statement_arguments))
     except BaseException as e:
         log.error("Failed to execute query: %s\n reason: %s", query, e)
-        msg = "ERROR: Cassandra query failed: {} reason: {}".format(query, e)
+        msg = f"ERROR: Cassandra query failed: {query} reason: {e}"
         raise CommandExecutionError(msg)
 
     if not asynchronous and results:
@@ -919,13 +919,13 @@ def list_column_families(
 
         salt 'minion1' cassandra_cql.list_column_families keyspace=system
     """
-    where_clause = "where keyspace_name = '{}'".format(keyspace) if keyspace else ""
+    where_clause = f"where keyspace_name = '{keyspace}'" if keyspace else ""
 
     query = {
         "2": "select columnfamily_name from system.schema_columnfamilies {};".format(
             where_clause
         ),
-        "3": "select column_name from system_schema.columns {};".format(where_clause),
+        "3": f"select column_name from system_schema.columns {where_clause};",
     }
 
     ret = {}
@@ -1190,7 +1190,7 @@ def drop_keyspace(
         ssl_options=ssl_options,
     )
     if existing_keyspace:
-        query = """drop keyspace {};""".format(keyspace)
+        query = f"""drop keyspace {keyspace};"""
         try:
             cql_query(
                 query,
@@ -1419,16 +1419,12 @@ def list_permissions(
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
           permission=select contact_points=minion1
     """
-    keyspace_cql = (
-        "{} {}".format(resource_type, resource) if resource else "all keyspaces"
-    )
-    permission_cql = (
-        "{} permission".format(permission) if permission else "all permissions"
-    )
-    query = "list {} on {}".format(permission_cql, keyspace_cql)
+    keyspace_cql = f"{resource_type} {resource}" if resource else "all keyspaces"
+    permission_cql = f"{permission} permission" if permission else "all permissions"
+    query = f"list {permission_cql} on {keyspace_cql}"
 
     if username:
-        query = "{} of {}".format(query, username)
+        query = f"{query} of {username}"
 
     log.debug("Attempting to list permissions with query '%s'", query)
 
@@ -1511,13 +1507,9 @@ def grant_permission(
         salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     """
-    permission_cql = (
-        "grant {}".format(permission) if permission else "grant all permissions"
-    )
-    resource_cql = (
-        "on {} {}".format(resource_type, resource) if resource else "on all keyspaces"
-    )
-    query = "{} {} to {}".format(permission_cql, resource_cql, username)
+    permission_cql = f"grant {permission}" if permission else "grant all permissions"
+    resource_cql = f"on {resource_type} {resource}" if resource else "on all keyspaces"
+    query = f"{permission_cql} {resource_cql} to {username}"
     log.debug("Attempting to grant permissions with query '%s'", query)
 
     try:

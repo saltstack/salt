@@ -2,6 +2,7 @@
 
 --constraint=./py{py_version}/{platform}.txt
 
-pylint==2.4.4
-SaltPyLint>=2023.3.8
+docker
+pylint~=3.1.0
+SaltPyLint>=2024.2.2
 toml

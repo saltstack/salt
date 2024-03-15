@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def preserve_context_ids(value):
-    return "preserve_context={}".format(value)
+    return f"preserve_context={value}"
 
 
 @pytest.fixture(params=[True, False], ids=preserve_context_ids)

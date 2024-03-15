@@ -2,7 +2,6 @@
 exclude= """
 /(
     salt/ext
-  | tests/kitchen
   | templates
 )/
 """
@@ -14,7 +13,7 @@ force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
 ensure_newline_before_comments=true
-skip="salt/ext,tests/kitchen,templates"
+skip="salt/ext,templates"
 known_third_party = [
   "pytest"
 ]

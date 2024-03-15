@@ -259,7 +259,7 @@ def get_route(ip):
 
         salt '*' network.get_route 10.10.10.10
     """
-    cmd = "Find-NetRoute -RemoteIPAddress {}".format(ip)
+    cmd = f"Find-NetRoute -RemoteIPAddress {ip}"
     out = __salt__["cmd.run"](cmd, shell="powershell", python_shell=True)
     regexp = re.compile(
         r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
@@ -492,7 +492,7 @@ def connect(host, port=None, **kwargs):
     ):
         address = host
     else:
-        address = "{}".format(salt.utils.network.sanitize_host(host))
+        address = f"{salt.utils.network.sanitize_host(host)}"
 
     # just in case we encounter error on getaddrinfo
     _address = ("unknown",)

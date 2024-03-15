@@ -9,7 +9,6 @@ Manage ini files
 
 """
 
-
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "ini"
@@ -71,12 +70,12 @@ def options_present(name, sections=None, separator="=", strict=False):
                 for option in options:
                     if option in original_top_level_opts:
                         if str(original_top_level_opts[option]) == str(options[option]):
-                            ret["comment"] += "Unchanged key {}.\n".format(option)
+                            ret["comment"] += f"Unchanged key {option}.\n"
                         else:
-                            ret["comment"] += "Changed key {}.\n".format(option)
+                            ret["comment"] += f"Changed key {option}.\n"
                             ret["result"] = None
                     else:
-                        ret["comment"] += "Changed key {}.\n".format(option)
+                        ret["comment"] += f"Changed key {option}.\n"
                         ret["result"] = None
             else:
                 options_updated = __salt__["ini.set_option"](name, options, separator)
@@ -84,7 +83,7 @@ def options_present(name, sections=None, separator="=", strict=False):
             if strict:
                 for opt_to_remove in set(original_top_level_opts).difference(options):
                     if __opts__["test"]:
-                        ret["comment"] += "Removed key {}.\n".format(opt_to_remove)
+                        ret["comment"] += f"Removed key {opt_to_remove}.\n"
                         ret["result"] = None
                     else:
                         __salt__["ini.remove_option"](
@@ -151,7 +150,7 @@ def options_present(name, sections=None, separator="=", strict=False):
             if not __opts__["test"]:
                 changes = __salt__["ini.set_option"](name, sections, separator)
     except (OSError, KeyError) as err:
-        ret["comment"] = "{}".format(err)
+        ret["comment"] = f"{err}"
         ret["result"] = False
         return ret
     if "error" in changes:
@@ -199,7 +198,7 @@ def options_absent(name, sections=None, separator="="):
             try:
                 cur_section = __salt__["ini.get_section"](name, section, separator)
             except OSError as err:
-                ret["comment"] = "{}".format(err)
+                ret["comment"] = f"{err}"
                 ret["result"] = False
                 return ret
             except AttributeError:
@@ -212,14 +211,14 @@ def options_absent(name, sections=None, separator="="):
                             key, section_name
                         )
                         continue
-                    ret["comment"] += "Deleted key {}{}.\n".format(key, section_name)
+                    ret["comment"] += f"Deleted key {key}{section_name}.\n"
                     ret["result"] = None
             else:
                 option = section
                 if not __salt__["ini.get_option"](name, None, option, separator):
-                    ret["comment"] += "Key {} does not exist.\n".format(option)
+                    ret["comment"] += f"Key {option} does not exist.\n"
                     continue
-                ret["comment"] += "Deleted key {}.\n".format(option)
+                ret["comment"] += f"Deleted key {option}.\n"
                 ret["result"] = None
 
         if ret["comment"] == "":
@@ -233,7 +232,7 @@ def options_absent(name, sections=None, separator="="):
                     name, section, key, separator
                 )
             except OSError as err:
-                ret["comment"] = "{}".format(err)
+                ret["comment"] = f"{err}"
                 ret["result"] = False
                 return ret
             if not current_value:
@@ -278,14 +277,14 @@ def sections_present(name, sections=None, separator="="):
             cur_ini = __salt__["ini.get_ini"](name, separator)
         except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{}".format(err)
+            ret["comment"] = f"{err}"
             return ret
         for section in sections or {}:
             if section in cur_ini:
-                ret["comment"] += "Section unchanged {}.\n".format(section)
+                ret["comment"] += f"Section unchanged {section}.\n"
                 continue
             else:
-                ret["comment"] += "Created new section {}.\n".format(section)
+                ret["comment"] += f"Created new section {section}.\n"
             ret["result"] = None
         if ret["comment"] == "":
             ret["comment"] = "No changes detected."
@@ -297,7 +296,7 @@ def sections_present(name, sections=None, separator="="):
         changes = __salt__["ini.set_option"](name, section_to_update, separator)
     except OSError as err:
         ret["result"] = False
-        ret["comment"] = "{}".format(err)
+        ret["comment"] = f"{err}"
         return ret
     if "error" in changes:
         ret["result"] = False
@@ -335,13 +334,13 @@ def sections_absent(name, sections=None, separator="="):
             cur_ini = __salt__["ini.get_ini"](name, separator)
         except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{}".format(err)
+            ret["comment"] = f"{err}"
             return ret
         for section in sections or []:
             if section not in cur_ini:
-                ret["comment"] += "Section {} does not exist.\n".format(section)
+                ret["comment"] += f"Section {section} does not exist.\n"
                 continue
-            ret["comment"] += "Deleted section {}.\n".format(section)
+            ret["comment"] += f"Deleted section {section}.\n"
             ret["result"] = None
         if ret["comment"] == "":
             ret["comment"] = "No changes detected."
@@ -351,7 +350,7 @@ def sections_absent(name, sections=None, separator="="):
             cur_section = __salt__["ini.remove_section"](name, section, separator)
         except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{}".format(err)
+            ret["comment"] = f"{err}"
             return ret
         if not cur_section:
             continue

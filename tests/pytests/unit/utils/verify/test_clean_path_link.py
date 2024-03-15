@@ -1,6 +1,7 @@
 """
 Ensure salt.utils.clean_path works with symlinked directories and files
 """
+
 import ctypes
 
 import pytest

@@ -1,6 +1,7 @@
 """
 Tests for the boto_sns state
 """
+
 import re
 
 import pytest
@@ -44,9 +45,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("boto_sns.present", name=self.topic_name)
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
-        self.assertInSaltComment(
-            "AWS SNS topic {} created.".format(self.topic_name), ret
-        )
+        self.assertInSaltComment(f"AWS SNS topic {self.topic_name} created.", ret)
         self.assertSaltStateChangesEqual(
             ret, {"old": None, "new": {"topic": self.topic_name, "subscriptions": []}}
         )
@@ -130,9 +129,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
-        self.assertInSaltComment(
-            "AWS SNS topic {} present.".format(self.topic_name), ret
-        )
+        self.assertInSaltComment(f"AWS SNS topic {self.topic_name} present.", ret)
         self.assertInSaltComment(
             "AWS SNS subscription https:https://www.example.com/sns/endpoint already"
             " set on topic {}.".format(self.topic_name),
@@ -234,7 +231,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {} is set to be created.".format(self.topic_name), ret
+            f"AWS SNS topic {self.topic_name} is set to be created.", ret
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function("boto_sns.exists", name=self.topic_name)
@@ -270,7 +267,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {} does not exist.".format(self.topic_name), ret
+            f"AWS SNS topic {self.topic_name} does not exist.", ret
         )
         self.assertSaltStateChangesEqual(ret, {})
 
@@ -280,7 +277,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {} does not exist.".format(self.topic_name), ret
+            f"AWS SNS topic {self.topic_name} does not exist.", ret
         )
         self.assertSaltStateChangesEqual(
             ret, {"new": None, "old": {"topic": self.topic_name}}
@@ -292,7 +289,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {} is set to be removed.".format(self.topic_name), ret
+            f"AWS SNS topic {self.topic_name} is set to be removed.", ret
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function("boto_sns.exists", name=self.topic_name)

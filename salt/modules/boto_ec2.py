@@ -39,6 +39,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 :depends: boto
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -664,7 +665,6 @@ def find_instances(
     in_states=None,
     filters=None,
 ):
-
     """
     Given instance properties, find and return matching instance ids
 
@@ -791,7 +791,6 @@ def find_images(
     profile=None,
     return_objs=False,
 ):
-
     """
     Given image properties, find and return matching AMI ids
 
@@ -891,7 +890,6 @@ def get_id(
     in_states=None,
     filters=None,
 ):
-
     """
     Given instance properties, return the instance id if it exists.
 
@@ -2297,10 +2295,10 @@ def set_volumes_tags(
                         profile=profile,
                     ):
                         ret["success"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove tags on vol.id {}: {}".format(
-                            vol.id, remove
+                        ret["comment"] = (
+                            "Failed to remove tags on vol.id {}: {}".format(
+                                vol.id, remove
+                            )
                         )
                         return ret
     if changes["old"] or changes["new"]:

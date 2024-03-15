@@ -1,6 +1,7 @@
 """
 unittests for json outputter
 """
+
 import pytest
 
 import salt.output.json_out as json_out

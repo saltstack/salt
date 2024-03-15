@@ -1,6 +1,7 @@
 """
 Unit tests for chocolatey state
 """
+
 import logging
 
 import pytest

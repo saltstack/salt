@@ -1,6 +1,7 @@
 """
 This tests policies that are defined in the giant dictionary in the LGPO module
 """
+
 import pytest
 
 import salt.modules.win_file as win_file

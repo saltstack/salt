@@ -212,12 +212,12 @@ def restart():
     restart_cmd = __salt__["config.get"]("minion_restart_command")
     if restart_cmd:
         comment.append("Using configuration minion_restart_command:")
-        comment.extend(["    {}".format(arg) for arg in restart_cmd])
+        comment.extend([f"    {arg}" for arg in restart_cmd])
     else:
         if "-d" in sys.argv:
             restart_cmd = sys.argv
             comment.append("Restart using process argv:")
-            comment.extend(["    {}".format(arg) for arg in restart_cmd])
+            comment.extend([f"    {arg}" for arg in restart_cmd])
         else:
             should_restart = False
             comment.append(

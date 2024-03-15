@@ -9,6 +9,7 @@ from tests.support.pytest.helpers import FakeSaltExtension
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
+    pytest.mark.timeout(120),
 ]
 
 log = logging.getLogger(__name__)

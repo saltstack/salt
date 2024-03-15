@@ -3,7 +3,6 @@
     This tests the SSH wrapper module.
 """
 
-
 import fnmatch
 
 import pytest

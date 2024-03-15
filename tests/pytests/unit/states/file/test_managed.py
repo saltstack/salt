@@ -179,7 +179,7 @@ def test_managed():
             assert filestate.managed("") == ret
 
             with patch.object(os.path, "isfile", mock_f):
-                comt = "File {} is not present and is not set for creation".format(name)
+                comt = f"File {name} is not present and is not set for creation"
                 ret.update({"comment": comt, "name": name, "result": True})
                 assert filestate.managed(name, create=False) == ret
 
@@ -193,13 +193,13 @@ def test_managed():
             assert filestate.managed(name, user=user, group=group) == ret
 
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {} is not an absolute path".format(name)
+                comt = f"Specified file {name} is not an absolute path"
                 ret.update({"comment": comt, "result": False})
                 assert filestate.managed(name, user=user, group=group) == ret
 
             with patch.object(os.path, "isabs", mock_t):
                 with patch.object(os.path, "isdir", mock_t):
-                    comt = "Specified target {} is a directory".format(name)
+                    comt = f"Specified target {name} is a directory"
                     ret.update({"comment": comt})
                     assert filestate.managed(name, user=user, group=group) == ret
 
@@ -237,7 +237,7 @@ def test_managed():
 
                     with patch.object(os.path, "exists", mock_t):
                         with patch.dict(filestate.__opts__, {"test": True}):
-                            comt = "File {} not updated".format(name)
+                            comt = f"File {name} not updated"
                             ret.update({"comment": comt})
                             assert (
                                 filestate.managed(
@@ -246,7 +246,7 @@ def test_managed():
                                 == ret
                             )
 
-                            comt = "The file {} is in the correct state".format(name)
+                            comt = f"The file {name} is in the correct state"
                             ret.update({"comment": comt, "result": True})
                             assert (
                                 filestate.managed(
@@ -324,7 +324,7 @@ def test_managed():
 
                     if salt.utils.platform.is_windows():
                         mock_ret = MagicMock(return_value=ret)
-                        comt = "File {} not updated".format(name)
+                        comt = f"File {name} not updated"
                     else:
                         perms = {"luser": user, "lmode": "0644", "lgroup": group}
                         mock_ret = MagicMock(return_value=(ret, perms))
@@ -359,7 +359,7 @@ def test_managed():
                     else:
                         perms = {"luser": user, "lmode": "0644", "lgroup": group}
                         mock_ret = MagicMock(return_value=(ret, perms))
-                    comt = "File {} not updated".format(name)
+                    comt = f"File {name} not updated"
                     with patch.dict(filestate.__salt__, {"file.check_perms": mock_ret}):
                         with patch.object(os.path, "exists", mock_t):
                             with patch.dict(filestate.__opts__, {"test": True}):
@@ -431,3 +431,22 @@ def test_managed_test_mode_user_group_not_present():
 )
 def test_sources_source_hash_check(source, check_result):
     assert filestate._http_ftp_check(source) is check_result
+
+
+def test_file_managed_tmp_dir_system_temp(tmp_path):
+    tmp_file = tmp_path / "tmp.txt"
+    mock_mkstemp = MagicMock()
+    with patch(
+        "salt.states.file._load_accumulators", MagicMock(return_value=([], []))
+    ), patch("salt.utils.files.mkstemp", mock_mkstemp), patch.dict(
+        filestate.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "file.file_exists": MagicMock(return_value=False),
+            "file.get_managed": MagicMock(return_value=["", "", ""]),
+            "file.manage_file": MagicMock(),
+            "file.source_list": MagicMock(return_value=["", ""]),
+        },
+    ):
+        filestate.managed(str(tmp_file), contents="wollo herld", check_cmd="true")
+        mock_mkstemp.assert_called_with(suffix="", dir=None)

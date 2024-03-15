@@ -96,7 +96,9 @@ def test_create_firewall_ssh():
 
     patch_show = patch("salt.cloud.clouds.vultrpy.show_instance", MagicMock())
 
-    with patch_scripts, patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
+    with (
+        patch_scripts
+    ), patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
         vultr.create(kwargs)
         query_ret = mock_query.call_args.kwargs["data"]
         assert "SSHKEYID=key1%2Ckey2%2Ckey3" in query_ret
@@ -143,7 +145,9 @@ def test_create_firewall_doesnotexist(caplog):
 
     patch_show = patch("salt.cloud.clouds.vultrpy.show_instance", MagicMock())
 
-    with patch_scripts, patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
+    with (
+        patch_scripts
+    ), patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
         with caplog.at_level(logging.INFO):
             ret = vultr.create(kwargs)
             assert (
@@ -193,7 +197,9 @@ def test_create_ssh_key_ids_doesnotexist(caplog):
 
     patch_show = patch("salt.cloud.clouds.vultrpy.show_instance", MagicMock())
 
-    with patch_scripts, patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
+    with (
+        patch_scripts
+    ), patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
         with caplog.at_level(logging.INFO):
             ret = vultr.create(kwargs)
             assert (

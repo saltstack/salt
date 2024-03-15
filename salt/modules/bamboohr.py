@@ -175,8 +175,8 @@ def update_employee(emp_id, key=None, value=None, items=None):
 
     xml_items = ""
     for pair in items:
-        xml_items += '<field id="{}">{}</field>'.format(pair, items[pair])
-    xml_items = "<employee>{}</employee>".format(xml_items)
+        xml_items += f'<field id="{pair}">{items[pair]}</field>'
+    xml_items = f"<employee>{xml_items}</employee>"
 
     status, result = _query(
         action="employees",
@@ -259,13 +259,13 @@ def _query(action=None, command=None, args=None, method="GET", data=None):
     The password can be any random text, so we chose Salty text.
     """
     subdomain = __opts__.get("bamboohr", {}).get("subdomain", None)
-    path = "https://api.bamboohr.com/api/gateway.php/{}/v1/".format(subdomain)
+    path = f"https://api.bamboohr.com/api/gateway.php/{subdomain}/v1/"
 
     if action:
         path += action
 
     if command:
-        path += "/{}".format(command)
+        path += f"/{command}"
 
     log.debug("BambooHR URL: %s", path)
 

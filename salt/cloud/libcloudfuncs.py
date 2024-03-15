@@ -61,7 +61,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
         )
     )
     if why:
-        errormsg += " for {}".format(why)
+        errormsg += f" for {why}"
     errormsg += ". Please upgrade."
     raise ImportError(errormsg)
 
@@ -186,7 +186,7 @@ def get_location(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -204,9 +204,7 @@ def get_image(conn, vm_):
         if vm_image and vm_image in (img_id, img_name):
             return img
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_size(conn, vm_):
@@ -224,9 +222,7 @@ def get_size(conn, vm_):
             str(size.name),
         ):
             return size
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def script(vm_):
@@ -257,7 +253,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -296,7 +292,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -338,8 +334,8 @@ def reboot(name, conn=None):
         # Fire reboot action
         __utils__["cloud.fire_event"](
             "event",
-            "{} has been rebooted".format(name),
-            "salt/cloud/{}/rebooting".format(name),
+            f"{name} has been rebooted",
+            f"salt/cloud/{name}/rebooting",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],

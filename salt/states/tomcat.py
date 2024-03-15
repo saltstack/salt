@@ -142,7 +142,7 @@ def war_deployed(
     status = True
 
     # Gathered/specified new WAR version string
-    specified_ver = "version {}".format(version) if version else "no version"
+    specified_ver = f"version {version}" if version else "no version"
 
     # Determine what to do
     try:
@@ -172,13 +172,13 @@ def war_deployed(
                 name, specified_ver
             )
             if webapps[name]["mode"] != "running":
-                ret["changes"]["start"] = "starting {}".format(name)
+                ret["changes"]["start"] = f"starting {name}"
                 status = False
             else:
                 return ret
     except Exception:  # pylint: disable=broad-except
         deploy = True
-        ret["changes"]["deploy"] = "deployed {} with {}".format(name, specified_ver)
+        ret["changes"]["deploy"] = f"deployed {name} with {specified_ver}"
 
     # Test
     if __opts__["test"]:
@@ -216,7 +216,7 @@ def war_deployed(
     if deploy_res.startswith("OK"):
         ret["result"] = True
         ret["comment"] = str(__salt__["tomcat.ls"](url, timeout)[name])
-        ret["changes"]["deploy"] = "deployed {} with {}".format(name, specified_ver)
+        ret["changes"]["deploy"] = f"deployed {name} with {specified_ver}"
     else:
         ret["result"] = False
         ret["comment"] = deploy_res

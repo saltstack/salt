@@ -9,18 +9,14 @@ from salt.modules import elasticsearch
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-# Import elasticsearch exceptions
-NO_ELASTIC = False
-try:
-    from elasticsearch import NotFoundError, TransportError
-except Exception:  # pylint: disable=broad-except
-    NO_ELASTIC = True
-
-
-@pytest.mark.skipif(
-    NO_ELASTIC,
+_es_module = pytest.importorskip(
+    "elasticsearch",
     reason="Install elasticsearch-py before running Elasticsearch unit tests.",
 )
+NotFoundError = _es_module.NotFoundError
+TransportError = _es_module.TransportError
+
+
 class ElasticsearchTestCase(TestCase):
     """
     Test cases for salt.modules.elasticsearch

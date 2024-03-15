@@ -3,7 +3,6 @@ Module for managing keyboards on supported POSIX-like systems using
 systemd, or such as Redhat, Debian and Gentoo.
 """
 
-
 import logging
 
 import salt.utils.path
@@ -64,19 +63,17 @@ def set_sys(layout):
         salt '*' keyboard.set_sys dvorak
     """
     if salt.utils.path.which("localectl"):
-        __salt__["cmd.run"]("localectl set-keymap {}".format(layout))
+        __salt__["cmd.run"](f"localectl set-keymap {layout}")
     elif "RedHat" in __grains__["os_family"]:
         __salt__["file.sed"](
-            "/etc/sysconfig/keyboard", "^LAYOUT=.*", "LAYOUT={}".format(layout)
+            "/etc/sysconfig/keyboard", "^LAYOUT=.*", f"LAYOUT={layout}"
         )
     elif "Debian" in __grains__["os_family"]:
         __salt__["file.sed"](
-            "/etc/default/keyboard", "^XKBLAYOUT=.*", "XKBLAYOUT={}".format(layout)
+            "/etc/default/keyboard", "^XKBLAYOUT=.*", f"XKBLAYOUT={layout}"
         )
     elif "Gentoo" in __grains__["os_family"]:
-        __salt__["file.sed"](
-            "/etc/conf.d/keymaps", "^keymap=.*", "keymap={}".format(layout)
-        )
+        __salt__["file.sed"]("/etc/conf.d/keymaps", "^keymap=.*", f"keymap={layout}")
     return layout
 
 
@@ -105,6 +102,6 @@ def set_x(layout):
 
         salt '*' keyboard.set_x dvorak
     """
-    cmd = "setxkbmap {}".format(layout)
+    cmd = f"setxkbmap {layout}"
     __salt__["cmd.run"](cmd)
     return layout

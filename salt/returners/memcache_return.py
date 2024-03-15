@@ -121,9 +121,9 @@ def _get_list(serv, key):
 def _append_list(serv, key, value):
     if value in _get_list(serv, key):
         return
-    r = serv.append(key, "{},".format(value))
+    r = serv.append(key, f"{value},")
     if not r:
-        serv.add(key, "{},".format(value))
+        serv.add(key, f"{value},")
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
@@ -142,8 +142,8 @@ def returner(ret):
     jid = ret["jid"]
     fun = ret["fun"]
     rets = salt.utils.json.dumps(ret)
-    serv.set("{}:{}".format(jid, minion), rets)  # cache for get_jid
-    serv.set("{}:{}".format(fun, minion), rets)  # cache for get_fun
+    serv.set(f"{jid}:{minion}", rets)  # cache for get_jid
+    serv.set(f"{fun}:{minion}", rets)  # cache for get_fun
 
     # The following operations are neither efficient nor atomic.
     # If there is a way to make them so, this should be updated.
@@ -183,7 +183,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
     minions = _get_list(serv, "minions")
-    returns = serv.get_multi(minions, key_prefix="{}:".format(jid))
+    returns = serv.get_multi(minions, key_prefix=f"{jid}:")
     # returns = {minion: return, minion: return, ...}
     ret = {}
     for minion, data in returns.items():
@@ -197,7 +197,7 @@ def get_fun(fun):
     """
     serv = _get_serv(ret=None)
     minions = _get_list(serv, "minions")
-    returns = serv.get_multi(minions, key_prefix="{}:".format(fun))
+    returns = serv.get_multi(minions, key_prefix=f"{fun}:")
     # returns = {minion: return, minion: return, ...}
     ret = {}
     for minion, data in returns.items():

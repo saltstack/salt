@@ -32,7 +32,6 @@ def configure_loader_modules():
 
 
 def test_check_virtual():
-
     """UT: nxos module:check_virtual method - return value"""
 
     result = nxos_proxy.__virtual__()
@@ -40,7 +39,6 @@ def test_check_virtual():
 
 
 def test_init():
-
     """UT: nxos module:init method - nxapi proxy"""
 
     with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": "nxapi"}}):
@@ -50,7 +48,6 @@ def test_init():
 
 
 def test_init_opts_none():
-
     """UT: nxos module:init method - __opts__ connection is None"""
 
     with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": None}}):
@@ -60,14 +57,12 @@ def test_init_opts_none():
 
 
 def test_init_bad_connection_type():
-
     """UT: nxos module:init method - bad CONNECTION type"""
     with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": "unknown"}}):
         assert not nxos_proxy.init()
 
 
 def test_initialized():
-
     """UT: nxos module:initialized method - nxapi proxy"""
 
     with patch(
@@ -78,7 +73,6 @@ def test_initialized():
 
 
 def test_ping():
-
     """UT: nxos module:ping method - nxapi proxy"""
 
     with patch("salt.proxy.nxos._ping_nxapi", autospec=True) as ping_nxapi:
@@ -87,7 +81,6 @@ def test_ping():
 
 
 def test_grains():
-
     """UT: nxos module:grains method - nxapi grains"""
 
     with patch(
@@ -98,7 +91,6 @@ def test_grains():
 
 
 def test_grains_cache_set():
-
     """UT: nxos module:grains method - nxapi grains cache set"""
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {"grains_cache": n9k_grains["nxos"]}):
@@ -112,7 +104,6 @@ def test_grains_cache_set():
 
 
 def test_grains_refresh():
-
     """UT: nxos module:grains_refresh method - nxapi grains"""
 
     device_details = {"grains_cache": None}
@@ -125,7 +116,6 @@ def test_grains_refresh():
 
 
 def test_sendline():
-
     """UT: nxos module:sendline method - nxapi"""
 
     command = "show version"
@@ -136,7 +126,6 @@ def test_sendline():
 
 
 def test_proxy_config():
-
     """UT: nxos module:proxy_config method - nxapi success path"""
 
     commands = ["feature bgp", "router bgp 65535"]
@@ -148,7 +137,6 @@ def test_proxy_config():
 
 
 def test_proxy_config_save_config():
-
     """UT: nxos module:proxy_config method - nxapi success path"""
 
     commands = ["feature bgp", "router bgp 65535"]
@@ -160,7 +148,6 @@ def test_proxy_config_save_config():
 
 
 def test__init_nxapi():
-
     """UT: nxos module:_init_nxapi method - successful connectinon"""
 
     opts = {"proxy": {"arg1": None}}
@@ -194,7 +181,6 @@ def test_bad__init_nxapi():
 
 
 def test__initialized_nxapi():
-
     """UT: nxos module:_initialized_nxapi method"""
 
     result = nxos_proxy._initialized_nxapi()
@@ -206,7 +192,6 @@ def test__initialized_nxapi():
 
 
 def test__ping_nxapi():
-
     """UT: nxos module:_ping_nxapi method"""
 
     result = nxos_proxy._ping_nxapi()
@@ -218,7 +203,6 @@ def test__ping_nxapi():
 
 
 def test__shutdown_nxapi():
-
     """UT: nxos module:_shutdown_nxapi method"""
 
     opts = {"id": "value"}
@@ -229,7 +213,6 @@ def test__shutdown_nxapi():
 
 
 def test__nxapi_request_ssh_return():
-
     """UT: nxos module:_nxapi_request method - CONNECTION == 'ssh'"""
 
     commands = "show version"
@@ -240,7 +223,6 @@ def test__nxapi_request_ssh_return():
 
 
 def test__nxapi_request_connect():
-
     """UT: nxos module:_nxapi_request method"""
 
     commands = "show version"

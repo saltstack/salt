@@ -1,6 +1,7 @@
 """
 Check salt code base for for missing or wrong docstrings.
 """
+
 # Skip mypy checks since it will follow into Salt which doesn't yet have proper types defined
 # mypy: ignore-errors
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated

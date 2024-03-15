@@ -739,9 +739,7 @@ def test_top():
                         with patch.object(os.path, "join", mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(state, "_set_retcode", mock):
-                                assert state.top(
-                                    "reverse_top.sls " "exclude=exclude.sls"
-                                )
+                                assert state.top("reverse_top.sls exclude=exclude.sls")
 
 
 def test_highstate():
@@ -779,7 +777,7 @@ def test_highstate():
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(os.path, "join", mock):
-                                with patch.object(state, "_set" "_retcode", mock):
+                                with patch.object(state, "_set_retcode", mock):
                                     assert state.highstate(arg)
 
 
@@ -883,11 +881,11 @@ def test_sls():
                         assert state.sls(arg, None, None, True, cache=True)
 
                     MockState.HighState.flag = True
-                    assert state.sls("core,edit" ".vim dev", None, None, True)
+                    assert state.sls("core,edit.vim dev", None, None, True)
 
                     MockState.HighState.flag = False
                     with patch.object(
-                        state, "_filter_" "running", return_value=True
+                        state, "_filter_running", return_value=True
                     ), patch.object(os.path, "join", return_value=True), patch.object(
                         os, "umask", return_value=True
                     ), patch.object(
@@ -899,7 +897,7 @@ def test_sls():
                     ), patch(
                         "salt.utils.files.fopen", mock_open()
                     ):
-                        assert state.sls("core,edit" ".vim dev", None, None, True)
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
 
 def test_get_test_value():

@@ -1,6 +1,7 @@
 """
 Cluster scinarios.
 """
+
 import os
 import pathlib
 import time
@@ -27,9 +28,9 @@ def test_cluster_key_rotation(
         cluster_master_3,
     ):
         config = cluster_minion_1.config.copy()
-        config[
-            "master_uri"
-        ] = f"tcp://{master.config['interface']}:{master.config['ret_port']}"
+        config["master_uri"] = (
+            f"tcp://{master.config['interface']}:{master.config['ret_port']}"
+        )
         auth = salt.crypt.SAuth(config)
         auth.authenticate()
         assert "aes" in auth._creds
@@ -64,9 +65,9 @@ def test_cluster_key_rotation(
         cluster_master_3,
     ):
         config = cluster_minion_1.config.copy()
-        config[
-            "master_uri"
-        ] = f"tcp://{master.config['interface']}:{master.config['ret_port']}"
+        config["master_uri"] = (
+            f"tcp://{master.config['interface']}:{master.config['ret_port']}"
+        )
         auth = salt.crypt.SAuth(config)
         auth.authenticate()
         assert "aes" in auth._creds

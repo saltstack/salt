@@ -1,6 +1,7 @@
 """
 Unit tests for salt.config
 """
+
 import logging
 import os
 import textwrap
@@ -52,7 +53,7 @@ MOCK_ETC_HOSTS = textwrap.dedent(
         hostname=MOCK_HOSTNAME
     )
 )
-MOCK_ETC_HOSTNAME = "{}\n".format(MOCK_HOSTNAME)
+MOCK_ETC_HOSTNAME = f"{MOCK_HOSTNAME}\n"
 PATH = "path/to/some/cloud/conf/file"
 DEFAULT = {"default_include": PATH}
 
@@ -86,7 +87,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         self.assertEqual(
             ret,
             {},
-            "Sample config file '{}' must be commented out.".format(master_config),
+            f"Sample config file '{master_config}' must be commented out.",
         )
 
     def test_conf_minion_sample_is_commented(self):
@@ -99,7 +100,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         self.assertEqual(
             ret,
             {},
-            "Sample config file '{}' must be commented out.".format(minion_config),
+            f"Sample config file '{minion_config}' must be commented out.",
         )
 
     def test_conf_cloud_sample_is_commented(self):
@@ -112,7 +113,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         self.assertEqual(
             ret,
             {},
-            "Sample config file '{}' must be commented out.".format(cloud_config),
+            f"Sample config file '{cloud_config}' must be commented out.",
         )
 
     def test_conf_cloud_profiles_sample_is_commented(self):
@@ -155,7 +156,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         self.assertEqual(
             ret,
             {},
-            "Sample config file '{}' must be commented out.".format(proxy_config),
+            f"Sample config file '{proxy_config}' must be commented out.",
         )
 
     def test_conf_roster_sample_is_commented(self):
@@ -168,7 +169,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         self.assertEqual(
             ret,
             {},
-            "Sample config file '{}' must be commented out.".format(roster_config),
+            f"Sample config file '{roster_config}' must be commented out.",
         )
 
     def test_conf_cloud_profiles_d_files_are_commented(self):
@@ -179,9 +180,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         """
         cloud_sample_dir = SAMPLE_CONF_DIR + "cloud.profiles.d/"
         if not os.path.exists(cloud_sample_dir):
-            self.skipTest(
-                "Sample config directory '{}' is missing.".format(cloud_sample_dir)
-            )
+            self.skipTest(f"Sample config directory '{cloud_sample_dir}' is missing.")
         cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
             profile_conf = cloud_sample_dir + conf_file
@@ -189,7 +188,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             self.assertEqual(
                 ret,
                 {},
-                "Sample config file '{}' must be commented out.".format(conf_file),
+                f"Sample config file '{conf_file}' must be commented out.",
             )
 
     def test_conf_cloud_providers_d_files_are_commented(self):
@@ -200,9 +199,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         """
         cloud_sample_dir = SAMPLE_CONF_DIR + "cloud.providers.d/"
         if not os.path.exists(cloud_sample_dir):
-            self.skipTest(
-                "Sample config directory '{}' is missing.".format(cloud_sample_dir)
-            )
+            self.skipTest(f"Sample config directory '{cloud_sample_dir}' is missing.")
         cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
             provider_conf = cloud_sample_dir + conf_file
@@ -210,7 +207,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             self.assertEqual(
                 ret,
                 {},
-                "Sample config file '{}' must be commented out.".format(conf_file),
+                f"Sample config file '{conf_file}' must be commented out.",
             )
 
     def test_conf_cloud_maps_d_files_are_commented(self):
@@ -221,9 +218,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         """
         cloud_sample_dir = SAMPLE_CONF_DIR + "cloud.maps.d/"
         if not os.path.exists(cloud_sample_dir):
-            self.skipTest(
-                "Sample config directory '{}' is missing.".format(cloud_sample_dir)
-            )
+            self.skipTest(f"Sample config directory '{cloud_sample_dir}' is missing.")
         cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
             map_conf = cloud_sample_dir + conf_file
@@ -231,7 +226,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             self.assertEqual(
                 ret,
                 {},
-                "Sample config file '{}' must be commented out.".format(conf_file),
+                f"Sample config file '{conf_file}' must be commented out.",
             )
 
 
@@ -239,14 +234,14 @@ def _unhandled_mock_read(filename):
     """
     Raise an error because we should not be calling salt.utils.files.fopen()
     """
-    raise CommandExecutionError("Unhandled mock read for {}".format(filename))
+    raise CommandExecutionError(f"Unhandled mock read for {filename}")
 
 
 def _salt_configuration_error(filename):
     """
     Raise an error to indicate error in the Salt configuration file
     """
-    raise SaltConfigurationError("Configuration error in {}".format(filename))
+    raise SaltConfigurationError(f"Configuration error in {filename}")
 
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -290,7 +285,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         config = salt.config.master_config(fpath)
         self.assertEqual(config["log_file"], fpath)
 
@@ -300,7 +295,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         config = salt.config.master_config(fpath)
         self.assertEqual(config["log_file"], fpath)
 
@@ -314,17 +309,17 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write(f"root_dir: {env_root_dir}\nlog_file: {env_fpath}\n")
         with patched_environ(SALT_MASTER_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file.
-            config = salt.config.master_config("{}/master".format(CONFIG_DIR))
+            config = salt.config.master_config(f"{CONFIG_DIR}/master")
             self.assertEqual(config["log_file"], env_fpath)
 
         root_dir = os.path.join(tempdir, "foo", "bar")
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -343,18 +338,18 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write(f"root_dir: {env_root_dir}\nlog_file: {env_fpath}\n")
 
         with patched_environ(SALT_MINION_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
-            config = salt.config.minion_config("{}/minion".format(CONFIG_DIR))
+            config = salt.config.minion_config(f"{CONFIG_DIR}/minion")
             self.assertEqual(config["log_file"], env_fpath)
 
         root_dir = os.path.join(tempdir, "foo", "bar")
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -386,7 +381,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Now the client configuration file
         env_fpath = os.path.join(env_root_dir, "config-env")
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write(f"root_dir: {env_root_dir}\nlog_file: {env_fpath}\n")
 
         with patched_environ(
             SALT_MASTER_CONFIG=master_config, SALT_CLIENT_CONFIG=env_fpath
@@ -400,7 +395,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -1675,7 +1670,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write(f"root_dir: {env_root_dir}\nlog_file: {env_fpath}\n")
 
         with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
@@ -1686,7 +1681,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
+            fp_.write(f"root_dir: {root_dir}\nlog_file: {fpath}\n")
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -1725,9 +1720,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         config_file = self.get_config_file_path("cloud")
         log.debug("Cloud config file path: %s", config_file)
-        self.assertTrue(
-            os.path.exists(config_file), "{} does not exist".format(config_file)
-        )
+        self.assertTrue(os.path.exists(config_file), f"{config_file} does not exist")
         config = salt.config.cloud_config(config_file)
         self.assertIn("providers", config)
         self.assertIn("ec2-config", config["providers"])
@@ -1900,7 +1893,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides = {}
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write("root_dir: /\nkey_logfile: key\ncachedir: {}".format(cachedir))
+            wfh.write(f"root_dir: /\nkey_logfile: key\ncachedir: {cachedir}")
         config = salt.config.mminion_config(fpath, overrides)
         self.assertEqual(config["__role"], "master")
         self.assertEqual(config["cachedir"], cachedir)
@@ -1944,7 +1937,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != "/" else ""
             )
             if salt.utils.platform.is_windows():
-                expected = "{}\\var\\log\\salt\\api".format(RUNTIME_VARS.TMP_ROOT_DIR)
+                expected = f"{RUNTIME_VARS.TMP_ROOT_DIR}\\var\\log\\salt\\api"
 
             ret = salt.config.api_config("/some/fake/path")
             self.assertEqual(ret["log_file"], expected)

@@ -137,7 +137,7 @@ def test_when_absent_is_called_it_should_pass_the_correct_ssl_argument_to_MongoC
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
-                call().__bool__(),
+                call().__bool__(),  # pylint: disable=unnecessary-dunder-call
                 call(
                     host="example.com",
                     port=42,
@@ -147,7 +147,7 @@ def test_when_absent_is_called_it_should_pass_the_correct_ssl_argument_to_MongoC
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
-                call().__bool__(),
+                call().__bool__(),  # pylint: disable=unnecessary-dunder-call
             ]
         )
 
@@ -191,7 +191,7 @@ def test_when_present_is_called_it_should_pass_the_correct_ssl_argument_to_Mongo
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
-                call().__bool__(),
+                call().__bool__(),  # pylint: disable=unnecessary-dunder-call
                 call(
                     host="example.com",
                     port=42,
@@ -201,6 +201,6 @@ def test_when_present_is_called_it_should_pass_the_correct_ssl_argument_to_Mongo
                     ssl=expected_ssl,
                     tlsAllowInvalidCertificates=expected_allow_invalid,
                 ),
-                call().__bool__(),
+                call().__bool__(),  # pylint: disable=unnecessary-dunder-call
             ]
         )

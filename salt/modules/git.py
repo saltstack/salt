@@ -1067,7 +1067,7 @@ def clone(
             url, https_user, https_pass, https_only=True
         )
     except ValueError as exc:
-        raise SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(str(exc))
 
     command = ["git"] + _format_git_opts(git_opts)
     command.append("clone")
@@ -3044,7 +3044,7 @@ def ls_remote(
             remote, https_user, https_pass, https_only=True
         )
     except ValueError as exc:
-        raise SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(str(exc))
     command = ["git"] + _format_git_opts(git_opts)
     command.append("ls-remote")
     command.extend(_format_opts(opts))
@@ -4051,7 +4051,7 @@ def remote_refs(
             )
         )
     except ValueError as exc:
-        raise SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(str(exc))
     if filter_:
         command.append(filter_)
     output = _git_run(
@@ -4185,7 +4185,7 @@ def remote_set(
             url, https_user, https_pass, https_only=True
         )
     except ValueError as exc:
-        raise SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(str(exc))
     command = ["git", "remote", "add", remote, url]
     _git_run(
         command,

@@ -509,7 +509,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate(
@@ -517,7 +517,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate(
@@ -525,7 +525,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -583,7 +583,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": False}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 1}, TestConf.serialize())
@@ -692,7 +692,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -702,7 +702,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3}, TestConf.serialize())
@@ -729,7 +729,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "foo"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -752,7 +752,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -788,7 +788,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -825,7 +825,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -861,7 +861,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -897,7 +897,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -936,7 +936,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -985,7 +985,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1100,7 +1100,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 2}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": "3"}, TestConf.serialize())
@@ -1114,7 +1114,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4.4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 4}, TestConf.serialize())
@@ -1128,7 +1128,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 3}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 11}, TestConf.serialize())
@@ -1173,7 +1173,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(
@@ -1289,7 +1289,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 2}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3.1}, TestConf.serialize())
@@ -1303,7 +1303,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3}, TestConf.serialize())
@@ -1317,7 +1317,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 3}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 11}, TestConf.serialize())
@@ -1362,7 +1362,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(
@@ -1497,7 +1497,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1523,7 +1523,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1567,7 +1567,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1591,7 +1591,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1611,7 +1611,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
         try:
             jsonschema.validate(
                 {"item": ["Tobias"]},
@@ -1619,7 +1619,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1797,7 +1797,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": {"sides": 1}}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": {"sides": "1"}}, TestConf.serialize())
@@ -1820,7 +1820,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"sides": 1, "color": "red"}}, TestConf.serialize()
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1872,7 +1872,7 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1904,7 +1904,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"color": "red", "sides": 1}}, TestConf.serialize()
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate(
@@ -1912,7 +1912,7 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": {"color": "blue"}}, TestConf.serialize())
@@ -1999,7 +1999,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -2048,22 +2048,22 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate({"item": [False]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -2108,12 +2108,12 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -2145,12 +2145,12 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
@@ -2494,7 +2494,7 @@ class ComplexSchemaTestCase(TestCase):
         try:
             jsonschema.validate({"complex_item": {"thirsty": True}}, serialized)
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
     @pytest.mark.skipif(
         HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
@@ -2515,7 +2515,7 @@ class ComplexSchemaTestCase(TestCase):
         try:
             jsonschema.validate({"complex_complex_item": {"hungry": True}}, serialized)
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
     @pytest.mark.skipif(
         HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
@@ -2533,7 +2533,7 @@ class ComplexSchemaTestCase(TestCase):
                 serialized,
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {}".format(exc))
+            self.fail(f"ValidationError raised: {exc}")
 
     @pytest.mark.skipif(
         HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"

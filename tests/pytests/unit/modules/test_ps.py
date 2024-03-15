@@ -1,6 +1,7 @@
 import time
 from collections import namedtuple
 
+import psutil
 import pytest
 
 import salt.modules.ps
@@ -9,8 +10,6 @@ import salt.utils.data
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
-
-psutil = pytest.importorskip("salt.utils.psutil_compat")
 
 # TestCase Exceptions are tested in tests/unit/modules/test_ps.py
 
@@ -85,7 +84,9 @@ def sample_process():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+    with (
+        patch_stat_file
+    ), patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         proc = psutil.Process(pid=42)
         proc.info = proc.as_dict(("name", "status"))
         yield proc
@@ -97,7 +98,7 @@ def test__status_when_process_is_found_with_matching_status_then_proc_info_shoul
     expected_result = [{"pid": 42, "name": "blerp"}]
     proc = sample_process
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         autospec=True,
         return_value=[
             proc
@@ -111,7 +112,7 @@ def test__status_when_process_is_found_with_matching_status_then_proc_info_shoul
 def test__status_when_no_matching_processes_then_no_results_should_be_returned():
     expected_result = []
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         autospec=True,
         return_value=[MagicMock(info={"status": "foo", "blerp": "whatever"})],
     ):
@@ -125,7 +126,7 @@ def test__status_when_some_matching_processes_then_only_correct_info_should_be_r
 ):
     expected_result = [{"name": "blerp", "pid": 42}]
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         autospec=True,
         return_value=[
             sample_process,
@@ -136,9 +137,6 @@ def test__status_when_some_matching_processes_then_only_correct_info_should_be_r
 
         actual_result = salt.modules.ps.status(status="fnord")
         assert actual_result == expected_result
-
-
-HAS_PSUTIL_VERSION = False
 
 
 STUB_CPU_TIMES = namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4)
@@ -204,9 +202,6 @@ def stub_user():
         "bdobbs", "ttys000", "localhost", 0.0
     )
 
-
-if psutil.version_info >= (0, 6, 0):
-    HAS_PSUTIL_VERSION = True
 
 STUB_PID_LIST = [0, 1, 2, 3]
 
@@ -302,15 +297,15 @@ class DummyProcess:
 
 @pytest.fixture
 def mocked_proc():
-    mocked_proc = MagicMock("salt.utils.psutil_compat.Process")
+    mocked_proc = MagicMock("psutil.Process")
     mocked_proc.name = Mock(return_value="test_mock_proc")
     mocked_proc.pid = Mock(return_value=9999999999)
     mocked_proc.cmdline = Mock(
         return_value=["test_mock_proc", "--arg", "--kwarg=value"]
     )
 
-    with patch("salt.utils.psutil_compat.Process.send_signal"), patch(
-        "salt.utils.psutil_compat.process_iter",
+    with patch("psutil.Process.send_signal"), patch(
+        "psutil.process_iter",
         MagicMock(return_value=[mocked_proc]),
     ):
         yield mocked_proc
@@ -427,7 +422,7 @@ def test__get_proc_username():
 
 
 def test_get_pid_list():
-    with patch("salt.utils.psutil_compat.pids", MagicMock(return_value=STUB_PID_LIST)):
+    with patch("psutil.pids", MagicMock(return_value=STUB_PID_LIST)):
         assert STUB_PID_LIST == ps.get_pid_list()
 
 
@@ -435,12 +430,12 @@ def test_kill_pid():
     cmdline = ["echo", "питон"]
     top_proc = DummyProcess(cmdline=cmdline)
 
-    with patch("salt.utils.psutil_compat.Process") as mock_process:
+    with patch("psutil.Process") as mock_process:
         mock_process.side_effect = psutil.NoSuchProcess(top_proc)
         ret = ps.kill_pid(0, signal=999)
         assert not ret
 
-    with patch("salt.utils.psutil_compat.Process") as send_signal_mock:
+    with patch("psutil.Process") as send_signal_mock:
         ps.kill_pid(0, signal=999)
         assert send_signal_mock.call_args == call(0)
 
@@ -467,7 +462,7 @@ def test_pkill(mocked_proc):
 
 def test_pgrep(mocked_proc):
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         MagicMock(return_value=[mocked_proc]),
     ):
         assert mocked_proc.pid in (ps.pgrep(_get_proc_name(mocked_proc)) or [])
@@ -479,7 +474,7 @@ def test_pgrep(mocked_proc):
 
 def test_pgrep_regex(mocked_proc):
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         MagicMock(return_value=[mocked_proc]),
     ):
         assert mocked_proc.pid in (
@@ -488,26 +483,22 @@ def test_pgrep_regex(mocked_proc):
 
 
 def test_cpu_percent():
-    with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
+    with patch("psutil.cpu_percent", MagicMock(return_value=1)):
         assert ps.cpu_percent() == 1
 
-    with patch(
-        "salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=(1, 1, 1, 1))
-    ):
+    with patch("psutil.cpu_percent", MagicMock(return_value=(1, 1, 1, 1))):
         assert ps.cpu_percent(per_cpu=True) == [1, 1, 1, 1]
 
-    with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
+    with patch("psutil.cpu_percent", MagicMock(return_value=1)):
         assert ps.cpu_percent(per_cpu=False) == 1
 
 
 def test_cpu_times():
-    with patch(
-        "salt.utils.psutil_compat.cpu_times", MagicMock(return_value=STUB_CPU_TIMES)
-    ):
+    with patch("psutil.cpu_times", MagicMock(return_value=STUB_CPU_TIMES)):
         assert {"idle": 4, "nice": 2, "system": 3, "user": 1} == ps.cpu_times()
 
     with patch(
-        "salt.utils.psutil_compat.cpu_times",
+        "psutil.cpu_times",
         MagicMock(return_value=STUB_CPU_TIMES_PERCPU),
     ):
         assert [
@@ -518,21 +509,9 @@ def test_cpu_times():
         ] == ps.cpu_times(per_cpu=True)
 
 
-@pytest.mark.skipif(
-    HAS_PSUTIL_VERSION is False,
-    reason="psutil 0.6.0 or greater is required for this test",
-)
 def test_virtual_memory():
-    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
-        with pytest.raises(CommandExecutionError) as exc:
-            ps.virtual_memory()
-        assert (
-            exc.value.error
-            == "virtual_memory is only available in psutil 0.6.0 or greater"
-        )
-
     with patch(
-        "salt.utils.psutil_compat.virtual_memory",
+        "psutil.virtual_memory",
         MagicMock(return_value=STUB_VIRT_MEM),
     ):
         assert {
@@ -544,22 +523,9 @@ def test_virtual_memory():
         } == ps.virtual_memory()
 
 
-@pytest.mark.skipif(
-    HAS_PSUTIL_VERSION is False,
-    reason="psutil 0.6.0 or greater is required for this test",
-)
 def test_swap_memory():
-
-    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
-        with pytest.raises(CommandExecutionError) as exc:
-            ps.swap_memory()
-        assert (
-            exc.value.error
-            == "swap_memory is only available in psutil 0.6.0 or greater"
-        )
-
     with patch(
-        "salt.utils.psutil_compat.swap_memory",
+        "psutil.swap_memory",
         MagicMock(return_value=STUB_SWAP_MEM),
     ):
         assert {
@@ -574,7 +540,7 @@ def test_swap_memory():
 
 def test_disk_partitions():
     with patch(
-        "salt.utils.psutil_compat.disk_partitions",
+        "psutil.disk_partitions",
         MagicMock(return_value=[STUB_DISK_PARTITION]),
     ):
         assert {
@@ -587,7 +553,7 @@ def test_disk_partitions():
 
 def test_disk_usage():
     with patch(
-        "salt.utils.psutil_compat.disk_usage",
+        "psutil.disk_usage",
         MagicMock(return_value=STUB_DISK_USAGE),
     ):
         assert {
@@ -600,11 +566,11 @@ def test_disk_usage():
 
 def test_disk_partition_usage():
     with patch(
-        "salt.utils.psutil_compat.disk_partitions",
+        "psutil.disk_partitions",
         MagicMock(return_value=[STUB_DISK_PARTITION]),
     ):
         with patch(
-            "salt.utils.psutil_compat.disk_usage",
+            "psutil.disk_usage",
             MagicMock(return_value=STUB_DISK_USAGE),
         ):
             result = ps.disk_partition_usage()[0]
@@ -622,7 +588,7 @@ def test_disk_partition_usage():
 
 def test_network_io_counters():
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=STUB_NETWORK_IO),
     ):
         assert {
@@ -637,7 +603,7 @@ def test_network_io_counters():
         } == ps.network_io_counters()
 
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=STUB_NETWORK_IO_PERNIC),
     ):
         assert {
@@ -656,7 +622,7 @@ def test_network_io_counters():
 
 def test_disk_io_counters():
     with patch(
-        "salt.utils.psutil_compat.disk_io_counters",
+        "psutil.disk_io_counters",
         MagicMock(return_value=STUB_DISK_IO),
     ):
         assert {
@@ -669,7 +635,7 @@ def test_disk_io_counters():
         } == ps.disk_io_counters()
 
     with patch(
-        "salt.utils.psutil_compat.disk_io_counters",
+        "psutil.disk_io_counters",
         MagicMock(return_value=STUB_DISK_IO_PERDISK),
     ):
         assert {
@@ -685,7 +651,7 @@ def test_disk_io_counters():
 
 
 def test_get_users(stub_user):
-    with patch("salt.utils.psutil_compat.users", MagicMock(return_value=[stub_user])):
+    with patch("psutil.users", MagicMock(return_value=[stub_user])):
         assert {
             "terminal": "ttys000",
             "started": 0.0,
@@ -708,8 +674,8 @@ def test_top():
     cmdline = ["echo", "питон"]
     top_proc = DummyProcess(cmdline=cmdline)
 
-    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
-        with patch("salt.utils.psutil_compat.Process") as mock_process:
+    with patch("psutil.pids", return_value=[1]):
+        with patch("psutil.Process") as mock_process:
             mock_process.side_effect = psutil.NoSuchProcess(top_proc)
             ret = ps.top(num_processes=1, interval=0)
             assert ret == []
@@ -750,8 +716,8 @@ def test_top():
         )
         zombie_mem_info = smem_info(0, 0, 0, 0, 0, 0, 0)
 
-    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
-        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+    with patch("psutil.pids", return_value=[1]):
+        with patch("psutil.Process", return_value=top_proc):
             with patch.object(top_proc, "cpu_times") as mock_cpu_times:
                 with patch.object(
                     top_proc, "memory_info", return_value=zombie_mem_info, create=True
@@ -808,8 +774,8 @@ def test_top():
                     assert ret[0]["mem"] == expected_mem
                     assert ret[0]["cpu"] == expected_cpu
 
-    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
-        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+    with patch("psutil.pids", return_value=[1]):
+        with patch("psutil.Process", return_value=top_proc):
             with patch.object(top_proc, "cpu_times") as mock_cpu_times:
                 mock_cpu_times.side_effect = [
                     top_proc._cpu_times,
@@ -818,8 +784,8 @@ def test_top():
                 ret = ps.top(num_processes=1, interval=0)
                 assert ret == []
 
-    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
-        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+    with patch("psutil.pids", return_value=[1]):
+        with patch("psutil.Process", return_value=top_proc):
             with patch.object(top_proc, "cpu_times") as mock_cpu_times:
                 with patch.object(
                     top_proc, "memory_info", create=True
@@ -847,9 +813,9 @@ def test_top_zombie_process():
     processes[1].cpu_times = raise_exception
 
     # Make sure psutil.pids only returns the above 3 pids
-    with patch("salt.utils.psutil_compat.pids", return_value=pids):
+    with patch("psutil.pids", return_value=pids):
         # Make sure we use our process list from above
-        with patch("salt.utils.psutil_compat.Process", side_effect=processes):
+        with patch("psutil.Process", side_effect=processes):
             result = ps.top(num_processes=1, interval=0)
             assert len(result) == 1
 
@@ -862,15 +828,15 @@ def test_status_when_no_status_is_provided_then_raise_invocation_error():
 @pytest.mark.parametrize(
     "exc_type",
     (
-        salt.utils.psutil_compat.AccessDenied(pid="9999", name="whatever"),
-        salt.utils.psutil_compat.NoSuchProcess(pid="42"),
+        psutil.AccessDenied(pid="9999", name="whatever"),
+        psutil.NoSuchProcess(pid="42"),
     ),
 )
 def test_status_when_access_denied_from_psutil_it_should_CommandExecutionError(
     exc_type,
 ):
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         autospec=True,
         side_effect=exc_type,
     ):
@@ -888,9 +854,9 @@ def test_status_when_no_filter_is_provided_then_raise_invocation_error():
 
 def test_status_when_access_denied_from_psutil_then_raise_exception():
     with patch(
-        "salt.utils.psutil_compat.process_iter",
+        "psutil.process_iter",
         autospec=True,
-        return_value=salt.utils.psutil_compat.AccessDenied(pid="9999", name="whatever"),
+        return_value=psutil.AccessDenied(pid="9999", name="whatever"),
     ):
         with pytest.raises(Exception) as general_issue:
             actual_result = salt.modules.ps.status(status="fnord")
@@ -898,7 +864,7 @@ def test_status_when_access_denied_from_psutil_then_raise_exception():
 
 ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
 # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
-# @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
+# @patch('psutil.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
 # def test_get_users_utmp():
 #     pass
 
@@ -1050,9 +1016,7 @@ def test_boot_time():
     Testing boot_time function in the ps module
     """
 
-    with patch(
-        "salt.utils.psutil_compat.boot_time", MagicMock(return_value=1691593290.0)
-    ):
+    with patch("psutil.boot_time", MagicMock(return_value=1691593290.0)):
         expected = 1691593290
         ret = ps.boot_time()
         assert ret == expected
@@ -1061,7 +1025,7 @@ def test_boot_time():
         ret = ps.boot_time(time_format="%m/%d/%Y")
         assert ret == expected
 
-    with patch("salt.utils.psutil_compat.boot_time") as mock_boot_time:
+    with patch("psutil.boot_time") as mock_boot_time:
         mock_boot_time.side_effect = [AttributeError(), 1691593290.0]
         expected = 1691593290
         ret = ps.boot_time()
@@ -1073,13 +1037,13 @@ def test_num_cpus():
     Testing num_cpus function in the ps module
     """
 
-    with patch("salt.utils.psutil_compat.cpu_count") as mock_cpu_count:
+    with patch("psutil.cpu_count") as mock_cpu_count:
         mock_cpu_count.side_effect = AttributeError()
-        with patch("salt.utils.psutil_compat.NUM_CPUS", create=True, new=5):
+        with patch("psutil.NUM_CPUS", create=True, new=5):
             ret = ps.num_cpus()
             assert ret == 5
 
-    with patch("salt.utils.psutil_compat.cpu_count") as mock_cpu_count:
+    with patch("psutil.cpu_count") as mock_cpu_count:
         mock_cpu_count.return_value = 5
         ret = ps.num_cpus()
         assert ret == 5
@@ -1089,26 +1053,17 @@ def test_total_physical_memory(stub_memory_usage):
     """
     Testing total_physical_memory function in the ps module
     """
-
-    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
-        with pytest.raises(CommandExecutionError) as exc:
-            ps.total_physical_memory()
-        assert (
-            exc.value.error
-            == "virtual_memory is only available in psutil 0.6.0 or greater"
-        )
-
-    with patch("salt.utils.psutil_compat.virtual_memory") as mock_total_physical_memory:
+    with patch("psutil.virtual_memory") as mock_total_physical_memory:
         mock_total_physical_memory.side_effect = AttributeError()
         with patch(
-            "salt.utils.psutil_compat.TOTAL_PHYMEM",
+            "psutil.TOTAL_PHYMEM",
             create=True,
             new=stub_memory_usage.total,
         ):
             ret = ps.total_physical_memory()
             assert ret == 15722012672
 
-    with patch("salt.utils.psutil_compat.virtual_memory") as mock_total_physical_memory:
+    with patch("psutil.virtual_memory") as mock_total_physical_memory:
         mock_total_physical_memory.return_value = stub_memory_usage
         ret = ps.total_physical_memory()
         assert ret == 15722012672
@@ -1184,7 +1139,9 @@ def test_proc_info():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+    with (
+        patch_stat_file
+    ), patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         if salt.utils.platform.is_windows():
             with patch("psutil._pswindows.cext") as mock__psutil_windows:
                 with patch("psutil._pswindows.Process.ppid", return_value=99):
@@ -1227,7 +1184,7 @@ def test_proc_info_access_denied():
     """
     cmdline = ["echo", "питон"]
     dummy_proc = DummyProcess(cmdline=cmdline)
-    with patch("salt.utils.psutil_compat.Process") as mock_process:
+    with patch("psutil.Process") as mock_process:
         mock_process.side_effect = psutil.AccessDenied(dummy_proc)
         with pytest.raises(CommandExecutionError):
             salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
@@ -1240,7 +1197,7 @@ def test_proc_info_no_such_process():
     """
     cmdline = ["echo", "питон"]
     dummy_proc = DummyProcess(cmdline=cmdline)
-    with patch("salt.utils.psutil_compat.Process") as mock_process:
+    with patch("psutil.Process") as mock_process:
         mock_process.side_effect = psutil.NoSuchProcess(dummy_proc)
         with pytest.raises(CommandExecutionError):
             salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
@@ -1251,8 +1208,7 @@ def test_proc_info_attribute_error():
     Testing proc_info function in the ps module
     when an AttributeError exception occurs
     """
-    cmdline = ["echo", "питон"]
-    with patch("salt.utils.psutil_compat.Process") as mock_process:
+    with patch("psutil.Process") as mock_process:
         mock_process.side_effect = AttributeError()
         with pytest.raises(CommandExecutionError):
             salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
@@ -1269,20 +1225,3 @@ def test__virtual__no_psutil():
         )
         result = ps.__virtual__()
     assert result == expected
-
-
-def test__virtual__wrong_version():
-    with patch("salt.modules.ps.psutil.version_info", (0, 2, 9)):
-        expected = (
-            False,
-            "The ps execution module cannot be loaded: the psutil python module version {}"
-            " is less than 0.3.0".format(psutil.version_info),
-        )
-        result = ps.__virtual__()
-    assert result == expected
-
-
-def test__virtual__correct_version():
-    with patch("salt.modules.ps.psutil.version_info", (0, 3, 0)):
-        result = ps.__virtual__()
-    assert result

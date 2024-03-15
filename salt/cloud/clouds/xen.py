@@ -124,7 +124,7 @@ def _get_session():
     Get a connection to the XenServer host
     """
     api_version = "1.0"
-    originator = "salt_cloud_{}_driver".format(__virtualname__)
+    originator = f"salt_cloud_{__virtualname__}_driver"
     url = config.get_cloud_config_value(
         "url", get_configured_provider(), __opts__, search_global=False
     )
@@ -550,7 +550,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{}/creating".format(name),
+        f"salt/cloud/{name}/creating",
         args={"name": name, "profile": vm_["profile"], "provider": vm_["driver"]},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -580,7 +580,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{}/requesting".format(name),
+        f"salt/cloud/{name}/requesting",
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -623,7 +623,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{}/created".format(name),
+        f"salt/cloud/{name}/created",
         args={"name": name, "profile": vm_["profile"], "provider": vm_["driver"]},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -923,7 +923,7 @@ def reboot(name, call=None, session=None):
         _run_async_task(task, session)
         return show_instance(name)
     else:
-        return "{} is not running to be rebooted".format(name)
+        return f"{name} is not running to be rebooted"
 
 
 def _get_vm(name=None, session=None):
@@ -984,7 +984,7 @@ def destroy(name=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1009,7 +1009,7 @@ def destroy(name=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1134,7 +1134,7 @@ def vif_list(name, call=None, kwargs=None):
         x = 0
         for vif in vifs:
             vif_record = session.xenapi.VIF.get_record(vif)
-            data["vif-{}".format(x)] = vif_record
+            data[f"vif-{x}"] = vif_record
             x += 1
     ret[name] = data
     return ret
@@ -1168,7 +1168,7 @@ def vbd_list(name=None, call=None):
             x = 0
             for vbd in vbds:
                 vbd_record = session.xenapi.VBD.get_record(vbd)
-                data["vbd-{}".format(x)] = vbd_record
+                data[f"vbd-{x}"] = vbd_record
                 x += 1
     ret = data
     return ret
@@ -1219,7 +1219,7 @@ def destroy_vm_vdis(name=None, session=None, call=None):
                     vdi_record = session.xenapi.VDI.get_record(vbd_record["VDI"])
                     if "iso" not in vdi_record["name_label"]:
                         session.xenapi.VDI.destroy(vbd_record["VDI"])
-                        ret["vdi-{}".format(x)] = vdi_record["name_label"]
+                        ret[f"vdi-{x}"] = vdi_record["name_label"]
                 x += 1
     return ret
 

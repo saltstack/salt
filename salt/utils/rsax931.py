@@ -2,7 +2,6 @@
 Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 """
 
-
 import ctypes.util
 import glob
 import os
@@ -33,15 +32,30 @@ def _find_libcrypto():
 
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
-        # Search in the following order. salts pkg, homebrew, macports, finnally
-        # system.
+        # Search in the following order:
+        # - salt's pkg install location
+        # - relative to the running python (sys.executable)
+        # - homebrew
+        # - macports
+        # - system libraries
+
         # look in salts pkg install location.
         lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
 
         # look in location salt is running from
-        # this accounts for running from an unpacked
-        # onedir file
+        # this accounts for running from an unpacked onedir file
         lib = lib or glob.glob("lib/libcrypto.dylib")
+
+        # Look in the location relative to the python binary
+        # Try to account for this being a venv by resolving the path if it is a
+        # symlink
+        py_bin = sys.executable
+        if os.path.islink(py_bin):
+            py_bin = os.path.realpath(py_bin)
+        target = os.path.dirname(py_bin)
+        if os.path.basename(target) == "bin":
+            target = os.path.dirname(target)
+        lib = lib or glob.glob(f"{target}/lib/libcrypto.dylib")
 
         # Find library symlinks in Homebrew locations.
         import salt.modules.mac_brew_pkg as mac_brew

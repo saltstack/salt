@@ -25,7 +25,7 @@ def test_installed():
     mock_lst = MagicMock(return_value={name: "stable"})
     mock_t = MagicMock(return_value=True)
     with patch.dict(pecl.__salt__, {"pecl.list": mock_lst, "pecl.install": mock_t}):
-        comt = "Pecl extension {} is already installed.".format(name)
+        comt = f"Pecl extension {name} is already installed."
         ret.update({"comment": comt, "result": True})
         assert pecl.installed(name) == ret
 
@@ -57,7 +57,7 @@ def test_removed():
     mock_lst = MagicMock(side_effect=[{}, {name: "stable"}, {name: "stable"}])
     mock_t = MagicMock(return_value=True)
     with patch.dict(pecl.__salt__, {"pecl.list": mock_lst, "pecl.uninstall": mock_t}):
-        comt = "Pecl extension {} is not installed.".format(name)
+        comt = f"Pecl extension {name} is not installed."
         ret.update({"comment": comt, "result": True})
         assert pecl.removed(name) == ret
 

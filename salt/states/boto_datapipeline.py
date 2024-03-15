@@ -48,7 +48,6 @@ config:
           myDDBTableName: my-dynamo-table
 """
 
-
 import copy
 import datetime
 import difflib

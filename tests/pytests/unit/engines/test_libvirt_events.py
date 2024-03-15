@@ -1,6 +1,7 @@
 """
 unit tests for the libvirt_events engine
 """
+
 import pytest
 
 import salt.engines.libvirt_events as libvirt_events

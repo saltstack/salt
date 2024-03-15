@@ -63,7 +63,6 @@ for a bugfix release.
 
 #. Ensure all required bug fixes are merged.
 #. Create release branch with the version of the release. (ex. 3000.1)
-#. Create jenkins jobs that test the new release branch.
 #. Run through a manual test run based off of the head of the branch.
 #. Generate the new man pages for the release.
 #. Create internal tag for testing.(ex v3000.1)

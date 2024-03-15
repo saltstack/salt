@@ -22,7 +22,6 @@ Example States
         - name: cirros
 """
 
-
 __virtualname__ = "glance_image"
 
 
@@ -61,7 +60,7 @@ def present(name, auth=None, **kwargs):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = kwargs
-            ret["comment"] = "Image {} will be created.".format(name)
+            ret["comment"] = f"Image {name} will be created."
             return ret
 
         kwargs["name"] = name
@@ -91,7 +90,7 @@ def absent(name, auth=None):
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = {"name": name}
-            ret["comment"] = "Image {} will be deleted.".format(name)
+            ret["comment"] = f"Image {name} will be deleted."
             return ret
 
         __salt__["glanceng.image_delete"](name=image)

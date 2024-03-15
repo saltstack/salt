@@ -193,10 +193,10 @@ def property_present(name, property, value):
     else:
         ## zone does not exist
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The zone {} is not in the configured, installed, or booted state.".format(
-            name
+        ret["comment"] = (
+            "The zone {} is not in the configured, installed, or booted state.".format(
+                name
+            )
         )
 
     return ret
@@ -250,10 +250,10 @@ def property_absent(name, property):
     else:
         ## zone does not exist
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The zone {} is not in the configured, installed, or booted state.".format(
-            name
+        ret["comment"] = (
+            "The zone {} is not in the configured, installed, or booted state.".format(
+                name
+            )
         )
 
     return ret
@@ -373,31 +373,31 @@ def resource_present(
                                     )
                             if ret["comment"] == "":
                                 if resource_selector_property:
-                                    ret[
-                                        "comment"
-                                    ] = "The {} resource {} was updated.".format(
-                                        resource_type,
-                                        resource_selector_value,
+                                    ret["comment"] = (
+                                        "The {} resource {} was updated.".format(
+                                            resource_type,
+                                            resource_selector_value,
+                                        )
                                     )
                                 else:
-                                    ret[
-                                        "comment"
-                                    ] = "The {} resource was updated.".format(
-                                        resource_type,
+                                    ret["comment"] = (
+                                        "The {} resource was updated.".format(
+                                            resource_type,
+                                        )
                                     )
                         elif ret["comment"] == "":
                             if resource_selector_property:
-                                ret[
-                                    "comment"
-                                ] = "The {} resource {} was not updated.".format(
-                                    resource_type,
-                                    resource_selector_value,
+                                ret["comment"] = (
+                                    "The {} resource {} was not updated.".format(
+                                        resource_type,
+                                        resource_selector_value,
+                                    )
                                 )
                             else:
-                                ret[
-                                    "comment"
-                                ] = "The {} resource was not updated.".format(
-                                    resource_type,
+                                ret["comment"] = (
+                                    "The {} resource was not updated.".format(
+                                        resource_type,
+                                    )
                                 )
         if ret["result"] is None:
             ## add
@@ -418,9 +418,9 @@ def resource_present(
                     ret["changes"][resource_type][resource_selector_value] = {}
                 for key in kwargs if ret["result"] else []:
                     if resource_selector_property:
-                        ret["changes"][resource_type][resource_selector_value][
-                            key
-                        ] = _parse_value(kwargs[key])
+                        ret["changes"][resource_type][resource_selector_value][key] = (
+                            _parse_value(kwargs[key])
+                        )
                     else:
                         ret["changes"][resource_type][key] = _parse_value(kwargs[key])
                 if ret["comment"] == "":
@@ -436,10 +436,10 @@ def resource_present(
     else:
         ## zone does not exist
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The zone {} is not in the configured, installed, or booted state.".format(
-            name
+        ret["comment"] = (
+            "The zone {} is not in the configured, installed, or booted state.".format(
+                name
+            )
         )
 
     return ret
@@ -541,10 +541,10 @@ def resource_absent(
     else:
         ## zone does not exist
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The zone {} is not in the configured, installed, or booted state.".format(
-            name
+        ret["comment"] = (
+            "The zone {} is not in the configured, installed, or booted state.".format(
+                name
+            )
         )
 
     return ret
@@ -682,11 +682,11 @@ def export(name, path, replace=False):
             if __salt__["file.file_exists"](path) and not replace:
                 ret["result"] = False
                 ret["changes"] = {}
-                ret[
-                    "comment"
-                ] = "File {} exists, zone configuration for {} not exported.".format(
-                    path,
-                    name,
+                ret["comment"] = (
+                    "File {} exists, zone configuration for {} not exported.".format(
+                        path,
+                        name,
+                    )
                 )
         else:
             ## export and update file
@@ -700,29 +700,29 @@ def export(name, path, replace=False):
                     if __salt__["file.file_exists"](cfg_tmp):
                         __salt__["file.remove"](cfg_tmp)
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Unable to export zone configuration for {} to {}!".format(
-                        name,
-                        path,
+                    ret["comment"] = (
+                        "Unable to export zone configuration for {} to {}!".format(
+                            name,
+                            path,
+                        )
                     )
                 else:
                     ret["result"] = True
-                    ret[
-                        "comment"
-                    ] = "Zone configuration for {} was exported to {}.".format(
-                        name,
-                        path,
+                    ret["comment"] = (
+                        "Zone configuration for {} was exported to {}.".format(
+                            name,
+                            path,
+                        )
                     )
                     ret["changes"][name] = "exported"
             else:
                 cfg_diff = __salt__["file.get_diff"](path, cfg_tmp)
                 if not cfg_diff:
                     ret["result"] = True
-                    ret[
-                        "comment"
-                    ] = "Zone configuration for {} was already exported to {}.".format(
-                        name, path
+                    ret["comment"] = (
+                        "Zone configuration for {} was already exported to {}.".format(
+                            name, path
+                        )
                     )
                     if __salt__["file.file_exists"](cfg_tmp):
                         __salt__["file.remove"](cfg_tmp)
@@ -743,11 +743,11 @@ def export(name, path, replace=False):
                             )
                         else:
                             ret["result"] = True
-                            ret[
-                                "comment"
-                            ] = "Zone configuration for {} was re-exported to {}.".format(
-                                name,
-                                path,
+                            ret["comment"] = (
+                                "Zone configuration for {} was re-exported to {}.".format(
+                                    name,
+                                    path,
+                                )
                             )
                             ret["changes"][name] = "exported"
                     else:
@@ -1016,25 +1016,25 @@ def present(name, brand, zonepath, properties=None, resources=None):
                             name,
                             resource_cfg["resource_type"],
                             resource_selector_property=resource_selector_property,
-                            resource_selector_value=resource_cfg[
-                                resource_selector_property
-                            ]
-                            if resource_selector_property
-                            else None,
+                            resource_selector_value=(
+                                resource_cfg[resource_selector_property]
+                                if resource_selector_property
+                                else None
+                            ),
                         )
                     else:
-                        resource_cfg[
-                            "resource_selector_property"
-                        ] = resource_selector_property
+                        resource_cfg["resource_selector_property"] = (
+                            resource_selector_property
+                        )
                         if resource_selector_property in resource_cfg:
                             resource_cfg["resource_selector_value"] = resource_cfg[
                                 resource_selector_property
                             ]
                         else:
                             resource_cfg["resource_selector_value"] = None
-                        resource_cfg[
-                            "name"
-                        ] = name  # we do this last because name can also be a attrib value
+                        resource_cfg["name"] = (
+                            name  # we do this last because name can also be a attrib value
+                        )
                         res = resource_present(**resource_cfg)
                     if res:
                         ret["result"] = ret["result"] if res["result"] else False

@@ -61,7 +61,7 @@ class SSHConnection:
              Example: '-o PubkeyAuthentication=no'
         """
         self.conn = Terminal(
-            "ssh {} -l {} {}".format(ssh_args, username, host),
+            f"ssh {ssh_args} -l {username} {host}",
             shell=True,
             log_stdout=True,
             log_stdout_level="trace",

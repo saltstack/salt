@@ -1,6 +1,7 @@
 """
 Validate network module
 """
+
 import pytest
 
 pytestmark = [
@@ -76,6 +77,4 @@ def test_network_nslookup(network, url):
             if out in val:
                 exp_out.remove(out)
     if exp_out:
-        pytest.fail(
-            "Failed to find the {} key(s) on the returned data: {}".format(exp_out, ret)
-        )
+        pytest.fail(f"Failed to find the {exp_out} key(s) on the returned data: {ret}")

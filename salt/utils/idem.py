@@ -6,6 +6,7 @@ This util provides access to an idem-ready hub
 
 .. versionadded:: 3002
 """
+
 import logging
 
 try:

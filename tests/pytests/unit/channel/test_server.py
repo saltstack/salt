@@ -19,17 +19,25 @@ def key_data():
 
 
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
-def test__clean_key(key_data, linesep):
-    tst_key = linesep.join(key_data)
-    chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) == clean_func(chk_key)
+def test_compare_keys(key_data, linesep):
+    src_key = linesep.join(key_data)
+    tgt_key = "\n".join(key_data)
+    assert server.ReqServerChannel.compare_keys(src_key, tgt_key) is True
 
 
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
-def test__clean_key_mismatch(key_data, linesep):
-    tst_key = linesep.join(key_data)
-    tst_key = tst_key.replace("5", "4")
-    chk_key = "\n".join(key_data)
-    clean_func = server.ReqServerChannel._clean_key
-    assert clean_func(tst_key) != clean_func(chk_key)
+def test_compare_keys_newline_src(key_data, linesep):
+    src_key = linesep.join(key_data) + linesep
+    tgt_key = "\n".join(key_data)
+    assert src_key.endswith(linesep)
+    assert not tgt_key.endswith("\n")
+    assert server.ReqServerChannel.compare_keys(src_key, tgt_key) is True
+
+
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test_compare_keys_newline_tgt(key_data, linesep):
+    src_key = linesep.join(key_data)
+    tgt_key = "\n".join(key_data) + "\n"
+    assert not src_key.endswith(linesep)
+    assert tgt_key.endswith("\n")
+    assert server.ReqServerChannel.compare_keys(src_key, tgt_key) is True

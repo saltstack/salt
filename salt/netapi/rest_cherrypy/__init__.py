@@ -28,7 +28,7 @@ cpy_min = "3.2.2"
 
 
 def __virtual__():
-    short_name = __name__.rsplit(".")[-1]
+    short_name = __name__.rsplit(".", maxsplit=1)[-1]
     mod_opts = __opts__.get(short_name, {})
 
     if mod_opts:

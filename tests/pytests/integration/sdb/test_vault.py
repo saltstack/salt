@@ -1,6 +1,7 @@
 """
 Integration tests for the vault modules
 """
+
 import logging
 
 import pytest

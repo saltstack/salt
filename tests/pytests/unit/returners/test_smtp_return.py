@@ -3,6 +3,7 @@
 
     Test SMTP returner
 """
+
 import pytest
 
 import salt.returners.smtp_return as smtp

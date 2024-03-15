@@ -2,7 +2,6 @@
 Test case for the consul execution module
 """
 
-
 import logging
 
 import pytest

@@ -2,7 +2,6 @@
 Manage the information in the hosts file
 """
 
-
 import errno
 import logging
 import os
@@ -59,7 +58,7 @@ def _list_hosts():
                     if not line:
                         continue
                     if line.startswith("#"):
-                        ret.setdefault("comment-{}".format(count), []).append(line)
+                        ret.setdefault(f"comment-{count}", []).append(line)
                         count += 1
                         continue
                     comment = None

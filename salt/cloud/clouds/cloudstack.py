@@ -20,6 +20,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       driver: cloudstack
 
 """
+
 # pylint: disable=function-redefined
 
 import logging
@@ -473,7 +474,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         sock_dir=__opts__["sock_dir"],
         args={"name": name},
     )
@@ -498,7 +499,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "detaching volume",
-            "salt/cloud/{}/detaching".format(volume.name),
+            f"salt/cloud/{volume.name}/detaching",
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -509,7 +510,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "detached volume",
-            "salt/cloud/{}/detached".format(volume.name),
+            f"salt/cloud/{volume.name}/detached",
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -518,7 +519,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroying volume",
-            "salt/cloud/{}/destroying".format(volume.name),
+            f"salt/cloud/{volume.name}/destroying",
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -529,7 +530,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed volume",
-            "salt/cloud/{}/destroyed".format(volume.name),
+            f"salt/cloud/{volume.name}/destroyed",
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -544,7 +545,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         sock_dir=__opts__["sock_dir"],
         args={"name": name},
     )

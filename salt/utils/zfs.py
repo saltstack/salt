@@ -12,7 +12,6 @@ These functions are for dealing with type conversion and basic execution
 
 """
 
-
 import logging
 import math
 import os

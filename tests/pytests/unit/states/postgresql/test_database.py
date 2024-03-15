@@ -28,7 +28,7 @@ def test_present():
         postgres_database.__salt__,
         {"postgres.db_list": mock, "postgres.db_alter": mock_t},
     ):
-        comt = "Database {} is already present".format(name)
+        comt = f"Database {name} is already present"
         ret.update({"comment": comt, "result": True})
         assert postgres_database.present(name) == ret
 
@@ -68,15 +68,15 @@ def test_absent():
         {"postgres.db_exists": mock, "postgres.db_remove": mock_t},
     ):
         with patch.dict(postgres_database.__opts__, {"test": True}):
-            comt = "Database {} is set to be removed".format(name)
+            comt = f"Database {name} is set to be removed"
             ret.update({"comment": comt, "result": None})
             assert postgres_database.absent(name) == ret
 
         with patch.dict(postgres_database.__opts__, {"test": False}):
-            comt = "Database {} has been removed".format(name)
+            comt = f"Database {name} has been removed"
             ret.update({"comment": comt, "result": True, "changes": {name: "Absent"}})
             assert postgres_database.absent(name) == ret
 
-            comt = "Database {} is not present, so it cannot be removed".format(name)
+            comt = f"Database {name} is not present, so it cannot be removed"
             ret.update({"comment": comt, "result": True, "changes": {}})
             assert postgres_database.absent(name) == ret

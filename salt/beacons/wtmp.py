@@ -159,7 +159,7 @@ except ImportError:
 def __virtual__():
     if os.path.isfile(WTMP):
         return __virtualname__
-    err_msg = "{} does not exist.".format(WTMP)
+    err_msg = f"{WTMP} does not exist."
     log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
     return False, err_msg
 

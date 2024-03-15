@@ -131,11 +131,11 @@ def present(name, value=None, contains=None, excludes=None):
                 ret["comment"] = msg.format(name)
             else:
                 if __opts__["test"]:
-                    msg = "Variable {} is set to".format(name)
+                    msg = f"Variable {name} is set to"
                     if len(to_append) > 0:
-                        msg += ' append "{}"'.format(list(to_append))
+                        msg += f' append "{list(to_append)}"'
                     if len(to_trim) > 0:
-                        msg += ' trim "{}"'.format(list(to_trim))
+                        msg += f' trim "{list(to_trim)}"'
                     msg += " in make.conf"
                     ret["comment"] = msg
                     ret["result"] = None

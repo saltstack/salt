@@ -165,6 +165,7 @@ Note that when a ``ca_server`` is involved, both peers must use the updated modu
 
 .. _x509-setup:
 """
+
 import base64
 import copy
 import datetime
@@ -766,9 +767,11 @@ def encode_certificate(
             else:
                 cipher = serialization.BestAvailableEncryption(pkcs12_passphrase)
         crt_bytes = serialization.pkcs12.serialize_key_and_certificates(
-            name=salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
-            if pkcs12_friendlyname
-            else None,
+            name=(
+                salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
+                if pkcs12_friendlyname
+                else None
+            ),
             key=private_key,
             cert=cert,
             cas=append_certs,
@@ -1940,7 +1943,7 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
         )
     result = result[next(iter(result))]
     if not isinstance(result, dict) or "data" not in result:
-        log.error(f"Received invalid return value from ca_server: {result}")
+        log.error("Received invalid return value from ca_server: %s", result)
         raise CommandExecutionError(
             "Received invalid return value from ca_server. See minion log for details"
         )

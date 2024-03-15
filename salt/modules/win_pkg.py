@@ -36,7 +36,6 @@ old.
 
 """
 
-
 import collections
 import datetime
 import errno
@@ -1648,7 +1647,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # single files
             if cache_dir and installer.startswith("salt:"):
                 path, _ = os.path.split(installer)
-                log.debug(f"PKG: Caching directory: {path}")
+                log.debug("PKG: Caching directory: %s", path)
                 try:
                     __salt__["cp.cache_dir"](
                         path=path,
@@ -1665,7 +1664,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith("salt:"):
                 cache_file_hash = __salt__["cp.hash_file"](cache_file, saltenv)
-                log.debug(f"PKG: Caching file: {cache_file}")
+                log.debug("PKG: Caching file: %s", cache_file)
                 try:
                     cached_file = __salt__["cp.cache_file"](
                         cache_file,
@@ -1695,7 +1694,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # file if the source_hash doesn't match, which only works on
                 # files hosted on "salt://". If the http/https url supports
                 # etag, it should also verify that information before caching
-                log.debug(f"PKG: Caching file: {installer}")
+                log.debug("PKG: Caching file: %s", installer)
                 try:
                     cached_pkg = __salt__["cp.cache_file"](
                         installer,
@@ -2092,7 +2091,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
                 if cache_dir and uninstaller.startswith("salt:"):
                     path, _ = os.path.split(uninstaller)
-                    log.debug(f"PKG: Caching dir: {path}")
+                    log.debug("PKG: Caching dir: %s", path)
                     try:
                         __salt__["cp.cache_dir"](
                             path=path,
@@ -2116,7 +2115,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     # only works on files hosted on "salt://". If the http/https
                     # url supports etag, it should also verify that information
                     # before caching
-                    log.debug(f"PKG: Caching file: {uninstaller}")
+                    log.debug("PKG: Caching file: %s", uninstaller)
                     try:
                         cached_pkg = __salt__["cp.cache_file"](
                             uninstaller,

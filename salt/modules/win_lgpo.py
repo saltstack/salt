@@ -41,6 +41,7 @@ Current known limitations
   - struct
   - salt.utils.win_reg
 """
+
 import csv
 import ctypes
 import glob
@@ -6932,9 +6933,9 @@ def _checkAllAdmxPolicies(
                                             TRUE_VALUE_XPATH,
                                             policy_file_data,
                                         ):
-                                            configured_elements[
-                                                this_element_name
-                                            ] = True
+                                            configured_elements[this_element_name] = (
+                                                True
+                                            )
                                             log.trace(
                                                 "element %s is configured true",
                                                 child_item.attrib["id"],
@@ -6951,9 +6952,9 @@ def _checkAllAdmxPolicies(
                                             FALSE_VALUE_XPATH,
                                             policy_file_data,
                                         ):
-                                            configured_elements[
-                                                this_element_name
-                                            ] = False
+                                            configured_elements[this_element_name] = (
+                                                False
+                                            )
                                             policy_disabled_elements = (
                                                 policy_disabled_elements + 1
                                             )
@@ -6975,9 +6976,9 @@ def _checkAllAdmxPolicies(
                                             TRUE_LIST_XPATH,
                                             policy_file_data,
                                         ):
-                                            configured_elements[
-                                                this_element_name
-                                            ] = True
+                                            configured_elements[this_element_name] = (
+                                                True
+                                            )
                                             log.trace(
                                                 "element %s is configured true",
                                                 child_item.attrib["id"],
@@ -6994,9 +6995,9 @@ def _checkAllAdmxPolicies(
                                             FALSE_LIST_XPATH,
                                             policy_file_data,
                                         ):
-                                            configured_elements[
-                                                this_element_name
-                                            ] = False
+                                            configured_elements[this_element_name] = (
+                                                False
+                                            )
                                             policy_disabled_elements = (
                                                 policy_disabled_elements + 1
                                             )
@@ -7096,9 +7097,9 @@ def _checkAllAdmxPolicies(
                                         ),
                                         policy_file_data,
                                     )
-                                    configured_elements[
-                                        this_element_name
-                                    ] = configured_value
+                                    configured_elements[this_element_name] = (
+                                        configured_value
+                                    )
                                     log.trace(
                                         "element %s is enabled, value == %s",
                                         child_item.attrib["id"],
@@ -7218,9 +7219,9 @@ def _checkAllAdmxPolicies(
                                         policy_file_data,
                                         return_value_name=return_value_name,
                                     )
-                                    configured_elements[
-                                        this_element_name
-                                    ] = configured_value
+                                    configured_elements[this_element_name] = (
+                                        configured_value
+                                    )
                                     log.trace(
                                         "element %s is enabled values: %s",
                                         child_item.attrib["id"],
@@ -8681,8 +8682,8 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
     }
     policy_class = policy_class.title()
     policy_data = _policy_info()
-    if policy_class not in policy_data.policies.keys():
-        policy_classes = ", ".join(policy_data.policies.keys())
+    if policy_class not in policy_data.policies:
+        policy_classes = ", ".join(policy_data.policies)
         ret["message"] = (
             'The requested policy class "{}" is invalid, '
             "policy_class should be one of: {}"
@@ -9396,23 +9397,23 @@ def _get_policy_adm_setting(
                                             log.trace(
                                                 "all valueList items exist in file"
                                             )
-                                            configured_elements[
-                                                this_element_name
-                                            ] = _getAdmlDisplayName(
+                                            configured_elements[this_element_name] = (
+                                                _getAdmlDisplayName(
+                                                    adml_xml_data=adml_policy_resources,
+                                                    display_name=enum_item.attrib[
+                                                        "displayName"
+                                                    ],
+                                                )
+                                            )
+                                            break
+                                    else:
+                                        configured_elements[this_element_name] = (
+                                            _getAdmlDisplayName(
                                                 adml_xml_data=adml_policy_resources,
                                                 display_name=enum_item.attrib[
                                                     "displayName"
                                                 ],
                                             )
-                                            break
-                                    else:
-                                        configured_elements[
-                                            this_element_name
-                                        ] = _getAdmlDisplayName(
-                                            adml_xml_data=adml_policy_resources,
-                                            display_name=enum_item.attrib[
-                                                "displayName"
-                                            ],
                                         )
                                         break
                     elif etree.QName(child_item).localname == "list":
@@ -9547,12 +9548,12 @@ def _get_policy_adm_setting(
         this_policy_namespace in policy_vals
         and this_policy_name in policy_vals[this_policy_namespace]
     ):
-        hierarchy.setdefault(this_policy_namespace, {})[
-            this_policy_name
-        ] = _build_parent_list(
-            policy_definition=admx_policy,
-            return_full_policy_names=return_full_policy_names,
-            adml_language=adml_language,
+        hierarchy.setdefault(this_policy_namespace, {})[this_policy_name] = (
+            _build_parent_list(
+                policy_definition=admx_policy,
+                return_full_policy_names=return_full_policy_names,
+                adml_language=adml_language,
+            )
         )
 
     if policy_vals and return_full_policy_names and not hierarchical_return:
@@ -9706,7 +9707,7 @@ def get_policy(
         raise SaltInvocationError("policy_class must be defined")
     policy_class = policy_class.title()
     policy_data = _policy_info()
-    if policy_class not in policy_data.policies.keys():
+    if policy_class not in policy_data.policies:
         policy_classes = ", ".join(policy_data.policies.keys())
         raise CommandExecutionError(
             'The requested policy class "{}" is invalid, policy_class should '

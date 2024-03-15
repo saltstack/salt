@@ -2,7 +2,6 @@
     :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
 """
 
-
 import os
 import textwrap
 

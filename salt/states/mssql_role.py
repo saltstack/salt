@@ -35,15 +35,15 @@ def present(name, owner=None, grants=None, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if __salt__["mssql.role_exists"](name, **kwargs):
-        ret[
-            "comment"
-        ] = "Role {} is already present (Not going to try to set its grants)".format(
-            name
+        ret["comment"] = (
+            "Role {} is already present (Not going to try to set its grants)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Role {} is set to be added".format(name)
+        ret["comment"] = f"Role {name} is set to be added"
         return ret
 
     role_created = __salt__["mssql.role_create"](
@@ -53,9 +53,9 @@ def present(name, owner=None, grants=None, **kwargs):
         role_created is not True
     ):  # Non-empty strings are also evaluated to True, so we cannot use if not role_created:
         ret["result"] = False
-        ret["comment"] += "Role {} failed to be created: {}".format(name, role_created)
+        ret["comment"] += f"Role {name} failed to be created: {role_created}"
         return ret
-    ret["comment"] += "Role {} has been added".format(name)
+    ret["comment"] += f"Role {name} has been added"
     ret["changes"][name] = "Present"
     return ret
 
@@ -70,17 +70,17 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if not __salt__["mssql.role_exists"](name):
-        ret["comment"] = "Role {} is not present".format(name)
+        ret["comment"] = f"Role {name} is not present"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Role {} is set to be removed".format(name)
+        ret["comment"] = f"Role {name} is set to be removed"
         return ret
     if __salt__["mssql.role_remove"](name, **kwargs):
-        ret["comment"] = "Role {} has been removed".format(name)
+        ret["comment"] = f"Role {name} has been removed"
         ret["changes"][name] = "Absent"
         return ret
     # else:
     ret["result"] = False
-    ret["comment"] = "Role {} failed to be removed".format(name)
+    ret["comment"] = f"Role {name} failed to be removed"
     return ret

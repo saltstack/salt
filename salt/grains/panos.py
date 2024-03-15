@@ -3,7 +3,6 @@ Generate baseline proxy minion grains for panos hosts.
 
 """
 
-
 import logging
 
 import salt.proxy.panos

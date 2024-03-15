@@ -34,7 +34,7 @@ def start(name):
 
         salt '*' monit.start <service name>
     """
-    cmd = "monit start {}".format(name)
+    cmd = f"monit start {name}"
 
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
@@ -49,7 +49,7 @@ def stop(name):
 
         salt '*' monit.stop <service name>
     """
-    cmd = "monit stop {}".format(name)
+    cmd = f"monit stop {name}"
 
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
@@ -64,7 +64,7 @@ def restart(name):
 
         salt '*' monit.restart <service name>
     """
-    cmd = "monit restart {}".format(name)
+    cmd = f"monit restart {name}"
 
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
@@ -79,7 +79,7 @@ def unmonitor(name):
 
         salt '*' monit.unmonitor <service name>
     """
-    cmd = "monit unmonitor {}".format(name)
+    cmd = f"monit unmonitor {name}"
 
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
@@ -94,7 +94,7 @@ def monitor(name):
 
         salt '*' monit.monitor <service name>
     """
-    cmd = "monit monitor {}".format(name)
+    cmd = f"monit monitor {name}"
 
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 

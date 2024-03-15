@@ -15,7 +15,7 @@ import time
 import traceback
 import types
 from collections.abc import MutableMapping
-from zipimport import zipimporter
+from zipimport import zipimporter  # pylint: disable=no-name-in-module
 
 import salt.config
 import salt.defaults.events
@@ -315,7 +315,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # A list to determine precedence of extensions
         # Prefer packages (directories) over modules (single files)!
         self.suffix_order = [""]
-        for (suffix, mode, kind) in SUFFIXES:
+        for suffix, mode, kind in SUFFIXES:
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 

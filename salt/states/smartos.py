@@ -381,10 +381,10 @@ def config_present(name, value):
         ret["result"] = _write_config(config)
 
         if not ret["result"]:
-            ret[
-                "comment"
-            ] = 'Could not add property {} with value "{}" to config'.format(
-                name, value
+            ret["comment"] = (
+                'Could not add property {} with value "{}" to config'.format(
+                    name, value
+                )
             )
 
     return ret
@@ -1021,9 +1021,9 @@ def vm_present(name, vmconfig, config=None):
                                 if f"update_{instance}" not in vmconfig["changed"]:
                                     vmconfig["changed"][f"update_{instance}"] = []
 
-                                update_cfg[
-                                    vmconfig_type["instance"][instance]
-                                ] = state_cfg[vmconfig_type["instance"][instance]]
+                                update_cfg[vmconfig_type["instance"][instance]] = (
+                                    state_cfg[vmconfig_type["instance"][instance]]
+                                )
                                 vmconfig["changed"][f"update_{instance}"].append(
                                     update_cfg
                                 )
@@ -1151,9 +1151,9 @@ def vm_present(name, vmconfig, config=None):
                         )
                         if vmconfig["state"]["hostname"] not in ret["changes"]:
                             ret["changes"][vmconfig["state"]["hostname"]] = {}
-                        ret["changes"][vmconfig["state"]["hostname"]][
-                            "image_uuid"
-                        ] = vmconfig["reprovision_uuid"]
+                        ret["changes"][vmconfig["state"]["hostname"]]["image_uuid"] = (
+                            vmconfig["reprovision_uuid"]
+                        )
                 else:
                     log.warning(
                         "smartos.vm_present::%s::reprovision - "

@@ -4,7 +4,6 @@
     TestCase for salt.modules.serverdensity_device
 """
 
-
 import pytest
 
 import salt.modules.serverdensity_device as serverdensity_device

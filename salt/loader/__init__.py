@@ -20,7 +20,6 @@ import salt.syspaths
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
 import salt.utils.odict
@@ -358,6 +357,8 @@ def minion_mods(
                         ret[f_key] = funcs[func]
 
     if notify:
+        import salt.utils.event
+
         with salt.utils.event.get_event("minion", opts=opts, listen=False) as evt:
             evt.fire_event(
                 {"complete": True}, tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE
@@ -534,6 +535,7 @@ def utils(
     whitelist=None,
     context=None,
     proxy=None,
+    file_client=None,
     pack_self=None,
     loaded_base_name=None,
 ):
@@ -553,7 +555,11 @@ def utils(
         opts,
         tag="utils",
         whitelist=whitelist,
-        pack={"__context__": context, "__proxy__": proxy or {}},
+        pack={
+            "__context__": context,
+            "__proxy__": proxy or {},
+            "__file_client__": file_client,
+        },
         pack_self=pack_self,
         loaded_base_name=loaded_base_name,
         _only_pack_properly_namespaced_functions=False,
@@ -884,7 +890,9 @@ def log_handlers(opts, loaded_base_name=None):
     return FilterDictWrapper(ret, ".setup_handlers")
 
 
-def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
+def ssh_wrapper(
+    opts, functions=None, context=None, file_client=None, loaded_base_name=None
+):
     """
     Returns the custom logging handler modules
 
@@ -902,13 +910,23 @@ def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
         ),
         opts,
         tag="wrapper",
-        pack={"__salt__": functions, "__context__": context},
+        pack={
+            "__salt__": functions,
+            "__context__": context,
+            "__file_client__": file_client,
+        },
         loaded_base_name=loaded_base_name,
     )
 
 
 def render(
-    opts, functions, states=None, proxy=None, context=None, loaded_base_name=None
+    opts,
+    functions,
+    states=None,
+    proxy=None,
+    context=None,
+    file_client=None,
+    loaded_base_name=None,
 ):
     """
     Returns the render modules
@@ -929,6 +947,7 @@ def render(
         "__salt__": functions,
         "__grains__": opts.get("grains", {}),
         "__context__": context,
+        "__file_client__": file_client,
     }
 
     if states:

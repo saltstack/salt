@@ -1,6 +1,7 @@
 """
 Use pycrypto to generate random passwords on the fly.
 """
+
 import logging
 import random
 import re
@@ -87,7 +88,7 @@ def secure_password(
                         continue
                 pw += re.sub(
                     salt.utils.stringutils.to_str(
-                        r"[^{}]".format(re.escape(chars)), encoding=encoding
+                        rf"[^{re.escape(chars)}]", encoding=encoding
                     ),
                     "",
                     char,
@@ -140,7 +141,7 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
     else:
         if algorithm != "crypt":
             # all non-crypt algorithms are specified as part of the salt
-            crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
+            crypt_salt = f"${methods[algorithm].ident}${crypt_salt}"
 
     try:
         ret = crypt.crypt(password, crypt_salt)

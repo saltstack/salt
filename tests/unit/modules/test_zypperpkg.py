@@ -2,7 +2,6 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-
 import configparser
 import errno
 import io

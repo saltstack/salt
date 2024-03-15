@@ -3,7 +3,6 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
-
 import fnmatch
 import logging
 import os

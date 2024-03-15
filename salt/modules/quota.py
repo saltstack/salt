@@ -48,7 +48,7 @@ def _parse_quota(mount, opts):
     """
     Parse the output from repquota. Requires that -u -g are passed in
     """
-    cmd = "repquota -vp {} {}".format(opts, mount)
+    cmd = f"repquota -vp {opts} {mount}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     mode = "header"
 
@@ -105,7 +105,7 @@ def set_(device, **kwargs):
         "file-hard-limit": 0,
     }
 
-    current = None
+    current = ret = None
     cmd = "setquota"
     if "user" in kwargs:
         cmd += " -u {} ".format(kwargs["user"])
@@ -200,7 +200,7 @@ def on(device):
 
         salt '*' quota.on
     """
-    cmd = "quotaon {}".format(device)
+    cmd = f"quotaon {device}"
     __salt__["cmd.run"](cmd, python_shell=False)
     return True
 
@@ -215,7 +215,7 @@ def off(device):
 
         salt '*' quota.off
     """
-    cmd = "quotaoff {}".format(device)
+    cmd = f"quotaoff {device}"
     __salt__["cmd.run"](cmd, python_shell=False)
     return True
 
@@ -231,7 +231,7 @@ def get_mode(device):
         salt '*' quota.get_mode
     """
     ret = {}
-    cmd = "quotaon -p {}".format(device)
+    cmd = f"quotaon -p {device}"
     out = __salt__["cmd.run"](cmd, python_shell=False)
     for line in out.splitlines():
         comps = line.strip().split()

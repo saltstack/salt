@@ -116,7 +116,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         if salt.utils.platform.is_darwin():
             self.patched_environ = patched_environ(__cleanup__=["__PYVENV_LAUNCHER__"])
-            self.patched_environ.__enter__()
+            self.patched_environ.__enter__()  # pylint: disable=unnecessary-dunder-call
             self.addCleanup(self.patched_environ.__exit__)
 
         super().setUp()
@@ -258,7 +258,7 @@ class BuildoutTestCase(Base):
         else:
             line_break = "\n"
         self.assertEqual(
-            f"foo{line_break}",
+            f"# pylint: skip-file{line_break}foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 
@@ -486,8 +486,8 @@ class BuildoutOnlineTestCase(Base):
         out = ret["out"]
         comment = ret["comment"]
         self.assertTrue(ret["status"])
-        self.assertTrue("Creating directory" in out)
-        self.assertTrue("Installing a." in out)
+        self.assertIn("Creating directory", out)
+        self.assertIn("Installing a.", out)
         self.assertTrue(f"{self.py_st} bootstrap.py" in comment)
         self.assertTrue("buildout -c buildout.cfg" in comment)
         ret = buildout.buildout(
@@ -496,17 +496,17 @@ class BuildoutOnlineTestCase(Base):
         outlog = ret["outlog"]
         out = ret["out"]
         comment = ret["comment"]
-        self.assertTrue("Installing single part: a" in outlog)
-        self.assertTrue("buildout -c buildout.cfg -N install a" in comment)
-        self.assertTrue("Installing b." in out)
-        self.assertTrue("Installing c." in out)
+        self.assertIn("Installing single part: a", outlog)
+        self.assertIn("buildout -c buildout.cfg -N install a", comment)
+        self.assertIn("Installing b.", out)
+        self.assertIn("Installing c.", out)
         ret = buildout.buildout(
             b_dir, parts=["a", "b", "c"], buildout_ver=2, newest=True, python=self.py_st
         )
         outlog = ret["outlog"]
         out = ret["out"]
         comment = ret["comment"]
-        self.assertTrue("buildout -c buildout.cfg -n install a" in comment)
+        self.assertIn("buildout -c buildout.cfg -n install a", comment)
 
 
 # TODO: Is this test even still needed?
@@ -533,8 +533,8 @@ class BuildoutAPITestCase(TestCase):
                 out = ret["out"].decode("utf-8")
 
         for out in ["àé", "ççàé"]:
-            self.assertTrue(out in uretm["logs_by_level"]["info"])
-            self.assertTrue(out in uretm["outlog_by_level"])
+            self.assertIn(out, uretm["logs_by_level"]["info"])
+            self.assertIn(out, uretm["outlog_by_level"])
 
     def test_setup(self):
         buildout.LOG.clear()

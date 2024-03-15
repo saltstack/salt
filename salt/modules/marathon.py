@@ -6,7 +6,6 @@ Currently this only works when run through a proxy minion.
 .. versionadded:: 2015.8.2
 """
 
-
 import logging
 
 import salt.utils.http
@@ -44,7 +43,7 @@ def _app_id(app_id):
     Make sure the app_id is in the correct format.
     """
     if app_id[0] != "/":
-        app_id = "/{}".format(app_id)
+        app_id = f"/{app_id}"
     return app_id
 
 
@@ -59,7 +58,7 @@ def apps():
         salt marathon-minion-id marathon.apps
     """
     response = salt.utils.http.query(
-        "{}/v2/apps".format(_base_url()),
+        f"{_base_url()}/v2/apps",
         decode_type="json",
         decode=True,
     )
@@ -90,7 +89,7 @@ def app(id):
         salt marathon-minion-id marathon.app my-app
     """
     response = salt.utils.http.query(
-        "{}/v2/apps/{}".format(_base_url(), id),
+        f"{_base_url()}/v2/apps/{id}",
         decode_type="json",
         decode=True,
     )
@@ -116,7 +115,7 @@ def update_app(id, config):
     data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
-            "{}/v2/apps/{}?force=true".format(_base_url(), id),
+            f"{_base_url()}/v2/apps/{id}?force=true",
             method="PUT",
             decode_type="json",
             decode=True,
@@ -144,7 +143,7 @@ def rm_app(id):
         salt marathon-minion-id marathon.rm_app my-app
     """
     response = salt.utils.http.query(
-        "{}/v2/apps/{}".format(_base_url(), id),
+        f"{_base_url()}/v2/apps/{id}",
         method="DELETE",
         decode_type="json",
         decode=True,
@@ -163,7 +162,7 @@ def info():
         salt marathon-minion-id marathon.info
     """
     response = salt.utils.http.query(
-        "{}/v2/info".format(_base_url()),
+        f"{_base_url()}/v2/info",
         decode_type="json",
         decode=True,
     )
@@ -202,7 +201,7 @@ def restart_app(id, restart=False, force=True):
         return ret
     try:
         response = salt.utils.http.query(
-            "{}/v2/apps/{}/restart?force={}".format(_base_url(), _app_id(id), force),
+            f"{_base_url()}/v2/apps/{_app_id(id)}/restart?force={force}",
             method="POST",
             decode_type="json",
             decode=True,

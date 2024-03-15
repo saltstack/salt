@@ -4,6 +4,7 @@
 
     Test the salt extend script, leave templates/test alone to keep this working!
 """
+
 import os
 import shutil
 from datetime import date

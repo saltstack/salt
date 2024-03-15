@@ -6,7 +6,6 @@ Connection module for Amazon Data Pipeline
 :depends: boto3
 """
 
-
 import logging
 
 import salt.utils.versions

@@ -194,7 +194,7 @@ def homebrew_prefix():
     # If HOMEBREW_PREFIX env variable is present, use it
     env_homebrew_prefix = "HOMEBREW_PREFIX"
     if env_homebrew_prefix in os.environ:
-        log.debug(f"{env_homebrew_prefix} is set. Using it for homebrew prefix.")
+        log.debug("%s is set. Using it for homebrew prefix.", env_homebrew_prefix)
         return os.environ[env_homebrew_prefix]
 
     # Try brew --prefix otherwise
@@ -213,9 +213,9 @@ def homebrew_prefix():
             )
 
             return ret
-    except CommandExecutionError as e:
+    except CommandExecutionError as exc:
         log.debug(
-            f"Unable to find homebrew prefix by running 'brew --prefix'. Error: {str(e)}"
+            "Unable to find homebrew prefix by running 'brew --prefix'. Error: %s", exc
         )
 
     return None

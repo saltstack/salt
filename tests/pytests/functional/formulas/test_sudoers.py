@@ -1,6 +1,7 @@
 """
 Tests using sudoers formula
 """
+
 import pytest
 
 

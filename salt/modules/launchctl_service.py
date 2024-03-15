@@ -10,7 +10,6 @@ Module for the management of MacOS systems that use launchd/launchctl
 :depends:   - plistlib Python module
 """
 
-
 import fnmatch
 import logging
 import os
@@ -102,7 +101,7 @@ def _available_services():
                 except Exception:  # pylint: disable=broad-except
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
-                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(true_path)
+                    cmd = f'/usr/bin/plutil -convert xml1 -o - -- "{true_path}"'
                     plist_xml = __salt__["cmd.run_all"](cmd, python_shell=False)[
                         "stdout"
                     ]
@@ -174,9 +173,9 @@ def get_all():
 
 def _get_launchctl_data(job_label, runas=None):
     if BEFORE_YOSEMITE:
-        cmd = "launchctl list -x {}".format(job_label)
+        cmd = f"launchctl list -x {job_label}"
     else:
-        cmd = "launchctl list {}".format(job_label)
+        cmd = f"launchctl list {job_label}"
 
     launchctl_data = __salt__["cmd.run_all"](cmd, python_shell=False, runas=runas)
 

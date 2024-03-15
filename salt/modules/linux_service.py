@@ -43,7 +43,7 @@ def __virtual__():
         return (False, "Non Linux OSes are not supported")
     init_grain = __grains__.get("init")
     if init_grain not in (None, "sysvinit", "unknown"):
-        return (False, "Minion is running {}".format(init_grain))
+        return (False, f"Minion is running {init_grain}")
     elif __utils__["systemd.booted"](__context__):
         # Should have been caught by init grain check, but check just in case
         return (False, "Minion is running systemd")

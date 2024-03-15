@@ -13,7 +13,6 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 """
 
-
 import logging
 import os
 import shutil
@@ -33,7 +32,7 @@ def __virtual__():
     """
     if __salt__["cmd.has_exec"](HG_BINARY):
         return True
-    return (False, "Command {} not found".format(HG_BINARY))
+    return (False, f"Command {HG_BINARY} not found")
 
 
 def latest(
@@ -89,7 +88,7 @@ def latest(
     if not target:
         return _fail(ret, '"target option is required')
 
-    is_repository = os.path.isdir(target) and os.path.isdir("{}/.hg".format(target))
+    is_repository = os.path.isdir(target) and os.path.isdir(f"{target}/.hg")
 
     if is_repository:
         ret = _update_repo(
@@ -104,7 +103,7 @@ def latest(
             log.debug('target %s is not found, "hg clone" is required', target)
         if __opts__["test"]:
             return _neutral_test(
-                ret, "Repository {} is about to be cloned to {}".format(name, target)
+                ret, f"Repository {name} is about to be cloned to {target}"
             )
         _clone_repo(ret, target, name, user, identity, rev, opts)
     return ret
@@ -118,7 +117,7 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
 
     current_rev = __salt__["hg.revision"](target, user=user, rev=".")
     if not current_rev:
-        return _fail(ret, "Seems that {} is not a valid hg repo".format(target))
+        return _fail(ret, f"Seems that {target} is not a valid hg repo")
 
     if __opts__["test"]:
         return _neutral_test(
@@ -145,9 +144,9 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
                 " updating."
             )
         else:
-            ret[
-                "comment"
-            ] = "No changes found and update_head=False so will skip updating."
+            ret["comment"] = (
+                "No changes found and update_head=False so will skip updating."
+            )
         return ret
 
     if rev:
@@ -168,12 +167,12 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
     new_rev = __salt__["hg.revision"](cwd=target, user=user, rev=".")
 
     if current_rev != new_rev:
-        revision_text = "{} => {}".format(current_rev, new_rev)
+        revision_text = f"{current_rev} => {new_rev}"
         log.info("Repository %s updated: %s", target, revision_text)
-        ret["comment"] = "Repository {} updated.".format(target)
+        ret["comment"] = f"Repository {target} updated."
         ret["changes"]["revision"] = revision_text
     elif "error:" in pull_out:
-        return _fail(ret, "An error was thrown by hg:\n{}".format(pull_out))
+        return _fail(ret, f"An error was thrown by hg:\n{pull_out}")
     return ret
 
 
@@ -217,7 +216,7 @@ def _clone_repo(ret, target, name, user, identity, rev, opts):
             return ret
 
     new_rev = __salt__["hg.revision"](cwd=target, user=user)
-    message = "Repository {} cloned to {}".format(name, target)
+    message = f"Repository {name} cloned to {target}"
     log.info(message)
     ret["comment"] = message
 

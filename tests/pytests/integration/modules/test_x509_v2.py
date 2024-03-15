@@ -454,6 +454,7 @@ def x509_salt_call_cli(x509_salt_minion):
     return x509_salt_minion.salt_call_cli()
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 def test_sign_remote_certificate(x509_salt_call_cli, cert_args, ca_key, rsa_privkey):
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data

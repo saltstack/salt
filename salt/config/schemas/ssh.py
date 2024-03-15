@@ -8,7 +8,6 @@
     Salt SSH related configuration schemas
 """
 
-
 from salt.config.schemas.minion import MinionConfiguration
 from salt.utils.schema import (
     AnyOfItem,

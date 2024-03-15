@@ -3,7 +3,6 @@
 """
 
 import logging
-import os
 import random
 
 import pytest
@@ -20,6 +19,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
+    pytest.mark.timeout_unless_on_windows(320),
 ]
 
 
@@ -59,17 +59,6 @@ def proxy_minion_id(salt_master):
     finally:
         # Remove stale key if it exists
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
-
-
-def clear_proxy_minions(salt_master, proxy_minion_id):
-    for proxy in [proxy_minion_id, "dummy_proxy_one", "dummy_proxy_two"]:
-        pytest.helpers.remove_stale_minion_key(salt_master, proxy)
-
-        cachefile = os.path.join(
-            salt_master.config["cachedir"], "{}.cache".format(proxy)
-        )
-        if os.path.exists(cachefile):
-            os.unlink(cachefile)
 
 
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then

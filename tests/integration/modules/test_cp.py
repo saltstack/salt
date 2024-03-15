@@ -595,7 +595,9 @@ class CPModuleTest(ModuleCase):
     @pytest.mark.slow_test
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
+        open(  # pylint: disable=resource-leakage
+            log_to_xfer, "w", encoding="utf-8"
+        ).close()
         try:
             self.run_function("cp.push", [log_to_xfer])
             tgt_cache_file = os.path.join(

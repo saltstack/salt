@@ -2,7 +2,6 @@
 Module for managing ext2/3/4 file systems
 """
 
-
 import logging
 
 import salt.utils.platform

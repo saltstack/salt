@@ -141,7 +141,6 @@ Delete also accepts a VPC peering connection id.
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -555,7 +554,6 @@ def subnet_present(
     route_table_name=None,
     auto_assign_public_ipv4=False,
 ):
-
     """
     Ensure a subnet exists.
 
@@ -2058,10 +2056,10 @@ def vpc_peering_connection_present(
             keyid=keyid,
             profile=profile,
         ):
-            ret[
-                "comment"
-            ] = "VPC peering {} already requested - pending acceptance by {}".format(
-                conn_name, peer_owner_id or peer_vpc_name or peer_vpc_id
+            ret["comment"] = (
+                "VPC peering {} already requested - pending acceptance by {}".format(
+                    conn_name, peer_owner_id or peer_vpc_name or peer_vpc_id
+                )
             )
             log.info(ret["comment"])
             return ret

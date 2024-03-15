@@ -28,7 +28,7 @@ def download_remote(url, dir):
     try:
         rand = hashlib.md5(os.urandom(32)).hexdigest()
         remote_filename = urllib.parse.urlparse(url).path.split("/")[-1]
-        full_directory = os.path.join(dir, "{}-{}".format(rand, remote_filename))
+        full_directory = os.path.join(dir, f"{rand}-{remote_filename}")
         with salt.utils.files.fopen(
             full_directory, "wb"
         ) as file, urllib.request.urlopen(url) as response:
