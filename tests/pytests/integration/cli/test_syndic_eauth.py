@@ -5,6 +5,7 @@ import time
 import pytest
 
 from tests.conftest import CODE_DIR
+from salt.utils.versions import Version
 
 docker = pytest.importorskip("docker")
 
@@ -13,6 +14,10 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.timeout_unless_on_windows(600),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 
