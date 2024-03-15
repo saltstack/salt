@@ -63,6 +63,7 @@ def _pip_successful_install(
     return expect.issubset(set(success_for))
 
 
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 @pytest.mark.parametrize(
     "pip_version",
     (
