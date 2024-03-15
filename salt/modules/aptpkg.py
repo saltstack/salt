@@ -1678,9 +1678,9 @@ def get_repo(repo, **kwargs):
                 uri_match = re.search("(http[s]?://)(.+)", repo_entry["uri"])
                 if uri_match:
                     if not uri_match.group(2).startswith(ppa_auth):
-                        repo_entry[
-                            "uri"
-                        ] = f"{uri_match.group(1)}{ppa_auth}@{uri_match.group(2)}"
+                        repo_entry["uri"] = (
+                            f"{uri_match.group(1)}{ppa_auth}@{uri_match.group(2)}"
+                        )
         except SyntaxError:
             raise CommandExecutionError(
                 f"Error: repo '{repo}' is not a well formatted definition"
@@ -2673,9 +2673,9 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
             repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
         if "file" not in kwargs:
-            kwargs[
-                "file"
-            ] = f"/etc/apt/sources.list.d/{owner_name}-{ppa_name}-{dist}.list"
+            kwargs["file"] = (
+                f"/etc/apt/sources.list.d/{owner_name}-{ppa_name}-{dist}.list"
+            )
 
     source_entry = SourceEntry(repo)
     for list_args in ("architectures", "comps"):
