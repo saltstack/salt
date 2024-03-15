@@ -1,0 +1,46 @@
+---
+name: cache-decider
+description: Decide which cache to use
+inputs:
+  key:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+  path:
+    required: true
+    type: string
+    description: path to contents to cache
+
+outputs:
+  cache-hit:
+    value: ${{ steps.s3-cache.outputs.cache-hit || steps.github-cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: Configure AWS Credentials to access cache bucket
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-west-2
+
+    - name: Cache Deps Onedir Package Directory
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      id: s3-cache
+      env:
+        RUNS_ON_S3_BUCKET_CACHE: "salt-project-test-salt-github-actions-s3-cache"
+        AWS_REGION: 'us-west-2'
+      uses: runs-on/cache@v4
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}
+
+    - name: Cache Deps Onedir Package Directory
+      if: ${{ env.USE_S3_CACHE != 'true' }}
+      id: github-cache
+      uses: actions/cache@v3.3.1
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}

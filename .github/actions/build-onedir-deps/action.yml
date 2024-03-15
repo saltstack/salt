@@ -24,22 +24,19 @@ inputs:
     type: string
     description: Seed used to invalidate caches
 
-
 env:
   COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   RELENV_BUILDENV: 1
 
-
 runs:
   using: composite
 
   steps:
-
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >
