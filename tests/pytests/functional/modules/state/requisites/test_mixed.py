@@ -447,3 +447,28 @@ def test_requisites_mixed_illegal_req(state_tree):
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state_mod.sls("requisite")
         assert ret == ["Illegal requisite \"['A']\" in SLS \"requisite\", please check your syntax.\n"]
+
+
+def test_many_requisites(state, state_tree):
+    """Test to make sure that many requisites does not take too long"""
+
+    sls_name = "many_aggregates_test"
+    sls_contents = """
+    {%- for i in range(1000) %}
+    nop-{{ i }}:
+      test.nop:
+        {%- if i > 0 %}
+        - require:
+          - test: nop-{{ i - 1 }}
+        {%- else %}
+        - require: []
+        {%- endif %}
+    {%- endfor %}
+    """
+    with pytest.helpers.temp_file(f"{sls_name}.sls", sls_contents, state_tree):
+        ret = state.sls(sls_name)
+        # Check the results
+        assert not ret.failed
+        for index, state_run in enumerate(ret):
+            expected_tag = f'test_|-nop-{index}_|-nop-{index}_|-nop'
+            assert expected_tag in state_run.raw
