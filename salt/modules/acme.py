@@ -121,6 +121,8 @@ def cert(
     renew=None,
     keysize=None,
     server=None,
+    eab_keyid=None,
+    eab_hmac=None,
     owner="root",
     group="root",
     mode="0640",
@@ -148,6 +150,8 @@ def cert(
         expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
+    :param eab_keyid: external account binding identification key (required with eab_hmac)
+    :param eab_hmac: external account binding hmac key (required with eab_keyid)
     :param owner: owner of the private key file
     :param group: group of the private key file
     :param mode: mode of the private key file
@@ -200,6 +204,16 @@ def cert(
         renew = True
     if server:
         cmd.append(f"--server {server}")
+
+    if eab_keyid and eab_hmac:
+        cmd.append(f"--eab-kid {eab_keyid} --eab-hmac-key {eab_hmac}")
+    elif eab_keyid or eab_hmac:
+        return {
+            "result": False,
+            "comment": "Certificate {} renewal failed with:\n{}".format(
+                name, "must provide both eab_keyid and eab_hmac"
+            ),
+        }
 
     if certname:
         cmd.append(f"--cert-name {certname}")

@@ -3,6 +3,7 @@ ACME / Let's Encrypt certificate management state
 =================================================
 
 .. versionadded:: 2016.3.0
+.. versionchanged:: TBD
 
 See also the module documentation
 
@@ -23,6 +24,23 @@ See also the module documentation
         - onchanges_in:
           - cmd: reload-gitlab
 
+    reload-nginx:
+      cmd.run:
+        - name: nginx -s HUP
+
+    dev2.example.com:
+      acme.cert:
+        - aliases:
+          - gitlab.example.com
+        - email: acmemaster@example.com
+        - webroot: /opt/gitlab/embedded/service/gitlab-rails/public
+        - renew: 14
+        - server: https://acme.digicert.com/v2/acme/directory/
+        - eab_keyid: PAtzxcSFQMQSdm9SLJTxCt0hwvvl5yNKPfnWBWqPk8o
+        - eab_hmac: ZndUSkZvVldvMEFiRzQ5VWNCdERtNkNBNnBTcTl4czNKVEVxdUZiaEdpZXZNUVJBVmRuSFREcDJYX2s3X0NxTA
+        - fire_event: acme/dev2.example.com
+        - onchanges_in:
+          - cmd: reload-nginx
 """
 
 import logging
@@ -50,6 +68,8 @@ def cert(
     renew=None,
     keysize=None,
     server=None,
+    eab_keyid=None,
+    eab_hmac=None,
     owner="root",
     group="root",
     mode="0640",
@@ -75,6 +95,8 @@ def cert(
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
+    :param eab_keyid: external account binding identification key (required with eab_hmac)
+    :param eab_hmac: external account binding hmac key (required with eab_keyid)
     :param owner: owner of the private key file
     :param group: group of the private key file
     :param mode: mode of the private key file
@@ -132,6 +154,8 @@ def cert(
                 renew=renew,
                 keysize=keysize,
                 server=server,
+                eab_keyid=eab_keyid,
+                eab_hmac=eab_hmac,
                 owner=owner,
                 group=group,
                 mode=mode,
