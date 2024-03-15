@@ -327,6 +327,13 @@ class TestAccount:
             log.debug("Creating system account: %s", self)
             ret = self.sminion.functions.user.add(self.username)
             assert ret
+            if salt.utils.platform.is_windows():
+                ret = self.sminion.functions.user.update(
+                    name=self.username,
+                    expired=False,
+                    password_never_expires=True,
+                )
+                assert ret
             self._delete_account = True
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
