@@ -191,10 +191,6 @@ def generate_workflows(ctx: Context):
             ("x86_64", "centos-7"),
             ("arm64", "centos-7-arm64"),
         ],
-        "macos": [
-            ("x86_64", "macos-12"),
-            ("arm64", "macos-13-xlarge"),
-        ],
         "windows": [
             ("amd64", "windows-2022"),
         ],

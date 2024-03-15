@@ -36,6 +36,9 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      github-enterprise-runners:
+        type: boolean
+        required: true
 
 env:
   COLUMNS: 190
@@ -51,9 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - arm64
+        arch: ${{ inputs.github-enterprise-runners == true && fromJSON('["x86_64", "arm64"]') || fromJSON('["x86_64"]') }}
         source:
           - ${{ inputs.source }}
 

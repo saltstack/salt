@@ -17,6 +17,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       source: "<{ backend }>"
+      github-enterprise-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted-enterprise'] }}
     <%- if gh_environment %>
       environment: <{ gh_environment }>
       sign-macos-packages: true

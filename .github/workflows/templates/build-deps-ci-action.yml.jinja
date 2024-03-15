@@ -24,6 +24,9 @@ on:
         required: true
         type: string
         description: Nox Tarball Cache Hash
+      github-enterprise-runners:
+        type: boolean
+        required: true
       python-version:
         required: false
         type: string
@@ -161,16 +164,14 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        include:
-        <%- for arch, build_distro_slug in build_ci_deps_listing["macos"] %>
-          - distro-slug: <{ build_distro_slug }>
-            arch: <{ arch }>
-        <%- endfor %>
+        arch: ${{ inputs.github-enterprise-runners == true && fromJSON('["x86_64", "arm64"]') || fromJSON('["x86_64"]') }}
+    runs-on:
+      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
     steps:
 
       - name: "Throttle Builds"

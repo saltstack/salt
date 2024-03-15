@@ -253,6 +253,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      github-enterprise-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted-enterprise'] }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 
@@ -276,6 +277,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      github-enterprise-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted-enterprise'] }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
 

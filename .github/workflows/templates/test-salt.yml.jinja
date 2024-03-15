@@ -38,7 +38,7 @@
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
     name: <{ display_name }> Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted<%- if arch == "arm64" %>-enterprise<%- endif %>'] }}
     needs:
       - prepare-workflow
       - build-ci-deps

@@ -192,7 +192,11 @@ def runner_types(ctx: Context, event_name: str):
     time.sleep(1)
 
     ctx.info("Selecting which type of runners(self hosted runners or not) to run")
-    runners = {"github-hosted": False, "self-hosted": False}
+    runners = {
+        "github-hosted": False,
+        "self-hosted": False,
+        "github-hosted-enterprise": False,
+    }
     if event_name == "pull_request":
         ctx.info("Running from a pull request event")
         pr_event_data = gh_event["pull_request"]
@@ -210,7 +214,8 @@ def runner_types(ctx: Context, event_name: str):
 
         # This is a PR from a forked repository
         ctx.info("Pull request is not comming from the same repository")
-        runners["github-hosted"] = runners["self-hosted"] = True
+        for key in ("self-hosted", "github-hosted", "github-hosted-enterprise"):
+            runners[key] = True
         ctx.info("Writing 'runners' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"runners={json.dumps(runners)}\n")
@@ -231,8 +236,11 @@ def runner_types(ctx: Context, event_name: str):
         ctx.exit(0)
 
     # Not running on a fork, or the fork has self hosted runners, run everything
+    # except GH Enterprise runners
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
+    if gh_event["repository"]["fork"] is False:
+        runners["github-hosted-enterprise"] = True
     ctx.info("Writing 'runners' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"runners={json.dumps(runners)}")

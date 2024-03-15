@@ -14,6 +14,9 @@ on:
       self-hosted-runners:
         type: boolean
         required: true
+      github-enterprise-runners:
+        type: boolean
+        required: true
       cache-seed:
         required: true
         type: string
@@ -90,9 +93,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86_64
-          - arm64
+        arch: ${{ inputs.github-enterprise-runners == true && fromJSON('["x86_64", "arm64"]') || fromJSON('["x86_64"]') }}
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
 

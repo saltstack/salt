@@ -36,7 +36,7 @@
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
     name: <{ display_name }> Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted<%- if arch == "arm64" %>-enterprise<%- endif %>'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir

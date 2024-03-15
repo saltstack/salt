@@ -20,3 +20,4 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
+      github-enterprise-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted-enterprise'] }}
