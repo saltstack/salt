@@ -4,7 +4,6 @@
     Test cases for salt.modules.oracle
 """
 
-
 import os
 
 import pytest

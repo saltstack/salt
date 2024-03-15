@@ -22,7 +22,6 @@ You have those following methods:
 * buildout
 """
 
-
 import copy
 import logging
 import os
@@ -190,9 +189,9 @@ def _encode_status(status):
             logs = status["logs_by_level"].get(logger, [])[:]
             if logs:
                 for i, log in enumerate(logs):
-                    status["logs_by_level"][logger][
-                        i
-                    ] = salt.utils.stringutils.to_unicode(log)
+                    status["logs_by_level"][logger][i] = (
+                        salt.utils.stringutils.to_unicode(log)
+                    )
     return status
 
 
@@ -287,7 +286,7 @@ def _Popen(
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = " ".join(command)
-    LOG.debug(f"Running {command}")  # pylint: disable=str-format-in-logging
+    LOG.debug(f"Running {command}")
     if not loglevel:
         loglevel = "debug"
     ret = __salt__["cmd.run_all"](
@@ -499,7 +498,7 @@ def upgrade_bootstrap(
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug(f"Using {booturl}")  # pylint: disable=str-format-in-logging
+    LOG.debug(f"Using {booturl}")
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
@@ -792,9 +791,7 @@ def run_buildout(
     cmds, outputs = [], []
     if parts:
         for part in parts:
-            LOG.info(
-                f"Installing single part: {part}"
-            )  # pylint: disable=str-format-in-logging
+            LOG.info(f"Installing single part: {part}")
             cmd = "{} -c {} {} install {}".format(bcmd, config, " ".join(argv), part)
             cmds.append(cmd)
             outputs.append(
@@ -960,9 +957,7 @@ def buildout(
 
         salt '*' buildout.buildout /srv/mybuildout
     """
-    LOG.info(
-        f"Running buildout in {directory} ({config})"
-    )  # pylint: disable=str-format-in-logging
+    LOG.info(f"Running buildout in {directory} ({config})")
     boot_ret = bootstrap(
         directory,
         config=config,

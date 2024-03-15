@@ -174,6 +174,7 @@ def _query(
         params=params,
         data=salt.utils.json.dumps(data),
         verify=verify_ssl,
+        timeout=120,
     )
 
     if result.text is None or result.text == "":
@@ -196,6 +197,7 @@ def _query(
                 params=params,
                 data=data,  # Already serialized above, don't do it again
                 verify=verify_ssl,
+                timeout=120,
             ).json()
             offset = next_page_results["offset"]
             limit = next_page_results["limit"]
@@ -345,7 +347,7 @@ def create_or_update_resource(
             resource_id = _get_resource_id(resource)
             return _query(
                 method="PUT",
-                action="{}/{}".format(resource_name, resource_id),
+                action=f"{resource_name}/{resource_id}",
                 data=data_to_update,
                 profile=profile,
                 subdomain=subdomain,
@@ -383,7 +385,7 @@ def delete_resource(
         resource_id = _get_resource_id(resource)
         return _query(
             method="DELETE",
-            action="{}/{}".format(resource_name, resource_id),
+            action=f"{resource_name}/{resource_id}",
             profile=profile,
             subdomain=subdomain,
             api_key=api_key,
@@ -399,7 +401,7 @@ def resource_present(
     profile="pagerduty",
     subdomain=None,
     api_key=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Generic resource.present state method.   Pagerduty state modules should be a thin wrapper over this method,
@@ -442,7 +444,7 @@ def resource_absent(
     profile="pagerduty",
     subdomain=None,
     api_key=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Generic resource.absent state method.   Pagerduty state modules should be a thin wrapper over this method,
@@ -467,7 +469,7 @@ def resource_absent(
         )
         if result is None:
             ret["result"] = True
-            ret["comment"] = "{} deleted".format(v)
+            ret["comment"] = f"{v} deleted"
             return ret
         elif result is True:
             continue

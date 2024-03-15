@@ -81,7 +81,6 @@ Ensure a Linux ACL list does not exist
 
 """
 
-
 import logging
 import os
 

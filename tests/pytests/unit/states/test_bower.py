@@ -1,6 +1,7 @@
 """
     :codeauthor: Alexander Pyatkin <asp@thexyz.net>
 """
+
 import pytest
 
 import salt.states.bower as bower

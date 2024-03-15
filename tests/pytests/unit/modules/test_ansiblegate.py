@@ -117,11 +117,11 @@ def test_ansible_module_call():
                 ANY,
             ],
             env=ANY,
-            check=True,
-            shell=False,
             capture_output=True,
             timeout=1200,
             text=True,
+            check=True,
+            shell=False,
         )
         assert ret == {"completed": True}
 

@@ -15,7 +15,6 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-
 import logging
 
 import salt.utils.dns

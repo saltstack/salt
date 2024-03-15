@@ -21,20 +21,23 @@ def latest_installer_name(arch="AMD64", **kwargs):
     """
     Create an installer file name
     """
-    return "Salt-Minion-Latest-Py3-{}-Setup.exe".format(arch)
+    return f"Salt-Minion-Latest-Py3-{arch}-Setup.exe"
 
 
 def download_and_verify(fp, name, repo=REPO):
     """
     Download an installer and verify its contents.
     """
-    md5 = "{}.md5".format(name)
-    url = lambda x: "{}/{}".format(repo, x)
-    resp = requests.get(url(md5))
+    md5 = f"{name}.md5"
+
+    def url(x):
+        return f"{repo}/{x}"
+
+    resp = requests.get(url(md5), timeout=60)
     if resp.status_code != 200:
         raise Exception("Unable to fetch installer md5")
     installer_md5 = resp.text.strip().split()[0].lower()
-    resp = requests.get(url(name), stream=True)
+    resp = requests.get(url(name), stream=True, timeout=60)
     if resp.status_code != 200:
         raise Exception("Unable to fetch installer")
     md5hsh = hashlib.md5()

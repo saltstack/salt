@@ -45,7 +45,6 @@ either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 """
 
-
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
@@ -127,4 +126,4 @@ def ext_pillar(minion_id, pillar, **kwargs):
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError("ext_pillar.reclass: {}".format(e))
+        raise SaltInvocationError(f"ext_pillar.reclass: {e}")

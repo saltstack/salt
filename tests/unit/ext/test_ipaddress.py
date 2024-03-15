@@ -13,7 +13,7 @@
 
 """Unittest for ipaddress module."""
 
-# pylint: disable=string-substitution-usage-error,pointless-statement,abstract-method,cell-var-from-loop
+# pylint: disable=pointless-statement,abstract-method,cell-var-from-loop,unnecessary-dunder-call
 
 import contextlib
 import functools
@@ -265,7 +265,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
             ("s", "1.2.3.42"),
             ("", "1.2.3.42"),
         ]
-        for (fmt, txt) in v4_pairs:
+        for fmt, txt in v4_pairs:
             self.assertEqual(txt, format(v4, fmt))
 
     def test_network_passed_as_address(self):
@@ -312,7 +312,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
 
     def test_invalid_characters(self):
         def assertBadOctet(addr, octet):
-            msg = "Only decimal digits permitted in {!r} in {!r}".format(octet, addr)
+            msg = f"Only decimal digits permitted in {octet!r} in {addr!r}"
             with self.assertAddressError(re.escape(msg)):
                 ipaddress.IPv4Address(addr)
 
@@ -402,7 +402,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
             ("", "::102:32a"),
         ]
 
-        for (fmt, txt) in v6_pairs:
+        for fmt, txt in v6_pairs:
             self.assertEqual(txt, format(v6, fmt))
 
     def test_network_passed_as_address(self):
@@ -657,7 +657,7 @@ class NetmaskTestMixin_v4(CommonTestMixin_v4):
         def assertBadNetmask(addr, netmask):
             msg = "%r is not a valid netmask" % netmask
             with self.assertNetmaskError(re.escape(msg)):
-                self.factory("{}/{}".format(addr, netmask))
+                self.factory(f"{addr}/{netmask}")
 
         assertBadNetmask("1.2.3.4", "")
         assertBadNetmask("1.2.3.4", "-1")
@@ -827,7 +827,7 @@ class NetmaskTestMixin_v6(CommonTestMixin_v6):
         def assertBadNetmask(addr, netmask):
             msg = "%r is not a valid netmask" % netmask
             with self.assertNetmaskError(re.escape(msg)):
-                self.factory("{}/{}".format(addr, netmask))
+                self.factory(f"{addr}/{netmask}")
 
         assertBadNetmask("::1", "")
         assertBadNetmask("::1", "::1")

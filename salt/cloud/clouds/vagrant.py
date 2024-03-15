@@ -256,7 +256,7 @@ def create(vm_):
                     vm_.setdefault("ssh_port", ret["ssh_port"])
             except (KeyError, TypeError):
                 raise SaltInvocationError(
-                    "Insufficient SSH addressing information for {}".format(name)
+                    f"Insufficient SSH addressing information for {name}"
                 )
 
         log.info(
@@ -300,7 +300,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
@@ -317,7 +317,7 @@ def destroy(name, call=None):
             __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
-                "salt/cloud/{}/destroyed".format(name),
+                f"salt/cloud/{name}/destroyed",
                 args={"name": name},
                 sock_dir=opts["sock_dir"],
                 transport=opts["transport"],
@@ -328,11 +328,11 @@ def destroy(name, call=None):
                     name, _get_active_provider_name().split(":")[0], opts
                 )
 
-            return {"Destroyed": "{} was destroyed.".format(name)}
+            return {"Destroyed": f"{name} was destroyed."}
         else:
-            return {"Error": "Error destroying {}".format(name)}
+            return {"Error": f"Error destroying {name}"}
     else:
-        return {"Error": "No response from {}. Cannot destroy.".format(name)}
+        return {"Error": f"No response from {name}. Cannot destroy."}
 
 
 # noinspection PyTypeChecker

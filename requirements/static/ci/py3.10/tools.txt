@@ -4,7 +4,9 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/tools.txt requirements/static/ci/tools.in
 #
-attrs==23.2.0
+annotated-types==0.6.0
+    # via pydantic
+attrs==20.3.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
@@ -34,11 +36,15 @@ mdurl==0.1.2
     # via markdown-it-py
 packaging==23.1
     # via -r requirements/static/ci/tools.in
-pygments==2.15.1
+pydantic-core==2.16.2
+    # via pydantic
+pydantic==2.6.1
+    # via python-tools-scripts
+pygments==2.13.0
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.18.6
+python-tools-scripts==0.20.0
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.1
     # via -r requirements/static/ci/tools.in
@@ -50,8 +56,11 @@ s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via python-dateutil
-typing-extensions==4.2.0
-    # via python-tools-scripts
+typing-extensions==4.9.0
+    # via
+    #   pydantic
+    #   pydantic-core
+    #   python-tools-scripts
 urllib3==1.26.18
     # via
     #   botocore

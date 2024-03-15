@@ -4,7 +4,6 @@
     Test cases for salt.modules.drbd
 """
 
-
 import pytest
 
 import salt.modules.drbd as drbd

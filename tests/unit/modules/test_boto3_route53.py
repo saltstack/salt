@@ -1,6 +1,7 @@
 """
     Tests for salt.modules.boto3_route53
 """
+
 import random
 import string
 

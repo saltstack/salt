@@ -1,6 +1,7 @@
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.localemod as localemod
@@ -417,9 +418,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             == "/etc/sysconfig/language"
         )
         assert localemod.__salt__["file.replace"].call_args[0][1] == "^RC_LANG=.*"
-        assert localemod.__salt__["file.replace"].call_args[0][
-            2
-        ] == 'RC_LANG="{}"'.format(loc)
+        assert localemod.__salt__["file.replace"].call_args[0][2] == f'RC_LANG="{loc}"'
 
     @patch("salt.utils.path.which", MagicMock(return_value=None))
     @patch(

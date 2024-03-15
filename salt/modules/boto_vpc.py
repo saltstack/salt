@@ -120,6 +120,7 @@ Deleting VPC peering connection via this module
     salt myminion boto_vpc.delete_vpc_peering_connection conn_id=pcx-8a8939e3
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -581,7 +582,6 @@ def _find_vpcs(
     keyid=None,
     profile=None,
 ):
-
     """
     Given VPC properties, find and return matching VPC ids.
     """
@@ -1419,9 +1419,9 @@ def describe_subnets(
                 subnet["id"], subnet["vpc_id"], conn=conn
             )
             if explicit_route_table_assoc:
-                subnet[
-                    "explicit_route_table_association_id"
-                ] = explicit_route_table_assoc
+                subnet["explicit_route_table_association_id"] = (
+                    explicit_route_table_assoc
+                )
             subnets_list.append(subnet)
         return {"subnets": subnets_list}
 

@@ -148,7 +148,9 @@ def _authenticate():
     connect_data = {"username": username, "password": passwd}
     full_url = f"https://{url}:{port}/api2/json/access/ticket"
 
-    response = requests.post(full_url, verify=verify_ssl, data=connect_data)
+    response = requests.post(
+        full_url, verify=verify_ssl, data=connect_data, timeout=120
+    )
     response.raise_for_status()
     returned_data = response.json()
 
@@ -182,6 +184,7 @@ def query(conn_type, option, post_data=None):
             data=post_data,
             cookies=ticket,
             headers=httpheaders,
+            timeout=120,
         )
     elif conn_type == "put":
         httpheaders["CSRFPreventionToken"] = csrf
@@ -191,6 +194,7 @@ def query(conn_type, option, post_data=None):
             data=post_data,
             cookies=ticket,
             headers=httpheaders,
+            timeout=120,
         )
     elif conn_type == "delete":
         httpheaders["CSRFPreventionToken"] = csrf
@@ -200,9 +204,12 @@ def query(conn_type, option, post_data=None):
             data=post_data,
             cookies=ticket,
             headers=httpheaders,
+            timeout=120,
         )
     elif conn_type == "get":
-        response = requests.get(full_url, verify=verify_ssl, cookies=ticket)
+        response = requests.get(
+            full_url, verify=verify_ssl, cookies=ticket, timeout=120
+        )
 
     try:
         response.raise_for_status()
@@ -871,7 +878,7 @@ def _import_api():
     """
     global api
     full_url = f"https://{url}:{port}/pve-docs/api-viewer/apidoc.js"
-    returned_data = requests.get(full_url, verify=verify_ssl)
+    returned_data = requests.get(full_url, verify=verify_ssl, timeout=120)
 
     re_filter = re.compile(" (?:pveapi|apiSchema) = (.*)^;", re.DOTALL | re.MULTILINE)
     api_json = re_filter.findall(returned_data.text)[0]

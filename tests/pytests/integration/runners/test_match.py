@@ -1,6 +1,7 @@
 """
 Integration tests for the match runner
 """
+
 import logging
 
 import pytest

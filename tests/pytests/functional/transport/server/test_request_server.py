@@ -10,9 +10,9 @@ async def test_request_server(
     minion_opts["transport"] = master_opts["transport"] = transport
 
     # Needed by tcp transport's RequestClient
-    minion_opts[
-        "master_uri"
-    ] = f"tcp://{master_opts['interface']}:{master_opts['ret_port']}"
+    minion_opts["master_uri"] = (
+        f"tcp://{master_opts['interface']}:{master_opts['ret_port']}"
+    )
 
     req_server = salt.transport.request_server(master_opts)
     req_server.pre_fork(process_manager)

@@ -462,10 +462,8 @@ def req_any(req, request):
 
 @pytest.fixture
 def req_unwrapping(wrapped_role_id_lookup_response, role_id_response, req):
-    req.side_effect = (
-        lambda method, url, **kwargs: _mock_json_response(
-            wrapped_role_id_lookup_response
-        )
+    req.side_effect = lambda method, url, **kwargs: (
+        _mock_json_response(wrapped_role_id_lookup_response)
         if url.endswith("sys/wrapping/lookup")
         else _mock_json_response(role_id_response)
     )
@@ -550,7 +548,7 @@ def salt_runtype(request):
     ]
 )
 def opts_runtype(request):
-    return {
+    rtype = {
         "master": {
             "__role": "master",
             "vault": {},
@@ -585,4 +583,5 @@ def opts_runtype(request):
         "minion_remote": {
             "grains": {"id": "test-minion"},
         },
-    }[request.param]
+    }
+    return rtype[request.param]

@@ -150,7 +150,7 @@ def _get_snapshot(name, suffix, blade):
     or None
     """
     try:
-        filt = "source='{}' and suffix='{}'".format(name, suffix)
+        filt = f"source='{name}' and suffix='{suffix}'"
         res = blade.file_system_snapshots.list_file_system_snapshots(filter=filt)
         return res.items[0]
     except rest.ApiException:

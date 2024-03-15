@@ -34,7 +34,6 @@ Module for Sending Messages via XMPP (a.k.a. Jabber)
 
 """
 
-
 import logging
 
 HAS_LIBS = False

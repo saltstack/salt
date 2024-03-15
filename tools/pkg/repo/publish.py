@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -119,7 +120,7 @@ def release(ctx: Context, salt_version: str):
             files_to_copy = json.loads(local_release_files_path.read_text())
         except ClientError as exc:
             if "Error" not in exc.response:
-                log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+                log.exception("Error downloading %s: %s", repo_release_files_path, exc)
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
                 ctx.error(f"Could not find {repo_release_files_path} in bucket.")
@@ -129,7 +130,7 @@ def release(ctx: Context, salt_version: str):
                     f"Could not download {repo_release_files_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
-            log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+            log.exception("Error downloading %s: %s", repo_release_files_path, exc)
             ctx.exit(1)
         local_release_symlinks_path = (
             pathlib.Path(tsd) / repo_release_symlinks_path.name
@@ -147,7 +148,9 @@ def release(ctx: Context, salt_version: str):
             directories_to_delete = json.loads(local_release_symlinks_path.read_text())
         except ClientError as exc:
             if "Error" not in exc.response:
-                log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
+                log.exception(
+                    "Error downloading %s: %s", repo_release_symlinks_path, exc
+                )
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
                 ctx.error(f"Could not find {repo_release_symlinks_path} in bucket.")
@@ -157,7 +160,7 @@ def release(ctx: Context, salt_version: str):
                     f"Could not download {repo_release_symlinks_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
-            log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
+            log.exception("Error downloading %s: %s", repo_release_symlinks_path, exc)
             ctx.exit(1)
 
         if directories_to_delete:
@@ -212,7 +215,7 @@ def release(ctx: Context, salt_version: str):
                 )
                 already_copied_files.append(fpath)
             except ClientError:
-                log.exception(f"Failed to copy {fpath}")
+                log.exception("Failed to copy %s", fpath)
             finally:
                 progress.update(task, advance=1)
 
@@ -326,12 +329,12 @@ def release(ctx: Context, salt_version: str):
                 updated_contents = re.sub(
                     r"^(baseurl|gpgkey)=https://([^/]+)/(.*)$",
                     rf"\1=https://{release_domain}/\3",
-                    repo_file_path.read_text(),
+                    repo_file_path.read_text(encoding="utf-8"),
                     flags=re.MULTILINE,
                 )
                 ctx.info(f"Updated '{repo_file_path.relative_to(repo_path)}:")
                 ctx.print(updated_contents)
-                repo_file_path.write_text(updated_contents)
+                repo_file_path.write_text(updated_contents, encoding="utf-8")
             except ClientError as exc:
                 if "Error" not in exc.response:
                     raise
@@ -592,7 +595,7 @@ def _publish_repo(
                     Delete={"Objects": objects},
                 )
             except ClientError:
-                log.exception(f"Failed to delete {bucket_uri}")
+                log.exception("Failed to delete %s", bucket_uri)
             finally:
                 progress.update(task, advance=1)
 

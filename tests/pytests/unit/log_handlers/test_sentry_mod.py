@@ -1,6 +1,7 @@
 """
 Tests for salt.log_handlers.sentry_mod
 """
+
 import pytest
 
 import salt.log_handlers.sentry_mod

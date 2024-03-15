@@ -114,7 +114,7 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
     if ki is not None:
         cmd = cmd + " kickstart {0}:{1} system {0}:{2}".format(dev, ki, si)
     else:
-        cmd = cmd + " nxos {}:{}".format(dev, si)
+        cmd = cmd + f" nxos {dev}:{si}"
 
     if issu and ki is None:
         cmd = cmd + " non-disruptive"
@@ -254,14 +254,14 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
 
     if ki is None:
         logmsg = "Upgrading device using combined system/kickstart image."
-        logmsg += "\nSystem Image: {}".format(si)
-        cmd = cmd + " nxos {}:{}".format(dev, si)
+        logmsg += f"\nSystem Image: {si}"
+        cmd = cmd + f" nxos {dev}:{si}"
         if issu:
             cmd = cmd + " non-disruptive"
     else:
         logmsg = "Upgrading device using separate system/kickstart images."
-        logmsg += "\nSystem Image: {}".format(si)
-        logmsg += "\nKickstart Image: {}".format(ki)
+        logmsg += f"\nSystem Image: {si}"
+        logmsg += f"\nKickstart Image: {ki}"
         if not issu:
             log.info("Attempting upgrade using force option")
             cmd = cmd + " force"
@@ -367,7 +367,7 @@ def _parse_upgrade_data(data):
             g3 = mo.group(3)
             g4 = mo.group(4)
             g5 = mo.group(5)
-            mk = "module {}:image {}".format(g1, g2)  # module key
+            mk = f"module {g1}:image {g2}"  # module key
             upgrade_result[bk][mk] = {}
             upgrade_result[bk][mk]["running_version"] = g3
             upgrade_result[bk][mk]["new_version"] = g4

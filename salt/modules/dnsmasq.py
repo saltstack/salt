@@ -2,7 +2,6 @@
 Module for managing dnsmasq
 """
 
-
 import logging
 import os
 
@@ -114,13 +113,13 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
                 for config in includes:
                     __salt__["file.sed"](
                         path=config,
-                        before="^{}=.*".format(key),
-                        after="{}={}".format(key, kwargs[key]),
+                        before=f"^{key}=.*",
+                        after=f"{key}={kwargs[key]}",
                     )
             else:
-                __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
+                __salt__["file.append"](config_file, f"{key}={kwargs[key]}")
         else:
-            __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
+            __salt__["file.append"](config_file, f"{key}={kwargs[key]}")
     return ret_kwargs
 
 
@@ -161,7 +160,7 @@ def _parse_dnamasq(filename):
     fileopts = {}
 
     if not os.path.isfile(filename):
-        raise CommandExecutionError("Error: No such file '{}'".format(filename))
+        raise CommandExecutionError(f"Error: No such file '{filename}'")
 
     with salt.utils.files.fopen(filename, "r") as fp_:
         for line in fp_:

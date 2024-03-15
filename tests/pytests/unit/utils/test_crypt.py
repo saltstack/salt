@@ -1,6 +1,7 @@
 """
 Unit tests for salt.utils.crypt.py
 """
+
 import pytest
 
 import salt.utils.crypt

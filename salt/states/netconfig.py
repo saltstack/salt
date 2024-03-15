@@ -67,7 +67,7 @@ def _update_config(
     commit=True,
     debug=False,
     replace=False,
-    **template_vars
+    **template_vars,
 ):
     """
     Call the necessary functions in order to execute the state.
@@ -92,7 +92,7 @@ def _update_config(
         commit=commit,
         debug=debug,
         replace=replace,
-        **template_vars
+        **template_vars,
     )
 
 
@@ -275,7 +275,7 @@ def saved(
     win_deny_perms=None,
     win_inheritance=True,
     win_perms_reset=False,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -452,7 +452,7 @@ def saved(
         win_deny_perms=win_deny_perms,
         win_inheritance=win_inheritance,
         win_perms_reset=win_perms_reset,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -475,7 +475,7 @@ def managed(
     commit_at=None,
     revert_in=None,
     revert_at=None,
-    **template_vars
+    **template_vars,
 ):
     """
     Manages the configuration on network devices.
@@ -851,7 +851,7 @@ def managed(
         revert_at=revert_at,
         debug=debug,
         replace=replace,
-        **template_vars
+        **template_vars,
     )
 
     return salt.utils.napalm.loaded_ret(ret, config_update_ret, test, debug)
@@ -877,7 +877,7 @@ def commit_cancelled(name):
     """
     cancelled = {"name": name, "result": None, "changes": {}, "comment": ""}
     if __opts__["test"]:
-        cancelled["comment"] = "It would cancel commit #{}".format(name)
+        cancelled["comment"] = f"It would cancel commit #{name}"
         return cancelled
     ret = __salt__["net.cancel_commit"](name)
     cancelled.update(ret)
@@ -904,7 +904,7 @@ def commit_confirmed(name):
     """
     confirmed = {"name": name, "result": None, "changes": {}, "comment": ""}
     if __opts__["test"]:
-        confirmed["comment"] = "It would confirm commit #{}".format(name)
+        confirmed["comment"] = f"It would confirm commit #{name}"
         return confirmed
     ret = __salt__["net.confirm_commit"](name)
     confirmed.update(ret)

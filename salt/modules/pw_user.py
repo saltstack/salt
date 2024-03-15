@@ -75,7 +75,7 @@ def _get_gecos(name):
     try:
         gecos_field = pwd.getpwnam(name).pw_gecos.split(",", 3)
     except KeyError:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if not gecos_field:
         return {}
     else:
@@ -136,7 +136,7 @@ def add(
     homephone="",
     createhome=True,
     loginclass=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Add a user to the minion
@@ -238,7 +238,7 @@ def chuid(name, uid):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if uid == pre_info["uid"]:
         return True
     cmd = ["pw", "usermod", "-u", uid, "-n", name]
@@ -258,7 +258,7 @@ def chgid(name, gid):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if gid == pre_info["gid"]:
         return True
     cmd = ["pw", "usermod", "-g", gid, "-n", name]
@@ -278,7 +278,7 @@ def chshell(name, shell):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if shell == pre_info["shell"]:
         return True
     cmd = ["pw", "usermod", "-s", shell, "-n", name]
@@ -309,7 +309,7 @@ def chhome(name, home, persist=False):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if home == pre_info["home"]:
         return True
     cmd = ["pw", "usermod", name, "-d", home]
@@ -419,7 +419,7 @@ def chloginclass(name, loginclass, root=None):
     if loginclass == get_loginclass(name):
         return True
 
-    cmd = ["pw", "usermod", "-L", "{}".format(loginclass), "-n", "{}".format(name)]
+    cmd = ["pw", "usermod", "-L", f"{loginclass}", "-n", f"{name}"]
 
     __salt__["cmd.run"](cmd, python_shell=False)
 
@@ -518,10 +518,10 @@ def rename(name, new_name):
     """
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
     cmd = ["pw", "usermod", "-l", new_name, "-n", name]
     __salt__["cmd.run"](cmd)
     post_info = info(new_name)

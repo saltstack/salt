@@ -52,7 +52,6 @@ allowing users to manage their own custom rows.
                     type: graph
 """
 
-
 import copy
 
 import salt.utils.json
@@ -139,15 +138,15 @@ def present(
     if not old_dashboard:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Dashboard {} is set to be created.".format(name)
+            ret["comment"] = f"Dashboard {name} is set to be created."
             return ret
 
         response = __salt__["grafana4.create_update_dashboard"](
             dashboard=new_dashboard, overwrite=True, profile=profile
         )
         if response.get("status") == "success":
-            ret["comment"] = "Dashboard {} created.".format(name)
-            ret["changes"]["new"] = "Dashboard {} created.".format(name)
+            ret["comment"] = f"Dashboard {name} created."
+            ret["changes"]["new"] = f"Dashboard {name} created."
         else:
             ret["result"] = False
             ret["comment"] = "Failed to create dashboard {}, response={}".format(
@@ -192,7 +191,7 @@ def present(
             dashboard_diff = DictDiffer(
                 _cleaned(updated_dashboard), _cleaned(old_dashboard)
             )
-            ret["comment"] = "Dashboard {} updated.".format(name)
+            ret["comment"] = f"Dashboard {name} updated."
             ret["changes"] = _dashboard_diff(
                 _cleaned(new_dashboard), _cleaned(old_dashboard)
             )
@@ -230,12 +229,12 @@ def absent(name, orgname=None, profile="grafana"):
     if existing_dashboard:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Dashboard {} is set to be deleted.".format(name)
+            ret["comment"] = f"Dashboard {name} is set to be deleted."
             return ret
 
         __salt__["grafana4.delete_dashboard"](name, profile=profile)
-        ret["comment"] = "Dashboard {} deleted.".format(name)
-        ret["changes"]["new"] = "Dashboard {} deleted.".format(name)
+        ret["comment"] = f"Dashboard {name} deleted."
+        ret["changes"]["new"] = f"Dashboard {name} deleted."
         return ret
 
     ret["comment"] = "Dashboard absent"

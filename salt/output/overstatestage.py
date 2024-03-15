@@ -6,7 +6,6 @@ This outputter is used to display :ref:`Orchestrate Runner
 <orchestrate-runner>` stages, and should not be called directly.
 """
 
-
 import salt.utils.color
 
 # [{'group2': {'match': ['fedora17-2', 'fedora17-3'],

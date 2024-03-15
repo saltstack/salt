@@ -3,7 +3,6 @@
 :platform:      Linux
 """
 
-
 import salt.modules.freezer as freezer
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin

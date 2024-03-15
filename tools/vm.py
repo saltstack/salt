@@ -2,6 +2,7 @@
 These commands are used to create/destroy VMs, sync the local checkout
 to the VM and to run commands on the VM.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -46,7 +47,9 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+    "r", encoding="utf-8"
+) as rfh:
     AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
@@ -633,12 +636,16 @@ def sync_cache(
             except FileNotFoundError:
                 if not delete:
                     log.info(
-                        f"Would remove {state_path.name} (No valid ID) from cache at {state_path}"
+                        "Would remove %s (No valid ID) from cache at %s",
+                        state_path.name,
+                        state_path,
                     )
                 else:
                     shutil.rmtree(state_path)
                     log.info(
-                        f"REMOVED {state_path.name} (No valid ID) from cache at {state_path}"
+                        "REMOVED %s (No valid ID) from cache at %s",
+                        state_path.name,
+                        state_path,
                     )
             else:
                 cached_instances[instance_id] = state_path.name
@@ -659,11 +666,17 @@ def sync_cache(
         if delete:
             shutil.rmtree(STATE_DIR / vm_name)
             log.info(
-                f"REMOVED {vm_name} ({cached_id.strip()}) from cache at {STATE_DIR / vm_name}"
+                "REMOVED %s (%s) from cache at %s",
+                vm_name,
+                cached_id.strip(),
+                STATE_DIR / vm_name,
             )
         else:
             log.info(
-                f"Would remove {vm_name} ({cached_id.strip()}) from cache at {STATE_DIR / vm_name}"
+                "Would remove %s (%s) from cache at %s",
+                vm_name,
+                cached_id.strip(),
+                STATE_DIR / vm_name,
             )
     if not delete and to_remove:
         log.info("To force the removal of the above cache entries, pass --delete")
@@ -719,7 +732,7 @@ def list_vms(
             extras = sep + sep.join(
                 [f"{key}: {value}" for key, value in extra_info.items()]
             )
-            log.info(f"{vm_name} ({vm_state}){extras}")
+            log.info("%s (%s)%s", vm_name, vm_state, extras)
 
 
 def _get_instances_by_key(ctx: Context, key_name: str):
@@ -785,7 +798,7 @@ class VM:
                 if key in AMIConfig.__annotations__
             }
         )
-        log.info(f"Loaded VM Configuration:\n{config}")
+        log.info("Loaded VM Configuration:\n%s", config)
         return config
 
     @state_dir.default
@@ -827,7 +840,9 @@ class VM:
                 {"Name": "tag:vm-name", "Values": [self.name]},
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
             ]
-            log.info(f"Checking existing instance of {self.name}({self.config.ami})...")
+            log.info(
+                "Checking existing instance of %s(%s)...", self.name, self.config.ami
+            )
             try:
                 instances = list(
                     self.ec2.instances.filter(
@@ -895,7 +910,7 @@ class VM:
         environment=None,
     ):
         if self.is_running:
-            log.info(f"{self!r} is already running...")
+            log.info("%r is already running...", self)
             return True
         self.get_ec2_resource.cache_clear()
 
@@ -1005,7 +1020,9 @@ class VM:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
-            log.info(f"Starting Developer configured VM In Environment '{environment}'")
+            log.info(
+                "Starting Developer configured VM In Environment '%s'", environment
+            )
             security_group_filters = [
                 {
                     "Name": "vpc-id",
@@ -1272,7 +1289,7 @@ class VM:
     def destroy(self, no_wait: bool = False):
         try:
             if not self.is_running:
-                log.info(f"{self!r} is not running...")
+                log.info("%r is not running...", self)
                 return
             timeout = self.config.terminate_timeout
             timeout_progress = 0.0
@@ -1286,8 +1303,9 @@ class VM:
                         time.sleep(1)
                         if no_wait and not self.is_running:
                             log.info(
-                                f"{self!r} started the destroy process. "
-                                "Not waiting for completion of that process."
+                                "%r started the destroy process. Not waiting "
+                                "for completion of that process.",
+                                self,
                             )
                             break
                         if self.state == "terminated":
@@ -1418,7 +1436,7 @@ class VM:
                 env=env,
                 log_command_level=log_command_level,
             )
-            log.debug(f"Running {ssh_command!r} ...")
+            log.debug("Running %r ...", ssh_command)
             return self.ctx.run(
                 *ssh_command,
                 check=check,
@@ -1574,7 +1592,7 @@ class VM:
                 destination,
             ]
         )
-        log.info(f"Running {' '.join(cmd)!r}")  # type: ignore[arg-type]
+        log.info("Running '%s'", " ".join(cmd))  # type: ignore[arg-type]
         progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
         if sys.platform == "win32":
@@ -1642,7 +1660,9 @@ class VM:
             remote_command.extend(list(command))
             log.log(
                 log_command_level,
-                f"Running {' '.join(remote_command[1:])!r} in {self.name}",
+                "Running '%s' in %s",
+                " ".join(remote_command[1:]),
+                self.name,
             )
             _ssh_command_args.extend(remote_command)
         return _ssh_command_args

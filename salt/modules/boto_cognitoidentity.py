@@ -72,6 +72,7 @@ Connection module for Amazon CognitoIdentity
 :depends: boto3
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -153,7 +154,6 @@ def describe_identity_pools(
     keyid=None,
     profile=None,
 ):
-
     """
     Given an identity pool name, (optionally if an identity pool id is given,
     the given name will be ignored)
@@ -453,9 +453,9 @@ def update_identity_pool(
     if AllowUnauthenticatedIdentities != request_params.get(
         "AllowUnauthenticatedIdentities"
     ):
-        request_params[
-            "AllowUnauthenticatedIdentities"
-        ] = AllowUnauthenticatedIdentities
+        request_params["AllowUnauthenticatedIdentities"] = (
+            AllowUnauthenticatedIdentities
+        )
 
     current_val = request_params.pop("SupportedLoginProviders", None)
     if SupportedLoginProviders is not None and SupportedLoginProviders != current_val:

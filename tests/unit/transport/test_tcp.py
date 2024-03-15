@@ -54,7 +54,7 @@ class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 "tcp_master_pull_port": tcp_master_pull_port,
                 "tcp_master_publish_pull": tcp_master_publish_pull,
                 "tcp_master_workers": tcp_master_workers,
-            }
+            },
         )
 
         cls.minion_config = cls.get_temp_config(
@@ -64,8 +64,8 @@ class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 "master_ip": "127.0.0.1",
                 "auth_timeout": 1,
                 "master_port": ret_port,
-                "master_uri": "tcp://127.0.0.1:{}".format(ret_port),
-            }
+                "master_uri": f"tcp://127.0.0.1:{ret_port}",
+            },
         )
 
         cls.process_manager = salt.utils.process.ProcessManager(
@@ -121,7 +121,7 @@ class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if failures:
-            raise Exception("FDs still attached to the IOLoop: {}".format(failures))
+            raise Exception(f"FDs still attached to the IOLoop: {failures}")
         del self.channel
         del self._start_handlers
 

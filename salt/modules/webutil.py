@@ -7,7 +7,6 @@ The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 """
 
-
 import logging
 import os
 
@@ -66,7 +65,7 @@ def useradd(pwfile, user, password, opts="", runas=None):
     if not os.path.exists(pwfile):
         opts += "c"
 
-    cmd = ["htpasswd", "-b{}".format(opts), pwfile, user, password]
+    cmd = ["htpasswd", f"-b{opts}", pwfile, user, password]
     return __salt__["cmd.run_all"](cmd, runas=runas, python_shell=False)
 
 
@@ -140,7 +139,7 @@ def verify(pwfile, user, password, opts="", runas=None):
     if not os.path.exists(pwfile):
         return False
 
-    cmd = ["htpasswd", "-bv{}".format(opts), pwfile, user, password]
+    cmd = ["htpasswd", f"-bv{opts}", pwfile, user, password]
     ret = __salt__["cmd.run_all"](cmd, runas=runas, python_shell=False)
     log.debug("Result of verifying htpasswd for user %s: %s", user, ret)
 

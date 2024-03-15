@@ -44,7 +44,7 @@ def test_present():
         assert boto_dynamodb.present(name) == ret
 
         with patch.dict(boto_dynamodb.__opts__, {"test": True}):
-            comt = "DynamoDB table {} would be created.".format(name)
+            comt = f"DynamoDB table {name} would be created."
             ret.update({"comment": comt, "result": None})
             assert boto_dynamodb.present(name) == ret
 
@@ -85,12 +85,12 @@ def test_absent():
         boto_dynamodb.__salt__,
         {"boto_dynamodb.exists": mock, "boto_dynamodb.delete": mock_bool},
     ):
-        comt = "DynamoDB table {} does not exist".format(name)
+        comt = f"DynamoDB table {name} does not exist"
         ret.update({"comment": comt})
         assert boto_dynamodb.absent(name) == ret
 
         with patch.dict(boto_dynamodb.__opts__, {"test": True}):
-            comt = "DynamoDB table {} is set to be deleted".format(name)
+            comt = f"DynamoDB table {name} is set to be deleted"
             ret.update({"comment": comt, "result": None})
             assert boto_dynamodb.absent(name) == ret
 
@@ -100,6 +100,6 @@ def test_absent():
         }
 
         with patch.dict(boto_dynamodb.__opts__, {"test": False}):
-            comt = "Deleted DynamoDB table {}".format(name)
+            comt = f"Deleted DynamoDB table {name}"
             ret.update({"comment": comt, "result": True, "changes": changes})
             assert boto_dynamodb.absent(name) == ret

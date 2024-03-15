@@ -193,9 +193,7 @@ def get_size(vm_):
     if size:
         return size
 
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def get_image(vm_):
@@ -211,9 +209,7 @@ def get_image(vm_):
         if vm_image and vm_image in (images[key]["id"], images[key]["name"]):
             return images[key]
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def avail_locations(conn=None, call=None):
@@ -735,7 +731,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -749,7 +745,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -846,7 +842,7 @@ def get_key_filename(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_private_key '{}' does not exist".format(key_filename)
+                f"The defined ssh_private_key '{key_filename}' does not exist"
             )
 
         return key_filename
@@ -897,11 +893,9 @@ def _wait_for_completion(conn, wait_timeout, server_id):
         if server_state == "powered_on":
             return
         elif server_state == "failed":
-            raise Exception("Server creation failed for {}".format(server_id))
+            raise Exception(f"Server creation failed for {server_id}")
         elif server_state in ("active", "enabled", "deploying", "configuring"):
             continue
         else:
-            raise Exception("Unknown server state {}".format(server_state))
-    raise Exception(
-        "Timed out waiting for server create completion for {}".format(server_id)
-    )
+            raise Exception(f"Unknown server state {server_state}")
+    raise Exception(f"Timed out waiting for server create completion for {server_id}")

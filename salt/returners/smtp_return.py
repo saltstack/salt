@@ -104,7 +104,6 @@ Also you need to create additional file ``/srv/salt/templates/email.j2`` with em
 This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 """
 
-
 import io
 import logging
 import os
@@ -186,7 +185,7 @@ def returner(ret):
 
     for field in fields:
         if field in ret:
-            subject += " {}".format(ret[field])
+            subject += f" {ret[field]}"
     subject = compile_template(
         ":string:", rend, renderer, blacklist, whitelist, input_data=subject, **ret
     )
@@ -214,7 +213,7 @@ def returner(ret):
     if gpgowner:
         if HAS_GNUPG:
             gpg = gnupg.GPG(
-                gnupghome=os.path.expanduser("~{}/.gnupg".format(gpgowner)),
+                gnupghome=os.path.expanduser(f"~{gpgowner}/.gnupg"),
                 options=["--trust-model always"],
             )
             encrypted_data = gpg.encrypt(content, to_addrs)

@@ -39,8 +39,8 @@ class MappedResultMock(MagicMock):
 
     def __init__(self):
         def mapped_results(*args, **kwargs):
-            if args[0] not in self._instances.keys():
-                raise virt.libvirt.libvirtError("Not found: {}".format(args[0]))
+            if args[0] not in self._instances:
+                raise virt.libvirt.libvirtError(f"Not found: {args[0]}")
             return self._instances[args[0]]
 
         super().__init__(side_effect=mapped_results)
@@ -150,8 +150,8 @@ def make_mock_storage_pool():
         mocked_pool = mocked_conn.storagePoolLookupByName(name)
         source_def = source
         if not source and type == "disk":
-            source = "<device path='/dev/{}'/>".format(name)
-        pool_path = "/path/to/{}".format(name)
+            source = f"<device path='/dev/{name}'/>"
+        pool_path = f"/path/to/{name}"
         mocked_pool.XMLDesc.return_value = """
             <pool type='{}'>
                 <source>
@@ -185,7 +185,7 @@ def make_mock_storage_pool():
         for volume in volumes:
             mocked_pool.storageVolLookupByName.add(volume)
             mocked_vol = mocked_pool.storageVolLookupByName(volume)
-            vol_path = "{}/{}".format(pool_path, volume)
+            vol_path = f"{pool_path}/{volume}"
             mocked_vol.XMLDesc.return_value = """
             <volume>
                 <target>

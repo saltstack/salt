@@ -1,6 +1,7 @@
 """
 Integration tests for DigitalOcean APIv2
 """
+
 import base64
 import hashlib
 

@@ -374,7 +374,7 @@ def node_ls(server=str):
     try:
         salt_return = {}
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
-        service = client.nodes(filters=({"name": server}))
+        service = client.nodes(filters={"name": server})
         getdata = salt.utils.json.dumps(service)
         dump = salt.utils.json.loads(getdata)
         for items in dump:

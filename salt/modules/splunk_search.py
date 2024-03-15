@@ -130,7 +130,7 @@ def update(name, profile="splunk", **kwargs):
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{}: '{}' => '{}'".format(key, old_value, new_value))
+            diffs.append(f"{key}: '{old_value}' => '{new_value}'")
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs
@@ -162,7 +162,7 @@ def create(name, profile="splunk", **kwargs):
     _req_url = "{}/servicesNS/{}/search/saved/searches/{}/acl".format(
         url, config.get("username"), urllib.parse.quote(name)
     )
-    requests.post(_req_url, auth=auth, verify=True, data=data)
+    requests.post(_req_url, auth=auth, verify=True, data=data, timeout=120)
     return _get_splunk_search_props(search)
 
 
@@ -286,7 +286,7 @@ def list_all(
         d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
         description = ""
-        for (k, v) in sorted(search.content.items()):
+        for k, v in sorted(search.content.items()):
             if k in readonly_keys:
                 continue
             if k.startswith("display."):

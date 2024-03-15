@@ -1,6 +1,7 @@
 """
 Validate the boto_iam module
 """
+
 import pytest
 
 from tests.support.case import ModuleCase

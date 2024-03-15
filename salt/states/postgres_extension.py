@@ -93,7 +93,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Extension {} is already present".format(name),
+        "comment": f"Extension {name} is already present",
     }
     db_args = {
         "maintenance_db": maintenance_db,
@@ -135,17 +135,17 @@ def present(
             schema=schema,
             ext_version=ext_version,
             from_version=from_version,
-            **db_args
+            **db_args,
         )
     if cret:
         if mode.endswith("e"):
             suffix = "d"
         else:
             suffix = "ed"
-        ret["comment"] = "The extension {} has been {}{}".format(name, mode, suffix)
-        ret["changes"][name] = "{}{}".format(mode.capitalize(), suffix)
+        ret["comment"] = f"The extension {name} has been {mode}{suffix}"
+        ret["changes"][name] = f"{mode.capitalize()}{suffix}"
     elif cret is not None:
-        ret["comment"] = "Failed to {1} extension {0}".format(name, mode)
+        ret["comment"] = f"Failed to {mode} extension {name}"
         ret["result"] = False
 
     return ret
@@ -210,17 +210,17 @@ def absent(
     if exists:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Extension {} is set to be removed".format(name)
+            ret["comment"] = f"Extension {name} is set to be removed"
             return ret
         if __salt__["postgres.drop_extension"](
             name, if_exists=if_exists, restrict=restrict, cascade=cascade, **db_args
         ):
-            ret["comment"] = "Extension {} has been removed".format(name)
+            ret["comment"] = f"Extension {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Extension {} failed to be removed".format(name)
+            ret["comment"] = f"Extension {name} failed to be removed"
             return ret
     else:
         ret["comment"] = "Extension {} is not present, so it cannot be removed".format(

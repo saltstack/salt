@@ -284,7 +284,7 @@ class SaltRenderError(SaltException):
         self.buffer = buf
         self.context = ""
         if trace:
-            exc_str += "\n{}\n".format(trace)
+            exc_str += f"\n{trace}\n"
         if self.line_num and self.buffer:
             # Avoid circular import
             import salt.utils.templates

@@ -6,7 +6,6 @@
 
 """
 
-
 import os
 import string
 import tempfile
@@ -59,18 +58,18 @@ def create_class(tmp_path):
 
             def set_password(
                 self, servicename, username, password
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 self.__storage.setdefault(servicename, {}).update({username: password})
                 return 0
 
             def get_password(
                 self, servicename, username
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 return self.__storage.setdefault(servicename, {}).get(username)
 
             def delete_password(
                 self, servicename, username
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 self.__storage.setdefault(servicename, {}).pop(username, None)
                 return 0
 
@@ -249,6 +248,7 @@ def test_run_psexec_command_cleanup_lingering_paexec(caplog):
             "MermaidMan",
             "BarnicleBoy",
         )
+        # pylint: disable=no-value-for-parameter
         mock_client.return_value.cleanup = MagicMock(side_effect=CannotDelete())
 
         cloud.run_psexec_command(
@@ -475,7 +475,7 @@ def test_winrm_pinnned_version():
     ):
 
         try:
-            import winrm
+            import winrm  # pylint: disable=unused-import
         except ImportError:
             raise pytest.skip('The "winrm" python module is not installed in this env.')
         else:

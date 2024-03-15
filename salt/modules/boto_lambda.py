@@ -74,6 +74,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
           message: error message
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

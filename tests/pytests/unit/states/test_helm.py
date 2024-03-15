@@ -2,7 +2,6 @@
     Test cases for salt.modules.helm
 """
 
-
 import pytest
 
 import salt.states.helm as helm

@@ -352,7 +352,7 @@ def replace(name, repl, full_match=False):
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     if full_match is False:
-        search = "^.*{}.*$".format(name)
+        search = f"^.*{name}.*$"
     else:
         search = name
 
@@ -376,7 +376,7 @@ def replace(name, repl, full_match=False):
 
     if matches:
         ret["result"] = False
-        ret["comment"] = 'Failed to replace all instances of "{}"'.format(name)
+        ret["comment"] = f'Failed to replace all instances of "{name}"'
     else:
         ret["result"] = True
         ret["comment"] = 'Successfully replaced all instances of "{}" with "{}"'.format(

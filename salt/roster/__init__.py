@@ -45,10 +45,10 @@ def get_roster_file(options):
             template = os.path.join(salt.syspaths.CONFIG_DIR, "roster")
 
     if not os.path.isfile(template):
-        raise OSError('Roster file "{}" not found'.format(template))
+        raise OSError(f'Roster file "{template}" not found')
 
     if not os.access(template, os.R_OK):
-        raise OSError('Access denied to roster "{}"'.format(template))
+        raise OSError(f'Access denied to roster "{template}"')
 
     return template
 
@@ -80,7 +80,7 @@ class Roster:
         back = set()
         if self.backends:
             for backend in self.backends:
-                fun = "{}.targets".format(backend)
+                fun = f"{backend}.targets"
                 if fun in self.rosters:
                     back.add(backend)
             return back
@@ -93,7 +93,7 @@ class Roster:
         """
         targets = {}
         for back in self._gen_back():
-            f_str = "{}.targets".format(back)
+            f_str = f"{back}.targets"
             if f_str not in self.rosters:
                 continue
             try:

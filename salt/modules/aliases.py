@@ -74,15 +74,15 @@ def __write_aliases_file(lines):
                 os.chmod(out.name, 0o644)
                 os.chown(out.name, 0, 0)
 
-        for (line_alias, line_target, line_comment) in lines:
+        for line_alias, line_target, line_comment in lines:
             if isinstance(line_target, list):
                 line_target = ", ".join(line_target)
             if not line_comment:
                 line_comment = ""
             if line_alias and line_target:
-                write_line = "{}: {}{}\n".format(line_alias, line_target, line_comment)
+                write_line = f"{line_alias}: {line_target}{line_comment}\n"
             else:
-                write_line = "{}\n".format(line_comment)
+                write_line = f"{line_comment}\n"
             write_line = write_line.encode(__salt_system_encoding__)
             out.write(write_line)
 
@@ -173,7 +173,7 @@ def set_target(alias, target):
     lines = __parse_aliases()
     out = []
     ovr = False
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias == alias:
             if not ovr:
                 out.append((alias, target, line_comment))
@@ -202,7 +202,7 @@ def rm_alias(alias):
 
     lines = __parse_aliases()
     out = []
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias != alias:
             out.append((line_alias, line_target, line_comment))
 

@@ -23,7 +23,7 @@ pytestmark = [
 def minion_config_overrides(zookeeper_port):
     zookeeper_grains = {
         "prod": {
-            "hosts": "localhost:{}".format(zookeeper_port),
+            "hosts": f"localhost:{zookeeper_port}",
             "default_acl": [
                 {
                     "username": "daniel",
@@ -38,7 +38,7 @@ def minion_config_overrides(zookeeper_port):
             "username": "daniel",
             "password": "test",
         },
-        "hosts": "localhost:{}".format(zookeeper_port),
+        "hosts": f"localhost:{zookeeper_port}",
         "default_acl": [
             {
                 "username": "daniel",

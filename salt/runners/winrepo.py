@@ -241,7 +241,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     winrepo.clear_old_remotes()
                 winrepo.checkout()
             except Exception as exc:  # pylint: disable=broad-except
-                msg = "Failed to update winrepo_remotes: {}".format(exc)
+                msg = f"Failed to update winrepo_remotes: {exc}"
                 log.error(msg, exc_info_on_loglevel=logging.DEBUG)
                 return msg
             ret.update(winrepo.winrepo_dirs)

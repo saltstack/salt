@@ -91,8 +91,8 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
     mm_master_2_addr = salt_mm_master_2.config["interface"]
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "test.foo": "baz",
     }
@@ -118,8 +118,8 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
     mm_master_2_addr = salt_mm_master_2.config["interface"]
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "test.foo": "baz",
     }
@@ -157,7 +157,7 @@ def run_salt_cmds():
                 for cli in list(clis_to_check[minion]):
                     try:
                         ret = cli.run(
-                            "--timeout={}".format(timeout),
+                            f"--timeout={timeout}",
                             "test.ping",
                             minion_tgt=minion,
                             _timeout=2 * timeout,

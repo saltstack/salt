@@ -99,6 +99,7 @@ def post_data(
                 "Content-Type": "application/json",
                 "Authorization": "GenieKey " + api_key,
             },
+            timeout=120,
         )
     else:
         response = requests.post(
@@ -108,6 +109,7 @@ def post_data(
                 "Content-Type": "application/json",
                 "Authorization": "GenieKey " + api_key,
             },
+            timeout=120,
         )
 
     return response.status_code, response.text

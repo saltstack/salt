@@ -1,6 +1,7 @@
 """
 Test the win_wua state module
 """
+
 from collections import namedtuple
 
 import pytest
@@ -337,7 +338,9 @@ def test_installed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {
                 "installed": {
@@ -433,7 +436,9 @@ def test_installed_test_mode(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates will be installed:",
@@ -493,7 +498,9 @@ def test_installed_already_installed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates already installed: KB4052623",
@@ -593,7 +600,9 @@ def test_removed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {
                 "removed": {
@@ -658,7 +667,9 @@ def test_removed_test_mode(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates will be removed:",
