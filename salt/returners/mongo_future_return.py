@@ -108,6 +108,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+MONGO_CLIENT = None
+
 # Define the module's virtual name
 __virtualname__ = "mongo"
 
@@ -157,6 +159,8 @@ def _get_conn(ret):
     """
     _options = _get_options(ret)
 
+    global MONGO_CLIENT
+
     host = _options.get("host")
     port = _options.get("port")
     ssl = _options.get("ssl") or False
@@ -176,21 +180,26 @@ def _get_conn(ret):
                 " provided"
             )
         pymongo.uri_parser.parse_uri(uri)
-        conn = pymongo.MongoClient(uri)
-        mdb = conn.get_database()
+
+        if not MONGO_CLIENT:
+            MONGO_CLIENT = pymongo.MongoClient(uri)
+
+        mdb = MONGO_CLIENT.get_database()
     else:
         if PYMONGO_VERSION > Version("2.3"):
-            conn = pymongo.MongoClient(
-                host, port, username=user, password=password, ssl=ssl
-            )
+            if not MONGO_CLIENT:
+                MONGO_CLIENT = pymongo.MongoClient(
+                    host, port, username=user, password=password, ssl=ssl
+                )
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(
                     "pymongo <= 2.3 does not support uri format"
                 )
-            conn = pymongo.Connection(host, port, username=user, password=password)
+            if not MONGO_CLIENT:
+                MONGO_CLIENT = pymongo.Connection(host, port, username=user, password=password)
 
-        mdb = conn[db_]
+        mdb = MONGO_CLIENT[db_]
 
     if indexes:
         if PYMONGO_VERSION > Version("2.3"):
@@ -204,14 +213,14 @@ def _get_conn(ret):
             mdb.jobs.ensure_index("jid")
             mdb.events.ensure_index("tag")
 
-    return conn, mdb
+    return mdb
 
 
 def returner(ret):
     """
     Return data to a mongodb server
     """
-    conn, mdb = _get_conn(ret)
+    mdb = _get_conn(ret)
 
     if isinstance(ret["return"], dict):
         back = _remove_dots(ret["return"])
@@ -292,7 +301,7 @@ def save_load(jid, load, minions=None):
     """
     Save the load for a given job id
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     to_save = _safe_copy(load)
 
     if PYMONGO_VERSION > Version("2.3"):
@@ -312,7 +321,7 @@ def get_load(jid):
     """
     Return the load associated with a given job id
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     return mdb.jobs.find_one({"jid": jid}, {"_id": 0})
 
 
@@ -320,7 +329,7 @@ def get_jid(jid):
     """
     Return the return information associated with a jid
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     ret = {}
     rdata = mdb.saltReturns.find({"jid": jid}, {"_id": 0})
     if rdata:
@@ -335,7 +344,7 @@ def get_fun(fun):
     """
     Return the most recent jobs that have executed the named function
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     ret = {}
     rdata = mdb.saltReturns.find_one({"fun": fun}, {"_id": 0})
     if rdata:
@@ -347,7 +356,7 @@ def get_minions():
     """
     Return a list of minions
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     ret = []
     name = mdb.saltReturns.distinct("minion")
     ret.append(name)
@@ -358,7 +367,7 @@ def get_jids():
     """
     Return a list of job ids
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     map = "function() { emit(this.jid, this); }"
     reduce = "function (key, values) { return values[0]; }"
     result = mdb.jobs.inline_map_reduce(map, reduce)
@@ -380,7 +389,7 @@ def event_return(events):
     """
     Return events to Mongodb server
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
 
     if isinstance(events, list):
         events = events[0]

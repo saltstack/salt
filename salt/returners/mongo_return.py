@@ -77,6 +77,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+MONGO_CLIENT = None
+
 # Define the module's virtual name
 # currently only used iby _get_options
 __virtualname__ = "mongo"
@@ -126,6 +128,8 @@ def _get_conn(ret):
     """
     _options = _get_options(ret)
 
+    global MONGO_CLIENT
+
     host = _options.get("host")
     port = _options.get("port")
     ssl = _options.get("ssl") or False
@@ -139,10 +143,12 @@ def _get_conn(ret):
     # a bunch of these sections that need to be supported
 
     if PYMONGO_VERSION > Version("2.3"):
-        conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
+        if not MONGO_CLIENT:
+            MONGO_CLIENT = pymongo.MongoClient(host=host, port=port, ssl=ssl)
     else:
-        conn = pymongo.Connection(host, port)
-    mdb = conn[db_]
+        if not MONGO_CLIENT:
+            MONGO_CLIENT = pymongo.Connection(host, port)
+    mdb = MONGO_CLIENT[db_]
 
     if user and password:
         mdb.authenticate(user, password)
@@ -159,14 +165,14 @@ def _get_conn(ret):
 
             mdb.jobs.ensure_index("jid")
 
-    return conn, mdb
+    return mdb
 
 
 def returner(ret):
     """
     Return data to a mongodb server
     """
-    conn, mdb = _get_conn(ret)
+    mdb = _get_conn(ret)
     col = mdb[ret["id"]]
 
     if isinstance(ret["return"], dict):
@@ -207,7 +213,7 @@ def get_jid(jid):
     """
     Return the return information associated with a jid
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     ret = {}
     rdata = mdb.saltReturns.find({"jid": jid}, {"_id": 0})
     if rdata:
@@ -222,7 +228,7 @@ def get_fun(fun):
     """
     Return the most recent jobs that have executed the named function
     """
-    conn, mdb = _get_conn(ret=None)
+    mdb = _get_conn(ret=None)
     ret = {}
     rdata = mdb.saltReturns.find_one({"fun": fun}, {"_id": 0})
     if rdata:
