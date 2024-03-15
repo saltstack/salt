@@ -3646,7 +3646,8 @@ def mod_aggregate(low, chunks, running):
         pkg_type = "sources" if is_sources else "pkgs"
         low_pkgs = {}
         _combine_pkgs(low_pkgs, low.get(pkg_type, []))
-        _combine_pkgs(low_pkgs, pkgs.items())
+        for pkg, values in pkgs.items():
+            low_pkgs.setdefault(pkg, {None}).update(values)
         # the value is the version for pkgs and
         # the URI for sources
         low_pkgs_list = [
@@ -3661,10 +3662,10 @@ def mod_aggregate(low, chunks, running):
 def _combine_pkgs(pkgs_dict, additional_pkgs_list):
     for item in additional_pkgs_list:
         if isinstance(item, str):
-            pkgs_dict.setdefault(item, set())
+            pkgs_dict.setdefault(item, {None})
         else:
             for pkg, version in item:
-                pkgs_dict.setdefault(pkg, set()).add(version)
+                pkgs_dict.setdefault(pkg, {None}).add(version)
 
 
 def mod_watch(name, **kwargs):
