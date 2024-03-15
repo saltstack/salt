@@ -117,6 +117,7 @@ def test_pip_installed_removed(states, pkg_name):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_pip_installed_removed_venv(states, venv, pkg_name):
     ret = states.pip.installed(name=pkg_name, bin_env=str(venv.venv_dir))
     assert ret.result is True
@@ -125,6 +126,7 @@ def test_pip_installed_removed_venv(states, venv, pkg_name):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_pip_installed_errors(tmp_path, modules, state_tree):
     venv_dir = tmp_path / "pip-installed-errors"
     # Since we don't have the virtualenv created, pip.installed will
@@ -156,6 +158,7 @@ def test_pip_installed_errors(tmp_path, modules, state_tree):
                     assert state_return.result is True
 
 
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_pip_installed_name_test_mode(states, venv, pkg_name):
     """
     Test pip.installed state while test=true
@@ -164,6 +167,7 @@ def test_pip_installed_name_test_mode(states, venv, pkg_name):
     assert pkg_name in ret.comment
 
 
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_pip_installed_pkgs_test_mode(states, venv):
     """
     Test pip.installed state while test=true
@@ -177,6 +181,7 @@ def test_pip_installed_pkgs_test_mode(states, venv):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_issue_2028_pip_installed_state(
     tmp_path, modules, state_tree, get_python_executable
 ):
@@ -234,6 +239,7 @@ def test_issue_2028_pip_installed_state(
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_issue_2087_missing_pip(modules, venv, pkg_name, state_tree):
     sls_name = "issue-2087-missing-pip"
     sls_contents = f"""
@@ -276,6 +282,7 @@ def test_issue_2087_missing_pip(modules, venv, pkg_name, state_tree):
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, states, account):
     # Setup virtual environment directory to be used throughout the test
     venv_dir = tmp_path / "6912-wrong-owner"
@@ -333,6 +340,7 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, states, account):
 @pytest.mark.skip_on_darwin(reason="Test is flaky on macosx")
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_issue_6912_wrong_owner_requirements_file(
     tmp_path, create_virtualenv, state_tree, states, account
 ):
@@ -394,6 +402,7 @@ def test_issue_6912_wrong_owner_requirements_file(
 
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states):
     # Create the testing virtualenv
     if sys.platform == "win32":
@@ -450,6 +459,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_pip_installed_specific_env(state_tree_prod, states, venv):
     contents = "pep8\n"
 
@@ -492,6 +502,7 @@ def test_pip_installed_specific_env(state_tree_prod, states, venv):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("virtualenv", reason="Needs virtualenv binary")
 def test_22359_pip_installed_unless_does_not_trigger_warnings(states, venv):
     # This test case should be moved to a format_call unit test specific to
     # the state internal keywords
