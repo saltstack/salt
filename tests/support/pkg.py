@@ -199,7 +199,7 @@ class SaltPkgInstall:
         Default location for salt configurations
         """
         if platform.is_windows():
-            config_path = pathlib.Path(os.getenv("ProgramData"), "Salt Project", "Salt")
+            config_path = pathlib.Path("C:\\salt", "etc", "salt")
         else:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
@@ -413,7 +413,7 @@ class SaltPkgInstall:
         if system_service is False:
             return None
         if platform.is_windows():
-            return pathlib.Path("C:\\Program Files", "Salt Project", "Salt")
+            return pathlib.Path("C:\\salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
