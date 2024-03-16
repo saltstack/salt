@@ -1915,7 +1915,9 @@ def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        chunks = st_.state.compile_high_data(high_)
+        chunks, errors = st_.state.compile_high_data(high_)
+        if errors:
+            return errors
         ret = {}
         for chunk in chunks:
             if chunk.get("__id__", "") == id_:
@@ -2023,7 +2025,9 @@ def show_low_sls(mods, test=None, queue=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        ret = st_.state.compile_high_data(high_)
+        ret, errors = st_.state.compile_high_data(high_)
+        if errors:
+            return errors
         # Work around Windows multiprocessing bug, set __opts__['test'] back to
         # value from before this function was run.
         __opts__["test"] = orig_test

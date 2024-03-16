@@ -199,7 +199,10 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         # Compile and verify the raw chunks
-        chunks = st_.state.compile_high_data(high_data)
+        chunks, errors = st_.state.compile_high_data(high_data)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -430,7 +433,9 @@ def high(data, **kwargs):
             # Ensure other wrappers use the correct pillar
             __pillar__.update(pillar)
         st_.push_active()
-        chunks = st_.state.compile_high_data(data)
+        chunks, errors = st_.state.compile_high_data(data)
+        if errors:
+            return errors
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(

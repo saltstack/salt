@@ -633,7 +633,9 @@ class Compiler:
             errors.append(f"Recursive requisites were found: {cycle_edges}")
         return sorted_chunks, errors
 
-    def compile_high_data(self, high):
+    def compile_high_data(
+        self, high: dict[str, Any],
+    ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
@@ -692,8 +694,8 @@ class Compiler:
                         self.dependency_dag.add_chunk(live, False)
                         chunks.append(live)
                         break
-        chunks = self.order_chunks(chunks)
-        return chunks
+        chunks, errors = self.order_chunks(chunks)
+        return chunks, errors
 
     def apply_exclude(self, high):
         """
@@ -1445,6 +1447,8 @@ class State:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
+
+        return a tuple of the LowChunk structures and a list of errors
         """
         chunks = []
         disabled = {}
