@@ -40,18 +40,28 @@ runs:
   using: composite
 
   steps:
+    - name: Get Salt Project GitHub Actions Bot Environment
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      shell: bash
+      run: |
+        TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+        SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+        echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" | tee -a "$GITHUB_ENV"
+        REGION=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+        echo "AWS_REGION=$REGION" | tee -a "$GITHUB_ENV"
+
     - name: Configure AWS Credentials to access cache bucket
       if: ${{ env.USE_S3_CACHE == 'true' }}
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-region: us-west-2
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Cache Deps Onedir Package Directory
       if: ${{ env.USE_S3_CACHE == 'true' }}
       id: s3-cache
       env:
-        RUNS_ON_S3_BUCKET_CACHE: "salt-project-test-salt-github-actions-s3-cache"
-        AWS_REGION: 'us-west-2'
+        RUNS_ON_S3_BUCKET_CACHE: salt-project-${{ env.SPB_ENVIRONMENT}}-salt-github-actions-s3-cache
+        AWS_REGION: ${{ env.AWS_REGION }}
       uses: runs-on/cache@v4
       with:
         path: ${{ inputs.path }}
