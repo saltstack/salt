@@ -61,6 +61,8 @@ jobs:
       - self-hosted
       - linux
       - bastion
+    env:
+      USE_S3_CACHE: 'true'
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
@@ -379,6 +381,8 @@ jobs:
   macos:
     name: MacOS
     runs-on: ${{ matrix.distro-slug }}
+    env:
+      USE_S3_CACHE: 'false'
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
@@ -585,6 +589,8 @@ jobs:
 
   windows:
     name: Windows
+    env:
+      USE_S3_CACHE: 'true'
     runs-on:
       - self-hosted
       - linux

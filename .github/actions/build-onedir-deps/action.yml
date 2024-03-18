@@ -25,7 +25,6 @@ runs:
   using: composite
 
   steps:
-
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
       uses: ./.github/actions/cache
