@@ -51,30 +51,24 @@ runs:
         echo "AWS_REGION=$REGION" | tee -a "$GITHUB_ENV"
 
     - name: Configure AWS Credentials to access cache bucket
-      if: ${{ env.USE_S3_CACHE == 'true' }}
+      if: ${{ env.RUNNER_ENVIRONMENT == 'self-hosted' }}
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: us-west-2
 
     - name: Cache Deps Onedir Package Directory
-      if: ${{ env.USE_S3_CACHE == 'true' }}
+      if: ${{ env.RUNNER_ENVIRONMENT == 'self-hosted' }}
       id: s3-cache
-      env:
-        RUNS_ON_S3_BUCKET_CACHE: salt-project-${{ env.SPB_ENVIRONMENT}}-salt-github-actions-s3-cache
-        AWS_REGION: ${{ env.AWS_REGION }}
-      uses: runs-on/cache@v4
+      uses: itchyny/s3-cache-action@v1
       with:
+        aws-region: us-west-2
+        bucket-name: salt-project-${{ env.SPB_ENVIRONMENT }}-salt-github-actions-s3-cache
         path: ${{ inputs.path }}
         key: ${{ inputs.key }}
         restore-keys: ${{ inputs.restore-keys }}
-        upload-chunk-size: ${{ inputs.upload-chunk-size }}
-        enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
-        fail-on-cache-miss: ${{ inputs.fail-on-cache-miss }}
-        lookup-only: ${{ inputs.lookup-only }}
-        save-always: ${{ inputs.save-always }}
 
     - name: Cache Deps Onedir Package Directory
-      if: ${{ env.USE_S3_CACHE != 'true' }}
+      if: ${{ env.RUNNER_ENVIRONMENT != 'self-hosted' }}
       id: github-cache
       uses: actions/cache@v4
       with:
