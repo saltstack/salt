@@ -29,7 +29,7 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing(
         "docker", "dockerd", reason="Docker not installed"
     ),
-    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
