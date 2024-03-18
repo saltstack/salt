@@ -1,19 +1,24 @@
 ---
 name: get-python-version
 description: Setup Relenv
+
 inputs:
   python-binary:
     required: true
-    type: string
     description: The python binary to get the version from
+
 outputs:
   binary:
+    description: The python binary executable
     value: ${{ steps.get-python-version.outputs.binary }}
   version:
+    description: The python version
     value: ${{ steps.get-python-version.outputs.version }}
   full-version:
+    description: The full python version
     value: ${{ steps.get-python-version.outputs.full-version }}
   version-sha256sum:
+    description: The sha256sum of the version
     value: ${{ steps.get-python-version.outputs.version-sha256sum }}
 
 
