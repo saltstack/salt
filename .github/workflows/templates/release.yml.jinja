@@ -74,6 +74,8 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
     <%- if prepare_workflow_needs %>
     needs:
@@ -157,6 +159,8 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
     needs:
       - prepare-workflow
@@ -212,6 +216,8 @@ permissions:
       - repo-<{ gh_environment }>
     needs:
       - prepare-workflow
+    env:
+      USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
     outputs:
       backup-complete: ${{ steps.backup.outputs.backup-complete }}
@@ -242,12 +248,13 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - backup
       - download-onedir-artifact
     environment: <{ gh_environment }>
-
     steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v4
@@ -282,6 +289,8 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - backup
@@ -396,6 +405,8 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - backup
       - release
@@ -437,6 +448,8 @@ permissions:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     steps:
       - uses: actions/checkout@v4
 

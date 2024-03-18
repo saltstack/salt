@@ -17,6 +17,8 @@
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       <%- if type not in ("src", "onedir") %>
