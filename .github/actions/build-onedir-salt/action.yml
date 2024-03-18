@@ -31,7 +31,7 @@ runs:
 
     - name: Download Cached Deps Onedir Package Directory
       id: onedir-bare-cache
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >
