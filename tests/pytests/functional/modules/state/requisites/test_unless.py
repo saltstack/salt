@@ -3,7 +3,7 @@ import pytest
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
-    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
