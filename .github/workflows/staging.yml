@@ -1852,6 +1852,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -1952,6 +1954,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2089,6 +2093,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2279,6 +2285,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2381,6 +2389,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2471,6 +2481,8 @@ jobs:
       - self-hosted
       - linux
       - repo-staging
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-salt-onedir

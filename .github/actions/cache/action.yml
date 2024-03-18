@@ -34,7 +34,7 @@ inputs:
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'
-    value: ${{ steps.github-cache.outputs.cache-hit }}
+    value: ${{ steps.github-cache.outputs.cache-hit || steps.s3-cache.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -55,7 +55,31 @@ runs:
 
     - name: Cache Provided Path (GitHub Actions)
       id: github-cache
+      if: ${{ env.USE_S3_CACHE != 'true' }}
       uses: actions/cache@v4
+      with:
+        path: ${{ env.GHA_CACHE_PATH }}
+        key: ${{ env.GHA_CACHE_KEY }}
+        enableCrossOsArchive: ${{ env.GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE }}
+        fail-on-cache-miss: ${{ env.GHA_CACHE_FAIL_ON_CACHE_MISS }}
+        lookup-only: ${{ env.GHA_CACHE_LOOKUP_ONLY }}
+        save-always: ${{ env.GHA_CACHE_SAVE_ALWAYS }}
+        restore-keys: ${{ env.GHA_CACHE_RESTORE_KEYS }}
+        upload-chunk-size: ${{ env.GHA_CACHE_UPLOAD_CHUNK_SIZE }}
+
+    - name: Configure AWS Credentials to access cache bucket
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-west-2
+
+    - name: Cache Provided Path (S3)
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      id: s3-cache
+      env:
+        RUNS_ON_S3_BUCKET_CACHE: "salt-project-test-salt-github-actions-s3-cache"
+        AWS_REGION: 'us-west-2'
+      uses: runs-on/cache@v4
       with:
         path: ${{ env.GHA_CACHE_PATH }}
         key: ${{ env.GHA_CACHE_KEY }}
@@ -70,7 +94,7 @@ runs:
       if: ${{ inputs.fail-on-cache-miss == 'true' }}
       shell: bash
       run: |
-        CACHE_HIT="${{ steps.github-cache.outputs.cache-hit }}"
+        CACHE_HIT="${{ steps.github-cache.outputs.cache-hit || steps.s3-cache.outputs.cache-hit }}"
         if [ "$CACHE_HIT" != "true" ]; then
           echo "No cache hit and fail-on-cache-miss is set to true."
           exit 1
