@@ -1,14 +1,15 @@
 ---
 name: setup-actionlint
 description: Setup actionlint
+
 inputs:
   version:
     description: The version of actionlint
     default: 1.6.26
   cache-seed:
     required: true
-    type: string
     description: Seed used to invalidate caches
+
 
 runs:
   using: composite
