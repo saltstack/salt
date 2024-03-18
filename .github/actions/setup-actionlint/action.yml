@@ -16,7 +16,7 @@ runs:
   steps:
 
     - name: Cache actionlint Binary
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: /usr/local/bin/actionlint
         key: ${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|actionlint|${{ inputs.version }}
