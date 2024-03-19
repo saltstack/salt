@@ -116,6 +116,10 @@ def existing_host_responses():
             "dns": "basic_interface",
             "port": "10050",
             "details": [],
+            "available": "1",
+            "disable_until": "",
+            "error": "",
+            "errors_from": "",
         }
     ]
     host_inventory_get_output = False
@@ -717,6 +721,68 @@ def test_ensure_nothing_happens_when_host_is_in_desired_state(
         hostinterface_get_output,
         host_inventory_get_output,
     ) = existing_host_responses
+
+    hostgroup_get_output = [
+        [{"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}],
+        hostgroup_get_output_up,
+    ]
+    host_exists_output = True
+    host_create_output = "31337"
+
+    ret = {
+        "changes": {},
+        "comment": "Host new_host already exists.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=False)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        assert not mock_host_update.called, "host_update should not be called"
+
+
+def test_ensure_nothing_happens_when_host_is_in_desired_state_with_older_hostinterface_response_variant(
+    basic_host_configuration, existing_host_responses
+):
+    """
+    Test to ensure that nothing happens when the state applied
+    already corresponds to the host actual configuration.
+    Same as above, but with an API response Zabbix Version < 5.4
+    """
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output_up,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    hostinterface_new_fields = [
+        "available",
+        "error",
+        "errors_from",
+        "disable_until",
+    ]
+
+    for interface in hostinterface_get_output:
+        for field in hostinterface_new_fields:
+            interface.pop(field, None)
 
     hostgroup_get_output = [
         [{"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}],
