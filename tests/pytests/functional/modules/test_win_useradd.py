@@ -3,7 +3,6 @@ from saltfactories.utils import random_string
 
 import salt.modules.cmdmod
 import salt.modules.win_useradd as user
-import salt.utils.data
 from salt.exceptions import CommandExecutionError
 
 pytestmark = [
@@ -104,7 +103,7 @@ def test_chgroups_single_str(account_str):
     assert ret is True
     ret = user.info(account_str.username)
     groups.append("Users")
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chgroups_single_int(account_int):
@@ -113,7 +112,7 @@ def test_chgroups_single_int(account_int):
     assert ret is True
     ret = user.info(account_int.username)
     groups.append("Users")
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chgroups_list_str(account_str):
@@ -122,7 +121,7 @@ def test_chgroups_list_str(account_str):
     assert ret is True
     ret = user.info(account_str.username)
     groups.append("Users")
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chgroups_list_int(account_int):
@@ -131,7 +130,7 @@ def test_chgroups_list_int(account_int):
     assert ret is True
     ret = user.info(account_int.username)
     groups.append("Users")
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chgroups_list_append_false_str(account_str):
@@ -139,7 +138,7 @@ def test_chgroups_list_append_false_str(account_str):
     ret = user.chgroups(account_str.username, groups=groups, append=False)
     assert ret is True
     ret = user.info(account_str.username)
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chgroups_list_append_false_int(account_int):
@@ -147,7 +146,7 @@ def test_chgroups_list_append_false_int(account_int):
     ret = user.chgroups(account_int.username, groups=groups, append=False)
     assert ret is True
     ret = user.info(account_int.username)
-    assert salt.utils.data.compare_lists(ret["groups"], groups) == {}
+    assert ret["groups"].sort() == groups.sort()
 
 
 def test_chhome_str(account_str):
@@ -194,13 +193,13 @@ def test_delete_int(account_int):
     assert user.info(name=account_int.username) == {}
 
 
-def test_getUserSig_str(account_str):
-    ret = user.getUserSid(account_str.username)
+def test_get_user_sid_str(account_str):
+    ret = user.get_user_sid(account_str.username)
     assert ret.startswith("S-1-5")
 
 
-def test_getUserSig_int(account_int):
-    ret = user.getUserSid(account_int.username)
+def test_get_user_sid_int(account_int):
+    ret = user.get_user_sid(account_int.username)
     assert ret.startswith("S-1-5")
 
 
