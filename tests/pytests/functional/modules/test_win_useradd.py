@@ -1,8 +1,6 @@
 import pytest
 from saltfactories.utils import random_string
 
-import salt.modules.cmdmod
-import salt.modules.win_useradd as user
 from salt.exceptions import CommandExecutionError
 
 pytestmark = [
@@ -12,13 +10,13 @@ pytestmark = [
 ]
 
 
-@pytest.fixture
-def configure_loader_modules():
-    return {user: {"__salt__": {"cmd.run_all": salt.modules.cmdmod.run_all}}}
+@pytest.fixture(scope="module")
+def user(modules):
+    return modules.user
 
 
 @pytest.fixture
-def username_str():
+def username_str(user):
     _username = random_string("test-account-", uppercase=False)
     try:
         yield _username
@@ -31,7 +29,7 @@ def username_str():
 
 
 @pytest.fixture
-def username_int():
+def username_int(user):
     _username = random_string("", uppercase=False, lowercase=False, digits=True)
     try:
         yield _username
@@ -44,60 +42,60 @@ def username_int():
 
 
 @pytest.fixture
-def account_str(username_str):
+def account_str(user, username_str):
     with pytest.helpers.create_account(username=username_str) as account:
         user.addgroup(account.username, "Users")
         yield account
 
 
 @pytest.fixture
-def account_int(username_int):
+def account_int(user, username_int):
     with pytest.helpers.create_account(username=username_int) as account:
         user.addgroup(account.username, "Users")
         yield account
 
 
-def test_add_str(username_str):
+def test_add_str(user, username_str):
     ret = user.add(name=username_str)
     assert ret is True
     assert username_str in user.list_users()
 
 
-def test_add_int(username_int):
+def test_add_int(user, username_int):
     ret = user.add(name=username_int)
     assert ret is True
     assert username_int in user.list_users()
 
 
-def test_addgroup_str(account_str):
+def test_addgroup_str(user, account_str):
     ret = user.addgroup(account_str.username, "Backup Operators")
     assert ret is True
     ret = user.info(account_str.username)
     assert "Backup Operators" in ret["groups"]
 
 
-def test_addgroup_int(account_int):
+def test_addgroup_int(user, account_int):
     ret = user.addgroup(account_int.username, "Backup Operators")
     assert ret is True
     ret = user.info(account_int.username)
     assert "Backup Operators" in ret["groups"]
 
 
-def test_chfullname_str(account_str):
+def test_chfullname_str(user, account_str):
     ret = user.chfullname(account_str.username, "New Full Name")
     assert ret is True
     ret = user.info(account_str.username)
     assert ret["fullname"] == "New Full Name"
 
 
-def test_chfullname_int(account_int):
+def test_chfullname_int(user, account_int):
     ret = user.chfullname(account_int.username, "New Full Name")
     assert ret is True
     ret = user.info(account_int.username)
     assert ret["fullname"] == "New Full Name"
 
 
-def test_chgroups_single_str(account_str):
+def test_chgroups_single_str(user, account_str):
     groups = ["Backup Operators"]
     ret = user.chgroups(account_str.username, groups=groups)
     assert ret is True
@@ -106,7 +104,7 @@ def test_chgroups_single_str(account_str):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chgroups_single_int(account_int):
+def test_chgroups_single_int(user, account_int):
     groups = ["Backup Operators"]
     ret = user.chgroups(account_int.username, groups=groups)
     assert ret is True
@@ -115,7 +113,7 @@ def test_chgroups_single_int(account_int):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chgroups_list_str(account_str):
+def test_chgroups_list_str(user, account_str):
     groups = ["Backup Operators", "Guests"]
     ret = user.chgroups(account_str.username, groups=groups)
     assert ret is True
@@ -124,7 +122,7 @@ def test_chgroups_list_str(account_str):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chgroups_list_int(account_int):
+def test_chgroups_list_int(user, account_int):
     groups = ["Backup Operators", "Guests"]
     ret = user.chgroups(account_int.username, groups=groups)
     assert ret is True
@@ -133,7 +131,7 @@ def test_chgroups_list_int(account_int):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chgroups_list_append_false_str(account_str):
+def test_chgroups_list_append_false_str(user, account_str):
     groups = ["Backup Operators", "Guests"]
     ret = user.chgroups(account_str.username, groups=groups, append=False)
     assert ret is True
@@ -141,7 +139,7 @@ def test_chgroups_list_append_false_str(account_str):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chgroups_list_append_false_int(account_int):
+def test_chgroups_list_append_false_int(user, account_int):
     groups = ["Backup Operators", "Guests"]
     ret = user.chgroups(account_int.username, groups=groups, append=False)
     assert ret is True
@@ -149,7 +147,7 @@ def test_chgroups_list_append_false_int(account_int):
     assert ret["groups"].sort() == groups.sort()
 
 
-def test_chhome_str(account_str):
+def test_chhome_str(user, account_str):
     home = r"C:\spongebob\squarepants"
     ret = user.chhome(name=account_str.username, home=home)
     assert ret is True
@@ -157,7 +155,7 @@ def test_chhome_str(account_str):
     assert ret["home"] == home
 
 
-def test_chhome_int(account_int):
+def test_chhome_int(user, account_int):
     home = r"C:\spongebob\squarepants"
     ret = user.chhome(name=account_int.username, home=home)
     assert ret is True
@@ -165,7 +163,7 @@ def test_chhome_int(account_int):
     assert ret["home"] == home
 
 
-def test_chprofile_str(account_str):
+def test_chprofile_str(user, account_str):
     profile = r"C:\spongebob\squarepants"
     ret = user.chprofile(name=account_str.username, profile=profile)
     assert ret is True
@@ -173,7 +171,7 @@ def test_chprofile_str(account_str):
     assert ret["profile"] == profile
 
 
-def test_chprofile_int(account_int):
+def test_chprofile_int(user, account_int):
     profile = r"C:\spongebob\squarepants"
     ret = user.chprofile(name=account_int.username, profile=profile)
     assert ret is True
@@ -181,70 +179,70 @@ def test_chprofile_int(account_int):
     assert ret["profile"] == profile
 
 
-def test_delete_str(account_str):
+def test_delete_str(user, account_str):
     ret = user.delete(name=account_str.username)
     assert ret is True
     assert user.info(name=account_str.username) == {}
 
 
-def test_delete_int(account_int):
+def test_delete_int(user, account_int):
     ret = user.delete(name=account_int.username)
     assert ret is True
     assert user.info(name=account_int.username) == {}
 
 
-def test_get_user_sid_str(account_str):
+def test_get_user_sid_str(user, account_str):
     ret = user.get_user_sid(account_str.username)
     assert ret.startswith("S-1-5")
 
 
-def test_get_user_sid_int(account_int):
+def test_get_user_sid_int(user, account_int):
     ret = user.get_user_sid(account_int.username)
     assert ret.startswith("S-1-5")
 
 
-def test_info_str(account_str):
+def test_info_str(user, account_str):
     ret = user.info(account_str.username)
     assert ret["name"] == account_str.username
     assert ret["uid"].startswith("S-1-5")
 
 
-def test_info_int(account_int):
+def test_info_int(user, account_int):
     ret = user.info(account_int.username)
     assert ret["name"] == account_int.username
     assert ret["uid"].startswith("S-1-5")
 
 
-def test_list_groups_str(account_str):
+def test_list_groups_str(user, account_str):
     ret = user.list_groups(account_str.username)
     assert ret == ["Users"]
 
 
-def test_list_groups_int(account_int):
+def test_list_groups_int(user, account_int):
     ret = user.list_groups(account_int.username)
     assert ret == ["Users"]
 
 
-def test_list_users():
+def test_list_users(user):
     ret = user.list_users()
     assert "Administrator" in ret
 
 
-def test_removegroup_str(account_str):
+def test_removegroup_str(user, account_str):
     ret = user.removegroup(account_str.username, "Users")
     assert ret is True
     ret = user.info(account_str.username)
     assert ret["groups"] == []
 
 
-def test_removegroup_int(account_int):
+def test_removegroup_int(user, account_int):
     ret = user.removegroup(account_int.username, "Users")
     assert ret is True
     ret = user.info(account_int.username)
     assert ret["groups"] == []
 
 
-def test_rename_str(account_str):
+def test_rename_str(user, account_str):
     new_name = random_string("test-account-", uppercase=False)
     ret = user.rename(name=account_str.username, new_name=new_name)
     assert ret is True
@@ -254,13 +252,13 @@ def test_rename_str(account_str):
     assert ret is True
 
 
-def test_rename_str_missing(account_str):
+def test_rename_str_missing(user, account_str):
     missing = random_string("test-account-", uppercase=False)
     with pytest.raises(CommandExecutionError):
         user.rename(name=missing, new_name="spongebob")
 
 
-def test_rename_str_existing(account_str):
+def test_rename_str_existing(user, account_str):
     new_existing = random_string("test-account-", uppercase=False)
     ret = user.add(name=new_existing)
     assert ret is True
@@ -272,7 +270,7 @@ def test_rename_str_existing(account_str):
     assert new_existing not in user.list_users()
 
 
-def test_rename_int(account_int):
+def test_rename_int(user, account_int):
     new_name = random_string("", uppercase=False, lowercase=False, digits=True)
     ret = user.rename(name=account_int.username, new_name=new_name)
     assert ret is True
@@ -282,13 +280,13 @@ def test_rename_int(account_int):
     assert ret is True
 
 
-def test_rename_int_missing(account_int):
+def test_rename_int_missing(user, account_int):
     missing = random_string("", uppercase=False, lowercase=False, digits=True)
     with pytest.raises(CommandExecutionError):
         user.rename(name=missing, new_name="spongebob")
 
 
-def test_rename_int_existing(account_int):
+def test_rename_int_existing(user, account_int):
     new_existing = random_string("", uppercase=False, lowercase=False, digits=True)
     ret = user.add(name=new_existing)
     assert ret is True
@@ -300,14 +298,14 @@ def test_rename_int_existing(account_int):
     assert new_existing not in user.list_users()
 
 
-def test_setpassword_str(account_str):
+def test_setpassword_str(user, account_str):
     ret = user.setpassword(account_str.username, password="Sup3rS3cret")
     # We have no way of verifying the password was changed on Windows, so the
     # best we can do is check that the command completed successfully
     assert ret is True
 
 
-def test_setpassword_int(account_int):
+def test_setpassword_int(user, account_int):
     ret = user.setpassword(account_int.username, password="Sup3rS3cret")
     # We have no way of verifying the password was changed on Windows, so the
     # best we can do is check that the command completed successfully
@@ -333,7 +331,7 @@ def test_setpassword_int(account_int):
         ("disallow_change_password", False, "", None),
     ],
 )
-def test_update_str(value_name, new_value, info_field, expected, account_str):
+def test_update_str(user, value_name, new_value, info_field, expected, account_str):
     setting = {value_name: new_value}
     ret = user.update(account_str.username, **setting)
     assert ret is True
