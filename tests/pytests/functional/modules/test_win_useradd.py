@@ -101,7 +101,7 @@ def test_chgroups_single_str(user, account_str):
     assert ret is True
     ret = user.info(account_str.username)
     groups.append("Users")
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chgroups_single_int(user, account_int):
@@ -110,7 +110,7 @@ def test_chgroups_single_int(user, account_int):
     assert ret is True
     ret = user.info(account_int.username)
     groups.append("Users")
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chgroups_list_str(user, account_str):
@@ -119,7 +119,7 @@ def test_chgroups_list_str(user, account_str):
     assert ret is True
     ret = user.info(account_str.username)
     groups.append("Users")
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chgroups_list_int(user, account_int):
@@ -128,7 +128,7 @@ def test_chgroups_list_int(user, account_int):
     assert ret is True
     ret = user.info(account_int.username)
     groups.append("Users")
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chgroups_list_append_false_str(user, account_str):
@@ -136,7 +136,7 @@ def test_chgroups_list_append_false_str(user, account_str):
     ret = user.chgroups(account_str.username, groups=groups, append=False)
     assert ret is True
     ret = user.info(account_str.username)
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chgroups_list_append_false_int(user, account_int):
@@ -144,7 +144,7 @@ def test_chgroups_list_append_false_int(user, account_int):
     ret = user.chgroups(account_int.username, groups=groups, append=False)
     assert ret is True
     ret = user.info(account_int.username)
-    assert ret["groups"].sort() == groups.sort()
+    assert sorted(ret["groups"]) == sorted(groups)
 
 
 def test_chhome_str(user, account_str):
