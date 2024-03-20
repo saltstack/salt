@@ -249,7 +249,9 @@ def _test_lock(opts):
     g.fetch_remotes()
     assert len(g.remotes) == 1
     repo = g.remotes[0]
-    mach_id = salt.utils.files.get_machine_identifier()
+    mach_id = salt.utils.files.get_machine_identifier().get(
+        "machine_id", "no_machine_id_available"
+    )
     assert repo.get_salt_working_dir() in repo._get_lock_file()
     assert repo.lock() == (
         [
