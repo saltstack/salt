@@ -42,7 +42,7 @@ def _search(prefix="latest/"):
             key, value = line.split("=")
             ret[value] = _search(prefix=os.path.join(prefix, key))
         else:
-            retdata = metadata.get_metadata(os.path.join(prefix, line)).text
+            retdata = salt.utils.aws.get_metadata(os.path.join(prefix, line)).text
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
             if isinstance(retdata, bytes):
