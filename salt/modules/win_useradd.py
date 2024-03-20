@@ -31,6 +31,7 @@ from datetime import datetime
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
+import salt.utils.versions
 import salt.utils.win_reg
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
@@ -370,7 +371,7 @@ def delete(name, purge=False, force=False):
     # Remove the User Profile directory
     if purge:
         try:
-            sid = getUserSid(name)
+            sid = get_user_sid(name)
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
             (number, context, message) = exc.args
@@ -398,6 +399,23 @@ def delete(name, purge=False, force=False):
 
 def getUserSid(username):
     """
+    Deprecated function. Please use get_user_sid instead
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_user_sid jsnuffy
+    """
+    salt.utils.versions.warn_until(
+        version=3009,
+        message="'getUserSid' is being deprecated. Please use get_user_sid instead",
+    )
+    return get_user_sid(username)
+
+
+def get_user_sid(username):
+    """
     Get the Security ID for the user
 
     Args:
@@ -410,7 +428,7 @@ def getUserSid(username):
 
     .. code-block:: bash
 
-        salt '*' user.getUserSid jsnuffy
+        salt '*' user.get_user_sid jsnuffy
     """
     domain = win32api.GetComputerName()
     if username.find("\\") != -1:
