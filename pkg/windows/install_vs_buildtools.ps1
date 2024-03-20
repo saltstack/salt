@@ -103,7 +103,6 @@ if ( $install_build_tools ) {
                                 "--add Microsoft.VisualStudio.Component.Windows81SDK", `
                                 "--add Microsoft.VisualStudio.Component.Windows10SDK.17763", `
                                 "--add Microsoft.VisualStudio.Component.VC.140", `
-                                "--add Microsoft.Component.VC.Runtime.UCRTSDK", `
                                 "--lang en-US", `
                                 "--includeRecommended", `
                                 "--quiet", `
