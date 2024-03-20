@@ -906,7 +906,7 @@ def get_encoding(path):
     raise CommandExecutionError("Could not detect file encoding")
 
 
-def local_get_machine_id():
+def get_machine_identifier():
     """
     Provide the machine-id for machine/virtualization combination
     """
