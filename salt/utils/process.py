@@ -1075,7 +1075,7 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        mach_id = salt.utils.files.local_get_machine_id().get(
+        mach_id = salt.utils.files.get_machine_identifier().get(
             "machine_id", "no_machine_id_available"
         )
         log.debug(

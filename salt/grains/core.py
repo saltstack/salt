@@ -3048,7 +3048,7 @@ def get_machine_id():
     if platform.system() == "AIX":
         return _aix_get_machine_id()
 
-    return salt.utils.files.local_get_machine_id()
+    return salt.utils.files.get_machine_identifier()
 
 
 def cwd():
