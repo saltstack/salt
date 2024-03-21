@@ -14,10 +14,11 @@ def minion_config_overrides():
 
 @pytest.fixture(scope="module", autouse=True)
 def nop_aggregate_mod(loaders, state_tree):
-    mod_contents = textwrap.dedent("""
+    mod_contents = textwrap.dedent(
+        """
         __virtualname__ = "aggr"
 
-                                   
+
         def __virtual__():
             return __virtualname__
 
@@ -60,7 +61,8 @@ def nop_aggregate_mod(loaders, state_tree):
                 else:
                     low["aggrs"] = aggrs
             return low
-    """)
+    """
+    )
     with pytest.helpers.temp_file("aggrs.py", mod_contents, state_tree / "_states"):
         res = loaders.modules.saltutil.sync_all()
         assert "states" in res
@@ -109,12 +111,12 @@ def test_aggregate_requisites(state_tree, modules):
         # Check the results
         assert not ret.failed
         expected_order = [
-            'aggr_|-packages 1_|-packages 1_|-test',
-            'test_|-listen to packages 2_|-listen to packages 2_|-succeed_with_changes',
-            'test_|-requirement_|-requirement_name_|-nop',
-            'aggr_|-packages 2_|-packages 2_|-test',
-            'aggr_|-packages 3_|-cowsay_|-test',
-            'test_|-listener_listen to packages 2_|-listen to packages 2_|-mod_watch',
+            "aggr_|-packages 1_|-packages 1_|-test",
+            "test_|-listen to packages 2_|-listen to packages 2_|-succeed_with_changes",
+            "test_|-requirement_|-requirement_name_|-nop",
+            "aggr_|-packages 2_|-packages 2_|-test",
+            "aggr_|-packages 3_|-cowsay_|-test",
+            "test_|-listener_listen to packages 2_|-listen to packages 2_|-mod_watch",
         ]
         for index, state_run in enumerate(ret):
             assert state_run.result is True

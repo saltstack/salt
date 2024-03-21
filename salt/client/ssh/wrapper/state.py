@@ -681,9 +681,9 @@ def highstate(test=None, **kwargs):
             # Ensure other wrappers use the correct pillar
             __pillar__.update(pillar)
         st_.push_active()
-        chunks = st_.compile_low_chunks(context=__context__.value())
+        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
-            chunks,
+            chunks_or_errors,
             _merge_extra_filerefs(
                 kwargs.get("extra_filerefs", ""),
                 opts.get("extra_filerefs", ""),
@@ -691,19 +691,19 @@ def highstate(test=None, **kwargs):
             ),
         )
         # Check for errors
-        for chunk in chunks:
+        for chunk in chunks_or_errors:
             if not isinstance(chunk, dict):
                 __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-                return chunks
+                return chunks_or_errors
 
         roster = salt.roster.Roster(opts, opts.get("roster", "flat"))
         roster_grains = roster.opts["grains"]
 
         # Create the tar containing the state pkg and relevant files.
-        _cleanup_slsmod_low_data(chunks)
+        _cleanup_slsmod_low_data(chunks_or_errors)
         trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__["fileclient"],
-            chunks,
+            chunks_or_errors,
             file_refs,
             pillar,
             st_kwargs["id_"],
@@ -772,14 +772,14 @@ def top(topfn, test=None, **kwargs):
             __pillar__.update(pillar)
         st_.opts["state_top"] = os.path.join("salt://", topfn)
         st_.push_active()
-        chunks = st_.compile_low_chunks(context=__context__.value())
+        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
         # Check for errors
-        for chunk in chunks:
+        for chunk in chunks_or_errors:
             if not isinstance(chunk, dict):
                 __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-                return chunks
+                return chunks_or_errors
         file_refs = salt.client.ssh.state.lowstate_file_refs(
-            chunks,
+            chunks_or_errors,
             _merge_extra_filerefs(
                 kwargs.get("extra_filerefs", ""),
                 opts.get("extra_filerefs", ""),
@@ -791,10 +791,10 @@ def top(topfn, test=None, **kwargs):
         roster_grains = roster.opts["grains"]
 
         # Create the tar containing the state pkg and relevant files.
-        _cleanup_slsmod_low_data(chunks)
+        _cleanup_slsmod_low_data(chunks_or_errors)
         trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__["fileclient"],
-            chunks,
+            chunks_or_errors,
             file_refs,
             pillar,
             st_kwargs["id_"],
@@ -893,9 +893,9 @@ def show_lowstate(**kwargs):
             err += st_.opts["pillar"]["_errors"]
             return err
         st_.push_active()
-        chunks = st_.compile_low_chunks(context=__context__.value())
-        _cleanup_slsmod_low_data(chunks)
-        return chunks
+        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
+        _cleanup_slsmod_low_data(chunks_or_errors)
+        return chunks_or_errors
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
@@ -982,7 +982,10 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        chunks = st_.state.compile_high_data(high_)
+        chunks, errors = st_.state.compile_high_data(high_)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
         chunk = [x for x in chunks if x.get("__id__", "") == id_]
 
         if not chunk:
@@ -1113,7 +1116,10 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        ret = st_.state.compile_high_data(high_data)
+        ret, errors = st_.state.compile_high_data(high_data)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
         _cleanup_slsmod_low_data(ret)
         return ret
 

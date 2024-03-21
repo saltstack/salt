@@ -10,6 +10,7 @@ The data sent to the state calls is as follows:
       'argn': '<arbitrary argument, can have many of these>'
       }
 """
+
 from __future__ import annotations
 
 import copy
@@ -25,7 +26,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any
 
 import networkx as nx
 
@@ -49,7 +50,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.utils.verify
-from salt.utils.requisite import DependencyGraph, RequisiteType
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -58,6 +58,7 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.odict import DefaultOrderedDict, OrderedDict
+from salt.utils.requisite import DependencyGraph, RequisiteType
 
 log = logging.getLogger(__name__)
 
@@ -66,8 +67,8 @@ log = logging.getLogger(__name__)
 # that have dict values. This could be cleaned up some by making
 # exclude and extend into dicts instead of lists so the type of all the values are
 # homogeneous.
-HighData: dict[str, Union[Mapping[str, Any], list[Union[Mapping[str, Any], str]]]]
-LowChunk: dict[str, Any]
+HighData = dict[str, Mapping[str, Any] | list[Mapping[str, Any] | str]]
+LowChunk = dict[str, Any]
 
 
 # These are keywords passed to state module functions which are to be used
@@ -634,12 +635,14 @@ class Compiler:
         return sorted_chunks, errors
 
     def compile_high_data(
-        self, high: dict[str, Any],
+        self,
+        high: dict[str, Any],
     ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
         """
+        self.dependency_dag = DependencyGraph()
         chunks = []
         for name, body in high.items():
             if name.startswith("__"):
@@ -784,7 +787,7 @@ class State:
         self.global_state_conditions = None
         self.dependency_dag = DependencyGraph()
         # a mapping of state tag (unique id) to the return result dict
-        self.disabled_states: Optional[dict[str, dict[str, Any]]] = None
+        self.disabled_states: dict[str, dict[str, Any]] | None = None
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1442,7 +1445,7 @@ class State:
                 )
 
     def compile_high_data(
-        self, high: dict[str, Any], orchestration_jid: Union[str, int, None] = None
+        self, high: dict[str, Any], orchestration_jid: str | int | None = None
     ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
@@ -1450,6 +1453,7 @@ class State:
 
         return a tuple of the LowChunk structures and a list of errors
         """
+        self.dependency_dag = DependencyGraph()
         chunks = []
         disabled = {}
         agg_opt = self.functions["config.option"]("state_aggregate")
@@ -2035,8 +2039,8 @@ class State:
     def call(
         self,
         low: LowChunk,
-        chunks: Optional[Sequence[LowChunk]] = None,
-        running: Optional[dict[str, dict]] = None,
+        chunks: Sequence[LowChunk] | None = None,
+        running: dict[str, dict] | None = None,
         retries: int = 1,
     ):
         """
@@ -2459,7 +2463,7 @@ class State:
     def call_chunks(
         self,
         chunks: Sequence[LowChunk],
-        disabled_states: Optional[dict[str, dict[str, Any]]] = None,
+        disabled_states: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """
         Iterate over a list of chunks and call them, checking for requires.
@@ -2505,7 +2509,7 @@ class State:
             return not running[tag]["result"]
         return False
 
-    def check_pause(self, low: LowChunk) -> Optional[str]:
+    def check_pause(self, low: LowChunk) -> str | None:
         """
         Check to see if this low chunk has been paused
         """
@@ -2705,7 +2709,7 @@ class State:
         return status, reqs
 
     def event(
-        self, chunk_ret: dict, length: int, fire_event: Union[bool, str] = False
+        self, chunk_ret: dict, length: int, fire_event: bool | str = False
     ) -> None:
         """
         Fire an event on the master bus
@@ -2908,12 +2912,14 @@ class State:
 
         return running
 
-    def _assign_not_run_result_dict(self,
-            low: LowChunk,
-            tag: str,
-            result: bool,
-            comment: str,
-            running: dict[str, dict]) -> None:
+    def _assign_not_run_result_dict(
+        self,
+        low: LowChunk,
+        tag: str,
+        result: bool,
+        comment: str,
+        running: dict[str, dict],
+    ) -> None:
         start_time, duration = _calculate_fake_duration()
         ret = {
             "changes": {},
@@ -3099,8 +3105,8 @@ class State:
         return running
 
     def call_high(
-        self, high: HighData, orchestration_jid: Union[str, int, None] = None
-    ) -> Union[dict, list]:
+        self, high: HighData, orchestration_jid: str | int | None = None
+    ) -> dict | list:
         """
         Process a high data call and ensure the defined states.
         """
@@ -3282,9 +3288,9 @@ class LazyAvailStates:
     are many environments.
     """
 
-    def __init__(self, hs: "BaseHighState"):
+    def __init__(self, hs: BaseHighState):
         self._hs = hs
-        self._avail: dict[Hashable, Optional[list[str]]] = {"base": None}
+        self._avail: dict[Hashable, list[str] | None] = {"base": None}
         self._filled = False
 
     def _fill(self) -> None:
@@ -3311,9 +3317,7 @@ class LazyAvailStates:
 
     def items(self):
         self._fill()
-        ret = [
-            (saltenv, self.__getitem__(saltenv)) for saltenv, _ in self._avail.items()
-        ]
+        ret = [(saltenv, self[saltenv]) for saltenv, _ in self._avail.items()]
         return ret
 
 

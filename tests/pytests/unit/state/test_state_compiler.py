@@ -89,8 +89,10 @@ def test_render_error_on_invalid_requisite(minion_opts):
                 ]
             )
         }
-        expected_result = ['Requisite [require: file] in state [git] in SLS'
-                           ' [issue_35226] must have a string as the value']
+        expected_result = [
+            "Requisite [require: file] in state [git] in SLS"
+            " [issue_35226] must have a string as the value"
+        ]
         minion_opts["pillar"] = {
             "git": salt.state.HashableOrderedDict([("test1", "test")])
         }

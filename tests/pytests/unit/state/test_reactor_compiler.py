@@ -529,7 +529,9 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
                     ]
                 ),
             },
-            ["Illegal requisite \"['add_test_1']\" in SLS \"/srv/reactor/start.sls\", please check your syntax.\n"],
+            [
+                'Illegal requisite "[\'add_test_1\']" in SLS "/srv/reactor/start.sls", please check your syntax.\n'
+            ],
         ),
         (
             {

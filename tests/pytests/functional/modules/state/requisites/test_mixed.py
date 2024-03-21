@@ -1,7 +1,5 @@
 import pytest
 
-from . import normalize_ret
-
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
@@ -446,7 +444,9 @@ def test_requisites_mixed_illegal_req(state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state_mod.sls("requisite")
-        assert ret == ["Illegal requisite \"['A']\" in SLS \"requisite\", please check your syntax.\n"]
+        assert ret == [
+            'Illegal requisite "[\'A\']" in SLS "requisite", please check your syntax.\n'
+        ]
 
 
 def test_many_requisites(state, state_tree):
@@ -470,5 +470,5 @@ def test_many_requisites(state, state_tree):
         # Check the results
         assert not ret.failed
         for index, state_run in enumerate(ret):
-            expected_tag = f'test_|-nop-{index}_|-nop-{index}_|-nop'
+            expected_tag = f"test_|-nop-{index}_|-nop-{index}_|-nop"
             assert expected_tag in state_run.raw

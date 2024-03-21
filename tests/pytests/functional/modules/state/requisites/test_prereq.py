@@ -415,7 +415,7 @@ def test_requisites_prereq_simple_ordering_and_errors_6(state, state_tree):
     sls_contents = """
     # issue #8211
     #             expected rank
-    #       
+    #
     # D --+ -------+    1
     #              |
     # B --+        |    2

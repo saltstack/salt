@@ -124,10 +124,16 @@ def test_requisites_require_no_state_module(state, state_tree):
         - require:
           - Z
     """
-    errmsgs = [('Referenced state does not exist for requisite [require: (id: Z)]'
-                ' in state [echo G] in SLS [requisite]'),
-               ('Referenced state does not exist for requisite [require: (id: Z)]'
-                ' in state [echo H] in SLS [requisite]')]
+    errmsgs = [
+        (
+            "Referenced state does not exist for requisite [require: (id: Z)]"
+            " in state [echo G] in SLS [requisite]"
+        ),
+        (
+            "Referenced state does not exist for requisite [require: (id: Z)]"
+            " in state [echo H] in SLS [requisite]"
+        ),
+    ]
 
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
@@ -207,12 +213,19 @@ def test_requisites_require_ordering_and_errors_1(state, state_tree):
           - cmd: Z
     """
     errmsgs = [
-        ('Referenced state does not exist for requisite [require: (foobar: A)]'
-         ' in state [echo F] in SLS [requisite]'),
-        ('Referenced state does not exist for requisite [require: (cmd: Z)]'
-         ' in state [echo G] in SLS [requisite]'),
-        ('Referenced state does not exist for requisite [require: (cmd: Z)]'
-         ' in state [echo H] in SLS [requisite]'),]
+        (
+            "Referenced state does not exist for requisite [require: (foobar: A)]"
+            " in state [echo F] in SLS [requisite]"
+        ),
+        (
+            "Referenced state does not exist for requisite [require: (cmd: Z)]"
+            " in state [echo G] in SLS [requisite]"
+        ),
+        (
+            "Referenced state does not exist for requisite [require: (cmd: Z)]"
+            " in state [echo H] in SLS [requisite]"
+        ),
+    ]
 
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")

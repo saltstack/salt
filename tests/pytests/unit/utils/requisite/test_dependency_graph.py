@@ -1,6 +1,7 @@
 """
 Test functions in state.py that are not a part of a class
 """
+
 import pytest
 
 import salt.utils.requisite
@@ -22,28 +23,26 @@ def test_ordering():
             "__id__": "success-6",
             "name": "success-6",
             "state": "test",
-            "fun": "succeed_with_changes"
+            "fun": "succeed_with_changes",
         },
         {
             "__id__": "fail-0",
             "name": "fail-0",
             "state": "test",
-            "fun": "fail_without_changes"
+            "fun": "fail_without_changes",
         },
         {
             "__id__": "fail-1",
             "name": "fail-1",
             "state": "test",
-            "fun": "fail_without_changes"
+            "fun": "fail_without_changes",
         },
         {
             "__id__": "req-fails",
             "name": "req-fails",
             "state": "test",
             "fun": "succeed_with_changes",
-            "require": [
-                "fail-0",
-                "fail-1"],
+            "require": ["fail-0", "fail-1"],
         },
         {
             "__id__": "success-4",
@@ -111,18 +110,33 @@ def test_ordering():
     ]
     depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
-        low.update({"__env__": env,
-                    "__sls__": sls, })
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
         depend_graph.add_chunk(low, allow_aggregate=False)
     for low in chunks:
         depend_graph.add_requisites(low, [])
-    ordered_chunk_ids = [chunk["__id__"]
-                         for chunk in depend_graph.aggregate_and_order_chunks(100)]
-    expected_order = ['success-1', 'success-2',
-                      'success-a', 'success-b', 'success-c',
-                      'success-3', 'success-4',
-                      'fail-0', 'fail-1', 'req-fails',
-                      'success-5', 'success-6', 'success-d']
+    ordered_chunk_ids = [
+        chunk["__id__"] for chunk in depend_graph.aggregate_and_order_chunks(100)
+    ]
+    expected_order = [
+        "success-1",
+        "success-2",
+        "success-a",
+        "success-b",
+        "success-c",
+        "success-3",
+        "success-4",
+        "fail-0",
+        "fail-1",
+        "req-fails",
+        "success-5",
+        "success-6",
+        "success-d",
+    ]
     assert expected_order == ordered_chunk_ids
 
 
@@ -154,57 +168,80 @@ def test_find_cycle_edges():
     ]
     depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
-        low.update({"__env__": env,
-                    "__sls__": sls, })
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
         depend_graph.add_chunk(low, allow_aggregate=False)
     for low in chunks:
         depend_graph.add_requisites(low, [])
     expected_cycle_edges = [
-        ({'__env__': 'base',
-          '__id__': 'state-3',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-3',
-          'require': [{'test': 'state-1'}],
-          'state': 'test'},
-         'require',
-         {'__env__': 'base',
-          '__id__': 'state-1',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-1',
-          'require': [{'test': 'state-2'}],
-          'state': 'test'}),
-        ({'__env__': 'base',
-          '__id__': 'state-2',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-2',
-          'require': [{'test': 'state-3'}],
-          'state': 'test'},
-         'require',
-         {'__env__': 'base',
-          '__id__': 'state-3',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-3',
-          'require': [{'test': 'state-1'}],
-          'state': 'test'}),
-        ({'__env__': 'base',
-          '__id__': 'state-1',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-1',
-          'require': [{'test': 'state-2'}],
-          'state': 'test'},
-         'require',
-         {'__env__': 'base',
-          '__id__': 'state-2',
-          '__sls__': 'test',
-          'fun': 'succeed_with_changes',
-          'name': 'state-2',
-          'require': [{'test': 'state-3'}],
-          'state': 'test'})]
+        (
+            {
+                "__env__": "base",
+                "__id__": "state-3",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-3",
+                "require": [{"test": "state-1"}],
+                "state": "test",
+            },
+            "require",
+            {
+                "__env__": "base",
+                "__id__": "state-1",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-1",
+                "require": [{"test": "state-2"}],
+                "state": "test",
+            },
+        ),
+        (
+            {
+                "__env__": "base",
+                "__id__": "state-2",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-2",
+                "require": [{"test": "state-3"}],
+                "state": "test",
+            },
+            "require",
+            {
+                "__env__": "base",
+                "__id__": "state-3",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-3",
+                "require": [{"test": "state-1"}],
+                "state": "test",
+            },
+        ),
+        (
+            {
+                "__env__": "base",
+                "__id__": "state-1",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-1",
+                "require": [{"test": "state-2"}],
+                "state": "test",
+            },
+            "require",
+            {
+                "__env__": "base",
+                "__id__": "state-2",
+                "__sls__": "test",
+                "fun": "succeed_with_changes",
+                "name": "state-2",
+                "require": [{"test": "state-3"}],
+                "state": "test",
+            },
+        ),
+    ]
     cycle_edges = depend_graph.find_cycle_edges()
     assert expected_cycle_edges == cycle_edges
 
@@ -260,8 +297,12 @@ def test_get_aggregate_chunks():
     ]
     depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
-        low.update({"__env__": env,
-                    "__sls__": sls, })
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
         depend_graph.add_chunk(low, allow_aggregate=True)
     for low in chunks:
         depend_graph.add_requisites(low, [])
@@ -332,8 +373,12 @@ def test_get_dependencies():
     ]
     depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
-        low.update({"__env__": env,
-                    "__sls__": sls, })
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
         depend_graph.add_chunk(low, allow_aggregate=False)
     for low in chunks:
         depend_graph.add_requisites(low, [])
@@ -405,8 +450,12 @@ def test_get_dependencies_when_aggregated():
     ]
     depend_graph = salt.utils.requisite.DependencyGraph()
     for low in chunks:
-        low.update({"__env__": env,
-                    "__sls__": sls, })
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
         depend_graph.add_chunk(low, allow_aggregate=True)
     for low in chunks:
         depend_graph.add_requisites(low, [])
@@ -417,11 +466,16 @@ def test_get_dependencies_when_aggregated():
         (chunks[2], [(salt.utils.requisite.RequisiteType.REQUIRE, "requirement")]),
         (chunks[3], []),
         (chunks[4], []),
-        (chunks[5], [(salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
-                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-1"),
-                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
-                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-2"),
-                     (salt.utils.requisite.RequisiteType.REQUIRE, "packages-3"),]),
+        (
+            chunks[5],
+            [
+                (salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
+                (salt.utils.requisite.RequisiteType.REQUIRE, "packages-1"),
+                (salt.utils.requisite.RequisiteType.REQUIRE, "packages-4"),
+                (salt.utils.requisite.RequisiteType.REQUIRE, "packages-2"),
+                (salt.utils.requisite.RequisiteType.REQUIRE, "packages-3"),
+            ],
+        ),
     ]
     for low, expected_dependency_tuples in expected_aggregates:
         depend_tuples = [
