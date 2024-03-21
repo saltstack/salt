@@ -1449,12 +1449,15 @@ def sls(
             return ["Pillar failed to render with the following messages:"] + errors
 
         orchestration_jid = kwargs.get("orchestration_jid")
+        metadata = kwargs.get("metadata")
         with salt.utils.files.set_umask(0o077):
             if kwargs.get("cache"):
                 if os.path.isfile(cfn):
                     with salt.utils.files.fopen(cfn, "rb") as fp_:
                         high_ = salt.payload.load(fp_)
-                        return st_.state.call_high(high_, orchestration_jid)
+                        return st_.state.call_high(
+                            high_, orchestration_jid, metadata=metadata
+                        )
 
         # If the state file is an integer, convert to a string then to unicode
         if isinstance(mods, int):
@@ -1477,7 +1480,7 @@ def sls(
                 else:
                     high_["__exclude__"] = exclude
             snapper_pre = _snapper_pre(opts, kwargs.get("__pub_jid", "called localy"))
-            ret = st_.state.call_high(high_, orchestration_jid)
+            ret = st_.state.call_high(high_, orchestration_jid, metadata=metadata)
         finally:
             st_.pop_active()
     if __salt__["config.option"]("state_data", "") == "terse" or kwargs.get("terse"):

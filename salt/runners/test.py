@@ -2,7 +2,10 @@
 This runner is used only for test purposes and serves no production purpose
 """
 
+import logging
 import time
+
+log = logging.getLogger(__name__)
 
 
 def arg(*args, **kwargs):
@@ -99,6 +102,7 @@ def sleep(s_time=10):
 
         salt-run test.sleep s_time=5
     """
+    # import traceback; log.warning("%s", "".join(traceback.format_stack()))
     print(s_time)
     time.sleep(s_time)
     return True

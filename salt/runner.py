@@ -66,6 +66,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         New-style: ``{'fun': 'jobs.lookup_jid', 'kwarg': {'jid': '1234'}}``
         CLI-style: ``{'fun': 'jobs.lookup_jid', 'arg': ['jid="1234"']}``
         """
+        log.warning("REFORMAT: %s", low)
         fun = low.pop("fun")
         verify_fun(self.functions, fun)
 
@@ -82,6 +83,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
             ]
             if i in low
         }
+        metadata = {"metadata": low.pop("metadata")} if "metadata" in low else {}
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
@@ -99,11 +101,14 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         munged = []
         munged.extend(_arg)
         munged.append(dict(__kwarg__=True, **_kwarg))
+
         arg, kwarg = salt.minion.load_args_and_kwargs(
             self.functions[fun], munged, ignore_invalid=True
         )
 
-        return dict(fun=fun, kwarg={"kwarg": kwarg, "arg": arg}, **eauth_creds)
+        return dict(
+            fun=fun, kwarg={"kwarg": kwarg, "arg": arg}, **eauth_creds, **metadata
+        )
 
     def cmd_async(self, low):
         """
@@ -121,6 +126,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
                 'eauth': 'pam',
             })
         """
+        log.warning("CMD_ASYNC_RC: %s", low)
         reformatted_low = self._reformat_low(low)
 
         return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
@@ -141,6 +147,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
                 'eauth': 'pam',
             })
         """
+        log.warning("CMD_SYNC_RC: %s", low)
         reformatted_low = self._reformat_low(low)
         return mixins.SyncClientMixin.cmd_sync(
             self, reformatted_low, timeout, full_return
@@ -183,6 +190,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
             }
 
         """
+        log.warning("CMD_RC: %s %s %s %s", fun, arg, kwarg, pub_data)
         return super().cmd(fun, arg, pub_data, kwarg, print_event, full_return)
 
 
@@ -218,6 +226,9 @@ class Runner(RunnerClient):
             self.print_docs()
         else:
             low = {"fun": self.opts["fun"]}
+            metadata = self.opts.get("metadata")
+            if metadata is not None:
+                low["metadata"] = salt.utils.args.yamlify_arg(metadata)
             try:
                 # Allocate a jid
                 async_pub = self._gen_async_pub(jid=self.opts.get("jid"))
@@ -277,7 +288,7 @@ class Runner(RunnerClient):
                         async_pub = self.asynchronous(
                             self.opts["fun"], low, user=user, pub=async_pub
                         )
-                    # by default: info will be not enougth to be printed out !
+                    # by default: info will be not enough to be printed out !
                     log.warning(
                         "Running in asynchronous mode. Results of this execution may "
                         "be collected by attaching to the master event bus or "
@@ -313,6 +324,7 @@ class Runner(RunnerClient):
                     )
             except salt.exceptions.SaltException as exc:
                 with salt.utils.event.get_event("master", opts=self.opts) as evt:
+                    # TODO add metadata
                     evt.fire_event(
                         {
                             "success": False,
