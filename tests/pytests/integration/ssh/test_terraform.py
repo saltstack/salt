@@ -17,7 +17,7 @@ def minion_id():
 
 
 @pytest.fixture(scope="module")
-def terraform_roster_file(sshd_server, salt_master, tmp_path_factory, minion_id):
+def terraform_roster_file(sshd_server, tmp_path_factory, minion_id, known_hosts_file):
     darwin_addon = ""
     if salt.utils.platform.is_darwin():
         darwin_addon = ',\n        "set_path": "$PATH:/usr/local/bin/"\n'
@@ -49,7 +49,10 @@ def terraform_roster_file(sshd_server, salt_master, tmp_path_factory, minion_id)
                 "thin_dir": null,
                 "timeout": null,
                 "tty": null,
-                "user": "{user}"{darwin_addon}
+                "user": "{user}"{darwin_addon},
+                "ssh_options": [
+                    "UserKnownHostsFile={known_hosts_file}"
+                ]
               }}
             }}
           ]
@@ -63,6 +66,7 @@ def terraform_roster_file(sshd_server, salt_master, tmp_path_factory, minion_id)
         port=sshd_server.listen_port,
         user=RUNTIME_VARS.RUNNING_TESTS_USER,
         darwin_addon=darwin_addon,
+        known_hosts_file=known_hosts_file,
     )
     roster_file = tmp_path_factory.mktemp("terraform_roster") / "terraform.tfstate"
     roster_file.write_text(roster_contents)
@@ -71,7 +75,7 @@ def terraform_roster_file(sshd_server, salt_master, tmp_path_factory, minion_id)
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_cli(salt_master, terraform_roster_file, sshd_config_dir):
+def salt_ssh_cli(salt_master, terraform_roster_file, sshd_config_dir, known_hosts_file):
     """
     The ``salt-ssh`` CLI as a fixture against the running master
     """
@@ -80,7 +84,6 @@ def salt_ssh_cli(salt_master, terraform_roster_file, sshd_config_dir):
         roster_file=terraform_roster_file,
         target_host="*",
         client_key=str(sshd_config_dir / "client_key"),
-        base_script_args=["--ignore-host-keys"],
     )
 
 
