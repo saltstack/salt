@@ -131,3 +131,16 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             results = pacman.group_diff('testgroup')
             self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
+            
+    def test_pkg_installed_sysupgrade_flag(self):
+        '''
+        Test if the pkg.installed state appends the '-u' flag only when sysupgrade is True
+        '''
+        with patch.dict(pacman.__salt__, {'cmd.run': MagicMock()}):
+            pacman.pkg_installed(name='somepkg', sysupgrade=True)
+            args, kwargs = pacman.__salt__['cmd.run'].call_args
+            self.assertIn('-u', args[0])
+
+            pacman.pkg_installed(name='somepkg', sysupgrade=None, refresh=True)
+            args, kwargs = pacman.__salt__['cmd.run'].call_args
+            self.assertNotIn('-u', args[0])
