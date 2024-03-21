@@ -593,7 +593,7 @@ def test_git_provider_sigterm_cleanup(main_class):
     while not proc.is_alive():
         time.sleep(1)  # give some time for it to be started
 
-    procmgr.run()
+    procmgr.run(asynchronous=True)
 
     # child process should be alive
     file_name = provider._get_lock_file("update")
