@@ -460,7 +460,8 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
             "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
         )
 
-    provider._master_lock.release()
+    finally:
+        provider._master_lock.release()
 
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
@@ -528,7 +529,8 @@ def test_git_provider_mp_lock_bad_machine(main_class, caplog):
             "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
         )
 
-    provider._master_lock.release()
+    finally:
+        provider._master_lock.release()
 
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
@@ -563,6 +565,8 @@ class KillProcessTest(salt.utils.process.SignalHandlingProcess):
         Start the test process to kill
         """
         self.provider.lock()
+        lockfile = self.provider._get_lock_file()
+        log.debug("KillProcessTest acquried lock file %s", lockfile)
 
         # check that lock has been released
         assert self.provider._master_lock.acquire(timeout=5)
@@ -574,6 +578,7 @@ class KillProcessTest(salt.utils.process.SignalHandlingProcess):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.timeout_unless_on_windows(120)
 def test_git_provider_sigterm_cleanup(main_class):
     """
     Start process which will obtain lock, and leave it locked
