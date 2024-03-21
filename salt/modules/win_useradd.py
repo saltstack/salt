@@ -122,7 +122,10 @@ def add(
         user_info["name"] = str(name)
     else:
         return False
-    user_info["password"] = str(password)
+    if password:
+        user_info["password"] = str(password)
+    else:
+        user_info["password"] = None
     user_info["priv"] = win32netcon.USER_PRIV_USER
     user_info["home_dir"] = home
     user_info["comment"] = description
@@ -234,6 +237,8 @@ def update(
     # Update the user object with new settings
     if password:
         user_info["password"] = str(password)
+    else:
+        user_info["password"] = None
     if home:
         user_info["home_dir"] = home
     if homedrive:
