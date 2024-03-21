@@ -224,11 +224,15 @@ def test_owner(modules):
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
-def test_which(modules):
+def test_which(grains, modules):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.which("/usr/local/bin/salt-call")
+    if grains["os_family"] in ["Debian", "RedHat"]:
+        file = "/bin/mknod"
+    else:
+        file = "/usr/local/bin/salt-call"
+    ret = modules.pkg.which(file)
     assert len(ret) != 0
 
 
