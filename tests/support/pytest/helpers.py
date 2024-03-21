@@ -63,7 +63,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -109,7 +109,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -236,7 +236,7 @@ class TestGroup:
             self._delete_group = True
             log.debug("Created system group: %s", self)
         else:
-            log.debug("Reusing exising system group: %s", self)
+            log.debug("Reusing existing system group: %s", self)
         if self.members:
             ret = self.sminion.functions.group.members(
                 self.name, members_list=self.members
@@ -325,14 +325,14 @@ class TestAccount:
         if not self.sminion.functions.user.info(self.username):
             log.debug("Creating system account: %s", self)
             ret = self.sminion.functions.user.add(self.username)
-            assert ret
+            assert ret is True
             self._delete_account = True
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
         else:
             password = self.hashed_password
         ret = self.sminion.functions.shadow.set_password(self.username, password)
-        assert ret
+        assert ret is True
         assert self.username in self.sminion.functions.user.list_users()
         if self._group:
             self.group.__enter__()
@@ -344,7 +344,7 @@ class TestAccount:
         if self._delete_account:
             log.debug("Created system account: %s", self)
         else:
-            log.debug("Reusing exisintg system account: %s", self)
+            log.debug("Reusing existing system account: %s", self)
         # Run tests
         return self
 
@@ -700,7 +700,7 @@ class EntropyGenerator:
         kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
         kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
         if not kernel_entropy_file.exists():
-            log.info("The '%s' file is not avilable", kernel_entropy_file)
+            log.info("The '%s' file is not available", kernel_entropy_file)
             return
 
         self.current_entropy = int(
@@ -709,7 +709,7 @@ class EntropyGenerator:
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
-            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+            log.info("The '%s' file is not available", kernel_poolsize_file)
         else:
             self.current_poolsize = int(
                 kernel_poolsize_file.read_text(encoding="utf-8").strip()
