@@ -1399,7 +1399,21 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(sshd_server, salt_master):
+def known_hosts_file(sshd_server, salt_master, salt_factories):
+    with pytest.helpers.temp_file(
+        "ssh-known-hosts",
+        "\n".join(sshd_server.get_host_keys()),
+        salt_factories.tmp_root_dir,
+    ) as known_hosts_file, pytest.helpers.temp_file(
+        "master.d/ssh-known-hosts.conf",
+        f"known_hosts_file: {known_hosts_file}",
+        salt_master.config_dir,
+    ):
+        yield known_hosts_file
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master, known_hosts_file):
     roster_contents = """
     localhost:
       host: 127.0.0.1
@@ -1412,6 +1426,7 @@ def salt_ssh_roster_file(sshd_server, salt_master):
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
+
     with pytest.helpers.temp_file(
         "roster", roster_contents, salt_master.config_dir
     ) as roster_file:

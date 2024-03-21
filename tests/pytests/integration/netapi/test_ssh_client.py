@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.netapi
@@ -19,9 +21,12 @@ pytestmark = [
     pytest.mark.timeout_unless_on_windows(120),
 ]
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture
-def client_config(client_config):
+def client_config(client_config, known_hosts_file):
+    client_config["known_hosts_file"] = str(known_hosts_file)
     client_config["netapi_enable_clients"] = ["ssh"]
     return client_config
 
@@ -74,7 +79,6 @@ def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
-        "ignore_host_keys": True,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
@@ -194,7 +198,6 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_acco
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
-        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
@@ -249,7 +252,6 @@ def test_shell_inject_ssh_port(
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "ssh_port": f"hhhhh|id>{path} #",
-        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
@@ -277,7 +279,6 @@ def test_shell_inject_remote_port_forwards(
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
-        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
@@ -324,7 +325,6 @@ def test_ssh_auth_bypass(client, salt_ssh_roster_file):
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "eauth": "xx",
-        "ignore_host_keys": True,
     }
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
