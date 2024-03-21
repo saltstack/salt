@@ -250,17 +250,7 @@ def _module_dirs(
         if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
-    if opts.get("features", {}).get(
-        "enable_deprecated_module_search_path_priority", False
-    ):
-        salt.utils.versions.warn_until(
-            3008,
-            "The old module search path priority will be removed in Salt 3008. "
-            "For more information see https://github.com/saltstack/salt/pull/65938.",
-        )
-        return cli_module_dirs + ext_type_types + ext_types + sys_types
-    else:
-        return cli_module_dirs + ext_types + ext_type_types + sys_types
+    return cli_module_dirs + ext_types + ext_type_types + sys_types
 
 
 def minion_mods(
