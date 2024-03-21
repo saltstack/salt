@@ -19,6 +19,7 @@ import salt.cache
 import salt.loader
 import salt.payload
 import salt.state
+from salt.config import _validate_roots
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class ThorState(salt.state.HighState):
         self.grain_keys = grain_keys
         self.pillar = pillar
         self.pillar_keys = pillar_keys
-        opts["file_roots"] = opts["thorium_roots"]
+        opts["file_roots"] = _validate_roots(opts, "thorium_roots")
         opts["saltenv"] = opts["thoriumenv"]
         opts["state_top"] = opts["thorium_top"]
         opts["file_client"] = "local"
