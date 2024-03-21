@@ -410,3 +410,35 @@ def test_selinux_add_policy_regex(name, sel_type):
         mock_cmd_run_all.assert_called_once_with(
             expected_cmd_run_all,
         )
+
+
+@pytest.mark.parametrize(
+    "name,sel_type",
+    (
+        ("/usr/share/munin/plugins/mysql_queries", "services_munin_plugin_exec_t"),
+        ("/usr/share/munin/plugins/mysql_", "unconfined_munin_plugin_exec_t"),
+    ),
+)
+def test_selinux_add_policy_shorter_path(name, sel_type):
+    """
+    Test adding policy with a shorter path than an existing entry
+    """
+    mock_cmd_shell = MagicMock(return_value={"retcode": 0})
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+
+    with patch.dict(selinux.__salt__, {"cmd.shell": mock_cmd_shell}), patch.dict(
+        selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}
+    ):
+        selinux.fcontext_add_policy(name, sel_type=sel_type)
+        filespec = re.escape(name)
+        expected_cmd_shell = f"semanage fcontext -l | egrep '{filespec}'"
+        mock_cmd_shell.assert_called_once_with(
+            expected_cmd_shell,
+            ignore_retcode=True,
+        )
+        expected_cmd_run_all = (
+            f"semanage fcontext --modify --type {sel_type} {filespec}"
+        )
+        mock_cmd_run_all.assert_called_once_with(
+            expected_cmd_run_all,
+        )
