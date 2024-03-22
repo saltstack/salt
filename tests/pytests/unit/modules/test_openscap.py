@@ -210,7 +210,9 @@ def test_new_openscap_xccdf_eval_success(policy_file):
     with patch(
         "salt.modules.openscap.subprocess.Popen",
         MagicMock(
-            return_value=Mock(**{"returncode": 0, "communicate.return_value": ("", "")})
+            return_value=Mock(
+                **{"returncode": 0, "communicate.return_value": (bytes(0), bytes(0))}
+            )
         ),
     ):
         response = openscap.xccdf_eval(
@@ -257,7 +259,9 @@ def test_new_openscap_xccdf_eval_success_with_extra_ovalfiles(policy_file):
     with patch(
         "salt.modules.openscap.subprocess.Popen",
         MagicMock(
-            return_value=Mock(**{"returncode": 0, "communicate.return_value": ("", "")})
+            return_value=Mock(
+                **{"returncode": 0, "communicate.return_value": (bytes(0), bytes(0))}
+            )
         ),
     ):
         response = openscap.xccdf_eval(
@@ -307,7 +311,13 @@ def test_new_openscap_xccdf_eval_success_with_failing_rules(policy_file):
         "salt.modules.openscap.subprocess.Popen",
         MagicMock(
             return_value=Mock(
-                **{"returncode": 2, "communicate.return_value": ("", "some error")}
+                **{
+                    "returncode": 2,
+                    "communicate.return_value": (
+                        bytes(0),
+                        bytes("some error", "UTF-8"),
+                    ),
+                }
             )
         ),
     ):
@@ -358,7 +368,10 @@ def test_new_openscap_xccdf_eval_evaluation_error(policy_file):
             return_value=Mock(
                 **{
                     "returncode": 1,
-                    "communicate.return_value": ("", "evaluation error"),
+                    "communicate.return_value": (
+                        bytes(0),
+                        bytes("evaluation error", "UTF-8"),
+                    ),
                 }
             )
         ),
