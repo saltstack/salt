@@ -639,7 +639,7 @@ class Key:
             for key in matches.get(keydir, []):
                 key_path = os.path.join(self.pki_dir, keydir, key)
                 try:
-                    salt.crypt.get_rsa_pub_key(key_path)
+                    salt.crypt.PublicKey(key_path)
                 except salt.exceptions.InvalidKeyError:
                     log.error("Invalid RSA public key: %s", key)
                     invalid_keys.append((keydir, key))

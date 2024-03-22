@@ -24,21 +24,6 @@ import salt.utils.verify
 import salt.utils.versions
 from salt.utils.asynchronous import SyncWrapper
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        try:
-            from Crypto.Cipher import PKCS1_OAEP  # nosec
-        except ImportError:
-            pass
-
-
 log = logging.getLogger(__name__)
 
 REQUEST_CHANNEL_TIMEOUT = 60
@@ -223,11 +208,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -484,7 +465,10 @@ class AsyncPubChannel:
             if decoded is not None and callback is not None:
                 await callback(decoded)
 
-        return self.transport.on_recv(wrap_callback)
+        if callback is None:
+            return self.transport.on_recv(callback)
+        else:
+            return self.transport.on_recv(wrap_callback)
 
     def _package_load(self, load):
         return {

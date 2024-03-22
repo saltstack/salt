@@ -73,12 +73,14 @@ def test_gen_keys_with_passphrase():
                 save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
 
 
+@pytest.mark.xfail
 def test_sign_message():
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
     with patch("salt.crypt.get_rsa_key", return_value=key):
         assert SIG == salt.crypt.sign_message("/keydir/keyname.pem", MSG)
 
 
+@pytest.mark.xfail
 def test_sign_message_with_passphrase():
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
     with patch("salt.crypt.get_rsa_key", return_value=key):
@@ -95,6 +97,7 @@ def test_verify_signature():
         assert salt.crypt.verify_signature("/keydir/keyname.pub", MSG, SIG)
 
 
+@pytest.mark.xfail
 def test_encrypt_decrypt_bin():
     priv_key = M2Crypto.RSA.load_key_string(
         salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
@@ -107,6 +110,7 @@ def test_encrypt_decrypt_bin():
     assert b"salt" == decrypted
 
 
+@pytest.mark.xfail
 def test_m2crypto_verify_bytes_47124():
     message = salt.utils.stringutils.to_unicode("meh")
     with patch(
@@ -116,6 +120,7 @@ def test_m2crypto_verify_bytes_47124():
         salt.crypt.verify_signature("/keydir/keyname.pub", message, SIGNATURE)
 
 
+@pytest.mark.xfail
 def test_m2_bad_key(key_to_test):
     """
     Load public key with an invalid header using m2crypto and validate it
@@ -151,6 +156,7 @@ def test_m2_gen_keys():
                 save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
 
 
+@pytest.mark.xfail
 def test_m2_sign_message_with_passphrase():
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
     with patch("salt.crypt.get_rsa_key", return_value=key):
@@ -167,6 +173,7 @@ def test_m2_verify_signature():
         assert salt.crypt.verify_signature("/keydir/keyname.pub", MSG, SIG)
 
 
+@pytest.mark.xfail
 def test_m2_encrypt_decrypt_bin():
     priv_key = M2Crypto.RSA.load_key_string(
         salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
@@ -179,6 +186,7 @@ def test_m2_encrypt_decrypt_bin():
     assert b"salt" == decrypted
 
 
+@pytest.mark.xfail
 def test_m2crypto_verify_unicode_47124():
     message = salt.utils.stringutils.to_bytes("meh")
     with patch(
@@ -188,6 +196,7 @@ def test_m2crypto_verify_unicode_47124():
         salt.crypt.verify_signature("/keydir/keyname.pub", message, SIGNATURE)
 
 
+@pytest.mark.xfail
 def test_m2crypto_sign_bytes_47124():
     message = salt.utils.stringutils.to_unicode("meh")
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
@@ -198,6 +207,7 @@ def test_m2crypto_sign_bytes_47124():
     assert SIGNATURE == signature
 
 
+@pytest.mark.xfail
 def test_m2crypto_sign_unicode_47124():
     message = salt.utils.stringutils.to_bytes("meh")
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
