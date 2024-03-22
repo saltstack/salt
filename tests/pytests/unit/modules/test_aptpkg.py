@@ -1181,7 +1181,7 @@ def test__expand_repo_def():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1220,7 +1220,7 @@ def test__expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1258,7 +1258,7 @@ def test_expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian", repo=repo, file=source_file, architectures="amd64"
