@@ -54,7 +54,7 @@ Lots of Docker Improvements
 Much Improved Support for Docker Networking
 *******************************************
 
-The :py:func:`docker_network.present <salt.states.docker_network.present>`
+The REMOVED DURRING MODULE MIGRATION
 state has undergone a full rewrite, which includes the following improvements:
 
 Full API Support for Network Management
@@ -70,7 +70,7 @@ Custom Subnets
 **************
 
 Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
-are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+are supported. See REMOVED DURRING MODULE MIGRATION for
 more information.
 
 Network Configuration in :py:func:`docker_container.running <salt.states.docker_container.running>` States
@@ -78,7 +78,7 @@ Network Configuration in :py:func:`docker_container.running <salt.states.docker_
 
 A long-requested feature has finally been added! It is now possible to
 configure static IPv4/IPv6 addresses, as well as links and labels. See
-:ref:`here <salt-states-docker-container-network-management>` for more
+REMOVDE DURRING MODULE MIGRATION for more
 information.
 
 .. note::
