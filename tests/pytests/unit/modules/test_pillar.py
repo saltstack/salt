@@ -180,3 +180,9 @@ def test_pillar_keys():
         test_key = "7:11"
         res = pillarmod.keys(test_key)
         assert res == ["12"]
+
+
+def test_ls_pass_kwargs(pillar_value):
+    with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
+        ls = sorted(pillarmod.ls(pillarenv="base"))
+        assert ls == ["a", "b"]
