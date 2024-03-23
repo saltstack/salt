@@ -328,7 +328,7 @@ def obfuscate(*args, **kwargs):
 
 # naming chosen for consistency with grains.ls, although it breaks the short
 # identifier rule.
-def ls(*args):
+def ls(*args, **kwargs):
     """
     .. versionadded:: 2015.8.0
 
@@ -342,7 +342,7 @@ def ls(*args):
         salt '*' pillar.ls
     """
 
-    return list(items(*args))
+    return list(items(*args, **kwargs))
 
 
 def item(*args, **kwargs):
