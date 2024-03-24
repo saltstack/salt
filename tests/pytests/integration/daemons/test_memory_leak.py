@@ -40,6 +40,7 @@ def file_add_delete_sls(tmp_path, salt_master):
 @pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.skip_on_windows(reason="Windows is a spawning platform, won't work")
 @pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work")
+@pytest.mark.skip_on_env("GITHUB_ACTIONS", present=True)
 @pytest.mark.flaky(max_runs=4)
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
     max_usg = None

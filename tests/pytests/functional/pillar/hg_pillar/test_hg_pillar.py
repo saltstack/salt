@@ -6,12 +6,7 @@ import pytest
 
 import salt.pillar.hg_pillar as hg_pillar
 
-try:
-    import hglib
-
-    HAS_HG = True
-except ImportError:
-    HAS_HG = False
+hglib = pytest.importorskip("hglib")
 
 
 @pytest.fixture(scope="module")
