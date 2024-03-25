@@ -525,6 +525,7 @@ def test_filesystem_present_properties(utils_patch):
         fields="value",
         parsable=True,
         type="filesystem",
+        source="default,inherited,local,none,received",
     )
 
 
@@ -568,6 +569,7 @@ def test_filesystem_present_update(utils_patch):
         fields="value",
         parsable=True,
         type="filesystem",
+        source="default,inherited,local,none,received",
     )
 
 
@@ -627,6 +629,7 @@ def test_volume_present(utils_patch):
         fields="value",
         parsable=True,
         type="volume",
+        source="default,inherited,local,none,received",
     )
 
 
@@ -689,6 +692,7 @@ def test_volume_present_update(utils_patch):
         fields="value",
         parsable=True,
         type="volume",
+        source="default,inherited,local,none,received",
     )
 
 
