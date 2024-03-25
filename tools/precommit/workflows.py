@@ -305,12 +305,11 @@ def generate_workflows(ctx: Context):
             f"Generating '{workflow_path.relative_to(tools.utils.REPO_ROOT)}' from "
             f"template '{template_path.relative_to(tools.utils.REPO_ROOT)}' ..."
         )
+        workflow_slug = details.get("slug") or workflow_name.lower().replace(" ", "-")
         context = {
             "template": template_path.relative_to(tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
-            "workflow_slug": (
-                details.get("slug") or workflow_name.lower().replace(" ", "-")
-            ),
+            "workflow_slug": workflow_slug,
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
@@ -318,10 +317,16 @@ def generate_workflows(ctx: Context):
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
-            "test_salt_listing": test_salt_listing,
-            "test_salt_pkg_listing": test_salt_pkg_listing,
+            "test_salt_listing": _filter_jobs_by_workflow(
+                workflow_slug, test_salt_listing
+            ),
+            "test_salt_pkg_listing": _filter_jobs_by_workflow(
+                workflow_slug, test_salt_pkg_listing
+            ),
             "build_ci_deps_listing": build_ci_deps_listing,
-            "test_salt_pkg_downloads_listing": test_salt_pkg_downloads_listing,
+            "test_salt_pkg_downloads_listing": _filter_jobs_by_workflow(
+                workflow_slug, test_salt_pkg_downloads_listing
+            ),
             "test_salt_pkg_downloads_needs_slugs": sorted(
                 test_salt_pkg_downloads_needs_slugs
             ),
@@ -337,6 +342,28 @@ def generate_workflows(ctx: Context):
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
+
+
+def _filter_jobs_by_workflow(
+    workflow_slug: str, jobs: dict
+) -> dict[str, list[tuple[str, str, str]]]:
+    short_worflow_os = (
+        "almalinux-9",
+        "amazonlinux-2023-arm64",
+        "ubuntu-22.04-arm64",
+        "windows-2022",
+        "macos-13",
+        "archlinux-lts",
+    )
+    if workflow_slug != "ci":
+        return jobs
+
+    selected: dict[str, list[tuple[str, str, str]]] = {}
+    for platform in jobs:
+        for entry in jobs[platform]:
+            if entry[0] in short_worflow_os:
+                selected.setdefault(platform, []).append(entry)
+    return selected
 
 
 @cgroup.command(
