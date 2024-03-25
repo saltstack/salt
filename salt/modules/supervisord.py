@@ -3,7 +3,6 @@ Provide the service module for system supervisord or supervisord in a
 virtualenv
 """
 
-
 import configparser
 import os
 
@@ -27,7 +26,7 @@ def _get_supervisorctl_bin(bin_env):
     if not bin_env:
         which_result = __salt__["cmd.which_bin"]([cmd])
         if which_result is None:
-            raise CommandNotFoundError("Could not find a `{}` binary".format(cmd))
+            raise CommandNotFoundError(f"Could not find a `{cmd}` binary")
         return which_result
 
     # try to get binary from env
@@ -35,7 +34,7 @@ def _get_supervisorctl_bin(bin_env):
         cmd_bin = os.path.join(bin_env, "bin", cmd)
         if os.path.isfile(cmd_bin):
             return cmd_bin
-        raise CommandNotFoundError("Could not find a `{}` binary".format(cmd))
+        raise CommandNotFoundError(f"Could not find a `{cmd}` binary")
 
     return bin_env
 
@@ -58,7 +57,7 @@ def _get_return(ret):
     if ret["retcode"] != 0:
         # This is a non 0 exit code
         if "ERROR" not in retmsg:
-            retmsg = "ERROR: {}".format(retmsg)
+            retmsg = f"ERROR: {retmsg}"
     return retmsg
 
 
@@ -372,7 +371,7 @@ def _read_config(conf_file=None):
     try:
         config.read(conf_file)
     except OSError as exc:
-        raise CommandExecutionError("Unable to read from {}: {}".format(conf_file, exc))
+        raise CommandExecutionError(f"Unable to read from {conf_file}: {exc}")
     return config
 
 
@@ -394,9 +393,9 @@ def options(name, conf_file=None):
         salt '*' supervisord.options foo
     """
     config = _read_config(conf_file)
-    section_name = "program:{}".format(name)
+    section_name = f"program:{name}"
     if section_name not in config.sections():
-        raise CommandExecutionError("Process '{}' not found".format(name))
+        raise CommandExecutionError(f"Process '{name}' not found")
     ret = {}
     for key, val in config.items(section_name):
         val = salt.utils.stringutils.to_num(val.split(";")[0].strip())
@@ -438,7 +437,7 @@ def status_bool(name, expected_state=None, user=None, conf_file=None, bin_env=No
         salt '*' supervisord.status_bool nginx expected_state='RUNNING'
     """
 
-    cmd = "status {}".format(name)
+    cmd = f"status {name}"
     for line in custom(cmd, user, conf_file, bin_env).splitlines():
         if len(line.split()) > 2:
             process, state, reason = line.split(None, 2)

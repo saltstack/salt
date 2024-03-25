@@ -27,7 +27,6 @@ Example States
         - description: 'my project'
 """
 
-
 __virtualname__ = "keystone_project"
 
 

@@ -171,7 +171,7 @@ def call(root, function, *args, **kwargs):
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                f"python{sys.version_info[0]}",
                 os.path.join(chroot_path, "salt-call"),
                 "--metadata",
                 "--local",
@@ -187,7 +187,7 @@ def call(root, function, *args, **kwargs):
                 function,
             ]
             + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+            + [f"{k}={v}" for (k, v) in safe_kwargs.items()]
         )
         ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
 

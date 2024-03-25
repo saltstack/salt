@@ -1,6 +1,7 @@
 """
 Primary interfaces for the salt-cloud system
 """
+
 # Need to get data from 4 sources!
 # CLI options
 # salt cloud config - CONFIG_DIR + '/cloud'

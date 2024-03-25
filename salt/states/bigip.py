@@ -4,7 +4,6 @@ A state module designed to enforce load-balancing configurations for F5 Big-IP e
     :platform:      f5_bigip_11.6
 """
 
-
 import salt.utils.json
 
 
@@ -331,9 +330,9 @@ def manage_node(
         # we think we are managing
         if existing["content"]["address"] != address:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "A node with this name exists but the address does not match."
+            ret["comment"] = (
+                "A node with this name exists but the address does not match."
+            )
 
         modified = __salt__["bigip.modify_node"](
             hostname=hostname,
@@ -1443,10 +1442,10 @@ def add_pool_member(hostname, username, password, name, member):
 
         if exists:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "Member: {name} already exists within this pool.  No changes made.".format(
-                name=member["name"]
+            ret["comment"] = (
+                "Member: {name} already exists within this pool.  No changes made.".format(
+                    name=member["name"]
+                )
             )
             ret["changes"]["old"] = {}
             ret["changes"]["new"] = {}
@@ -1457,10 +1456,10 @@ def add_pool_member(hostname, username, password, name, member):
 
             if new_member["code"] == 200:
                 ret["result"] = True
-                ret[
-                    "comment"
-                ] = "Member: {name} has been successfully added to the pool.".format(
-                    name=member["name"]
+                ret["comment"] = (
+                    "Member: {name} has been successfully added to the pool.".format(
+                        name=member["name"]
+                    )
                 )
                 ret["changes"]["old"] = {}
 
@@ -1629,17 +1628,15 @@ def modify_pool_member(
                 # check for changes
                 old = {"content": existing_member}
                 new = {"content": modified_member}
-                ret = _check_for_changes(
-                    "Pool Member: {member}".format(member=member), ret, old, new
-                )
+                ret = _check_for_changes(f"Pool Member: {member}", ret, old, new)
 
             else:
                 ret = _load_result(modified, ret)
         else:
-            ret[
-                "comment"
-            ] = "Member: {name} does not exists within this pool.  No changes made.".format(
-                name=member["name"]
+            ret["comment"] = (
+                "Member: {name} does not exists within this pool.  No changes made.".format(
+                    name=member["name"]
+                )
             )
 
     # pool does not exists
@@ -1706,10 +1703,10 @@ def delete_pool_member(hostname, username, password, name, member):
             # did we get rid of it?
             if deleted["code"] == 200:
                 ret["result"] = True
-                ret[
-                    "comment"
-                ] = "Pool Member: {member} was successfully deleted.".format(
-                    member=member
+                ret["comment"] = (
+                    "Pool Member: {member} was successfully deleted.".format(
+                        member=member
+                    )
                 )
                 ret["changes"]["old"] = existing_member
                 ret["changes"]["new"] = {}
@@ -2353,9 +2350,9 @@ def manage_virtual(
             ret["result"] = True
             ret["changes"]["old"] = {}
             ret["changes"]["new"] = virtual["content"]
-            ret[
-                "comment"
-            ] = "Virtual was successfully created and enforced to the desired state."
+            ret["comment"] = (
+                "Virtual was successfully created and enforced to the desired state."
+            )
 
         else:
             ret = _load_result(virtual, ret)

@@ -561,6 +561,7 @@ class Pillar:
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
 
         if opts.get("file_client", "") == "local" and not opts.get(
@@ -573,11 +574,15 @@ class Pillar:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
                 self.functions = salt.loader.minion_mods(
-                    opts, utils=utils, file_client=self.client
+                    opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
             else:
                 self.functions = salt.loader.minion_mods(
-                    self.opts, utils=utils, file_client=self.client
+                    self.opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
         else:
             self.functions = functions
@@ -746,9 +751,7 @@ class Pillar:
                         )
                     )
         except Exception as exc:  # pylint: disable=broad-except
-            errors.append(
-                "Rendering Primary Top file failed, render error:\n{}".format(exc)
-            )
+            errors.append(f"Rendering Primary Top file failed, render error:\n{exc}")
             log.exception("Pillar rendering failed for minion %s", self.minion_id)
 
         # Search initial top files for includes
@@ -953,7 +956,7 @@ class Pillar:
                 **defaults,
             )
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "Rendering SLS '{}' failed, render error:\n{}".format(sls, exc)
+            msg = f"Rendering SLS '{sls}' failed, render error:\n{exc}"
             log.critical(msg, exc_info=True)
             if self.opts.get("pillar_safe_render_error", True):
                 errors.append(
@@ -966,7 +969,7 @@ class Pillar:
         nstate = None
         if state:
             if not isinstance(state, dict):
-                msg = "SLS '{}' does not render to a dictionary".format(sls)
+                msg = f"SLS '{sls}' does not render to a dictionary"
                 log.error(msg)
                 errors.append(msg)
             else:
@@ -1103,7 +1106,7 @@ class Pillar:
                             "a sign of a malformed pillar sls file. Returned "
                             "errors: %s",
                             sls,
-                            ", ".join(["'{}'".format(e) for e in errors]),
+                            ", ".join([f"'{e}'" for e in errors]),
                         )
                         continue
                     pillar = merge(
@@ -1353,7 +1356,7 @@ class Pillar:
                         if ptr is not None:
                             ptr[child] = ret
                 except Exception as exc:  # pylint: disable=broad-except
-                    msg = "Failed to decrypt pillar key '{}': {}".format(key, exc)
+                    msg = f"Failed to decrypt pillar key '{key}': {exc}"
                     errors.append(msg)
                     log.error(msg, exc_info=True)
         return errors
@@ -1368,6 +1371,11 @@ class Pillar:
         if self.client:
             try:
                 self.client.destroy()
+            except AttributeError:
+                pass
+        if self.fileclient:
+            try:
+                self.fileclient.destroy()
             except AttributeError:
                 pass
 

@@ -542,7 +542,7 @@ def test_verify_onlyif_parse_slots(tmp_path, minion_opts):
         "onlyif": [
             {
                 "fun": "file.search",
-                "args": ["__slot__:salt:test.echo({})".format(_expand_win_path(name))],
+                "args": [f"__slot__:salt:test.echo({_expand_win_path(name)})"],
                 "pattern": "__slot__:salt:test.echo(file-contents)",
             }
         ],
@@ -644,7 +644,7 @@ def test_verify_unless_parse_slots(tmp_path, minion_opts):
         "unless": [
             {
                 "fun": "file.search",
-                "args": ["__slot__:salt:test.echo({})".format(_expand_win_path(name))],
+                "args": [f"__slot__:salt:test.echo({_expand_win_path(name)})"],
                 "pattern": "__slot__:salt:test.echo(file-contents)",
             }
         ],

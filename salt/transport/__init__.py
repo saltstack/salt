@@ -2,7 +2,6 @@
 Encapsulate the different transports available to Salt.
 """
 
-
 import logging
 import warnings
 

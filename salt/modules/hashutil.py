@@ -2,7 +2,6 @@
 A collection of hashing and encoding functions
 """
 
-
 import base64
 import hashlib
 import hmac
@@ -39,7 +38,7 @@ def digest(instr, checksum="md5"):
 
     if hash_func is None:
         raise salt.exceptions.CommandExecutionError(
-            "Hash func '{}' is not supported.".format(checksum)
+            f"Hash func '{checksum}' is not supported."
         )
 
     return hash_func(instr)
@@ -63,9 +62,7 @@ def digest_file(infile, checksum="md5"):
         salt '*' hashutil.digest_file /path/to/file
     """
     if not __salt__["file.file_exists"](infile):
-        raise salt.exceptions.CommandExecutionError(
-            "File path '{}' not found.".format(infile)
-        )
+        raise salt.exceptions.CommandExecutionError(f"File path '{infile}' not found.")
 
     with salt.utils.files.fopen(infile, "rb") as f:
         file_hash = __salt__["hashutil.digest"](f.read(), checksum)

@@ -2,7 +2,6 @@
 :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.sysmod as sysmod
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
@@ -108,18 +107,18 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
         cls.salt_dunder = {}
 
         for func in cls._functions:
-            docstring = "docstring for {}".format(func)
+            docstring = f"docstring for {func}"
 
             cls.salt_dunder[func] = MockDocstringable(docstring)
             cls._docstrings[func] = docstring
 
             module = func.split(".", maxsplit=1)[0]
             cls._statedocstrings[func] = docstring
-            cls._statedocstrings[module] = "docstring for {}".format(module)
+            cls._statedocstrings[module] = f"docstring for {module}"
 
             cls._modules.add(func.split(".", maxsplit=1)[0])
 
-            docstring = "docstring for {}".format(func)
+            docstring = f"docstring for {func}"
             mock = MockDocstringable(docstring)
             mock.set_module_docstring(
                 "docstring for {}".format(func.split(".", maxsplit=1)[0])

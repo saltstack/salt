@@ -46,6 +46,7 @@ Connection module for Amazon CloudFront
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -255,7 +256,7 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
                 {"config": config},
                 {"tags": tags},
             ]
-            results["Manage CloudFront distribution {}".format(name)] = {
+            results[f"Manage CloudFront distribution {name}"] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
     except botocore.exceptions.ClientError as exc:

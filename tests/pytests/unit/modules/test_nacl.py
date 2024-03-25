@@ -1,6 +1,7 @@
 """
     Unit tests for the salt.modules.nacl module
 """
+
 import pytest
 
 import salt.utils.stringutils

@@ -1,6 +1,7 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import glob
 import logging
 import os
@@ -132,7 +133,7 @@ def test__load_policy_definitions():
         # Remove source file
         os.remove(bogus_fle)
         # Remove cached file
-        search_string = "{}\\_bogus*.adml".format(cache_dir)
+        search_string = f"{cache_dir}\\_bogus*.adml"
         for file_name in glob.glob(search_string):
             os.remove(file_name)
 

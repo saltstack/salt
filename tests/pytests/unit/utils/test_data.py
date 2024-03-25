@@ -1,6 +1,7 @@
 """
 Tests for salt.utils.data
 """
+
 import builtins
 import logging
 

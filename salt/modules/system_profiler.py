@@ -8,7 +8,6 @@ information about package receipts and installed applications.
 
 """
 
-
 import plistlib
 import subprocess
 

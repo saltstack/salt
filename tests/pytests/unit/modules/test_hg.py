@@ -4,7 +4,6 @@
     Test cases for salt.modules.hg
 """
 
-
 import pytest
 
 import salt.modules.hg as hg

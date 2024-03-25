@@ -151,7 +151,7 @@ def test_register_instances():
 
     mock_bool = MagicMock(return_value=False)
     with patch.dict(boto_elb.__salt__, {"boto_elb.exists": mock_bool}):
-        comt = "Could not find lb {}".format(name)
+        comt = f"Could not find lb {name}"
         ret.update({"comment": comt})
         assert boto_elb.register_instances(name, instances) == ret
 
@@ -166,11 +166,11 @@ def test_absent():
 
     mock = MagicMock(side_effect=[False, True])
     with patch.dict(boto_elb.__salt__, {"boto_elb.exists": mock}):
-        comt = "{} ELB does not exist.".format(name)
+        comt = f"{name} ELB does not exist."
         ret.update({"comment": comt})
         assert boto_elb.absent(name) == ret
 
         with patch.dict(boto_elb.__opts__, {"test": True}):
-            comt = "ELB {} is set to be removed.".format(name)
+            comt = f"ELB {name} is set to be removed."
             ret.update({"comment": comt, "result": None})
             assert boto_elb.absent(name) == ret

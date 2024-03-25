@@ -24,7 +24,6 @@ rest API.
 
 """
 
-
 import logging
 
 import salt.proxy.cimc
@@ -116,7 +115,7 @@ def create_user(uid=None, username=None, password=None, priv=None):
             "The privilege level must be specified."
         )
 
-    dn = "sys/user-ext/user-{}".format(uid)
+    dn = f"sys/user-ext/user-{uid}"
 
     inconfig = """<aaaUser id="{0}" accountStatus="active" name="{1}" priv="{2}"
     pwd="{3}"  dn="sys/user-ext/user-{0}"/>""".format(
@@ -607,7 +606,7 @@ def mount_share(
     else:
         mount_options = ""
 
-    dn = "sys/svc-ext/vmedia-svc/vmmap-{}".format(name)
+    dn = f"sys/svc-ext/vmedia-svc/vmmap-{name}"
     inconfig = """<commVMediaMap dn='sys/svc-ext/vmedia-svc/vmmap-{}' map='{}'{}
     remoteFile='{}' remoteShare='{}' status='created'
     volumeName='Win12' />""".format(
@@ -713,7 +712,7 @@ def set_logging_levels(remote=None, local=None):
 
     if remote:
         if remote in logging_options:
-            query += ' remoteSeverity="{}"'.format(remote)
+            query += f' remoteSeverity="{remote}"'
         else:
             raise salt.exceptions.CommandExecutionError(
                 "Remote Severity option is not valid."
@@ -721,14 +720,14 @@ def set_logging_levels(remote=None, local=None):
 
     if local:
         if local in logging_options:
-            query += ' localSeverity="{}"'.format(local)
+            query += f' localSeverity="{local}"'
         else:
             raise salt.exceptions.CommandExecutionError(
                 "Local Severity option is not valid."
             )
 
     dn = "sys/svc-ext/syslog"
-    inconfig = """<commSyslog dn="sys/svc-ext/syslog"{} ></commSyslog>""".format(query)
+    inconfig = f"""<commSyslog dn="sys/svc-ext/syslog"{query} ></commSyslog>"""
 
     ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
@@ -818,7 +817,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
             if delayType == "fixed":
                 query += ' delayType="fixed"'
                 if delayValue:
-                    query += ' delay="{}"'.format(delayValue)
+                    query += f' delay="{delayValue}"'
             elif delayType == "random":
                 query += ' delayType="random"'
             else:
@@ -924,18 +923,18 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
         raise salt.exceptions.CommandExecutionError("The user ID must be specified.")
 
     if status:
-        conf += ' accountStatus="{}"'.format(status)
+        conf += f' accountStatus="{status}"'
 
     if username:
-        conf += ' name="{}"'.format(username)
+        conf += f' name="{username}"'
 
     if priv:
-        conf += ' priv="{}"'.format(priv)
+        conf += f' priv="{priv}"'
 
     if password:
-        conf += ' pwd="{}"'.format(password)
+        conf += f' pwd="{password}"'
 
-    dn = "sys/user-ext/user-{}".format(uid)
+    dn = f"sys/user-ext/user-{uid}"
 
     inconfig = """<aaaUser id="{0}"{1} dn="sys/user-ext/user-{0}"/>""".format(uid, conf)
 

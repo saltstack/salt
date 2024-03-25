@@ -60,14 +60,14 @@ def _get_token_and_url_from_master():
     # When rendering pillars, the module executes on the master, but the token
     # should be issued for the minion, so that the correct policies are applied
     if __opts__.get("__role", "minion") == "minion":
-        private_key = "{}/minion.pem".format(pki_dir)
+        private_key = f"{pki_dir}/minion.pem"
         log.debug("Running on minion, signing token request with key %s", private_key)
         signature = base64.b64encode(salt.crypt.sign_message(private_key, minion_id))
         result = __salt__["publish.runner"](
             "vault.generate_token", arg=[minion_id, signature, False, ttl, uses]
         )
     else:
-        private_key = "{}/master.pem".format(pki_dir)
+        private_key = f"{pki_dir}/master.pem"
         log.debug(
             "Running on master, signing token request for %s with key %s",
             minion_id,
@@ -330,7 +330,7 @@ def make_request(
     namespace=None,
     get_token_url=False,
     retry=False,
-    **args
+    **args,
 ):
     """
     Make a request to Vault
@@ -350,7 +350,7 @@ def make_request(
             pass
     if "timeout" not in args:
         args["timeout"] = 120
-    url = "{}/{}".format(vault_url, resource)
+    url = f"{vault_url}/{resource}"
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
     if namespace is not None:
         headers["X-Vault-Namespace"] = namespace
@@ -369,7 +369,7 @@ def make_request(
                 vault_url=vault_url,
                 get_token_url=get_token_url,
                 retry=True,
-                **args
+                **args,
             )
         else:
             log.error("Unable to connect to vault server: %s", response.text)
@@ -423,7 +423,7 @@ def _selftoken_expired():
         return False
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {}".format(e)
+            f"Error while looking up self token : {e}"
         )
 
 
@@ -447,7 +447,7 @@ def _wrapped_token_valid():
         return True
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up wrapped token : {}".format(e)
+            f"Error while looking up wrapped token : {e}"
         )
 
 
@@ -548,7 +548,7 @@ def _get_secret_path_metadata(path):
     else:
         log.debug("Fetching metadata for %s", path)
         try:
-            url = "v1/sys/internal/ui/mounts/{}".format(path)
+            url = f"v1/sys/internal/ui/mounts/{path}"
             response = make_request("GET", url)
             if response.ok:
                 response.raise_for_status()
@@ -609,12 +609,12 @@ def expand_pattern_lists(pattern, **mappings):
     # very expensive, since patterns will typically involve a handful of lists at
     # most.
 
-    for (_, field_name, _, _) in f.parse(pattern):
+    for _, field_name, _, _ in f.parse(pattern):
         if field_name is None:
             continue
         (value, _) = f.get_field(field_name, None, mappings)
         if isinstance(value, list):
-            token = "{{{0}}}".format(field_name)
+            token = f"{{{field_name}}}"
             expanded = [pattern.replace(token, str(elem)) for elem in value]
             for expanded_item in expanded:
                 result = expand_pattern_lists(expanded_item, **mappings)

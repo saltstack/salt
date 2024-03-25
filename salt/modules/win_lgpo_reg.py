@@ -54,6 +54,7 @@ The same values can also be used to create states for setting these policies.
     you will have to find the values needed to set them with this module using a
     different method.
 """
+
 import logging
 
 import salt.utils.platform
@@ -341,22 +342,22 @@ def set_value(
         "REG_SZ",
     ]
     if v_type not in valid_types:
-        msg = "Invalid type: {}".format(v_type)
+        msg = f"Invalid type: {v_type}"
         raise SaltInvocationError(msg)
 
     if v_type in ["REG_SZ", "REG_EXPAND_SZ"]:
         if not isinstance(v_data, str):
-            msg = "{} data must be a string".format(v_type)
+            msg = f"{v_type} data must be a string"
             raise SaltInvocationError(msg)
     elif v_type == "REG_MULTI_SZ":
         if not isinstance(v_data, list):
-            msg = "{} data must be a list".format(v_type)
+            msg = f"{v_type} data must be a list"
             raise SaltInvocationError(msg)
     elif v_type in ["REG_DWORD", "REG_QWORD"]:
         try:
             int(v_data)
         except (TypeError, ValueError):
-            msg = "{} data must be an integer".format(v_type)
+            msg = f"{v_type} data must be an integer"
             raise SaltInvocationError(msg)
 
     pol_data = read_reg_pol(policy_class=policy_class)
@@ -466,11 +467,11 @@ def disable_value(key, v_name, policy_class="machine"):
                 return None
             log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
             pol_data[found_key].pop(found_name)
-            found_name = "**del.{}".format(found_name)
+            found_name = f"**del.{found_name}"
             pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
         else:
             log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
-            pol_data[found_key]["**del.{}".format(v_name)] = {
+            pol_data[found_key][f"**del.{v_name}"] = {
                 "data": " ",
                 "type": "REG_SZ",
             }
@@ -478,7 +479,7 @@ def disable_value(key, v_name, policy_class="machine"):
         log.debug(
             "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
         )
-        pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
+        pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
 
     success = True
     if not write_reg_pol(pol_data, policy_class=policy_class):

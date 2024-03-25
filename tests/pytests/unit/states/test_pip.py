@@ -1,6 +1,7 @@
 """
     :codeauthor: Eric Graham <eric.graham@vantagepnt.com>
 """
+
 import logging
 
 import pytest

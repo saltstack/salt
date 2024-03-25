@@ -109,11 +109,9 @@ def _localectl_set(locale=""):
         else _localectl_status().get("system_locale", {})
     )
     locale_params["LANG"] = str(locale)
-    args = " ".join(
-        ['{}="{}"'.format(k, v) for k, v in locale_params.items() if v is not None]
-    )
+    args = " ".join([f'{k}="{v}"' for k, v in locale_params.items() if v is not None])
     return not __salt__["cmd.retcode"](
-        "localectl set-locale {}".format(args), python_shell=False
+        f"localectl set-locale {args}", python_shell=False
     )
 
 
@@ -204,7 +202,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/sysconfig/language",
             "^RC_LANG=.*",
-            'RC_LANG="{}"'.format(locale),
+            f'RC_LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "RedHat" in __grains__["os_family"]:
@@ -213,7 +211,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/sysconfig/i18n",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "Debian" in __grains__["os_family"]:
@@ -227,11 +225,11 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/default/locale",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "Gentoo" in __grains__["os_family"]:
-        cmd = "eselect --brief locale set {}".format(locale)
+        cmd = f"eselect --brief locale set {locale}"
         return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
     elif "Solaris" in __grains__["os_family"]:
         if locale not in __salt__["locale.list_avail"]():
@@ -239,7 +237,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/default/init",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     else:
@@ -319,9 +317,7 @@ def gen_locale(locale, **kwargs):
 
     if on_debian or on_gentoo:  # file-based search
         search = "/usr/share/i18n/SUPPORTED"
-        valid = __salt__["file.search"](
-            search, "^{}$".format(locale), flags=re.MULTILINE
-        )
+        valid = __salt__["file.search"](search, f"^{locale}$", flags=re.MULTILINE)
     else:  # directory-based search
         if on_suse:
             search = "/usr/share/locale"
@@ -332,7 +328,7 @@ def gen_locale(locale, **kwargs):
             valid = locale_search_str in os.listdir(search)
         except OSError as ex:
             log.error(ex)
-            raise CommandExecutionError('Locale "{}" is not available.'.format(locale))
+            raise CommandExecutionError(f'Locale "{locale}" is not available.')
 
     if not valid:
         log.error('The provided locale "%s" is not found in %s', locale, search)
@@ -341,8 +337,8 @@ def gen_locale(locale, **kwargs):
     if os.path.exists("/etc/locale.gen"):
         __salt__["file.replace"](
             "/etc/locale.gen",
-            r"^\s*#\s*{}\s*$".format(locale),
-            "{}\n".format(locale),
+            rf"^\s*#\s*{locale}\s*$",
+            f"{locale}\n",
             append_if_not_found=True,
         )
     elif on_ubuntu:

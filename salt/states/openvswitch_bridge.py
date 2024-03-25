@@ -32,16 +32,16 @@ def present(name, parent=None, vlan=None):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_bridge_created = "Bridge {} created.".format(name)
-    comment_bridge_notcreated = "Unable to create bridge: {}.".format(name)
-    comment_bridge_exists = "Bridge {} already exists.".format(name)
+    comment_bridge_created = f"Bridge {name} created."
+    comment_bridge_notcreated = f"Unable to create bridge: {name}."
+    comment_bridge_exists = f"Bridge {name} already exists."
     comment_bridge_mismatch = (
         "Bridge {} already exists, but has a different" " parent or VLAN ID."
     ).format(name)
     changes_bridge_created = {
         name: {
-            "old": "Bridge {} does not exist.".format(name),
-            "new": "Bridge {} created".format(name),
+            "old": f"Bridge {name} does not exist.",
+            "new": f"Bridge {name} created",
         }
     }
 
@@ -103,13 +103,13 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_bridge_deleted = "Bridge {} deleted.".format(name)
-    comment_bridge_notdeleted = "Unable to delete bridge: {}.".format(name)
-    comment_bridge_notexists = "Bridge {} does not exist.".format(name)
+    comment_bridge_deleted = f"Bridge {name} deleted."
+    comment_bridge_notdeleted = f"Unable to delete bridge: {name}."
+    comment_bridge_notexists = f"Bridge {name} does not exist."
     changes_bridge_deleted = {
         name: {
-            "old": "Bridge {} exists.".format(name),
-            "new": "Bridge {} deleted.".format(name),
+            "old": f"Bridge {name} exists.",
+            "new": f"Bridge {name} deleted.",
         }
     }
 

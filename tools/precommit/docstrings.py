@@ -1,6 +1,7 @@
 """
 Check salt code base for for missing or wrong docstrings.
 """
+
 # Skip mypy checks since it will follow into Salt which doesn't yet have proper types defined
 # mypy: ignore-errors
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
@@ -750,7 +751,6 @@ MISSING_EXAMPLES = {
         "delete_advanced_configs",
         "get_vm",
     ],
-    "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
     "salt/modules/zk_concurrency.py": [
         "lock",

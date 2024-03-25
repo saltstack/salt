@@ -47,9 +47,9 @@ def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
         scheme = _get_current_scheme()
 
     if __grains__["osrelease"] == "7":
-        cmd = "powercfg /q {} {}".format(scheme, guid)
+        cmd = f"powercfg /q {scheme} {guid}"
     else:
-        cmd = "powercfg /q {} {} {}".format(scheme, guid, subguid)
+        cmd = f"powercfg /q {scheme} {guid} {subguid}"
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     split = out.split("\r\n\r\n")

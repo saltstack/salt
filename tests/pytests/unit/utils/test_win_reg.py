@@ -200,7 +200,7 @@ def test_list_keys_non_existing(fake_key):
     """
     Test the list_keys function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(fake_key))
+    expected = (False, f"Cannot find key: HKLM\\{fake_key}")
     assert win_reg.list_keys(hive="HKLM", key=fake_key) == expected
 
 
@@ -208,7 +208,7 @@ def test_list_keys_access_denied(fake_key):
     """
     Test the list_keys function using a registry key when access is denied
     """
-    expected = (False, "Access is denied: HKLM\\{}".format(fake_key))
+    expected = (False, f"Access is denied: HKLM\\{fake_key}")
     mock_error = MagicMock(
         side_effect=win32api.error(5, "RegOpenKeyEx", "Access is denied")
     )
@@ -261,7 +261,7 @@ def test_list_values_non_existing(fake_key):
     """
     Test the list_values function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(fake_key))
+    expected = (False, f"Cannot find key: HKLM\\{fake_key}")
     assert win_reg.list_values(hive="HKLM", key=fake_key) == expected
 
 
@@ -269,7 +269,7 @@ def test_list_values_access_denied(fake_key):
     """
     Test the list_values function using a registry key when access is denied
     """
-    expected = (False, "Access is denied: HKLM\\{}".format(fake_key))
+    expected = (False, f"Access is denied: HKLM\\{fake_key}")
     mock_error = MagicMock(
         side_effect=win32api.error(5, "RegOpenKeyEx", "Access is denied")
     )
@@ -359,7 +359,7 @@ def test_read_value_non_existing_key(fake_key):
     Test the read_value function using a non existing registry key
     """
     expected = {
-        "comment": "Cannot find key: HKLM\\{}".format(fake_key),
+        "comment": f"Cannot find key: HKLM\\{fake_key}",
         "vdata": None,
         "vtype": None,
         "vname": "fake_name",
@@ -375,7 +375,7 @@ def test_read_value_access_denied(fake_key):
     Test the read_value function using a registry key when access is denied
     """
     expected = {
-        "comment": "Access is denied: HKLM\\{}".format(fake_key),
+        "comment": f"Access is denied: HKLM\\{fake_key}",
         "vdata": None,
         "vtype": None,
         "vname": "fake_name",

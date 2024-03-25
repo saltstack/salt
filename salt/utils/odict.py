@@ -11,6 +11,7 @@
 
         http://stackoverflow.com/questions/6190331/
 """
+
 import copy
 from collections import OrderedDict
 from collections.abc import Callable

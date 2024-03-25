@@ -125,7 +125,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "model": "virtio",
                     "filename": "myvm_system.qcow2",
                     "image": "/path/to/image",
-                    "source_file": "{}{}myvm_system.qcow2".format(root_dir, os.sep),
+                    "source_file": f"{root_dir}{os.sep}myvm_system.qcow2",
                 },
                 {
                     "name": "data",
@@ -134,7 +134,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "format": "raw",
                     "model": "virtio",
                     "filename": "myvm_data.raw",
-                    "source_file": "{}{}myvm_data.raw".format(root_dir, os.sep),
+                    "source_file": f"{root_dir}{os.sep}myvm_data.raw",
                 },
             ],
             disks,
@@ -1831,18 +1831,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ret = virt._diff_disk_lists(old_disks, new_disks)
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["unchanged"]
             ],
             [],
         )
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["new"]
             ],
             ["/path/to/img3.qcow2", "/path/to/img0.qcow2", "/path/to/img4.qcow2", None],
@@ -1853,9 +1857,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["sorted"]
             ],
             ["/path/to/img3.qcow2", "/path/to/img0.qcow2", "/path/to/img4.qcow2", None],
@@ -1863,9 +1869,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["new"][1].find("target").get("bus"), "virtio")
         self.assertEqual(
             [
-                disk.find("source").get("file")
-                if disk.find("source") is not None
-                else None
+                (
+                    disk.find("source").get("file")
+                    if disk.find("source") is not None
+                    else None
+                )
                 for disk in ret["deleted"]
             ],
             [
@@ -2123,7 +2131,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(definition.find("./devices/disk[2]/source"))
                 self.assertEqual(
                     mock_run.call_args[0][0],
-                    'qemu-img create -f qcow2 "{}" 10240M'.format(expected_disk_path),
+                    f'qemu-img create -f qcow2 "{expected_disk_path}" 10240M',
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
 
@@ -3501,9 +3509,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("vm_with_memtune_param", mem=memtune_new_val),
         )
-        self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
-        )
+        self.assertEqual(domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2))
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(
@@ -3569,9 +3575,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("vm_with_memtune_param", mem=max_swap_none),
         )
-        self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
-        )
+        self.assertEqual(domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2))
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(
@@ -4385,7 +4389,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "tag": "first-snap",
                         "vmsize": 1234,
                         "date": datetime.datetime.fromtimestamp(
-                            float("{}.{}".format(1528877587, 380589000))
+                            float(f"{1528877587}.{380589000}")
                         ).isoformat(),
                         "vmclock": "00:00:00",
                     },
@@ -4394,7 +4398,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "tag": "second snap",
                         "vmsize": 4567,
                         "date": datetime.datetime.fromtimestamp(
-                            float("{}.{}".format(1528877592, 933509000))
+                            float(f"{1528877592}.{933509000}")
                         ).isoformat(),
                         "vmclock": "00:00:00",
                     },
@@ -5297,9 +5301,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for i in range(2):
             net_mock = MagicMock()
 
-            net_mock.name.return_value = "net{}".format(i)
+            net_mock.name.return_value = f"net{i}"
             net_mock.UUIDString.return_value = "some-uuid"
-            net_mock.bridgeName.return_value = "br{}".format(i)
+            net_mock.bridgeName.return_value = f"br{i}"
             net_mock.autostart.return_value = True
             net_mock.isActive.return_value = False
             net_mock.isPersistent.return_value = True
@@ -5759,8 +5763,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_mocks = []
         for i in range(2):
             pool_mock = MagicMock()
-            pool_mock.name.return_value = "pool{}".format(i)
-            pool_mock.UUIDString.return_value = "some-uuid-{}".format(i)
+            pool_mock.name.return_value = f"pool{i}"
+            pool_mock.UUIDString.return_value = f"some-uuid-{i}"
             pool_mock.info.return_value = [0, 1234, 5678, 123]
             pool_mock.autostart.return_value = True
             pool_mock.isPersistent.return_value = True
@@ -6290,7 +6294,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for idx, disk in enumerate(vms_disks):
             vm = MagicMock()
             # pylint: disable=no-member
-            vm.name.return_value = "vm{}".format(idx)
+            vm.name.return_value = f"vm{idx}"
             vm.XMLDesc.return_value = """
                     <domain type='kvm' id='1'>
                       <name>vm{}</name>
@@ -6829,7 +6833,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         def create_mock_vm(idx):
             mock_vm = MagicMock()
-            mock_vm.name.return_value = "vm{}".format(idx)
+            mock_vm.name.return_value = f"vm{idx}"
             return mock_vm
 
         mock_vms = [create_mock_vm(idx) for idx in range(3)]

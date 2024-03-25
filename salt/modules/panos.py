@@ -27,7 +27,6 @@ through the XML API or through a brokered connection to Panorama.
 
 """
 
-
 import logging
 import time
 
@@ -229,7 +228,7 @@ def delete_license(key_name=None):
     else:
         query = {
             "type": "op",
-            "cmd": "<delete><license><key>{}</key></license></delete>".format(key_name),
+            "cmd": f"<delete><license><key>{key_name}</key></license></delete>",
         }
 
     return __proxy__["panos.call"](query)
@@ -775,7 +774,7 @@ def get_interface_counters(name="all"):
     """
     query = {
         "type": "op",
-        "cmd": "<show><counter><interface>{}</interface></counter></show>".format(name),
+        "cmd": f"<show><counter><interface>{name}</interface></counter></show>",
     }
 
     return __proxy__["panos.call"](query)
@@ -798,7 +797,7 @@ def get_interfaces(name="all"):
     """
     query = {
         "type": "op",
-        "cmd": "<show><interface>{}</interface></show>".format(name),
+        "cmd": f"<show><interface>{name}</interface></show>",
     }
 
     return __proxy__["panos.call"](query)
@@ -821,7 +820,7 @@ def get_job(jid=None):
     if not jid:
         raise CommandExecutionError("ID option must not be none.")
 
-    query = {"type": "op", "cmd": "<show><jobs><id>{}</id></jobs></show>".format(jid)}
+    query = {"type": "op", "cmd": f"<show><jobs><id>{jid}</id></jobs></show>"}
 
     return __proxy__["panos.call"](query)
 
@@ -1170,7 +1169,7 @@ def get_predefined_application(application=None):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/predefined/application/entry[@name='{}']".format(application),
+        "xpath": f"/config/predefined/application/entry[@name='{application}']",
     }
 
     return __proxy__["panos.call"](query)
@@ -1800,7 +1799,7 @@ def save_device_config(filename=None):
 
     query = {
         "type": "op",
-        "cmd": "<save><config><to>{}</to></config></save>".format(filename),
+        "cmd": f"<save><config><to>{filename}</to></config></save>",
     }
 
     return __proxy__["panos.call"](query)
@@ -1894,7 +1893,7 @@ def set_hostname(hostname=None, deploy=False):
         "xpath": (
             "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system"
         ),
-        "element": "<hostname>{}</hostname>".format(hostname),
+        "element": f"<hostname>{hostname}</hostname>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -1938,7 +1937,7 @@ def set_management_icmp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-icmp>{}</disable-icmp>".format(value),
+        "element": f"<disable-icmp>{value}</disable-icmp>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -1982,7 +1981,7 @@ def set_management_http(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-http>{}</disable-http>".format(value),
+        "element": f"<disable-http>{value}</disable-http>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2026,7 +2025,7 @@ def set_management_https(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-https>{}</disable-https>".format(value),
+        "element": f"<disable-https>{value}</disable-https>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2070,7 +2069,7 @@ def set_management_ocsp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-http-ocsp>{}</disable-http-ocsp>".format(value),
+        "element": f"<disable-http-ocsp>{value}</disable-http-ocsp>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2114,7 +2113,7 @@ def set_management_snmp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-snmp>{}</disable-snmp>".format(value),
+        "element": f"<disable-snmp>{value}</disable-snmp>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2158,7 +2157,7 @@ def set_management_ssh(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-ssh>{}</disable-ssh>".format(value),
+        "element": f"<disable-ssh>{value}</disable-ssh>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2202,7 +2201,7 @@ def set_management_telnet(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-telnet>{}</disable-telnet>".format(value),
+        "element": f"<disable-telnet>{value}</disable-telnet>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2447,7 +2446,7 @@ def set_permitted_ip(address=None, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/permitted-ip",
-        "element": "<entry name='{}'></entry>".format(address),
+        "element": f"<entry name='{address}'></entry>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2485,7 +2484,7 @@ def set_timezone(tz=None, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/timezone",
-        "element": "<timezone>{}</timezone>".format(tz),
+        "element": f"<timezone>{tz}</timezone>",
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2535,10 +2534,10 @@ def test_fib_route(ip=None, vr="vr1"):
     xpath = "<test><routing><fib-lookup>"
 
     if ip:
-        xpath += "<ip>{}</ip>".format(ip)
+        xpath += f"<ip>{ip}</ip>"
 
     if vr:
-        xpath += "<virtual-router>{}</virtual-router>".format(vr)
+        xpath += f"<virtual-router>{vr}</virtual-router>"
 
     xpath += "</fib-lookup></routing></test>"
 
@@ -2594,35 +2593,35 @@ def test_security_policy(
     xpath = "<test><security-policy-match>"
 
     if sourcezone:
-        xpath += "<from>{}</from>".format(sourcezone)
+        xpath += f"<from>{sourcezone}</from>"
 
     if destinationzone:
-        xpath += "<to>{}</to>".format(destinationzone)
+        xpath += f"<to>{destinationzone}</to>"
 
     if source:
-        xpath += "<source>{}</source>".format(source)
+        xpath += f"<source>{source}</source>"
 
     if destination:
-        xpath += "<destination>{}</destination>".format(destination)
+        xpath += f"<destination>{destination}</destination>"
 
     if protocol:
-        xpath += "<protocol>{}</protocol>".format(protocol)
+        xpath += f"<protocol>{protocol}</protocol>"
 
     if port:
-        xpath += "<destination-port>{}</destination-port>".format(port)
+        xpath += f"<destination-port>{port}</destination-port>"
 
     if application:
-        xpath += "<application>{}</application>".format(application)
+        xpath += f"<application>{application}</application>"
 
     if category:
-        xpath += "<category>{}</category>".format(category)
+        xpath += f"<category>{category}</category>"
 
     if allrules:
         xpath += "<show-all>yes</show-all>"
 
     xpath += "</security-policy-match></test>"
 
-    query = {"type": "op", "vsys": "vsys{}".format(vsys), "cmd": xpath}
+    query = {"type": "op", "vsys": f"vsys{vsys}", "cmd": xpath}
 
     return __proxy__["panos.call"](query)
 

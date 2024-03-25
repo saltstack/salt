@@ -3,7 +3,6 @@ Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
 """
 
-
 import logging
 import os
 import posixpath
@@ -289,7 +288,7 @@ def check_or_die(command):
         raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError("'{}' is not in the path".format(command))
+        raise CommandNotFoundError(f"'{command}' is not in the path")
 
 
 def sanitize_win_path(winpath):

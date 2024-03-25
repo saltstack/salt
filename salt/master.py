@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+
 import collections
 import copy
 import ctypes
@@ -159,7 +160,7 @@ class SMaster:
                 if "serial" in secret_map:
                     secret_map["serial"].value = 0
             if event:
-                event.fire_event({"rotate_{}_key".format(secret_key): True}, tag="key")
+                event.fire_event({f"rotate_{secret_key}_key": True}, tag="key")
 
         if opts.get("ping_on_rotate"):
             # Ping all minions to get them to pick up the new key
@@ -321,7 +322,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 log.error("Found dropfile with incorrect permissions, ignoring...")
             os.remove(dfn)
-        except os.error:
+        except OSError:
             pass
 
         if self.opts.get("publish_session"):
@@ -400,7 +401,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         update_intervals = self.fileserver.update_intervals()
         self.buckets = {}
         for backend in self.fileserver.backends():
-            fstr = "{}.update".format(backend)
+            fstr = f"{backend}.update"
             try:
                 update_func = self.fileserver.servers[fstr]
             except KeyError:
@@ -430,7 +431,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                 # nothing to pass to the backend's update func, so we'll just
                 # set the value to None.
                 try:
-                    interval_key = "{}_update_interval".format(backend)
+                    interval_key = f"{backend}_update_interval"
                     interval = self.opts[interval_key]
                 except KeyError:
                     interval = DEFAULT_INTERVAL
@@ -607,7 +608,7 @@ class Master(SMaster):
         try:
             os.chdir("/")
         except OSError as err:
-            errors.append("Cannot change to root directory ({})".format(err))
+            errors.append(f"Cannot change to root directory ({err})")
 
         if self.opts.get("fileserver_verify_config", True):
             # Avoid circular import
@@ -625,7 +626,7 @@ class Master(SMaster):
                 try:
                     fileserver.init()
                 except salt.exceptions.FileserverConfigError as exc:
-                    critical_errors.append("{}".format(exc))
+                    critical_errors.append(f"{exc}")
 
         if not self.opts["fileserver_backend"]:
             errors.append("No fileserver backends are configured")
@@ -772,7 +773,7 @@ class Master(SMaster):
                     cls = _tmp.__getattribute__(  # pylint: disable=unnecessary-dunder-call
                         cls
                     )
-                    name = "ExtProcess({})".format(cls.__qualname__)
+                    name = f"ExtProcess({cls.__qualname__})"
                     self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
@@ -886,7 +887,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     # Cannot delete read-only files on Windows.
                     os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
-            except os.error:
+            except OSError:
                 pass
 
         # Wait for kill should be less then parent's ProcessManager.
@@ -912,7 +913,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             for ind in range(int(self.opts["worker_threads"])):
-                name = "MWorker-{}".format(ind)
+                name = f"MWorker-{ind}"
                 self.process_manager.add_process(
                     MWorker,
                     args=(self.opts, self.master_key, self.key, req_channels),
@@ -1577,7 +1578,7 @@ class AESFuncs(TransportMethods):
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"
@@ -2122,7 +2123,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")
             data = {
-                "fun": "wheel.{}".format(fun),
+                "fun": f"wheel.{fun}",
                 "jid": jid,
                 "tag": tag,
                 "user": username,
@@ -2225,7 +2226,7 @@ class ClearFuncs(TransportMethods):
         else:
             auth_list = auth_check.get("auth_list", [])
 
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+        err_msg = f'Authentication failure of type "{auth_type}" occurred.'
 
         if auth_check.get("error"):
             # Authentication error occurred: do not continue.

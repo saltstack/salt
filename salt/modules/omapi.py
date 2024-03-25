@@ -11,7 +11,6 @@ config or pillar:
 :depends: pypureomapi Python module
 """
 
-
 import logging
 import struct
 
@@ -87,9 +86,9 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None, supersede_host=Fal
     if group:
         msg.obj.append((b"group", salt.utils.stringutils.to_bytes(group)))
     if supersede_host:
-        statements += 'option host-name "{}"; '.format(name)
+        statements += f'option host-name "{name}"; '
     if ddns and name:
-        statements += 'ddns-hostname "{}"; '.format(name)
+        statements += f'ddns-hostname "{name}"; '
     if statements:
         msg.obj.append((b"statements", salt.utils.stringutils.to_bytes(statements)))
     response = o.query_server(msg)

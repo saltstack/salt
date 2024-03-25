@@ -1,6 +1,7 @@
 """
 These commands are used to validate changelog entries
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 

@@ -414,7 +414,7 @@ def deployment_create_or_update(
     parameters_link=None,
     deploy_template=None,
     template_link=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -489,7 +489,7 @@ def deployment_create_or_update(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -511,9 +511,7 @@ def deployment_create_or_update(
         __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -592,7 +590,7 @@ def deployment_validate(
     parameters_link=None,
     deploy_template=None,
     template_link=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -668,7 +666,7 @@ def deployment_validate(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -686,9 +684,7 @@ def deployment_validate(
         __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -981,9 +977,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
                 "resource.policy", "PolicyAssignment", **policy_kwargs
             )
         except TypeError as exc:
-            result = {
-                "error": "The object model could not be built. ({})".format(str(exc))
-            }
+            result = {"error": f"The object model could not be built. ({str(exc)})"}
             return result
 
         try:
@@ -995,9 +989,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
             result = {"error": str(exc)}
         except SerializationError as exc:
-            result = {
-                "error": "The object model could not be parsed. ({})".format(str(exc))
-            }
+            result = {"error": f"The object model could not be parsed. ({str(exc)})"}
     else:
         result = {
             "error": 'The policy definition named "{}" could not be found.'.format(
@@ -1146,7 +1138,7 @@ def policy_definition_create_or_update(
             "resource.policy", "PolicyDefinition", **policy_kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -1158,9 +1150,7 @@ def policy_definition_create_or_update(
         __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 

@@ -45,7 +45,7 @@ def __apf_cmd(cmd):
             msg = out["stdout"]
         else:
             msg = out["stderr"]
-        raise CommandExecutionError("apf failed: {}".format(msg))
+        raise CommandExecutionError(f"apf failed: {msg}")
     return out["stdout"]
 
 
@@ -140,7 +140,7 @@ def allow(ip, port=None):
         salt '*' apf.allow 127.0.0.1
     """
     if port is None:
-        return __apf_cmd("-a {}".format(ip))
+        return __apf_cmd(f"-a {ip}")
 
 
 def deny(ip):
@@ -153,7 +153,7 @@ def deny(ip):
 
         salt '*' apf.deny 1.2.3.4
     """
-    return __apf_cmd("-d {}".format(ip))
+    return __apf_cmd(f"-d {ip}")
 
 
 def remove(ip):
@@ -166,4 +166,4 @@ def remove(ip):
 
         salt '*' apf.remove 1.2.3.4
     """
-    return __apf_cmd("-u {}".format(ip))
+    return __apf_cmd(f"-u {ip}")

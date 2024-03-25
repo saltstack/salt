@@ -5,7 +5,6 @@ See http://code.google.com/p/psutil.
 :depends:   - python-utmp package (optional)
 """
 
-
 import datetime
 import re
 import time
@@ -561,7 +560,7 @@ def boot_time(time_format=None):
         try:
             return b_time.strftime(time_format)
         except TypeError as exc:
-            raise SaltInvocationError("Invalid format string: {}".format(exc))
+            raise SaltInvocationError(f"Invalid format string: {exc}")
     return b_time
 
 

@@ -106,7 +106,7 @@ def _which(cmd):
     """
     _cmd = salt.utils.path.which(cmd)
     if not _cmd:
-        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
     return _cmd
 
 
@@ -429,7 +429,7 @@ def _chattrib(name, key, value, param, persist=False, root=None):
     """
     pre_info = info(name, root=root)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
 
     if value == pre_info[key]:
         return True
@@ -911,7 +911,7 @@ def rename(name, new_name, root=None):
         salt '*' user.rename name new_name
     """
     if info(new_name, root=root):
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
 
     return _chattrib(name, "name", new_name, "-l", root=root)
 

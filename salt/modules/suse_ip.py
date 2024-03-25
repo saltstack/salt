@@ -197,7 +197,7 @@ def _parse_ethtool_opts(opts, iface):
             _raise_error_iface(iface, "advertise", valid)
 
     if "channels" in opts:
-        channels_cmd = "-L {}".format(iface.strip())
+        channels_cmd = f"-L {iface.strip()}"
         channels_params = []
         for option in ("rx", "tx", "other", "combined"):
             if option in opts["channels"]:
@@ -557,9 +557,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type not in ("bridge",):
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
-            result["ethtool"] = " ".join(
-                ["{} {}".format(x, y) for x, y in ethtool.items()]
-            )
+            result["ethtool"] = " ".join([f"{x} {y}" for x, y in ethtool.items()])
 
     if iface_type == "slave":
         result["proto"] = "none"
@@ -571,9 +569,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             raise AttributeError(msg)
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
-            result["bonding"] = " ".join(
-                ["{}={}".format(x, y) for x, y in bonding.items()]
-            )
+            result["bonding"] = " ".join([f"{x}={y}" for x, y in bonding.items()])
             result["devtype"] = "Bond"
             if "slaves" in opts:
                 if isinstance(opts["slaves"], list):
@@ -667,14 +663,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             ) or salt.utils.validate.net.ipv6_addr(opt):
                 result["ipaddrs"].append(opt)
             else:
-                msg = "{} is invalid ipv4 or ipv6 CIDR".format(opt)
+                msg = f"{opt} is invalid ipv4 or ipv6 CIDR"
                 log.error(msg)
                 raise AttributeError(msg)
     if "ipv6addr" in opts:
         if salt.utils.validate.net.ipv6_addr(opts["ipv6addr"]):
             result["ipaddrs"].append(opts["ipv6addr"])
         else:
-            msg = "{} is invalid ipv6 CIDR".format(opt)
+            msg = f"{opt} is invalid ipv6 CIDR"
             log.error(msg)
             raise AttributeError(msg)
     if "ipv6addrs" in opts:
@@ -682,7 +678,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if salt.utils.validate.net.ipv6_addr(opt):
                 result["ipaddrs"].append(opt)
             else:
-                msg = "{} is invalid ipv6 CIDR".format(opt)
+                msg = f"{opt} is invalid ipv6 CIDR"
                 log.error(msg)
                 raise AttributeError(msg)
 
@@ -878,7 +874,7 @@ def _write_file_iface(iface, data, folder, pattern):
     """
     filename = os.path.join(folder, pattern.format(iface))
     if not os.path.exists(folder):
-        msg = "{} cannot be written. {} does not exist".format(filename, folder)
+        msg = f"{filename} cannot be written. {folder} does not exist"
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.fopen(filename, "w") as fp_:
@@ -987,7 +983,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         return _get_non_blank_lines(ifcfg)
 
     _write_file_iface(iface, ifcfg, _SUSE_NETWORK_SCRIPT_DIR, "ifcfg-{}")
-    path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
+    path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, f"ifcfg-{iface}")
 
     return _read_file(path)
 
@@ -1036,7 +1032,7 @@ def build_routes(iface, **settings):
     if iface == "routes":
         path = _SUSE_NETWORK_ROUTES_FILE
     else:
-        path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, "ifroute-{}".format(iface))
+        path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, f"ifroute-{iface}")
 
     _write_file_network(routecfg, path)
 
@@ -1068,7 +1064,7 @@ def down(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if not iface_type or iface_type.lower() != "slave":
-        return __salt__["cmd.run"]("ifdown {}".format(iface))
+        return __salt__["cmd.run"](f"ifdown {iface}")
     return None
 
 
@@ -1089,7 +1085,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     """
-    path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
+    path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, f"ifcfg-{iface}")
     return _read_file(path)
 
 
@@ -1118,7 +1114,7 @@ def up(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if not iface_type or iface_type.lower() != "slave":
-        return __salt__["cmd.run"]("ifup {}".format(iface))
+        return __salt__["cmd.run"](f"ifup {iface}")
     return None
 
 
@@ -1142,7 +1138,7 @@ def get_routes(iface):
     if iface == "routes":
         path = _SUSE_NETWORK_ROUTES_FILE
     else:
-        path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, "ifroute-{}".format(iface))
+        path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, f"ifroute-{iface}")
     return _read_file(path)
 
 

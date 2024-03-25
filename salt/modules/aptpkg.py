@@ -20,6 +20,7 @@ import re
 import shutil
 import tempfile
 import time
+from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
@@ -204,27 +205,28 @@ if not HAS_APT:
             repo_line.append(self.type)
             opts = _get_opts(self.line)
             if self.architectures:
-                archs = ",".join(self.architectures)
-                opts["arch"]["full"] = "arch={}".format(archs)
+                if "arch" not in opts:
+                    opts["arch"] = {}
+                opts["arch"]["full"] = f"arch={','.join(self.architectures)}"
                 opts["arch"]["value"] = self.architectures
             if self.signedby:
-                opts["signedby"]["full"] = "signed-by={}".format(self.signedby)
+                if "signedby" not in opts:
+                    opts["signedby"] = {}
+                opts["signedby"]["full"] = f"signed-by={self.signedby}"
                 opts["signedby"]["value"] = self.signedby
 
-            ordered_opts = [
-                opt_type for opt_type, opt in opts.items() if opt["full"] != ""
-            ]
+            ordered_opts = []
 
             for opt in opts.values():
                 if opt["full"] != "":
-                    ordered_opts[opt["index"]] = opt["full"]
+                    ordered_opts.append(opt["full"])
 
             if ordered_opts:
-                repo_line.append("[{}]".format(" ".join(ordered_opts)))
+                repo_line.append(f"[{' '.join(ordered_opts)}]")
 
             repo_line += [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
-                repo_line.append("#{}".format(self.comment))
+                repo_line.append(f"#{self.comment}")
             return " ".join(repo_line) + "\n"
 
         def _parse_sources(self, line):
@@ -237,10 +239,12 @@ if not HAS_APT:
             if repo_line[1].startswith("["):
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
-                self.architectures.extend(opts["arch"]["value"])
-                self.signedby = opts["signedby"]["value"]
-                for opt in opts:
-                    opt = opts[opt]["full"]
+                if "arch" in opts:
+                    self.architectures.extend(opts["arch"]["value"])
+                if "signedby" in opts:
+                    self.signedby = opts["signedby"]["value"]
+                for opt in opts.values():
+                    opt = opt["full"]
                     if opt:
                         try:
                             repo_line.pop(repo_line.index(opt))
@@ -287,7 +291,7 @@ if not HAS_APT:
                 architectures = "arch={}".format(",".join(architectures))
                 opts_count.append(architectures)
             if signedby:
-                signedby = "signed-by={}".format(signedby)
+                signedby = f"signed-by={signedby}"
                 opts_count.append(signedby)
             if len(opts_count) > 1:
                 opts_line = "[" + " ".join(opts_count) + "]"
@@ -350,7 +354,7 @@ def _reconstruct_ppa_name(owner_name, ppa_name):
     """
     Stringify PPA name from args.
     """
-    return "ppa:{}/{}".format(owner_name, ppa_name)
+    return f"ppa:{owner_name}/{ppa_name}"
 
 
 def _call_apt(args, scope=True, **kwargs):
@@ -363,7 +367,7 @@ def _call_apt(args, scope=True, **kwargs):
         and salt.utils.systemd.has_scope(__context__)
         and __salt__["config.get"]("systemd.scope", True)
     ):
-        cmd.extend(["systemd-run", "--scope", "--description", '"{}"'.format(__name__)])
+        cmd.extend(["systemd-run", "--scope", "--description", f'"{__name__}"'])
     cmd.extend(args)
 
     params = {
@@ -473,7 +477,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ""
     pkgs = list_pkgs(versions_as_list=True)
-    repo = ["-o", "APT::Default-Release={}".format(fromrepo)] if fromrepo else None
+    repo = ["-o", f"APT::Default-Release={fromrepo}"] if fromrepo else None
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -941,7 +945,7 @@ def install(
                         continue
                     else:
                         version_num = target
-                pkgstr = "{}={}".format(pkgname, version_num)
+                pkgstr = f"{pkgname}={version_num}"
             else:
                 pkgstr = pkgpath
 
@@ -1317,7 +1321,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     ]
     for option in dpkg_options:
         cmd.append("-o")
-        cmd.append("DPkg::Options::={}".format(option))
+        cmd.append(f"DPkg::Options::={option}")
 
     if kwargs.get("force_yes", False):
         cmd.append("--force-yes")
@@ -1390,15 +1394,15 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
         state = get_selections(pattern=target, state="hold")
         if not state:
-            ret[target]["comment"] = "Package {} not currently held.".format(target)
+            ret[target]["comment"] = f"Package {target} not currently held."
         elif not salt.utils.data.is_true(state.get("hold", False)):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be held.".format(target)
+                ret[target]["comment"] = f"Package {target} is set to be held."
             else:
                 result = set_selections(selection={"hold": [target]})
                 ret[target].update(changes=result[target], result=True)
-                ret[target]["comment"] = "Package {} is now being held.".format(target)
+                ret[target]["comment"] = f"Package {target} is now being held."
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is already set to be held.".format(
@@ -1455,7 +1459,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         state = get_selections(pattern=target)
         if not state:
-            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+            ret[target]["comment"] = f"Package {target} does not have a state."
         elif salt.utils.data.is_true(state.get("hold", False)):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
@@ -1551,7 +1555,7 @@ def list_pkgs(
         if __grains__.get("cpuarch", "") == "x86_64":
             osarch = __grains__.get("osarch", "")
             if arch != "all" and osarch == "amd64" and osarch != arch:
-                name += ":{}".format(arch)
+                name += f":{arch}"
         if cols:
             if ("install" in linetype or "hold" in linetype) and "installed" in status:
                 __salt__["pkg_resource.add_pkg"](ret["installed"], name, version_num)
@@ -1732,31 +1736,27 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[(.*=.*)\]", line)
-    ret = {
-        "arch": {"full": "", "value": "", "index": 0},
-        "signedby": {"full": "", "value": "", "index": 0},
-    }
 
+    ret = OrderedDict()
     if not get_opts:
         return ret
     opts = get_opts.group(0).strip("[]")
     architectures = []
-    for idx, opt in enumerate(opts.split()):
+    for opt in opts.split():
         if opt.startswith("arch"):
             architectures.extend(opt.split("=", 1)[1].split(","))
+            ret["arch"] = {}
             ret["arch"]["full"] = opt
             ret["arch"]["value"] = architectures
-            ret["arch"]["index"] = idx
         elif opt.startswith("signed-by"):
+            ret["signedby"] = {}
             ret["signedby"]["full"] = opt
             ret["signedby"]["value"] = opt.split("=", 1)[1]
-            ret["signedby"]["index"] = idx
         else:
             other_opt = opt.split("=", 1)[0]
             ret[other_opt] = {}
             ret[other_opt]["full"] = opt
             ret[other_opt]["value"] = opt.split("=", 1)[1]
-            ret[other_opt]["index"] = idx
     return ret
 
 
@@ -1769,7 +1769,11 @@ def _split_repo_str(repo):
     if not HAS_APT:
         signedby = entry.signedby
     else:
-        signedby = _get_opts(line=repo)["signedby"].get("value", "")
+        opts = _get_opts(line=repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
         if signedby:
             # python3-apt does not support signedby. So if signedby
             # is in the repo we have to check our code to see if the
@@ -1792,7 +1796,7 @@ def _consolidate_repo_sources(sources):
     Consolidate APT sources.
     """
     if not isinstance(sources, SourcesList):
-        raise TypeError("'{}' not a '{}'".format(type(sources), SourcesList))
+        raise TypeError(f"'{type(sources)}' not a '{SourcesList}'")
 
     consolidated = {}
     delete_files = set()
@@ -1937,7 +1941,12 @@ def list_repos(**kwargs):
         if not HAS_APT:
             signedby = source.signedby
         else:
-            signedby = _get_opts(line=source.line)["signedby"].get("value", "")
+            opts = _get_opts(line=source.line)
+            if "signedby" in opts:
+                signedby = opts["signedby"].get("value", "")
+            else:
+                signedby = ""
+
         repo = {}
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
@@ -1973,7 +1982,7 @@ def get_repo(repo, **kwargs):
         dist = __grains__["oscodename"]
         owner_name, ppa_name = repo[4:].split("/")
         if ppa_auth:
-            auth_info = "{}@".format(ppa_auth)
+            auth_info = f"{ppa_auth}@"
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
@@ -1986,7 +1995,7 @@ def get_repo(repo, **kwargs):
                         repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
                 except NameError as name_error:
                     raise CommandExecutionError(
-                        "Could not find ppa {}: {}".format(repo, name_error)
+                        f"Could not find ppa {repo}: {name_error}"
                     )
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
@@ -2005,7 +2014,7 @@ def get_repo(repo, **kwargs):
                         )
         except SyntaxError:
             raise CommandExecutionError(
-                "Error: repo '{}' is not a well formatted definition".format(repo)
+                f"Error: repo '{repo}' is not a well formatted definition"
             )
 
         for source in repos.values():
@@ -2068,7 +2077,7 @@ def del_repo(repo, **kwargs):
             repo_entry = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
-                "Error: repo '{}' not a well formatted definition".format(repo)
+                f"Error: repo '{repo}' not a well formatted definition"
             )
 
         for source in repos:
@@ -2130,9 +2139,7 @@ def del_repo(repo, **kwargs):
             refresh_db()
             return ret
 
-    raise CommandExecutionError(
-        "Repo {} doesn't exist in the sources.list(s)".format(repo)
-    )
+    raise CommandExecutionError(f"Repo {repo} doesn't exist in the sources.list(s)")
 
 
 def _convert_if_int(value):
@@ -2425,11 +2432,11 @@ def add_repo_key(
         else:
             cmd.extend(["adv", "--batch", "--keyserver", keyserver, "--recv", keyid])
     elif keyid:
-        error_msg = "No keyserver specified for keyid: {}".format(keyid)
+        error_msg = f"No keyserver specified for keyid: {keyid}"
         raise SaltInvocationError(error_msg)
     else:
         raise TypeError(
-            "{}() takes at least 1 argument (0 given)".format(add_repo_key.__name__)
+            f"{add_repo_key.__name__}() takes at least 1 argument (0 given)"
         )
 
     cmd_ret = _call_apt(cmd, **kwargs)
@@ -2729,7 +2736,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                     repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
             raise CommandExecutionError(
-                'cannot parse "ppa:" style repo definitions: {}'.format(repo)
+                f'cannot parse "ppa:" style repo definitions: {repo}'
             )
 
     sources = SourcesList()
@@ -2764,9 +2771,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 f"Name {repo} is not valid. This must be the complete repo entry as seen in the sources file"
             )
     except SyntaxError:
-        raise SyntaxError(
-            "Error: repo '{}' not a well formatted definition".format(repo)
-        )
+        raise SyntaxError(f"Error: repo '{repo}' not a well formatted definition")
 
     full_comp_list = {comp.strip() for comp in repo_entry["comps"]}
     no_proxy = __salt__["config.option"]("no_proxy")
@@ -2810,7 +2815,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                             "adv",
                             "--batch",
                             "--keyserver-options",
-                            "http-proxy={}".format(http_proxy_url),
+                            f"http-proxy={http_proxy_url}",
                             "--keyserver",
                             keyserver,
                             "--logger-fd",
@@ -2856,7 +2861,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         key_url = kwargs["key_url"]
         fn_ = pathlib.Path(__salt__["cp.cache_file"](key_url, saltenv))
         if not fn_:
-            raise CommandExecutionError("Error: file not found: {}".format(key_url))
+            raise CommandExecutionError(f"Error: file not found: {key_url}")
 
         if kwargs["signedby"] and fn_.name != kwargs["signedby"].name:
             # override the signedby defined in the name with the
@@ -2876,9 +2881,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             cmd = ["apt-key", "add", str(fn_)]
             out = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
             if not out.upper().startswith("OK"):
-                raise CommandExecutionError(
-                    "Error: failed to add key from {}".format(key_url)
-                )
+                raise CommandExecutionError(f"Error: failed to add key from {key_url}")
 
     elif "key_text" in kwargs:
         key_text = kwargs["key_text"]
@@ -2887,9 +2890,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             cmd, stdin=key_text, python_shell=False, **kwargs
         )
         if not out.upper().startswith("OK"):
-            raise CommandExecutionError(
-                "Error: failed to add key:\n{}".format(key_text)
-            )
+            raise CommandExecutionError(f"Error: failed to add key:\n{key_text}")
 
     if "comps" in kwargs:
         kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
@@ -2965,7 +2966,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if not HAS_APT:
         signedby = mod_source.signedby
     else:
-        signedby = _get_opts(repo)["signedby"].get("value", "")
+        opts = _get_opts(repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
 
     return {
         repo: {
@@ -3066,7 +3071,11 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         signedby = source_entry.signedby
         kwargs["signedby"] = signedby
     else:
-        signedby = _get_opts(repo)["signedby"].get("value", "")
+        opts = _get_opts(repo)
+        if "signedby" in opts:
+            signedby = opts["signedby"].get("value", "")
+        else:
+            signedby = ""
 
     _source_entry = source_list.add(
         type=source_entry.type,
@@ -3236,7 +3245,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv="base"):
             salt.utils.yaml.parser.ParserError,
             salt.utils.yaml.scanner.ScannerError,
         ) as exc:
-            raise SaltInvocationError("Improperly-formatted selection: {}".format(exc))
+            raise SaltInvocationError(f"Improperly-formatted selection: {exc}")
 
     if path:
         path = __salt__["cp.cache_file"](path, saltenv)
@@ -3272,7 +3281,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv="base"):
                 if _state == sel_revmap.get(_pkg):
                     continue
                 cmd = ["dpkg", "--set-selections"]
-                cmd_in = "{} {}".format(_pkg, _state)
+                cmd_in = f"{_pkg} {_state}"
                 if not __opts__["test"]:
                     result = _call_apt(cmd, scope=False, stdin=cmd_in)
                     if result["retcode"] != 0:
@@ -3468,9 +3477,9 @@ def _get_http_proxy_url():
     # Set http_proxy_url for use in various internet facing actions...eg apt-key adv
     if host and port:
         if username and password:
-            http_proxy_url = "http://{}:{}@{}:{}".format(username, password, host, port)
+            http_proxy_url = f"http://{username}:{password}@{host}:{port}"
         else:
-            http_proxy_url = "http://{}:{}".format(host, port)
+            http_proxy_url = f"http://{host}:{port}"
 
     return http_proxy_url
 

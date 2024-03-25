@@ -1,6 +1,7 @@
 """
 Integration tests for salt-ssh logging
 """
+
 import logging
 import time
 

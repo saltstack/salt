@@ -18,6 +18,7 @@
 
     .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 """
+
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 

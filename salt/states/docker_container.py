@@ -163,7 +163,7 @@ def _parse_networks(networks):
             ]
         except CommandExecutionError as exc:
             raise CommandExecutionError(
-                "Failed to get list of existing networks: {}.".format(exc)
+                f"Failed to get list of existing networks: {exc}."
             )
         else:
             missing_networks = [x for x in sorted(networks) if x not in all_networks]
@@ -192,7 +192,7 @@ def _resolve_image(ret, image, client_timeout):
                     client_timeout=client_timeout,
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                raise CommandExecutionError("Failed to pull {}: {}".format(image, exc))
+                raise CommandExecutionError(f"Failed to pull {image}: {exc}")
             else:
                 ret["changes"]["image"] = pull_result
                 # Try resolving again now that we've pulled
@@ -218,7 +218,7 @@ def running(
     shutdown_timeout=None,
     client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     networks=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that a container with a specific configuration is present and
@@ -1740,7 +1740,7 @@ def running(
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
             client_timeout=client_timeout,
-            **kwargs
+            **kwargs,
         )
         temp_container_name = temp_container["Name"]
     except KeyError as exc:
@@ -1779,9 +1779,9 @@ def running(
             result = __salt__["docker.rename"](new, orig)
         except CommandExecutionError as exc:
             result = False
-            comments.append("Failed to rename temp container: {}".format(exc))
+            comments.append(f"Failed to rename temp container: {exc}")
         if result:
-            comments.append("Replaced container '{}'".format(orig))
+            comments.append(f"Replaced container '{orig}'")
         else:
             comments.append("Failed to replace container '{0}'")
         return result
@@ -1843,10 +1843,17 @@ def running(
         )
 
         if not skip_comparison:
+            docker_version_info = __salt__["docker.version"]()["VersionInfo"]
+            if docker_version_info < (25, 0):
+                compare_containers_ignore = "Hostname"
+            else:
+                # With docker >= 25.0 we get a new value to compare,
+                # MacAddress, which we'll ignore for now.
+                compare_containers_ignore = "Hostname,MacAddress"
             container_changes = __salt__["docker.compare_containers"](
                 name,
                 temp_container_name,
-                ignore="Hostname",
+                ignore=compare_containers_ignore,
             )
             if container_changes:
                 if _check_diff(container_changes):
@@ -1877,9 +1884,9 @@ def running(
                     if not _replace(name, temp_container_name):
                         ret["result"] = False
                         return _format_comments(ret, comments)
-                    ret["changes"].setdefault("container_id", {})[
-                        "added"
-                    ] = temp_container["Id"]
+                    ret["changes"].setdefault("container_id", {})["added"] = (
+                        temp_container["Id"]
+                    )
             else:
                 # No changes between existing container and temp container.
                 # First check if a requisite is asking to send a signal to the
@@ -1887,22 +1894,18 @@ def running(
                 if send_signal:
                     if __opts__["test"]:
                         comments.append(
-                            "Signal {} would be sent to container".format(watch_action)
+                            f"Signal {watch_action} would be sent to container"
                         )
                     else:
                         try:
                             __salt__["docker.signal"](name, signal=watch_action)
                         except CommandExecutionError as exc:
                             ret["result"] = False
-                            comments.append(
-                                "Failed to signal container: {}".format(exc)
-                            )
+                            comments.append(f"Failed to signal container: {exc}")
                             return _format_comments(ret, comments)
                         else:
                             ret["changes"]["signal"] = watch_action
-                            comments.append(
-                                "Sent signal {} to container".format(watch_action)
-                            )
+                            comments.append(f"Sent signal {watch_action} to container")
                 elif container_changes:
                     if not comments:
                         log.warning(
@@ -1920,7 +1923,7 @@ def running(
                     # existing container and the temp container were detected,
                     # and no signal was sent to the container.
                     comments.append(
-                        "Container '{}' is already configured as specified".format(name)
+                        f"Container '{name}' is already configured as specified"
                     )
 
         if net_changes:
@@ -1981,11 +1984,9 @@ def running(
                             "configuration".format(net_name)
                         )
                     elif disconnected:
-                        comments.append(
-                            "Disconnected from network '{}'".format(net_name)
-                        )
+                        comments.append(f"Disconnected from network '{net_name}'")
                     elif connected:
-                        comments.append("Connected to network '{}'".format(net_name))
+                        comments.append(f"Connected to network '{net_name}'")
 
                 if network_failure:
                     ret["result"] = False
@@ -1996,7 +1997,7 @@ def running(
 
     if skip_comparison:
         if not exists:
-            comments.append("Created container '{}'".format(name))
+            comments.append(f"Created container '{name}'")
         else:
             if not _replace(name, temp_container):
                 ret["result"] = False
@@ -2023,9 +2024,7 @@ def running(
                 post_state = __salt__["docker.start"](name)["state"]["new"]
             except Exception as exc:  # pylint: disable=broad-except
                 ret["result"] = False
-                comments.append(
-                    "Failed to start container '{}': '{}'".format(name, exc)
-                )
+                comments.append(f"Failed to start container '{name}': '{exc}'")
                 return _format_comments(ret, comments)
     else:
         post_state = __salt__["docker.state"](name)
@@ -2070,9 +2069,7 @@ def running(
     if pre_state != post_state:
         ret["changes"]["state"] = {"old": pre_state, "new": post_state}
         if pre_state is not None:
-            comments.append(
-                "State changed from '{}' to '{}'".format(pre_state, post_state)
-            )
+            comments.append(f"State changed from '{pre_state}' to '{post_state}'")
 
     if exists and current_image_id != image_id:
         comments.append("Container has a new image")
@@ -2096,7 +2093,7 @@ def run(
     ignore_collisions=False,
     validate_ip_addrs=True,
     client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2018.3.0
@@ -2186,7 +2183,7 @@ def run(
     for unsupported in ("watch_action", "start", "shutdown_timeout", "follow"):
         if unsupported in kwargs:
             ret["result"] = False
-            ret["comment"] = "The '{}' argument is not supported".format(unsupported)
+            ret["comment"] = f"The '{unsupported}' argument is not supported"
             return ret
 
     if image is None:
@@ -2235,9 +2232,9 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    ret["comment"] = (
+                        "'rm' is an alias for 'auto_remove', they cannot both be used"
+                    )
                     return ret
             else:
                 remove = bool(val)
@@ -2259,12 +2256,12 @@ def run(
             bg=bg,
             replace=replace,
             force=force,
-            **kwargs
+            **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error running container")
         ret["result"] = False
-        ret["comment"] = "Encountered error running container: {}".format(exc)
+        ret["comment"] = f"Encountered error running container: {exc}"
     else:
         if bg:
             ret["comment"] = "Container was run in the background"
@@ -2275,9 +2272,9 @@ def run(
                 pass
             else:
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret[
-                    "comment"
-                ] = "Container ran and exited with a return code of {}".format(retcode)
+                ret["comment"] = (
+                    f"Container ran and exited with a return code of {retcode}"
+                )
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")
@@ -2286,7 +2283,7 @@ def run(
                 __salt__["docker.rm"](ret["changes"]["Id"])
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
-                    "Failed to auto_remove container: {}".format(exc)
+                    f"Failed to auto_remove container: {exc}"
                 )
 
     return ret
@@ -2298,7 +2295,7 @@ def stopped(
     shutdown_timeout=None,
     unpause=False,
     error_on_absent=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that a container (or containers) is stopped
@@ -2402,7 +2399,7 @@ def stopped(
     if not to_stop:
         ret["result"] = True
         if len(targets) == 1:
-            ret["comment"] = "Container '{}' is ".format(targets[0])
+            ret["comment"] = f"Container '{targets[0]}' is "
         else:
             ret["comment"] = "All specified containers are "
         if "absent" in containers:
@@ -2429,7 +2426,7 @@ def stopped(
             if "comment" in changes:
                 stop_errors.append(changes["comment"])
             else:
-                stop_errors.append("Failed to stop container '{}'".format(target))
+                stop_errors.append(f"Failed to stop container '{target}'")
 
     if stop_errors:
         ret["comment"] = "; ".join(stop_errors)
@@ -2470,7 +2467,7 @@ def absent(name, force=False):
 
     if name not in __salt__["docker.list_containers"](all=True):
         ret["result"] = True
-        ret["comment"] = "Container '{}' does not exist".format(name)
+        ret["comment"] = f"Container '{name}' does not exist"
         return ret
 
     pre_state = __salt__["docker.state"](name)
@@ -2480,23 +2477,23 @@ def absent(name, force=False):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Container '{}' will be removed".format(name)
+        ret["comment"] = f"Container '{name}' will be removed"
         return ret
 
     try:
         ret["changes"]["removed"] = __salt__["docker.rm"](name, force=force)
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = "Failed to remove container '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to remove container '{name}': {exc}"
         return ret
 
     if name in __salt__["docker.list_containers"](all=True):
-        ret["comment"] = "Failed to remove container '{}'".format(name)
+        ret["comment"] = f"Failed to remove container '{name}'"
     else:
         if force and pre_state != "stopped":
             method = "Forcibly"
         else:
             method = "Successfully"
-        ret["comment"] = "{} removed container '{}'".format(method, name)
+        ret["comment"] = f"{method} removed container '{name}'"
         ret["result"] = True
     return ret
 
@@ -2530,5 +2527,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for {}".format(sfun),
+        "comment": f"watch requisite is not implemented for {sfun}",
     }

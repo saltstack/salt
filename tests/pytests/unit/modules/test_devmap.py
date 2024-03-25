@@ -2,7 +2,6 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-
 import os.path
 
 import pytest

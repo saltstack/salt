@@ -59,7 +59,7 @@ def test_comment():
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt, "name": name})
             assert filestate.comment(name, regex) == ret
 
@@ -80,7 +80,7 @@ def test_comment():
                 ret.update({"comment": comt, "result": True})
                 assert filestate.comment(name, regex, ignore_missing=True) == ret
 
-                comt = "{}: Pattern not found".format(regex)
+                comt = f"{regex}: Pattern not found"
                 ret.update({"comment": comt, "result": False})
                 assert filestate.comment(name, regex) == ret
 
@@ -95,7 +95,7 @@ def test_comment():
                 },
             ):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "File {} is set to be updated".format(name)
+                    comt = f"File {name} is set to be updated"
                     ret.update(
                         {"comment": comt, "result": None, "changes": {name: "updated"}}
                     )
@@ -134,7 +134,7 @@ def test_uncomment():
         mock_f = MagicMock(return_value=False)
         mock = MagicMock(side_effect=[False, True, False, False, True, True, True])
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt, "name": name})
             assert filestate.uncomment(name, regex) == ret
 
@@ -151,12 +151,12 @@ def test_uncomment():
                 ret.update({"comment": comt, "result": True})
                 assert filestate.uncomment(name, regex) == ret
 
-                comt = "{}: Pattern not found".format(regex)
+                comt = f"{regex}: Pattern not found"
                 ret.update({"comment": comt, "result": False})
                 assert filestate.uncomment(name, regex) == ret
 
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "File {} is set to be updated".format(name)
+                    comt = f"File {name} is set to be updated"
                     ret.update(
                         {"comment": comt, "result": None, "changes": {name: "updated"}}
                     )

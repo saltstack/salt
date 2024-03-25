@@ -285,7 +285,7 @@ class SSDPDiscoveryServer(SSDPBase):
                             family=family,
                             type=socket.SOCK_DGRAM,
                             proto=proto,
-                            flags=flags
+                            flags=flags,
                         )
                     )
                     if not infos:
@@ -306,7 +306,7 @@ class SSDPDiscoveryServer(SSDPBase):
             if not addr_pairs_info:
                 raise ValueError("can not get address information")
         exceptions = []
-        for ((family, proto), (local_address, remote_address)) in addr_pairs_info:
+        for (family, proto), (local_address, remote_address) in addr_pairs_info:
             sock = r_addr = None
             try:
                 sock = socket.socket(family=family, type=socket.SOCK_DGRAM, proto=proto)
@@ -407,9 +407,7 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         """
-        query = salt.utils.stringutils.to_bytes(
-            "{}{}".format(self.signature, time.time())
-        )
+        query = salt.utils.stringutils.to_bytes(f"{self.signature}{time.time()}")
         self._socket.sendto(query, ("<broadcast>", self.port))
 
         return query

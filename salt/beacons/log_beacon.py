@@ -4,6 +4,7 @@ Beacon to fire events at specific log messages.
 .. versionadded:: 2017.7.0
 
 """
+
 import logging
 
 import salt.utils.beacons

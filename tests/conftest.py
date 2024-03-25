@@ -10,7 +10,7 @@ import re
 import shutil
 import stat
 import sys
-from functools import lru_cache, partial, wraps
+from functools import lru_cache
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
@@ -448,8 +448,6 @@ def pytest_collection_modifyitems(config, items):
     groups_collection_modifyitems(config, items)
     from_filenames_collection_modifyitems(config, items)
 
-    log.warning("Mofifying collected tests to keep track of fixture usage")
-
     timeout_marker_tests_paths = (
         str(PYTESTS_DIR / "pkg"),
         str(PYTESTS_DIR / "scenarios"),
@@ -478,101 +476,6 @@ def pytest_collection_modifyitems(config, items):
                 # Default to counting only the test execution for the timeouts, ie,
                 # withough including the fixtures setup time towards the timeout.
                 item.add_marker(pytest.mark.timeout(90, func_only=True))
-        for fixture in item.fixturenames:
-            if fixture not in item._fixtureinfo.name2fixturedefs:
-                continue
-            for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope != "package":
-                    continue
-                try:
-                    fixturedef.finish.__wrapped__
-                except AttributeError:
-                    original_func = fixturedef.finish
-
-                    def wrapper(func, fixturedef):
-                        @wraps(func)
-                        def wrapped(self, request, nextitem=False):
-                            try:
-                                return self._finished
-                            except AttributeError:
-                                if nextitem:
-                                    fpath = pathlib.Path(self.baseid).resolve()
-                                    tpath = pathlib.Path(
-                                        nextitem.fspath.strpath
-                                    ).resolve()
-                                    try:
-                                        tpath.relative_to(fpath)
-                                        # The test module is within the same package that the fixture is
-                                        if (
-                                            not request.session.shouldfail
-                                            and not request.session.shouldstop
-                                        ):
-                                            log.debug(
-                                                "The next test item is still under the"
-                                                " fixture package path. Not"
-                                                " terminating %s",
-                                                self,
-                                            )
-                                            return
-                                    except ValueError:
-                                        pass
-                                log.debug("Finish called on %s", self)
-                                try:
-                                    return func(request)
-                                except BaseException as exc:  # pylint: disable=broad-except
-                                    pytest.fail(
-                                        "Failed to run finish() on {}: {}".format(
-                                            fixturedef, exc
-                                        ),
-                                        pytrace=True,
-                                    )
-                                finally:
-                                    self._finished = True
-
-                        return partial(wrapped, fixturedef)
-
-                    fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
-                    try:
-                        fixturedef.finish.__wrapped__
-                    except AttributeError:
-                        fixturedef.finish.__wrapped__ = original_func
-
-
-@pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_runtest_protocol(item, nextitem):
-    """
-    implements the runtest_setup/call/teardown protocol for
-    the given test item, including capturing exceptions and calling
-    reporting hooks.
-
-    :arg item: test item for which the runtest protocol is performed.
-
-    :arg nextitem: the scheduled-to-be-next test item (or None if this
-                   is the end my friend).  This argument is passed on to
-                   :py:func:`pytest_runtest_teardown`.
-
-    :return boolean: True if no further hook implementations should be invoked.
-
-
-    Stops at first non-None result, see :ref:`firstresult`
-    """
-    request = item._request
-    used_fixture_defs = []
-    for fixture in item.fixturenames:
-        if fixture not in item._fixtureinfo.name2fixturedefs:
-            continue
-        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope != "package":
-                continue
-            used_fixture_defs.append(fixturedef)
-    try:
-        # Run the test
-        yield
-    finally:
-        for fixturedef in used_fixture_defs:
-            fixturedef.finish(request, nextitem=nextitem)
-    del request
-    del used_fixture_defs
 
 
 def pytest_markeval_namespace(config):
@@ -819,11 +722,14 @@ def pytest_runtest_setup(item):
         entropy_generator.generate_entropy()
 
     if salt.utils.platform.is_windows():
-        unit_tests_paths = (
+        auto_whitelisted_paths = (
             str(TESTS_DIR / "unit"),
             str(PYTESTS_DIR / "unit"),
+            str(PYTESTS_DIR / "pkg"),
         )
-        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(
+            auto_whitelisted_paths
+        ):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -1551,7 +1457,7 @@ def from_filenames_collection_modifyitems(config, items):
             path.replace("\\", os.sep).replace("/", os.sep)
         )
         if not properly_slashed_path.exists():
-            errors.append("{}: Does not exist".format(properly_slashed_path))
+            errors.append(f"{properly_slashed_path}: Does not exist")
             continue
         if (
             properly_slashed_path.name == "testrun-changed-files.txt"
@@ -1574,12 +1480,12 @@ def from_filenames_collection_modifyitems(config, items):
                     )
                     continue
                 changed_files_selections.append(
-                    "{}: Source {}".format(line_path, properly_slashed_path)
+                    f"{line_path}: Source {properly_slashed_path}"
                 )
                 from_filenames_paths.add(line_path)
             continue
         changed_files_selections.append(
-            "{}: Source --from-filenames".format(properly_slashed_path)
+            f"{properly_slashed_path}: Source --from-filenames"
         )
         from_filenames_paths.add(properly_slashed_path)
 
@@ -1609,7 +1515,7 @@ def from_filenames_collection_modifyitems(config, items):
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
-            test_module_selections.append("{}: Source --from-filenames".format(path))
+            test_module_selections.append(f"{path}: Source --from-filenames")
             test_module_paths.add(path)
             continue
         if path.name == "setup.py" or path.as_posix().startswith("salt/"):
@@ -1622,18 +1528,18 @@ def from_filenames_collection_modifyitems(config, items):
                 # salt/version.py ->
                 #    tests/unit/test_version.py
                 #    tests/pytests/unit/test_version.py
-                "**/test_{}".format(path.name),
+                f"**/test_{path.name}",
                 # salt/modules/grains.py ->
                 #    tests/pytests/integration/modules/grains/tests_*.py
                 # salt/modules/saltutil.py ->
                 #    tests/pytests/integration/modules/saltutil/test_*.py
-                "**/{}/test_*.py".format(path.stem),
+                f"**/{path.stem}/test_*.py",
                 # salt/modules/config.py ->
                 #    tests/unit/modules/test_config.py
                 #    tests/integration/modules/test_config.py
                 #    tests/pytests/unit/modules/test_config.py
                 #    tests/pytests/integration/modules/test_config.py
-                "**/{}/test_{}".format(path.parent.name, path.name),
+                f"**/{path.parent.name}/test_{path.name}",
             )
             for pattern in glob_patterns:
                 for match in TESTS_DIR.rglob(pattern):
@@ -1692,20 +1598,20 @@ def from_filenames_collection_modifyitems(config, items):
                         test_module_paths.add(match_path)
             continue
         else:
-            errors.append("{}: Don't know what to do with this path".format(path))
+            errors.append(f"{path}: Don't know what to do with this path")
 
     if errors:
         terminal_reporter.write("Errors:\n", bold=True)
         for error in errors:
-            terminal_reporter.write(" * {}\n".format(error))
+            terminal_reporter.write(f" * {error}\n")
     if changed_files_selections:
         terminal_reporter.write("Changed files collected:\n", bold=True)
         for selection in changed_files_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     if test_module_selections:
         terminal_reporter.write("Selected test modules:\n", bold=True)
         for selection in test_module_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     terminal_reporter.section(
         "From Filenames(--from-filenames) Test Selection", sep="<"
     )

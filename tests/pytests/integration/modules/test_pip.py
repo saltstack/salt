@@ -58,7 +58,7 @@ def _pip_successful_install(
     )
 
     success_for = (
-        re.findall(r"({})(?:-(?:[\d\.-]))?".format(expect_str), success.groups()[0])
+        re.findall(rf"({expect_str})(?:-(?:[\d\.-]))?", success.groups()[0])
         if success
         else []
     )
@@ -540,7 +540,7 @@ def test_pip_install_multiple_editables(venv_dir, salt_cli, salt_minion):
             assert ret.returncode == 0
             for package in ("iStr", "SaltTesting"):
                 match = re.search(
-                    r"(?:.*)(Successfully installed)(?:.*)({})(?:.*)".format(package),
+                    rf"(?:.*)(Successfully installed)(?:.*)({package})(?:.*)",
                     ret.stdout,
                 )
                 assert match is not None
@@ -580,7 +580,7 @@ def test_pip_install_multiple_editables_and_pkgs(venv_dir, salt_cli, salt_minion
             assert ret.returncode == 0
             for package in ("iStr", "SaltTesting", "pep8"):
                 match = re.search(
-                    r"(?:.*)(Successfully installed)(?:.*)({})(?:.*)".format(package),
+                    rf"(?:.*)(Successfully installed)(?:.*)({package})(?:.*)",
                     ret.stdout,
                 )
                 assert match is not None

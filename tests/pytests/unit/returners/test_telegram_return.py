@@ -3,6 +3,7 @@
 
     :codeauthor: :email:`Roald Nefs (info@roaldnefs.com)`
 """
+
 import pytest
 
 import salt.returners.telegram_return as telegram

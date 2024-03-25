@@ -43,6 +43,7 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
 Module Documentation
 ====================
 """
+
 import logging
 import re
 import urllib.parse
@@ -94,7 +95,7 @@ def ext_pillar(
                 return {}
 
             grain_value = urllib.parse.quote(str(grain_value))
-            url = re.sub("<{}>".format(grain_name), grain_value, url)
+            url = re.sub(f"<{grain_name}>", grain_value, url)
 
     log.debug("Getting url: %s", url)
     data = __salt__["http.query"](

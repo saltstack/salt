@@ -48,7 +48,7 @@ def logging_master(salt_factories):
 def matches(logging_master):
     return [
         # Each of these is a separate process started by the master
-        "*|PID:{}|*".format(logging_master.process_pid),
+        f"*|PID:{logging_master.process_pid}|*",
         "*|MWorker-*|*",
         "*|Maintenance|*",
         "*|ReqServer|*",

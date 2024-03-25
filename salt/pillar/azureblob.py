@@ -258,7 +258,7 @@ def _get_containers_cache_filename(container):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, "{}-files.cache".format(container))
+    return os.path.join(cache_dir, f"{container}-files.cache")
 
 
 def _refresh_containers_cache_file(

@@ -53,15 +53,15 @@ def present(
             protocol=protocol, service_address=service_address, scheduler=scheduler
         )
         if service_rule_check is True:
-            ret["comment"] = "LVS Service {} is present".format(name)
+            ret["comment"] = f"LVS Service {name} is present"
             return ret
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "LVS Service {} is present but some options should update".format(
-                    name
+                ret["comment"] = (
+                    "LVS Service {} is present but some options should update".format(
+                        name
+                    )
                 )
                 return ret
             else:
@@ -71,18 +71,18 @@ def present(
                     scheduler=scheduler,
                 )
                 if service_edit is True:
-                    ret["comment"] = "LVS Service {} has been updated".format(name)
+                    ret["comment"] = f"LVS Service {name} has been updated"
                     ret["changes"][name] = "Update"
                     return ret
                 else:
                     ret["result"] = False
-                    ret["comment"] = "LVS Service {} update failed".format(name)
+                    ret["comment"] = f"LVS Service {name} update failed"
                     return ret
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "LVS Service {} is not present and needs to be created".format(name)
+            ret["comment"] = (
+                f"LVS Service {name} is not present and needs to be created"
+            )
             ret["result"] = None
             return ret
         else:
@@ -90,7 +90,7 @@ def present(
                 protocol=protocol, service_address=service_address, scheduler=scheduler
             )
             if service_add is True:
-                ret["comment"] = "LVS Service {} has been created".format(name)
+                ret["comment"] = f"LVS Service {name} has been created"
                 ret["changes"][name] = "Present"
                 return ret
             else:
@@ -131,7 +131,7 @@ def absent(name, protocol=None, service_address=None):
             protocol=protocol, service_address=service_address
         )
         if service_delete is True:
-            ret["comment"] = "LVS Service {} has been removed".format(name)
+            ret["comment"] = f"LVS Service {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
@@ -141,8 +141,6 @@ def absent(name, protocol=None, service_address=None):
             ret["result"] = False
             return ret
     else:
-        ret[
-            "comment"
-        ] = "LVS Service {} is not present, so it cannot be removed".format(name)
+        ret["comment"] = f"LVS Service {name} is not present, so it cannot be removed"
 
     return ret

@@ -64,8 +64,8 @@ def add(name, gid=None, **kwargs):
 
     cmd = "pw groupadd "
     if gid:
-        cmd += "-g {} ".format(gid)
-    cmd = "{} -n {}".format(cmd, name)
+        cmd += f"-g {gid} "
+    cmd = f"{cmd} -n {name}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     return not ret["retcode"]
@@ -81,7 +81,7 @@ def delete(name):
 
         salt '*' group.delete foo
     """
-    ret = __salt__["cmd.run_all"]("pw groupdel {}".format(name), python_shell=False)
+    ret = __salt__["cmd.run_all"](f"pw groupdel {name}", python_shell=False)
 
     return not ret["retcode"]
 
@@ -142,7 +142,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     if gid == pre_gid:
         return True
-    cmd = "pw groupmod {} -g {}".format(name, gid)
+    cmd = f"pw groupmod {name} -g {gid}"
     __salt__["cmd.run"](cmd, python_shell=False)
     post_gid = __salt__["file.group_to_gid"](name)
     if post_gid != pre_gid:
@@ -165,7 +165,7 @@ def adduser(name, username):
     """
     # Note: pw exits with code 65 if group is unknown
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {} -m {}".format(name, username), python_shell=False
+        f"pw groupmod {name} -m {username}", python_shell=False
     )
 
     return not retcode
@@ -191,7 +191,7 @@ def deluser(name, username):
 
     # Note: pw exits with code 65 if group is unknown
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {} -d {}".format(name, username), python_shell=False
+        f"pw groupmod {name} -d {username}", python_shell=False
     )
 
     return not retcode
@@ -214,7 +214,7 @@ def members(name, members_list):
     """
 
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {} -M {}".format(name, members_list), python_shell=False
+        f"pw groupmod {name} -M {members_list}", python_shell=False
     )
 
     return not retcode

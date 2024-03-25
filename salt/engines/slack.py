@@ -747,7 +747,7 @@ class SlackClient:
         results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
-            if self.master_minion.returners["{}.get_jid".format(source)](jid):
+            if self.master_minion.returners[f"{source}.get_jid"](jid):
                 job_result = runner.cmd("jobs.list_job", [jid])
                 jid_result = job_result.get("Result", {})
                 jid_function = job_result.get("Function", {})
@@ -800,9 +800,9 @@ class SlackClient:
                     channel = self.sc.server.channels.find(msg["channel"])
                     jid = self.run_command_async(msg)
                     log.debug("Submitted a job and got jid: %s", jid)
-                    outstanding[
-                        jid
-                    ] = msg  # record so we can return messages to the caller
+                    outstanding[jid] = (
+                        msg  # record so we can return messages to the caller
+                    )
                     channel.send_message(
                         "@{}'s job is submitted as salt jid {}".format(
                             msg["user_name"], jid
@@ -838,7 +838,7 @@ class SlackClient:
                     channel.send_message(return_prefix)
                     ts = time.time()
                     st = datetime.datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S%f")
-                    filename = "salt-results-{}.yaml".format(st)
+                    filename = f"salt-results-{st}.yaml"
                     r = self.sc.api_call(
                         "files.upload",
                         channels=channel.id,
@@ -855,7 +855,6 @@ class SlackClient:
                     del outstanding[jid]
 
     def run_command_async(self, msg):
-
         """
         :type message_generator: generator of dict
         :param message_generator: Generates messages from slack that should be run
@@ -945,4 +944,4 @@ def start(
         )
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:  # pylint: disable=broad-except
-        raise Exception("{}".format(traceback.format_exc()))
+        raise Exception(f"{traceback.format_exc()}")

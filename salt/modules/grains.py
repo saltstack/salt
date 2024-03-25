@@ -9,7 +9,6 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-
 import collections
 import logging
 import math
@@ -38,6 +37,7 @@ __outputter__ = {
     "item": "nested",
     "setval": "nested",
 }
+
 
 # http://stackoverflow.com/a/12414913/127816
 def _infinitedict():
@@ -264,7 +264,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             try:
                 grains = salt.utils.yaml.safe_load(fp_)
             except salt.utils.yaml.YAMLError as exc:
-                return "Unable to read existing grains file: {}".format(exc)
+                return f"Unable to read existing grains file: {exc}"
         if not isinstance(grains, dict):
             grains = {}
     for key, val in new_grains.items():
@@ -360,9 +360,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         if not isinstance(grains, list):
             grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val in grains:
-        return "The val {} was already in the list {}".format(val, key)
+        return f"The val {val} was already in the list {key}"
     if isinstance(val, list):
         for item in val:
             grains.append(item)
@@ -407,9 +407,9 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     """
     grains = get(key, [], delimiter)
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val not in grains:
-        return "The val {} was not in the list {}".format(val, key)
+        return f"The val {val} was not in the list {key}"
     grains.remove(val)
 
     while delimiter in key:

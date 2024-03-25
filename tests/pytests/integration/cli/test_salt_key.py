@@ -138,7 +138,7 @@ def test_list_accepted_args(salt_key_cli, key_type):
     assert ret.returncode == 0
     assert "error:" not in ret.stdout
     # Should throw an error now
-    ret = salt_key_cli.run("-l", "foo-{}".format(key_type))
+    ret = salt_key_cli.run("-l", f"foo-{key_type}")
     assert ret.returncode != 0
     assert "error:" in ret.stderr
 
@@ -330,7 +330,7 @@ def test_accept_bad_key(salt_master, salt_key_cli):
         # Check Key
         ret = salt_key_cli.run("-y", "-a", min_name)
         assert ret.returncode == 0
-        assert "invalid key for {}".format(min_name) in ret.stderr
+        assert f"invalid key for {min_name}" in ret.stderr
     finally:
         if os.path.exists(key):
             os.remove(key)

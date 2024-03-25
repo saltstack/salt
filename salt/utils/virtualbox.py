@@ -382,7 +382,7 @@ def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=N
             for i in range(total_slots):
                 try:
                     address = machine.getGuestPropertyValue(
-                        "/VirtualBox/GuestInfo/Net/{}/V4/IP".format(i)
+                        f"/VirtualBox/GuestInfo/Net/{i}/V4/IP"
                     )
                     if address:
                         ip_addresses.append(address)
@@ -607,7 +607,7 @@ def vb_xpcom_to_attribute_dict(
     """
     # Check the interface
     if interface_name:
-        m = re.search(r"XPCOM.+implementing {}".format(interface_name), str(xpcom))
+        m = re.search(rf"XPCOM.+implementing {interface_name}", str(xpcom))
         if not m:
             # TODO maybe raise error here?
             log.warning(

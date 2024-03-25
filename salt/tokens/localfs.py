@@ -2,7 +2,6 @@
 Stores eauth tokens in the filesystem of the master. Location is configured by the master config option 'token_dir'
 """
 
-
 import hashlib
 import logging
 import os
@@ -31,7 +30,7 @@ def mk_token(opts, tdata):
     hash_type = getattr(hashlib, opts.get("hash_type", DEFAULT_HASH_TYPE))
     tok = str(hash_type(os.urandom(512)).hexdigest())
     t_path = os.path.join(opts["token_dir"], tok)
-    temp_t_path = "{}.tmp".format(t_path)
+    temp_t_path = f"{t_path}.tmp"
     while os.path.isfile(t_path):
         tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(opts["token_dir"], tok)
@@ -93,7 +92,7 @@ def list_tokens(opts):
     :returns: List of dicts (tokens)
     """
     ret = []
-    for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(opts["token_dir"]):
+    for dirpath, dirnames, filenames in salt.utils.path.os_walk(opts["token_dir"]):
         for token in filenames:
             ret.append(token)
     return ret

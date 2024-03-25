@@ -1,6 +1,7 @@
 """
 Tests for salt.utils.jinja
 """
+
 import pytest
 
 

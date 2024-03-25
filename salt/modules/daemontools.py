@@ -44,7 +44,7 @@ def __virtual__():
     BINS = frozenset(("svc", "supervise", "svok"))
     if all(salt.utils.path.which(b) for b in BINS) and SERVICE_DIR:
         return __virtualname__
-    return (False, "Missing dependency: {}".format(BINS))
+    return (False, f"Missing dependency: {BINS}")
 
 
 def _service_path(name):
@@ -53,7 +53,7 @@ def _service_path(name):
     """
     if not SERVICE_DIR:
         raise CommandExecutionError("Could not find service directory.")
-    return "{}/{}".format(SERVICE_DIR, name)
+    return f"{SERVICE_DIR}/{name}"
 
 
 # -- states.service  compatible args
@@ -67,8 +67,8 @@ def start(name):
 
         salt '*' daemontools.start <service name>
     """
-    __salt__["file.remove"]("{}/down".format(_service_path(name)))
-    cmd = "svc -u {}".format(_service_path(name))
+    __salt__["file.remove"](f"{_service_path(name)}/down")
+    cmd = f"svc -u {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -83,8 +83,8 @@ def stop(name):
 
         salt '*' daemontools.stop <service name>
     """
-    __salt__["file.touch"]("{}/down".format(_service_path(name)))
-    cmd = "svc -d {}".format(_service_path(name))
+    __salt__["file.touch"](f"{_service_path(name)}/down")
+    cmd = f"svc -d {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -98,7 +98,7 @@ def term(name):
 
         salt '*' daemontools.term <service name>
     """
-    cmd = "svc -t {}".format(_service_path(name))
+    cmd = f"svc -t {_service_path(name)}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -158,7 +158,7 @@ def status(name, sig=None):
 
         salt '*' daemontools.status <service name>
     """
-    cmd = "svstat {}".format(_service_path(name))
+    cmd = f"svstat {_service_path(name)}"
     out = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     try:
         pid = re.search(r"\(pid (\d+)\)", out).group(1)

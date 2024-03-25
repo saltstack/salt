@@ -1,6 +1,7 @@
 """
 Template render systems
 """
+
 import codecs
 import importlib.machinery
 import importlib.util
@@ -115,9 +116,9 @@ def generate_sls_context(tmplpath, sls):
         # Determine proper template name without root
         if not sls:
             template = template.rsplit("/", 1)[-1]
-        elif template.endswith("{}.sls".format(slspath)):
+        elif template.endswith(f"{slspath}.sls"):
             template = template[-(4 + len(slspath)) :]
-        elif template.endswith("{}/init.sls".format(slspath)):
+        elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
             # Something went wrong
@@ -314,14 +315,14 @@ def _get_jinja_error(trace, context=None):
     # error log place at the beginning
     if add_log:
         if template_path:
-            out = "\n{}\n".format(msg.splitlines()[0])
+            out = f"\n{msg.splitlines()[0]}\n"
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = salt.utils.stringutils.to_unicode(fp_.read())
             out += salt.utils.stringutils.get_context(
                 template_contents, line, marker="    <======================"
             )
         else:
-            out = "\n{}\n".format(msg)
+            out = f"\n{msg}\n"
         line = 0
     return line, out
 
@@ -470,7 +471,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             line, out = _get_jinja_error(trace, context=decoded_context)
             if not line:
                 tmplstr = ""
-            raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
+            raise SaltRenderError(f"Jinja variable {exc}{out}", line, tmplstr)
         except (
             jinja2.exceptions.TemplateRuntimeError,
             jinja2.exceptions.TemplateSyntaxError,
@@ -480,9 +481,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             line, out = _get_jinja_error(trace, context=decoded_context)
             if not line:
                 tmplstr = ""
-            raise SaltRenderError(
-                "Jinja syntax error: {}{}".format(exc, out), line, tmplstr
-            )
+            raise SaltRenderError(f"Jinja syntax error: {exc}{out}", line, tmplstr)
         except (SaltInvocationError, CommandExecutionError) as exc:
             trace = traceback.extract_tb(sys.exc_info()[2])
             line, out = _get_jinja_error(trace, context=decoded_context)
@@ -502,7 +501,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if not line:
                 tmplstr = ""
             else:
-                tmplstr += "\n{}".format(tracestr)
+                tmplstr += f"\n{tracestr}"
             log.debug("Jinja Error")
             log.debug("Exception:", exc_info=True)
             log.debug("Out: %s", out)
@@ -511,7 +510,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             log.debug("TraceStr: %s", tracestr)
 
             raise SaltRenderError(
-                "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
+                f"Jinja error: {exc}{out}", line, tmplstr, trace=tracestr
             )
     finally:
         if loader and isinstance(loader, salt.utils.jinja.SaltCacheLoader):
@@ -680,7 +679,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         setattr(mod, "__env__", kwargs["saltenv"])
         builtins = ["salt", "grains", "pillar", "opts"]
         for builtin in builtins:
-            arg = "__{}__".format(builtin)
+            arg = f"__{builtin}__"
             setattr(mod, arg, kwargs[builtin])
 
     for kwarg in kwargs:

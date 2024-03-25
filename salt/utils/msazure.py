@@ -4,7 +4,6 @@
 Utilities for accessing storage container blobs on Azure
 """
 
-
 import logging
 
 from salt.exceptions import SaltSystemExit

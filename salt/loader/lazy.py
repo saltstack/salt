@@ -162,7 +162,7 @@ class LoadedFunc:
         return ret
 
     def __repr__(self):
-        return "<{} name={!r}>".format(self.__class__.__name__, self.name)
+        return f"<{self.__class__.__name__} name={self.name!r}>"
 
 
 class LoadedMod:
@@ -185,10 +185,10 @@ class LoadedMod:
         Run the wrapped function in the loader's context.
         """
         try:
-            return self.loader["{}.{}".format(self.mod, name)]
+            return self.loader[f"{self.mod}.{name}"]
         except KeyError:
             raise AttributeError(
-                "No attribute by the name of {} was found on {}".format(name, self.mod)
+                f"No attribute by the name of {name} was found on {self.mod}"
             )
 
     def __repr__(self):
@@ -318,7 +318,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # A list to determine precedence of extensions
         # Prefer packages (directories) over modules (single files)!
         self.suffix_order = [""]
-        for (suffix, mode, kind) in SUFFIXES:
+        for suffix, mode, kind in SUFFIXES:
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
@@ -328,10 +328,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         super().__init__()  # late init the lazy loader
         # create all of the import namespaces
-        _generate_module("{}.int".format(self.loaded_base_name))
-        _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
-        _generate_module("{}.ext".format(self.loaded_base_name))
-        _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
+        _generate_module(f"{self.loaded_base_name}.int")
+        _generate_module(f"{self.loaded_base_name}.int.{tag}")
+        _generate_module(f"{self.loaded_base_name}.ext")
+        _generate_module(f"{self.loaded_base_name}.ext.{tag}")
 
     def clean_modules(self):
         """
@@ -389,19 +389,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         mod_name = function_name.split(".")[0]
         if mod_name in self.loaded_modules:
-            return "'{}' is not available.".format(function_name)
+            return f"'{function_name}' is not available."
         else:
             try:
                 reason = self.missing_modules[mod_name]
             except KeyError:
-                return "'{}' is not available.".format(function_name)
+                return f"'{function_name}' is not available."
             else:
                 if reason is not None:
                     return "'{}' __virtual__ returned False: {}".format(
                         mod_name, reason
                     )
                 else:
-                    return "'{}' __virtual__ returned False".format(mod_name)
+                    return f"'{mod_name}' __virtual__ returned False"
 
     def _refresh_file_mapping(self):
         """
@@ -514,7 +514,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         for suffix in self.suffix_order:
                             if "" == suffix:
                                 continue  # Next suffix (__init__ must have a suffix)
-                            init_file = "__init__{}".format(suffix)
+                            init_file = f"__init__{suffix}"
                             if init_file in subfiles:
                                 break
                         else:
@@ -1013,7 +1013,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 try:
                     full_funcname = ".".join((tgt_mod, funcname))
                 except TypeError:
-                    full_funcname = "{}.{}".format(tgt_mod, funcname)
+                    full_funcname = f"{tgt_mod}.{funcname}"
                 # Save many references for lookups
                 # Careful not to overwrite existing (higher priority) functions
                 if full_funcname not in self._dict:
@@ -1040,7 +1040,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if not isinstance(key, str):
             raise KeyError("The key must be a string.")
         if "." not in key:
-            raise KeyError("The key '{}' should contain a '.'".format(key))
+            raise KeyError(f"The key '{key}' should contain a '.'")
         mod_name, _ = key.split(".", 1)
         with self._lock:
             # It is possible that the key is in the dictionary after

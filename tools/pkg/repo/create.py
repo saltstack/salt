@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -315,7 +316,7 @@ def debian(
 _rpm_distro_info = {
     "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
-    "fedora": ["36", "37", "38"],
+    "fedora": ["36", "37", "38", "39"],
     "photon": ["3", "4", "5"],
 }
 

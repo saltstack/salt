@@ -51,7 +51,7 @@ def test_peered():
             assert glusterfs.peered(name) == ret
 
             mock_host_ips.return_value = ["1.2.3.42"]
-            comt = "Host {} already peered".format(name)
+            comt = f"Host {name} already peered"
             ret.update({"comment": comt})
             assert glusterfs.peered(name) == ret
 
@@ -62,7 +62,7 @@ def test_peered():
                     "uuid2": {"hostnames": ["someAlias", name]},
                 }
                 mock_status.side_effect = [old, new]
-                comt = "Host {} successfully peered".format(name)
+                comt = f"Host {name} successfully peered"
                 ret.update({"comment": comt, "changes": {"old": old, "new": new}})
                 assert glusterfs.peered(name) == ret
                 mock_status.side_effect = None
@@ -84,7 +84,7 @@ def test_peered():
                 ret.update({"name": name})
 
             with patch.dict(glusterfs.__opts__, {"test": True}):
-                comt = "Peer {} will be added.".format(name)
+                comt = f"Peer {name} will be added."
                 ret.update({"comment": comt, "result": None})
                 assert glusterfs.peered(name) == ret
 
@@ -117,41 +117,41 @@ def test_volume_present():
         with patch.dict(glusterfs.__opts__, {"test": False}):
             mock_list.return_value = [name]
             mock_info.return_value = started_info
-            comt = "Volume {} already exists and is started".format(name)
+            comt = f"Volume {name} already exists and is started"
             ret.update({"comment": comt})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
             mock_info.return_value = stopped_info
-            comt = "Volume {} already exists and is now started".format(name)
+            comt = f"Volume {name} already exists and is now started"
             ret.update(
                 {"comment": comt, "changes": {"old": "stopped", "new": "started"}}
             )
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
-            comt = "Volume {} already exists".format(name)
+            comt = f"Volume {name} already exists"
             ret.update({"comment": comt, "changes": {}})
             assert glusterfs.volume_present(name, bricks, start=False) == ret
         with patch.dict(glusterfs.__opts__, {"test": True}):
-            comt = "Volume {} already exists".format(name)
+            comt = f"Volume {name} already exists"
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=False) == ret
 
-            comt = "Volume {} already exists and will be started".format(name)
+            comt = f"Volume {name} already exists and will be started"
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
             mock_list.return_value = []
-            comt = "Volume {} will be created".format(name)
+            comt = f"Volume {name} will be created"
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=False) == ret
 
-            comt = "Volume {} will be created and started".format(name)
+            comt = f"Volume {name} will be created and started"
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
         with patch.dict(glusterfs.__opts__, {"test": False}):
             mock_list.side_effect = [[], [name]]
-            comt = "Volume {} is created".format(name)
+            comt = f"Volume {name} is created"
             ret.update(
                 {
                     "comment": comt,
@@ -162,14 +162,14 @@ def test_volume_present():
             assert glusterfs.volume_present(name, bricks, start=False) == ret
 
             mock_list.side_effect = [[], [name]]
-            comt = "Volume {} is created and is now started".format(name)
+            comt = f"Volume {name} is created and is now started"
             ret.update({"comment": comt, "result": True})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
             mock_list.side_effect = None
             mock_list.return_value = []
             mock_create.return_value = False
-            comt = "Creation of volume {} failed".format(name)
+            comt = f"Creation of volume {name} failed"
             ret.update({"comment": comt, "result": False, "changes": {}})
             assert glusterfs.volume_present(name, bricks) == ret
 
@@ -196,23 +196,23 @@ def test_started():
         glusterfs.__salt__,
         {"glusterfs.info": mock_info, "glusterfs.start_volume": mock_start},
     ):
-        comt = "Volume {} does not exist".format(name)
+        comt = f"Volume {name} does not exist"
         ret.update({"comment": comt})
         assert glusterfs.started(name) == ret
 
         mock_info.return_value = started_info
-        comt = "Volume {} is already started".format(name)
+        comt = f"Volume {name} is already started"
         ret.update({"comment": comt, "result": True})
         assert glusterfs.started(name) == ret
 
         with patch.dict(glusterfs.__opts__, {"test": True}):
             mock_info.return_value = stopped_info
-            comt = "Volume {} will be started".format(name)
+            comt = f"Volume {name} will be started"
             ret.update({"comment": comt, "result": None})
             assert glusterfs.started(name) == ret
 
         with patch.dict(glusterfs.__opts__, {"test": False}):
-            comt = "Volume {} is started".format(name)
+            comt = f"Volume {name} is started"
             ret.update(
                 {
                     "comment": comt,

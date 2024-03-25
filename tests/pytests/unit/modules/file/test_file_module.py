@@ -183,7 +183,7 @@ def test_sed_limit_escaped(sed_content, subdir):
         path = tfile.name
         before = "/var/lib/foo"
         after = ""
-        limit = "^{}".format(before)
+        limit = f"^{before}"
 
         filemod.sed(path, before, after, limit=limit)
 

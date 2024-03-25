@@ -7,6 +7,7 @@
 
     This is where all the black magic happens on all of salt's CLI tools.
 """
+
 # pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
@@ -140,7 +141,7 @@ class OptionParser(optparse.OptionParser):
     _mixin_prio_ = sys.maxsize - 200
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("version", "%prog {}".format(self.VERSION))
+        kwargs.setdefault("version", f"%prog {self.VERSION}")
         kwargs.setdefault("usage", self.usage)
         if self.description:
             kwargs.setdefault("description", self.description)
@@ -186,7 +187,7 @@ class OptionParser(optparse.OptionParser):
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
         for option_key in options.__dict__:
-            process_option_func = getattr(self, "process_{}".format(option_key), None)
+            process_option_func = getattr(self, f"process_{option_key}", None)
             if process_option_func is not None:
                 process_option_funcs.append(process_option_func)
 
@@ -273,7 +274,7 @@ class OptionParser(optparse.OptionParser):
             temp_log_handler.flush()
         salt._logging.shutdown_temp_handler()
         if isinstance(msg, str) and msg and msg[-1] != "\n":
-            msg = "{}\n".format(msg)
+            msg = f"{msg}\n"
         optparse.OptionParser.exit(self, status, msg)
 
     def error(self, msg):
@@ -286,7 +287,7 @@ class OptionParser(optparse.OptionParser):
         self.print_usage(sys.stderr)
         self.exit(
             salt.defaults.exitcodes.EX_USAGE,
-            "{}: error: {}\n".format(self.get_prog_name(), msg),
+            f"{self.get_prog_name()}: error: {msg}\n",
         )
 
 
@@ -407,7 +408,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
             return
 
         if not os.path.isfile(self.options.saltfile):
-            self.error("'{}' file does not exist.\n".format(self.options.saltfile))
+            self.error(f"'{self.options.saltfile}' file does not exist.\n")
 
         # Make sure we have an absolute path
         self.options.saltfile = os.path.abspath(self.options.saltfile)
@@ -421,7 +422,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
             self.error(error.message)
             self.exit(
                 salt.defaults.exitcodes.EX_GENERIC,
-                "{}: error: {}\n".format(self.get_prog_name(), error.message),
+                f"{self.get_prog_name()}: error: {error.message}\n",
             )
 
         if not saltfile_config:
@@ -569,7 +570,7 @@ class ConfigDirMixIn(metaclass=MixInMeta):
             try:
                 self.config.update(self.setup_config())
             except OSError as exc:
-                self.error("Failed to load configuration: {}".format(exc))
+                self.error(f"Failed to load configuration: {exc}")
 
     def get_config_file_path(self, configfile=None):
         if configfile is None:
@@ -613,7 +614,7 @@ class LogLevelMixIn(metaclass=MixInMeta):
             choices=list(salt._logging.LOG_LEVELS),
             help="Console logging log level. One of {}. Default: '{}'. \n "
             "The following log levels are INSECURE and may log sensitive data: {}".format(
-                ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
+                ", ".join([f"'{n}'" for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
                 ", ".join(insecure_log()),
             ),
@@ -632,7 +633,7 @@ class LogLevelMixIn(metaclass=MixInMeta):
             action="callback",
             type="string",
             callback=_logfile_callback,
-            help="Log file path. Default: '{}'.".format(self._default_logging_logfile_),
+            help=f"Log file path. Default: '{self._default_logging_logfile_}'.",
         )
 
         group.add_option(
@@ -641,7 +642,7 @@ class LogLevelMixIn(metaclass=MixInMeta):
             choices=list(salt._logging.SORTED_LEVEL_NAMES),
             help="Logfile logging log level. One of {}. Default: '{}'. \n "
             "The following log levels are INSECURE and may log sensitive data: {}".format(
-                ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
+                ", ".join([f"'{n}'" for n in salt._logging.SORTED_LEVEL_NAMES]),
                 self._default_logging_level_,
                 ", ".join(insecure_log()),
             ),
@@ -863,9 +864,7 @@ class LogLevelMixIn(metaclass=MixInMeta):
                         str(logfile),
                         str(logfile_basename),
                     )
-                    logfile = os.path.join(
-                        user_salt_dir, "{}.log".format(logfile_basename)
-                    )
+                    logfile = os.path.join(user_salt_dir, f"{logfile_basename}.log")
 
             # If we haven't changed the logfile path and it's not writeable,
             # salt will fail once we try to setup the logfile logging.
@@ -920,7 +919,7 @@ class RunUserMixin(metaclass=MixInMeta):
 
     def _mixin_setup(self):
         self.add_option(
-            "-u", "--user", help="Specify user to run {}.".format(self.get_prog_name())
+            "-u", "--user", help=f"Specify user to run {self.get_prog_name()}."
         )
 
 
@@ -933,14 +932,12 @@ class DaemonMixIn(metaclass=MixInMeta):
             "--daemon",
             default=False,
             action="store_true",
-            help="Run the {} as a daemon.".format(self.get_prog_name()),
+            help=f"Run the {self.get_prog_name()} as a daemon.",
         )
         self.add_option(
             "--pid-file",
             dest="pidfile",
-            default=os.path.join(
-                syspaths.PIDFILE_DIR, "{}.pid".format(self.get_prog_name())
-            ),
+            default=os.path.join(syspaths.PIDFILE_DIR, f"{self.get_prog_name()}.pid"),
             help="Specify the location of the pidfile. Default: '%default'.",
         )
 
@@ -1063,7 +1060,7 @@ class DaemonMixIn(metaclass=MixInMeta):
         elif signum == signal.SIGTERM:
             msg += " received a SIGTERM."
         logging.getLogger(__name__).warning("%s Exiting.", msg)
-        self.shutdown(exitmsg="{} Exited.".format(msg))
+        self.shutdown(exitmsg=f"{msg} Exited.")
 
     def shutdown(self, exitcode=0, exitmsg=None):
         self.exit(exitcode, exitmsg)
@@ -1180,7 +1177,7 @@ class TargetOptionsMixIn(metaclass=MixInMeta):
                 if getattr(self.options, opt.dest):
                     self.selected_target_option = opt.dest
 
-            funcname = "process_{}".format(option.dest)
+            funcname = f"process_{option.dest}"
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
@@ -1438,7 +1435,7 @@ class OutputOptionsMixIn(metaclass=MixInMeta):
                     return
                 self.selected_output_option = opt.dest
 
-            funcname = "process_{}".format(option.dest)
+            funcname = f"process_{option.dest}"
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
@@ -1457,9 +1454,7 @@ class OutputOptionsMixIn(metaclass=MixInMeta):
                         # it. This way we keep the file permissions.
                         pass
                 except OSError as exc:
-                    self.error(
-                        "{}: Access denied: {}".format(self.options.output_file, exc)
-                    )
+                    self.error(f"{self.options.output_file}: Access denied: {exc}")
 
     def process_state_verbose(self):
         if self.options.state_verbose == "True" or self.options.state_verbose == "true":
@@ -1714,7 +1709,7 @@ class CloudQueriesMixIn(metaclass=MixInMeta):
                             )
                     self.selected_query_option = query
 
-            funcname = "process_{}".format(option.dest)
+            funcname = f"process_{option.dest}"
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
@@ -1914,7 +1909,7 @@ class JIDMixin:
     def process_jid(self):
         if self.options.jid is not None:
             if not salt.utils.jid.is_jid(self.options.jid):
-                self.error("'{}' is not a valid JID".format(self.options.jid))
+                self.error(f"'{self.options.jid}' is not a valid JID")
 
 
 class MasterOptionParser(
@@ -2747,9 +2742,7 @@ class SaltKeyOptionParser(
         if not self.options.list:
             return
         if not self.options.list.startswith(("acc", "pre", "un", "rej", "den", "all")):
-            self.error(
-                "'{}' is not a valid argument to '--list'".format(self.options.list)
-            )
+            self.error(f"'{self.options.list}' is not a valid argument to '--list'")
 
     def process_keysize(self):
         if self.options.keysize < 2048:

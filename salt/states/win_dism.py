@@ -64,11 +64,11 @@ def capability_installed(
     old = __salt__["dism.installed_capabilities"]()
 
     if name in old:
-        ret["comment"] = "The capability {} is already installed".format(name)
+        ret["comment"] = f"The capability {name} is already installed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["capability"] = "{} will be installed".format(name)
+        ret["changes"]["capability"] = f"{name} will be installed"
         ret["result"] = None
         return ret
 
@@ -83,7 +83,7 @@ def capability_installed(
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {}".format(name)
+        ret["comment"] = f"Installed {name}"
         ret["changes"] = status
         ret["changes"]["capability"] = changes
 
@@ -117,11 +117,11 @@ def capability_removed(name, image=None, restart=False):
     old = __salt__["dism.installed_capabilities"]()
 
     if name not in old:
-        ret["comment"] = "The capability {} is already removed".format(name)
+        ret["comment"] = f"The capability {name} is already removed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["capability"] = "{} will be removed".format(name)
+        ret["changes"]["capability"] = f"{name} will be removed"
         ret["result"] = None
         return ret
 
@@ -136,7 +136,7 @@ def capability_removed(name, image=None, restart=False):
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {}".format(name)
+        ret["comment"] = f"Removed {name}"
         ret["changes"] = status
         ret["changes"]["capability"] = changes
 
@@ -185,11 +185,11 @@ def feature_installed(
     old = __salt__["dism.installed_features"]()
 
     if name in old:
-        ret["comment"] = "The feature {} is already installed".format(name)
+        ret["comment"] = f"The feature {name} is already installed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["feature"] = "{} will be installed".format(name)
+        ret["changes"]["feature"] = f"{name} will be installed"
         ret["result"] = None
         return ret
 
@@ -206,7 +206,7 @@ def feature_installed(
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {}".format(name)
+        ret["comment"] = f"Installed {name}"
         ret["changes"] = status
         ret["changes"]["feature"] = changes
 
@@ -243,11 +243,11 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     old = __salt__["dism.installed_features"]()
 
     if name not in old:
-        ret["comment"] = "The feature {} is already removed".format(name)
+        ret["comment"] = f"The feature {name} is already removed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["feature"] = "{} will be removed".format(name)
+        ret["changes"]["feature"] = f"{name} will be removed"
         ret["result"] = None
         return ret
 
@@ -262,7 +262,7 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {}".format(name)
+        ret["comment"] = f"Removed {name}"
         ret["changes"] = status
         ret["changes"]["feature"] = changes
 
@@ -303,7 +303,7 @@ def package_installed(
             ret["result"] = None
         else:
             ret["result"] = False
-        ret["comment"] = "Package path {} does not exist".format(name)
+        ret["comment"] = f"Package path {name} does not exist"
         return ret
 
     old = __salt__["dism.installed_packages"]()
@@ -318,7 +318,7 @@ def package_installed(
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["package"] = "{} will be installed".format(name)
+        ret["changes"]["package"] = f"{name} will be installed"
         ret["result"] = None
         return ret
 
@@ -335,7 +335,7 @@ def package_installed(
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {}".format(name)
+        ret["comment"] = f"Installed {name}"
         ret["changes"] = status
         ret["changes"]["package"] = changes
 
@@ -379,7 +379,7 @@ def package_removed(name, image=None, restart=False):
             ret["result"] = None
         else:
             ret["result"] = False
-        ret["comment"] = "Package path {} does not exist".format(name)
+        ret["comment"] = f"Package path {name} does not exist"
         return ret
 
     old = __salt__["dism.installed_packages"]()
@@ -393,11 +393,11 @@ def package_removed(name, image=None, restart=False):
         "Package Identity" not in package_info
         or package_info["Package Identity"] not in old
     ):
-        ret["comment"] = "The package {} is already removed".format(name)
+        ret["comment"] = f"The package {name} is already removed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["package"] = "{} will be removed".format(name)
+        ret["changes"]["package"] = f"{name} will be removed"
         ret["result"] = None
         return ret
 
@@ -412,7 +412,7 @@ def package_removed(name, image=None, restart=False):
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {}".format(name)
+        ret["comment"] = f"Removed {name}"
         ret["changes"] = status
         ret["changes"]["package"] = changes
 
@@ -454,11 +454,11 @@ def kb_removed(name, image=None, restart=False):
 
     # If pkg_name is None, the package is not installed
     if pkg_name is None:
-        ret["comment"] = "{} is not installed".format(name)
+        ret["comment"] = f"{name} is not installed"
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["package"] = "{} will be removed".format(name)
+        ret["changes"]["package"] = f"{name} will be removed"
         ret["result"] = None
         return ret
 
@@ -477,7 +477,7 @@ def kb_removed(name, image=None, restart=False):
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {}".format(name)
+        ret["comment"] = f"Removed {name}"
         ret["changes"] = status
         ret["changes"]["package"] = changes
 

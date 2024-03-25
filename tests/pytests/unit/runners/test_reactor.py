@@ -2,7 +2,6 @@
 unit tests for the reactor runner
 """
 
-
 import logging
 
 import pytest

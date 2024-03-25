@@ -7,6 +7,7 @@ or for problem solving if your minion is having problems.
 
 :depends:  - wmi
 """
+
 import ctypes
 import datetime
 import logging

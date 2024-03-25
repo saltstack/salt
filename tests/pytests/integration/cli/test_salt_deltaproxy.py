@@ -1,6 +1,7 @@
 """
 :codeauthor: Gareth J. Greenaway (ggreenaway@vmware.com)
 """
+
 import logging
 import random
 
@@ -170,14 +171,16 @@ def test_exit_status_correct_usage(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
+    with (
+        top_tempfile
+    ), controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
@@ -277,7 +280,7 @@ def test_missing_pillar_file(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile:
@@ -395,16 +398,20 @@ def test_invalid_connection(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_one), broken_proxy_one_pillar_file
+        f"{broken_proxy_one}.sls", broken_proxy_one_pillar_file
     )
     broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_two), broken_proxy_two_pillar_file
+        f"{broken_proxy_two}.sls", broken_proxy_two_pillar_file
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
@@ -522,18 +529,22 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 
     custom_proxy_module = salt_master.state_tree.base.temp_file(
         "_proxy/custom_dummy.py", module_contents
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
@@ -655,18 +666,22 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 
     custom_proxy_module = salt_master.state_tree.base.temp_file(
         "_proxy/custom_dummy.py", module_contents
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,

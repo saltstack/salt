@@ -86,6 +86,6 @@ def update_config(file_name, yaml_contents):
         with salt.utils.files.fopen(file_path, "w") as fp_:
             fp_.write(yaml_out)
 
-        return "Wrote {}".format(file_name)
+        return f"Wrote {file_name}"
     except (OSError, salt.utils.yaml.YAMLError, ValueError) as err:
         return str(err)

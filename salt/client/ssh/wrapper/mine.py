@@ -4,7 +4,6 @@ Wrapper function for mine operations for salt-ssh
 .. versionadded:: 2015.5.0
 """
 
-
 import copy
 
 import salt.client.ssh

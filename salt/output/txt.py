@@ -26,14 +26,14 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
             # Don't blow up on non-strings
             try:
                 for line in value.splitlines():
-                    ret += "{}: {}\n".format(key, line)
+                    ret += f"{key}: {line}\n"
             except AttributeError:
-                ret += "{}: {}\n".format(key, value)
+                ret += f"{key}: {value}\n"
     else:
         try:
             ret += data + "\n"
         except TypeError:
             # For non-dictionary, non-string data, just use print
-            ret += "{}\n".format(pprint.pformat(data))
+            ret += f"{pprint.pformat(data)}\n"
 
     return ret

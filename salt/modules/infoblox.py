@@ -61,7 +61,7 @@ def _get_config(**api_opts):
         "api_key": "",
     }
     if "__salt__" in globals():
-        config_key = "{}.config".format(__virtualname__)
+        config_key = f"{__virtualname__}.config"
         config.update(__salt__["config.get"](config_key, {}))
     # pylint: disable=C0201
     for k in set(config.keys()) & set(api_opts.keys()):
@@ -143,7 +143,7 @@ def update_object(objref, data, **api_opts):
         salt-call infoblox.update_object objref=[ref_of_object] data={}
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to update object: {}".format(objref)}
+        return {"Test": f"Would attempt to update object: {objref}"}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.update_object(objref, data)
 
@@ -159,7 +159,7 @@ def delete_object(objref, **api_opts):
         salt-call infoblox.delete_object objref=[ref_of_object]
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to delete object: {}".format(objref)}
+        return {"Test": f"Would attempt to delete object: {objref}"}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.delete_object(objref)
 
@@ -175,7 +175,7 @@ def create_object(object_type, data, **api_opts):
         salt-call infoblox.update_object object_type=record:host  data={}
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to create object: {}".format(object_type)}
+        return {"Test": f"Would attempt to create object: {object_type}"}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.create_object(object_type, data)
 
@@ -186,7 +186,7 @@ def get_object(
     return_fields=None,
     max_results=None,
     ensure_none_or_one_result=False,
-    **api_opts
+    **api_opts,
 ):
     """
     Get raw infoblox object. This is a low level api call.

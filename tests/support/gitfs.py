@@ -64,6 +64,8 @@ _OPTS = freeze(
             "+refs/tags/*:refs/tags/*",
         ],
         "git_pillar_includes": True,
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
 )
 
@@ -323,9 +325,9 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     def make_repo(self, root_dir, user=None):
         log.info("Creating test Git repo....")
         self.bare_repo = os.path.join(root_dir, "repo.git")
-        self.bare_repo_backup = "{}.backup".format(self.bare_repo)
+        self.bare_repo_backup = f"{self.bare_repo}.backup"
         self.admin_repo = os.path.join(root_dir, "admin")
-        self.admin_repo_backup = "{}.backup".format(self.admin_repo)
+        self.admin_repo_backup = f"{self.admin_repo}.backup"
 
         for dirname in (self.bare_repo, self.admin_repo):
             shutil.rmtree(dirname, ignore_errors=True)
@@ -489,9 +491,9 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     def make_extra_repo(self, root_dir, user=None):
         log.info("Creating extra test Git repo....")
         self.bare_extra_repo = os.path.join(root_dir, "extra_repo.git")
-        self.bare_extra_repo_backup = "{}.backup".format(self.bare_extra_repo)
+        self.bare_extra_repo_backup = f"{self.bare_extra_repo}.backup"
         self.admin_extra_repo = os.path.join(root_dir, "admin_extra")
-        self.admin_extra_repo_backup = "{}.backup".format(self.admin_extra_repo)
+        self.admin_extra_repo_backup = f"{self.admin_extra_repo}.backup"
 
         for dirname in (self.bare_extra_repo, self.admin_extra_repo):
             shutil.rmtree(dirname, ignore_errors=True)
@@ -586,10 +588,10 @@ class GitPillarSSHTestBase(GitPillarTestBase):
         """
         log.info("%s.setUp() started...", self.__class__.__name__)
         super().setUp()
-        root_dir = os.path.expanduser("~{}".format(self.username))
+        root_dir = os.path.expanduser(f"~{self.username}")
         if root_dir.startswith("~"):
             raise AssertionError(
-                "Unable to resolve homedir for user '{}'".format(self.username)
+                f"Unable to resolve homedir for user '{self.username}'"
             )
         self.make_repo(root_dir, user=self.username)
         self.make_extra_repo(root_dir, user=self.username)

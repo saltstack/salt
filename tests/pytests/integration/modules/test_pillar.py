@@ -210,7 +210,7 @@ class PillarRefresh:
             "top.sls", top_file_contents
         )
         self.minion_1_pillar = self.master.pillar_tree.base.temp_file(
-            "minion-1-pillar.sls", "{}: true".format(self.pillar_key)
+            "minion-1-pillar.sls", f"{self.pillar_key}: true"
         )
         self.top_file.__enter__()
         self.minion_1_pillar.__enter__()

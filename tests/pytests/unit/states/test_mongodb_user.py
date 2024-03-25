@@ -37,12 +37,12 @@ def test_present():
         assert mongodb_user.present(name, passwd) == ret
 
         with patch.dict(mongodb_user.__opts__, {"test": True}):
-            comt = "User {} is not present and needs to be created".format(name)
+            comt = f"User {name} is not present and needs to be created"
             ret.update({"comment": comt, "result": None})
             assert mongodb_user.present(name, passwd) == ret
 
         with patch.dict(mongodb_user.__opts__, {"test": False}):
-            comt = "User {} has been created".format(name)
+            comt = f"User {name} has been created"
             ret.update({"comment": comt, "result": True, "changes": {name: "Present"}})
             assert mongodb_user.present(name, passwd) == ret
 
@@ -62,15 +62,15 @@ def test_absent():
         {"mongodb.user_exists": mock, "mongodb.user_remove": mock_t},
     ):
         with patch.dict(mongodb_user.__opts__, {"test": True}):
-            comt = "User {} is present and needs to be removed".format(name)
+            comt = f"User {name} is present and needs to be removed"
             ret.update({"comment": comt, "result": None})
             assert mongodb_user.absent(name) == ret
 
         with patch.dict(mongodb_user.__opts__, {"test": False}):
-            comt = "User {} has been removed".format(name)
+            comt = f"User {name} has been removed"
             ret.update({"comment": comt, "result": True, "changes": {name: "Absent"}})
             assert mongodb_user.absent(name) == ret
 
-        comt = "User {} is not present".format(name)
+        comt = f"User {name} is not present"
         ret.update({"comment": comt, "result": True, "changes": {}})
         assert mongodb_user.absent(name) == ret

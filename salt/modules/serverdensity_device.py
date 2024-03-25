@@ -5,7 +5,6 @@ Wrapper around Server Density API
 .. versionadded:: 2014.7.0
 """
 
-
 import logging
 import os
 import tempfile
@@ -49,14 +48,14 @@ def get_sd_auth(val, sd_auth_pillar_name="serverdensity"):
     if not sd_pillar:
         log.error("Could not load %s pillar", sd_auth_pillar_name)
         raise CommandExecutionError(
-            "{} pillar is required for authentication".format(sd_auth_pillar_name)
+            f"{sd_auth_pillar_name} pillar is required for authentication"
         )
 
     try:
         return sd_pillar[val]
     except KeyError:
         log.error("Could not find value %s in pillar", val)
-        raise CommandExecutionError("{} value was not found in pillar".format(val))
+        raise CommandExecutionError(f"{val} value was not found in pillar")
 
 
 def _clean_salt_variables(params, variable_prefix="__"):
@@ -99,7 +98,7 @@ def create(name, **params):
         except ValueError:
             log.error("Could not parse API Response content: %s", api_response.content)
             raise CommandExecutionError(
-                "Failed to create, API Response: {}".format(api_response)
+                f"Failed to create, API Response: {api_response}"
             )
     else:
         return None
@@ -131,7 +130,7 @@ def delete(device_id):
         except ValueError:
             log.error("Could not parse API Response content: %s", api_response.content)
             raise CommandExecutionError(
-                "Failed to create, API Response: {}".format(api_response)
+                f"Failed to create, API Response: {api_response}"
             )
     else:
         return None
@@ -168,7 +167,7 @@ def ls(**params):
         params[key] = str(val)
 
     api_response = requests.get(
-        "https://api.serverdensity.io/inventory/{}".format(endpoint),
+        f"https://api.serverdensity.io/inventory/{endpoint}",
         params={
             "token": get_sd_auth("api_token"),
             "filter": salt.utils.json.dumps(params),
@@ -186,7 +185,7 @@ def ls(**params):
                 api_response.content,
             )
             raise CommandExecutionError(
-                "Failed to create, Server Density API Response: {}".format(api_response)
+                f"Failed to create, Server Density API Response: {api_response}"
             )
     else:
         return None
@@ -225,7 +224,7 @@ def update(device_id, **params):
                 api_response.content,
             )
             raise CommandExecutionError(
-                "Failed to create, API Response: {}".format(api_response)
+                f"Failed to create, API Response: {api_response}"
             )
     else:
         return None
@@ -259,10 +258,8 @@ def install_agent(agent_key, agent_version=1):
 
     account = get_sd_auth(account_field)
 
-    __salt__["cmd.run"](
-        cmd="curl -L {} -o {}".format(url, install_filename), cwd=work_dir
-    )
-    __salt__["cmd.run"](cmd="chmod +x {}".format(install_filename), cwd=work_dir)
+    __salt__["cmd.run"](cmd=f"curl -L {url} -o {install_filename}", cwd=work_dir)
+    __salt__["cmd.run"](cmd=f"chmod +x {install_filename}", cwd=work_dir)
 
     return __salt__["cmd.run"](
         cmd="{filename} -a {account} -k {agent_key}".format(

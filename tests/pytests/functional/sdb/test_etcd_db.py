@@ -43,10 +43,7 @@ def test_basic_operations(etcd_profile, prefix, profile_name):
     Ensure we can do the basic CRUD operations available in sdb.etcd_db
     """
     assert (
-        etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile[profile_name])
-        == "one"
+        etcd_db.set_(f"{prefix}/1", "one", profile=etcd_profile[profile_name]) == "one"
     )
-    etcd_db.delete("{}/1".format(prefix), profile=etcd_profile[profile_name])
-    assert (
-        etcd_db.get("{}/1".format(prefix), profile=etcd_profile[profile_name]) is None
-    )
+    etcd_db.delete(f"{prefix}/1", profile=etcd_profile[profile_name])
+    assert etcd_db.get(f"{prefix}/1", profile=etcd_profile[profile_name]) is None

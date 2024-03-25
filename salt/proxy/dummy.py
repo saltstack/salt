@@ -30,7 +30,7 @@ def __virtual__():
 
 def _save_state(opts, details):
     _id = __context__["dummy_proxy"]["id"]
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy-{}.cache".format(_id))
+    cachefile = os.path.join(opts["cachedir"], f"dummy-proxy-{_id}.cache")
     with salt.utils.files.fopen(cachefile, "wb") as pck:
         pck.write(salt.utils.msgpack.packb(details, use_bin_type=True))
     log.warning("Dummy Proxy Saved State(%s):\n%s", cachefile, pprint.pformat(details))
@@ -38,7 +38,7 @@ def _save_state(opts, details):
 
 def _load_state(opts):
     _id = __context__["dummy_proxy"]["id"]
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy-{}.cache".format(_id))
+    cachefile = os.path.join(opts["cachedir"], f"dummy-proxy-{_id}.cache")
     try:
         with salt.utils.files.fopen(cachefile, "rb") as pck:
             state = salt.utils.msgpack.unpackb(pck.read(), raw=False)

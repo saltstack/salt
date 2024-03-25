@@ -43,7 +43,7 @@ class EchoServer:
         """
         context = zmq.Context()
         socket = context.socket(zmq.REP)
-        socket.bind("tcp://*:{}".format(port))
+        socket.bind(f"tcp://*:{port}")
         while event.is_set():
             try:
                 #  Wait for next request from client
@@ -77,7 +77,7 @@ def echo_server(echo_port):
 
 @pytest.fixture
 def sreq(echo_port):
-    yield salt.payload.SREQ("tcp://127.0.0.1:{}".format(echo_port))
+    yield salt.payload.SREQ(f"tcp://127.0.0.1:{echo_port}")
 
 
 @pytest.mark.slow_test

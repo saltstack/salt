@@ -898,9 +898,11 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{}".format(traceback.format_exc())
-            if cherrypy.config["debug"]
-            else "An unexpected error occurred",
+            "return": (
+                f"{traceback.format_exc()}"
+                if cherrypy.config["debug"]
+                else "An unexpected error occurred"
+            ),
         }
 
     # Raises 406 if requested content-type is not supported
@@ -1747,9 +1749,9 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers[
-            "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        headers["Content-Disposition"] = (
+            'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        )
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"
@@ -1944,7 +1946,7 @@ class Logout(LowDataAdapter):
 
     _cp_config = dict(
         LowDataAdapter._cp_config,
-        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False}
+        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False},
     )
 
     def POST(self):  # pylint: disable=arguments-differ
@@ -2187,7 +2189,7 @@ class Events:
             "tools.salt_auth.on": False,
             "tools.hypermedia_in.on": False,
             "tools.hypermedia_out.on": False,
-        }
+        },
     )
 
     def __init__(self):
@@ -2392,7 +2394,7 @@ class Events:
 
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
-                    yield "data: {}\n\n".format(salt.utils.json.dumps(data))
+                    yield f"data: {salt.utils.json.dumps(data)}\n\n"
 
         return listen()
 
@@ -2422,7 +2424,7 @@ class WebsocketEndpoint:
             "tools.hypermedia_out.on": False,
             "tools.websocket.on": True,
             "tools.websocket.handler_cls": websockets.SynchronizingWebsocket,
-        }
+        },
     )
 
     def __init__(self):
@@ -2576,7 +2578,7 @@ class WebsocketEndpoint:
                                 SaltInfo.process(data, salt_token, self.opts)
                             else:
                                 handler.send(
-                                    "data: {}\n\n".format(salt.utils.json.dumps(data)),
+                                    f"data: {salt.utils.json.dumps(data)}\n\n",
                                     False,
                                 )
                         except UnicodeDecodeError:
@@ -2648,7 +2650,7 @@ class Webhook:
             "tools.lowdata_fmt.on": True,
             # Auth can be overridden in __init__().
             "tools.salt_auth.on": True,
-        }
+        },
     )
 
     def __init__(self):

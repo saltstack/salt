@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import textwrap
 
 import pytest
@@ -53,7 +54,7 @@ def test_present():
             assert boto_sqs.present(name) == ret
 
         with patch.dict(boto_sqs.__opts__, {"test": True}):
-            comt = ["SQS queue {} is set to be created.".format(name)]
+            comt = [f"SQS queue {name} is set to be created."]
             ret = base_ret.copy()
             ret.update(
                 {
@@ -101,13 +102,13 @@ def test_absent():
 
     mock = MagicMock(side_effect=[{"result": False}, {"result": True}])
     with patch.dict(boto_sqs.__salt__, {"boto_sqs.exists": mock}):
-        comt = "SQS queue {} does not exist in None.".format(name)
+        comt = f"SQS queue {name} does not exist in None."
         ret = base_ret.copy()
         ret.update({"result": True, "comment": comt})
         assert boto_sqs.absent(name) == ret
 
         with patch.dict(boto_sqs.__opts__, {"test": True}):
-            comt = "SQS queue {} is set to be removed.".format(name)
+            comt = f"SQS queue {name} is set to be removed."
             ret = base_ret.copy()
             ret.update(
                 {

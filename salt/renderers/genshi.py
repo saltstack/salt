@@ -2,7 +2,6 @@
 Genshi Renderer for Salt
 """
 
-
 try:
     from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
     from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module

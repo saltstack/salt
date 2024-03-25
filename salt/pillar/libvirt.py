@@ -4,6 +4,7 @@ generated using the libvirt key runner
 
 :depends: certtool
 """
+
 import os
 import subprocess
 
@@ -41,9 +42,7 @@ def ext_pillar(minion_id, pillar, command):
             continue
         fn_ = os.path.join(key_dir, key)
         with salt.utils.files.fopen(fn_, "r") as fp_:
-            ret["libvirt.{}".format(key)] = salt.utils.stringutils.to_unicode(
-                fp_.read()
-            )
+            ret[f"libvirt.{key}"] = salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(cacert, "r") as fp_:
         ret["libvirt.cacert.pem"] = salt.utils.stringutils.to_unicode(fp_.read())
     return ret
@@ -74,7 +73,7 @@ def gen_hyper_keys(
         proc = subprocess.run(
             ["certtool", "--generate-privkey"],
             stdout=subprocess.PIPE,
-            universal_newlines=True,
+            text=True,
             check=True,
         )
         with salt.utils.files.fopen(cakey, "w") as wfh:
@@ -115,7 +114,7 @@ def gen_hyper_keys(
         proc = subprocess.run(
             ["certtool", "--generate-privkey"],
             stdout=subprocess.PIPE,
-            universal_newlines=True,
+            text=True,
             check=True,
         )
         with salt.utils.files.fopen(priv, "w") as wfh:
@@ -152,7 +151,7 @@ def gen_hyper_keys(
         proc = subprocess.run(
             ["certtool", "--generate-privkey"],
             stdout=subprocess.PIPE,
-            universal_newlines=True,
+            text=True,
             check=True,
         )
         with salt.utils.files.fopen(cpriv, "w") as wfh:

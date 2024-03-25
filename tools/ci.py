@@ -1,6 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -653,7 +654,7 @@ def matrix(
     """
     _matrix = []
     _splits = {
-        "functional": 3,
+        "functional": 4,
         "integration": 5,
         "scenarios": 1,
         "unit": 4,

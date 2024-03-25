@@ -130,7 +130,7 @@ def update(name, profile="splunk", **kwargs):
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{}: '{}' => '{}'".format(key, old_value, new_value))
+            diffs.append(f"{key}: '{old_value}' => '{new_value}'")
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs
@@ -286,7 +286,7 @@ def list_all(
         d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
         description = ""
-        for (k, v) in sorted(search.content.items()):
+        for k, v in sorted(search.content.items()):
             if k in readonly_keys:
                 continue
             if k.startswith("display."):

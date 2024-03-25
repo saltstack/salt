@@ -132,6 +132,7 @@ Note that when a ``ca_server`` is involved, both peers must use the updated modu
 
 .. _x509-setup:
 """
+
 import base64
 import copy
 import datetime
@@ -733,9 +734,11 @@ def encode_certificate(
             else:
                 cipher = serialization.BestAvailableEncryption(pkcs12_passphrase)
         crt_bytes = serialization.pkcs12.serialize_key_and_certificates(
-            name=salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
-            if pkcs12_friendlyname
-            else None,
+            name=(
+                salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
+                if pkcs12_friendlyname
+                else None
+            ),
             key=private_key,
             cert=cert,
             cas=append_certs,

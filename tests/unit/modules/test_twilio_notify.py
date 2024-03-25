@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.twilio_notify as twilio_notify

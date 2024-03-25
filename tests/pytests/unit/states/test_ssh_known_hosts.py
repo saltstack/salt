@@ -76,7 +76,7 @@ def test_present():
         }
         mock = MagicMock(return_value=result)
         with patch.dict(ssh_known_hosts.__salt__, {"ssh.set_known_host": mock}):
-            comt = "{}'s key saved to .ssh/known_hosts (key: {})".format(name, key)
+            comt = f"{name}'s key saved to .ssh/known_hosts (key: {key})"
             ret.update(
                 {
                     "comment": comt,

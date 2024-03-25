@@ -64,8 +64,8 @@ def get_application(opts):
                 getattr(hashlib, opts.get("hash_type", DEFAULT_HASH_TYPE))().hexdigest()
             )
         )
-        all_events_pattern = r"/all_events/{}".format(token_pattern)
-        formatted_events_pattern = r"/formatted_events/{}".format(token_pattern)
+        all_events_pattern = rf"/all_events/{token_pattern}"
+        formatted_events_pattern = rf"/formatted_events/{token_pattern}"
         log.debug("All events URL pattern is %s", all_events_pattern)
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}

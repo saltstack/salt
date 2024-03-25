@@ -1,6 +1,7 @@
 """
 :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 """
+
 import logging
 import os
 import shutil
@@ -168,7 +169,7 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     cmdline = [
         sys.executable,
         salt_cli.get_script_path(),
-        "--config-dir={}".format(salt_master.config_dir),
+        f"--config-dir={salt_master.config_dir}",
         salt_minion.id,
         "test.sleep",
         "30",

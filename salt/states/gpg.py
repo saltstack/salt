@@ -91,7 +91,7 @@ def present(
                             ret["comment"].append(result["comment"])
                         else:
                             ret["comment"].append(
-                                "Set trust level for {} to {}".format(key, trust)
+                                f"Set trust level for {key} to {trust}"
                             )
                     else:
                         ret["comment"].append(
@@ -100,9 +100,9 @@ def present(
                             )
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {}".format(trust))
+                    ret["comment"].append(f"Invalid trust level {trust}")
 
-            ret["comment"].append("GPG Public Key {} already in keychain ".format(key))
+            ret["comment"].append(f"GPG Public Key {key} already in keychain ")
 
         else:
             result = __salt__["gpg.receive_keys"](
@@ -115,7 +115,7 @@ def present(
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Adding {} to GPG keychain".format(name))
+                ret["comment"].append(f"Adding {name} to GPG keychain")
 
             if trust:
                 if trust in _VALID_TRUST_VALUES:
@@ -128,11 +128,9 @@ def present(
                         ret["result"] = result["result"]
                         ret["comment"].append(result["comment"])
                     else:
-                        ret["comment"].append(
-                            "Set trust level for {} to {}".format(key, trust)
-                        )
+                        ret["comment"].append(f"Set trust level for {key} to {trust}")
                 else:
-                    ret["comment"].append("Invalid trust level {}".format(trust))
+                    ret["comment"].append(f"Invalid trust level {trust}")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -181,8 +179,8 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Deleting {} from GPG keychain".format(name))
+                ret["comment"].append(f"Deleting {name} from GPG keychain")
         else:
-            ret["comment"].append("{} not found in GPG keychain".format(name))
+            ret["comment"].append(f"{name} not found in GPG keychain")
     ret["comment"] = "\n".join(ret["comment"])
     return ret

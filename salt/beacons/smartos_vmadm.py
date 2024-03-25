@@ -17,6 +17,7 @@ Beacon that fires events on vm state changes
         - interval: 60
         - startup_create_event: True
 """
+
 import logging
 
 import salt.utils.beacons
@@ -82,7 +83,7 @@ def beacon(config):
     for uuid in current_vms:
         event = {}
         if uuid not in VMADM_STATE["vms"]:
-            event["tag"] = "created/{}".format(uuid)
+            event["tag"] = f"created/{uuid}"
             for label in current_vms[uuid]:
                 if label == "state":
                     continue
@@ -95,7 +96,7 @@ def beacon(config):
     for uuid in VMADM_STATE["vms"]:
         event = {}
         if uuid not in current_vms:
-            event["tag"] = "deleted/{}".format(uuid)
+            event["tag"] = f"deleted/{uuid}"
             for label in VMADM_STATE["vms"][uuid]:
                 if label == "state":
                     continue
