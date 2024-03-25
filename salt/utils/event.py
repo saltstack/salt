@@ -59,7 +59,7 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
 import tornado.iostream
@@ -186,17 +186,23 @@ def tagify(suffix="", prefix="", base=SALT):
 
     """
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    if isinstance(suffix, Iterable) and not isinstance(
+        suffix, str
+    ):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    str_parts = []
+    for part in parts:
+        part_str = None
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            part_str = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
-    return TAGPARTER.join([part for part in parts if part])
+            part_str = str(part)
+        if part_str:
+            str_parts.append(part_str)
+    return TAGPARTER.join(str_parts)
 
 
 class SaltEvent:
