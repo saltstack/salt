@@ -470,10 +470,10 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
         assert provider._master_lock.acquire(timeout=5)
         provider._master_lock.release()
 
-    provider.clear_lock()
-    # check that lock has been released
-    assert provider._master_lock.acquire(timeout=5)
-    provider._master_lock.release()
+        provider.clear_lock()
+        # check that lock has been released
+        assert provider._master_lock.acquire(timeout=5)
+        provider._master_lock.release()
 
     assert test_msg1 in caplog.text
     assert test_msg2 in caplog.text
@@ -539,10 +539,10 @@ def test_git_provider_mp_lock_bad_machine(main_class, caplog):
         assert provider._master_lock.acquire(timeout=5)
         provider._master_lock.release()
 
-    provider.clear_lock()
-    # check that lock has been released
-    assert provider._master_lock.acquire(timeout=5)
-    provider._master_lock.release()
+        provider.clear_lock()
+        # check that lock has been released
+        assert provider._master_lock.acquire(timeout=5)
+        provider._master_lock.release()
 
     assert test_msg1 in caplog.text
     assert test_msg2 in caplog.text
