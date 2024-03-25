@@ -211,20 +211,27 @@ follows:
 
 1) A master publishes a job that is received by a minion as outlined by the
 master's job flow above.
+
 2) The minion is polling its receive socket that's connected to the master
 Publisher (TCP 4505 on master). When it detects an incoming message, it picks it
 up from the socket and decrypts it.
+
 3) A new minion process or thread is created and provided with the contents of the
 decrypted message. The _thread_return() method is provided with the contents of
 the received message.
+
 4) The new minion thread is created. The _thread_return() function starts up
 and actually calls out to the requested function contained in the job.
+
 5) The requested function runs and returns a result. [Still in thread.]
+
 6) The result of the function that's run is published on the minion's local event bus with event
 tag "__master_req_channel_payload" [Still in thread.]
+
 7) Thread exits. Because the main thread was only blocked for the time that it
 took to initialize the worker thread, many other requests could have been
 received and processed during this time.
+
 8) Minion event handler gets the event with tag "__master_req_channel_payload"
 and sends the payload to master's ReqServer (TCP 4506 on master), via the long-running async request channel
 that was opened when minion first started up.
