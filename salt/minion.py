@@ -3231,6 +3231,7 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
@@ -3923,6 +3924,7 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
         return mp_call(self, payload)
