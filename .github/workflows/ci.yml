@@ -533,7 +533,7 @@ jobs:
 
   almalinux-9-pkg-tests:
     name: Alma Linux 9 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["almalinux-9", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -638,7 +638,7 @@ jobs:
 
   amazonlinux-2023-arm64-pkg-tests:
     name: Amazon Linux 2023 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["amazonlinux-2023-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -936,7 +936,7 @@ jobs:
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["ubuntu-22.04-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -978,7 +978,7 @@ jobs:
 
   macos-13-pkg-tests:
     name: macOS 13 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -1104,7 +1104,7 @@ jobs:
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["windows-2022", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -1125,7 +1125,7 @@ jobs:
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["windows-2022", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -1188,7 +1188,7 @@ jobs:
 
   windows-2022:
     name: Windows 2022 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["windows-2022", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1230,7 +1230,7 @@ jobs:
 
   macos-13:
     name: macOS 13 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1314,7 +1314,7 @@ jobs:
 
   almalinux-9:
     name: Alma Linux 9 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["almalinux-9", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1419,7 +1419,7 @@ jobs:
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["amazonlinux-2023-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1440,7 +1440,7 @@ jobs:
 
   archlinux-lts:
     name: Arch Linux LTS Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["archlinux-lts", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1780,7 +1780,7 @@ jobs:
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["ubuntu-22.04-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
