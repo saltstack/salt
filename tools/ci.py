@@ -949,10 +949,15 @@ def get_pr_test_labels(
         pr = gh_event["pull_request"]["number"]
         labels = _get_pr_test_labels_from_event_payload(gh_event)
 
+    os_labels = []
+    test_labels = []
     if labels:
         ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
-        for name, description in labels:
+        for name, description in sorted(labels):
             ctx.info(f" * [yellow]{name}[/yellow]: {description}")
+            test_labels.append(name)
+            if name.startswith("test:os:"):
+                os_labels.append(name.split("test:os:", 1)[-1])
     else:
         ctx.info(f"No test labels for pull-request #{pr} on {repository}")
 
@@ -965,7 +970,8 @@ def get_pr_test_labels(
 
     ctx.info("Writing 'labels' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"labels={json.dumps([label[0] for label in labels])}\n")
+        wfh.write(f"os-labels={json.dumps([label for label in os_labels])}\n")
+        wfh.write(f"test-labels={json.dumps([label for label in test_labels])}\n")
     ctx.exit(0)
 
 

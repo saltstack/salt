@@ -9,7 +9,11 @@
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
     name: <{ display_name }> Test
+    <%- if workflow_slug != "ci" or slug in mandatory_os %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["<{ slug }>", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -36,7 +40,11 @@
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
     name: <{ display_name }> Test
+    <%- if workflow_slug != "ci" or slug in mandatory_os %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["<{ slug }>", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -62,7 +70,11 @@
   <{ slug.replace(".", "") }>:
     <%- do test_salt_needs.append(slug.replace(".", "")) %>
     name: <{ display_name }> Test
+    <%- if workflow_slug != "ci" or slug in mandatory_os %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON('["<{ slug }>", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
