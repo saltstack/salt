@@ -87,7 +87,8 @@ jobs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.labels }}
+      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
