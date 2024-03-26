@@ -957,7 +957,7 @@ jobs:
 
   macos-12-pkg-tests:
     name: macOS 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-12", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-12", "macos-12", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -978,7 +978,7 @@ jobs:
 
   macos-13-pkg-tests:
     name: macOS 13 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -999,7 +999,7 @@ jobs:
 
   macos-13-xlarge-pkg-tests:
     name: macOS 13 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13-xlarge", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13-xlarge", "macos-13-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -1209,7 +1209,7 @@ jobs:
 
   macos-12:
     name: macOS 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-12", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-12", "macos-12", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1230,7 +1230,7 @@ jobs:
 
   macos-13:
     name: macOS 13 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13", "macos-13", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -1251,7 +1251,7 @@ jobs:
 
   macos-13-xlarge:
     name: macOS 13 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13-xlarge", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["macos-13-xlarge", "macos-13-arm64", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     needs:
       - prepare-workflow
       - build-ci-deps
