@@ -320,14 +320,6 @@ def generate_workflows(ctx: Context):
             ),
             "build_rpms_listing": build_rpms_listing,
             "build_debs_listing": build_debs_listing,
-            "mandatory_os": (
-                "almalinux-9",
-                "amazonlinux-2023-arm64",
-                "archlinux-lts",
-                "macos-13",
-                "ubuntu-22.04-arm64",
-                "windows-2022",
-            ),
         }
         shared_context = tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
