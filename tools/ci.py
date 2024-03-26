@@ -968,7 +968,13 @@ def get_pr_test_labels(
     if TYPE_CHECKING:
         assert github_output is not None
 
-    ctx.info("Writing 'labels' to the github outputs file")
+    ctx.info("Writing 'labels' to the github outputs file...")
+    ctx.info("Test Labels:")
+    for label in sorted(test_labels):
+        ctx.info(f" * [yellow]{label}[/yellow]")
+    ctx.info("* OS Labels:")
+    for slug in sorted(selected):
+        ctx.info(f" * [yellow]{slug}[/yellow]")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"os-labels={json.dumps([label for label in os_labels])}\n")
         wfh.write(f"test-labels={json.dumps([label for label in test_labels])}\n")

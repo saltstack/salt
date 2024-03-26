@@ -999,6 +999,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
+      runner: macos-12
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1020,6 +1021,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-13
+      runner: macos-13
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1031,7 +1033,7 @@ jobs:
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  macos-13-xlarge-pkg-tests:
+  macos-13-arm64-pkg-tests:
     name: macOS 13 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
@@ -1040,7 +1042,8 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
-      distro-slug: macos-13-xlarge
+      distro-slug: macos-13-arm64
+      runner: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: macos
       arch: arm64
@@ -1250,6 +1253,7 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
+      runner: macos-12
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1271,6 +1275,7 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13
+      runner: macos-13
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1283,7 +1288,7 @@ jobs:
       workflow-slug: scheduled
       default-timeout: 360
 
-  macos-13-xlarge:
+  macos-13-arm64:
     name: macOS 13 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
@@ -1291,7 +1296,8 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
-      distro-slug: macos-13-xlarge
+      distro-slug: macos-13-arm64
+      runner: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: macos
       arch: arm64
@@ -1845,7 +1851,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
-      - macos-13-xlarge
+      - macos-13-arm64
       - almalinux-8
       - almalinux-8-arm64
       - almalinux-9
@@ -2001,7 +2007,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
-      - macos-13-xlarge
+      - macos-13-arm64
       - almalinux-8
       - almalinux-8-arm64
       - almalinux-9
@@ -2051,7 +2057,7 @@ jobs:
       - ubuntu-2204-arm64-pkg-tests
       - macos-12-pkg-tests
       - macos-13-pkg-tests
-      - macos-13-xlarge-pkg-tests
+      - macos-13-arm64-pkg-tests
       - windows-2016-nsis-pkg-tests
       - windows-2016-msi-pkg-tests
       - windows-2019-nsis-pkg-tests

@@ -10,6 +10,7 @@ import sys
 from enum import IntEnum
 from functools import cache
 
+import attr
 import packaging.version
 import yaml
 from ptscripts import Context
@@ -35,6 +36,36 @@ class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
     SOFT_FAIL = 2
+
+
+@attr.s(frozen=True, slots=True)
+class OS:
+    platform: str = attr.ib()
+    slug: str = attr.ib()
+    display_name: str = attr.ib(default=None)
+    arch: str = attr.ib(default=None)
+    pkg_type: str = attr.ib(default=None)
+
+
+@attr.s(frozen=True, slots=True)
+class Linux(OS):
+    platform: str = attr.ib(default="linux")
+    fips: bool = attr.ib(default=False)
+
+
+@attr.s(frozen=True, slots=True)
+class MacOS(OS):
+    runner: str = attr.ib()
+    platform: str = attr.ib(default="macos")
+
+    @runner.default
+    def _default_runner(self):
+        return self.slug
+
+
+@attr.s(frozen=True, slots=True)
+class Windows(OS):
+    platform: str = attr.ib(default="windows")
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):

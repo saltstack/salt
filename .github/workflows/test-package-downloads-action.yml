@@ -380,7 +380,7 @@ jobs:
 
   macos:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     env:
       USE_S3_CACHE: 'false'
     environment: ${{ inputs.environment }}
@@ -395,10 +395,10 @@ jobs:
           - distro-slug: macos-13
             arch: x86_64
             pkg-type: package
-          - distro-slug: macos-13-xlarge
+          - distro-slug: macos-13-arm64
             arch: arm64
             pkg-type: package
-          - distro-slug: macos-13-xlarge
+          - distro-slug: macos-13-arm64
             arch: arm64
             pkg-type: onedir
 
