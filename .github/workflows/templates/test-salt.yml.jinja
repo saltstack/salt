@@ -43,7 +43,7 @@
     <%- if workflow_slug != "ci" or slug in mandatory_os %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["<{ slug }>", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON('["<{ slug }>", "<{ slug.replace('xlarge', 'arm64') }>", "all"]'), needs.prepare-workflow.outputs.os-labels) }}
     <%- endif %>
     needs:
       - prepare-workflow
