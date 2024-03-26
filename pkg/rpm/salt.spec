@@ -176,7 +176,7 @@ cd $RPM_BUILD_DIR
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
   # the <onedir>/bin directory
-  find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
+  find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh -x\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
   $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
@@ -439,16 +439,16 @@ find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
 # %%systemd_preun salt-syndic.service > /dev/null 2>&1
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
-  systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
-  systemctl stop salt-syndic.service > /dev/null 2>&1 || :
+  /bin/systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
+  /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
 fi
 
 %preun minion
 # %%systemd_preun salt-minion.service
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
-  systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
-  systemctl stop salt-minion.service > /dev/null 2>&1 || :
+  /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+  /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
 fi
 
 
@@ -456,8 +456,8 @@ fi
 # %%systemd_preun salt-api.service
 if [ $1 -eq 0 ] ; then
   # Package removal, not upgrade
-  systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
-  systemctl stop salt-api.service > /dev/null 2>&1 || :
+  /bin/systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
+  /bin/systemctl stop salt-api.service > /dev/null 2>&1 || :
 fi
 
 
@@ -475,10 +475,10 @@ ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 # %%systemd_post salt-master.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl try-restart salt-master.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 else
   # Initial installation
-  systemctl preset salt-master.service >/dev/null 2>&1 || :
+  /bin/systemctl preset salt-master.service >/dev/null 2>&1 || :
 fi
 ln -s -f /opt/saltstack/salt/salt %{_bindir}/salt
 ln -s -f /opt/saltstack/salt/salt-cp %{_bindir}/salt-cp
@@ -503,10 +503,10 @@ fi
 # %%systemd_post salt-syndic.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 else
   # Initial installation
-  systemctl preset salt-syndic.service >/dev/null 2>&1 || :
+  /bin/systemctl preset salt-syndic.service >/dev/null 2>&1 || :
 fi
 ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 
@@ -514,10 +514,10 @@ ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 # %%systemd_post salt-minion.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 else
   # Initial installation
-  systemctl preset salt-minion.service >/dev/null 2>&1 || :
+  /bin/systemctl preset salt-minion.service >/dev/null 2>&1 || :
 fi
 ln -s -f /opt/saltstack/salt/salt-minion %{_bindir}/salt-minion
 ln -s -f /opt/saltstack/salt/salt-call %{_bindir}/salt-call
@@ -543,10 +543,10 @@ ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 # %%systemd_post salt-api.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
-  systemctl try-restart salt-api.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 else
   # Initial installation
-  systemctl preset salt-api.service >/dev/null 2>&1 || :
+  /bin/systemctl preset salt-api.service >/dev/null 2>&1 || :
 fi
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
 
@@ -589,10 +589,10 @@ fi
 
 %postun master
 # %%systemd_postun_with_restart salt-master.service
-systemctl daemon-reload >/dev/null 2>&1 || :
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
-  systemctl try-restart salt-master.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 fi
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
@@ -610,18 +610,18 @@ fi
 
 %postun syndic
 # %%systemd_postun_with_restart salt-syndic.service
-systemctl daemon-reload >/dev/null 2>&1 || :
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
-  systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 fi
 
 %postun minion
 # %%systemd_postun_with_restart salt-minion.service
-systemctl daemon-reload >/dev/null 2>&1 || :
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
-  systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 fi
 if [ $1 -eq 0 ]; then
   if [ $(cat /etc/os-release | grep VERSION_ID | cut -d '=' -f 2 | sed  's/\"//g' | cut -d '.' -f 1) = "8" ]; then
@@ -639,10 +639,10 @@ fi
 
 %postun api
 # %%systemd_postun_with_restart salt-api.service
-systemctl daemon-reload >/dev/null 2>&1 || :
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
-  systemctl try-restart salt-api.service >/dev/null 2>&1 || :
+  /bin/systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 fi
 
 %changelog
