@@ -153,7 +153,7 @@ class Sls:
         highstate = self.included_highstate
         slsmods = []  # a list of pydsl sls modules rendered.
         for sls in sls_names:
-            r_env = "{}:{}".format(saltenv, sls)
+            r_env = f"{saltenv}:{sls}"
             if r_env not in self.rendered_sls:
                 self.rendered_sls.add(
                     sls
@@ -166,7 +166,7 @@ class Sls:
                     raise PyDslError("\n".join(errors))
                 HIGHSTATE.clean_duplicate_extends(highstate)
 
-            state_id = "_slsmod_{}".format(sls)
+            state_id = f"_slsmod_{sls}"
             if state_id not in highstate:
                 slsmods.append(None)
             else:
@@ -194,7 +194,7 @@ class Sls:
 
     def state(self, id=None):
         if not id:
-            id = ".{}".format(_uuid())
+            id = f".{_uuid()}"
             # adds a leading dot to make use of stateconf's namespace feature.
         try:
             return self.get_all_decls()[id]
@@ -408,7 +408,7 @@ class StateFunction:
     def _repr(self, context=None):
         if not self.name and context != "extend":
             raise PyDslError(
-                "No state function specified for module: {}".format(self.mod._name)
+                f"No state function specified for module: {self.mod._name}"
             )
         if not self.name and context == "extend":
             return self.args
@@ -440,9 +440,7 @@ class StateFunction:
         if isinstance(mod, StateModule):
             ref = mod._state_id
         elif not (mod and ref):
-            raise PyDslError(
-                "Invalid a requisite reference declaration! {}: {}".format(mod, ref)
-            )
+            raise PyDslError(f"Invalid a requisite reference declaration! {mod}: {ref}")
         self.args.append({req_type: [{str(mod): str(ref)}]})
 
     ns = locals()

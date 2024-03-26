@@ -315,7 +315,6 @@ def pillar_format(ret, keys, value, expand_keys):
 
 
 def get_conn(opts, profile):
-
     """
     Return a client object for accessing consul
     """

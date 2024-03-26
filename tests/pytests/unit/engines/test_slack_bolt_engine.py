@@ -1,6 +1,7 @@
 """
 unit tests for the slack engine
 """
+
 import pytest
 
 import salt.engines.slack_bolt_engine as slack_bolt_engine
@@ -327,7 +328,13 @@ def test_run_commands_from_slack_async(slack_client):
     #
     # test with control as True and fire_all as False
     #
-    with patch_slack_client_run_until, patch_slack_client_run_command_async, patch_slack_client_get_jobs_from_runner, patch_app_client_files_upload as app_client_files_upload, patch_app_client_chat_postMessage as app_client_chat_postMessage:
+    with (
+        patch_slack_client_run_until
+    ), (
+        patch_slack_client_run_command_async
+    ), (
+        patch_slack_client_get_jobs_from_runner
+    ), patch_app_client_files_upload as app_client_files_upload, patch_app_client_chat_postMessage as app_client_chat_postMessage:
         slack_client.run_commands_from_slack_async(
             message_generator=message_generator,
             fire_all=False,
@@ -389,7 +396,15 @@ def test_run_commands_from_slack_async(slack_client):
             },
         )
     ]
-    with patch_slack_client_run_until, patch_slack_client_run_command_async, patch_slack_client_get_jobs_from_runner, patch_event_send, patch_app_client_files_upload as app_client_files_upload, patch_app_client_chat_postMessage as app_client_chat_postMessage:
+    with (
+        patch_slack_client_run_until
+    ), (
+        patch_slack_client_run_command_async
+    ), (
+        patch_slack_client_get_jobs_from_runner
+    ), (
+        patch_event_send
+    ), patch_app_client_files_upload as app_client_files_upload, patch_app_client_chat_postMessage as app_client_chat_postMessage:
         slack_client.run_commands_from_slack_async(
             message_generator=message_generator,
             fire_all=True,
@@ -509,6 +524,8 @@ def test_run_command_async(slack_client):
             },
         )
     ]
-    with patch_runner_client, patch_runner_client_asynchronous as runner_client_asynchronous:
+    with (
+        patch_runner_client
+    ), patch_runner_client_asynchronous as runner_client_asynchronous:
         ret = slack_client.run_command_async(msg)
         runner_client_asynchronous.assert_has_calls(expected_calls)

@@ -1,6 +1,7 @@
 """
 This test checks mysql_database salt state
 """
+
 import pytest
 
 import salt.states.mysql_database as mysql_database
@@ -48,7 +49,7 @@ def test_present():
                 "Database character set {} != {} needs to be updated".format(
                     mod_charset, charset
                 ),
-                "Database {} is going to be updated".format(dbname),
+                f"Database {dbname} is going to be updated",
             ]
             ret.update({"comment": "\n".join(comt)})
             ret.update({"result": None})
@@ -56,7 +57,7 @@ def test_present():
 
         with patch.dict(mysql_database.__opts__, {"test": True}):
             comt = [
-                "Database {} is already present".format(dbname),
+                f"Database {dbname} is already present",
                 "Database collate {} != {} needs to be updated".format(
                     mod_collate, collate
                 ),
@@ -89,7 +90,7 @@ def test_present():
             )
 
         with patch.dict(mysql_database.__opts__, {"test": False}):
-            comt = "Database {} is already present".format(dbname)
+            comt = f"Database {dbname} is already present"
             ret.update({"comment": comt})
             ret.update({"result": True})
             assert (
@@ -104,7 +105,7 @@ def test_present():
                 assert mysql_database.present(dbname) == ret
 
             with patch.object(mysql_database, "_get_mysql_error", mock_no_err):
-                comt = "The database {} has been created".format(dbname)
+                comt = f"The database {dbname} has been created"
 
                 ret.update({"comment": comt, "result": True})
                 ret.update({"changes": {dbname: "Present"}})
@@ -116,7 +117,7 @@ def test_present():
             ret["comment"] = ""
             with patch.object(mysql_database, "_get_mysql_error", mock_no_err):
                 ret.update({"changes": {}})
-                comt = "Failed to create database {}".format(dbname)
+                comt = f"Failed to create database {dbname}"
                 ret.update({"comment": comt, "result": False})
                 assert mysql_database.present(dbname) == ret
 
@@ -139,12 +140,12 @@ def test_absent():
         {"mysql.db_exists": mock_db_exists, "mysql.db_remove": mock_remove},
     ):
         with patch.dict(mysql_database.__opts__, {"test": True}):
-            comt = "Database {} is present and needs to be removed".format(dbname)
+            comt = f"Database {dbname} is present and needs to be removed"
             ret.update({"comment": comt, "result": None})
             assert mysql_database.absent(dbname) == ret
 
         with patch.dict(mysql_database.__opts__, {}):
-            comt = "Database {} has been removed".format(dbname)
+            comt = f"Database {dbname} has been removed"
             ret.update({"comment": comt, "result": True})
             ret.update({"changes": {dbname: "Absent"}})
             assert mysql_database.absent(dbname) == ret

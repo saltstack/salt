@@ -10,7 +10,7 @@ from tests.support.mock import MagicMock, patch
 
 
 def mock_net_load(template, *args, **kwargs):
-    raise ValueError("incorrect template {}".format(template))
+    raise ValueError(f"incorrect template {template}")
 
 
 @pytest.fixture

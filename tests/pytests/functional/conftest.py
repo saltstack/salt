@@ -127,7 +127,7 @@ def master_opts(
 
 @pytest.fixture(scope="module")
 def loaders(minion_opts):
-    return Loaders(minion_opts, loaded_base_name="{}.loaded".format(__name__))
+    return Loaders(minion_opts, loaded_base_name=f"{__name__}.loaded")
 
 
 @pytest.fixture(autouse=True)

@@ -4,7 +4,6 @@
     Test cases for salt.modules.lvs
 """
 
-
 import pytest
 
 import salt.modules.lvs as lvs

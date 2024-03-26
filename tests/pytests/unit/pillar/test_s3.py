@@ -41,7 +41,7 @@ def test_refresh_buckets_cache_file():
     first_range_end = 999
     second_range_end = 1200
     for i in range(0, first_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",
@@ -52,7 +52,7 @@ def test_refresh_buckets_cache_file():
         mock_return_first.append(tmp)
 
     for i in range(first_range_end, second_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",
@@ -64,7 +64,7 @@ def test_refresh_buckets_cache_file():
 
     _expected = {"base": {"dummy_bucket": []}}
     for i in range(0, second_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",

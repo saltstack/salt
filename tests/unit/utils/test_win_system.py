@@ -18,9 +18,7 @@ class WinSystemImportTestCase(TestCase):
 
     def test_import(self):
         if isinstance(win_system, Exception):
-            raise Exception(
-                "Importing win_system caused traceback: {}".format(win_system)
-            )
+            raise Exception(f"Importing win_system caused traceback: {win_system}")
 
 
 @pytest.mark.skip_unless_on_windows

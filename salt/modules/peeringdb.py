@@ -55,8 +55,8 @@ def _get_auth(username=None, password=None):
 
 def _build_url(endpoint, id=None):
     if id:
-        return "{base}/{endp}/{id}".format(base=PEERINGDB_URL, endp=endpoint, id=id)
-    return "{base}/{endp}".format(base=PEERINGDB_URL, endp=endpoint)
+        return f"{PEERINGDB_URL}/{endpoint}/{id}"
+    return f"{PEERINGDB_URL}/{endpoint}"
 
 
 def _get_endpoint(endpoint, id=None, **kwargs):

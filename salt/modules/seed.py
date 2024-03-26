@@ -2,7 +2,6 @@
 Virtual machine image management tools
 """
 
-
 import logging
 import os
 import shutil
@@ -42,7 +41,7 @@ def prep_bootstrap(mpt):
     """
     # Verify that the boostrap script is downloaded
     bs_ = __salt__["config.gather_bootstrap_script"]()
-    fpd_ = os.path.join(mpt, "tmp", "{}".format(uuid.uuid4()))
+    fpd_ = os.path.join(mpt, "tmp", f"{uuid.uuid4()}")
     if not os.path.exists(fpd_):
         os.makedirs(fpd_)
     os.chmod(fpd_, 0o700)
@@ -136,7 +135,7 @@ def apply_(
     """
     stats = __salt__["file.stats"](path, follow_symlinks=True)
     if not stats:
-        return "{} does not exist".format(path)
+        return f"{path} does not exist"
     ftype = stats["type"]
     path = stats["target"]
     log.debug("Mounting %s at %s", ftype, path)
@@ -149,7 +148,7 @@ def apply_(
     mpt = _mount(path, ftype, mount_point)
 
     if not mpt:
-        return "{} could not be mounted".format(path)
+        return f"{path} could not be mounted"
 
     tmp = os.path.join(mpt, "tmp")
     log.debug("Attempting to create directory %s", tmp)
@@ -300,6 +299,6 @@ def _check_install(root):
         sh_ = "/bin/bash"
 
     cmd = "if ! type salt-minion; then exit 1; fi"
-    cmd = "chroot '{}' {} -c '{}'".format(root, sh_, cmd)
+    cmd = f"chroot '{root}' {sh_} -c '{cmd}'"
 
     return not __salt__["cmd.retcode"](cmd, output_loglevel="quiet", python_shell=True)

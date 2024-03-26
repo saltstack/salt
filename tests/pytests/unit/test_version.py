@@ -4,6 +4,7 @@ tests.pytests.unit.test_version
 
 Test salt's regex git describe version parsing
 """
+
 import re
 
 import pytest

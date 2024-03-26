@@ -17,7 +17,7 @@ def _make_temp_root_file(root, *subpaths, binary=False, dir_only=False):
             full_path.write_bytes(content)
         else:
             content = str(full_path)
-            full_path.write_text(content)
+            full_path.write_text(content, encoding="utf-8")
 
 
 @pytest.fixture

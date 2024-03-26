@@ -2,7 +2,6 @@
 Functions for working with files
 """
 
-
 import codecs
 import contextlib
 import errno
@@ -131,9 +130,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     specified cache the file.
     """
     if not os.path.isfile(source):
-        raise OSError("[Errno 2] No such file or directory: {}".format(source))
+        raise OSError(f"[Errno 2] No such file or directory: {source}")
     if not os.path.isdir(os.path.dirname(dest)):
-        raise OSError("[Errno 2] No such file or directory: {}".format(dest))
+        raise OSError(f"[Errno 2] No such file or directory: {dest}")
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
@@ -199,9 +198,7 @@ def rename(src, dst):
             os.remove(dst)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise MinionError(
-                    "Error: Unable to remove {}: {}".format(dst, exc.strerror)
-                )
+                raise MinionError(f"Error: Unable to remove {dst}: {exc.strerror}")
         os.rename(src, dst)
 
 
@@ -222,9 +219,9 @@ def process_read_exception(exc, path, ignore=None):
         return
 
     if exc.errno == errno.ENOENT:
-        raise CommandExecutionError("{} does not exist".format(path))
+        raise CommandExecutionError(f"{path} does not exist")
     elif exc.errno == errno.EACCES:
-        raise CommandExecutionError("Permission denied reading from {}".format(path))
+        raise CommandExecutionError(f"Permission denied reading from {path}")
     else:
         raise CommandExecutionError(
             "Error {} encountered reading from {}: {}".format(
@@ -254,7 +251,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
     try:
         if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error("lock_fn {} exists and is not a file".format(lock_fn))
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -294,9 +291,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
-        _raise_error(
-            "Error encountered obtaining file lock {}: {}".format(lock_fn, exc)
-        )
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
         if obtained_lock:
@@ -322,8 +317,8 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
+        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
         try:
-            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
             os.umask(orig_mask)  # pylint: disable=blacklisted-function
@@ -347,7 +342,7 @@ def fopen(*args, **kwargs):
         # and True are treated by Python 3's open() as file descriptors 0
         # and 1, respectively.
         if args[0] in (0, 1, 2):
-            raise TypeError("{} is not a permitted file descriptor".format(args[0]))
+            raise TypeError(f"{args[0]} is not a permitted file descriptor")
     except IndexError:
         pass
     binary = None
@@ -390,7 +385,9 @@ def fopen(*args, **kwargs):
         )
         kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    f_handle = open(  # pylint: disable=resource-leakage,unspecified-encoding
+        *args, **kwargs
+    )
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -488,7 +485,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = os.listdir(top)
-    except os.error as err:
+    except OSError as err:
         if onerror is not None:
             onerror(err)
         return
@@ -649,7 +646,10 @@ def is_text(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     """
-    int2byte = lambda x: bytes((x,))
+
+    def int2byte(x):
+        return bytes((x,))
+
     text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
     try:
         block = fp_.read(blocksize)
@@ -694,7 +694,7 @@ def is_binary(path):
                 return salt.utils.stringutils.is_binary(data)
             except UnicodeDecodeError:
                 return True
-    except os.error:
+    except OSError:
         return False
 
 
@@ -787,8 +787,8 @@ def backup_minion(path, bkroot):
         stamp = time.strftime("%a_%b_%d_%H-%M-%S_%Y")
     else:
         stamp = time.strftime("%a_%b_%d_%H:%M:%S_%Y")
-    stamp = "{}{}_{}".format(stamp[:-4], msecs, stamp[-4:])
-    bkpath = os.path.join(bkroot, src_dir, "{}_{}".format(bname, stamp))
+    stamp = f"{stamp[:-4]}{msecs}_{stamp[-4:]}"
+    bkpath = os.path.join(bkroot, src_dir, f"{bname}_{stamp}")
     if not os.path.isdir(os.path.dirname(bkpath)):
         os.makedirs(os.path.dirname(bkpath))
     shutil.copyfile(path, bkpath)
@@ -883,7 +883,7 @@ def get_encoding(path):
     try:
         with fopen(path, "rb") as fp_:
             data = fp_.read(2048)
-    except os.error:
+    except OSError:
         raise CommandExecutionError("Failed to open file")
 
     # Check for Unicode BOM

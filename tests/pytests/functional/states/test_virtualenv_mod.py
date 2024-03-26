@@ -36,7 +36,7 @@ def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
             ret = states.virtualenv.managed(
                 name=str(venv_dir),
                 user=account.username,
-                requirements="salt://{}/requirements.txt".format(state_tree_dirname),
+                requirements=f"salt://{state_tree_dirname}/requirements.txt",
             )
             assert ret.result is True
 
@@ -56,11 +56,11 @@ def test_issue_2594_non_invalidated_cache(tmp_path, state_tree, modules, require
 
         # Our state template
         template = [
-            "{}:".format(venv_dir),
+            f"{venv_dir}:",
             "  virtualenv.managed:",
             "    - system_site_packages: False",
             "    - clear: false",
-            "    - requirements: salt://{}/requirements.txt".format(state_tree_dirname),
+            f"    - requirements: salt://{state_tree_dirname}/requirements.txt",
         ]
 
         # Let's run our state!!!

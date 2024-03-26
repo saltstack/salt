@@ -2,7 +2,6 @@
 This module contains routines used for the salt mine
 """
 
-
 import logging
 
 import salt.utils.data

@@ -13,10 +13,8 @@ returner modules
     appoptics_return
     carbon_return
     cassandra_cql_return
-    cassandra_return
     couchbase_return
     couchdb_return
-    django_return
     elasticsearch_return
     etcd_return
     highstate_return

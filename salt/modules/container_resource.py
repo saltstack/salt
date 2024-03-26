@@ -8,6 +8,7 @@ These functions are not designed to be called directly, but instead from the
 :mod:`docker <salt.modules.docker>` execution modules. They provide for
 common logic to be re-used for common actions.
 """
+
 import copy
 import functools
 import logging

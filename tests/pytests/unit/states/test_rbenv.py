@@ -42,12 +42,12 @@ def test_installed():
     ):
         with patch.dict(rbenv.__opts__, {"test": True}):
             name = "1.9.3-p551"
-            comt = "Ruby {} is set to be installed".format(name)
+            comt = f"Ruby {name} is set to be installed"
             ret = {"name": name, "changes": {}, "comment": comt, "result": None}
             assert rbenv.installed(name) == ret
 
             name = "2.4.1"
-            comt = "Ruby {} is already installed".format(name)
+            comt = f"Ruby {name} is already installed"
             ret = {
                 "name": name,
                 "changes": {},
@@ -58,7 +58,7 @@ def test_installed():
             assert rbenv.installed(name) == ret
 
             name = "2.3.4"
-            comt = "Ruby {} is already installed".format(name)
+            comt = f"Ruby {name} is already installed"
             ret = {
                 "name": name,
                 "changes": {},
@@ -136,16 +136,16 @@ def test_absent():
 
         with patch.dict(rbenv.__opts__, {"test": True}):
             name = "1.9.3-p551"
-            comt = "Rbenv not installed, {} not either".format(name)
+            comt = f"Rbenv not installed, {name} not either"
             ret = {"name": name, "changes": {}, "comment": comt, "result": True}
             assert rbenv.absent(name) == ret
 
-            comt = "Ruby {} is already uninstalled".format(name)
+            comt = f"Ruby {name} is already uninstalled"
             ret = {"name": name, "changes": {}, "comment": comt, "result": True}
             assert rbenv.absent(name) == ret
 
             name = "2.3.4"
-            comt = "Ruby {} is set to be uninstalled".format(name)
+            comt = f"Ruby {name} is set to be uninstalled"
             ret = {
                 "name": name,
                 "changes": {},
@@ -156,7 +156,7 @@ def test_absent():
             assert rbenv.absent("2.3.4") == ret
 
             name = "2.4.1"
-            comt = "Ruby {} is set to be uninstalled".format(name)
+            comt = f"Ruby {name} is set to be uninstalled"
             ret = {
                 "name": name,
                 "changes": {},
@@ -168,11 +168,11 @@ def test_absent():
 
         with patch.dict(rbenv.__opts__, {"test": False}):
             name = "1.9.3-p551"
-            comt = "Rbenv not installed, {} not either".format(name)
+            comt = f"Rbenv not installed, {name} not either"
             ret = {"name": name, "changes": {}, "comment": comt, "result": True}
             assert rbenv.absent(name) == ret
 
-            comt = "Ruby {} is already absent".format(name)
+            comt = f"Ruby {name} is already absent"
             ret = {"name": name, "changes": {}, "comment": comt, "result": True}
             assert rbenv.absent(name) == ret
 

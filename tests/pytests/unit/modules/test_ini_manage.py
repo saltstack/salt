@@ -77,7 +77,7 @@ def test_section_req():
     """
     Test the __repr__ in the _Section class
     """
-    expected = "_Section(){}{{}}".format(os.linesep)
+    expected = f"_Section(){os.linesep}{{}}"
     assert repr(ini._Section("test")) == expected
 
 
@@ -437,9 +437,7 @@ def test_unicode_set_option(encoding, linesep, ini_file, unicode_content):
     assert ini.get_option(str(ini_file), "Ascii", "ay", encoding=encoding) == "Aymar"
 
     # Check new section and option added
-    assert (
-        ini.get_option(str(ini_file), "Юникод", "dv", encoding=encoding) == "ދިވެހިބަސް"
-    )
+    assert ini.get_option(str(ini_file), "Юникод", "dv", encoding=encoding) == "ދިވެހިބަސް"
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
@@ -478,9 +476,12 @@ def test_unicode_remove_option(encoding, linesep, ini_file, unicode_content):
     ini_file.write_bytes(content)
 
     assert (
-        ini.remove_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding) == "zh_TW"
+        ini.remove_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding)
+        == "zh_TW"
     )
-    assert ini.get_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding) is None
+    assert (
+        ini.get_option(str(ini_file), "Юникод", "繁體中文", encoding=encoding) is None
+    )
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])

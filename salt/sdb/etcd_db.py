@@ -39,7 +39,6 @@ defaults to true, meaning you will use v2 unless you specify otherwise.
 
 """
 
-
 import logging
 
 try:

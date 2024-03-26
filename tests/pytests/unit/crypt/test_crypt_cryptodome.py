@@ -35,8 +35,8 @@ pytestmark = [
 
 @pytest.mark.slow_test
 def test_gen_keys():
-    open_priv_wb = MockCall("/keydir{}keyname.pem".format(os.sep), "wb+")
-    open_pub_wb = MockCall("/keydir{}keyname.pub".format(os.sep), "wb+")
+    open_priv_wb = MockCall(f"/keydir{os.sep}keyname.pem", "wb+")
+    open_pub_wb = MockCall(f"/keydir{os.sep}keyname.pub", "wb+")
 
     with patch.multiple(
         os,
@@ -48,7 +48,7 @@ def test_gen_keys():
             "os.path.isfile", return_value=True
         ):
             result = salt.crypt.gen_keys("/keydir", "keyname", 2048)
-            assert result == "/keydir{}keyname.pem".format(os.sep), result
+            assert result == f"/keydir{os.sep}keyname.pem", result
             assert open_priv_wb not in m_open.calls
             assert open_pub_wb not in m_open.calls
 

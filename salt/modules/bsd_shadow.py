@@ -8,7 +8,6 @@ Manage the password database on BSD systems
     <module-provider-override>`.
 """
 
-
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -111,7 +110,7 @@ def info(name):
     if not isinstance(name, str):
         name = str(name)
     if ":" in name:
-        raise SaltInvocationError("Invalid username '{}'".format(name))
+        raise SaltInvocationError(f"Invalid username '{name}'")
 
     if __salt__["cmd.has_exec"]("pw"):
         change, expire = __salt__["cmd.run_stdout"](
@@ -122,7 +121,7 @@ def info(name):
             with salt.utils.files.fopen("/etc/master.passwd", "r") as fp_:
                 for line in fp_:
                     line = salt.utils.stringutils.to_unicode(line)
-                    if line.startswith("{}:".format(name)):
+                    if line.startswith(f"{name}:"):
                         key = line.split(":")
                         change, expire = key[5:7]
                         ret["passwd"] = str(key[1])
@@ -211,7 +210,7 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     """
-    cmd = "pw user mod {} -w none".format(name)
+    cmd = f"pw user mod {name} -w none"
     __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="quiet")
     uinfo = info(name)
     return not uinfo["passwd"]

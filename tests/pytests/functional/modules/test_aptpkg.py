@@ -35,7 +35,7 @@ class Key:
         keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not keydir.is_dir():
             keydir.mkdir()
-        aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
+        aptpkg.add_repo_key(f"salt://{self.keyname}", aptkey=self.aptkey)
 
     def del_key(self):
         aptpkg.del_repo_key(keyid="0E08A149DE57BFBE", aptkey=self.aptkey)
@@ -124,7 +124,7 @@ def get_repos_from_file(source_path):
             for line in fp:
                 test_repos.append(line.strip())
     except FileNotFoundError as error:
-        pytest.skip("Missing {}".format(error.filename))
+        pytest.skip(f"Missing {error.filename}")
     if not test_repos:
         pytest.skip("Did not detect an APT repo")
     return test_repos
@@ -153,7 +153,7 @@ def get_current_repo(multiple_comps=False):
                     else:
                         break
     except FileNotFoundError as error:
-        pytest.skip("Missing {}".format(error.filename))
+        pytest.skip(f"Missing {error.filename}")
     if not test_repo:
         pytest.skip("Did not detect an APT repo")
     return test_repo, comps
@@ -237,10 +237,10 @@ def test_del_repo(build_repo_file):
     test_repos = get_repos_from_file(build_repo_file)
     for test_repo in test_repos:
         ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo '{}' has been removed".format(test_repo)
+        assert f"Repo '{test_repo}' has been removed"
         with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
             ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
+        assert f"Repo {test_repo} doesn't exist" in exc.value.message
 
 
 @pytest.mark.skipif(
@@ -287,7 +287,7 @@ def test_mod_repo(revert_repo_file):
         ret = aptpkg.mod_repo(repo=test_repo, comments=msg)
     assert sorted(ret[list(ret.keys())[0]]["comps"]) == sorted(comps)
     ret = file.grep("/etc/apt/sources.list", msg)
-    assert "#{}".format(msg) in ret["stdout"]
+    assert f"#{msg}" in ret["stdout"]
 
 
 @pytest.mark.destructive_test
@@ -356,7 +356,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
     and using both binary and armored gpg keys
     """
     try:
-        assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
+        assert aptpkg.add_repo_key(f"salt://{get_key_file}", aptkey=aptkey)
         keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()

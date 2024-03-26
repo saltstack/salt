@@ -1,28 +1,29 @@
 """
 Send events covering process status
 """
+
 import logging
 
 import salt.utils.beacons
 
 try:
-    import salt.utils.psutil_compat as psutil
+    import psutil
 
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
 
-
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 __virtualname__ = "ps"
 
 
 def __virtual__():
     if not HAS_PSUTIL:
-        err_msg = "psutil library is missing."
-        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
-        return False, err_msg
+        return (
+            False,
+            f"Unable to load {__virtualname__} beacon: psutil library not installed",
+        )
     return __virtualname__
 
 

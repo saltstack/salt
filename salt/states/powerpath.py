@@ -31,12 +31,12 @@ def license_present(name):
 
     if name in licenses:
         ret["result"] = True
-        ret["comment"] = "License key {} already present".format(name)
+        ret["comment"] = f"License key {name} already present"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "License key {} is set to be added".format(name)
+        ret["comment"] = f"License key {name} is set to be added"
         return ret
 
     data = __salt__["powerpath.add_license"](name)
@@ -70,12 +70,12 @@ def license_absent(name):
 
     if name not in licenses:
         ret["result"] = True
-        ret["comment"] = "License key {} not present".format(name)
+        ret["comment"] = f"License key {name} not present"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "License key {} is set to be removed".format(name)
+        ret["comment"] = f"License key {name} is set to be removed"
         return ret
 
     data = __salt__["powerpath.remove_license"](name)

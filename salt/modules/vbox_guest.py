@@ -90,19 +90,19 @@ def _return_mount_error(f):
 
 
 def _additions_install_program_path(mount_point):
-    return os.path.join(
-        mount_point,
-        {
-            "Linux": "VBoxLinuxAdditions.run",
-            "Solaris": "VBoxSolarisAdditions.pkg",
-            "Windows": "VBoxWindowsAdditions.exe",
-        }[__grains__.get("kernel", "")],
-    )
+    kernel = __grains__.get("kernel", "")
+    if kernel == "Linux":
+        exe = "VBoxLinuxAdditions.run"
+    elif kernel == "Solaris":
+        exe = "VBoxSolarisAdditions.pkg"
+    elif kernel == "Windows":
+        exe = "VBoxWindowsAdditions.exe"
+    return os.path.join(mount_point, exe)
 
 
 def _additions_install_opensuse(**kwargs):
     kernel_type = re.sub(r"^(\d|\.|-)*", "", __grains__.get("kernelrelease", ""))
-    kernel_devel = "kernel-{}-devel".format(kernel_type)
+    kernel_devel = f"kernel-{kernel_type}-devel"
     return __states__["pkg.installed"](None, pkgs=["make", "gcc", kernel_devel])
 
 
@@ -279,7 +279,7 @@ def additions_version():
     except OSError:
         return False
     if d and len(os.listdir(d)) > 0:
-        return re.sub(r"^{}-".format(_additions_dir_prefix), "", os.path.basename(d))
+        return re.sub(rf"^{_additions_dir_prefix}-", "", os.path.basename(d))
     return False
 
 

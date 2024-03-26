@@ -1,6 +1,7 @@
 """
 Salt dunders.
 """
+
 import salt.loader.context
 
 loader_context = salt.loader.context.LoaderContext()

@@ -3,7 +3,6 @@
     :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
-
 import pytest
 
 import salt.modules.mine as mine
@@ -24,7 +23,7 @@ class FakeCache:
         return self.data.get((bank, key), {})
 
     def debug(self):
-        print("{}:FakeCache dump:\n{}".format(__name__, self.data))
+        print(f"{__name__}:FakeCache dump:\n{self.data}")
 
 
 @pytest.fixture

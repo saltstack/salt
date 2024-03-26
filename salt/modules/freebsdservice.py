@@ -56,7 +56,7 @@ def _cmd(jail=None):
         jexec = salt.utils.path.which("jexec")
         if not jexec:
             raise CommandNotFoundError("'jexec' command not found")
-        service = "{} {} {}".format(jexec, jail, service)
+        service = f"{jexec} {jail} {service}"
     return service
 
 
@@ -72,7 +72,7 @@ def _get_jail_path(jail):
     jls = salt.utils.path.which("jls")
     if not jls:
         raise CommandNotFoundError("'jls' command not found")
-    jails = __salt__["cmd.run_stdout"]("{} -n jid name path".format(jls))
+    jails = __salt__["cmd.run_stdout"](f"{jls} -n jid name path")
     for j in jails.splitlines():
         jid, jname, path = (x.split("=")[1].strip() for x in j.split())
         if jid == jail or jname == jail:
@@ -89,10 +89,10 @@ def _get_rcscript(name, jail=None):
 
     Support for jail (representing jid or jail name) keyword argument in kwargs
     """
-    cmd = "{} -r".format(_cmd(jail))
+    cmd = f"{_cmd(jail)} -r"
     prf = _get_jail_path(jail) if jail else ""
     for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
-        if line.endswith("{}{}".format(os.path.sep, name)):
+        if line.endswith(f"{os.path.sep}{name}"):
             return os.path.join(prf, line.lstrip(os.path.sep))
     return None
 
@@ -109,7 +109,7 @@ def _get_rcvar(name, jail=None):
         log.error("Service %s not found", name)
         return False
 
-    cmd = "{} {} rcvar".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} rcvar"
 
     for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
@@ -137,14 +137,14 @@ def get_enabled(jail=None):
     ret = []
     service = _cmd(jail)
     prf = _get_jail_path(jail) if jail else ""
-    for svc in __salt__["cmd.run"]("{} -e".format(service)).splitlines():
+    for svc in __salt__["cmd.run"](f"{service} -e").splitlines():
         ret.append(os.path.basename(svc))
 
     # This is workaround for bin/173454 bug
     for svc in get_all(jail):
         if svc in ret:
             continue
-        if not os.path.exists("{}/etc/rc.conf.d/{}".format(prf, svc)):
+        if not os.path.exists(f"{prf}/etc/rc.conf.d/{svc}"):
             continue
         if enabled(svc, jail=jail):
             ret.append(svc)
@@ -199,13 +199,11 @@ def _switch(name, on, **kwargs):  # pylint: disable=C0103  # pylint: disable=C01
 
     config = kwargs.get(
         "config",
-        __salt__["config.option"](
-            "service.config", default="{}/etc/rc.conf".format(chroot)
-        ),
+        __salt__["config.option"]("service.config", default=f"{chroot}/etc/rc.conf"),
     )
 
     if not config:
-        rcdir = "{}/etc/rc.conf.d".format(chroot)
+        rcdir = f"{chroot}/etc/rc.conf.d"
         if not os.path.exists(rcdir) or not os.path.isdir(rcdir):
             log.error("%s not exists", rcdir)
             return False
@@ -223,17 +221,17 @@ def _switch(name, on, **kwargs):  # pylint: disable=C0103  # pylint: disable=C01
         with salt.utils.files.fopen(config, "r") as ifile:
             for line in ifile:
                 line = salt.utils.stringutils.to_unicode(line)
-                if not line.startswith("{}=".format(rcvar)):
+                if not line.startswith(f"{rcvar}="):
                     nlines.append(line)
                     continue
                 rest = line[len(line.split()[0]) :]  # keep comments etc
-                nlines.append('{}="{}"{}'.format(rcvar, val, rest))
+                nlines.append(f'{rcvar}="{val}"{rest}')
                 edited = True
     if not edited:
         # Ensure that the file ends in a \n
         if len(nlines) > 1 and nlines[-1][-1] != "\n":
-            nlines[-1] = "{}\n".format(nlines[-1])
-        nlines.append('{}="{}"\n'.format(rcvar, val))
+            nlines[-1] = f"{nlines[-1]}\n"
+        nlines.append(f'{rcvar}="{val}"\n')
 
     with salt.utils.files.fopen(config, "w") as ofile:
         nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
@@ -318,7 +316,7 @@ def enabled(name, **kwargs):
         log.error("Service %s not found", name)
         return False
 
-    cmd = "{} {} rcvar".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} rcvar"
 
     for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
@@ -395,7 +393,7 @@ def get_all(jail=None):
     """
     ret = []
     service = _cmd(jail)
-    for srv in __salt__["cmd.run"]("{} -l".format(service)).splitlines():
+    for srv in __salt__["cmd.run"](f"{service} -l").splitlines():
         if not srv.isupper():
             ret.append(srv)
     return sorted(ret)
@@ -415,7 +413,7 @@ def start(name, jail=None):
 
         salt '*' service.start <service name>
     """
-    cmd = "{} {} onestart".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} onestart"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -433,7 +431,7 @@ def stop(name, jail=None):
 
         salt '*' service.stop <service name>
     """
-    cmd = "{} {} onestop".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} onestop"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -451,7 +449,7 @@ def restart(name, jail=None):
 
         salt '*' service.restart <service name>
     """
-    cmd = "{} {} onerestart".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} onerestart"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -469,7 +467,7 @@ def reload_(name, jail=None):
 
         salt '*' service.reload <service name>
     """
-    cmd = "{} {} onereload".format(_cmd(jail), name)
+    cmd = f"{_cmd(jail)} {name} onereload"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -508,7 +506,7 @@ def status(name, sig=None, jail=None):
         services = [name]
     results = {}
     for service in services:
-        cmd = "{} {} onestatus".format(_cmd(jail), service)
+        cmd = f"{_cmd(jail)} {service} onestatus"
         results[service] = not __salt__["cmd.retcode"](
             cmd, python_shell=False, ignore_retcode=True
         )

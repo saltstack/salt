@@ -42,7 +42,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "continuous query {} is already present".format(name),
+        "comment": f"continuous query {name} is already present",
     }
 
     if not __salt__["influxdb.continuous_query_exists"](
@@ -50,16 +50,16 @@ def present(
     ):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = " {} is absent and will be created".format(name)
+            ret["comment"] = f" {name} is absent and will be created"
             return ret
         if __salt__["influxdb.create_continuous_query"](
             database, name, query, resample_time, coverage_period, **client_args
         ):
-            ret["comment"] = "continuous query {} has been created".format(name)
+            ret["comment"] = f"continuous query {name} has been created"
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create continuous query {}".format(name)
+            ret["comment"] = f"Failed to create continuous query {name}"
             ret["result"] = False
             return ret
 
@@ -80,22 +80,22 @@ def absent(name, database, **client_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "continuous query {} is not present".format(name),
+        "comment": f"continuous query {name} is not present",
     }
 
     if __salt__["influxdb.continuous_query_exists"](database, name, **client_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "continuous query {} is present and needs to be removed".format(name)
+            ret["comment"] = (
+                f"continuous query {name} is present and needs to be removed"
+            )
             return ret
         if __salt__["influxdb.drop_continuous_query"](database, name, **client_args):
-            ret["comment"] = "continuous query {} has been removed".format(name)
+            ret["comment"] = f"continuous query {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove continuous query {}".format(name)
+            ret["comment"] = f"Failed to remove continuous query {name}"
             ret["result"] = False
             return ret
 

@@ -47,7 +47,7 @@ def __execute_cmd(name, xml):
         tmpfilename = fh.name
         fh.write(xml)
 
-    cmd = __salt__["cmd.run_all"]("hponcfg -f {}".format(tmpfilename))
+    cmd = __salt__["cmd.run_all"](f"hponcfg -f {tmpfilename}")
 
     # Clean up the temp file
     __salt__["file.remove"](tmpfilename)
@@ -394,11 +394,7 @@ def create_user(name, password, *privileges):
         name,
         password,
         "\n".join(
-            [
-                '<{} value="Y" />'.format(i.upper())
-                for i in privileges
-                if i.upper() in _priv
-            ]
+            [f'<{i.upper()} value="Y" />' for i in privileges if i.upper() in _priv]
         ),
     )
 

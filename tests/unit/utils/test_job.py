@@ -2,7 +2,6 @@
 unit tests for salt.utils.job
 """
 
-
 import salt.minion
 import salt.utils.job as job
 from tests.support.mock import patch

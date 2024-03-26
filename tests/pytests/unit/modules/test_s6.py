@@ -4,7 +4,6 @@
     Test cases for salt.modules.s6
 """
 
-
 import os
 
 import pytest

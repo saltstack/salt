@@ -29,7 +29,6 @@ Example:
           - npm: bower
 """
 
-
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -88,7 +87,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         installed_pkgs = __salt__["bower.list"](dir=dir, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error looking up '{}': {}".format(name, err)
+        ret["comment"] = f"Error looking up '{name}': {err}"
         return ret
     else:
         installed_pkgs = {p: info for p, info in installed_pkgs.items()}
@@ -106,7 +105,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         if pkg_name in installed_pkgs:
             installed_pkg = installed_pkgs[pkg_name]
             installed_pkg_ver = installed_pkg.get("pkgMeta").get("version")
-            installed_name_ver = "{}#{}".format(pkg_name, installed_pkg_ver)
+            installed_name_ver = f"{pkg_name}#{installed_pkg_ver}"
 
             # If given an explicit version check the installed version matches.
             if pkg_ver:
@@ -200,30 +199,30 @@ def removed(name, dir, user=None):
         installed_pkgs = __salt__["bower.list"](dir=dir, runas=user)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret["result"] = False
-        ret["comment"] = "Error removing '{}': {}".format(name, err)
+        ret["comment"] = f"Error removing '{name}': {err}"
         return ret
 
     if name not in installed_pkgs:
         ret["result"] = True
-        ret["comment"] = "Package '{}' is not installed".format(name)
+        ret["comment"] = f"Package '{name}' is not installed"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Package '{}' is set to be removed".format(name)
+        ret["comment"] = f"Package '{name}' is set to be removed"
         return ret
 
     try:
         if __salt__["bower.uninstall"](pkg=name, dir=dir, runas=user):
             ret["result"] = True
             ret["changes"] = {name: "Removed"}
-            ret["comment"] = "Package '{}' was successfully removed".format(name)
+            ret["comment"] = f"Package '{name}' was successfully removed"
         else:
             ret["result"] = False
-            ret["comment"] = "Error removing '{}'".format(name)
+            ret["comment"] = f"Error removing '{name}'"
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret["result"] = False
-        ret["comment"] = "Error removing '{}': {}".format(name, err)
+        ret["comment"] = f"Error removing '{name}': {err}"
 
     return ret
 
@@ -242,14 +241,14 @@ def bootstrap(name, user=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Directory '{}' is set to be bootstrapped".format(name)
+        ret["comment"] = f"Directory '{name}' is set to be bootstrapped"
         return ret
 
     try:
         call = __salt__["bower.install"](pkg=None, dir=name, runas=user)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error bootstrapping '{}': {}".format(name, err)
+        ret["comment"] = f"Error bootstrapping '{name}': {err}"
         return ret
 
     if not call:
@@ -280,21 +279,21 @@ def pruned(name, user=None, env=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Directory '{}' is set to be pruned".format(name)
+        ret["comment"] = f"Directory '{name}' is set to be pruned"
         return ret
 
     try:
         call = __salt__["bower.prune"](dir=name, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error pruning '{}': {}".format(name, err)
+        ret["comment"] = f"Error pruning '{name}': {err}"
         return ret
 
     ret["result"] = True
     if call:
-        ret["comment"] = "Directory '{}' was successfully pruned".format(name)
+        ret["comment"] = f"Directory '{name}' was successfully pruned"
         ret["changes"] = {"old": [], "new": call}
     else:
-        ret["comment"] = "No packages were pruned from directory '{}'".format(name)
+        ret["comment"] = f"No packages were pruned from directory '{name}'"
 
     return ret

@@ -39,6 +39,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 :depends: boto
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -658,7 +659,6 @@ def find_instances(
     in_states=None,
     filters=None,
 ):
-
     """
     Given instance properties, find and return matching instance ids
 
@@ -685,7 +685,7 @@ def find_instances(
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+                filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
         if filters:
             filter_parameters["filters"].update(filters)
@@ -785,7 +785,6 @@ def find_images(
     profile=None,
     return_objs=False,
 ):
-
     """
     Given image properties, find and return matching AMI ids
 
@@ -811,7 +810,7 @@ def find_images(
                 filter_parameters["filters"]["name"] = ami_name
             if tags:
                 for tag_name, tag_value in tags.items():
-                    filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+                    filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
             images = conn.get_all_images(**filter_parameters)
             log.debug(
                 "The filters criteria %s matched the following images:%s",
@@ -885,7 +884,6 @@ def get_id(
     in_states=None,
     filters=None,
 ):
-
     """
     Given instance properties, return the instance id if it exists.
 
@@ -1518,9 +1516,7 @@ def get_attribute(
             " command."
         )
     if attribute not in attribute_list:
-        raise SaltInvocationError(
-            "Attribute must be one of: {}.".format(attribute_list)
-        )
+        raise SaltInvocationError(f"Attribute must be one of: {attribute_list}.")
     try:
         if instance_name:
             instances = find_instances(
@@ -1611,9 +1607,7 @@ def set_attribute(
             " command."
         )
     if attribute not in attribute_list:
-        raise SaltInvocationError(
-            "Attribute must be one of: {}.".format(attribute_list)
-        )
+        raise SaltInvocationError(f"Attribute must be one of: {attribute_list}.")
     try:
         if instance_name:
             instances = find_instances(
@@ -1824,7 +1818,7 @@ def create_network_interface(
     )
     vpc_id = vpc_id.get("vpc_id")
     if not vpc_id:
-        msg = "subnet_id {} does not map to a valid vpc id.".format(subnet_id)
+        msg = f"subnet_id {subnet_id} does not map to a valid vpc id."
         r["error"] = {"message": msg}
         return r
     _groups = __salt__["boto_secgroup.convert_to_group_ids"](
@@ -2233,7 +2227,7 @@ def set_volumes_tags(
                         profile=profile,
                     )
                     if not instance_id:
-                        msg = "Couldn't resolve instance Name {} to an ID.".format(v)
+                        msg = f"Couldn't resolve instance Name {v} to an ID."
                         raise CommandExecutionError(msg)
                     new_filters["attachment.instance_id"] = instance_id
                 else:
@@ -2295,10 +2289,10 @@ def set_volumes_tags(
                         profile=profile,
                     ):
                         ret["success"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove tags on vol.id {}: {}".format(
-                            vol.id, remove
+                        ret["comment"] = (
+                            "Failed to remove tags on vol.id {}: {}".format(
+                                vol.id, remove
+                            )
                         )
                         return ret
     if changes["old"] or changes["new"]:

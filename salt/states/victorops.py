@@ -93,7 +93,7 @@ def create_event(name, message_type, routing_key="everyone", **kwargs):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "Need to create event: {}".format(name)
+        ret["comment"] = f"Need to create event: {name}"
         return ret
 
     res = __salt__["victorops.create_event"](

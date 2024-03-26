@@ -23,18 +23,18 @@ def test_enabled():
         apache_site.__salt__,
         {"apache.check_site_enabled": mock, "apache.a2ensite": mock_str},
     ):
-        comt = "{} already enabled.".format(name)
+        comt = f"{name} already enabled."
         ret.update({"comment": comt})
         assert apache_site.enabled(name) == ret
 
-        comt = "Apache site {} is set to be enabled.".format(name)
+        comt = f"Apache site {name} is set to be enabled."
         ret.update(
             {"comment": comt, "result": None, "changes": {"new": name, "old": None}}
         )
         with patch.dict(apache_site.__opts__, {"test": True}):
             assert apache_site.enabled(name) == ret
 
-        comt = "Failed to enable {} Apache site".format(name)
+        comt = f"Failed to enable {name} Apache site"
         ret.update({"comment": comt, "result": False, "changes": {}})
         with patch.dict(apache_site.__opts__, {"test": False}):
             assert apache_site.enabled(name) == ret
@@ -54,16 +54,16 @@ def test_disabled():
         apache_site.__salt__,
         {"apache.check_site_enabled": mock, "apache.a2dissite": mock_str},
     ):
-        comt = "Apache site {} is set to be disabled.".format(name)
+        comt = f"Apache site {name} is set to be disabled."
         ret.update({"comment": comt, "changes": {"new": None, "old": name}})
         with patch.dict(apache_site.__opts__, {"test": True}):
             assert apache_site.disabled(name) == ret
 
-        comt = "Failed to disable {} Apache site".format(name)
+        comt = f"Failed to disable {name} Apache site"
         ret.update({"comment": comt, "result": False, "changes": {}})
         with patch.dict(apache_site.__opts__, {"test": False}):
             assert apache_site.disabled(name) == ret
 
-        comt = "{} already disabled.".format(name)
+        comt = f"{name} already disabled."
         ret.update({"comment": comt, "result": True})
         assert apache_site.disabled(name) == ret

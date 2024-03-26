@@ -160,7 +160,7 @@ def get_hash(path, form="sha256", chunk_size=65536):
     """
     hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
     if hash_type is None:
-        raise ValueError("Invalid hash type: {}".format(form))
+        raise ValueError(f"Invalid hash type: {form}")
 
     with salt.utils.files.fopen(path, "rb") as ifile:
         hash_obj = hash_type()
@@ -182,7 +182,7 @@ class DigestCollector:
         """
         self.__digest = hasattr(hashlib, form) and getattr(hashlib, form)() or None
         if self.__digest is None:
-            raise ValueError("Invalid hash type: {}".format(form))
+            raise ValueError(f"Invalid hash type: {form}")
         self.__buff = buff
 
     def add(self, path):

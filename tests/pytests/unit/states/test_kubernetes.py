@@ -33,7 +33,7 @@ def mock_func(func_name, return_value, test=False):
     Mock any of the kubernetes state function return values and set
     the test options.
     """
-    name = "kubernetes.{}".format(func_name)
+    name = f"kubernetes.{func_name}"
     mocked = {name: MagicMock(return_value=return_value)}
     with patch.dict(kubernetes.__salt__, mocked) as patched:
         with patch.dict(kubernetes.__opts__, {"test": test}):
@@ -85,7 +85,7 @@ def make_node(name="minikube"):
                 "labels": make_node_labels(name=name),
                 "name": name,
                 "namespace": None,
-                "link": "/api/v1/nodes/{name}".format(name=name),
+                "link": f"/api/v1/nodes/{name}",
                 "uid": "7811b8ae-c1a1-11e7-a55a-0800279fb61e",
             },
             "spec": {"external_id": name},

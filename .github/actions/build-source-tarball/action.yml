@@ -1,22 +1,15 @@
 ---
 name: build-source-tarball
 description: Build Source Tarball
+
 inputs:
   salt-version:
-    type: string
     required: true
     description: The Salt version to set prior to building the tarball.
   nox-version:
     required: false
-    type: string
     description: The version of Nox to install
     default: "2022.8.7"
-
-
-env:
-  COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:

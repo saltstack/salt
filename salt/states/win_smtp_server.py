@@ -3,7 +3,6 @@ Module for managing IIS SMTP server configuration on Windows servers.
 
 """
 
-
 import salt.utils.args
 
 _DEFAULT_SERVER = "SmtpSvc/1"
@@ -39,7 +38,7 @@ def _normalize_server_settings(**settings):
         if isinstance(settings[setting], dict):
             value_from_key = next(iter(settings[setting].keys()))
 
-            ret[setting] = "{{{0}}}".format(value_from_key)
+            ret[setting] = f"{{{value_from_key}}}"
         else:
             ret[setting] = settings[setting]
     return ret
@@ -144,17 +143,17 @@ def active_log_format(name, log_format, server=_DEFAULT_SERVER):
     current_log_format = __salt__["win_smtp_server.get_log_format"](server)
 
     if log_format == current_log_format:
-        ret[
-            "comment"
-        ] = "LogPluginClsid already contains the id of the provided log format."
+        ret["comment"] = (
+            "LogPluginClsid already contains the id of the provided log format."
+        )
         ret["result"] = True
     elif __opts__["test"]:
         ret["comment"] = "LogPluginClsid will be changed."
         ret["changes"] = {"old": current_log_format, "new": log_format}
     else:
-        ret[
-            "comment"
-        ] = "Set LogPluginClsid to contain the id of the provided log format."
+        ret["comment"] = (
+            "Set LogPluginClsid to contain the id of the provided log format."
+        )
         ret["changes"] = {"old": current_log_format, "new": log_format}
         ret["result"] = __salt__["win_smtp_server.set_log_format"](log_format, server)
     return ret

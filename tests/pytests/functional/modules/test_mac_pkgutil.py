@@ -1,6 +1,7 @@
 """
 integration tests for mac_pkgutil
 """
+
 import shutil
 
 import pytest

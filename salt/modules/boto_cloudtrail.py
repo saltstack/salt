@@ -45,6 +45,7 @@ The dependencies listed above can be installed via package or pip.
             region: us-east-1
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -424,7 +425,7 @@ def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:cloudtrail:{}:{}:trail/{}".format(region, account_id, name)
+    return f"arn:aws:cloudtrail:{region}:{account_id}:trail/{name}"
 
 
 def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):

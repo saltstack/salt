@@ -1,6 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -57,7 +58,7 @@ def print_gh_event(ctx: Context):
         assert gh_event_path is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
         ctx.exit(1)
@@ -179,7 +180,7 @@ def runner_types(ctx: Context, event_name: str):
         assert github_output is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
         ctx.exit(1)
@@ -326,7 +327,7 @@ def define_jobs(
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -473,7 +474,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -653,7 +654,7 @@ def matrix(
     """
     _matrix = []
     _splits = {
-        "functional": 3,
+        "functional": 4,
         "integration": 5,
         "scenarios": 1,
         "unit": 4,
@@ -791,18 +792,21 @@ def pkg_matrix(
         parts = distro_slug.split("-")
         name = parts[0]
         version = parts[1]
-        if name in ("debian", "ubuntu"):
-            arch = "amd64"
-        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
-            arch = "x86_64"
+
         if len(parts) > 2:
             arch = parts[2]
+        elif name in ("debian", "ubuntu"):
+            arch = "amd64"
+        else:
+            arch = "x86_64"
+
         if name == "amazonlinux":
             name = "amazon"
-        if "centos" in name:
+        elif "centos" in name or name == "almalinux":
             name = "redhat"
-        if "photon" in name:
+        elif "photon" in name:
             name = "photon"
+
         if name == "windows":
             prefixes = {
                 "classic": "windows/",
@@ -931,7 +935,7 @@ def get_pr_test_labels(
             assert gh_event_path is not None
 
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -1100,7 +1104,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
@@ -1167,7 +1171,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
             pr_event_data = gh_event.get("pull_request")
             if pr_event_data:
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])

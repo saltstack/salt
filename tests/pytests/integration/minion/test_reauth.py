@@ -25,9 +25,7 @@ def test_reauth(salt_master_factory, event_listener):
         "test_reauth-master",
         overrides={"log_level": "info"},
     )
-    sls_tempfile = master.state_tree.base.temp_file(
-        "{}.sls".format(sls_name), sls_contents
-    )
+    sls_tempfile = master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents)
     minion = master.salt_minion_daemon(
         "test_reauth-minion",
         overrides={"log_level": "info"},

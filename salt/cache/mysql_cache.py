@@ -144,9 +144,7 @@ def run_query(conn, query, args=None, retries=3):
         if len(query) > 150:
             query = query[:150] + "<...>"
         raise SaltCacheError(
-            "Error running {}{}: {}".format(
-                query, "- args: {}".format(args) if args else "", e
-            )
+            "Error running {}{}: {}".format(query, f"- args: {args}" if args else "", e)
         )
 
 
@@ -266,7 +264,7 @@ def store(bank, key, data):
     cur, cnt = run_query(__context__.get("mysql_client"), query, args=args)
     cur.close()
     if cnt not in (1, 2):
-        raise SaltCacheError("Error storing {} {} returned {}".format(bank, key, cnt))
+        raise SaltCacheError(f"Error storing {bank} {key} returned {cnt}")
 
 
 def fetch(bank, key):

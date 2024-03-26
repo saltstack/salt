@@ -93,9 +93,7 @@ def test_load():
                 assert [mod] == kmod.load(mod, True)
 
             with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_1}):
-                assert "Error loading module {}: {}".format(mod, err_msg) == kmod.load(
-                    mod
-                )
+                assert f"Error loading module {mod}: {err_msg}" == kmod.load(mod)
 
 
 def test_is_loaded():

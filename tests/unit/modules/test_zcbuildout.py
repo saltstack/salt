@@ -76,7 +76,7 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.tdir = os.path.join(cls.rdir, "test")
         for idx, url in buildout._URL_VERSIONS.items():
             log.debug("Downloading bootstrap from %s", url)
-            dest = os.path.join(cls.rdir, "{}_bootstrap.py".format(idx))
+            dest = os.path.join(cls.rdir, f"{idx}_bootstrap.py")
             try:
                 download_to(url, dest)
             except urllib.error.URLError as exc:
@@ -116,7 +116,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         if salt.utils.platform.is_darwin():
             self.patched_environ = patched_environ(__cleanup__=["__PYVENV_LAUNCHER__"])
-            self.patched_environ.__enter__()
+            self.patched_environ.__enter__()  # pylint: disable=unnecessary-dunder-call
             self.addCleanup(self.patched_environ.__exit__)
 
         super().setUp()
@@ -124,7 +124,7 @@ class Base(TestCase, LoaderModuleMockMixin):
         shutil.copytree(self.root, self.tdir)
 
         for idx in BOOT_INIT:
-            path = os.path.join(self.rdir, "{}_bootstrap.py".format(idx))
+            path = os.path.join(self.rdir, f"{idx}_bootstrap.py")
             for fname in BOOT_INIT[idx]:
                 shutil.copy2(path, os.path.join(self.tdir, fname))
 
@@ -155,7 +155,7 @@ class BuildoutTestCase(Base):
         @buildout._salt_callback
         def callback1(a, b=1):
             for i in buildout.LOG.levels:
-                getattr(buildout.LOG, i)("{}bar".format(i[0]))
+                getattr(buildout.LOG, i)(f"{i[0]}bar")
             return "foo"
 
         def callback2(a, b=1):
@@ -212,7 +212,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(
                 buildout._URL_VERSIONS[1],
                 buildout._get_bootstrap_url(path),
-                "b1 url for {}".format(path),
+                f"b1 url for {path}",
             )
         for path in [
             os.path.join(self.tdir, "/non/existing"),
@@ -222,7 +222,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(
                 buildout._URL_VERSIONS[2],
                 buildout._get_bootstrap_url(path),
-                "b2 url for {}".format(path),
+                f"b2 url for {path}",
             )
 
     @pytest.mark.slow_test
@@ -231,17 +231,13 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
-            self.assertEqual(
-                1, buildout._get_buildout_ver(path), "1 for {}".format(path)
-            )
+            self.assertEqual(1, buildout._get_buildout_ver(path), f"1 for {path}")
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
-            self.assertEqual(
-                2, buildout._get_buildout_ver(path), "2 for {}".format(path)
-            )
+            self.assertEqual(2, buildout._get_buildout_ver(path), f"2 for {path}")
 
     @pytest.mark.slow_test
     def test_get_bootstrap_content(self):
@@ -380,14 +376,14 @@ class BuildoutOnlineTestCase(Base):
                     "-C",
                     cls.ppy_dis,
                     "-xzvf",
-                    "{}/distribute-0.6.43.tar.gz".format(cls.ppy_dis),
+                    f"{cls.ppy_dis}/distribute-0.6.43.tar.gz",
                 ]
             )
 
             subprocess.check_call(
                 [
-                    "{}/bin/python".format(cls.ppy_dis),
-                    "{}/distribute-0.6.43/setup.py".format(cls.ppy_dis),
+                    f"{cls.ppy_dis}/bin/python",
+                    f"{cls.ppy_dis}/distribute-0.6.43/setup.py",
                     "install",
                 ]
             )
@@ -490,9 +486,9 @@ class BuildoutOnlineTestCase(Base):
         out = ret["out"]
         comment = ret["comment"]
         self.assertTrue(ret["status"])
-        self.assertTrue("Creating directory" in out)
-        self.assertTrue("Installing a." in out)
-        self.assertTrue("{} bootstrap.py".format(self.py_st) in comment)
+        self.assertIn("Creating directory", out)
+        self.assertIn("Installing a.", out)
+        self.assertTrue(f"{self.py_st} bootstrap.py" in comment)
         self.assertTrue("buildout -c buildout.cfg" in comment)
         ret = buildout.buildout(
             b_dir, parts=["a", "b", "c"], buildout_ver=2, python=self.py_st
@@ -500,17 +496,17 @@ class BuildoutOnlineTestCase(Base):
         outlog = ret["outlog"]
         out = ret["out"]
         comment = ret["comment"]
-        self.assertTrue("Installing single part: a" in outlog)
-        self.assertTrue("buildout -c buildout.cfg -N install a" in comment)
-        self.assertTrue("Installing b." in out)
-        self.assertTrue("Installing c." in out)
+        self.assertIn("Installing single part: a", outlog)
+        self.assertIn("buildout -c buildout.cfg -N install a", comment)
+        self.assertIn("Installing b.", out)
+        self.assertIn("Installing c.", out)
         ret = buildout.buildout(
             b_dir, parts=["a", "b", "c"], buildout_ver=2, newest=True, python=self.py_st
         )
         outlog = ret["outlog"]
         out = ret["out"]
         comment = ret["comment"]
-        self.assertTrue("buildout -c buildout.cfg -n install a" in comment)
+        self.assertIn("buildout -c buildout.cfg -n install a", comment)
 
 
 # TODO: Is this test even still needed?
@@ -537,8 +533,8 @@ class BuildoutAPITestCase(TestCase):
                 out = ret["out"].decode("utf-8")
 
         for out in ["àé", "ççàé"]:
-            self.assertTrue(out in uretm["logs_by_level"]["info"])
-            self.assertTrue(out in uretm["outlog_by_level"])
+            self.assertIn(out, uretm["logs_by_level"]["info"])
+            self.assertIn(out, uretm["outlog_by_level"])
 
     def test_setup(self):
         buildout.LOG.clear()

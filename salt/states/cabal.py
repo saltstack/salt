@@ -22,7 +22,6 @@ pkg.installed state for the package which provides cabal
 
 """
 
-
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -84,7 +83,7 @@ def installed(name, pkgs=None, user=None, install_global=False, env=None):
         call = __salt__["cabal.update"](user=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Could not run cabal update {}".format(err)
+        ret["comment"] = f"Could not run cabal update {err}"
         return ret
 
     if pkgs is not None:
@@ -96,7 +95,7 @@ def installed(name, pkgs=None, user=None, install_global=False, env=None):
         installed_pkgs = __salt__["cabal.list"](user=user, installed=True, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error looking up '{}': {}".format(name, err)
+        ret["comment"] = f"Error looking up '{name}': {err}"
         return ret
 
     pkgs_satisfied = []
@@ -181,24 +180,24 @@ def removed(name, user=None, env=None):
         installed_pkgs = __salt__["cabal.list"](user=user, installed=True, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error looking up '{}': {}".format(name, err)
+        ret["comment"] = f"Error looking up '{name}': {err}"
 
     if name not in installed_pkgs:
         ret["result"] = True
-        ret["comment"] = "Package '{}' is not installed".format(name)
+        ret["comment"] = f"Package '{name}' is not installed"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Package '{}' is set to be removed".format(name)
+        ret["comment"] = f"Package '{name}' is set to be removed"
         return ret
 
     if __salt__["cabal.uninstall"](pkg=name, user=user, env=env):
         ret["result"] = True
         ret["changes"][name] = "Removed"
-        ret["comment"] = "Package '{}' was successfully removed".format(name)
+        ret["comment"] = f"Package '{name}' was successfully removed"
     else:
         ret["result"] = False
-        ret["comment"] = "Error removing package '{}'".format(name)
+        ret["comment"] = f"Error removing package '{name}'"
 
     return ret

@@ -117,9 +117,9 @@ def _query(lamp_id, state, action="", method="GET"):
     # Because salt.utils.query is that dreadful... :(
 
     err = None
-    url = "{}/lights{}".format(
-        CONFIG["uri"], lamp_id and "/{}".format(lamp_id) or ""
-    ) + (action and "/{}".format(action) or "")
+    url = "{}/lights{}".format(CONFIG["uri"], lamp_id and f"/{lamp_id}" or "") + (
+        action and f"/{action}" or ""
+    )
     conn = http.client.HTTPConnection(CONFIG["host"])
     if method == "PUT":
         conn.request(method, url, salt.utils.json.dumps(state))
@@ -130,7 +130,7 @@ def _query(lamp_id, state, action="", method="GET"):
     if resp.status == http.client.OK:
         res = salt.utils.json.loads(resp.read())
     else:
-        err = "HTTP error: {}, {}".format(resp.status, resp.reason)
+        err = f"HTTP error: {resp.status}, {resp.reason}"
     conn.close()
     if err:
         raise CommandExecutionError(err)
@@ -175,7 +175,7 @@ def _get_devices(params):
         raise CommandExecutionError("Parameter ID is required.")
 
     return (
-        type(params["id"]) == int
+        isinstance(params["id"], int)
         and [params["id"]]
         or [int(dev) for dev in params["id"].split(",")]
     )

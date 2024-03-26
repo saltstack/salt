@@ -1,6 +1,7 @@
 """
     :codeauthor: Lukas Raska <lukas@raska.me>
 """
+
 import pytest
 
 import salt.utils.dictdiffer as dictdiffer

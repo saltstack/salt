@@ -29,8 +29,7 @@ def test_mocked_objects():
         else:
             assert len(v) == 2
 
-    sv = sv.__str__()
-    assert isinstance(sv, str)
+    assert isinstance(str(sv), str)
 
     with patch("salt.version.SaltStackVersion.LNAMES", {"neon": (2019, 8)}):
         sv = salt.version.SaltStackVersion.from_name("Neon")

@@ -86,9 +86,9 @@ def test_replace_issue_18612_prepend(file, tmp_path):
         )
 
     # ensure, the resulting file contains the expected lines
-    assert path_test.read_text() == "en_US.UTF-8\n{}".format(contents)
+    assert path_test.read_text() == f"en_US.UTF-8\n{contents}"
 
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file()
     assert backup_file.read_text() == contents
 
@@ -127,9 +127,9 @@ def test_replace_issue_18612_append(file, tmp_path):
         )
 
     # ensure, the resulting file contains the expected lines
-    assert path_test.read_text() == "{}\nen_US.UTF-8\n".format(contents)
+    assert path_test.read_text() == f"{contents}\nen_US.UTF-8\n"
 
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file()
     assert backup_file.read_text() == contents
 
@@ -171,9 +171,9 @@ def test_replace_issue_18612_append_not_found_content(file, tmp_path):
         )
 
     # ensure, the resulting file contains the expected lines
-    assert path_test.read_text() == "{}\n{}\n".format(contents, not_found_content)
+    assert path_test.read_text() == f"{contents}\n{not_found_content}\n"
 
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file()
     assert backup_file.read_text() == contents
 
@@ -215,7 +215,7 @@ def test_replace_issue_18612_change_mid_line_with_comment(file, tmp_path):
     # ensure, the resulting file contains the expected lines
     assert path_test.read_text() == contents.replace("#foo=bar", "foo=salt")
 
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file()
     assert backup_file.read_text() == contents
 
@@ -273,7 +273,7 @@ def test_replace_issue_18841_no_changes(file, tmp_path):
     assert path_test.read_text() == contents
 
     # ensure no backup file was created
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file() is False
 
     # ensure the file's mtime didn't change
@@ -328,7 +328,7 @@ def test_replace_issue_18841_omit_backup(file, tmp_path):
     assert path_test.read_text() == contents
 
     # ensure no backup file was created
-    backup_file = path_test.with_name("{}.bak".format(path_test.name))
+    backup_file = path_test.with_name(f"{path_test.name}.bak")
     assert backup_file.is_file() is False
 
     # ensure the file's mtime didn't change
@@ -378,20 +378,20 @@ def test_file_replace_prerequired_issues_55775(modules, state_tree, tmp_path):
     assert managed_file.exists()
 
 
-def test_file_replace_check_cmd(modules, state_tree, tmp_path):
+def test_file_replace_check_cmd(modules, state_tree):
     """
     Test that check_cmd works for file.replace
     and those states do not run.
     """
-    sls_contents = f"""
-replace_in_file:
-  file.replace:
-    - name: /tmp/test
-    - pattern: hi
-    - repl: "replacement text"
-    - append_if_not_found: True
-    - check_cmd:
-      - "djasjahj"
+    sls_contents = """
+    replace_in_file:
+      file.replace:
+        - name: /tmp/test
+        - pattern: hi
+        - repl: "replacement text"
+        - append_if_not_found: True
+        - check_cmd:
+          - "djasjahj"
     """
     with pytest.helpers.temp_file(
         "file-replace-check-cmd.sls", sls_contents, state_tree

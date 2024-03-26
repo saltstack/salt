@@ -140,14 +140,14 @@ def present(name, clients=None, hosts=None, options=None, exports="/etc/exports"
     if path in old:
         if old[path] == clients:
             ret["result"] = True
-            ret["comment"] = "Export {} already configured".format(path)
+            ret["comment"] = f"Export {path} already configured"
             return ret
 
         ret["changes"]["new"] = clients
         ret["changes"]["old"] = old[path]
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Export {} would be changed".format(path)
+            ret["comment"] = f"Export {path} would be changed"
             return ret
 
         __salt__["nfs3.del_export"](exports, path)
@@ -157,7 +157,7 @@ def present(name, clients=None, hosts=None, options=None, exports="/etc/exports"
         ret["changes"]["new"] = clients
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Export {} would be added".format(path)
+            ret["comment"] = f"Export {path} would be added"
             return ret
 
     add_export = __salt__["nfs3.add_export"]
@@ -186,7 +186,7 @@ def absent(name, exports="/etc/exports"):
     old = __salt__["nfs3.list_exports"](exports)
     if path in old:
         if __opts__["test"]:
-            ret["comment"] = "Export {} would be removed".format(path)
+            ret["comment"] = f"Export {path} would be removed"
             ret["changes"][path] = old[path]
             ret["result"] = None
             return ret
@@ -196,12 +196,12 @@ def absent(name, exports="/etc/exports"):
         if not try_reload["result"]:
             ret["comment"] = try_reload["stderr"]
         else:
-            ret["comment"] = "Export {} removed".format(path)
+            ret["comment"] = f"Export {path} removed"
 
         ret["result"] = try_reload["result"]
         ret["changes"][path] = old[path]
     else:
-        ret["comment"] = "Export {} already absent".format(path)
+        ret["comment"] = f"Export {path} already absent"
         ret["result"] = True
 
     return ret

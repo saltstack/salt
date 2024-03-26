@@ -87,7 +87,6 @@ for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 """
 
-
 import logging
 import os
 import pickle
@@ -144,7 +143,6 @@ def ext_pillar(
     path_style=False,
     https_enable=True,
 ):
-
     """
     Execute a command and read the output as YAML
     """
@@ -278,7 +276,7 @@ def _get_buckets_cache_filename(bucket, prefix):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, "{}-{}-files.cache".format(bucket, prefix))
+    return os.path.join(cache_dir, f"{bucket}-{prefix}-files.cache")
 
 
 def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, prefix):

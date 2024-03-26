@@ -5,7 +5,6 @@ States for solrcloud alias and collection configuration
 
 """
 
-
 import salt.utils.json
 
 
@@ -39,11 +38,11 @@ def alias(name, collections, **kwargs):
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = 'The alias "{}" will be updated.'.format(name)
+            ret["comment"] = f'The alias "{name}" will be updated.'
             ret["result"] = None
         else:
             __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
-            ret["comment"] = 'The alias "{}" has been updated.'.format(name)
+            ret["comment"] = f'The alias "{name}" has been updated.'
             ret["result"] = True
 
         ret["changes"] = {
@@ -53,11 +52,11 @@ def alias(name, collections, **kwargs):
 
     else:
         if __opts__["test"]:
-            ret["comment"] = 'The alias "{}" will be created.'.format(name)
+            ret["comment"] = f'The alias "{name}" will be created.'
             ret["result"] = None
         else:
             __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
-            ret["comment"] = 'The alias "{}" has been created.'.format(name)
+            ret["comment"] = f'The alias "{name}" has been created.'
             ret["result"] = True
 
         ret["changes"] = {
@@ -121,7 +120,7 @@ def collection(name, options=None, **kwargs):
         else:
 
             if __opts__["test"]:
-                ret["comment"] = 'Collection options "{}" will be changed.'.format(name)
+                ret["comment"] = f'Collection options "{name}" will be changed.'
                 ret["result"] = None
             else:
                 __salt__["solrcloud.collection_set_options"](name, diff, **kwargs)
@@ -146,11 +145,11 @@ def collection(name, options=None, **kwargs):
             options, sort_keys=True, indent=4, separators=(",", ": ")
         )
         if __opts__["test"]:
-            ret["comment"] = 'The collection "{}" will be created.'.format(name)
+            ret["comment"] = f'The collection "{name}" will be created.'
             ret["result"] = None
         else:
             __salt__["solrcloud.collection_create"](name, options, **kwargs)
-            ret["comment"] = 'The collection "{}" has been created.'.format(name)
+            ret["comment"] = f'The collection "{name}" has been created.'
             ret["result"] = True
 
         ret["changes"] = {

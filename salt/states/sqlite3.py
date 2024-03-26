@@ -92,7 +92,6 @@ can be approximated with sqlite3's module functions and module.run:
           - sqlite3: zone-insert-12
 """
 
-
 try:
     import sqlite3
 

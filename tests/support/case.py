@@ -77,7 +77,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "-t {} {}".format(timeout, arg_str)
+        arg_str = f"-t {timeout} {arg_str}"
         return self.run_script(
             "salt",
             arg_str,
@@ -99,7 +99,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         ssh_opts="",
         log_level="error",
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute salt-ssh
@@ -128,7 +128,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             raw=True,
             timeout=timeout,
             config_dir=config_dir,
-            **kwargs
+            **kwargs,
         )
         log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
         return ret
@@ -141,7 +141,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         asynchronous=False,
         timeout=None,
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute salt-run
@@ -284,7 +284,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         catch_stderr=False,
         local=False,
         timeout=RUN_TIMEOUT,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute function with salt-call.
@@ -349,7 +349,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         popen_kwargs=None,
         log_output=None,
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a script with the given argument string
@@ -398,13 +398,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             import salt.utils.json
 
             for key, value in kwargs.items():
-                cmd += "'{}={} '".format(key, salt.utils.json.dumps(value))
+                cmd += f"'{key}={salt.utils.json.dumps(value)} '"
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
         popen_kwargs = dict(
             {"shell": True, "stdout": tmp_file, "universal_newlines": True},
-            **popen_kwargs
+            **popen_kwargs,
         )
 
         if catch_stderr is True:
@@ -639,7 +639,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "cachedir": os.path.join(self._tmp_spm, "cache"),
                 "spm_repo_dups": "ignore",
                 "spm_share_dir": os.path.join(self._tmp_spm, "share"),
-            }
+            },
         )
 
         import salt.utils.yaml
@@ -723,7 +723,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         minion_tgt="minion",
         timeout=300,
         master_tgt=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Run a single salt function and condition the return down to match the
@@ -809,7 +809,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                         job_data, job_kill
                     )
                 )
-                ret.append("[TEST SUITE ENFORCED]{}[/TEST SUITE ENFORCED]".format(msg))
+                ret.append(f"[TEST SUITE ENFORCED]{msg}[/TEST SUITE ENFORCED]")
         return ret
 
 

@@ -58,7 +58,7 @@ def test_run():
             assert mysql_query.run(name, database, query) == ret
 
         with patch.object(mysql_query, "_get_mysql_error", mock_none):
-            comt = "Database {} is not present".format(name)
+            comt = f"Database {name} is not present"
             ret.update({"comment": comt, "result": None})
             assert mysql_query.run(name, database, query) == ret
 

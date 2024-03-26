@@ -333,12 +333,12 @@ class EventListener:
         Get an event (asynchronous of course) return a future that will get it later
         """
         future = Future()
+        _loop = salt.ext.tornado.ioloop.IOLoop.current()
+        assert _loop
         if callback is not None:
 
             def handle_future(future):
-                salt.ext.tornado.ioloop.IOLoop.current().add_callback(
-                    callback, future
-                )  # pylint: disable=E1102
+                _loop.add_callback(callback, future)  # pylint: disable=not-callable
 
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
@@ -346,7 +346,7 @@ class EventListener:
         self.request_map[request].append((tag, matcher, future))
 
         if timeout:
-            timeout_future = salt.ext.tornado.ioloop.IOLoop.current().call_later(
+            timeout_future = _loop.call_later(
                 timeout, self._timeout_future, tag, matcher, future
             )
             self.timeout_map[future] = timeout_future
@@ -944,7 +944,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append("Failed to authenticate")
                 break
             except Exception as ex:  # pylint: disable=broad-except
-                ret.append("Unexpected exception while handling request: {}".format(ex))
+                ret.append(f"Unexpected exception while handling request: {ex}")
                 log.error("Unexpected exception while handling request:", exc_info=True)
 
         try:
@@ -1611,7 +1611,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header("Cache-Control", "no-cache")
         self.set_header("Connection", "keep-alive")
 
-        self.write("retry: {}\n".format(400))
+        self.write(f"retry: {400}\n")
         self.flush()
 
         while True:
@@ -1622,7 +1622,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
-                self.write("data: {}\n\n".format(_json_dumps(event)))
+                self.write(f"data: {_json_dumps(event)}\n\n")
                 self.flush()
             except TimeoutException:
                 break

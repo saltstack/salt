@@ -150,7 +150,6 @@ You can override the merging behavior per defined ext_pillar:
            merge_lists: false
 """
 
-
 import logging
 
 from requests.exceptions import HTTPError
@@ -204,7 +203,7 @@ def ext_pillar(
             if version2["v2"]:
                 path = version2["data"]
 
-            url = "v1/{}".format(path)
+            url = f"v1/{path}"
             response = __utils__["vault.make_request"]("GET", url)
             response.raise_for_status()
             vault_pillar_single = response.json().get("data", {})
@@ -241,5 +240,5 @@ def _get_paths(path_pattern, minion_id, pillar):
     except KeyError:
         log.warning("Could not resolve pillar path pattern %s", path_pattern)
 
-    log.debug(f"{minion_id} vault pillar paths: {paths}")
+    log.debug("%s vault pillar paths: %s", minion_id, paths)
     return paths

@@ -114,19 +114,19 @@ class Assert:
                 salt.utils.dockermod.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
-                    **{item: [{"foo": "bar"}, {"baz": "qux"}]}
+                    **{item: [{"foo": "bar"}, {"baz": "qux"}]},
                 ),
                 testcase.apply_defaults({name: expected}),
             )
         if alias is not None:
             # Test collision
-            test_kwargs = {name: vals, alias: "hello{}world".format(delimiter)}
+            test_kwargs = {name: vals, alias: f"hello{delimiter}world"}
             testcase.assertEqual(
                 salt.utils.dockermod.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
                     ignore_collisions=True,
-                    **test_kwargs
+                    **test_kwargs,
                 ),
                 testcase.apply_defaults({name: expected}),
             )
@@ -137,7 +137,7 @@ class Assert:
                     self.translator,
                     validate_ip_addrs=False,
                     ignore_collisions=False,
-                    **test_kwargs
+                    **test_kwargs,
                 )
 
 
@@ -505,7 +505,7 @@ class assert_device_rates(Assert):
                 "Path '{}' is not absolute".format(path.replace("\\", "\\\\")),
             ):
                 salt.utils.dockermod.translate_input(
-                    self.translator, **{item: "{}:1048576".format(path)}
+                    self.translator, **{item: f"{path}:1048576"}
                 )
 
             if name.endswith("_bps"):
@@ -661,7 +661,7 @@ class assert_subnet(Assert):
             ):
                 log.debug("Verifying '%s' is not a valid subnet", val)
                 with testcase.assertRaisesRegex(
-                    CommandExecutionError, "'{}' is not a valid subnet".format(val)
+                    CommandExecutionError, f"'{val}' is not a valid subnet"
                 ):
                     salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: val}
@@ -1945,7 +1945,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
 
         for val in self.ip_addrs[False]:
             with self.assertRaisesRegex(
-                CommandExecutionError, "'{}' is not a valid IP address".format(val)
+                CommandExecutionError, f"'{val}' is not a valid IP address"
             ):
                 salt.utils.dockermod.translate_input(
                     self.translator,
@@ -1983,7 +1983,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
             for val in self.ip_addrs[False]:
                 addresses = {"foo.bar.tld": val}
                 with self.assertRaisesRegex(
-                    CommandExecutionError, "'{}' is not a valid IP address".format(val)
+                    CommandExecutionError, f"'{val}' is not a valid IP address"
                 ):
                     salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: addresses}

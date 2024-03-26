@@ -22,7 +22,6 @@ Module for controlling Jenkins
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-
 import logging
 
 import salt.utils.files
@@ -109,7 +108,7 @@ def _retrieve_config_xml(config_xml, saltenv):
     ret = __salt__["cp.cache_file"](config_xml, saltenv)
 
     if not ret:
-        raise CommandExecutionError("Failed to retrieve {}".format(config_xml))
+        raise CommandExecutionError(f"Failed to retrieve {config_xml}")
 
     return ret
 
@@ -220,7 +219,7 @@ def get_job_info(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     job_info = server.get_job_info(name)
     if job_info:
@@ -249,14 +248,12 @@ def build_job(name=None, parameters=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist.".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist.")
 
     try:
         server.build_job(name, parameters)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error building job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error building job '{name}': {err}")
     return True
 
 
@@ -282,7 +279,7 @@ def create_job(name=None, config_xml=None, saltenv="base"):
         raise SaltInvocationError("Required parameter 'name' is missing")
 
     if job_exists(name):
-        raise CommandExecutionError("Job '{}' already exists".format(name))
+        raise CommandExecutionError(f"Job '{name}' already exists")
 
     if not config_xml:
         config_xml = jenkins.EMPTY_CONFIG_XML
@@ -296,9 +293,7 @@ def create_job(name=None, config_xml=None, saltenv="base"):
     try:
         server.create_job(name, config_xml)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error creating job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error creating job '{name}': {err}")
     return config_xml
 
 
@@ -335,9 +330,7 @@ def update_job(name=None, config_xml=None, saltenv="base"):
     try:
         server.reconfig_job(name, config_xml)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error updating job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error updating job '{name}': {err}")
     return config_xml
 
 
@@ -361,14 +354,12 @@ def delete_job(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     try:
         server.delete_job(name)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error deleting job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error deleting job '{name}': {err}")
     return True
 
 
@@ -392,14 +383,12 @@ def enable_job(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     try:
         server.enable_job(name)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error enabling job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error enabling job '{name}': {err}")
     return True
 
 
@@ -424,14 +413,12 @@ def disable_job(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     try:
         server.disable_job(name)
     except jenkins.JenkinsException as err:
-        raise CommandExecutionError(
-            "Encountered error disabling job '{}': {}".format(name, err)
-        )
+        raise CommandExecutionError(f"Encountered error disabling job '{name}': {err}")
     return True
 
 
@@ -456,7 +443,7 @@ def job_status(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     return server.get_job_info("empty")["buildable"]
 
@@ -482,7 +469,7 @@ def get_job_config(name=None):
     server = _connect()
 
     if not job_exists(name):
-        raise CommandExecutionError("Job '{}' does not exist".format(name))
+        raise CommandExecutionError(f"Job '{name}' does not exist")
 
     job_info = server.get_job_config(name)
     return job_info

@@ -4,7 +4,6 @@
     Test cases for salt.modules.hadoop
 """
 
-
 import pytest
 
 import salt.modules.hadoop as hadoop

@@ -4,7 +4,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-
 import logging
 
 import pytest

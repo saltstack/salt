@@ -64,7 +64,7 @@ def test_set_setting(settings):
                 value = random.choice(settings)
                 win_lgpo_auditpol.set_setting(name=name, value=value)
                 switches = win_lgpo_auditpol.settings[value]
-                cmd = 'auditpol /set /subcategory:"{}" {}'.format(name, switches)
+                cmd = f'auditpol /set /subcategory:"{name}" {switches}'
                 mock_set.assert_called_once_with(cmd=cmd, python_shell=True)
                 mock_set.reset_mock()
 

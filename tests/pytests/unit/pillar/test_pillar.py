@@ -65,6 +65,8 @@ def test_dynamic_pillarenv():
         },
         "file_roots": {"base": ["/srv/salt/base"], "__env__": ["/srv/salt/__env__"]},
         "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
     pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
     assert pillar.opts["pillar_roots"] == {
@@ -87,6 +89,8 @@ def test_ignored_dynamic_pillarenv():
         },
         "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
         "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
     pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="base")
     assert pillar.opts["pillar_roots"] == {"base": ["/srv/pillar/base"]}

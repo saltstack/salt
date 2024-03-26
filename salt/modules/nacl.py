@@ -149,7 +149,6 @@ Optional small program to encrypt data without needing salt modules.
 
 """
 
-
 import salt.utils.nacl
 
 __virtualname__ = "nacl"

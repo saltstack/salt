@@ -123,7 +123,7 @@ def get_provider_client(name=None):
     elif name == "vpc_client":
         client = vpc_client.VpcClient(crd, region, cpf)
     else:
-        raise SaltCloudSystemExit("Client name {} is not supported".format(name))
+        raise SaltCloudSystemExit(f"Client name {name} is not supported")
 
     return client
 
@@ -206,11 +206,11 @@ def avail_sizes(call=None):
         ret[typeConfig.InstanceType] = {
             "Zone": typeConfig.Zone,
             "InstanceFamily": typeConfig.InstanceFamily,
-            "Memory": "{}GB".format(typeConfig.Memory),
-            "CPU": "{}-Core".format(typeConfig.CPU),
+            "Memory": f"{typeConfig.Memory}GB",
+            "CPU": f"{typeConfig.CPU}-Core",
         }
         if typeConfig.GPU:
-            ret[typeConfig.InstanceType]["GPU"] = "{}-Core".format(typeConfig.GPU)
+            ret[typeConfig.InstanceType]["GPU"] = f"{typeConfig.GPU}-Core"
 
     return ret
 
@@ -714,7 +714,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -730,7 +730,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -782,9 +782,7 @@ def show_image(kwargs, call=None):
     resp = client.DescribeImages(req)
 
     if not resp.ImageSet:
-        raise SaltCloudNotFound(
-            "The specified image '{}' could not be found.".format(image)
-        )
+        raise SaltCloudNotFound(f"The specified image '{image}' could not be found.")
 
     ret = {}
     for image in resp.ImageSet:
@@ -794,7 +792,7 @@ def show_image(kwargs, call=None):
             "ImageSource": image.ImageSource,
             "Platform": image.Platform,
             "Architecture": image.Architecture,
-            "ImageSize": "{}GB".format(image.ImageSize),
+            "ImageSize": f"{image.ImageSize}GB",
             "ImageState": image.ImageState,
         }
 
@@ -893,7 +891,7 @@ def _get_node(name):
             )
             time.sleep(0.5)
 
-    raise SaltCloudNotFound("Failed to get instance info {}".format(name))
+    raise SaltCloudNotFound(f"Failed to get instance info {name}")
 
 
 def _get_nodes():
@@ -940,7 +938,7 @@ def _get_images(image_type):
             "ImageSource": image.ImageSource,
             "Platform": image.Platform,
             "Architecture": image.Architecture,
-            "ImageSize": "{}GB".format(image.ImageSize),
+            "ImageSize": f"{image.ImageSize}GB",
         }
 
     return ret
@@ -958,9 +956,7 @@ def __get_image(vm_):
     if vm_image in images:
         return vm_image
 
-    raise SaltCloudNotFound(
-        "The specified image '{}' could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image '{vm_image}' could not be found.")
 
 
 def __get_size(vm_):
@@ -975,9 +971,7 @@ def __get_size(vm_):
     if vm_size in sizes:
         return vm_size
 
-    raise SaltCloudNotFound(
-        "The specified size '{}' could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size '{vm_size}' could not be found.")
 
 
 def __get_securitygroups(vm_):

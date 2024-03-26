@@ -97,8 +97,8 @@ bymYbi0l2pWqQLA2sPoRHNw=
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
 def test_create_ca_permissions_on_cert_and_key(tmp_path, tls_test_data):
     ca_name = "test_ca"
-    certp = tmp_path / ca_name / "{}_ca_cert.crt".format(ca_name)
-    certk = tmp_path / ca_name / "{}_ca_cert.key".format(ca_name)
+    certp = tmp_path / ca_name / f"{ca_name}_ca_cert.crt"
+    certk = tmp_path / ca_name / f"{ca_name}_ca_cert.key"
     mock_opt = MagicMock(return_value=str(tmp_path))
     mock_ret = MagicMock(return_value=0)
 
@@ -392,16 +392,12 @@ def test_cert_info(tls_test_data):
                     == str(err)
                 ):
                     log.exception(err)
-                    pytest.skip(
-                        "Encountered an upstream error with PyOpenSSL: {}".format(err)
-                    )
+                    pytest.skip(f"Encountered an upstream error with PyOpenSSL: {err}")
                 if "'_cffi_backend.CDataGCP' object has no attribute 'object'" == str(
                     err
                 ):
                     log.exception(err)
-                    pytest.skip(
-                        "Encountered an upstream error with PyOpenSSL: {}".format(err)
-                    )
+                    pytest.skip(f"Encountered an upstream error with PyOpenSSL: {err}")
                 # python-openssl version 0.14, when installed with the "junos-eznc" pip
                 # package, causes an error on this test. Newer versions of PyOpenSSL do not have
                 # this issue. If 0.14 is installed and we hit this error, skip the test.
@@ -555,7 +551,7 @@ def test_create_self_signed_cert(tmp_path, tls_test_data):
     certk = "{}/{}/certs/{}.key".format(
         ca_path, tls_dir, tls_test_data["create_ca"]["CN"]
     )
-    ret = 'Created Private Key: "{}" Created Certificate: "{}"'.format(certk, certp)
+    ret = f'Created Private Key: "{certk}" Created Certificate: "{certp}"'
     mock_opt = MagicMock(return_value=ca_path)
     with patch.dict(tls.__salt__, {"config.option": mock_opt}), patch.dict(
         tls.__opts__, {"hash_type": "sha256", "cachedir": ca_path}
@@ -580,7 +576,7 @@ def test_recreate_self_signed_cert(tmp_path, tls_test_data):
     certk = "{}/{}/certs/{}.key".format(
         ca_path, tls_dir, tls_test_data["create_ca"]["CN"]
     )
-    ret = 'Created Private Key: "{}" Created Certificate: "{}"'.format(certk, certp)
+    ret = f'Created Private Key: "{certk}" Created Certificate: "{certp}"'
     mock_opt = MagicMock(return_value=ca_path)
     with patch.dict(tls.__salt__, {"config.option": mock_opt}), patch.dict(
         tls.__opts__, {"hash_type": "sha256", "cachedir": ca_path}

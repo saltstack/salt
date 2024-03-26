@@ -181,7 +181,6 @@ connection credentials are used instead of vCenter credentials, the ``host_names
                     6500
 """
 
-
 import datetime
 import logging
 import sys
@@ -356,7 +355,7 @@ def _get_proxy_connection_details():
     elif proxytype == "esxvm":
         details = __salt__["esxvm.get_details"]()
     else:
-        raise CommandExecutionError("'{}' proxy is not supported".format(proxytype))
+        raise CommandExecutionError(f"'{proxytype}' proxy is not supported")
     proxy_details = [
         details.get("vcenter") if "vcenter" in details else details.get("host"),
         details.get("username"),
@@ -784,7 +783,7 @@ def coredump_network_enable(
         enable_it = 1
     else:
         enable_it = 0
-    cmd = "system coredump network set -e {}".format(enable_it)
+    cmd = f"system coredump network set -e {enable_it}"
 
     ret = {}
     if esxi_hosts:
@@ -1663,7 +1662,7 @@ def upload_ssh_key(
     if certificate_verify is None:
         certificate_verify = True
 
-    url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
+    url = f"{protocol}://{host}:{port}/host/ssh_root_authorized_keys"
     ret = {}
     result = None
     try:
@@ -1734,7 +1733,7 @@ def get_ssh_key(
     if certificate_verify is None:
         certificate_verify = True
 
-    url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
+    url = f"{protocol}://{host}:{port}/host/ssh_root_authorized_keys"
     ret = {}
     try:
         result = salt.utils.http.query(
@@ -1998,11 +1997,7 @@ def get_service_policy(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -2030,7 +2025,7 @@ def get_service_policy(
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = "'vsphere.get_service_policy' failed for host {}.".format(host_name)
+            msg = f"'vsphere.get_service_policy' failed for host {host_name}."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
 
@@ -2141,11 +2136,7 @@ def get_service_running(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -2173,7 +2164,7 @@ def get_service_running(
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = "'vsphere.get_service_running' failed for host {}.".format(host_name)
+            msg = f"'vsphere.get_service_running' failed for host {host_name}."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
 
@@ -2330,7 +2321,7 @@ def get_vsan_enabled(
 
         # We must have a VSAN Config in place get information about VSAN state.
         if vsan_config is None:
-            msg = "VSAN System Config Manager is unset for host '{}'.".format(host_name)
+            msg = f"VSAN System Config Manager is unset for host '{host_name}'."
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
         else:
@@ -3237,7 +3228,7 @@ def set_ntp_config(
         try:
             date_time_manager.UpdateDateTimeConfig(config=date_config)
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.ntp_configure_servers failed: {}".format(err)
+            msg = f"vsphere.ntp_configure_servers failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
             continue
@@ -3356,11 +3347,7 @@ def service_start(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3499,11 +3486,7 @@ def service_stop(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3515,7 +3498,7 @@ def service_stop(
         try:
             service_manager.StopService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
-            msg = "'vsphere.service_stop' failed for host {}: {}".format(host_name, err)
+            msg = f"'vsphere.service_stop' failed for host {host_name}: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg}})
             continue
@@ -3640,11 +3623,7 @@ def service_restart(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3781,11 +3760,7 @@ def set_service_policy(
         # If we don't have a valid service, return. The service will be invalid for all hosts.
         if service_name not in valid_services:
             ret.update(
-                {
-                    host_name: {
-                        "Error": "{} is not a valid service name.".format(service_name)
-                    }
-                }
+                {host_name: {"Error": f"{service_name} is not a valid service name."}}
             )
             return ret
 
@@ -3812,7 +3787,7 @@ def set_service_policy(
                         id=service_key, policy=service_policy
                     )
                 except vim.fault.NotFound:
-                    msg = "The service name '{}' was not found.".format(service_name)
+                    msg = f"The service name '{service_name}' was not found."
                     log.debug(msg)
                     ret.update({host_name: {"Error": msg}})
                     continue
@@ -4057,7 +4032,7 @@ def vmotion_disable(
         try:
             vmotion_system.DeselectVnic()
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.vmotion_disable failed: {}".format(err)
+            msg = f"vsphere.vmotion_disable failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg, "VMotion Disabled": False}})
             continue
@@ -4145,7 +4120,7 @@ def vmotion_enable(
         try:
             vmotion_system.SelectVnic(device)
         except vim.fault.HostConfigFault as err:
-            msg = "vsphere.vmotion_disable failed: {}".format(err)
+            msg = f"vsphere.vmotion_disable failed: {err}"
             log.debug(msg)
             ret.update({host_name: {"Error": msg, "VMotion Enabled": False}})
             continue
@@ -4872,7 +4847,7 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs_name])
         if not dvs_refs:
             raise VMwareObjectRetrievalError(
-                "DVS '{}' wasn't found in datacenter '{}'".format(dvs_name, datacenter)
+                f"DVS '{dvs_name}' wasn't found in datacenter '{datacenter}'"
             )
         dvs_ref = dvs_refs[0]
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
@@ -4925,7 +4900,7 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
         raise VMwareObjectRetrievalError(
-            "DVS '{}' wasn't found in datacenter '{}'".format(dvs, datacenter)
+            f"DVS '{dvs}' wasn't found in datacenter '{datacenter}'"
         )
     dvs_ref = dvs_refs[0]
     # Build the config spec from the input
@@ -5156,7 +5131,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
     if dvs:
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
         if not dvs_refs:
-            raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+            raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
         dvs_ref = dvs_refs[0]
     get_all_portgroups = True if not portgroup_names else False
     for pg_ref in salt.utils.vmware.get_dvportgroups(
@@ -5199,7 +5174,7 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     uplink_pg_ref = salt.utils.vmware.get_uplink_dvportgroup(dvs_refs[0])
     return _get_dvportgroup_dict(uplink_pg_ref)
 
@@ -5434,7 +5409,7 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     # Make the name of the dvportgroup consistent with the parameter
     portgroup_dict["name"] = portgroup_name
     spec = vim.DVPortgroupConfigSpec()
@@ -5490,14 +5465,12 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
-        raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not retrieved".format(portgroup)
-        )
+        raise VMwareObjectRetrievalError(f"Portgroup '{portgroup}' was not retrieved")
     pg_props = salt.utils.vmware.get_properties_of_managed_object(
         pg_refs[0], ["config"]
     )
@@ -5556,14 +5529,12 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
+        raise VMwareObjectRetrievalError(f"DVS '{dvs}' was not retrieved")
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
-        raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not retrieved".format(portgroup)
-        )
+        raise VMwareObjectRetrievalError(f"Portgroup '{portgroup}' was not retrieved")
     salt.utils.vmware.remove_dvportgroup(pg_refs[0])
     return True
 
@@ -5834,7 +5805,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
+        raise VMwareObjectRetrievalError(f"Policy '{policy}' was not found")
     policy_ref = policies[0]
     policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
     log.trace("Setting policy values in policy_update_spec")
@@ -5877,9 +5848,7 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
         service_instance, target_ref, datastore_names=[datastore]
     )
     if not ds_refs:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
         profile_manager, ds_refs[0]
@@ -5921,7 +5890,7 @@ def assign_default_storage_policy_to_datastore(
     # Find policy
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
+        raise VMwareObjectRetrievalError(f"Policy '{policy}' was not found")
     policy_ref = policies[0]
     # Find datastore
     target_ref = _get_proxy_target(service_instance)
@@ -5929,9 +5898,7 @@ def assign_default_storage_policy_to_datastore(
         service_instance, target_ref, datastore_names=[datastore]
     )
     if not ds_refs:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     ds_ref = ds_refs[0]
     salt.utils.pbm.assign_default_storage_policy_to_datastore(
         profile_manager, policy_ref, ds_ref
@@ -6657,7 +6624,7 @@ def create_vmfs_datastore(
         disks = salt.utils.vmware.get_disks(host_ref, disk_ids=[disk_id])
         if not disks:
             raise VMwareObjectRetrievalError(
-                "Disk '{}' was not found in host '{}'".format(disk_id, hostname)
+                f"Disk '{disk_id}' was not found in host '{hostname}'"
             )
     ds_ref = salt.utils.vmware.create_vmfs_datastore(
         host_ref, datastore_name, disks[0], vmfs_major_version
@@ -6696,9 +6663,7 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
         service_instance, target, datastore_names=[datastore_name]
     )
     if not datastores:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore_name)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore_name}' was not found")
     ds = datastores[0]
     salt.utils.vmware.rename_datastore(ds, new_datastore_name)
     return True
@@ -6731,12 +6696,10 @@ def remove_datastore(datastore, service_instance=None):
         service_instance, reference=target, datastore_names=[datastore]
     )
     if not datastores:
-        raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found".format(datastore)
-        )
+        raise VMwareObjectRetrievalError(f"Datastore '{datastore}' was not found")
     if len(datastores) > 1:
         raise VMwareObjectRetrievalError(
-            "Multiple datastores '{}' were found".format(datastore)
+            f"Multiple datastores '{datastore}' were found"
         )
     salt.utils.vmware.remove_datastore(service_instance, datastores[0])
     return True
@@ -6970,9 +6933,7 @@ def assign_license(
     if safety_checks:
         licenses = salt.utils.vmware.get_licenses(service_instance)
         if not [l for l in licenses if l.licenseKey == license_key]:
-            raise VMwareObjectRetrievalError(
-                "License '{}' wasn't found".format(license_name)
-            )
+            raise VMwareObjectRetrievalError(f"License '{license_name}' wasn't found")
     salt.utils.vmware.assign_license(
         service_instance,
         license_key,
@@ -7348,7 +7309,7 @@ def create_diskgroup(
     for id in disk_ids:
         if not [d for d in disks if d.canonicalName == id]:
             raise VMwareObjectRetrievalError(
-                "No disk with id '{}' was found in ESXi host '{}'".format(id, hostname)
+                f"No disk with id '{id}' was found in ESXi host '{hostname}'"
             )
     cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
     capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
@@ -7597,7 +7558,7 @@ def get_host_cache(service_instance=None):
     return {
         "enabled": True,
         "datastore": {"name": hci.key.name},
-        "swap_size": "{}MiB".format(hci.swapSize),
+        "swap_size": f"{hci.swapSize}MiB",
     }
 
 
@@ -7661,7 +7622,7 @@ def configure_host_cache(
         )
         if not ds_refs:
             raise VMwareObjectRetrievalError(
-                "Datastore '{}' was not found on host '{}'".format(datastore, hostname)
+                f"Datastore '{datastore}' was not found on host '{hostname}'"
             )
         ds_ref = ds_refs[0]
     salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
@@ -7960,7 +7921,7 @@ def _set_syslog_config_helper(
     """
     Helper function for set_syslog_config that sets the config and populates the return dictionary.
     """
-    cmd = "system syslog config set --{} {}".format(syslog_config, config_value)
+    cmd = f"system syslog config set --{syslog_config} {config_value}"
     ret_dict = {}
 
     valid_resets = [
@@ -7975,7 +7936,7 @@ def _set_syslog_config_helper(
         ret_dict.update(
             {
                 "success": False,
-                "message": "'{}' is not a valid config variable.".format(syslog_config),
+                "message": f"'{syslog_config}' is not a valid config variable.",
             }
         )
         return ret_dict
@@ -8218,14 +8179,14 @@ def add_host_to_dvs(
     dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
     if not dvs:
         ret["message"].append(
-            "No Distributed Virtual Switch found with name {}".format(dvs_name)
+            f"No Distributed Virtual Switch found with name {dvs_name}"
         )
         ret["success"] = False
 
     target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs, target_portgroup_name)
     if not target_portgroup:
         ret["message"].append(
-            "No target portgroup found with name {}".format(target_portgroup_name)
+            f"No target portgroup found with name {target_portgroup_name}"
         )
         ret["success"] = False
 
@@ -8234,7 +8195,7 @@ def add_host_to_dvs(
     )
     if not uplink_portgroup:
         ret["message"].append(
-            "No uplink portgroup found with name {}".format(uplink_portgroup_name)
+            f"No uplink portgroup found with name {uplink_portgroup_name}"
         )
         ret["success"] = False
 
@@ -8245,7 +8206,7 @@ def add_host_to_dvs(
     try:
         host_names = _check_hosts(service_instance, host, host_names)
     except CommandExecutionError as e:
-        ret["message"] = "Error retrieving hosts: {}".format(e.msg)
+        ret["message"] = f"Error retrieving hosts: {e.msg}"
         return ret
 
     for host_name in host_names:
@@ -8272,9 +8233,7 @@ def add_host_to_dvs(
         p_nics = salt.utils.vmware._get_pnics(host_ref)
         p_nic = [x for x in p_nics if x.device == vmnic_name]
         if not p_nic:
-            ret[host_name].update(
-                {"message": "Physical nic {} not found".format(vmknic_name)}
-            )
+            ret[host_name].update({"message": f"Physical nic {vmknic_name} not found"})
             ret["success"] = False
             continue
 
@@ -8282,9 +8241,7 @@ def add_host_to_dvs(
         v_nic = [x for x in v_nics if x.device == vmknic_name]
 
         if not v_nic:
-            ret[host_name].update(
-                {"message": "Virtual nic {} not found".format(vmnic_name)}
-            )
+            ret[host_name].update({"message": f"Virtual nic {vmnic_name} not found"})
             ret["success"] = False
             continue
 
@@ -8377,7 +8334,7 @@ def add_host_to_dvs(
         except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, "msg"):
                 ret[host_name].update(
-                    {"message": "Failed to migrate adapters ({})".format(e.msg)}
+                    {"message": f"Failed to migrate adapters ({e.msg})"}
                 )
                 continue
             else:
@@ -8876,7 +8833,7 @@ def _get_scsi_controller_key(bus_number, scsi_ctrls):
     ]
     if not keys:
         raise salt.exceptions.VMwareVmCreationError(
-            "SCSI controller number {} doesn't exist".format(bus_number)
+            f"SCSI controller number {bus_number} doesn't exist"
         )
     return keys[0]
 
@@ -9055,7 +9012,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The network '{}' could not be retrieved.".format(network_name)
+                    f"The network '{network_name}' could not be retrieved."
                 )
             network_ref = networks[0]
             backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
@@ -9067,7 +9024,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The port group '{}' could not be retrieved.".format(network_name)
+                    f"The port group '{network_name}' could not be retrieved."
                 )
             network_ref = networks[0]
             dvs_port_connection = vim.dvs.PortConnection(
@@ -9682,7 +9639,7 @@ def _create_scsi_devices(scsi_devices):
         log.trace("Creating SCSI devices %s", devs)
         # unitNumber for disk attachment, 0:0 1st 0 is the controller busNumber,
         # 2nd is the unitNumber
-        for (key, scsi_controller) in zip(keys, scsi_devices):
+        for key, scsi_controller in zip(keys, scsi_devices):
             # create the SCSI controller
             scsi_spec = _apply_scsi_controller(
                 scsi_controller["adapter"],
@@ -9730,9 +9687,9 @@ def _create_network_adapters(network_interfaces, parent=None):
                 interface["switch_type"],
                 network_adapter_label=interface["adapter"],
                 operation="add",
-                connectable=interface["connectable"]
-                if "connectable" in interface
-                else None,
+                connectable=(
+                    interface["connectable"] if "connectable" in interface else None
+                ),
                 mac=interface["mac"],
                 parent=parent,
             )
@@ -9800,15 +9757,17 @@ def _create_cd_drives(cd_drives, controllers=None, parent_ref=None):
                     key,
                     drive["device_type"],
                     "add",
-                    client_device=drive["client_device"]
-                    if "client_device" in drive
-                    else None,
-                    datastore_iso_file=drive["datastore_iso_file"]
-                    if "datastore_iso_file" in drive
-                    else None,
-                    connectable=drive["connectable"]
-                    if "connectable" in drive
-                    else None,
+                    client_device=(
+                        drive["client_device"] if "client_device" in drive else None
+                    ),
+                    datastore_iso_file=(
+                        drive["datastore_iso_file"]
+                        if "datastore_iso_file" in drive
+                        else None
+                    ),
+                    connectable=(
+                        drive["connectable"] if "connectable" in drive else None
+                    ),
                     controller_key=controller_key,
                     parent_ref=parent_ref,
                 )
@@ -9833,7 +9792,7 @@ def _get_device_by_key(devices, key):
         return device_keys[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with unique key {} does not exist".format(key)
+            f"Virtual machine device with unique key {key} does not exist"
         )
 
 
@@ -9853,7 +9812,7 @@ def _get_device_by_label(devices, label):
         return device_labels[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with label {} does not exist".format(label)
+            f"Virtual machine device with label {label} does not exist"
         )
 
 
@@ -10098,9 +10057,9 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
         if isinstance(device, vim.vm.device.VirtualEthernetCard):
             interface = {}
             interface["adapter"] = device.deviceInfo.label
-            interface[
-                "adapter_type"
-            ] = salt.utils.vmware.get_network_adapter_object_type(device)
+            interface["adapter_type"] = (
+                salt.utils.vmware.get_network_adapter_object_type(device)
+            )
             interface["connectable"] = {
                 "allow_guest_control": device.connectable.allowGuestControl,
                 "connected": device.connectable.connected,
@@ -10438,12 +10397,16 @@ def _update_cd_drives(drives_old_new, controllers=None, parent=None):
                         current_drive["key"],
                         new_drive["device_type"],
                         "edit",
-                        client_device=new_drive["client_device"]
-                        if "client_device" in new_drive
-                        else None,
-                        datastore_iso_file=new_drive["datastore_iso_file"]
-                        if "datastore_iso_file" in new_drive
-                        else None,
+                        client_device=(
+                            new_drive["client_device"]
+                            if "client_device" in new_drive
+                            else None
+                        ),
+                        datastore_iso_file=(
+                            new_drive["datastore_iso_file"]
+                            if "datastore_iso_file" in new_drive
+                            else None
+                        ),
                         connectable=new_drive["connectable"],
                         controller_key=controller_key,
                         parent_ref=parent,
@@ -11207,7 +11170,7 @@ def create_vm(
     )[0]
     if not datastore_object:
         raise salt.exceptions.ArgumentValueError(
-            "Specified datastore: '{}' does not exist.".format(datastore)
+            f"Specified datastore: '{datastore}' does not exist."
         )
     try:
         ds_summary = salt.utils.vmware.get_properties_of_managed_object(
@@ -11218,7 +11181,7 @@ def create_vm(
                 "The vmPathName should be the datastore "
                 "name if the datastore type is vsan"
             )
-            config_spec.files.vmPathName = "[{}]".format(datastore)
+            config_spec.files.vmPathName = f"[{datastore}]"
         else:
             config_spec.files.vmPathName = "[{0}] {1}/{1}.vmx".format(
                 datastore, vm_name

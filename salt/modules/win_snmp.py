@@ -11,11 +11,11 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 _HKEY = "HKLM"
 
 _SNMP_KEY = r"SYSTEM\CurrentControlSet\Services\SNMP\Parameters"
-_AGENT_KEY = r"{}\RFC1156Agent".format(_SNMP_KEY)
-_COMMUNITIES_KEY = r"{}\ValidCommunities".format(_SNMP_KEY)
+_AGENT_KEY = rf"{_SNMP_KEY}\RFC1156Agent"
+_COMMUNITIES_KEY = rf"{_SNMP_KEY}\ValidCommunities"
 
 _SNMP_GPO_KEY = r"SOFTWARE\Policies\SNMP\Parameters"
-_COMMUNITIES_GPO_KEY = r"{}\ValidCommunities".format(_SNMP_GPO_KEY)
+_COMMUNITIES_GPO_KEY = rf"{_SNMP_GPO_KEY}\ValidCommunities"
 
 _PERMISSION_TYPES = {
     "None": 1,

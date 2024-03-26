@@ -36,7 +36,7 @@ def service_name(grains, modules):
         service_name = "Spooler"
 
     if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-        pytest.skip("{} is not installed".format(cmd_name))
+        pytest.skip(f"{cmd_name} is not installed")
 
     if is_systemd and modules.service.offline():
         pytest.skip("systemd is OFFLINE")

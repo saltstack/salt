@@ -49,16 +49,16 @@ def present(name, user=None, password=None, host=None, port=None):
             )
             return ret
         if __salt__["influxdb08.db_create"](name, user, password, host, port):
-            ret["comment"] = "Database {} has been created".format(name)
+            ret["comment"] = f"Database {name} has been created"
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create database {}".format(name)
+            ret["comment"] = f"Failed to create database {name}"
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is already present, so cannot be created".format(name)
+    ret["comment"] = f"Database {name} is already present, so cannot be created"
     return ret
 
 
@@ -93,14 +93,14 @@ def absent(name, user=None, password=None, host=None, port=None):
             )
             return ret
         if __salt__["influxdb08.db_remove"](name, user, password, host, port):
-            ret["comment"] = "Database {} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove database {}".format(name)
+            ret["comment"] = f"Failed to remove database {name}"
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
+    ret["comment"] = f"Database {name} is not present, so it cannot be removed"
     return ret

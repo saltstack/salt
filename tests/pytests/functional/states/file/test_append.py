@@ -94,7 +94,7 @@ def test_issue_2379_file_append(modules, tmp_path):
     )
     # create the sls template
     template_lines = [
-        "{}:".format(tmp_file),
+        f"{tmp_file}:",
         "  file.append:",
         "    - text: PermitRootLogin yes",
     ]
@@ -145,13 +145,13 @@ def test_file_append_check_cmd(modules, state_tree, tmp_path):
     Test that check_cmd works for file.append
     and those states do not run.
     """
-    sls_contents = f"""
-append_in_file:
-  file.append:
-    - name: /tmp/test
-    - text: "appended text"
-    - check_cmd:
-      - "djasjahj"
+    sls_contents = """
+    append_in_file:
+      file.append:
+        - name: /tmp/test
+        - text: "appended text"
+        - check_cmd:
+          - "djasjahj"
     """
     with pytest.helpers.temp_file(
         "file-append-check-cmd.sls", sls_contents, state_tree

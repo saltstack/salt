@@ -70,6 +70,7 @@ Connection module for Amazon Elasticsearch Service
 :depends: boto3
 
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -273,7 +274,7 @@ def create(
                     except ValueError as e:
                         return {
                             "updated": False,
-                            "error": "Error parsing {}: {}".format(k, e.message),
+                            "error": f"Error parsing {k}: {e.message}",
                         }
                 kwargs[k] = val
         if "AccessPolicies" in kwargs:
@@ -364,7 +365,7 @@ def update(
                 except ValueError as e:
                     return {
                         "updated": False,
-                        "error": "Error parsing {}: {}".format(k, e.message),
+                        "error": f"Error parsing {k}: {e.message}",
                     }
             call_args[k] = val
     if "AccessPolicies" in call_args:

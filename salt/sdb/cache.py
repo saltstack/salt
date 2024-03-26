@@ -44,7 +44,6 @@ it must be specified in the URI:
     master_ip: sdb://mastercloudcache/public_ips?bank=cloud/active/ec2/my-ec2-conf/saltmaster
 """
 
-
 import salt.cache
 
 __func_alias__ = {"set_": "set"}

@@ -27,7 +27,6 @@ Manage LXD profiles.
 :platform: Linux
 """
 
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -133,7 +132,7 @@ def present(
     if profile is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the profile
-            msg = 'Would create the profile "{}"'.format(name)
+            msg = f'Would create the profile "{name}"'
             ret["changes"] = {"created": msg}
             return _unchanged(ret, msg)
 
@@ -146,7 +145,7 @@ def present(
         except CommandExecutionError as e:
             return _error(ret, str(e))
 
-        msg = 'Profile "{}" has been created'.format(name)
+        msg = f'Profile "{name}" has been created'
         ret["changes"] = {"created": msg}
         return _success(ret, msg)
 
@@ -156,10 +155,10 @@ def present(
     # Description change
     #
     if str(profile.description) != str(description):
-        ret["changes"][
-            "description"
-        ] = 'Description changed, from "{}" to "{}".'.format(
-            profile.description, description
+        ret["changes"]["description"] = (
+            'Description changed, from "{}" to "{}".'.format(
+                profile.description, description
+            )
         )
 
         profile.description = description
@@ -173,7 +172,7 @@ def present(
         return _success(ret, "No changes")
 
     if __opts__["test"]:
-        return _unchanged(ret, 'Profile "{}" would get changed.'.format(name))
+        return _unchanged(ret, f'Profile "{name}" would get changed.')
 
     try:
         __salt__["lxd.pylxd_save_object"](profile)
@@ -234,9 +233,9 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
             return _error(ret, str(e))
         except SaltInvocationError as e:
             # Profile not found
-            return _success(ret, 'Profile "{}" not found.'.format(name))
+            return _success(ret, f'Profile "{name}" not found.')
 
-        ret["changes"] = {"removed": 'Profile "{}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": f'Profile "{name}" would get deleted.'}
         return _success(ret, ret["changes"]["removed"])
 
     try:
@@ -245,9 +244,9 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
         return _error(ret, str(e))
     except SaltInvocationError as e:
         # Profile not found
-        return _success(ret, 'Profile "{}" not found.'.format(name))
+        return _success(ret, f'Profile "{name}" not found.')
 
-    ret["changes"] = {"removed": 'Profile "{}" has been deleted.'.format(name)}
+    ret["changes"] = {"removed": f'Profile "{name}" has been deleted.'}
     return _success(ret, ret["changes"]["removed"])
 
 

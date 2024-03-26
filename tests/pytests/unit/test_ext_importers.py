@@ -32,12 +32,11 @@ def test_tornado_import_override(tmp_path):
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
         ret = subprocess.run(
             [sys.executable, str(test_source_path)],
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
+            capture_output=True,
             env=env,
             shell=False,
             check=False,
-            universal_newlines=True,
+            text=True,
         )
         assert ret.returncode == 0
         assert ret.stdout.strip() == "salt.ext.tornado"

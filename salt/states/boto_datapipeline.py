@@ -48,7 +48,6 @@ config:
           myDDBTableName: my-dynamo-table
 """
 
-
 import copy
 import datetime
 import difflib
@@ -133,11 +132,11 @@ def present(
         profile=profile,
     )
     if present:
-        ret["comment"] = "AWS data pipeline {} present".format(name)
+        ret["comment"] = f"AWS data pipeline {name} present"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Data pipeline {} is set to be created or updated".format(name)
+        ret["comment"] = f"Data pipeline {name} is set to be created or updated"
         ret["result"] = None
         return ret
 
@@ -260,10 +259,10 @@ def present(
 
     if not old_pipeline_definition:
         ret["changes"]["new"] = "Pipeline created."
-        ret["comment"] = "Data pipeline {} created".format(name)
+        ret["comment"] = f"Data pipeline {name} created"
     else:
         ret["changes"]["diff"] = _diff(old_pipeline_definition, new_pipeline_definition)
-        ret["comment"] = "Data pipeline {} updated".format(name)
+        ret["comment"] = f"Data pipeline {name} updated"
 
     return ret
 
@@ -596,7 +595,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     if "error" not in result_pipeline_id:
         pipeline_id = result_pipeline_id["result"]
         if __opts__["test"]:
-            ret["comment"] = "Data pipeline {} set to be deleted.".format(name)
+            ret["comment"] = f"Data pipeline {name} set to be deleted."
             ret["result"] = None
             return ret
         else:
@@ -610,6 +609,6 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["old"] = {"pipeline_id": pipeline_id}
             ret["changes"]["new"] = None
     else:
-        ret["comment"] = "AWS data pipeline {} absent.".format(name)
+        ret["comment"] = f"AWS data pipeline {name} absent."
 
     return ret

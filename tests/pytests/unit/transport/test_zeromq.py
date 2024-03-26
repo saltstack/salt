@@ -282,36 +282,53 @@ def test_master_uri():
         "salt.transport.zeromq.ZMQ_VERSION_INFO", (16, 0, 1)
     ):
         # pass in both source_ip and source_port
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_ip=s_ip, source_port=s_port
-        ) == "tcp://{}:{};{}:{}".format(s_ip, s_port, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip, source_port=s_port
+            )
+            == f"tcp://{s_ip}:{s_port};{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port, source_ip=s_ip6, source_port=s_port
-        ) == "tcp://[{}]:{};[{}]:{}".format(s_ip6, s_port, m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6, source_port=s_port
+            )
+            == f"tcp://[{s_ip6}]:{s_port};[{m_ip6}]:{m_port}"
+        )
 
         # source ip and source_port empty
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port
-        ) == "tcp://{}:{}".format(m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip, master_port=m_port)
+            == f"tcp://{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port
-        ) == "tcp://[{}]:{}".format(m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip6, master_port=m_port)
+            == f"tcp://[{m_ip6}]:{m_port}"
+        )
 
         # pass in only source_ip
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_ip=s_ip
-        ) == "tcp://{}:0;{}:{}".format(s_ip, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip
+            )
+            == f"tcp://{s_ip}:0;{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port, source_ip=s_ip6
-        ) == "tcp://[{}]:0;[{}]:{}".format(s_ip6, m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6
+            )
+            == f"tcp://[{s_ip6}]:0;[{m_ip6}]:{m_port}"
+        )
 
         # pass in only source_port
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_port=s_port
-        ) == "tcp://0.0.0.0:{};{}:{}".format(s_port, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_port=s_port
+            )
+            == f"tcp://0.0.0.0:{s_port};{m_ip}:{m_port}"
+        )
 
 
 def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_master):
@@ -616,7 +633,7 @@ def test_req_server_chan_encrypt_v2(pki_dir):
     if HAS_M2:
         aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
     else:
-        cipher = PKCS1_OAEP.new(key)
+        cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
         aes = cipher.decrypt(ret["key"])
     pcrypt = salt.crypt.Crypticle(opts, aes)
     signed_msg = pcrypt.loads(ret[dictkey])
@@ -1434,7 +1451,7 @@ async def test_req_server_garbage_request(io_loop):
     try:
         await request_server.handle_message(stream, badbyts)
     except Exception as exc:  # pylint: disable=broad-except
-        pytest.fail("Exception was raised {}".format(exc))
+        pytest.fail(f"Exception was raised {exc}")
 
     request_server.stream.send.assert_called_once_with(valid_response)
 
@@ -1541,7 +1558,7 @@ async def test_unclosed_request_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
 
@@ -1557,6 +1574,6 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
     try:
         assert client._closing is False
         with pytest.warns(salt.transport.base.TransportWarning):
-            client.__del__()
+            client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()

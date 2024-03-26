@@ -4,6 +4,7 @@
     :maturity: develop
     .. versionadded:: 2018.3.0
 """
+
 # pylint: disable=invalid-name,no-member
 
 import re
@@ -39,7 +40,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         version = re.match(r"^(\d+\.\d+\.\d+)-(\d+)", cls.KERNEL_LIST[-1])
-        cls.LATEST = "{}.{}".format(version.group(1), version.group(2))
+        cls.LATEST = f"{version.group(1)}.{version.group(2)}"
 
         for kernel in cls.KERNEL_LIST:
             pkg = "{}-{}".format(
@@ -66,8 +67,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         Test - Return return the latest installed kernel version
         """
         PACKAGE_LIST = [
-            "{}-{}".format(kernelpkg._package_prefix(), kernel)
-            for kernel in self.KERNEL_LIST
+            f"{kernelpkg._package_prefix()}-{kernel}" for kernel in self.KERNEL_LIST
         ]  # pylint: disable=protected-access
 
         mock = MagicMock(return_value=PACKAGE_LIST)

@@ -1,6 +1,7 @@
 """
 Functional tests for chocolatey state
 """
+
 import os
 import pathlib
 

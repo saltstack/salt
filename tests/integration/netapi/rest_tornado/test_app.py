@@ -67,7 +67,7 @@ class SaltnadoIntegrationTestsBase(
     def setUp(self):
         super().setUp()
         self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT="30")
-        self.patched_environ.__enter__()
+        self.patched_environ.__enter__()  # pylint: disable=unnecessary-dunder-call
         self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):

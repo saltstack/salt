@@ -1,6 +1,7 @@
 """
 Test the RSA ANSI X9.31 signer and verifier
 """
+
 import ctypes
 import ctypes.util
 import fnmatch

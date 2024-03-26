@@ -93,7 +93,7 @@ def test_present():
         # Update - test=False
         with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Updated permissions for {}".format(acl_name)
+                comt = f"Updated permissions for {acl_name}"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -118,7 +118,7 @@ def test_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_name)
+                comt = f"Error updating permissions for {acl_name}: Custom err"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -148,7 +148,7 @@ def test_present():
         # New - test=False
         with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Applied new permissions for {}".format(acl_name)
+                comt = f"Applied new permissions for {acl_name}"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -168,7 +168,7 @@ def test_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_name)
+                comt = f"Error updating permissions for {acl_name}: Custom err"
                 ret = {
                     "name": name,
                     "comment": comt,
@@ -395,7 +395,7 @@ def test_list_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_names)
+                comt = f"Error updating permissions for {acl_names}: Custom err"
                 expected = {
                     "name": name,
                     "comment": comt,
@@ -453,7 +453,7 @@ def test_list_present():
             {"acl.modfacl": MagicMock(side_effect=CommandExecutionError("Custom err"))},
         ):
             with patch.dict(linux_acl.__opts__, {"test": False}):
-                comt = "Error updating permissions for {}: Custom err".format(acl_names)
+                comt = f"Error updating permissions for {acl_names}: Custom err"
                 expected = {
                     "name": name,
                     "comment": comt,

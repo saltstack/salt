@@ -313,6 +313,7 @@ file ``samba/map.sls``, you could do the following.
         Service.running("samba", name=Samba.service)
 
 """
+
 # TODO: Interface for working with reactor files
 
 
@@ -346,7 +347,7 @@ class PyobjectsModule:
         self.__dict__ = attrs
 
     def __repr__(self):
-        return "<module '{!s}' (pyobjects)>".format(self.name)
+        return f"<module '{self.name!s}' (pyobjects)>"
 
 
 def load_states():
@@ -463,9 +464,7 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 with get_file_client(__opts__) as client:
                     state_file = client.cache_file(import_file, saltenv)
                     if not state_file:
-                        raise ImportError(
-                            "Could not find the file '{}'".format(import_file)
-                        )
+                        raise ImportError(f"Could not find the file '{import_file}'")
 
                     with salt.utils.files.fopen(state_file) as state_fh:
                         state_contents, state_globals = process_template(state_fh)
@@ -490,7 +489,7 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
 
                         if name not in state_globals:
                             raise ImportError(
-                                "'{}' was not found in '{}'".format(name, import_file)
+                                f"'{name}' was not found in '{import_file}'"
                             )
                         template_globals[alias] = state_globals[name]
 

@@ -415,7 +415,7 @@ Add a system dependency to the test run
 ---------------------------------------
 
 If you need to add a system dependency for the test run, this will need to be added in
-the `salt jenkins`_ repo. This repo uses salt states to install system dependencies.
+the `salt-ci-images`_ repo. This repo uses salt states to install system dependencies.
 You need to update the ``state-tree/golden-images-provision.sls`` file with
 your dependency to ensure it is installed. Once your PR is merged the core team
 will need to promote the new images with your new dependency installed.
@@ -516,16 +516,6 @@ All thought the fast, slow and core tests specified in the change file will alwa
 * test:flaky-jail
 
 
-Automated Test Runs
-===================
-
-SaltStack maintains a Jenkins server which can be viewed at
-https://jenkins.saltproject.io. The tests executed from this Jenkins server
-create fresh virtual machines for each test run, then execute the destructive
-tests on the new, clean virtual machine. This allows for the execution of tests
-across supported platforms.
-
-
 Additional Testing Documentation
 ================================
 
@@ -545,4 +535,4 @@ Python testing documentation. Please see the follow references for more informat
 .. _MagicMock: https://docs.python.org/3/library/unittest.mock.html
 .. _Python Unittest: https://docs.python.org/3/library/unittest.html
 .. _Python's Assert Functions: https://docs.python.org/3/library/unittest.html#assert-methods
-.. _salt jenkins: https://github.com/saltstack/salt-jenkins
+.. _salt-ci-images: https://github.com/saltstack/salt-ci-images

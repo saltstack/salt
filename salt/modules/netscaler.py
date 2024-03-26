@@ -118,7 +118,7 @@ def _connect(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("netscaler.{}".format(name), None)
+            val = __salt__["config.option"](f"netscaler.{name}", None)
             if val is not None:
                 connargs[key] = val
             elif default is not None:

@@ -2303,3 +2303,38 @@ def test_set_selections_test():
     with patch_get_sel, patch_call_apt, patch_opts:
         ret = aptpkg.set_selections(selection=f'{{"hold": [{pkg}]}}')
     assert ret == {}
+
+
+def test__get_opts():
+    tests = [
+        {
+            "oneline": "deb [signed-by=/etc/apt/keyrings/example.key arch=amd64] https://example.com/pub/repos/apt xenial main",
+            "result": {
+                "signedby": {
+                    "full": "signed-by=/etc/apt/keyrings/example.key",
+                    "value": "/etc/apt/keyrings/example.key",
+                },
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+            },
+        },
+        {
+            "oneline": "deb [arch=amd64 signed-by=/etc/apt/keyrings/example.key]  https://example.com/pub/repos/apt xenial main",
+            "result": {
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+                "signedby": {
+                    "full": "signed-by=/etc/apt/keyrings/example.key",
+                    "value": "/etc/apt/keyrings/example.key",
+                },
+            },
+        },
+        {
+            "oneline": "deb [arch=amd64]  https://example.com/pub/repos/apt xenial main",
+            "result": {
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+            },
+        },
+    ]
+
+    for test in tests:
+        ret = aptpkg._get_opts(test["oneline"])
+        assert ret == test["result"]

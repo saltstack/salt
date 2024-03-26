@@ -9,6 +9,7 @@
     The ``salt._logging`` package should be imported as soon as possible since salt tweaks
     the python's logging system.
 """
+
 from salt._logging.impl import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,

@@ -9,7 +9,6 @@ http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-r
 .. versionadded:: 0.16.0
 """
 
-
 import logging
 import os
 import re
@@ -76,7 +75,7 @@ def _parse_env(env):
 
 def _rbenv_bin(runas=None):
     path = _rbenv_path(runas)
-    return "{}/bin/rbenv".format(path)
+    return f"{path}/bin/rbenv"
 
 
 def _rbenv_path(runas=None):
@@ -84,7 +83,7 @@ def _rbenv_path(runas=None):
     if runas in (None, "root"):
         path = __salt__["config.option"]("rbenv.root") or "/usr/local/rbenv"
     else:
-        path = __salt__["config.option"]("rbenv.root") or "~{}/.rbenv".format(runas)
+        path = __salt__["config.option"]("rbenv.root") or f"~{runas}/.rbenv"
 
     return os.path.expanduser(path)
 
@@ -120,7 +119,7 @@ def _install_rbenv(path, runas=None):
 
 
 def _install_ruby_build(path, runas=None):
-    path = "{}/plugins/ruby-build".format(path)
+    path = f"{path}/plugins/ruby-build"
     if os.path.isdir(path):
         return True
 
@@ -141,7 +140,7 @@ def _update_rbenv(path, runas=None):
 
 
 def _update_ruby_build(path, runas=None):
-    path = "{}/plugins/ruby-build".format(path)
+    path = f"{path}/plugins/ruby-build"
     if not os.path.isdir(path):
         return False
 

@@ -4,7 +4,6 @@
     Test cases for salt.modules.introspect
 """
 
-
 import pytest
 
 import salt.modules.introspect as introspect
@@ -33,8 +32,8 @@ def test_running_service_owners():
     )
     ret = {
         "Error": {
-            "Unsupported File Module": "{}".format(err2),
-            "Unsupported Package Manager": "{}".format(err1),
+            "Unsupported File Module": f"{err2}",
+            "Unsupported Package Manager": f"{err1}",
         }
     }
     assert introspect.running_service_owners() == ret
@@ -65,8 +64,8 @@ def test_enabled_service_owners():
     )
     ret = {
         "Error": {
-            "Unsupported Service Manager": "{}".format(err2),
-            "Unsupported Package Manager": "{}".format(err1),
+            "Unsupported Service Manager": f"{err2}",
+            "Unsupported Package Manager": f"{err1}",
         }
     }
     assert introspect.enabled_service_owners() == ret

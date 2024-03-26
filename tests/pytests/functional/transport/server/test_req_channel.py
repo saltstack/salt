@@ -113,7 +113,7 @@ def req_server_channel(salt_master, req_channel_crypt):
 
 
 def req_channel_crypt_ids(value):
-    return "ReqChannel(crypt='{}')".format(value)
+    return f"ReqChannel(crypt='{value}')"
 
 
 @pytest.fixture(params=["clear", "aes"], ids=req_channel_crypt_ids)

@@ -216,7 +216,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
             if default_rule["name"] == name:
                 result = default_rule
         if not result:
-            result = {"error": "Unable to find {} in {}!".format(name, security_group)}
+            result = {"error": f"Unable to find {name} in {security_group}!"}
     except KeyError as exc:
         log.error("Unable to find %s in %s!", name, security_group)
         result = {"error": str(exc)}
@@ -311,7 +311,7 @@ def security_rule_create_or_update(
     destination_address_prefixes=None,
     source_port_ranges=None,
     destination_port_ranges=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -398,7 +398,7 @@ def security_rule_create_or_update(
         # pylint: disable=eval-used
         if eval(params[0]):
             # pylint: disable=exec-used
-            exec("{} = None".format(params[1]))
+            exec(f"{params[1]} = None")
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
@@ -419,10 +419,10 @@ def security_rule_create_or_update(
             destination_port_range=destination_port_range,
             destination_address_prefixes=destination_address_prefixes,
             destination_address_prefix=destination_address_prefix,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -439,9 +439,7 @@ def security_rule_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -559,7 +557,7 @@ def network_security_group_create_or_update(
             "network", "NetworkSecurityGroup", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -575,9 +573,7 @@ def network_security_group_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -817,7 +813,7 @@ def subnet_create_or_update(
         nsg = network_security_group_get(
             name=kwargs["network_security_group"],
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in nsg:
             kwargs["network_security_group"] = {"id": str(nsg["id"])}
@@ -836,10 +832,10 @@ def subnet_create_or_update(
             "Subnet",
             address_prefix=address_prefix,
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -856,9 +852,7 @@ def subnet_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -1014,10 +1008,10 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
             "VirtualNetwork",
             address_space=address_space,
             dhcp_options=dhcp_options,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -1033,9 +1027,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -1238,7 +1230,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 pub_ip = public_ip_address_get(
                     name=kwargs["frontend_ip_configurations"][idx]["public_ip_address"],
                     resource_group=resource_group,
-                    **kwargs
+                    **kwargs,
                 )
                 if "error" not in pub_ip:
                     kwargs["frontend_ip_configurations"][idx]["public_ip_address"] = {
@@ -1252,7 +1244,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                         subnets = subnets_list(
                             virtual_network=vnet,
                             resource_group=resource_group,
-                            **kwargs
+                            **kwargs,
                         )
                         if (
                             kwargs["frontend_ip_configurations"][idx]["subnet"]
@@ -1364,7 +1356,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
             "network", "LoadBalancer", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -1380,9 +1372,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -1562,7 +1552,7 @@ def network_interface_create_or_update(
         nsg = network_security_group_get(
             name=kwargs["network_security_group"],
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in nsg:
             kwargs["network_security_group"] = {"id": str(nsg["id"])}
@@ -1581,7 +1571,7 @@ def network_interface_create_or_update(
             name=subnet,
             virtual_network=virtual_network,
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in subnet:
             subnet = {"id": str(subnet["id"])}
@@ -1607,7 +1597,7 @@ def network_interface_create_or_update(
                         pub_ip = public_ip_address_get(
                             name=ipconfig["public_ip_address"],
                             resource_group=resource_group,
-                            **kwargs
+                            **kwargs,
                         )
                         if "error" not in pub_ip:
                             ipconfig["public_ip_address"] = {"id": str(pub_ip["id"])}
@@ -1617,7 +1607,7 @@ def network_interface_create_or_update(
             "network", "NetworkInterface", ip_configurations=ip_configurations, **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -1633,9 +1623,7 @@ def network_interface_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -2014,7 +2002,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
             "network", "PublicIPAddress", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -2030,9 +2018,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -2225,10 +2211,10 @@ def route_filter_rule_create_or_update(
             "RouteFilterRule",
             access=access,
             communities=communities,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -2248,9 +2234,7 @@ def route_filter_rule_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", message, **kwargs)
         result = {"error": message}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -2396,7 +2380,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
             "network", "RouteFilter", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -2412,9 +2396,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -2567,7 +2549,7 @@ def route_create_or_update(
     route_table,
     resource_group,
     next_hop_ip_address=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -2605,10 +2587,10 @@ def route_create_or_update(
             address_prefix=address_prefix,
             next_hop_type=next_hop_type,
             next_hop_ip_address=next_hop_ip_address,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -2625,9 +2607,7 @@ def route_create_or_update(
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -2773,7 +2753,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
             "network", "RouteTable", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -2789,9 +2769,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
         __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 

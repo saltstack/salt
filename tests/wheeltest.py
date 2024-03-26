@@ -3,9 +3,7 @@
 Test interacting with the wheel system. This script is useful when testing
 wheel modules
 """
-
-
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import pprint
 
 import salt.auth

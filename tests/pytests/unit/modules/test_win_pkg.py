@@ -1,6 +1,7 @@
 """
 Tests for the win_pkg module
 """
+
 import logging
 
 import pytest
@@ -92,7 +93,7 @@ def test_pkg__get_reg_software():
 
 def test_pkg__get_reg_software_noremove():
     search = "test_pkg_noremove"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     win_reg.set_value(
@@ -114,7 +115,7 @@ def test_pkg__get_reg_software_noremove():
 
 def test_pkg__get_reg_software_noremove_not_present():
     search = "test_pkg_noremove_not_present"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     try:
@@ -754,3 +755,21 @@ def test__reverse_cmp_pkg_versions(v1, v2, expected):
     assert result == expected, "cmp({}, {}) should be {}, got {}".format(
         v1, v2, expected, result
     )
+
+
+def test__repo_process_pkg_sls():
+    patch_render = patch("salt.loader.render")
+    patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
+    patch_compile = patch("salt.template.compile_template", return_value="junk")
+    with patch_opts, patch_render as render, patch_compile as test:
+        ret = win_pkg._repo_process_pkg_sls(
+            filename="junk",
+            short_path_name="junk",
+            ret={},
+            successful_verbose=False,
+            saltenv="spongebob",
+        )
+        assert ret is False
+        test.assert_called_once_with(
+            "junk", render(), None, "", "", saltenv="spongebob"
+        )

@@ -1,6 +1,7 @@
 """
 This module contains the function calls to execute command line scripts
 """
+
 import contextlib
 import functools
 import logging
@@ -17,9 +18,6 @@ import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
-
-if sys.version_info < (3,):
-    raise SystemExit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def _handle_signals(client, signum, sigframe):
@@ -414,7 +412,7 @@ def salt_key():
         _install_signal_handlers(client)
         client.run()
     except Exception as err:  # pylint: disable=broad-except
-        sys.stderr.write("Error: {}\n".format(err))
+        sys.stderr.write(f"Error: {err}\n")
 
 
 def salt_cp():
@@ -483,16 +481,14 @@ def salt_cloud():
     """
     The main function for salt-cloud
     """
-    # Define 'salt' global so we may use it after ImportError. Otherwise,
-    # UnboundLocalError will be raised.
-    global salt  # pylint: disable=W0602
-
     try:
         # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
     except ImportError as e:
         # No salt cloud on Windows
+        import salt.defaults.exitcodes
+
         log.error("Error importing salt cloud: %s", e)
         print("salt-cloud is not available in this system")
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
@@ -572,7 +568,7 @@ def salt_unity():
     if len(sys.argv) < 2:
         msg = "Must pass in a salt command, available commands are:"
         for cmd in avail:
-            msg += "\n{}".format(cmd)
+            msg += f"\n{cmd}"
         print(msg)
         sys.exit(1)
     cmd = sys.argv[1]
@@ -581,9 +577,9 @@ def salt_unity():
         sys.argv[0] = "salt"
         s_fun = salt_main
     else:
-        sys.argv[0] = "salt-{}".format(cmd)
+        sys.argv[0] = f"salt-{cmd}"
         sys.argv.pop(1)
-        s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
+        s_fun = getattr(sys.modules[__name__], f"salt_{cmd}")
     s_fun()
 
 

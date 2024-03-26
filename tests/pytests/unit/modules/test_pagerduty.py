@@ -4,7 +4,6 @@
     Test cases for salt.modules.pagerduty
 """
 
-
 import pytest
 
 import salt.modules.pagerduty as pagerduty

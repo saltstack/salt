@@ -3,6 +3,7 @@ Beacon to emit when a display is available to a linux machine
 
 .. versionadded:: 2016.3.0
 """
+
 import logging
 
 import salt.utils.beacons

@@ -306,7 +306,7 @@ def _add_new_hard_disk_helper(
     disk_spec.device.key = random_key
     disk_spec.device.deviceInfo = vim.Description()
     disk_spec.device.deviceInfo.label = disk_label
-    disk_spec.device.deviceInfo.summary = "{} GB".format(size_gb)
+    disk_spec.device.deviceInfo.summary = f"{size_gb} GB"
 
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
@@ -662,7 +662,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
         if datastore_ref:
             drive.backing.datastore = datastore_ref
 
-        drive.deviceInfo.summary = "ISO {}".format(iso_path)
+        drive.deviceInfo.summary = f"ISO {iso_path}"
 
     elif device_type == "client_device":
         if mode == "passthrough":
@@ -917,7 +917,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                             else None
                         )
                         if bus_sharing and bus_sharing in ["virtual", "physical", "no"]:
-                            bus_sharing = "{}Sharing".format(bus_sharing)
+                            bus_sharing = f"{bus_sharing}Sharing"
                             if bus_sharing != device.sharedBus:
                                 # Only edit the SCSI controller if bus_sharing is different
                                 scsi_spec = _edit_existing_scsi_controller(
@@ -1327,7 +1327,7 @@ def _format_instance_info_select(vm, selection):
     if "size" in selection:
         cpu = defaultto(vm, "config.hardware.numCPU")
         ram = "{} MB".format(defaultto(vm, "config.hardware.memoryMB"))
-        vm_select_info["size"] = "cpu: {}\nram: {}".format(cpu, ram)
+        vm_select_info["size"] = f"cpu: {cpu}\nram: {ram}"
         vm_select_info["size_dict"] = {
             "cpu": cpu,
             "memory": ram,
@@ -1454,15 +1454,21 @@ def _format_instance_info_select(vm, selection):
 
     if "storage" in selection:
         storage_full_info = {
-            "committed": int(vm["summary.storage.committed"])
-            if "summary.storage.committed" in vm
-            else "N/A",
-            "uncommitted": int(vm["summary.storage.uncommitted"])
-            if "summary.storage.uncommitted" in vm
-            else "N/A",
-            "unshared": int(vm["summary.storage.unshared"])
-            if "summary.storage.unshared" in vm
-            else "N/A",
+            "committed": (
+                int(vm["summary.storage.committed"])
+                if "summary.storage.committed" in vm
+                else "N/A"
+            ),
+            "uncommitted": (
+                int(vm["summary.storage.uncommitted"])
+                if "summary.storage.uncommitted" in vm
+                else "N/A"
+            ),
+            "unshared": (
+                int(vm["summary.storage.unshared"])
+                if "summary.storage.unshared" in vm
+                else "N/A"
+            ),
         }
         vm_select_info["storage"] = storage_full_info
 
@@ -1553,15 +1559,21 @@ def _format_instance_info(vm):
                 ] = device.backing.fileName
 
     storage_full_info = {
-        "committed": int(vm["summary.storage.committed"])
-        if "summary.storage.committed" in vm
-        else "N/A",
-        "uncommitted": int(vm["summary.storage.uncommitted"])
-        if "summary.storage.uncommitted" in vm
-        else "N/A",
-        "unshared": int(vm["summary.storage.unshared"])
-        if "summary.storage.unshared" in vm
-        else "N/A",
+        "committed": (
+            int(vm["summary.storage.committed"])
+            if "summary.storage.committed" in vm
+            else "N/A"
+        ),
+        "uncommitted": (
+            int(vm["summary.storage.uncommitted"])
+            if "summary.storage.uncommitted" in vm
+            else "N/A"
+        ),
+        "unshared": (
+            int(vm["summary.storage.unshared"])
+            if "summary.storage.unshared" in vm
+            else "N/A"
+        ),
     }
 
     file_full_info = {}
@@ -1593,14 +1605,18 @@ def _format_instance_info(vm):
     )
     vm_full_info = {
         "id": str(vm["name"]),
-        "image": "{} (Detected)".format(vm["config.guestFullName"])
-        if "config.guestFullName" in vm
-        else "N/A",
-        "size": "cpu: {}\nram: {}".format(cpu, ram),
+        "image": (
+            "{} (Detected)".format(vm["config.guestFullName"])
+            if "config.guestFullName" in vm
+            else "N/A"
+        ),
+        "size": f"cpu: {cpu}\nram: {ram}",
         "size_dict": {"cpu": cpu, "memory": ram},
-        "state": str(vm["summary.runtime.powerState"])
-        if "summary.runtime.powerState" in vm
-        else "N/A",
+        "state": (
+            str(vm["summary.runtime.powerState"])
+            if "summary.runtime.powerState" in vm
+            else "N/A"
+        ),
         "private_ips": ip_addresses,
         "public_ips": [],
         "devices": device_full_info,
@@ -1610,12 +1626,14 @@ def _format_instance_info(vm):
         "hostname": str(vm["object"].guest.hostName),
         "mac_addresses": device_mac_addresses,
         "networks": network_full_info,
-        "path": str(vm["config.files.vmPathName"])
-        if "config.files.vmPathName" in vm
-        else "N/A",
-        "tools_status": str(vm["guest.toolsStatus"])
-        if "guest.toolsStatus" in vm
-        else "N/A",
+        "path": (
+            str(vm["config.files.vmPathName"])
+            if "config.files.vmPathName" in vm
+            else "N/A"
+        ),
+        "tools_status": (
+            str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
+        ),
     }
 
     return vm_full_info
@@ -1624,11 +1642,11 @@ def _format_instance_info(vm):
 def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
-        snapshot_path = "{}/{}".format(parent_snapshot_path, snapshot.name)
+        snapshot_path = f"{parent_snapshot_path}/{snapshot.name}"
         snapshots[snapshot_path] = {
             "name": snapshot.name,
             "description": snapshot.description,
-            "created": str(snapshot.createTime).split(".")[0],
+            "created": str(snapshot.createTime).split(".", maxsplit=1)[0],
             "state": snapshot.state,
             "path": snapshot_path,
         }
@@ -1759,7 +1777,7 @@ def test_vcenter_connection(kwargs=None, call=None):
         # Get the service instance object
         _get_si()
     except Exception as exc:  # pylint: disable=broad-except
-        return "failed to connect: {}".format(exc)
+        return f"failed to connect: {exc}"
 
     return "connection successful"
 
@@ -2004,14 +2022,18 @@ def list_nodes(kwargs=None, call=None):
         )
         vm_info = {
             "id": vm["name"],
-            "image": "{} (Detected)".format(vm["config.guestFullName"])
-            if "config.guestFullName" in vm
-            else "N/A",
-            "size": "cpu: {}\nram: {}".format(cpu, ram),
+            "image": (
+                "{} (Detected)".format(vm["config.guestFullName"])
+                if "config.guestFullName" in vm
+                else "N/A"
+            ),
+            "size": f"cpu: {cpu}\nram: {ram}",
             "size_dict": {"cpu": cpu, "memory": ram},
-            "state": str(vm["summary.runtime.powerState"])
-            if "summary.runtime.powerState" in vm
-            else "N/A",
+            "state": (
+                str(vm["summary.runtime.powerState"])
+                if "summary.runtime.powerState" in vm
+                else "N/A"
+            ),
             "private_ips": [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             "public_ips": [],
         }
@@ -2242,15 +2264,21 @@ def avail_images(call=None):
         if "config.template" in vm and vm["config.template"]:
             templates[vm["name"]] = {
                 "name": vm["name"],
-                "guest_fullname": vm["config.guestFullName"]
-                if "config.guestFullName" in vm
-                else "N/A",
-                "cpus": vm["config.hardware.numCPU"]
-                if "config.hardware.numCPU" in vm
-                else "N/A",
-                "ram": vm["config.hardware.memoryMB"]
-                if "config.hardware.memoryMB" in vm
-                else "N/A",
+                "guest_fullname": (
+                    vm["config.guestFullName"]
+                    if "config.guestFullName" in vm
+                    else "N/A"
+                ),
+                "cpus": (
+                    vm["config.hardware.numCPU"]
+                    if "config.hardware.numCPU" in vm
+                    else "N/A"
+                ),
+                "ram": (
+                    vm["config.hardware.memoryMB"]
+                    if "config.hardware.memoryMB" in vm
+                    else "N/A"
+                ),
             }
 
     return templates
@@ -2656,7 +2684,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2702,7 +2730,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -3107,7 +3135,7 @@ def create(vm_):
             )
             if not datastore_ref:
                 raise SaltCloudSystemExit(
-                    "Specified datastore: '{}' does not exist".format(datastore)
+                    f"Specified datastore: '{datastore}' does not exist"
                 )
 
         if host:
@@ -3123,7 +3151,7 @@ def create(vm_):
     # If the hardware version is specified and if it is different from the current
     # hardware version, then schedule a hardware version upgrade
     if hardware_version and object_ref is not None:
-        hardware_version = "vmx-{:02}".format(hardware_version)
+        hardware_version = f"vmx-{hardware_version:02}"
         if hardware_version != object_ref.config.version:
             log.debug(
                 "Scheduling hardware version upgrade from %s to %s",
@@ -3153,7 +3181,7 @@ def create(vm_):
             elif memory_unit.lower() == "gb":
                 memory_mb = int(float(memory_num) * 1024.0)
             else:
-                err_msg = "Invalid memory type specified: '{}'".format(memory_unit)
+                err_msg = f"Invalid memory type specified: '{memory_unit}'"
                 log.error(err_msg)
                 return {"Error": err_msg}
         except (TypeError, ValueError):
@@ -3601,7 +3629,7 @@ def rescan_hba(kwargs=None, call=None):
         if hba:
             log.info("Rescanning HBA %s on host %s", hba, host_name)
             host_ref.configManager.storageSystem.RescanHba(hba)
-            ret = "rescanned HBA {}".format(hba)
+            ret = f"rescanned HBA {hba}"
         else:
             log.info("Rescanning all HBAs on host %s", host_name)
             host_ref.configManager.storageSystem.RescanAllHba()
@@ -3879,7 +3907,7 @@ def list_hbas(kwargs=None, call=None):
 
     if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
         raise SaltCloudSystemExit(
-            "Specified hba type {} currently not supported.".format(hba_type)
+            f"Specified hba type {hba_type} currently not supported."
         )
 
     host_list = salt.utils.vmware.get_mors_with_properties(
@@ -4252,10 +4280,10 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
         else:
             log.debug("Reverting VM %s to snapshot %s", name, snapshot_name)
-            msg = "reverted to snapshot {}".format(snapshot_name)
+            msg = f"reverted to snapshot {snapshot_name}"
             snapshot_ref = _get_snapshot_ref_by_name(vm_ref, snapshot_name)
             if snapshot_ref is None:
-                return "specified snapshot '{}' does not exist".format(snapshot_name)
+                return f"specified snapshot '{snapshot_name}' does not exist"
             task = snapshot_ref.snapshot.Revert(suppressPowerOn=suppress_power_on)
 
         salt.utils.vmware.wait_for_task(task, name, "revert to snapshot", 5, "info")
@@ -4393,7 +4421,7 @@ def convert_to_template(name, kwargs=None, call=None):
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if vm_ref.config.template:
-        raise SaltCloudSystemExit("{} already a template".format(name))
+        raise SaltCloudSystemExit(f"{name} already a template")
 
     try:
         vm_ref.MarkAsTemplate()
@@ -4407,7 +4435,7 @@ def convert_to_template(name, kwargs=None, call=None):
         )
         return "failed to convert to teamplate"
 
-    return "{} converted to template".format(name)
+    return f"{name} converted to template"
 
 
 def add_host(kwargs=None, call=None):
@@ -4529,7 +4557,7 @@ def add_host(kwargs=None, call=None):
                 ("echo", "-n"), stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             p2 = subprocess.Popen(
-                ("openssl", "s_client", "-connect", "{}:443".format(host_name)),
+                ("openssl", "s_client", "-connect", f"{host_name}:443"),
                 stdin=p1.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -4559,12 +4587,12 @@ def add_host(kwargs=None, call=None):
     try:
         if cluster_name:
             task = cluster_ref.AddHost(spec=spec, asConnected=True)
-            ret = "added host system to cluster {}".format(cluster_name)
+            ret = f"added host system to cluster {cluster_name}"
         if datacenter_name:
             task = datacenter_ref.hostFolder.AddStandaloneHost(
                 spec=spec, addConnected=True
             )
-            ret = "added host system to datacenter {}".format(datacenter_name)
+            ret = f"added host system to datacenter {datacenter_name}"
         salt.utils.vmware.wait_for_task(task, host_name, "add host system", 5, "info")
     except Exception as exc:  # pylint: disable=broad-except
         if isinstance(exc, vim.fault.SSLVerifyFault):

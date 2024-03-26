@@ -38,7 +38,7 @@ async def test_websocket_handler_upgrade_to_websocket(
     )
     token = salt.utils.json.loads(response.body)["return"][0]["token"]
 
-    url = "ws://127.0.0.1:{}/all_events/{}".format(http_server_port, token)
+    url = f"ws://127.0.0.1:{http_server_port}/all_events/{token}"
     request = HTTPRequest(
         url, headers={"Origin": "http://example.com", "Host": "example.com"}
     )
@@ -57,7 +57,7 @@ async def test_websocket_handler_bad_token(client_config, http_server):
         )().hexdigest()
     )
 
-    url = "ws://127.0.0.1:{}/all_events/{}".format(http_server.port, token)
+    url = f"ws://127.0.0.1:{http_server.port}/all_events/{token}"
     request = HTTPRequest(
         url, headers={"Origin": "http://example.com", "Host": "example.com"}
     )
@@ -78,7 +78,7 @@ async def test_websocket_handler_cors_origin_wildcard(
     )
     token = salt.utils.json.loads(response.body)["return"][0]["token"]
 
-    url = "ws://127.0.0.1:{}/all_events/{}".format(http_server_port, token)
+    url = f"ws://127.0.0.1:{http_server_port}/all_events/{token}"
     request = HTTPRequest(
         url, headers={"Origin": "http://foo.bar", "Host": "example.com"}
     )
@@ -99,7 +99,7 @@ async def test_cors_origin_single(
     )
     token = salt.utils.json.loads(response.body)["return"][0]["token"]
 
-    url = "ws://127.0.0.1:{}/all_events/{}".format(http_server_port, token)
+    url = f"ws://127.0.0.1:{http_server_port}/all_events/{token}"
 
     # Example.com should works
     request = HTTPRequest(
@@ -131,7 +131,7 @@ async def test_cors_origin_multiple(
     )
     token = salt.utils.json.loads(response.body)["return"][0]["token"]
 
-    url = "ws://127.0.0.1:{}/all_events/{}".format(http_server_port, token)
+    url = f"ws://127.0.0.1:{http_server_port}/all_events/{token}"
 
     # Example.com should works
     request = HTTPRequest(

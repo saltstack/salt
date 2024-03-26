@@ -290,7 +290,7 @@ def test_find_file_not_in_root(tmp_state_tree):
     """
     badfile = pathlib.Path(tmp_state_tree).parent / "bar"
     badfile.write_text("Bad file")
-    badpath = f"../bar"
+    badpath = "../bar"
     ret = roots.find_file(badpath)
     assert ret == {"path": "", "rel": ""}
     badpath = f"{tmp_state_tree / '..' / 'bar'}"
@@ -304,7 +304,7 @@ def test_serve_file_not_in_root(tmp_state_tree):
     """
     badfile = pathlib.Path(tmp_state_tree).parent / "bar"
     badfile.write_text("Bad file")
-    badpath = f"../bar"
+    badpath = "../bar"
     load = {"path": "salt://|..\\bar", "saltenv": "base", "loc": 0}
     fnd = {
         "path": f"{tmp_state_tree / '..' / 'bar'}",

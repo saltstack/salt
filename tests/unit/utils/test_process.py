@@ -42,7 +42,7 @@ def die(func):
         name = func.__name__[5:]
 
         def _die():
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
 
         attrname = "die_" + name
         setattr(self, attrname, _die)
@@ -62,7 +62,7 @@ def incr(func):
         name = func.__name__[5:]
 
         def _incr(counter, num):
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
             for _ in range(0, num):
                 counter.value += 1
 
@@ -84,7 +84,7 @@ def spin(func):
         name = func.__name__[5:]
 
         def _spin():
-            salt.utils.process.appendproctitle("test_{}".format(name))
+            salt.utils.process.appendproctitle(f"test_{name}")
             while True:
                 time.sleep(1)
 

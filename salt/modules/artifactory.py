@@ -732,7 +732,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            "Artifact downloaded from URL: {}".format(artifact_url),
+            f"Artifact downloaded from URL: {artifact_url}",
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file

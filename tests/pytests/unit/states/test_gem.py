@@ -2,7 +2,6 @@
     Tests of salt.states.gem
 """
 
-
 import pytest
 
 import salt.states.gem as gem

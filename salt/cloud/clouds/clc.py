@@ -308,7 +308,7 @@ def get_build_status(req_id, nodename):
     counter = 0
     req_id = str(req_id)
     while counter < 10:
-        queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
+        queue = clc.v1.Blueprint.GetStatus(request_id=req_id)
         if queue["PercentComplete"] == 100:
             server_name = queue["Servers"][0]
             creds = get_creds()
@@ -421,7 +421,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{}/waiting_for_ssh".format(name),
+        f"salt/cloud/{name}/waiting_for_ssh",
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],

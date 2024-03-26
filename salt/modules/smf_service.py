@@ -9,7 +9,6 @@ that use SMF also. (e.g. SmartOS)
     <module-provider-override>`.
 """
 
-
 import fnmatch
 import re
 
@@ -112,7 +111,7 @@ def available(name):
 
         salt '*' service.available net-snmp
     """
-    cmd = "/usr/bin/svcs -H -o FMRI {}".format(name)
+    cmd = f"/usr/bin/svcs -H -o FMRI {name}"
     name = __salt__["cmd.run"](cmd, python_shell=False)
     return name in get_all()
 
@@ -129,7 +128,7 @@ def missing(name):
 
         salt '*' service.missing net-snmp
     """
-    cmd = "/usr/bin/svcs -H -o FMRI {}".format(name)
+    cmd = f"/usr/bin/svcs -H -o FMRI {name}"
     name = __salt__["cmd.run"](cmd, python_shell=False)
     return name not in get_all()
 
@@ -165,7 +164,7 @@ def start(name):
 
         salt '*' service.start <service name>
     """
-    cmd = "/usr/sbin/svcadm enable -s -t {}".format(name)
+    cmd = f"/usr/sbin/svcadm enable -s -t {name}"
     retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
     if not retcode:
         return True
@@ -173,7 +172,7 @@ def start(name):
         # Return code 3 means there was a problem with the service
         # A common case is being in the 'maintenance' state
         # Attempt a clear and try one more time
-        clear_cmd = "/usr/sbin/svcadm clear {}".format(name)
+        clear_cmd = f"/usr/sbin/svcadm clear {name}"
         __salt__["cmd.retcode"](clear_cmd, python_shell=False)
         return not __salt__["cmd.retcode"](cmd, python_shell=False)
     return False
@@ -189,7 +188,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     """
-    cmd = "/usr/sbin/svcadm disable -s -t {}".format(name)
+    cmd = f"/usr/sbin/svcadm disable -s -t {name}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -203,7 +202,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     """
-    cmd = "/usr/sbin/svcadm restart {}".format(name)
+    cmd = f"/usr/sbin/svcadm restart {name}"
     if not __salt__["cmd.retcode"](cmd, python_shell=False):
         # calling restart doesn't clear maintenance
         # or tell us that the service is in the 'online' state
@@ -221,7 +220,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     """
-    cmd = "/usr/sbin/svcadm refresh {}".format(name)
+    cmd = f"/usr/sbin/svcadm refresh {name}"
     if not __salt__["cmd.retcode"](cmd, python_shell=False):
         # calling reload doesn't clear maintenance
         # or tell us that the service is in the 'online' state
@@ -259,7 +258,7 @@ def status(name, sig=None):
         services = [name]
     results = {}
     for service in services:
-        cmd = "/usr/bin/svcs -H -o STATE {}".format(service)
+        cmd = f"/usr/bin/svcs -H -o STATE {service}"
         line = __salt__["cmd.run"](cmd, python_shell=False)
         results[service] = line == "online"
     if contains_globbing:
@@ -277,7 +276,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     """
-    cmd = "/usr/sbin/svcadm enable {}".format(name)
+    cmd = f"/usr/sbin/svcadm enable {name}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -291,7 +290,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     """
-    cmd = "/usr/sbin/svcadm disable {}".format(name)
+    cmd = f"/usr/sbin/svcadm disable {name}"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -308,9 +307,9 @@ def enabled(name, **kwargs):
     # The property that reveals whether a service is enabled
     # can only be queried using the full FMRI
     # We extract the FMRI and then do the query
-    fmri_cmd = "/usr/bin/svcs -H -o FMRI {}".format(name)
+    fmri_cmd = f"/usr/bin/svcs -H -o FMRI {name}"
     fmri = __salt__["cmd.run"](fmri_cmd, python_shell=False)
-    cmd = "/usr/sbin/svccfg -s {} listprop general/enabled".format(fmri)
+    cmd = f"/usr/sbin/svccfg -s {fmri} listprop general/enabled"
     comps = __salt__["cmd.run"](cmd, python_shell=False).split()
     if comps[2] == "true":
         return True

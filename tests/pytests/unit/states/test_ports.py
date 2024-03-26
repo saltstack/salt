@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import os
 
 import pytest
@@ -66,7 +67,7 @@ def test_installed():
         mock_dict = MagicMock(return_value={"origin": {"origin": "salt"}})
         with patch.dict(ports.__salt__, {"pkg.list_pkgs": mock_dict}):
             with patch.dict(ports.__opts__, {"test": True}):
-                comt = "{} will be installed".format(name)
+                comt = f"{name} will be installed"
                 ret.update({"comment": comt, "result": None})
                 assert ports.installed(name) == ret
 

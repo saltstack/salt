@@ -106,7 +106,6 @@ and then:
 Required python modules: psycopg2
 """
 
-
 import logging
 import re
 import sys

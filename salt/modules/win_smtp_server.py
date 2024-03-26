@@ -109,7 +109,7 @@ def _normalize_server_settings(**settings):
             _LOG.debug("Fixing value: %s", settings[setting])
             value_from_key = next(iter(settings[setting].keys()))
 
-            ret[setting] = "{{{0}}}".format(value_from_key)
+            ret[setting] = f"{{{value_from_key}}}"
         else:
             ret[setting] = settings[setting]
     return ret
@@ -391,7 +391,7 @@ def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
     for unnormalized_address in addresses:
         ip_address, subnet = re.split(reg_separator, unnormalized_address)
         if as_wmi_format:
-            ret.append("{}, {}".format(ip_address, subnet))
+            ret.append(f"{ip_address}, {subnet}")
         else:
             ret[ip_address] = subnet
 
@@ -431,9 +431,7 @@ def set_connection_ip_list(
     # Convert addresses to the 'ip_address, subnet' format used by
     # IIsIPSecuritySetting.
     for address in addresses:
-        formatted_addresses.append(
-            "{}, {}".format(address.strip(), addresses[address].strip())
-        )
+        formatted_addresses.append(f"{address.strip()}, {addresses[address].strip()}")
 
     current_addresses = get_connection_ip_list(as_wmi_format=True, server=server)
 

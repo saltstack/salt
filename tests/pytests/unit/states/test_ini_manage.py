@@ -2,7 +2,6 @@
     Test cases for salt.states.ini_manage
 """
 
-
 import copy
 import os
 

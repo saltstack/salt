@@ -965,7 +965,7 @@ def test_delete_line_in_empty_file(anyattr, mode):
             )
         warning_call = _log.warning.call_args_list[0][0]
         warning_log_msg = warning_call[0] % warning_call[1:]
-        assert "Cannot find text to {}".format(mode) in warning_log_msg
+        assert f"Cannot find text to {mode}" in warning_log_msg
 
 
 @pytest.mark.parametrize("mode", ["delete", "replace"])
@@ -1149,7 +1149,7 @@ def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
     See issue #48113
     :return:
     """
-    file_content = "This is a line{}This is another line".format(os.linesep)
+    file_content = f"This is a line{os.linesep}This is another line"
     file_modified = salt.utils.stringutils.to_str(
         "This is a line{}"
         "This is another line{}"
@@ -1588,7 +1588,7 @@ def test_line_insert_ensure_beforeafter_twolines(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
         ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1633,14 +1633,14 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
     )
     # pylint: enable=W1401
     after, before = (
-        file_content.split(os.linesep)[0],
+        file_content.split(os.linesep, maxsplit=1)[0],
         file_content.split(os.linesep)[2],
     )
 
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
         ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1677,7 +1677,7 @@ def test_line_insert_ensure_beforeafter_rangelines():
         file_content.split(os.linesep)[0],
         file_content.split(os.linesep)[-1],
     )
-    for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
+    for _after, _before in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
             "os.path.isfile", MagicMock(return_value=True)
         ), patch("os.stat", MagicMock()), patch(

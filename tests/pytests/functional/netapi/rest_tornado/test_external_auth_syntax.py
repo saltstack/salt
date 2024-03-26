@@ -15,7 +15,7 @@ pytestmark = [
 
 
 ACCOUNT_USERNAME = "saltdev-syntax"
-ACCOUNT_GROUP_NAME = "{}-group".format(ACCOUNT_USERNAME)
+ACCOUNT_GROUP_NAME = f"{ACCOUNT_USERNAME}-group"
 
 
 @attr.s(frozen=True, slots=True)
@@ -33,7 +33,7 @@ class ExternalAuthConfig:
         return {
             "*": ["grains.*"],
             ACCOUNT_USERNAME: ["@wheel"],
-            "{}%".format(ACCOUNT_GROUP_NAME): ["@runner"],
+            f"{ACCOUNT_GROUP_NAME}%": ["@runner"],
         }
 
     @pam.default
@@ -73,14 +73,14 @@ def external_auth_ids(value):
         # By Group
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["grains.*"],
             expected_perms=["grains.*"],
             fixture_id="by-group-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel", "grains.*"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-auto",
@@ -148,14 +148,14 @@ def external_auth_ids(value):
         # By group, by wheel
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel"],
             expected_perms=["@wheel"],
             fixture_id="by-group-by-@wheel-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@wheel-auto",
@@ -163,14 +163,14 @@ def external_auth_ids(value):
         # By group, by runner
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@runner"],
             expected_perms=["@runner"],
             fixture_id="by-group-by-@runner-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@runner"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@runner-auto",
@@ -178,14 +178,14 @@ def external_auth_ids(value):
         # By group, by jobs
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@jobs"],
             expected_perms=["@jobs"],
             fixture_id="by-group-by-@jobs-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@jobs"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@jobs-auto",

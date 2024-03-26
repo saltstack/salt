@@ -51,6 +51,8 @@ jobs:
       - self-hosted
       - linux
       - ${{ matrix.arch }}
+    env:
+      USE_S3_CACHE: 'true'
     steps:
 
       - name: "Throttle Builds"
@@ -95,7 +97,8 @@ jobs:
           - arm64
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
-
+    env:
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"
@@ -144,6 +147,8 @@ jobs:
           - x86
           - amd64
     runs-on: windows-latest
+    env:
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"

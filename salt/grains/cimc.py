@@ -3,7 +3,6 @@ Generate baseline proxy minion grains for cimc hosts.
 
 """
 
-
 import logging
 
 import salt.proxy.cimc

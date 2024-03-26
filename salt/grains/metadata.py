@@ -24,7 +24,7 @@ import salt.utils.stringutils
 
 # metadata server information
 IP = "169.254.169.254"
-HOST = "http://{}/".format(IP)
+HOST = f"http://{IP}/"
 
 
 def __virtual__():

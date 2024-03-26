@@ -95,7 +95,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
         except AttributeError:
             continue
-        pkgname += "--{}".format(flavor) if flavor else ""
+        pkgname += f"--{flavor}" if flavor else ""
         __salt__["pkg_resource.add_pkg"](ret, pkgname, pkgver)
 
     __salt__["pkg_resource.sort_pkglist"](ret)
@@ -129,7 +129,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ""
 
         # Query the repository for the package name
-        cmd = "pkg_info -Q {}".format(name)
+        cmd = f"pkg_info -Q {name}"
         out = __salt__["cmd.run_stdout"](
             cmd, python_shell=False, output_loglevel="trace"
         )
@@ -153,8 +153,8 @@ def latest_version(*names, **kwargs):
 
             # First check if we need to look for flavors before
             # looking at unflavored packages.
-            if "{}--{}".format(pkgname, flavor) == name:
-                pkgname += "--{}".format(flavor)
+            if f"{pkgname}--{flavor}" == name:
+                pkgname += f"--{flavor}"
             elif pkgname == name:
                 pass
             else:
@@ -233,8 +233,8 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         if pkg_type == "repository":
             stem, branch = (pkg.split("%") + [""])[:2]
             base, flavor = (stem.split("--") + [""])[:2]
-            pkg = "{}--{}%{}".format(base, flavor, branch)
-        cmd = "pkg_add -x -I {}".format(pkg)
+            pkg = f"{base}--{flavor}%{branch}"
+        cmd = f"pkg_add -x -I {pkg}"
         out = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")
         if out["retcode"] != 0 and out["stderr"]:
             errors.append(out["stderr"])

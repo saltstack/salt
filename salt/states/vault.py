@@ -41,7 +41,7 @@ def policy_present(name, rules):
                 }
 
     """
-    url = "v1/sys/policy/{}".format(name)
+    url = f"v1/sys/policy/{name}"
     response = __utils__["vault.make_request"]("GET", url)
     try:
         if response.status_code == 200:
@@ -55,7 +55,7 @@ def policy_present(name, rules):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to get policy: {}".format(e),
+            "comment": f"Failed to get policy: {e}",
         }
 
 
@@ -69,14 +69,14 @@ def _create_new_policy(name, rules):
         }
 
     payload = {"rules": rules}
-    url = "v1/sys/policy/{}".format(name)
+    url = f"v1/sys/policy/{name}"
     response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to create policy: {}".format(response.reason),
+            "comment": f"Failed to create policy: {response.reason}",
         }
 
     return {
@@ -108,14 +108,14 @@ def _handle_existing_policy(name, new_rules, existing_rules):
 
     payload = {"rules": new_rules}
 
-    url = "v1/sys/policy/{}".format(name)
+    url = f"v1/sys/policy/{name}"
     response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to change policy: {}".format(response.reason),
+            "comment": f"Failed to change policy: {response.reason}",
         }
 
     ret["result"] = True

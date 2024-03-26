@@ -146,7 +146,7 @@ def _get_asam_configuration(driver_url=""):
 
 
 def _make_post_request(url, data, auth, verify=True):
-    r = requests.post(url, data=data, auth=auth, verify=verify)
+    r = requests.post(url, data=data, auth=auth, verify=verify, timeout=120)
     if r.status_code != requests.codes.ok:
         r.raise_for_status()
     else:
@@ -226,7 +226,7 @@ def remove_platform(name, server_url):
     try:
         html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to look up existing platforms on {}".format(server_url)
+        err_msg = f"Failed to look up existing platforms on {server_url}"
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
@@ -244,18 +244,18 @@ def remove_platform(name, server_url):
                 url, data, auth, verify=config["verify_ssl"]
             )
         except Exception as exc:  # pylint: disable=broad-except
-            err_msg = "Failed to delete platform from {}".format(server_url)
+            err_msg = f"Failed to delete platform from {server_url}"
             log.error("%s:\n%s", err_msg, exc)
             return {name: err_msg}
 
         parser = _parse_html_content(html_content)
         platformset_name = _get_platformset_name(parser.data, name)
         if platformset_name:
-            return {name: "Failed to delete platform from {}".format(server_url)}
+            return {name: f"Failed to delete platform from {server_url}"}
         else:
-            return {name: "Successfully deleted platform from {}".format(server_url)}
+            return {name: f"Successfully deleted platform from {server_url}"}
     else:
-        return {name: "Specified platform name does not exist on {}".format(server_url)}
+        return {name: f"Specified platform name does not exist on {server_url}"}
 
 
 def list_platforms(server_url):
@@ -351,11 +351,11 @@ def add_platform(name, platform_set, server_url):
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Specified platform already exists on {}".format(server_url)}
+        return {name: f"Specified platform already exists on {server_url}"}
 
     platform_sets = list_platform_sets(server_url)
     if platform_set not in platform_sets[server_url]:
-        return {name: "Specified platform set does not exist on {}".format(server_url)}
+        return {name: f"Specified platform set does not exist on {server_url}"}
 
     url = config["platform_edit_url"]
 
@@ -373,12 +373,12 @@ def add_platform(name, platform_set, server_url):
     try:
         html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to add platform on {}".format(server_url)
+        err_msg = f"Failed to add platform on {server_url}"
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Successfully added platform on {}".format(server_url)}
+        return {name: f"Successfully added platform on {server_url}"}
     else:
-        return {name: "Failed to add platform on {}".format(server_url)}
+        return {name: f"Failed to add platform on {server_url}"}

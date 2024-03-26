@@ -21,9 +21,10 @@ def test_config_present_does_not_exist():
         with patch("salt.utils.atomicfile.atomic_open", side_effect=IOError):
             ret = smartos.config_present(name=name, value=value)
     assert not ret["result"]
-    assert ret[
-        "comment"
-    ] == 'Could not add property {} with value "{}" to config'.format(name, value)
+    assert (
+        ret["comment"]
+        == f'Could not add property {name} with value "{value}" to config'
+    )
 
 
 def test_parse_vmconfig_vrrp():

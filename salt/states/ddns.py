@@ -64,7 +64,7 @@ def present(name, zone, ttl, data, rdtype="A", **kwargs):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = '{} record "{}" will be updated'.format(rdtype, name)
+        ret["comment"] = f'{rdtype} record "{name}" will be updated'
         return ret
 
     status = __salt__["ddns.update"](zone, name, ttl, rdtype, data, **kwargs)
@@ -76,7 +76,7 @@ def present(name, zone, ttl, data, rdtype="A", **kwargs):
         )
     elif status:
         ret["result"] = True
-        ret["comment"] = 'Updated {} record for "{}"'.format(rdtype, name)
+        ret["comment"] = f'Updated {rdtype} record for "{name}"'
         ret["changes"] = {
             "name": name,
             "zone": zone,
@@ -122,7 +122,7 @@ def absent(name, zone, data=None, rdtype=None, **kwargs):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = '{} record "{}" will be deleted'.format(rdtype, name)
+        ret["comment"] = f'{rdtype} record "{name}" will be deleted'
         return ret
 
     status = __salt__["ddns.delete"](zone, name, rdtype, data, **kwargs)

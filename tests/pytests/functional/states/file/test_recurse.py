@@ -180,9 +180,7 @@ def test_recurse_issue_34945(file, tmp_path, state_tree):
 
     name = tmp_path / issue_dir
 
-    ret = file.recurse(
-        name=str(name), source="salt://{}".format(issue_dir), dir_mode=dir_mode
-    )
+    ret = file.recurse(name=str(name), source=f"salt://{issue_dir}", dir_mode=dir_mode)
     assert ret.result is True
     assert name.is_dir()
     assert src_dir.stat().st_mode != name.stat().st_mode
@@ -222,7 +220,7 @@ def test_issue_2726_mode_kwarg(modules, tmp_path, state_tree):
         # Let's test for the wrong usage approach
         bad_mode_kwarg_testfile = dir1 / "bad_mode_kwarg" / "testfile"
         bad_template = [
-            "{}:".format(bad_mode_kwarg_testfile),
+            f"{bad_mode_kwarg_testfile}:",
             "  file.recurse:",
             "    - source: salt://testfile",
             "    - mode: 644",
@@ -242,7 +240,7 @@ def test_issue_2726_mode_kwarg(modules, tmp_path, state_tree):
         # Now, the correct usage approach
         good_mode_kwargs_testfile = dir2 / "good_mode_kwargs" / "testappend"
         good_template = [
-            "{}:".format(good_mode_kwargs_testfile),
+            f"{good_mode_kwargs_testfile}:",
             "  file.recurse:",
             "    - source: salt://testappend",
             "    - dir_mode: 744",

@@ -38,16 +38,16 @@ def test_present():
         assert boto_elasticache.present(name, engine, cache_node_type) == ret
 
         with patch.dict(boto_elasticache.__opts__, {"test": True}):
-            comt = "Cache cluster {} is set to be created.".format(name)
+            comt = f"Cache cluster {name} is set to be created."
             ret.update({"comment": comt})
             assert boto_elasticache.present(name, engine, cache_node_type) == ret
 
         with patch.dict(boto_elasticache.__opts__, {"test": False}):
-            comt = "Failed to create {} cache cluster.".format(name)
+            comt = f"Failed to create {name} cache cluster."
             ret.update({"comment": comt, "result": False})
             assert boto_elasticache.present(name, engine, cache_node_type) == ret
 
-            comt = "Cache cluster {} is present.".format(name)
+            comt = f"Cache cluster {name} is present."
             ret.update({"comment": comt, "result": True})
             assert boto_elasticache.present(name, engine, cache_node_type) == ret
 
@@ -62,12 +62,12 @@ def test_absent():
 
     mock = MagicMock(side_effect=[False, True])
     with patch.dict(boto_elasticache.__salt__, {"boto_elasticache.exists": mock}):
-        comt = "{} does not exist in None.".format(name)
+        comt = f"{name} does not exist in None."
         ret.update({"comment": comt})
         assert boto_elasticache.absent(name) == ret
 
         with patch.dict(boto_elasticache.__opts__, {"test": True}):
-            comt = "Cache cluster {} is set to be removed.".format(name)
+            comt = f"Cache cluster {name} is set to be removed."
             ret.update({"comment": comt, "result": None})
             assert boto_elasticache.absent(name) == ret
 
@@ -84,7 +84,7 @@ def test_creategroup():
 
     mock = MagicMock(return_value=True)
     with patch.dict(boto_elasticache.__salt__, {"boto_elasticache.group_exists": mock}):
-        comt = "{} replication group exists .".format(name)
+        comt = f"{name} replication group exists ."
         ret.update({"comment": comt})
         assert (
             boto_elasticache.creategroup(

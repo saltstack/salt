@@ -1,6 +1,5 @@
 """test for pillar csvpillar.py"""
 
-
 import salt.pillar.csvpillar as csvpillar
 from tests.support.mock import mock_open, patch
 

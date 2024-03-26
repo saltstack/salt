@@ -118,7 +118,7 @@ try:
     if PYGIT2_VERSION <= Version("0.26.3"):
         try:
             import pygit2.ffi
-            import pygit2.remote
+            import pygit2.remote  # pylint: disable=no-name-in-module
         except ImportError:
             # If we couldn't import these, then we're using an old enough
             # version where ffi isn't in use and this workaround would be
@@ -216,7 +216,7 @@ def failhard(role):
     """
     Fatal configuration issue, raise an exception
     """
-    raise FileserverConfigError("Failed to load {}".format(role))
+    raise FileserverConfigError(f"Failed to load {role}")
 
 
 class GitProvider:
@@ -244,12 +244,16 @@ class GitProvider:
     ):
         self.opts = opts
         self.role = role
+
+        def _val_cb(x, y):
+            return str(y)
+
         self.global_saltenv = salt.utils.data.repack_dictlist(
-            self.opts.get("{}_saltenv".format(self.role), []),
+            self.opts.get(f"{self.role}_saltenv", []),
             strict=True,
             recurse=True,
             key_cb=str,
-            val_cb=lambda x, y: str(y),
+            val_cb=_val_cb,
         )
         self.conf = copy.deepcopy(per_remote_defaults)
         # Remove the 'salt://' from the beginning of any globally-defined
@@ -407,7 +411,7 @@ class GitProvider:
             # when instantiating an instance of a GitBase subclass. Make sure
             # that we set this attribute so we at least have a sane default and
             # are able to fetch.
-            key = "{}_refspecs".format(self.role)
+            key = f"{self.role}_refspecs"
             try:
                 default_refspecs = _DEFAULT_MASTER_OPTS[key]
             except KeyError:
@@ -473,7 +477,9 @@ class GitProvider:
             try:
                 self._cache_basename = self.get_checkout_target()
             except AttributeError:
-                log.critical(f"__env__ cant generate basename: {self.role} {self.id}")
+                log.critical(
+                    "__env__ cant generate basename: %s %s", self.role, self.id
+                )
                 failhard(self.role)
         self._cache_full_basename = salt.utils.path.join(
             self._cache_basehash, self._cache_basename
@@ -574,9 +580,9 @@ class GitProvider:
         """
 
         def _getconf(self, tgt_env="base"):
-            strip_sep = (
-                lambda x: x.rstrip(os.sep) if name in ("root", "mountpoint") else x
-            )
+            def strip_sep(x):
+                return x.rstrip(os.sep) if name in ("root", "mountpoint") else x
+
             if self.role != "gitfs":
                 return strip_sep(getattr(self, "_" + name))
             # Get saltenv-specific configuration
@@ -949,7 +955,7 @@ class GitProvider:
                         )
                     )
                     if pid:
-                        msg += " Process {} obtained the lock".format(pid)
+                        msg += f" Process {pid} obtained the lock"
                         if not pid_exists(pid):
                             msg += (
                                 " but this process is not running. The "
@@ -995,7 +1001,7 @@ class GitProvider:
                 )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
-        msg = "Set {} lock for {} remote '{}'".format(lock_type, self.role, self.id)
+        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}'"
         log.debug(msg)
         return msg
 
@@ -1024,7 +1030,7 @@ class GitProvider:
         Set and automatically clear a lock
         """
         if not isinstance(lock_type, str):
-            raise GitLockError(errno.EINVAL, "Invalid lock_type '{}'".format(lock_type))
+            raise GitLockError(errno.EINVAL, f"Invalid lock_type '{lock_type}'")
 
         # Make sure that we have a positive integer timeout, otherwise just set
         # it to zero.
@@ -1152,7 +1158,7 @@ class GitProvider:
 
         for ref_type in self.ref_types:
             try:
-                func_name = "get_tree_from_{}".format(ref_type)
+                func_name = f"get_tree_from_{ref_type}"
                 func = getattr(self, func_name)
             except AttributeError:
                 log.error(
@@ -1168,7 +1174,7 @@ class GitProvider:
         if self.fallback:
             for ref_type in self.ref_types:
                 try:
-                    func_name = "get_tree_from_{}".format(ref_type)
+                    func_name = f"get_tree_from_{ref_type}"
                     func = getattr(self, func_name)
                 except AttributeError:
                     log.error(
@@ -1203,12 +1209,14 @@ class GitProvider:
     def fetch_request_check(self):
         fetch_request = salt.utils.path.join(self._salt_working_dir, "fetch_request")
         if os.path.isfile(fetch_request):
-            log.debug(f"Fetch request: {self._salt_working_dir}")
+            log.debug("Fetch request: %s", self._salt_working_dir)
             try:
                 os.remove(fetch_request)
             except OSError as exc:
                 log.error(
-                    f"Failed to remove Fetch request: {self._salt_working_dir} {exc}",
+                    "Failed to remove Fetch request: %s %s",
+                    self._salt_working_dir,
+                    exc,
                     exc_info=True,
                 )
             self.fetch()
@@ -1426,12 +1434,20 @@ class GitPython(GitProvider):
                 tree = tree / self.root(tgt_env)
             except KeyError:
                 return ret
-            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
+
+            def relpath(path):
+                return os.path.relpath(path, self.root(tgt_env))
+
         else:
-            relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path.join(
-            self.mountpoint(tgt_env), path, use_posixpath=True
-        )
+
+            def relpath(path):
+                return path
+
+        def add_mountpoint(path):
+            return salt.utils.path.join(
+                self.mountpoint(tgt_env), path, use_posixpath=True
+            )
+
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
@@ -1498,12 +1514,20 @@ class GitPython(GitProvider):
                 tree = tree / self.root(tgt_env)
             except KeyError:
                 return files, symlinks
-            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
+
+            def relpath(path):
+                return os.path.relpath(path, self.root(tgt_env))
+
         else:
-            relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path.join(
-            self.mountpoint(tgt_env), path, use_posixpath=True
-        )
+
+            def relpath(path):
+                return path
+
+        def add_mountpoint(path):
+            return salt.utils.path.join(
+                self.mountpoint(tgt_env), path, use_posixpath=True
+            )
+
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
@@ -1569,7 +1593,7 @@ class GitPython(GitProvider):
         """
         try:
             return git.RemoteReference(
-                self.repo, "refs/remotes/origin/{}".format(ref)
+                self.repo, f"refs/remotes/origin/{ref}"
             ).commit.tree
         except ValueError:
             return None
@@ -1579,7 +1603,7 @@ class GitPython(GitProvider):
         Return a git.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return git.TagReference(self.repo, "refs/tags/{}".format(ref)).commit.tree
+            return git.TagReference(self.repo, f"refs/tags/{ref}").commit.tree
         except ValueError:
             return None
 
@@ -1945,15 +1969,24 @@ class Pygit2(GitProvider):
                 return ret
             if not isinstance(tree, pygit2.Tree):
                 return ret
-            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
+
+            def relpath(path):
+                return os.path.relpath(path, self.root(tgt_env))
+
         else:
-            relpath = lambda path: path
+
+            def relpath(path):
+                return path
+
         blobs = []
         if tree:
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path.join(
-            self.mountpoint(tgt_env), path, use_posixpath=True
-        )
+
+        def add_mountpoint(path):
+            return salt.utils.path.join(
+                self.mountpoint(tgt_env), path, use_posixpath=True
+            )
+
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -2086,15 +2119,24 @@ class Pygit2(GitProvider):
                 return files, symlinks
             if not isinstance(tree, pygit2.Tree):
                 return files, symlinks
-            relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
+
+            def relpath(path):
+                return os.path.relpath(path, self.root(tgt_env))
+
         else:
-            relpath = lambda path: path
+
+            def relpath(path):
+                return path
+
         blobs = {}
         if tree:
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path.join(
-            self.mountpoint(tgt_env), path, use_posixpath=True
-        )
+
+        def add_mountpoint(path):
+            return salt.utils.path.join(
+                self.mountpoint(tgt_env), path, use_posixpath=True
+            )
+
         for repo_path in blobs.get("files", []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in blobs.get("symlinks", {}).items():
@@ -2149,7 +2191,7 @@ class Pygit2(GitProvider):
         """
         try:
             return self.peel(
-                self.repo.lookup_reference("refs/remotes/origin/{}".format(ref))
+                self.repo.lookup_reference(f"refs/remotes/origin/{ref}")
             ).tree
         except KeyError:
             return None
@@ -2159,9 +2201,7 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return self.peel(
-                self.repo.lookup_reference("refs/tags/{}".format(ref))
-            ).tree
+            return self.peel(self.repo.lookup_reference(f"refs/tags/{ref}")).tree
         except KeyError:
             return None
 
@@ -2181,9 +2221,12 @@ class Pygit2(GitProvider):
         if PYGIT2_VERSION >= Version("0.23.2"):
             self.remotecallbacks = pygit2.RemoteCallbacks(credentials=self.credentials)
             if not self.ssl_verify:
-                # Override the certificate_check function with a lambda that
+                # Override the certificate_check function with another that
                 # just returns True, thus skipping the cert check.
-                self.remotecallbacks.certificate_check = lambda *args, **kwargs: True
+                def _certificate_check(*args, **kwargs):
+                    return True
+
+                self.remotecallbacks.certificate_check = _certificate_check
         else:
             self.remotecallbacks = None
             if not self.ssl_verify:
@@ -2440,9 +2483,7 @@ class GitBase:
         # error out and do not proceed.
         override_params = copy.deepcopy(per_remote_overrides)
         global_auth_params = [
-            "{}_{}".format(self.role, x)
-            for x in AUTH_PARAMS
-            if self.opts["{}_{}".format(self.role, x)]
+            f"{self.role}_{x}" for x in AUTH_PARAMS if self.opts[f"{self.role}_{x}"]
         ]
         if self.provider in AUTH_PROVIDERS:
             override_params += AUTH_PARAMS
@@ -2465,7 +2506,7 @@ class GitBase:
         global_values = set(override_params)
         global_values.update(set(global_only))
         for param in global_values:
-            key = "{}_{}".format(self.role, param)
+            key = f"{self.role}_{param}"
             if key not in self.opts:
                 log.critical(
                     "Key '%s' not present in global configuration. This is "
@@ -2600,7 +2641,7 @@ class GitBase:
                 try:
                     shutil.rmtree(rdir)
                 except OSError as exc:
-                    errors.append("Unable to delete {}: {}".format(rdir, exc))
+                    errors.append(f"Unable to delete {rdir}: {exc}")
         return errors
 
     def clear_lock(self, remote=None, lock_type="update"):
@@ -2663,11 +2704,13 @@ class GitBase:
                                     pass
                             except OSError as exc:  # pylint: disable=broad-except
                                 log.error(
-                                    f"Failed to make fetch request: {fetch_path} {exc}",
+                                    "Failed to make fetch request: %s %s",
+                                    fetch_path,
+                                    exc,
                                     exc_info=True,
                                 )
                         else:
-                            log.error(f"Failed to make fetch request: {fetch_path}")
+                            log.error("Failed to make fetch request: %s", fetch_path)
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
                         # because the data could still have changed if old
@@ -2776,10 +2819,10 @@ class GitBase:
         """
         Determine which provider to use
         """
-        if "verified_{}_provider".format(self.role) in self.opts:
-            self.provider = self.opts["verified_{}_provider".format(self.role)]
+        if f"verified_{self.role}_provider" in self.opts:
+            self.provider = self.opts[f"verified_{self.role}_provider"]
         else:
-            desired_provider = self.opts.get("{}_provider".format(self.role))
+            desired_provider = self.opts.get(f"{self.role}_provider")
             if not desired_provider:
                 if self.verify_pygit2(quiet=True):
                     self.provider = "pygit2"
@@ -2850,7 +2893,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "gitpython"
+        self.opts[f"verified_{self.role}_provider"] = "gitpython"
         log.debug("gitpython %s_provider enabled", self.role)
         return True
 
@@ -2906,7 +2949,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "pygit2"
+        self.opts[f"verified_{self.role}_provider"] = "pygit2"
         log.debug("pygit2 %s_provider enabled", self.role)
         return True
 
@@ -2918,11 +2961,11 @@ class GitBase:
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# {}_remote map as of {}\n".format(self.role, timestamp))
+                fp_.write(f"# {self.role}_remote map as of {timestamp}\n")
                 for repo in self.remotes:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{} = {}\n".format(repo.get_cache_basehash(), repo.id)
+                            f"{repo.get_cache_basehash()} = {repo.id}\n"
                         )
                     )
         except OSError:
@@ -3007,9 +3050,9 @@ class GitFS(GitBase):
                 remotes if remotes is not None else [],
                 per_remote_overrides=per_remote_overrides,
                 per_remote_only=per_remote_only,
-                git_providers=git_providers
-                if git_providers is not None
-                else GIT_PROVIDERS,
+                git_providers=(
+                    git_providers if git_providers is not None else GIT_PROVIDERS
+                ),
                 cache_root=cache_root,
                 init_remotes=init_remotes,
             )
@@ -3072,12 +3115,12 @@ class GitFS(GitBase):
 
         dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
         hashes_glob = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.*".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.*"
         )
         blobshadest = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.blob_sha1".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, "{}.lk".format(path))
+        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
@@ -3244,7 +3287,7 @@ class GitFS(GitBase):
         if not os.path.isdir(self.file_list_cachedir):
             try:
                 os.makedirs(self.file_list_cachedir)
-            except os.error:
+            except OSError:
                 log.error("Unable to make cachedir %s", self.file_list_cachedir)
                 return []
         list_cache = salt.utils.path.join(
@@ -3437,7 +3480,7 @@ class GitPillar(GitBase):
                                         "Failed to remove existing git_pillar "
                                         "mountpoint link %s: %s",
                                         lcachelink,
-                                        exc.__str__(),
+                                        exc,
                                     )
                                 wipe_linkdir = False
                                 create_link = True
@@ -3457,7 +3500,7 @@ class GitPillar(GitBase):
                         log.error(
                             "Failed to os.makedirs() linkdir parent %s: %s",
                             ldirname,
-                            exc.__str__(),
+                            exc,
                         )
                         return False
 
@@ -3475,7 +3518,7 @@ class GitPillar(GitBase):
                             "Failed to create symlink to %s at path %s: %s",
                             lcachedest,
                             lcachelink,
-                            exc.__str__(),
+                            exc,
                         )
                         return False
         except GitLockError:

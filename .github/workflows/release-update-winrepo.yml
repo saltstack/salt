@@ -41,9 +41,12 @@ jobs:
     - name: Add Version to Minion Definition File
       working-directory: salt
       run: |
+        pwd
+        ls -al ../winrepo/salt-minion.sls
         python .github/workflows/scripts/update_winrepo.py \
           --file ../winrepo/salt-minion.sls \
           --version ${{ inputs.salt-version || github.ref_name }}
+        grep ${{ inputs.salt-version || github.ref_name }} ../winrepo/salt-minion.sls
 
     - name: Commit Changes
       working-directory: winrepo

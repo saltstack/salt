@@ -62,7 +62,7 @@ def _build_sdb_uri(key):
     Salt node id's are used as the key for vm_ dicts.
 
     """
-    return "{}{}".format(VAGRANT_SDB_URL, key)
+    return f"{VAGRANT_SDB_URL}{key}"
 
 
 def _build_machine_uri(machine, cwd):
@@ -73,7 +73,7 @@ def _build_machine_uri(machine, cwd):
     never collide with a Salt node id -- which is important since we
     will be storing both in the same table.
     """
-    key = "{}?{}".format(machine, os.path.abspath(cwd))
+    key = f"{machine}?{os.path.abspath(cwd)}"
     return _build_sdb_uri(key)
 
 
@@ -102,9 +102,7 @@ def get_vm_info(name):
             "Probable sdb driver not found. Check your configuration."
         )
     if vm_ is None or "machine" not in vm_:
-        raise SaltInvocationError(
-            "No Vagrant machine defined for Salt_id {}".format(name)
-        )
+        raise SaltInvocationError(f"No Vagrant machine defined for Salt_id {name}")
     return vm_
 
 
@@ -161,7 +159,7 @@ def _vagrant_ssh_config(vm_):
     """
     machine = vm_["machine"]
     log.info("requesting vagrant ssh-config for VM %s", machine or "(default)")
-    cmd = "vagrant ssh-config {}".format(machine)
+    cmd = f"vagrant ssh-config {machine}"
     reply = __salt__["cmd.shell"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), ignore_retcode=True
     )
@@ -305,12 +303,12 @@ def vm_state(name="", cwd=None):
     else:
         if not cwd:
             raise SaltInvocationError(
-                "Path to Vagranfile must be defined, but cwd={}".format(cwd)
+                f"Path to Vagranfile must be defined, but cwd={cwd}"
             )
         machine = ""
 
     info = []
-    cmd = "vagrant status {}".format(machine)
+    cmd = f"vagrant status {machine}"
     reply = __salt__["cmd.shell"](cmd, cwd)
     log.info("--->\n%s", reply)
     for line in reply.split("\n"):  # build a list of the text reply
@@ -404,13 +402,11 @@ def _start(
     try:
         machine = vm_["machine"]
     except KeyError:
-        raise SaltInvocationError(
-            "No Vagrant machine defined for Salt_id {}".format(name)
-        )
+        raise SaltInvocationError(f"No Vagrant machine defined for Salt_id {name}")
 
     vagrant_provider = vm_.get("vagrant_provider", "")
-    provider_ = "--provider={}".format(vagrant_provider) if vagrant_provider else ""
-    cmd = "vagrant up {} {}".format(machine, provider_)
+    provider_ = f"--provider={vagrant_provider}" if vagrant_provider else ""
+    cmd = f"vagrant up {machine} {provider_}"
     ret = __salt__["cmd.run_all"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), output_loglevel="info"
     )
@@ -424,7 +420,7 @@ def _start(
                 break
 
     if ret["retcode"] == 0:
-        return 'Started "{}" using Vagrant machine "{}".'.format(name, machine)
+        return f'Started "{name}" using Vagrant machine "{machine}".'
     return False
 
 
@@ -458,7 +454,7 @@ def stop(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant halt {}".format(machine)
+    cmd = f"vagrant halt {machine}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -476,7 +472,7 @@ def pause(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant suspend {}".format(machine)
+    cmd = f"vagrant suspend {machine}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -498,7 +494,7 @@ def reboot(name, provision=False):
     machine = vm_["machine"]
     prov = "--provision" if provision else ""
 
-    cmd = "vagrant reload {} {}".format(machine, prov)
+    cmd = f"vagrant reload {machine} {prov}"
     ret = __salt__["cmd.retcode"](cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"))
     return ret == 0
 
@@ -518,14 +514,14 @@ def destroy(name):
     vm_ = get_vm_info(name)
     machine = vm_["machine"]
 
-    cmd = "vagrant destroy -f {}".format(machine)
+    cmd = f"vagrant destroy -f {machine}"
 
     ret = __salt__["cmd.run_all"](
         cmd, runas=vm_.get("runas"), cwd=vm_.get("cwd"), output_loglevel="info"
     )
     if ret["retcode"] == 0:
         _erase_vm_info(name)
-        return "Destroyed VM {}".format(name)
+        return f"Destroyed VM {name}"
     return False
 
 
@@ -637,6 +633,6 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
                 ans["private_key"] = salt.utils.stringutils.to_unicode(pks.read())
         except OSError as e:
             raise CommandExecutionError(
-                "Error processing Vagrant private key file: {}".format(e)
+                f"Error processing Vagrant private key file: {e}"
             )
     return ans

@@ -38,7 +38,7 @@ def enabled(name):
     is_enabled = __salt__["apache.check_site_enabled"](name)
     if not is_enabled:
         if __opts__["test"]:
-            msg = "Apache site {} is set to be enabled.".format(name)
+            msg = f"Apache site {name} is set to be enabled."
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = name
@@ -51,12 +51,12 @@ def enabled(name):
             ret["changes"]["new"] = name
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to enable {} Apache site".format(name)
+            ret["comment"] = f"Failed to enable {name} Apache site"
             if isinstance(status, str):
-                ret["comment"] = ret["comment"] + " ({})".format(status)
+                ret["comment"] = ret["comment"] + f" ({status})"
             return ret
     else:
-        ret["comment"] = "{} already enabled.".format(name)
+        ret["comment"] = f"{name} already enabled."
     return ret
 
 
@@ -72,7 +72,7 @@ def disabled(name):
     is_enabled = __salt__["apache.check_site_enabled"](name)
     if is_enabled:
         if __opts__["test"]:
-            msg = "Apache site {} is set to be disabled.".format(name)
+            msg = f"Apache site {name} is set to be disabled."
             ret["comment"] = msg
             ret["changes"]["old"] = name
             ret["changes"]["new"] = None
@@ -85,10 +85,10 @@ def disabled(name):
             ret["changes"]["new"] = None
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to disable {} Apache site".format(name)
+            ret["comment"] = f"Failed to disable {name} Apache site"
             if isinstance(status, str):
-                ret["comment"] = ret["comment"] + " ({})".format(status)
+                ret["comment"] = ret["comment"] + f" ({status})"
             return ret
     else:
-        ret["comment"] = "{} already disabled.".format(name)
+        ret["comment"] = f"{name} already disabled."
     return ret

@@ -46,12 +46,12 @@ def test_present():
 
         assert cloud.present(name, cloud_provider, unless="") == ret
 
-        comt = "Already present instance {}".format(name)
+        comt = f"Already present instance {name}"
         ret.update({"comment": comt})
         assert cloud.present(name, cloud_provider) == ret
 
         with patch.dict(cloud.__opts__, {"test": True}):
-            comt = "Instance {} needs to be created".format(name)
+            comt = f"Instance {name} needs to be created"
             ret.update({"comment": comt, "result": None})
             assert cloud.present(name, cloud_provider) == ret
 
@@ -97,12 +97,12 @@ def test_absent():
 
         assert cloud.absent(name, unless="") == ret
 
-        comt = "Already absent instance {}".format(name)
+        comt = f"Already absent instance {name}"
         ret.update({"comment": comt})
         assert cloud.absent(name) == ret
 
         with patch.dict(cloud.__opts__, {"test": True}):
-            comt = "Instance {} needs to be destroyed".format(name)
+            comt = f"Instance {name} needs to be destroyed"
             ret.update({"comment": comt, "result": None})
             assert cloud.absent(name) == ret
 
@@ -150,22 +150,22 @@ def test_profile():
 
         assert cloud.profile(name, profile, unless="") == ret
 
-        comt = "Already present instance {}".format(name)
+        comt = f"Already present instance {name}"
         ret.update({"comment": comt})
         assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": True}):
-            comt = "Instance {} needs to be created".format(name)
+            comt = f"Instance {name} needs to be created"
             ret.update({"comment": comt, "result": None})
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = "Failed to create instance {} using profile {}".format(name, profile)
+            comt = f"Failed to create instance {name} using profile {profile}"
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = "Failed to create instance {} using profile {}".format(name, profile)
+            comt = f"Failed to create instance {name} using profile {profile}"
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 
@@ -188,17 +188,17 @@ def test_volume_present():
             ret.update({"comment": comt})
             assert cloud.volume_present(name) == ret
 
-        comt = "Volume exists: {}".format(name)
+        comt = f"Volume exists: {name}"
         ret.update({"comment": comt, "result": True})
         assert cloud.volume_present(name) == ret
 
         with patch.dict(cloud.__opts__, {"test": True}):
-            comt = "Volume {} will be created.".format(name)
+            comt = f"Volume {name} will be created."
             ret.update({"comment": comt, "result": None})
             assert cloud.volume_present(name) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = "Volume {} was created".format(name)
+            comt = f"Volume {name} was created"
             ret.update(
                 {
                     "comment": comt,
@@ -232,12 +232,12 @@ def test_volume_absent():
         assert cloud.volume_absent(name) == ret
 
         with patch.dict(cloud.__opts__, {"test": True}):
-            comt = "Volume {} will be deleted.".format(name)
+            comt = f"Volume {name} will be deleted."
             ret.update({"comment": comt, "result": None})
             assert cloud.volume_absent(name) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = "Volume {} failed to delete.".format(name)
+            comt = f"Volume {name} failed to delete."
             ret.update({"comment": comt, "result": False})
             assert cloud.volume_absent(name) == ret
 
@@ -277,15 +277,15 @@ def test_volume_attached():
             ret.update({"name": server_name})
             assert cloud.volume_attached(name, server_name) == ret
 
-        comt = "Volume {} is already attached: True".format(disk_name)
+        comt = f"Volume {disk_name} is already attached: True"
         ret.update({"comment": comt, "result": True})
         assert cloud.volume_attached(name, server_name) == ret
 
-        comt = "Volume {} does not exist".format(name)
+        comt = f"Volume {name} does not exist"
         ret.update({"comment": comt, "result": False})
         assert cloud.volume_attached(name, server_name) == ret
 
-        comt = "Server {} does not exist".format(server_name)
+        comt = f"Server {server_name} does not exist"
         ret.update({"comment": comt, "result": False})
         assert cloud.volume_attached(name, server_name) == ret
 
@@ -294,12 +294,12 @@ def test_volume_attached():
             cloud.__salt__, {"cloud.action": mock, "cloud.volume_attach": mock}
         ):
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Volume {} will be will be attached.".format(name)
+                comt = f"Volume {name} will be will be attached."
                 ret.update({"comment": comt, "result": None})
                 assert cloud.volume_attached(name, server_name) == ret
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = "Volume {} was created".format(name)
+                comt = f"Volume {name} was created"
                 ret.update(
                     {
                         "comment": comt,
@@ -348,15 +348,15 @@ def test_volume_detached():
             ret.update({"name": server_name})
             assert cloud.volume_detached(name, server_name) == ret
 
-        comt = "Volume {} is not currently attached to anything.".format(disk_name)
+        comt = f"Volume {disk_name} is not currently attached to anything."
         ret.update({"comment": comt, "result": True})
         assert cloud.volume_detached(name, server_name) == ret
 
-        comt = "Volume {} does not exist".format(name)
+        comt = f"Volume {name} does not exist"
         ret.update({"comment": comt})
         assert cloud.volume_detached(name, server_name) == ret
 
-        comt = "Server {} does not exist".format(server_name)
+        comt = f"Server {server_name} does not exist"
         ret.update({"comment": comt})
         assert cloud.volume_detached(name, server_name) == ret
 
@@ -365,12 +365,12 @@ def test_volume_detached():
             cloud.__salt__, {"cloud.action": mock, "cloud.volume_detach": mock}
         ):
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Volume {} will be will be detached.".format(name)
+                comt = f"Volume {name} will be will be detached."
                 ret.update({"comment": comt, "result": None})
                 assert cloud.volume_detached(name, server_name) == ret
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = "Volume {} was created".format(name)
+                comt = f"Volume {name} was created"
                 ret.update(
                     {
                         "comment": comt,

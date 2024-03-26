@@ -25,13 +25,13 @@ def test_create_event():
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     with patch.dict(pagerduty.__opts__, {"test": True}):
-        comt = "Need to create event: {}".format(name)
+        comt = f"Need to create event: {name}"
         ret.update({"comment": comt})
         assert pagerduty.create_event(name, details, service_key, profile) == ret
 
     with patch.dict(pagerduty.__opts__, {"test": False}):
         mock_t = MagicMock(return_value=True)
         with patch.dict(pagerduty.__salt__, {"pagerduty.create_event": mock_t}):
-            comt = "Created event: {}".format(name)
+            comt = f"Created event: {name}"
             ret.update({"comment": comt, "result": True})
             assert pagerduty.create_event(name, details, service_key, profile) == ret

@@ -137,7 +137,7 @@ class LoadAuth:
         mod = self.opts["eauth_acl_module"]
         if not mod:
             mod = load["eauth"]
-        fstr = "{}.acl".format(mod)
+        fstr = f"{mod}.acl"
         if fstr not in self.auth:
             return None
         fcall = salt.utils.args.format_call(
@@ -474,7 +474,7 @@ class LoadAuth:
             msg = 'Authentication failure of type "user" occurred'
             if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = "{} for user {}.".format(msg, username)
+                    msg = f"{msg} for user {username}."
                 ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                 return ret
 
@@ -535,7 +535,7 @@ class Resolver:
         if not eauth:
             print("External authentication system has not been specified")
             return ret
-        fstr = "{}.auth".format(eauth)
+        fstr = f"{eauth}.auth"
         if fstr not in self.auth:
             print(
                 'The specified external authentication system "{}" is not available'.format(
@@ -554,14 +554,14 @@ class Resolver:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
-                ret[arg] = getpass.getpass("{}: ".format(arg))
+                ret[arg] = getpass.getpass(f"{arg}: ")
             else:
-                ret[arg] = input("{}: ".format(arg))
+                ret[arg] = input(f"{arg}: ")
         for kwarg, default in list(args["kwargs"].items()):
             if kwarg in self.opts:
                 ret["kwarg"] = self.opts[kwarg]
             else:
-                ret[kwarg] = input("{} [{}]: ".format(kwarg, default))
+                ret[kwarg] = input(f"{kwarg} [{default}]: ")
 
         # Use current user if empty
         if "username" in ret and not ret["username"]:

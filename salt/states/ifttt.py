@@ -80,8 +80,8 @@ def trigger_event(name, event, value1=None, value2=None, value3=None):
 
     if ret and ret["result"]:
         ret["result"] = True
-        ret["comment"] = "Triggered Event: {}".format(name)
+        ret["comment"] = f"Triggered Event: {name}"
     else:
-        ret["comment"] = "Failed to trigger event: {}".format(name)
+        ret["comment"] = f"Failed to trigger event: {name}"
 
     return ret

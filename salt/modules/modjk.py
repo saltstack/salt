@@ -29,6 +29,7 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 """
+
 import urllib.parse
 import urllib.request
 
@@ -59,25 +60,25 @@ def _do_http(opts, profile="default"):
 
     ret = {}
 
-    url = __salt__["config.get"]("modjk:{}:url".format(profile), "")
-    user = __salt__["config.get"]("modjk:{}:user".format(profile), "")
-    passwd = __salt__["config.get"]("modjk:{}:pass".format(profile), "")
-    realm = __salt__["config.get"]("modjk:{}:realm".format(profile), "")
-    timeout = __salt__["config.get"]("modjk:{}:timeout".format(profile), "")
+    url = __salt__["config.get"](f"modjk:{profile}:url", "")
+    user = __salt__["config.get"](f"modjk:{profile}:user", "")
+    passwd = __salt__["config.get"](f"modjk:{profile}:pass", "")
+    realm = __salt__["config.get"](f"modjk:{profile}:realm", "")
+    timeout = __salt__["config.get"](f"modjk:{profile}:timeout", "")
 
     if not url:
-        raise Exception("missing url in profile {}".format(profile))
+        raise Exception(f"missing url in profile {profile}")
 
     if user and passwd:
         auth = _auth(url=url, realm=realm, user=user, passwd=passwd)
         urllib.request.install_opener(auth)
 
-    url += "?{}".format(urllib.parse.urlencode(opts))
+    url += f"?{urllib.parse.urlencode(opts)}"
 
     for line in urllib.request.urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split("=", 1)
         if splt[0] in ret:
-            ret[splt[0]] += ",{}".format(splt[1])
+            ret[splt[0]] += f",{splt[1]}"
         else:
             ret[splt[0]] = splt[1]
 
@@ -171,7 +172,7 @@ def list_configured_members(lbn, profile="default"):
     config = dump_config(profile)
 
     try:
-        ret = config["worker.{}.balance_workers".format(lbn)]
+        ret = config[f"worker.{lbn}.balance_workers"]
     except KeyError:
         return []
 
@@ -197,9 +198,7 @@ def workers(profile="default"):
 
     for lb in lbn:
         try:
-            worker_list.extend(
-                config["worker.{}.balance_workers".format(lb)].split(",")
-            )
+            worker_list.extend(config[f"worker.{lb}.balance_workers"].split(","))
         except KeyError:
             pass
 
@@ -207,8 +206,8 @@ def workers(profile="default"):
 
     for worker in worker_list:
         ret[worker] = {
-            "activation": config["worker.{}.activation".format(worker)],
-            "state": config["worker.{}.state".format(worker)],
+            "activation": config[f"worker.{worker}.activation"],
+            "state": config[f"worker.{worker}.state"],
         }
 
     return ret
@@ -229,7 +228,7 @@ def recover_all(lbn, profile="default"):
     ret = {}
     config = get_running(profile)
     try:
-        workers_ = config["worker.{}.balance_workers".format(lbn)].split(",")
+        workers_ = config[f"worker.{lbn}.balance_workers"].split(",")
     except KeyError:
         return ret
 
@@ -417,8 +416,8 @@ def worker_status(worker, profile="default"):
     config = get_running(profile)
     try:
         return {
-            "activation": config["worker.{}.activation".format(worker)],
-            "state": config["worker.{}.state".format(worker)],
+            "activation": config[f"worker.{worker}.activation"],
+            "state": config[f"worker.{worker}.state"],
         }
     except KeyError:
         return False

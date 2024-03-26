@@ -11,7 +11,6 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
       api_key: '280d4699-a817-4719-ba6f-ca56e573e44f'
 """
 
-
 import datetime
 import logging
 import time
@@ -49,10 +48,10 @@ def _query(
     path = "https://alert.victorops.com/integrations/generic/20131114/"
 
     if action:
-        path += "{}/".format(action)
+        path += f"{action}/"
 
     if api_key:
-        path += "{}/".format(api_key)
+        path += f"{api_key}/"
 
     if routing_key:
         path += routing_key

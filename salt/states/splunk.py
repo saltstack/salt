@@ -50,22 +50,22 @@ def present(email, profile="splunk", **kwargs):
 
     if not target:
         if __opts__["test"]:
-            ret["comment"] = "User {} will be created".format(name)
+            ret["comment"] = f"User {name} will be created"
             return ret
 
         # create the user
         result = __salt__["splunk.create_user"](email, profile=profile, **kwargs)
         if result:
             ret["changes"].setdefault("old", None)
-            ret["changes"].setdefault("new", "User {} exists".format(name))
+            ret["changes"].setdefault("new", f"User {name} exists")
             ret["result"] = True
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {}".format(name)
+            ret["comment"] = f"Failed to create {name}"
 
         return ret
     else:
-        ret["comment"] = "User {} set to be updated.".format(name)
+        ret["comment"] = f"User {name} set to be updated."
         if __opts__["test"]:
             ret["result"] = None
             return ret
@@ -130,31 +130,31 @@ def absent(email, profile="splunk", **kwargs):
         "name": user_identity,
         "changes": {},
         "result": None,
-        "comment": "User {} is absent.".format(user_identity),
+        "comment": f"User {user_identity} is absent.",
     }
 
     target = __salt__["splunk.get_user"](email, profile=profile)
 
     if not target:
-        ret["comment"] = "User {} does not exist".format(user_identity)
+        ret["comment"] = f"User {user_identity} does not exist"
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "User {} is all set to be deleted".format(user_identity)
+        ret["comment"] = f"User {user_identity} is all set to be deleted"
         ret["result"] = None
         return ret
 
     result = __salt__["splunk.delete_user"](email, profile=profile)
 
     if result:
-        ret["comment"] = "Deleted user {}".format(user_identity)
-        ret["changes"].setdefault("old", "User {} exists".format(user_identity))
-        ret["changes"].setdefault("new", "User {} deleted".format(user_identity))
+        ret["comment"] = f"Deleted user {user_identity}"
+        ret["changes"].setdefault("old", f"User {user_identity} exists")
+        ret["changes"].setdefault("new", f"User {user_identity} deleted")
         ret["result"] = True
 
     else:
-        ret["comment"] = "Failed to delete {}".format(user_identity)
+        ret["comment"] = f"Failed to delete {user_identity}"
         ret["result"] = False
 
     return ret

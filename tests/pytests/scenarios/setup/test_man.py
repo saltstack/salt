@@ -59,7 +59,7 @@ def test_man_pages(virtualenv, src_dir):
             venv.venv_python,
             "setup.py",
             "install",
-            "--root={}".format(rootdir),
+            f"--root={rootdir}",
             cwd=src_dir,
         )
 

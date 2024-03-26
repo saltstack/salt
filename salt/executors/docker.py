@@ -22,7 +22,7 @@ def __virtual__():
             "Docker executor is only meant to be used with Docker Proxy Minions",
         )
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 

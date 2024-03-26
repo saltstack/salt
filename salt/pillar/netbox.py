@@ -1109,7 +1109,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # Fetch device from API
     headers = {}
     if api_token:
-        headers = {"Authorization": "Token {}".format(api_token)}
+        headers = {"Authorization": f"Token {api_token}"}
     else:
         log.error("The value for api_token is not set")
         return ret

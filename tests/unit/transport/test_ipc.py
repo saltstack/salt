@@ -1,6 +1,7 @@
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
+
 import errno
 import logging
 import os

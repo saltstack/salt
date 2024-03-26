@@ -36,10 +36,10 @@ def zmq_server():
     context = zmq.Context()
     server = context.socket(zmq.SUB)
     port = ports.get_unused_localhost_port()
-    handler = ZMQLogstashHander("tcp://127.0.0.1:{}".format(port))
+    handler = ZMQLogstashHander(f"tcp://127.0.0.1:{port}")
     try:
         server.setsockopt(zmq.SUBSCRIBE, b"")
-        server.bind("tcp://127.0.0.1:{}".format(port))
+        server.bind(f"tcp://127.0.0.1:{port}")
 
         logger.setLevel(logging.DEBUG)
         logger.addHandler(handler)

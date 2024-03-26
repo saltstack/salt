@@ -175,9 +175,9 @@ def get_client(client_type, **kwargs):
     try:
         client_module = importlib.import_module("azure.mgmt." + module_name)
         # pylint: disable=invalid-name
-        Client = getattr(client_module, "{}Client".format(map_value))
+        Client = getattr(client_module, f"{map_value}Client")
     except ImportError:
-        raise sys.exit("The azure {} client is not available.".format(client_type))
+        raise sys.exit(f"The azure {client_type} client is not available.")
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
 
@@ -193,7 +193,7 @@ def get_client(client_type, **kwargs):
             base_url=cloud_env.endpoints.resource_manager,
         )
 
-    client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
+    client.config.add_user_agent(f"Salt/{salt.version.__version__}")
 
     return client
 
@@ -236,9 +236,7 @@ def create_object_model(module_name, object_name, **kwargs):
     object_kwargs = {}
 
     try:
-        model_module = importlib.import_module(
-            "azure.mgmt.{}.models".format(module_name)
-        )
+        model_module = importlib.import_module(f"azure.mgmt.{module_name}.models")
         # pylint: disable=invalid-name
         Model = getattr(model_module, object_name)
     except ImportError:
@@ -269,7 +267,7 @@ def create_object_model(module_name, object_name, **kwargs):
                                         items["type"].index("[")
                                         + 1 : items["type"].rindex("]")
                                     ],
-                                    **list_item
+                                    **list_item,
                                 )
                             )
                         elif items["type"][1] == "{" and isinstance(list_item, dict):

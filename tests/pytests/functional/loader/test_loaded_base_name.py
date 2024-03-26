@@ -10,7 +10,7 @@ from salt.loader.lazy import LazyLoader
 
 @pytest.fixture(scope="module")
 def loaded_base_name():
-    return random_string("{}.".format(__name__), digits=False, uppercase=False)
+    return random_string(f"{__name__}.", digits=False, uppercase=False)
 
 
 @pytest.fixture(scope="module")

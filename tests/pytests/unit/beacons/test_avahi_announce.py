@@ -4,6 +4,7 @@
 
     Avahi announce beacon test cases
 """
+
 import pytest
 
 import salt.beacons.avahi_announce as avahi_announce

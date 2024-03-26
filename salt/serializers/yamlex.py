@@ -98,6 +98,7 @@
 
     Document is defacto an aggregate mapping.
 """
+
 # pylint: disable=invalid-name,no-member,missing-docstring,no-self-use
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
@@ -208,7 +209,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             raise ConstructorError(
                 None,
                 None,
-                "expected a mapping node, but found {}".format(node.id),
+                f"expected a mapping node, but found {node.id}",
                 node.start_mark,
             )
 

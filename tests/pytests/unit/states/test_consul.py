@@ -2,7 +2,6 @@
 Test case for the consul state module
 """
 
-
 import logging
 
 import pytest

@@ -91,7 +91,7 @@ def test_symlink():
         },
     ):
         if salt.utils.platform.is_windows():
-            comt = "User {} does not exist".format(user)
+            comt = f"User {user} does not exist"
             ret = return_val({"comment": comt, "name": name})
         else:
             comt = "User {} does not exist. Group {} does not exist.".format(
@@ -114,12 +114,12 @@ def test_symlink():
         os.path, "exists", mock_f
     ):
         if salt.utils.platform.is_windows():
-            comt = "User {} does not exist".format(user)
+            comt = f"User {user} does not exist"
             ret = return_val(
                 {"comment": comt, "result": False, "name": name, "changes": {}}
             )
         else:
-            comt = "Symlink {} to {} is set for creation".format(name, target)
+            comt = f"Symlink {name} to {target} is set for creation"
             ret = return_val(
                 {"comment": comt, "result": None, "changes": {"new": name}}
             )
@@ -141,12 +141,12 @@ def test_symlink():
         os.path, "exists", mock_f
     ):
         if salt.utils.platform.is_windows():
-            comt = "User {} does not exist".format(user)
+            comt = f"User {user} does not exist"
             ret = return_val(
                 {"comment": comt, "result": False, "name": name, "changes": {}}
             )
         else:
-            comt = "Directory {} for symlink is not present".format(test_dir)
+            comt = f"Directory {test_dir} for symlink is not present"
             ret = return_val({"comment": comt, "result": False, "changes": {}})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -169,9 +169,9 @@ def test_symlink():
         "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
     ):
         if salt.utils.platform.is_windows():
-            comt = "Symlink {} is present and owned by {}".format(name, user)
+            comt = f"Symlink {name} is present and owned by {user}"
         else:
-            comt = "Symlink {} is present and owned by {}:{}".format(name, user, group)
+            comt = f"Symlink {name} is present and owned by {user}:{group}"
         ret = return_val({"comment": comt, "result": True, "changes": {}})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -256,7 +256,7 @@ def test_symlink():
     ), patch(
         "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
     ):
-        comt = "File exists where the symlink {} should be".format(name)
+        comt = f"File exists where the symlink {name} should be"
         ret = return_val({"comment": comt, "changes": {}, "result": False})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -281,7 +281,7 @@ def test_symlink():
     ), patch(
         "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
     ):
-        comt = "Directory exists where the symlink {} should be".format(name)
+        comt = f"Directory exists where the symlink {name} should be"
         ret = return_val({"comment": comt, "result": False, "changes": {}})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -304,7 +304,7 @@ def test_symlink():
     ), patch(
         "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
     ):
-        comt = "Unable to create new symlink {} -> {}: ".format(name, target)
+        comt = f"Unable to create new symlink {name} -> {target}: "
         ret = return_val({"comment": comt, "result": False, "changes": {}})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -331,7 +331,7 @@ def test_symlink():
     ), patch(
         "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
     ):
-        comt = "Created new symlink {} -> {}".format(name, target)
+        comt = f"Created new symlink {name} -> {target}"
         ret = return_val({"comment": comt, "result": True, "changes": {"new": name}})
         assert filestate.symlink(name, target, user=user, group=group) == ret
 
@@ -392,7 +392,7 @@ def test_symlink():
     ), patch(
         "salt.states.file._check_symlink_ownership", return_value=True
     ):
-        comt = "Created new symlink {} -> {}".format(name, target)
+        comt = f"Created new symlink {name} -> {target}"
         ret = return_val({"comment": comt, "result": True, "changes": {"new": name}})
         res = filestate.symlink(name, target, user=user, group=user)
         assert res == ret
@@ -423,9 +423,9 @@ def test_symlink():
         "salt.states.file._get_symlink_ownership", return_value=(user, group)
     ):
         if salt.utils.platform.is_windows():
-            comt = "Symlink {} is present and owned by {}".format(name, user)
+            comt = f"Symlink {name} is present and owned by {user}"
         else:
-            comt = "Symlink {} is present and owned by {}:{}".format(name, user, group)
+            comt = f"Symlink {name} is present and owned by {user}:{group}"
         ret = return_val({"comment": comt, "result": True, "changes": {}})
         res = filestate.symlink(name, target, inherit_user_and_group=True)
         assert res == ret

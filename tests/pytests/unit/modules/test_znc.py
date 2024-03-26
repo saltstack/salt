@@ -4,7 +4,6 @@
     TestCase for salt.modules.znc
 """
 
-
 import pytest
 
 import salt.modules.znc as znc

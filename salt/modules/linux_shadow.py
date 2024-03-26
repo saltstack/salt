@@ -368,7 +368,7 @@ def set_password(name, password, use_usermod=False, root=None):
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
         if __grains__["os"] == "ALT":
-            s_file = "/etc/tcb/{}/shadow".format(name)
+            s_file = f"/etc/tcb/{name}/shadow"
         else:
             s_file = "/etc/shadow"
         if root:

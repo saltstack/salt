@@ -61,7 +61,7 @@ def _get_url():
     host = __salt__["config.option"]("kapacitor.host", "localhost")
     port = __salt__["config.option"]("kapacitor.port", 9092)
 
-    return "{}://{}:{}".format(protocol, host, port)
+    return f"{protocol}://{host}:{port}"
 
 
 def get_task(name):
@@ -80,9 +80,9 @@ def get_task(name):
     url = _get_url()
 
     if version() < "0.13":
-        task_url = "{}/task?name={}".format(url, name)
+        task_url = f"{url}/task?name={name}"
     else:
-        task_url = "{}/kapacitor/v1/tasks/{}?skip-format=true".format(url, name)
+        task_url = f"{url}/kapacitor/v1/tasks/{name}?skip-format=true"
 
     response = salt.utils.http.query(task_url, status=True)
 
@@ -173,28 +173,28 @@ def define_task(
         return False
 
     if version() < "0.13":
-        cmd = "kapacitor define -name {}".format(name)
+        cmd = f"kapacitor define -name {name}"
     else:
-        cmd = "kapacitor define {}".format(name)
+        cmd = f"kapacitor define {name}"
 
     if tick_script.startswith("salt://"):
         tick_script = __salt__["cp.cache_file"](tick_script, __env__)
 
-    cmd += " -tick {}".format(tick_script)
+    cmd += f" -tick {tick_script}"
 
     if task_type:
-        cmd += " -type {}".format(task_type)
+        cmd += f" -type {task_type}"
 
     if not dbrps:
         dbrps = []
 
     if database and retention_policy:
-        dbrp = "{}.{}".format(database, retention_policy)
+        dbrp = f"{database}.{retention_policy}"
         dbrps.append(dbrp)
 
     if dbrps:
         for dbrp in dbrps:
-            cmd += " -dbrp {}".format(dbrp)
+            cmd += f" -dbrp {dbrp}"
 
     return _run_cmd(cmd)
 
@@ -212,7 +212,7 @@ def delete_task(name):
 
         salt '*' kapacitor.delete_task cpu
     """
-    return _run_cmd("kapacitor delete tasks {}".format(name))
+    return _run_cmd(f"kapacitor delete tasks {name}")
 
 
 def enable_task(name):
@@ -228,7 +228,7 @@ def enable_task(name):
 
         salt '*' kapacitor.enable_task cpu
     """
-    return _run_cmd("kapacitor enable {}".format(name))
+    return _run_cmd(f"kapacitor enable {name}")
 
 
 def disable_task(name):
@@ -244,4 +244,4 @@ def disable_task(name):
 
         salt '*' kapacitor.disable_task cpu
     """
-    return _run_cmd("kapacitor disable {}".format(name))
+    return _run_cmd(f"kapacitor disable {name}")

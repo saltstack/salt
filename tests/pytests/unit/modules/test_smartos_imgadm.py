@@ -4,7 +4,6 @@
     TestCase for salt.modules.smartos_imgadm module
 """
 
-
 import pytest
 
 import salt.modules.smartos_imgadm as imgadm

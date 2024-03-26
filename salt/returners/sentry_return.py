@@ -111,11 +111,7 @@ def _get_message(ret):
         kwargs = ret["fun_args"][-1]
         if isinstance(kwargs, dict):
             kwarg_string = " ".join(
-                sorted(
-                    "{}={}".format(k, v)
-                    for k, v in kwargs.items()
-                    if not k.startswith("_")
-                )
+                sorted(f"{k}={v}" for k, v in kwargs.items() if not k.startswith("_"))
             )
     return "salt func: {fun} {argstr} {kwargstr}".format(
         fun=ret["fun"], argstr=arg_string, kwargstr=kwarg_string

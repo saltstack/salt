@@ -250,7 +250,7 @@ def update(
             try:
                 dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
-                return "Invalid Date/Time Format: {}".format(expiration_date)
+                return f"Invalid Date/Time Format: {expiration_date}"
             user_info["acct_expires"] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
@@ -467,7 +467,7 @@ def addgroup(name, group):
     if group in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{}" {} /add'.format(group, name)
+    cmd = f'net localgroup "{group}" {name} /add'
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -502,7 +502,7 @@ def removegroup(name, group):
     if group not in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{}" {} /delete'.format(group, name)
+    cmd = f'net localgroup "{group}" {name} /delete'
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -633,14 +633,14 @@ def chgroups(name, groups, append=True):
         for group in ugrps:
             group = shlex.quote(group).lstrip("'").rstrip("'")
             if group not in groups:
-                cmd = 'net localgroup "{}" {} /delete'.format(group, name)
+                cmd = f'net localgroup "{group}" {name} /delete'
                 __salt__["cmd.run_all"](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
         group = shlex.quote(group).lstrip("'").rstrip("'")
-        cmd = 'net localgroup "{}" {} /add'.format(group, name)
+        cmd = f'net localgroup "{group}" {name} /add'
         out = __salt__["cmd.run_all"](cmd, python_shell=True)
         if out["retcode"] != 0:
             log.error(out["stdout"])
@@ -774,7 +774,7 @@ def _get_userprofile_from_registry(user, sid):
     """
     profile_dir = __utils__["reg.read_value"](
         "HKEY_LOCAL_MACHINE",
-        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{}".format(sid),
+        f"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{sid}",
         "ProfileImagePath",
     )["vdata"]
     log.debug('user %s with sid=%s profile is located at "%s"', user, sid, profile_dir)
@@ -901,12 +901,12 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
 
     # Rename the user account
     # Connect to WMI
@@ -917,7 +917,7 @@ def rename(name, new_name):
         try:
             user = c.Win32_UserAccount(Name=name)[0]
         except IndexError:
-            raise CommandExecutionError("User '{}' does not exist".format(name))
+            raise CommandExecutionError(f"User '{name}' does not exist")
 
         # Rename the user
         result = user.Rename(new_name)[0]

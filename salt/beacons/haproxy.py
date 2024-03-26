@@ -4,6 +4,7 @@ Fire an event when over a specified threshold.
 
 .. versionadded:: 2016.11.0
 """
+
 import logging
 
 import salt.utils.beacons

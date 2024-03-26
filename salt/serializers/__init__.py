@@ -14,7 +14,6 @@
 
 """
 
-
 from salt.exceptions import SaltException, SaltRenderError
 
 

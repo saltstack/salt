@@ -139,7 +139,7 @@ def test_file_managed_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        "localhost{free_port}".format(free_port=free_port),
+        f"localhost{free_port}",
         "foo.txt",
     )
     cached_etag = cached_file + ".etag"
@@ -151,7 +151,7 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 200 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 
@@ -167,7 +167,7 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 304 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 
@@ -183,7 +183,7 @@ def test_file_managed_web_source_etag_operation(
     #     No call to the web server will be made.
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=False,
     )
 
@@ -195,7 +195,7 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:12] "GET /foo.txt HTTP/1.1" 200 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 

@@ -146,7 +146,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
             "dns", "RecordSet", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -164,9 +164,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 
@@ -394,7 +392,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
     try:
         zone_model = __utils__["azurearm.create_object_model"]("dns", "Zone", **kwargs)
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -410,9 +408,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
         __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 

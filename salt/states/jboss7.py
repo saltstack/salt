@@ -35,7 +35,6 @@ For the sake of brevity, examples for each state assume that jboss_config is con
 
 """
 
-
 import logging
 import re
 import time
@@ -579,7 +578,7 @@ def __get_artifact(salt_source):
 
             except Exception as e:  # pylint: disable=broad-except
                 log.debug(traceback.format_exc())
-                comment = "Unable to manage file: {}".format(e)
+                comment = f"Unable to manage file: {e}"
 
         else:
             resolved_source = salt_source["target_file"]
@@ -649,10 +648,10 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
             ret["changes"]["reloaded"] = "configuration"
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Could not reload the configuration. Timeout ({} s) exceeded. ".format(
-                timeout
+            ret["comment"] = (
+                "Could not reload the configuration. Timeout ({} s) exceeded. ".format(
+                    timeout
+                )
             )
             if not status["success"]:
                 ret["comment"] = __append_comment(
@@ -675,9 +674,7 @@ def __check_dict_contains(dct, dict_name, keys, comment="", result=True):
     for key in keys:
         if key not in dct.keys():
             result = False
-            comment = __append_comment(
-                "Missing {} in {}".format(key, dict_name), comment
-            )
+            comment = __append_comment(f"Missing {key} in {dict_name}", comment)
     return result, comment
 
 

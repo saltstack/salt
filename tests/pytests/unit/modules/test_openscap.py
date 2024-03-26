@@ -29,7 +29,7 @@ def test_openscap_xccdf_eval_success(policy_file, tmp_path):
     )
     patch_popen = patch.object(openscap, "Popen", mock_popen)
     with patch_popen, patch_rmtree, patch_mkdtemp:
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
 
         assert mock_mkdtemp.call_count == 1
         expected_cmd = [
@@ -73,7 +73,7 @@ def test_openscap_xccdf_eval_success_with_failing_rules(policy_file, tmp_path):
     )
     patch_popen = patch.object(openscap, "Popen", mock_popen)
     with patch_popen, patch_mkdtemp, patch_rmtree as mock_rmtree:
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
 
         assert mock_mkdtemp.call_count == 1
         expected_cmd = [
@@ -168,7 +168,7 @@ def test_openscap_xccdf_eval_evaluation_error(policy_file):
     )
     patch_popen = patch("salt.modules.openscap.Popen", mock_popen)
     with patch_popen:
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
         expected = {
             "upload_dir": None,
             "error": "evaluation error",
@@ -179,7 +179,7 @@ def test_openscap_xccdf_eval_evaluation_error(policy_file):
 
 
 def test_openscap_xccdf_eval_fail_not_implemented_action(policy_file):
-    response = openscap.xccdf("info {}".format(policy_file))
+    response = openscap.xccdf(f"info {policy_file}")
     mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
     expected = {
         "upload_dir": None,
@@ -201,7 +201,7 @@ def test_openscap_xccdf_eval_evaluation_unknown_error(policy_file):
     )
     patch_popen = patch("salt.modules.openscap.Popen", mock_popen)
     with patch_popen:
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
         expected = {
             "upload_dir": None,
             "error": "unknown error",

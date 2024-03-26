@@ -39,7 +39,7 @@ def test_load_map(grains, salt_cli, salt_minion):
 
     assert isinstance(
         ret.data, dict
-    ), "failed to return dictionary from jinja.load_map: {}".format(ret)
+    ), f"failed to return dictionary from jinja.load_map: {ret}"
 
     with salt.utils.files.fopen(_path("defaults.yaml", absolute=True)) as fh_:
         defaults = salt.utils.yaml.safe_load(fh_)

@@ -1,6 +1,7 @@
 """
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
+
 import pathlib
 import shutil
 

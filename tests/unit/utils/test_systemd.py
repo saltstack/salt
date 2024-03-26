@@ -78,7 +78,7 @@ class SystemdTestCase(TestCase):
         """
         with patch("subprocess.Popen") as popen_mock:
             _version = 231
-            output = "systemd {}\n-SYSVINIT".format(_version)
+            output = f"systemd {_version}\n-SYSVINIT"
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (output, None),
                 pid=lambda: 12345,
@@ -162,7 +162,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = False
             _version = 204
-            _output = "systemd {}\n-SYSVINIT".format(_version)
+            _output = f"systemd {_version}\n-SYSVINIT"
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -196,7 +196,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = True
             _version = 205
-            _output = "systemd {}\n-SYSVINIT".format(_version)
+            _output = f"systemd {_version}\n-SYSVINIT"
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -230,7 +230,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = True
             _version = 206
-            _output = "systemd {}\n-SYSVINIT".format(_version)
+            _output = f"systemd {_version}\n-SYSVINIT"
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -350,8 +350,6 @@ class SystemdTestCase(TestCase):
             """
             Raised by DBUS, e.g. when a PID does not belong to a service
             """
-
-            ...
 
         dbus_mock = Mock()
         dbus_mock.DBusException = DBusException()

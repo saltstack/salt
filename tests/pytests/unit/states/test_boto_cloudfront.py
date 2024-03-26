@@ -1,6 +1,7 @@
 """
 Unit tests for the boto_cloudfront state module.
 """
+
 import copy
 import textwrap
 
@@ -70,7 +71,7 @@ def test_present_from_scratch():
         __salt__={"boto_cloudfront.get_distribution": mock_get},
         __opts__={"test": True},
     ):
-        comment = "Distribution {} set for creation.".format(name)
+        comment = f"Distribution {name} set for creation."
         assert boto_cloudfront.present(name, config, tags) == base_ret_with(
             {"result": None, "comment": comment, "changes": {"old": None, "new": name}}
         )
@@ -184,7 +185,7 @@ def test_present_update_config_and_tags():
         __salt__={"boto_cloudfront.get_distribution": mock_get},
         __opts__={"test": True},
     ):
-        header = "Distribution {} set for new config:".format(name)
+        header = f"Distribution {name} set for new config:"
         assert boto_cloudfront.present(name, config, tags) == base_ret_with(
             {
                 "result": None,
@@ -219,7 +220,7 @@ def test_present_update_config_and_tags():
         assert boto_cloudfront.present(name, config, tags) == base_ret_with(
             {
                 "result": True,
-                "comment": "Updated distribution {}.".format(name),
+                "comment": f"Updated distribution {name}.",
                 "changes": {"diff": diff},
             }
         )

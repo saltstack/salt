@@ -1,6 +1,7 @@
 """
 Tests for the salt fileclient
 """
+
 import errno
 import logging
 import os
@@ -50,7 +51,7 @@ def client_opts():
 
 def _fake_makedir(num=errno.EEXIST):
     def _side_effect(*args, **kwargs):
-        raise OSError(num, "Errno {}".format(num))
+        raise OSError(num, f"Errno {num}")
 
     return Mock(side_effect=_side_effect)
 

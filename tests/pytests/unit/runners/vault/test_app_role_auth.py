@@ -2,7 +2,6 @@
 Unit tests for the Vault runner
 """
 
-
 import logging
 
 import pytest
@@ -73,7 +72,14 @@ def test_generate_token():
                 headers=ANY,
                 json=ANY,
                 verify=ANY,
+                timeout=120,
             ),
-            call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
+            call(
+                "http://fake_url",
+                headers=ANY,
+                json=ANY,
+                verify=ANY,
+                timeout=120,
+            ),
         ]
         mock.assert_has_calls(calls)

@@ -137,7 +137,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             # Validate default gateway
             if gateway is not None:
                 if not salt.utils.validate.net.ipv4_addr(gateway):
-                    errors.append("Gateway IP {} is invalid".format(gateway))
+                    errors.append(f"Gateway IP {gateway} is invalid")
 
     return errors
 
@@ -198,7 +198,7 @@ def managed(
     ip_addrs=None,
     gateway=None,
     enabled=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that the named interface is configured properly.
@@ -262,7 +262,7 @@ def managed(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Interface '{}' is up to date".format(name),
+        "comment": f"Interface '{name}' is up to date",
     }
 
     dns_proto = str(dns_proto).lower()
@@ -296,11 +296,11 @@ def managed(
         if currently_enabled:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Interface '{}' will be disabled".format(name)
+                ret["comment"] = f"Interface '{name}' will be disabled"
             else:
                 ret["result"] = __salt__["ip.disable"](name)
                 if not ret["result"]:
-                    ret["comment"] = "Failed to disable interface '{}'".format(name)
+                    ret["comment"] = f"Failed to disable interface '{name}'"
         else:
             ret["comment"] += " (already disabled)"
         return ret
@@ -308,31 +308,31 @@ def managed(
         if not currently_enabled:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Interface '{}' will be enabled".format(name)
+                ret["comment"] = f"Interface '{name}' will be enabled"
             else:
                 if not __salt__["ip.enable"](name):
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Failed to enable interface '{}' to make changes".format(name)
+                    ret["comment"] = (
+                        f"Failed to enable interface '{name}' to make changes"
+                    )
                     return ret
 
         errors = _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway)
         if errors:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "The following SLS configuration errors were detected:\n- {}".format(
-                "\n- ".join(errors)
+            ret["comment"] = (
+                "The following SLS configuration errors were detected:\n- {}".format(
+                    "\n- ".join(errors)
+                )
             )
             return ret
 
         old = __salt__["ip.get_interface"](name)
         if not old:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to get current configuration for interface '{}'".format(name)
+            ret["comment"] = (
+                f"Unable to get current configuration for interface '{name}'"
+            )
             return ret
 
         changes = _changes(old, dns_proto, dns_servers, ip_proto, ip_addrs, gateway)
@@ -382,10 +382,10 @@ def managed(
                         )
 
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "The following changes will be made to interface '{}':\n- {}".format(
-                name, "\n- ".join(comments)
+            ret["comment"] = (
+                "The following changes will be made to interface '{}':\n- {}".format(
+                    name, "\n- ".join(comments)
+                )
             )
             return ret
 
@@ -431,7 +431,7 @@ def managed(
                 "for interface '{}'".format(name)
             )
         else:
-            ret[
-                "comment"
-            ] = "Successfully updated configuration for interface '{}'".format(name)
+            ret["comment"] = (
+                f"Successfully updated configuration for interface '{name}'"
+            )
         return ret

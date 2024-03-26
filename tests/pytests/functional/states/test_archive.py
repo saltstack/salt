@@ -147,7 +147,7 @@ def test_archive_extracted_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        "localhost{free_port}".format(free_port=free_port),
+        f"localhost{free_port}",
         "foo.tar.gz",
     )
     cached_etag = cached_file + ".etag"
@@ -159,7 +159,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,
@@ -177,7 +177,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 304 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,
@@ -202,7 +202,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     No call to the web server will be made.
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=False,
@@ -216,7 +216,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,

@@ -145,7 +145,7 @@ def _render_cmd(cmd, cwd, template, saltenv=None, pillarenv=None, pillar_overrid
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine {}".format(template)
+            f"Attempted to render file paths with unavailable engine {template}"
         )
 
     kwargs = {}
@@ -265,7 +265,7 @@ def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
     # the shell in quotes in case there are
     # spaces in the paths.
     if salt.utils.platform.is_windows():
-        shell = '"{}"'.format(shell)
+        shell = f'"{shell}"'
 
     # extract_stack() returns a list of tuples.
     # The last item in the list [-1] is the current method.
@@ -277,9 +277,9 @@ def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
             )
         )
     elif encoded_cmd:
-        cmd = "{} -NonInteractive -NoProfile -EncodedCommand {}".format(shell, cmd)
+        cmd = f"{shell} -NonInteractive -NoProfile -EncodedCommand {cmd}"
     else:
-        cmd = '{} -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
+        cmd = f'{shell} -NonInteractive -NoProfile -Command "{cmd}"'
 
     return cmd
 
@@ -318,7 +318,7 @@ def _run(
     success_stdout=None,
     success_stderr=None,
     windows_codepage=65001,
-    **kwargs
+    **kwargs,
 ):
     """
     Do the DRY thing and only call subprocess.Popen() once
@@ -368,7 +368,7 @@ def _run(
     change_windows_codepage = False
     if not salt.utils.platform.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
-            msg = "The shell {} is not available".format(shell)
+            msg = f"The shell {shell} is not available"
             raise CommandExecutionError(msg)
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
@@ -406,9 +406,7 @@ def _run(
     # checked if blacklisted
     if "__pub_jid" in kwargs:
         if not _check_avail(cmd):
-            raise CommandExecutionError(
-                'The shell command "{}" is not permitted'.format(cmd)
-            )
+            raise CommandExecutionError(f'The shell command "{cmd}" is not permitted')
 
     env = _parse_env(env)
 
@@ -428,12 +426,14 @@ def _run(
             "'" if not isinstance(cmd, list) else "",
             _log_cmd(cmd),
             "'" if not isinstance(cmd, list) else "",
-            "as user '{}' ".format(runas) if runas else "",
-            "in group '{}' ".format(group) if group else "",
+            f"as user '{runas}' " if runas else "",
+            f"in group '{group}' " if group else "",
             cwd,
-            ". Executing command in the background, no output will be logged."
-            if bg
-            else "",
+            (
+                ". Executing command in the background, no output will be logged."
+                if bg
+                else ""
+            ),
         )
         log.info(log_callback(msg))
 
@@ -455,7 +455,7 @@ def _run(
             cmd = " ".join(map(_cmd_quote, cmd))
 
         # Ensure directory is correct before running command
-        cmd = "cd -- {dir} && {{ {cmd}\n }}".format(dir=_cmd_quote(cwd), cmd=cmd)
+        cmd = f"cd -- {_cmd_quote(cwd)} && {{ {cmd}\n }}"
 
         # Ensure environment is correct for a newly logged-in user by running
         # the command under bash as a login shell
@@ -472,7 +472,7 @@ def _run(
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
         # which causes the environment to be initialised incorrectly, which is
         # fixed by the previous line of code)
-        cmd = "su -l {} -c {}".format(_cmd_quote(runas), _cmd_quote(cmd))
+        cmd = f"su -l {_cmd_quote(runas)} -c {_cmd_quote(cmd)}"
 
         # Set runas to None, because if you try to run `su -l` after changing
         # user, su will prompt for the password of the user and cause salt to
@@ -484,7 +484,7 @@ def _run(
         try:
             pwd.getpwnam(runas)
         except KeyError:
-            raise CommandExecutionError("User '{}' is not available".format(runas))
+            raise CommandExecutionError(f"User '{runas}' is not available")
 
     if group:
         if salt.utils.platform.is_windows():
@@ -496,7 +496,7 @@ def _run(
         try:
             grp.getgrnam(group)
         except KeyError:
-            raise CommandExecutionError("Group '{}' is not available".format(runas))
+            raise CommandExecutionError(f"Group '{runas}' is not available")
         else:
             use_sudo = True
 
@@ -542,7 +542,7 @@ def _run(
 
             if not salt.utils.pkg.check_bundled():
                 if __grains__["os"] in ["FreeBSD"]:
-                    env_cmd.extend(["{} -c {}".format(shell, sys.executable)])
+                    env_cmd.extend([f"{shell} -c {sys.executable}"])
                 else:
                     env_cmd.extend([sys.executable])
             else:
@@ -556,11 +556,11 @@ def _run(
                             ]
                         )
                     else:
-                        env_cmd.extend(["{} python {}".format(sys.executable, fp.name)])
+                        env_cmd.extend([f"{sys.executable} python {fp.name}"])
                     fp.write(py_code)
                     shutil.chown(fp.name, runas)
 
-            msg = "env command: {}".format(env_cmd)
+            msg = f"env command: {env_cmd}"
             log.debug(log_callback(msg))
             env_bytes, env_encoded_err = subprocess.Popen(
                 env_cmd,
@@ -607,7 +607,7 @@ def _run(
 
             # Fix some corner cases where shelling out to get the user's
             # environment returns the wrong home directory.
-            runas_home = os.path.expanduser("~{}".format(runas))
+            runas_home = os.path.expanduser(f"~{runas}")
             if env_runas.get("HOME") != runas_home:
                 env_runas["HOME"] = runas_home
 
@@ -685,7 +685,7 @@ def _run(
         try:
             _umask = int(_umask, 8)
         except ValueError:
-            raise CommandExecutionError("Invalid umask: '{}'".format(umask))
+            raise CommandExecutionError(f"Invalid umask: '{umask}'")
     else:
         _umask = None
 
@@ -707,7 +707,7 @@ def _run(
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
-            "Specified cwd '{}' either not absolute or does not exist".format(cwd)
+            f"Specified cwd '{cwd}' either not absolute or does not exist"
         )
 
     if (
@@ -828,9 +828,9 @@ def _run(
     else:
         formatted_timeout = ""
         if timeout:
-            formatted_timeout = " (timeout: {}s)".format(timeout)
+            formatted_timeout = f" (timeout: {timeout}s)"
         if output_loglevel is not None:
-            msg = "Running {} in VT{}".format(cmd, formatted_timeout)
+            msg = f"Running {cmd} in VT{formatted_timeout}"
             log.debug(log_callback(msg))
         stdout, stderr = "", ""
         now = time.time()
@@ -875,7 +875,7 @@ def _run(
                             ret["retcode"] = None
                             break
                     except KeyboardInterrupt:
-                        ret["stderr"] = "SALT: User break\n{}".format(stderr)
+                        ret["stderr"] = f"SALT: User break\n{stderr}"
                         ret["retcode"] = 1
                         break
                 except salt.utils.vt.TerminalException as exc:
@@ -999,7 +999,6 @@ def _run_all_quiet(
     success_stderr=None,
     ignore_retcode=None,
 ):
-
     """
     Helper for running commands quietly for minion startup.
     Returns a dict of return data.
@@ -1064,7 +1063,7 @@ def run(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Execute the passed command and return the output as a string
@@ -1331,7 +1330,7 @@ def run(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     log_callback = _check_cb(log_callback)
@@ -1380,7 +1379,7 @@ def shell(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed command and return the output as a string.
@@ -1608,7 +1607,7 @@ def shell(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1639,7 +1638,7 @@ def run_stdout(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a command, and only return the standard out
@@ -1840,7 +1839,7 @@ def run_stdout(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     return ret["stdout"] if not hide_output else ""
@@ -1873,7 +1872,7 @@ def run_stderr(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a command and only return the standard error
@@ -2074,7 +2073,7 @@ def run_stderr(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     return ret["stderr"] if not hide_output else ""
@@ -2109,7 +2108,7 @@ def run_all(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed command and return a dict of return data
@@ -2354,7 +2353,7 @@ def run_all(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     if hide_output:
@@ -2386,7 +2385,7 @@ def retcode(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a shell command and return the command's return code.
@@ -2576,7 +2575,7 @@ def retcode(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
     return ret["retcode"]
 
@@ -2604,7 +2603,7 @@ def _retcode_quiet(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Helper for running commands quietly for minion startup. Returns same as
@@ -2634,7 +2633,7 @@ def _retcode_quiet(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -2663,7 +2662,7 @@ def script(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -2936,7 +2935,7 @@ def script(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
     _cleanup_tempfile(path)
     # If a temp working directory was created (Windows), let's remove that
@@ -2971,7 +2970,7 @@ def script_retcode(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -3150,7 +3149,7 @@ def script_retcode(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )["retcode"]
 
 
@@ -3280,7 +3279,7 @@ def tty(device, echo=""):
         salt '*' cmd.tty pts3 'This is a test'
     """
     if device.startswith("tty"):
-        teletype = "/dev/{}".format(device)
+        teletype = f"/dev/{device}"
     elif device.startswith("pts"):
         teletype = "/dev/{}".format(device.replace("pts", "pts/"))
     else:
@@ -3288,9 +3287,9 @@ def tty(device, echo=""):
     try:
         with salt.utils.files.fopen(teletype, "wb") as tty_device:
             tty_device.write(salt.utils.stringutils.to_bytes(echo))
-        return {"Success": "Message was successfully echoed to {}".format(teletype)}
+        return {"Success": f"Message was successfully echoed to {teletype}"}
     except OSError:
-        return {"Error": "Echoing to {} returned error".format(teletype)}
+        return {"Error": f"Echoing to {teletype} returned error"}
 
 
 def run_chroot(
@@ -3321,7 +3320,7 @@ def run_chroot(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -3497,7 +3496,7 @@ def run_chroot(
     else:
         userspec = ""
 
-    cmd = "chroot {} {} {} -c {}".format(userspec, root, sh_, _cmd_quote(cmd))
+    cmd = f"chroot {userspec} {root} {sh_} -c {_cmd_quote(cmd)}"
 
     run_func = __context__.pop("cmd.run_chroot.func", run_all)
 
@@ -3710,7 +3709,7 @@ def shell_info(shell, list_modules=False):
         for reg_ver in pw_keys:
             install_data = salt.utils.win_reg.read_value(
                 hive="HKEY_LOCAL_MACHINE",
-                key="Software\\Microsoft\\PowerShell\\{}".format(reg_ver),
+                key=f"Software\\Microsoft\\PowerShell\\{reg_ver}",
                 vname="Install",
             )
             if (
@@ -3861,7 +3860,7 @@ def powershell(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed PowerShell command and return the output as a dictionary.
@@ -4064,7 +4063,7 @@ def powershell(
     if salt.utils.versions.version_cmp(psversion, "2.0") == 1:
         cmd += " | ConvertTo-JSON"
         if depth is not None:
-            cmd += " -Depth {}".format(depth)
+            cmd += f" -Depth {depth}"
 
     # Put the whole command inside a try / catch block
     # Some errors in PowerShell are not "Terminating Errors" and will not be
@@ -4077,7 +4076,7 @@ def powershell(
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
         log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
+        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
         cmd_utf16 = cmd.encode("utf-16-le")
         cmd = base64.standard_b64encode(cmd_utf16)
         cmd = salt.utils.stringutils.to_str(cmd)
@@ -4111,7 +4110,7 @@ def powershell(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
@@ -4150,7 +4149,7 @@ def powershell_all(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed PowerShell command and return a dictionary with a result
@@ -4423,13 +4422,13 @@ def powershell_all(
     # Append PowerShell Object formatting
     cmd += " | ConvertTo-JSON"
     if depth is not None:
-        cmd += " -Depth {}".format(depth)
+        cmd += f" -Depth {depth}"
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
         log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
+        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
         cmd_utf16 = cmd.encode("utf-16-le")
         cmd = base64.standard_b64encode(cmd_utf16)
         cmd = salt.utils.stringutils.to_str(cmd)
@@ -4463,7 +4462,7 @@ def powershell_all(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
     stdoutput = response["stdout"]
 
@@ -4519,7 +4518,7 @@ def run_bg(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     .. versionadded:: 2016.3.0
@@ -4737,7 +4736,7 @@ def run_bg(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )
 
     return {"pid": res["pid"]}

@@ -21,7 +21,6 @@ For example:
 
 """
 
-
 import logging
 
 try:

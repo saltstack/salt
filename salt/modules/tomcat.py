@@ -214,11 +214,11 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
     if url[-1] != "/":
         url += "/"
     url6 = url
-    url += "text/{}".format(cmd)
-    url6 += "{}".format(cmd)
+    url += f"text/{cmd}"
+    url6 += f"{cmd}"
     if opts:
-        url += "?{}".format(urllib.parse.urlencode(opts))
-        url6 += "?{}".format(urllib.parse.urlencode(opts))
+        url += f"?{urllib.parse.urlencode(opts)}"
+        url6 += f"?{urllib.parse.urlencode(opts)}"
 
     # Make the HTTP request
     urllib.request.install_opener(auth)
@@ -257,7 +257,7 @@ def _simple_cmd(cmd, app, url="http://localhost:8080/manager", timeout=180):
         opts = {"path": app, "version": ls(url)[app]["version"]}
         return "\n".join(_wget(cmd, opts, url, timeout=timeout)["msg"])
     except Exception:  # pylint: disable=broad-except
-        return "FAIL - No context exists for path {}".format(app)
+        return f"FAIL - No context exists for path {app}"
 
 
 # Functions
@@ -565,10 +565,10 @@ def deploy_war(
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     """
     # Decide the location to copy the war for the deployment
-    tfile = "salt.{}".format(os.path.basename(war))
+    tfile = f"salt.{os.path.basename(war)}"
     if temp_war_location is not None:
         if not os.path.isdir(temp_war_location):
-            return 'Error - "{}" is not a directory'.format(temp_war_location)
+            return f'Error - "{temp_war_location}" is not a directory'
         tfile = os.path.join(temp_war_location, tfile)
     else:
         tfile = os.path.join(tempfile.gettempdir(), tfile)
@@ -589,7 +589,7 @@ def deploy_war(
 
     # Prepare options
     opts = {
-        "war": "file:{}".format(tfile),
+        "war": f"file:{tfile}",
         "path": context,
     }
 
@@ -630,17 +630,14 @@ def passwd(passwd, user="", alg="sha1", realm=None):
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     """
+    # pylint: disable=no-value-for-parameter
+    # we call the first parameter the same as the function!
+
     # Shouldn't it be SHA265 instead of SHA1?
-    digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
-    if digest:
+    digest = getattr(hashlib, alg, None)
+    if digest is not None:
         if realm:
-            digest.update(
-                "{}:{}:{}".format(
-                    user,
-                    realm,
-                    passwd,
-                )
-            )
+            digest.update(f"{user}:{realm}:{passwd}")
         else:
             digest.update(passwd)
 
@@ -710,7 +707,7 @@ def signal(signal=None):
     if signal not in valid_signals:
         return
 
-    cmd = "{}/bin/catalina.sh {}".format(__catalina_home(), valid_signals[signal])
+    cmd = f"{__catalina_home()}/bin/catalina.sh {valid_signals[signal]}"
     __salt__["cmd.run"](cmd)
 
 

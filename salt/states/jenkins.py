@@ -6,7 +6,6 @@ Management of Jenkins
 
 """
 
-
 import difflib
 import io
 import logging
@@ -56,7 +55,7 @@ def present(name, config=None, **kwargs):
         "name": name,
         "result": True,
         "changes": {},
-        "comment": ["Job {} is up to date.".format(name)],
+        "comment": [f"Job {name} is up to date."],
     }
 
     if __salt__["jenkins.job_exists"](name):
@@ -79,7 +78,7 @@ def present(name, config=None, **kwargs):
                 return _fail(ret, exc.strerror)
             else:
                 ret["changes"] = "".join(diff)
-                ret["comment"].append("Job '{}' updated.".format(name))
+                ret["comment"].append(f"Job '{name}' updated.")
 
     else:
         cached_source_path = __salt__["cp.cache_file"](config, __env__)
@@ -94,7 +93,7 @@ def present(name, config=None, **kwargs):
         buf = io.StringIO(new_config_xml)
         diff = difflib.unified_diff("", buf.readlines(), lineterm="")
         ret["changes"][name] = "".join(diff)
-        ret["comment"].append("Job '{}' added.".format(name))
+        ret["comment"].append(f"Job '{name}' added.")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -115,7 +114,7 @@ def absent(name, **kwargs):
         except CommandExecutionError as exc:
             return _fail(ret, exc.strerror)
         else:
-            ret["comment"] = "Job '{}' deleted.".format(name)
+            ret["comment"] = f"Job '{name}' deleted."
     else:
-        ret["comment"] = "Job '{}' already absent.".format(name)
+        ret["comment"] = f"Job '{name}' already absent."
     return ret

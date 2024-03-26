@@ -6,7 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import os
 
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode

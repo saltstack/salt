@@ -2,7 +2,6 @@
 Tests for the Mandrill execution module.
 """
 
-
 import pytest
 
 import salt.modules.mandrill as mandrill

@@ -25,7 +25,6 @@ Example configuration
       identity_api_version: 3
 """
 
-
 HAS_SHADE = False
 try:
     import shade

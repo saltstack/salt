@@ -247,11 +247,11 @@ class KiwiExporter:
 
         descr = etree.SubElement(node, "description")
         author = etree.SubElement(descr, "author")
-        author.text = "salt.modules.node on {}".format(hostname)
+        author.text = f"salt.modules.node on {hostname}"
         contact = etree.SubElement(descr, "contact")
-        contact.text = "root@{}".format(hostname)
+        contact.text = f"root@{hostname}"
         specs = etree.SubElement(descr, "specification")
-        specs.text = "Rebuild of {}, based on Salt inspection.".format(hostname)
+        specs.text = f"Rebuild of {hostname}, based on Salt inspection."
 
         return descr
 

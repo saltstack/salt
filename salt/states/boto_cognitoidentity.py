@@ -45,7 +45,6 @@ config:
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -109,7 +108,7 @@ def _role_present(
         IdentityPoolId=IdentityPoolId,
         AuthenticatedRole=AuthenticatedRole,
         UnauthenticatedRole=UnauthenticatedRole,
-        **conn_params
+        **conn_params,
     )
     if not r.get("set"):
         ret["result"] = False
@@ -234,10 +233,10 @@ def pool_present(
                 IdentityPoolName
             )
         else:
-            ret[
-                "comment"
-            ] = "An existing identity pool named {} with id {} will be updated.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "An existing identity pool named {} with id {} will be updated.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         ret["result"] = None
         return ret
@@ -261,10 +260,10 @@ def pool_present(
         if r.get("created"):
             updated_identity_pool = r.get("identity_pool")
             IdentityPoolId = updated_identity_pool.get("IdentityPoolId")
-            ret[
-                "comment"
-            ] = "A new identity pool with name {}, id {} is created.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "A new identity pool with name {}, id {} is created.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         else:
             ret["result"] = False
@@ -280,26 +279,26 @@ def pool_present(
 
         if r.get("updated"):
             updated_identity_pool = r.get("identity_pool")
-            ret[
-                "comment"
-            ] = "Existing identity pool with name {}, id {} is updated.".format(
-                IdentityPoolName, IdentityPoolId
+            ret["comment"] = (
+                "Existing identity pool with name {}, id {} is updated.".format(
+                    IdentityPoolName, IdentityPoolId
+                )
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to update an existing identity pool {} {}: {}".format(
-                IdentityPoolName,
-                IdentityPoolId,
-                r["error"].get("message", r["error"]),
+            ret["comment"] = (
+                "Failed to update an existing identity pool {} {}: {}".format(
+                    IdentityPoolName,
+                    IdentityPoolId,
+                    r["error"].get("message", r["error"]),
+                )
             )
             return ret
 
     if existing_identity_pool != updated_identity_pool:
         ret["changes"]["old"] = dict()
         ret["changes"]["new"] = dict()
-        change_key = "Identity Pool Name {}".format(IdentityPoolName)
+        change_key = f"Identity Pool Name {IdentityPoolName}"
         ret["changes"]["old"][change_key] = existing_identity_pool
         ret["changes"]["new"][change_key] = updated_identity_pool
     else:
@@ -388,10 +387,10 @@ def pool_absent(
         return ret
 
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "The following matched identity pools will be deleted.\n{}".format(
-            identity_pools
+        ret["comment"] = (
+            "The following matched identity pools will be deleted.\n{}".format(
+                identity_pools
+            )
         )
         ret["result"] = None
         return ret
@@ -413,12 +412,10 @@ def pool_absent(
             if not ret["changes"]:
                 ret["changes"]["old"] = dict()
                 ret["changes"]["new"] = dict()
-            change_key = "Identity Pool Id {}".format(IdentityPoolId)
+            change_key = f"Identity Pool Id {IdentityPoolId}"
             ret["changes"]["old"][change_key] = IdentityPoolName
             ret["changes"]["new"][change_key] = None
-            ret["comment"] = "{}\n{}".format(
-                ret["comment"], "{} deleted".format(change_key)
-            )
+            ret["comment"] = "{}\n{}".format(ret["comment"], f"{change_key} deleted")
         else:
             ret["result"] = False
             failure_comment = (

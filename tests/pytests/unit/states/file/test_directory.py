@@ -104,7 +104,7 @@ def test_directory():
     mock_check = MagicMock(
         return_value=(
             None,
-            'The directory "{}" will be changed'.format(name),
+            f'The directory "{name}" will be changed',
             {name: {"directory": "new"}},
         )
     )
@@ -132,7 +132,7 @@ def test_directory():
         assert filestate.directory(name, user=user, group=group) == ret
 
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt})
             assert filestate.directory(name, user=user, group=group) == ret
 
@@ -153,12 +153,12 @@ def test_directory():
                     )
 
                 with patch.object(os.path, "isfile", mock_t):
-                    comt = "Specified location {} exists and is a file".format(name)
+                    comt = f"Specified location {name} exists and is a file"
                     ret.update({"comment": comt})
                     assert filestate.directory(name, user=user, group=group) == ret
 
                 with patch.object(os.path, "islink", mock_t):
-                    comt = "Specified location {} exists and is a symlink".format(name)
+                    comt = f"Specified location {name} exists and is a symlink"
                     ret.update({"comment": comt})
                     assert filestate.directory(name, user=user, group=group) == ret
 
@@ -182,7 +182,7 @@ def test_directory():
 
                 with patch.dict(filestate.__opts__, {"test": False}):
                     with patch.object(os.path, "isdir", mock_f):
-                        comt = "No directory to create {} in".format(name)
+                        comt = f"No directory to create {name} in"
                         ret.update({"comment": comt, "result": False})
                         assert filestate.directory(name, user=user, group=group) == ret
 
@@ -193,7 +193,7 @@ def test_directory():
                     with patch.object(
                         os.path, "isdir", MagicMock(side_effect=isdir_side_effect)
                     ):
-                        comt = "Failed to create directory {}".format(name)
+                        comt = f"Failed to create directory {name}"
                         ret.update(
                             {
                                 "comment": comt,
@@ -266,7 +266,7 @@ def test_directory():
                                 == ret
                             )
 
-                    comt = "Directory {} updated".format(name)
+                    comt = f"Directory {name} updated"
                     ret = {
                         "name": name,
                         "result": True,

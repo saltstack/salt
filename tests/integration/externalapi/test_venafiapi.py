@@ -45,7 +45,7 @@ class VenafiTest(ShellCase):
     @pytest.mark.slow_test
     @pytest.mark.skip_on_fips_enabled_platform
     def test_request(self, name):
-        cn = "{}.example.com".format(name)
+        cn = f"{name}.example.com"
 
         ret = self.run_run_plus(
             fun="venafi.request",

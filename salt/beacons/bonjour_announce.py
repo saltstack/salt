@@ -1,6 +1,7 @@
 """
 Beacon to announce via Bonjour (zeroconf)
 """
+
 import atexit
 import logging
 import select

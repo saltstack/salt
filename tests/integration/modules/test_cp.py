@@ -421,7 +421,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = ports.get_unused_localhost_port()
-        url_prefix = "http://localhost:{}/".format(nginx_port)
+        url_prefix = f"http://localhost:{nginx_port}/"
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -444,7 +444,7 @@ class CPModuleTest(ModuleCase):
             fp_.write(
                 textwrap.dedent(
                     salt.utils.stringutils.to_str(
-                        """\
+                        f"""\
                 user root;
                 worker_processes 1;
                 error_log {nginx_conf_dir}/server_error.log;
@@ -474,9 +474,7 @@ class CPModuleTest(ModuleCase):
                             return 302 /actual_file;
                         }}
                     }}
-                }}""".format(
-                            **locals()
-                        )
+                }}"""
                     )
                 )
             )
@@ -597,7 +595,9 @@ class CPModuleTest(ModuleCase):
     @pytest.mark.slow_test
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
+        open(  # pylint: disable=resource-leakage
+            log_to_xfer, "w", encoding="utf-8"
+        ).close()
         try:
             self.run_function("cp.push", [log_to_xfer])
             tgt_cache_file = os.path.join(

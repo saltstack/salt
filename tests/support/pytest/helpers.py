@@ -4,6 +4,7 @@
 
     PyTest helpers functions
 """
+
 import logging
 import os
 import pathlib
@@ -70,9 +71,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -118,9 +117,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -161,7 +158,7 @@ def salt_loader_module_functions(module):
             # Not a function? carry on
             continue
         funcname = func_alias.get(func.__name__) or func.__name__
-        funcs["{}.{}".format(virtualname, funcname)] = func
+        funcs[f"{virtualname}.{funcname}"] = func
     return funcs
 
 
@@ -203,7 +200,7 @@ def remove_stale_master_key(master):
 def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
     cachefile = os.path.join(
         proxy_minion.config["cachedir"],
-        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+        f"dummy-proxy-{minion_id or proxy_minion.id}.cache",
     )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
@@ -298,7 +295,7 @@ class TestAccount:
     @group_name.default
     def _default_group_name(self):
         if self.create_group:
-            return "group-{}".format(self.username)
+            return f"group-{self.username}"
         return None
 
     @_group.default
@@ -706,13 +703,17 @@ class EntropyGenerator:
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
-        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        self.current_entropy = int(
+            kernel_entropy_file.read_text(encoding="utf-8").strip()
+        )
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
             log.info("The '%s' file is not avilable", kernel_poolsize_file)
         else:
-            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            self.current_poolsize = int(
+                kernel_poolsize_file.read_text(encoding="utf-8").strip()
+            )
             log.info("Entropy Poolsize: %s", self.current_poolsize)
             # Account for smaller poolsizes using BLAKE2s
             if self.current_poolsize == 256:
@@ -738,7 +739,9 @@ class EntropyGenerator:
                         raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -773,7 +776,9 @@ class EntropyGenerator:
                     check=True,
                 )
                 os.unlink(target_file.name)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break

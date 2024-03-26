@@ -73,8 +73,6 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 # Script Variables
 #-------------------------------------------------------------------------------
 
-$WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL       = "https://repo.saltproject.io/windows/dependencies"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -122,21 +120,6 @@ Write-Host "- Salt Version: $Version"
 Write-Host $("-" * 80)
 
 #-------------------------------------------------------------------------------
-# Ensure cache dir exists
-#-------------------------------------------------------------------------------
-
-if ( ! (Test-Path -Path $WEBCACHE_DIR) ) {
-    Write-Host "Creating cache directory: " -NoNewline
-    New-Item -ItemType directory -Path $WEBCACHE_DIR | Out-Null
-    if ( Test-Path -Path $WEBCACHE_DIR ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-#-------------------------------------------------------------------------------
 # Ensure WIX environment variable is set, if not refresh and check again
 #-------------------------------------------------------------------------------
 # If wix is installed in the same session, the WIX environment variable won't be
@@ -154,21 +137,6 @@ if ( ! "$env:WIX" ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
-}
-
-#-------------------------------------------------------------------------------
-# Caching VC++ Runtimes
-#-------------------------------------------------------------------------------
-
-$RUNTIMES = @(
-    ("Microsoft_VC120_CRT_x64.msm", "64", "15FD10A495287505184B8913DF8D6A9CA461F44F78BC74115A0C14A5EDD1C9A7"),
-    ("Microsoft_VC120_CRT_x86.msm", "32", "26340B393F52888B908AC3E67B935A80D390E1728A31FF38EBCEC01117EB2579"),
-    ("Microsoft_VC140_CRT_x64.msm", "64", "E1344D5943FB2BBB7A56470ED0B7E2B9B212CD9210D3CC6FA82BC3DA8F11EDA8"),
-    ("Microsoft_VC140_CRT_x86.msm", "32", "0D36CFE6E9ABD7F530DBAA4A83841CDBEF9B2ADCB625614AF18208FDCD6B92A4")
-)
-$RUNTIMES | ForEach-Object {
-    $name, $arch, $hash = $_
-    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$arch/$name" "$hash"
 }
 
 #-------------------------------------------------------------------------------
@@ -531,7 +499,6 @@ Push-Location $SCRIPT_DIR
     -dDisplayVersion="$Version" `
     -dInternalVersion="$INTERNAL_VERSION" `
     -dDISCOVER_INSTALLDIR="$($DISCOVER_INSTALLDIR[$i])" `
-    -dWEBCACHE_DIR="$WEBCACHE_DIR" `
     -dDISCOVER_CONFDIR="$DISCOVER_CONFDIR" `
     -ext "$($ENV:WIX)bin\WixUtilExtension.dll" `
     -ext "$($ENV:WIX)bin\WixUIExtension.dll" `

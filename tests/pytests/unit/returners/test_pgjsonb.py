@@ -2,7 +2,6 @@
 Unit tests for the PGJsonb returner (pgjsonb).
 """
 
-
 import pytest
 
 import salt.returners.pgjsonb as pgjsonb

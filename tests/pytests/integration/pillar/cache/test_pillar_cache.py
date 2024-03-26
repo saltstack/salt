@@ -1,6 +1,7 @@
 """
 Pillar cache tests
 """
+
 import pytest
 
 

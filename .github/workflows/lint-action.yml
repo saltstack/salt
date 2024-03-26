@@ -23,7 +23,7 @@ jobs:
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.9
 
     steps:
       - name: Install System Deps

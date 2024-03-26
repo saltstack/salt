@@ -166,7 +166,7 @@ def tree(config=None, path=None, with_tags=False, saltenv="base"):
     if path:
         config = __salt__["cp.get_file_str"](path, saltenv=saltenv)
         if config is False:
-            raise SaltException("{} is not available".format(path))
+            raise SaltException(f"{path} is not available")
     config_lines = config.splitlines()
     return _parse_text_config(config_lines, with_tags=with_tags)
 

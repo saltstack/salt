@@ -37,7 +37,6 @@ version currently listed in PyPi, run the following:
     pip install pyVmomi==5.5.0.2014.1.1
 """
 
-
 import logging
 
 import salt.utils.vmware
@@ -89,7 +88,7 @@ def get_profile_manager(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -116,7 +115,7 @@ def get_placement_solver(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -142,7 +141,7 @@ def get_capability_definitions(profile_manager):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -171,7 +170,7 @@ def get_policies_by_id(profile_manager, policy_ids):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -204,7 +203,7 @@ def get_storage_policies(profile_manager, policy_names=None, get_all_policies=Fa
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -241,7 +240,7 @@ def create_storage_policy(profile_manager, policy_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -269,7 +268,7 @@ def update_storage_policy(profile_manager, policy, policy_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -297,7 +296,7 @@ def get_default_storage_policy_of_datastore(profile_manager, datastore):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -308,7 +307,7 @@ def get_default_storage_policy_of_datastore(profile_manager, datastore):
     policy_refs = get_policies_by_id(profile_manager, [policy_id])
     if not policy_refs:
         raise VMwareObjectRetrievalError(
-            "Storage policy with id '{}' was not found".format(policy_id)
+            f"Storage policy with id '{policy_id}' was not found"
         )
     return policy_refs[0]
 
@@ -337,7 +336,7 @@ def assign_default_storage_policy_to_datastore(profile_manager, policy, datastor
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
+            f"Not enough permissions. Required privilege: {exc.privilegeId}"
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)

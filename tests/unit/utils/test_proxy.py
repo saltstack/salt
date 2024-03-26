@@ -3,7 +3,6 @@
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
 """
 
-
 import salt.utils.proxy
 from tests.support.mock import patch
 from tests.support.unit import TestCase

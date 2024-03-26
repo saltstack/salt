@@ -91,14 +91,14 @@ def _freebsd_geom():
     geom = salt.utils.path.which("geom")
     ret = {"disks": {}, "ssds": []}
 
-    devices = __salt__["cmd.run"]("{} disk list".format(geom))
+    devices = __salt__["cmd.run"](f"{geom} disk list")
     devices = devices.split("\n\n")
 
     def parse_geom_attribs(device):
         tmp = {}
         for line in device.split("\n"):
             for attrib in _geom_attribs:
-                search = re.search(r"{}:\s(.*)".format(attrib), line)
+                search = re.search(rf"{attrib}:\s(.*)", line)
                 if search:
                     value = _datavalue(
                         _geomconsts._datatypes.get(attrib), search.group(1)
@@ -174,7 +174,7 @@ def _windows_disks():
             info = line.split()
             if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
                 continue
-            device = r"\\.\PhysicalDrive{}".format(info[0])
+            device = rf"\\.\PhysicalDrive{info[0]}"
             mediatype = info[1]
             if mediatype == "3":
                 log.trace("Device %s reports itself as an HDD", device)

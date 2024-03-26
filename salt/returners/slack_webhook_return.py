@@ -170,10 +170,10 @@ def _generate_payload(author_icon, title, report, **kwargs):
     text += "JID: {}\n".format(report.get("jid"))
 
     if TOTAL_KEY in report:
-        text += "Total: {}\n".format(report[TOTAL_KEY])
+        text += f"Total: {report[TOTAL_KEY]}\n"
 
     if DURATION_KEY in report:
-        text += "Duration: {:.2f} secs".format(float(report[DURATION_KEY]))
+        text += f"Duration: {float(report[DURATION_KEY]):.2f} secs"
 
     attachments = [
         {
@@ -201,7 +201,7 @@ def _generate_payload(author_icon, title, report, **kwargs):
         # Changed
         changed = {
             "color": "warning",
-            "title": "Changed: {}".format(report[CHANGED_KEY].get(COUNTER_KEY, 0)),
+            "title": f"Changed: {report[CHANGED_KEY].get(COUNTER_KEY, 0)}",
         }
 
         if len(report[CHANGED_KEY].get(TASKS_KEY, [])) > 0:
@@ -212,7 +212,7 @@ def _generate_payload(author_icon, title, report, **kwargs):
         # Failed
         failed = {
             "color": "danger",
-            "title": "Failed: {}".format(report[FAILED_KEY].get(COUNTER_KEY, None)),
+            "title": f"Failed: {report[FAILED_KEY].get(COUNTER_KEY, None)}",
         }
 
         if len(report[FAILED_KEY].get(TASKS_KEY, [])) > 0:
@@ -319,9 +319,7 @@ def _generate_report(ret, show_tasks):
             del ret_return[CHANGED_KEY][TASKS_KEY]
             del ret_return[FAILED_KEY][TASKS_KEY]
     elif isinstance(ret_return, dict):
-        ret_return = {
-            "return": "\n{}".format(salt.utils.yaml.safe_dump(ret_return, indent=2))
-        }
+        ret_return = {"return": f"\n{salt.utils.yaml.safe_dump(ret_return, indent=2)}"}
     else:
         ret_return = {"return": ret_return}
 

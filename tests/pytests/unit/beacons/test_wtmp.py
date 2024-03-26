@@ -236,7 +236,7 @@ def test_match_group():
             with patch("time.time", MagicMock(return_value=1506121200)):
                 with patch("struct.unpack", MagicMock(return_value=pack)):
                     with patch(
-                        "{}.info".format(groupadd),
+                        f"{groupadd}.info",
                         new=MagicMock(return_value=mock_group_info),
                     ):
                         config = [

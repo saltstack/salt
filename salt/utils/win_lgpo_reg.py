@@ -2,6 +2,7 @@
 A Salt Util for working with the Registry.pol file. The Registry.pol file is the
 source of truth for registry settings that are configured via LGPO.
 """
+
 import logging
 import os
 import re
@@ -173,16 +174,16 @@ def write_reg_pol_data(
     if not search_reg_pol(r"\[General\]\r\n", gpt_ini_data):
         log.debug("LGPO_REG Util: Adding [General] section to gpt.ini")
         gpt_ini_data = "[General]\r\n" + gpt_ini_data
-    if search_reg_pol(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):
+    if search_reg_pol(rf"{re.escape(gpt_extension)}=", gpt_ini_data):
         # ensure the line contains the ADM guid
         gpt_ext_loc = re.search(
-            r"^{}=.*\r\n".format(re.escape(gpt_extension)),
+            rf"^{re.escape(gpt_extension)}=.*\r\n",
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
         )
         gpt_ext_str = gpt_ini_data[gpt_ext_loc.start() : gpt_ext_loc.end()]
         if not search_reg_pol(
-            search_string=r"{}".format(re.escape(gpt_extension_guid)),
+            search_string=rf"{re.escape(gpt_extension_guid)}",
             policy_data=gpt_ext_str,
         ):
             log.debug("LGPO_REG Util: Inserting gpt extension GUID")
@@ -339,7 +340,7 @@ def reg_pol_to_dict(policy_data):
             # REG_QWORD : 64-bit little endian
             v_data = struct.unpack("<q", v_data)[0]
         else:
-            msg = "LGPO_REG Util: Found unknown registry type: {}".format(v_type)
+            msg = f"LGPO_REG Util: Found unknown registry type: {v_type}"
             raise CommandExecutionError(msg)
 
         # Lookup the REG Type from the number
@@ -392,9 +393,9 @@ def dict_to_reg_pol(data):
             # The first three items are pretty straight forward
             policy = [
                 # Key followed by null byte
-                "{}".format(key).encode("utf-16-le") + pol_section_term,
+                f"{key}".encode("utf-16-le") + pol_section_term,
                 # Value name followed by null byte
-                "{}".format(v_name).encode("utf-16-le") + pol_section_term,
+                f"{v_name}".encode("utf-16-le") + pol_section_term,
                 # Type in 32-bit little-endian
                 struct.pack("<i", v_type),
             ]

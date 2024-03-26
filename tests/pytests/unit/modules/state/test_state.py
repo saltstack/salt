@@ -759,9 +759,7 @@ def test_top():
                         with patch.object(os.path, "join", mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(state, "_set_retcode", mock):
-                                assert state.top(
-                                    "reverse_top.sls " "exclude=exclude.sls"
-                                )
+                                assert state.top("reverse_top.sls exclude=exclude.sls")
 
 
 def test_highstate():
@@ -800,7 +798,7 @@ def test_highstate():
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.payload, "Serial", mock):
                                 with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set" "_retcode", mock):
+                                    with patch.object(state, "_set_retcode", mock):
                                         assert state.highstate(arg)
 
 
@@ -906,11 +904,11 @@ def test_sls():
                         assert state.sls(arg, None, None, True, cache=True)
 
                     MockState.HighState.flag = True
-                    assert state.sls("core,edit" ".vim dev", None, None, True)
+                    assert state.sls("core,edit.vim dev", None, None, True)
 
                     MockState.HighState.flag = False
                     with patch.object(
-                        state, "_filter_" "running", return_value=True
+                        state, "_filter_running", return_value=True
                     ), patch.object(os.path, "join", return_value=True), patch.object(
                         os, "umask", return_value=True
                     ), patch.object(
@@ -922,7 +920,7 @@ def test_sls():
                     ), patch(
                         "salt.utils.files.fopen", mock_open()
                     ):
-                        assert state.sls("core,edit" ".vim dev", None, None, True)
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
 
 def test_get_test_value():
@@ -933,42 +931,42 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "blah"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is blah in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is blah in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "true"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is true in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is true in __opts__"
 
     with patch.dict(config.__opts__, {test_arg: False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(config.__opts__, {}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} does not exist in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} does not exist in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: None}):
         assert (
             state._get_test_value(test=None) is None
-        ), "Failure when {} is None in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is None in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in master __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in master __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
         with patch.dict(config.__pillar__, {test_arg: True}):
@@ -989,13 +987,13 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {"test": False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {"test": False}):
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             assert state._get_test_value(
                 test=None
-            ), "Failure when {} is False in __opts__".format(test_arg)
+            ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {}):
         assert state._get_test_value(test=True), "Failure when test is True as arg"
@@ -1264,7 +1262,7 @@ def test_event():
         "tag": "a_event_tag",
     }
 
-    _expected = '"date": "{}"'.format(now)
+    _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
         print_cli_mock = MagicMock()
         with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):

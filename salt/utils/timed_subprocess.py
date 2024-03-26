@@ -44,7 +44,7 @@ class TimedProc:
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError(
-                "Error: timeout {} must be a number".format(self.timeout)
+                f"Error: timeout {self.timeout} must be a number"
             )
         if kwargs.get("shell", False):
             args = salt.utils.data.decode(args, to_str=True)

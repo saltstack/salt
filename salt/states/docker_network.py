@@ -65,7 +65,7 @@ def _normalize_pools(existing, desired):
     for pool in desired["Config"]:
         subnet = ipaddress.ip_network(pool.get("Subnet"))
         if pools["desired"][subnet.version] is not None:
-            raise ValueError("Only one IPv{} pool is permitted".format(subnet.version))
+            raise ValueError(f"Only one IPv{subnet.version} pool is permitted")
         else:
             pools["desired"][subnet.version] = pool
 
@@ -91,7 +91,7 @@ def present(
     validate_ip_addrs=True,
     containers=None,
     reconnect=True,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -523,7 +523,7 @@ def present(
     try:
         network = __salt__["docker.inspect_network"](name)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" in msg:
             # Network not present
             network = None
@@ -575,10 +575,10 @@ def present(
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
-            **__utils__["args.clean_kwargs"](**kwargs)
+            **__utils__["args.clean_kwargs"](**kwargs),
         )
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = exc.__str__()
+        ret["comment"] = str(exc)
         return ret
 
     # Separate out the IPAM config options and build the IPAM config dict
@@ -607,7 +607,7 @@ def present(
                 *ipam_pools, **ipam_kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = exc.__str__()
+            ret["comment"] = str(exc)
             return ret
 
     # We'll turn this off if we decide below that creating the network is not
@@ -619,9 +619,9 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret[
-            "comment"
-        ] = "Network '{}' already exists, and is configured as specified".format(name)
+        ret["comment"] = (
+            f"Network '{name}' already exists, and is configured as specified"
+        )
         log.trace("Details of docker network '%s': %s", name, network)
 
         temp_net_name = "".join(
@@ -658,11 +658,11 @@ def present(
                 temp_net_name,
                 skip_translate=True,  # No need to translate (already did)
                 enable_ipv6=False,
-                **kwargs_tmp
+                **kwargs_tmp,
             )
         except CommandExecutionError as exc:
             ret["comment"] = "Failed to create temp network for comparison: {}".format(
-                exc.__str__()
+                str(exc)
             )
             return ret
         else:
@@ -674,9 +674,7 @@ def present(
             try:
                 temp_net_info = __salt__["docker.inspect_network"](temp_net_name)
             except CommandExecutionError as exc:
-                ret["comment"] = "Failed to inspect temp network: {}".format(
-                    exc.__str__()
-                )
+                ret["comment"] = f"Failed to inspect temp network: {str(exc)}"
                 return ret
             else:
                 temp_net_info["EnableIPv6"] = bool(enable_ipv6)
@@ -690,9 +688,8 @@ def present(
             existing_pool_count = len(network["IPAM"]["Config"])
             desired_pool_count = len(temp_net_info["IPAM"]["Config"])
 
-            is_default_pool = (
-                lambda x: True if sorted(x) == ["Gateway", "Subnet"] else False
-            )
+            def is_default_pool(x):
+                return True if sorted(x) == ["Gateway", "Subnet"] else False
 
             if (
                 desired_pool_count == 0
@@ -776,9 +773,7 @@ def present(
                 __salt__["docker.remove_network"](temp_net_name)
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
-                    "Failed to remove temp network '{}': {}.".format(
-                        temp_net_name, exc.__str__()
-                    )
+                    f"Failed to remove temp network '{temp_net_name}': {exc}."
                 )
 
     if create_network:
@@ -800,12 +795,10 @@ def present(
             __salt__["docker.create_network"](
                 name,
                 skip_translate=True,  # No need to translate (already did)
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Failed to create network '{}': {}".format(
-                name, exc.__str__()
-            )
+            ret["comment"] = f"Failed to create network '{name}': {exc}"
             return ret
         else:
             action = "recreated" if network is not None else "created"
@@ -859,19 +852,21 @@ def present(
                 )
             except CommandExecutionError as exc:
                 if not connect_kwargs:
-                    errors.append(exc.__str__())
+                    errors.append(str(exc))
                 else:
                     # We failed to reconnect with the container's old IP
                     # configuration. Reconnect using automatic IP config.
                     try:
                         __salt__["docker.connect_container_to_network"](cid, name)
                     except CommandExecutionError as exc:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
                     else:
                         ret["changes"].setdefault(
-                            "reconnected"
-                            if cid in disconnected_containers
-                            else "connected",
+                            (
+                                "reconnected"
+                                if cid in disconnected_containers
+                                else "connected"
+                            ),
                             [],
                         ).append(connect_info["Name"])
             else:
@@ -917,7 +912,7 @@ def absent(name):
     try:
         network = __salt__["docker.inspect_network"](name)
     except CommandExecutionError as exc:
-        msg = exc.__str__()
+        msg = str(exc)
         if "404" in msg:
             # Network not present
             network = None
@@ -927,12 +922,12 @@ def absent(name):
 
     if network is None:
         ret["result"] = True
-        ret["comment"] = "Network '{}' already absent".format(name)
+        ret["comment"] = f"Network '{name}' already absent"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Network '{}' will be removed".format(name)
+        ret["comment"] = f"Network '{name}' will be removed"
         return ret
 
     return _remove_network(network)
@@ -957,7 +952,7 @@ def _remove_network(network):
         try:
             __salt__["docker.disconnect_container_from_network"](cid, network["Name"])
         except CommandExecutionError as exc:
-            errors = "Failed to disconnect container '{}' : {}".format(cname, exc)
+            errors = f"Failed to disconnect container '{cname}' : {exc}"
         else:
             ret["changes"].setdefault("disconnected", []).append(cname)
 
@@ -968,7 +963,7 @@ def _remove_network(network):
     try:
         __salt__["docker.remove_network"](network["Name"])
     except CommandExecutionError as exc:
-        ret["comment"] = "Failed to remove network: {}".format(exc)
+        ret["comment"] = f"Failed to remove network: {exc}"
     else:
         ret["changes"]["removed"] = True
         ret["result"] = True

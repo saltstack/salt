@@ -1,6 +1,7 @@
 """
 Tests for salt.utils.data
 """
+
 import builtins
 import logging
 
@@ -14,8 +15,13 @@ from tests.support.unit import LOREM_IPSUM
 
 log = logging.getLogger(__name__)
 
-_b = lambda x: x.encode("utf-8")
-_s = lambda x: salt.utils.stringutils.to_str(x, normalize=True)
+
+def _b(x):
+    return x.encode("utf-8")
+
+
+def _s(x):
+    return salt.utils.stringutils.to_str(x, normalize=True)
 
 
 @pytest.fixture
@@ -566,7 +572,9 @@ def test_encode(get_test_data, get_BYTES, get_EGGS):
         None,
         [True, _b(get_EGGS), get_BYTES],
     ]
-    expected[11][_b("subdict")][_b("tuple")] = [
+    expected[11][_b("subdict")][  # pylint: disable=unsupported-assignment-operation
+        _b("tuple")
+    ] = [
         123,
         _b("hello"),
         _b("world"),

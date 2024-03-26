@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.states.layman as layman
@@ -22,12 +23,12 @@ def test_present():
 
     mock = MagicMock(side_effect=[[name], []])
     with patch.dict(layman.__salt__, {"layman.list_local": mock}):
-        comt = "Overlay {} already present".format(name)
+        comt = f"Overlay {name} already present"
         ret.update({"comment": comt})
         assert layman.present(name) == ret
 
         with patch.dict(layman.__opts__, {"test": True}):
-            comt = "Overlay {} is set to be added".format(name)
+            comt = f"Overlay {name} is set to be added"
             ret.update({"comment": comt, "result": None})
             assert layman.present(name) == ret
 
@@ -42,11 +43,11 @@ def test_absent():
 
     mock = MagicMock(side_effect=[[], [name]])
     with patch.dict(layman.__salt__, {"layman.list_local": mock}):
-        comt = "Overlay {} already absent".format(name)
+        comt = f"Overlay {name} already absent"
         ret.update({"comment": comt})
         assert layman.absent(name) == ret
 
         with patch.dict(layman.__opts__, {"test": True}):
-            comt = "Overlay {} is set to be deleted".format(name)
+            comt = f"Overlay {name} is set to be deleted"
             ret.update({"comment": comt, "result": None})
             assert layman.absent(name) == ret

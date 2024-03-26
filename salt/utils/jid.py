@@ -27,11 +27,11 @@ def gen_jid(opts):
 
     jid_dt = _utc_now()
     if not opts.get("unique_jid", False):
-        return "{:%Y%m%d%H%M%S%f}".format(jid_dt)
+        return f"{jid_dt:%Y%m%d%H%M%S%f}"
     if LAST_JID_DATETIME and LAST_JID_DATETIME >= jid_dt:
         jid_dt = LAST_JID_DATETIME + datetime.timedelta(microseconds=1)
     LAST_JID_DATETIME = jid_dt
-    return "{:%Y%m%d%H%M%S%f}_{}".format(jid_dt, os.getpid())
+    return f"{jid_dt:%Y%m%d%H%M%S%f}_{os.getpid()}"
 
 
 def is_jid(jid):

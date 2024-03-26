@@ -57,19 +57,19 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
         if obj:
             # warn user that the data was updated and does not match
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "** please update the name: {} to equal the updated data name {}".format(
-                name, data["name"]
+            ret["comment"] = (
+                "** please update the name: {} to equal the updated data name {}".format(
+                    name, data["name"]
+                )
             )
             return ret
 
     if obj:
         if not ensure_data:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "infoblox record already created (supplied fields not ensured to match)"
+            ret["comment"] = (
+                "infoblox record already created (supplied fields not ensured to match)"
+            )
             return ret
 
         diff = __salt__["infoblox.diff_objects"](data, obj)

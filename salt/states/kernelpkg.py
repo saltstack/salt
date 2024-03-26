@@ -99,9 +99,9 @@ def latest_installed(name, **kwargs):  # pylint: disable=unused-argument
             result = __salt__["kernelpkg.upgrade"]()
             ret["result"] = True
             ret["changes"] = result["upgrades"]
-            ret[
-                "comment"
-            ] = "The latest kernel package has been installed, but not activated."
+            ret["comment"] = (
+                "The latest kernel package has been installed, but not activated."
+            )
 
     return ret
 

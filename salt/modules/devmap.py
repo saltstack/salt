@@ -30,7 +30,7 @@ def multipath_flush(device):
         salt '*' devmap.multipath_flush mpath1
     """
     if not os.path.exists(device):
-        return "{} does not exist".format(device)
+        return f"{device} does not exist"
 
-    cmd = "multipath -f {}".format(device)
+    cmd = f"multipath -f {device}"
     return __salt__["cmd.run"](cmd).splitlines()

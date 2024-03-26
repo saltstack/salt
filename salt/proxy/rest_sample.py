@@ -192,7 +192,6 @@ def fix_outage():
 
 
 def uptodate(name):
-
     """
     Call the REST endpoint to see if the packages on the "server" are up to date.
     """
@@ -205,7 +204,6 @@ def uptodate(name):
 
 
 def package_remove(name):
-
     """
     Remove a "package" on the REST server
     """

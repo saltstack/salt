@@ -4,7 +4,6 @@
     Test cases for salt.modules.dpkg
 """
 
-
 import logging
 import os
 

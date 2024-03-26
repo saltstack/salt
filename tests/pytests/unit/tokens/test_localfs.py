@@ -42,7 +42,7 @@ def test_write_token(tmp_path):
         tdata = salt.tokens.localfs.mk_token(opts, {})
     assert "token" in tdata
     t_path = os.path.join(str(tmp_path), tdata["token"])
-    temp_t_path = "{}.tmp".format(t_path)
+    temp_t_path = f"{t_path}.tmp"
     assert len(fopen.called_with) == 1, len(fopen.called_with)
     assert fopen.called_with == [((temp_t_path, "w+b"), {})], fopen.called_with
     assert len(rename.called_with) == 1, len(rename.called_with)

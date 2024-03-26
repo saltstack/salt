@@ -40,7 +40,6 @@ Module for Sending Messages via SMTP
 
 """
 
-
 import logging
 import os
 import socket
@@ -157,7 +156,7 @@ def send_msg(
             name = os.path.basename(f)
             with salt.utils.files.fopen(f, "rb") as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
-            att["Content-Disposition"] = 'attachment; filename="{}"'.format(name)
+            att["Content-Disposition"] = f'attachment; filename="{name}"'
             msg.attach(att)
 
     try:

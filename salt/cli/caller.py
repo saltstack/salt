@@ -75,7 +75,7 @@ class BaseCaller:
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get("fun", "")):
-                salt.utils.stringutils.print_cli("{}:\n{}\n".format(name, docs[name]))
+                salt.utils.stringutils.print_cli(f"{name}:\n{docs[name]}\n")
 
     def print_grains(self):
         """
@@ -130,7 +130,7 @@ class BaseCaller:
             salt.minion.get_proc_dir(self.opts["cachedir"]), ret["jid"]
         )
         if fun not in self.minion.functions:
-            docs = self.minion.functions["sys.doc"]("{}*".format(fun))
+            docs = self.minion.functions["sys.doc"](f"{fun}*")
             if docs:
                 docs[fun] = self.minion.functions.missing_fun_string(fun)
                 ret["out"] = "nested"
@@ -194,20 +194,16 @@ class BaseCaller:
                 executors = [executors]
             try:
                 for name in executors:
-                    fname = "{}.execute".format(name)
+                    fname = f"{name}.execute"
                     if fname not in self.minion.executors:
-                        raise SaltInvocationError(
-                            "Executor '{}' is not available".format(name)
-                        )
+                        raise SaltInvocationError(f"Executor '{name}' is not available")
                     ret["return"] = self.minion.executors[fname](
                         self.opts, data, func, args, kwargs
                     )
                     if ret["return"] is not None:
                         break
             except TypeError as exc:
-                sys.stderr.write(
-                    "\nPassed invalid arguments: {}.\n\nUsage:\n".format(exc)
-                )
+                sys.stderr.write(f"\nPassed invalid arguments: {exc}.\n\nUsage:\n")
                 salt.utils.stringutils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts["log_level"].lower(), logging.ERROR
@@ -235,7 +231,7 @@ class BaseCaller:
                     retcode = salt.defaults.exitcodes.EX_GENERIC
 
             ret["retcode"] = retcode
-        except (CommandExecutionError) as exc:
+        except CommandExecutionError as exc:
             msg = "Error running '{0}': {1}\n"
             active_level = LOG_LEVELS.get(self.opts["log_level"].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
@@ -272,7 +268,7 @@ class BaseCaller:
                 continue
             try:
                 ret["success"] = True
-                self.minion.returners["{}.returner".format(returner)](ret)
+                self.minion.returners[f"{returner}.returner"](ret)
             except Exception:  # pylint: disable=broad-except
                 pass
 

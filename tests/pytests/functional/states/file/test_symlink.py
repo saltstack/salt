@@ -20,7 +20,7 @@ def test_symlink(file, tmp_path):
         "name": str(symlink),
         "changes": {"new": str(symlink)},
         "result": True,
-        "comment": "Created new symlink {} -> {}".format(symlink, target),
+        "comment": f"Created new symlink {symlink} -> {target}",
     }
     assert ret.filtered == expected
     assert symlink.exists()

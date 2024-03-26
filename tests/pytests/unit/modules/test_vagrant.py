@@ -2,7 +2,6 @@
     TestCase for the salt.modules.vagrant module.
 """
 
-
 import pytest
 
 import salt.exceptions
@@ -59,7 +58,7 @@ def test_vagrant_init_positional(local_opts, tmp_path):
             different="very",
         )
         mock_sdb.assert_called_with(
-            "sdb://vagrant_sdb_data/onetest?{}".format(path_nowhere),
+            f"sdb://vagrant_sdb_data/onetest?{path_nowhere}",
             "test1",
             local_opts,
         )
@@ -138,7 +137,7 @@ def test_vagrant_destroy(local_opts, tmp_path):
             with patch.dict(vagrant.__utils__, {"sdb.sdb_get": mock_sdb_get}):
                 assert vagrant.destroy("test4")
                 mock_sdb.assert_any_call(
-                    "sdb://vagrant_sdb_data/macfour?{}".format(path_mydir),
+                    f"sdb://vagrant_sdb_data/macfour?{path_mydir}",
                     local_opts,
                 )
                 mock_sdb.assert_any_call("sdb://vagrant_sdb_data/test4", local_opts)

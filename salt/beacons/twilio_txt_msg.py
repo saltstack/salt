@@ -1,6 +1,7 @@
 """
 Beacon to emit Twilio text messages
 """
+
 import logging
 
 import salt.utils.beacons

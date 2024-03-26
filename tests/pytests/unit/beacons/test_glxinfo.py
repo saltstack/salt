@@ -4,6 +4,7 @@
 
     glxinfo beacon test cases
 """
+
 import pytest
 
 import salt.beacons.glxinfo as glxinfo

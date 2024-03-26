@@ -73,13 +73,13 @@ def get_modules():
     system_dir = "{}\\System32".format(os.environ.get("WINDIR", "C:\\Windows"))
     program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
     default_paths = [
-        "{}/.local/share/powershell/Modules".format(home_dir),
+        f"{home_dir}/.local/share/powershell/Modules",
         # Once version is available, these can be enabled
         # '/opt/microsoft/powershell/{0}/Modules'.format(ps_version),
         # '/usr/local/microsoft/powershell/{0}/Modules'.format(ps_version),
         "/usr/local/share/powershell/Modules",
-        "{}\\WindowsPowerShell\\v1.0\\Modules\\".format(system_dir),
-        "{}\\WindowsPowerShell\\Modules".format(program_files),
+        f"{system_dir}\\WindowsPowerShell\\v1.0\\Modules\\",
+        f"{program_files}\\WindowsPowerShell\\Modules",
     ]
     default_paths = ";".join(default_paths)
 

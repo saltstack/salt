@@ -128,7 +128,7 @@ def event_return(events):
         log.debug("Event data: %s", event["data"])
         message = "tag: {}\r\n".format(event["tag"])
         for key, value in event["data"].items():
-            message += "{}: {}\r\n".format(key, value)
+            message += f"{key}: {value}\r\n"
         result = post_message(channel, message, username, api_url, hook)
         if not result:
             is_ok = False
@@ -157,7 +157,7 @@ def post_message(channel, message, username, api_url, hook):
     result = salt.utils.mattermost.query(
         api_url=api_url,
         hook=hook,
-        data="payload={}".format(salt.utils.json.dumps(parameters)),
+        data=f"payload={salt.utils.json.dumps(parameters)}",
     )
 
     log.debug("result %s", result)

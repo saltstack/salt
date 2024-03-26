@@ -2,7 +2,6 @@
    Test cases for salt.states.kapacitor
 """
 
-
 import pytest
 
 import salt.states.kapacitor as kapacitor

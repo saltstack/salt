@@ -118,7 +118,7 @@ def test_add_quotes(pol_info):
         (None, "Not Defined"),
         (chr(0), "Disabled"),
         (chr(1), "Enabled"),
-        (chr(2), "Invalid Value: {!r}".format(chr(2))),
+        (chr(2), f"Invalid Value: {chr(2)!r}"),
         ("patrick", "Invalid Value"),
     ),
 )

@@ -167,7 +167,7 @@ class Counter:
         )
         if win32pdh.ValidatePath(path) == 0:
             return Counter(path, obj, instance, instance_index, counter)
-        raise CommandExecutionError("Invalid counter specified: {}".format(path))
+        raise CommandExecutionError(f"Invalid counter specified: {path}")
 
     build_counter = staticmethod(build_counter)
 

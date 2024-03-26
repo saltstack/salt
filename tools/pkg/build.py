@@ -1,6 +1,7 @@
 """
 These commands are used to build the salt onedir and system packages.
 """
+
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
@@ -144,13 +145,13 @@ def rpm(
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
     else:
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         if arch is None:
             ctx.error(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
         if not python_version:
             python_version = shared_constants["python_version"]
@@ -230,7 +231,7 @@ def macos(
         ctx.info(f"Extracting the onedir artifact to {build_root}")
         with tarfile.open(str(onedir_artifact)) as tarball:
             with ctx.chdir(onedir_artifact.parent):
-                tarball.extractall(path=build_root)
+                tarball.extractall(path=build_root)  # nosec
     else:
         ctx.info("Building package without an existing onedir")
 
@@ -360,7 +361,7 @@ def windows(
         unzip_dir = checkout / "pkg" / "windows"
         ctx.info(f"Unzipping the onedir artifact to {unzip_dir}")
         with zipfile.ZipFile(onedir_artifact, mode="r") as archive:
-            archive.extractall(unzip_dir)
+            archive.extractall(unzip_dir)  # nosec
 
         move_dir = unzip_dir / "salt"
         build_env = unzip_dir / "buildenv"

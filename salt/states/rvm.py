@@ -150,7 +150,7 @@ def _check_ruby(ret, ruby, user=None):
 
     for impl, version, default in __salt__["rvm.list"](runas=user):
         if impl != "ruby":
-            version = "{impl}-{version}".format(impl=impl, version=version)
+            version = f"{impl}-{version}"
         if not match_micro_version:
             version = micro_version_regex.sub("", version)
         if not match_version:
@@ -188,7 +188,7 @@ def installed(name, default=False, user=None, opts=None, env=None):
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     if __opts__["test"]:
-        ret["comment"] = "Ruby {} is set to be installed".format(name)
+        ret["comment"] = f"Ruby {name} is set to be installed"
         return ret
 
     ret = _check_rvm(ret, user)
@@ -241,7 +241,7 @@ def gemset_present(name, ruby="default", user=None):
     else:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Set to install gemset {}".format(name)
+            ret["comment"] = f"Set to install gemset {name}"
             return ret
         if __salt__["rvm.gemset_create"](ruby, name, runas=user):
             ret["result"] = True

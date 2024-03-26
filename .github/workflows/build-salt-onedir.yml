@@ -41,6 +41,8 @@ jobs:
   build-salt-linux:
     name: Linux
     if: ${{ inputs.self-hosted-runners }}
+    env:
+      USE_S3_CACHE: 'true'
     strategy:
       fail-fast: false
       matrix:

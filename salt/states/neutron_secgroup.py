@@ -34,7 +34,6 @@ Example States
         - project_name: Project1
 """
 
-
 __virtualname__ = "neutron_secgroup"
 
 

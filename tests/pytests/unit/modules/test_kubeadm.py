@@ -2,7 +2,6 @@
     Test cases for salt.modules.kubeadm
 """
 
-
 import pytest
 
 import salt.modules.kubeadm as kubeadm

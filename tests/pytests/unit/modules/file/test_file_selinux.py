@@ -118,7 +118,7 @@ def test_selinux_setcontext_persist_change(tfile2):
 def test_file_check_perms(tfile3):
     expected_result = (
         {
-            "comment": "The file {} is set to be changed".format(tfile3),
+            "comment": f"The file {tfile3} is set to be changed",
             "changes": {
                 "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
                 "mode": "0664",

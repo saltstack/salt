@@ -1,6 +1,7 @@
 """
 Unit tests for salt.auth.ldap
 """
+
 import pytest
 
 import salt.auth.ldap

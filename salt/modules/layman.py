@@ -48,7 +48,7 @@ def add(overlay):
     """
     ret = list()
     old_overlays = list_local()
-    cmd = "layman --quietness=0 --add {}".format(overlay)
+    cmd = f"layman --quietness=0 --add {overlay}"
     add_attempt = __salt__["cmd.run_all"](cmd, python_shell=False, stdin="y")
     if add_attempt["retcode"] != 0:
         raise salt.exceptions.CommandExecutionError(add_attempt["stdout"])
@@ -82,7 +82,7 @@ def delete(overlay):
     """
     ret = list()
     old_overlays = list_local()
-    cmd = "layman --quietness=0 --delete {}".format(overlay)
+    cmd = f"layman --quietness=0 --delete {overlay}"
     delete_attempt = __salt__["cmd.run_all"](cmd, python_shell=False)
     if delete_attempt["retcode"] != 0:
         raise salt.exceptions.CommandExecutionError(delete_attempt["stdout"])
@@ -114,7 +114,7 @@ def sync(overlay="ALL"):
 
         salt '*' layman.sync
     """
-    cmd = "layman --quietness=0 --sync {}".format(overlay)
+    cmd = f"layman --quietness=0 --sync {overlay}"
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 

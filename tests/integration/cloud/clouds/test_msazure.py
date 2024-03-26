@@ -44,7 +44,7 @@ def __has_required_azure():
 )
 @pytest.mark.skipif(
     not __has_required_azure(),
-    reason="The Azure Python SDK must be >= {}.".format(REQUIRED_AZURE),
+    reason=f"The Azure Python SDK must be >= {REQUIRED_AZURE}.",
 )
 class AzureTest(CloudTest):
     """
@@ -59,8 +59,6 @@ class AzureTest(CloudTest):
         Test creating an instance on Azure
         """
         # check if instance with salt installed returned
-        ret_val = self.run_cloud(
-            "-p azure-test {}".format(self.instance_name), timeout=TIMEOUT
-        )
+        ret_val = self.run_cloud(f"-p azure-test {self.instance_name}", timeout=TIMEOUT)
         self.assertInstanceExists(ret_val)
         self.assertDestroyInstance(timeout=TIMEOUT)

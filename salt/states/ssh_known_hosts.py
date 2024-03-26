@@ -148,18 +148,18 @@ def present(
             )
         except CommandNotFoundError as err:
             ret["result"] = False
-            ret["comment"] = "ssh.check_known_host error: {}".format(err)
+            ret["comment"] = f"ssh.check_known_host error: {err}"
             return ret
 
         if result == "exists":
-            comment = "Host {} is already in {}".format(name, config)
+            comment = f"Host {name} is already in {config}"
             ret["result"] = True
             return dict(ret, comment=comment)
         elif result == "add":
-            comment = "Key for {} is set to be added to {}".format(name, config)
+            comment = f"Key for {name} is set to be added to {config}"
             return dict(ret, comment=comment)
         else:  # 'update'
-            comment = "Key for {} is set to be updated in {}".format(name, config)
+            comment = f"Key for {name} is set to be updated in {config}"
             return dict(ret, comment=comment)
 
     result = __salt__["ssh.set_known_host"](
@@ -175,7 +175,7 @@ def present(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if result["status"] == "exists":
-        return dict(ret, comment="{} already exists in {}".format(name, config))
+        return dict(ret, comment=f"{name} already exists in {config}")
     elif result["status"] == "error":
         return dict(ret, result=False, comment=result["error"])
     else:  # 'updated'
@@ -184,7 +184,7 @@ def present(
             return dict(
                 ret,
                 changes={"old": result["old"], "new": result["new"]},
-                comment="{}'s key saved to {} (key: {})".format(name, config, new_key),
+                comment=f"{name}'s key saved to {config} (key: {new_key})",
             )
         else:
             fingerprint = result["new"][0]["fingerprint"]
@@ -235,7 +235,7 @@ def absent(name, user=None, config=None):
         return dict(ret, comment="Host is already absent")
 
     if __opts__["test"]:
-        comment = "Key for {} is set to be removed from {}".format(name, config)
+        comment = f"Key for {name} is set to be removed from {config}"
         ret["result"] = None
         return dict(ret, comment=comment)
 

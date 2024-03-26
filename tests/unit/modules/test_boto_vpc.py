@@ -5,15 +5,12 @@ import os.path
 import random
 import string
 
-import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 import pytest
-from pkg_resources import (  # pylint: disable=3rd-party-module-not-gated
-    DistributionNotFound,
-)
 
 import salt.config
 import salt.loader
 import salt.modules.boto_vpc as boto_vpc
+from salt._compat import importlib_metadata
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.utils.versions import Version
@@ -117,8 +114,8 @@ def _get_moto_version():
         return Version(str(moto.__version__))
     except AttributeError:
         try:
-            return Version(pkg_resources.get_distribution("moto").version)
-        except DistributionNotFound:
+            return Version(importlib_metadata.version("moto"))
+        except importlib_metadata.PackageNotFoundError:
             return False
 
 
@@ -708,7 +705,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1262,7 +1259,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2223,7 +2220,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @pytest.mark.skipif(
     _has_required_moto() is False,
-    reason="The moto version must be >= to version {}".format(required_moto_version),
+    reason=f"The moto version must be >= to version {required_moto_version}",
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2239,7 +2236,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 name="my_peering",
                 requester_vpc_id=my_vpc.id,
                 peer_vpc_id=other_vpc.id,
-                **conn_parameters
+                **conn_parameters,
             )
         )
 
@@ -2256,7 +2253,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             requester_vpc_id=my_vpc.id,
             peer_vpc_id=other_vpc.id,
             peer_region="test_region",
-            **conn_parameters
+            **conn_parameters,
         )
 
     @mock_ec2_deprecated
@@ -2272,14 +2269,14 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 requester_vpc_id=my_vpc.id,
                 requester_vpc_name="foobar",
                 peer_vpc_id=other_vpc.id,
-                **conn_parameters
+                **conn_parameters,
             )
 
         boto_vpc.request_vpc_peering_connection(
             name="my_peering",
             requester_vpc_name="my_peering",
             peer_vpc_id=other_vpc.id,
-            **conn_parameters
+            **conn_parameters,
         )
 
 

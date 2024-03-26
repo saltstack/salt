@@ -1,6 +1,7 @@
 """
 Test utility methods that the idem module and state share
 """
+
 from contextlib import contextmanager
 
 import pytest

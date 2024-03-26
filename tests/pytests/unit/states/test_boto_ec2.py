@@ -27,16 +27,16 @@ def test_key_present():
     with patch.dict(
         boto_ec2.__salt__, {"boto_ec2.get_key": mock, "cp.get_file_str": mock_bool}
     ):
-        comt = "The key name {} already exists".format(name)
+        comt = f"The key name {name} already exists"
         ret.update({"comment": comt})
         assert boto_ec2.key_present(name) == ret
 
-        comt = "File {} not found.".format(upublic)
+        comt = f"File {upublic} not found."
         ret.update({"comment": comt, "result": False})
         assert boto_ec2.key_present(name, upload_public=upublic) == ret
 
         with patch.dict(boto_ec2.__opts__, {"test": True}):
-            comt = "The key {} is set to be created.".format(name)
+            comt = f"The key {name} is set to be created."
             ret.update({"comment": comt, "result": None})
             assert boto_ec2.key_present(name, upload_public=upublic) == ret
 
@@ -51,11 +51,11 @@ def test_key_absent():
 
     mock = MagicMock(side_effect=[False, True])
     with patch.dict(boto_ec2.__salt__, {"boto_ec2.get_key": mock}):
-        comt = "The key name {} does not exist".format(name)
+        comt = f"The key name {name} does not exist"
         ret.update({"comment": comt})
         assert boto_ec2.key_absent(name) == ret
 
         with patch.dict(boto_ec2.__opts__, {"test": True}):
-            comt = "The key {} is set to be deleted.".format(name)
+            comt = f"The key {name} is set to be deleted."
             ret.update({"comment": comt, "result": None})
             assert boto_ec2.key_absent(name) == ret

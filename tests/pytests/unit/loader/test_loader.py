@@ -4,6 +4,7 @@ tests.pytests.unit.loader.test_loader
 
 Unit tests for salt's loader
 """
+
 import os
 import shutil
 import textwrap
