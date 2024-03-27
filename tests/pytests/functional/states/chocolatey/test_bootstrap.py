@@ -28,8 +28,10 @@ def clean(chocolatey_mod):
     except CommandExecutionError:
         chocolatey_version = None
     assert chocolatey_version is None
-    yield
-    chocolatey_mod.unbootstrap()
+    try:
+        yield
+    finally:
+        chocolatey_mod.unbootstrap()
 
 
 @pytest.fixture()
@@ -40,8 +42,10 @@ def installed(chocolatey_mod):
     except CommandExecutionError:
         chocolatey_version = None
     assert chocolatey_version is not None
-    yield
-    chocolatey_mod.unbootstrap()
+    try:
+        yield
+    finally:
+        chocolatey_mod.unbootstrap()
 
 
 def test_bootstrapped(chocolatey, chocolatey_mod, clean):
