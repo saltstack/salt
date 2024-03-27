@@ -626,7 +626,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"{path}\n")
         wfh.write("</pre>\n</details>\n")
 
-    ctx.info("Writing 'testrun' to the github outputs file")
+    ctx.info("Writing 'testrun' to the github outputs file:\n", testrun)
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"testrun={json.dumps(testrun)}\n")
 
