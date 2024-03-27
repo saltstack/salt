@@ -472,7 +472,7 @@ class GitProvider:
                 "/", "_"
             )  # replace "/" with "_" to not cause trouble with file system
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
-        self._cache_basename = "_"
+        self._cache_basename = ""
         if self.id.startswith("__env__"):
             try:
                 self._cache_basename = self.get_checkout_target()
