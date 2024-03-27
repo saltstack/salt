@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from salt.exceptions import CommandExecutionError
@@ -8,6 +10,8 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -22,26 +26,53 @@ def chocolatey_mod(modules):
 
 @pytest.fixture()
 def clean(chocolatey_mod):
-    chocolatey_mod.unbootstrap()
+    try:
+        # If chocolatey is not installed, this will throw an error
+        chocolatey_mod.chocolatey_version(refresh=True)
+        # If we get this far, chocolatey is installed... let's uninstall
+        chocolatey_mod.unbootstrap()
+    except CommandExecutionError:
+        pass
+
+    # Try to get the new version, should throw an error
     try:
         chocolatey_version = chocolatey_mod.chocolatey_version(refresh=True)
     except CommandExecutionError:
         chocolatey_version = None
+
+    # Assert the chocolatey is not installed
     assert chocolatey_version is None
-    yield
-    chocolatey_mod.unbootstrap()
+    try:
+        yield
+    finally:
+        try:
+            # If chocolatey is not installed, this will throw an error
+            chocolatey_mod.chocolatey_version(refresh=True)
+            # If we get this far, chocolatey is installed... let's uninstall
+            chocolatey_mod.unbootstrap()
+        except CommandExecutionError:
+            pass
 
 
 @pytest.fixture()
 def installed(chocolatey_mod):
-    chocolatey_mod.bootstrap(force=True)
+    result = chocolatey_mod.bootstrap(force=True)
+    log.debug("CHOCO: chocolatey install output\n%s", result)
     try:
         chocolatey_version = chocolatey_mod.chocolatey_version(refresh=True)
     except CommandExecutionError:
         chocolatey_version = None
     assert chocolatey_version is not None
-    yield
-    chocolatey_mod.unbootstrap()
+    try:
+        yield
+    finally:
+        try:
+            # If chocolatey is not installed, this will throw an error
+            chocolatey_mod.chocolatey_version(refresh=True)
+            # If we get this far, chocolatey is installed... let's uninstall
+            chocolatey_mod.unbootstrap()
+        except CommandExecutionError:
+            pass
 
 
 def test_bootstrapped(chocolatey, chocolatey_mod, clean):
