@@ -290,10 +290,6 @@ jobs:
         run: |
           tools ci define-testrun ${{ github.event_name }} changed-files.json
 
-      - name: Check Defined Test Run
-        run: |
-          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
-
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
         run: |
