@@ -246,14 +246,10 @@ jobs:
         run: |
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
 
-      - name: Define Jobs
+      - name: Define Jobs To Run
         id: define-jobs
         run: |
           tools ci define-jobs${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Jobs
-        run: |
-          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Get Salt Releases
         id: get-salt-releases
