@@ -237,10 +237,6 @@ jobs:
         run: |
           tools ci runner-types ${{ github.event_name }}
 
-      - name: Check Defined Runners
-        run: |
-          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
-
       - name: Define Jobs To Run
         id: define-jobs
         run: |
