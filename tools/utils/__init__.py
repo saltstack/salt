@@ -1,22 +1,17 @@
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
-import fnmatch
 import hashlib
 import json
 import os
 import pathlib
 import shutil
 import sys
-import tempfile
-import zipfile
-from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from functools import cache
 
-import boto3
 import packaging.version
-from botocore.exceptions import ClientError
+import yaml
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -284,3 +279,23 @@ def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
         else:
             arch = "x86_64"
     return platform, arch
+
+
+@cache
+def get_cicd_shared_context():
+    """
+    Return the CI/CD shared context file contents.
+    """
+    shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    return yaml.safe_load(shared_context_file.read_text())
+
+
+@cache
+def get_golden_images():
+    """
+    Return the golden images information stored on file.
+    """
+    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+        "r", encoding="utf-8"
+    ) as rfh:
+        return json.load(rfh)
