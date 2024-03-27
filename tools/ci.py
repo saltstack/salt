@@ -202,7 +202,7 @@ def runner_types(ctx: Context, event_name: str):
             # If this is a pull request coming from the same repository, don't run anything
             ctx.info("Pull request is coming from the same repository.")
             ctx.info("Not running any jobs since they will run against the branch")
-            ctx.info("Writing 'runners' to the github outputs file")
+            ctx.info("Writing 'runners' to the github outputs file:\n", runners)
             with open(github_output, "a", encoding="utf-8") as wfh:
                 wfh.write(f"runners={json.dumps(runners)}\n")
             ctx.exit(0)
@@ -210,7 +210,7 @@ def runner_types(ctx: Context, event_name: str):
         # This is a PR from a forked repository
         ctx.info("Pull request is not comming from the same repository")
         runners["github-hosted"] = runners["self-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file")
+        ctx.info("Writing 'runners' to the github outputs file:\n", runners)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
@@ -224,7 +224,7 @@ def runner_types(ctx: Context, event_name: str):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
         runners["github-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file")
+        ctx.info("Writing 'runners' to the github outputs file:\n", runners)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
@@ -232,7 +232,7 @@ def runner_types(ctx: Context, event_name: str):
     # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
-    ctx.info("Writing 'runners' to the github outputs file")
+    ctx.info("Writing 'runners' to the github outputs file:\n", runners)
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"runners={json.dumps(runners)}")
     ctx.exit(0)
