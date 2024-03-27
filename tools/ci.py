@@ -949,17 +949,38 @@ def get_pr_test_labels(
         pr = gh_event["pull_request"]["number"]
         labels = _get_pr_test_labels_from_event_payload(gh_event)
 
-    os_labels = []
+    shared_context = tools.utils.get_cicd_shared_context()
+    mandatory_os_slugs = set(shared_context["mandatory_os_slugs"])
+    available = set(tools.utils.get_golden_images())
+    # Add MacOS provided by GitHub
+    available.update({"macos-12", "macos-13", "macos-13-arm64"})
+    # Remove mandatory OS'ss
+    available.difference_update(mandatory_os_slugs)
+    select_all = set(available)
+    selected = set()
     test_labels = []
     if labels:
         ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
         for name, description in sorted(labels):
             ctx.info(f" * [yellow]{name}[/yellow]: {description}")
-            test_labels.append(name)
             if name.startswith("test:os:"):
-                os_labels.append(name.split("test:os:", 1)[-1])
+                slug = name.split("test:os:", 1)[-1]
+                if slug not in available and name != "test:os:all":
+                    ctx.warn(
+                        f"The '{slug}' slug exists as a label but not as an available OS."
+                    )
+                selected.add(slug)
+                if slug != "all":
+                    available.remove(slug)
+                continue
+            test_labels.append(name)
+
     else:
         ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    if "all" in selected:
+        selected = select_all
+        available.clear()
 
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
@@ -970,14 +991,42 @@ def get_pr_test_labels(
 
     ctx.info("Writing 'labels' to the github outputs file...")
     ctx.info("Test Labels:")
-    for label in sorted(test_labels):
-        ctx.info(f" * [yellow]{label}[/yellow]")
+    if not test_labels:
+        ctx.info(" * None")
+    else:
+        for label in sorted(test_labels):
+            ctx.info(f" * [yellow]{label}[/yellow]")
     ctx.info("* OS Labels:")
-    for slug in sorted(selected):
-        ctx.info(f" * [yellow]{slug}[/yellow]")
+    if not selected:
+        ctx.info(" * None")
+    else:
+        for slug in sorted(selected):
+            ctx.info(f" * [yellow]{slug}[/yellow]")
     with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"os-labels={json.dumps([label for label in os_labels])}\n")
+        wfh.write(f"os-labels={json.dumps([label for label in selected])}\n")
         wfh.write(f"test-labels={json.dumps([label for label in test_labels])}\n")
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is not None:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Mandatory OS Test Runs:\n")
+            for slug in sorted(mandatory_os_slugs):
+                wfh.write(f"* `{slug}`\n")
+
+            wfh.write("\nOptional OS Test Runs(selected by label):\n")
+            if not selected:
+                wfh.write("* None\n")
+            else:
+                for slug in sorted(selected):
+                    wfh.write(f"* `{slug}`\n")
+
+            wfh.write("\nSkipped OS Tests Runs(NOT selected by label):\n")
+            if not available:
+                wfh.write("* None\n")
+            else:
+                for slug in sorted(available):
+                    wfh.write(f"* `{slug}`\n")
+
     ctx.exit(0)
 
 
