@@ -11,7 +11,7 @@ import shutil
 from typing import TYPE_CHECKING, cast
 
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -292,6 +292,7 @@ def generate_workflows(ctx: Context):
             "jinja2.ext.do",
         ],
         loader=FileSystemLoader(str(TEMPLATES)),
+        undefined=StrictUndefined,
     )
     for workflow_name, details in workflows.items():
         if TYPE_CHECKING:
