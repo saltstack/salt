@@ -30,10 +30,11 @@ cryptography>=42.0.0
 rpm-vercmp; sys_platform == 'linux'
 
 # From old windows.txt requirements file
-pywin32>=305; sys_platform == 'win32'
-wmi>=1.5.1; sys_platform == 'win32'
-pythonnet>=3.0.1; sys_platform == 'win32'
+gitpython>=3.1.37; sys_platform == 'win32'
+lxml>=4.6.3; sys_platform == 'win32'
 pymssql>=2.2.1; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
-lxml>=4.6.3; sys_platform == 'win32'
+pythonnet>=3.0.1; sys_platform == 'win32'
+pywin32>=305; sys_platform == 'win32'
+wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'

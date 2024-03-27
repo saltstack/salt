@@ -51,11 +51,14 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
     $filename = Split-Path $local_file -leaf
     if ( Test-Path -Path $local_file ) {
         Write-Host "Verifying hash for $filename`: " -NoNewline
-        if ( (Get-FileHash $local_file).Hash -eq $SHA256 ) {
+        $hash = (Get-FileHash $local_file).Hash
+        if ( $hash -eq $SHA256 ) {
             Write-Result "Verified" -ForegroundColor Green
             return
         } else {
             Write-Result "Failed Hash" -ForegroundColor Red
+            Write-Host "Found Hash: $hash"
+            Write-Host "Expected Hash: $SHA256"
             Remove-Item -Path $local_file -Force
         }
     }
@@ -161,10 +164,8 @@ if ( ! "$env:WIX" ) {
 #-------------------------------------------------------------------------------
 
 $RUNTIMES = @(
-    ("Microsoft_VC120_CRT_x64.msm", "64", "15FD10A495287505184B8913DF8D6A9CA461F44F78BC74115A0C14A5EDD1C9A7"),
-    ("Microsoft_VC120_CRT_x86.msm", "32", "26340B393F52888B908AC3E67B935A80D390E1728A31FF38EBCEC01117EB2579"),
-    ("Microsoft_VC140_CRT_x64.msm", "64", "E1344D5943FB2BBB7A56470ED0B7E2B9B212CD9210D3CC6FA82BC3DA8F11EDA8"),
-    ("Microsoft_VC140_CRT_x86.msm", "32", "0D36CFE6E9ABD7F530DBAA4A83841CDBEF9B2ADCB625614AF18208FDCD6B92A4")
+    ("Microsoft_VC143_CRT_x64.msm", "64", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
+    ("Microsoft_VC143_CRT_x86.msm", "32", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
 )
 $RUNTIMES | ForEach-Object {
     $name, $arch, $hash = $_
