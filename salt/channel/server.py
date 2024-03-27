@@ -1074,7 +1074,7 @@ class MasterPubServerChannel:
                 if m_digest != digest:
                     log.error("Invalid aes signature from peer: %s", peer)
                     return
-                log.error("Received new key from peer %s", peer)
+                log.info("Received new key from peer %s", peer)
                 if peer in self.peer_keys:
                     if self.peer_keys[peer] != key_str:
                         self.peer_keys[peer] = key_str
