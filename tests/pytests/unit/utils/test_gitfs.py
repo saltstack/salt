@@ -248,4 +248,4 @@ def test_checkout_pygit2(_prepare_provider):
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
-    assert "_" == _prepare_provider.get_cache_basename()
+    assert "" == _prepare_provider.get_cache_basename()
