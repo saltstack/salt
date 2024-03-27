@@ -5,12 +5,10 @@ These commands are used for our GitHub Actions workflows.
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 from typing import TYPE_CHECKING, cast
 
-import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
@@ -20,10 +18,6 @@ log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-    "r", encoding="utf-8"
-) as rfh:
-    AMIS = json.load(rfh)
 
 
 # Define the command group
@@ -216,7 +210,7 @@ def generate_workflows(ctx: Context):
         "opensuse-15",
         "windows",
     )
-    for slug in sorted(AMIS):
+    for slug in sorted(tools.utils.get_golden_images()):
         if slug.startswith(linux_skip_pkg_download_tests):
             continue
         if "arm64" in slug:
@@ -251,7 +245,7 @@ def generate_workflows(ctx: Context):
         "photon": [],
         "redhat": [],
     }
-    for slug in sorted(AMIS):
+    for slug in sorted(tools.utils.get_golden_images()):
         if slug.endswith("-arm64"):
             continue
         if not slug.startswith(
@@ -274,7 +268,7 @@ def generate_workflows(ctx: Context):
                 build_rpms_listing.append((distro, release, arch))
 
     build_debs_listing = []
-    for slug in sorted(AMIS):
+    for slug in sorted(tools.utils.get_golden_images()):
         if not slug.startswith(("debian-", "ubuntu-")):
             continue
         if slug.endswith("-arm64"):
@@ -335,10 +329,7 @@ def generate_workflows(ctx: Context):
                 "windows-2022",
             ),
         }
-        shared_context_file = (
-            tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
-        )
-        shared_context = yaml.safe_load(shared_context_file.read_text())
+        shared_context = tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
             context[key] = value
         loaded_template = env.get_template(template_path.name)
