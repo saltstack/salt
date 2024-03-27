@@ -311,6 +311,11 @@ def define_jobs(
 
     if event_name != "pull_request":
         # In this case, all defined jobs should run
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Selected Jobs:\n")
+            for name, value in sorted(jobs.items()):
+                wfh.write(f" - `{name}`: {value}\n")
+
         ctx.info("Writing 'jobs' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"jobs={json.dumps(jobs)}\n")
@@ -422,7 +427,7 @@ def define_jobs(
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
         wfh.write("Selected Jobs:\n")
         for name, value in sorted(jobs.items()):
-            wfh.write(f" - {name}: {value}\n")
+            wfh.write(f" - `{name}`: {value}\n")
 
     ctx.info("Writing 'jobs' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:

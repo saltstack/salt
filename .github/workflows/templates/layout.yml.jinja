@@ -264,16 +264,12 @@ jobs:
         run: |
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
 
-      - name: Define Jobs
+      - name: Define Jobs To Run
         id: define-jobs
         run: |
           tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
             prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
           }> ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Jobs
-        run: |
-          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Get Salt Releases
         id: get-salt-releases
