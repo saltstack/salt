@@ -251,7 +251,7 @@ def _assert_saltutil_runner_pillar(ret, salt_minion_id):
 
 @pytest.mark.skip_if_binaries_missing("gpg")
 @pytest.mark.usefixtures("pillar_setup", "gpg_homedir")
-def test_gpg_pillar_orch(salt_ssh_cli, salt_run_cli, gpg_homedir):
+def test_gpg_pillar_orch(salt_ssh_cli, salt_run_cli):
     """
     Ensure that GPG-encrypted pillars can be decrypted when Salt-SSH is
     called during an orchestration or via saltutil.cmd.
@@ -265,7 +265,6 @@ def test_gpg_pillar_orch(salt_ssh_cli, salt_run_cli, gpg_homedir):
         salt_ssh_cli.target_host,
         "pillar.items",
         ssh=True,
-        ignore_host_keys=True,
         roster_file=str(salt_ssh_cli.roster_file),
         ssh_priv=str(salt_ssh_cli.client_key),
     )
@@ -290,7 +289,6 @@ def test_saltutil_runner_orch(salt_ssh_cli, salt_run_cli, salt_minion):
         salt_ssh_cli.target_host,
         "pillar.items",
         ssh=True,
-        ignore_host_keys=True,
         roster_file=str(salt_ssh_cli.roster_file),
         ssh_priv=str(salt_ssh_cli.client_key),
     )

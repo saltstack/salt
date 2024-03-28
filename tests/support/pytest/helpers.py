@@ -8,6 +8,7 @@
 import logging
 import os
 import pathlib
+import pprint
 import shutil
 import subprocess
 import tempfile
@@ -18,6 +19,7 @@ import warnings
 from contextlib import contextmanager
 
 import attr
+import psutil
 import pytest
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
@@ -816,6 +818,61 @@ def change_cwd(path):
     finally:
         # Restore Old CWD
         os.chdir(old_cwd)
+
+
+@contextmanager
+def reap_stray_processes(pid: int = os.getpid()):
+
+    try:
+        pre_children = psutil.Process(pid).children(recursive=True)
+        # Do stuff
+        yield
+    finally:
+        post_children = psutil.Process(pid).children(recursive=True)
+
+    children = []
+    for process in post_children:
+        if process in pre_children:
+            # Process existed before entering the context
+            continue
+        if not psutil.pid_exists(process.pid):
+            # Process just died
+            continue
+        # This process is alive and was not running before entering the context
+        children.append(process)
+
+    if not children:
+        log.info("No astray processes found")
+        return
+
+    def on_terminate(proc):
+        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            "Test suite left %d astray processes running. Killing those processes:\n%s",
+            len(children),
+            pprint.pformat(children),
+        )
+
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                continue
+
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                log.warning(
+                    "Process %s survived SIGKILL, giving up:\n%s",
+                    child,
+                    pprint.pformat(child.as_dict()),
+                )
 
 
 # Only allow star importing the functions defined in this module
