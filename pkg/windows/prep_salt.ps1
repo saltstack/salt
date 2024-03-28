@@ -62,7 +62,6 @@ if ( $BuildDir ) {
 } else {
     $BUILD_DIR = "$SCRIPT_DIR\buildenv"
 }
-$PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
@@ -126,17 +125,6 @@ if ( Test-Path -Path $BUILD_CONF_DIR) {
     }
 }
 
-if ( Test-Path -Path $PREREQ_DIR ) {
-    Write-Host "Removing PreReq Directory: " -NoNewline
-    Remove-Item -Path $PREREQ_DIR -Recurse -Force
-    if ( ! (Test-Path -Path $PREREQ_DIR) ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
 #-------------------------------------------------------------------------------
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
@@ -181,18 +169,6 @@ $scripts | ForEach-Object {
             exit 1
         }
     }
-}
-
-# Copy VCRedist 2022 to the prereqs directory
-New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-Write-Host "Copying VCRedist 2022 $ARCH_X to prereqs: " -NoNewline
-$file = "vcredist_$ARCH_X`_2022.exe"
-Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
-if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
 }
 
 #-------------------------------------------------------------------------------
