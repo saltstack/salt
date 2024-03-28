@@ -12,6 +12,7 @@ import sys
 import distro
 
 from salt.utils.decorators import memoize as real_memoize
+from salt.utils.files import fopen as _fopen
 
 
 def linux_distribution(full_distribution_name=True):
@@ -239,3 +240,18 @@ def spawning_platform():
     Salt, however, will force macOS to spawning by default on all python versions
     """
     return multiprocessing.get_start_method(allow_none=False) == "spawn"
+
+
+def get_machine_identifier():
+    """
+    Provide the machine-id for machine/virtualization combination
+    """
+    # Provides:
+    #   machine-id
+    locations = ["/etc/machine-id", "/var/lib/dbus/machine-id"]
+    existing_locations = [loc for loc in locations if os.path.exists(loc)]
+    if not existing_locations:
+        return {}
+    else:
+        with _fopen(existing_locations[0]) as machineid:
+            return {"machine_id": machineid.read().strip()}

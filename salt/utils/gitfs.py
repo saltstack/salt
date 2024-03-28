@@ -41,6 +41,7 @@ from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.process import os_is_running as pid_exists
 from salt.utils.versions import Version
 
@@ -249,7 +250,7 @@ class GitProvider:
             return str(y)
 
         # get machine_identifier
-        self.mach_id = salt.utils.files.get_machine_identifier().get(
+        self.mach_id = _get_machine_identifier().get(
             "machine_id", "no_machine_id_available"
         )
 
