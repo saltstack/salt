@@ -1099,8 +1099,9 @@ class SignalHandlingProcess(Process):
                                 os.getpid(),
                             )
 
-                # need to go through and clean up any resources left around like lock files if using gitfs
-                # example lockfile /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
+                # need to clean up any resources left around like lock files if using gitfs
+                # example: lockfile i
+                # /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
                 cache_dir = self.opts.get("cachedir", None)
                 gitfs_active = self.opts.get("gitfs_remotes", None)
                 if cache_dir and gitfs_active:
@@ -1131,7 +1132,7 @@ class SignalHandlingProcess(Process):
                                             ).rstrip()
                                         )
                                     except ValueError:
-                                        # Lock file is empty, set mach_id to 0 so it evaluates as False.
+                                        # Lock file is empty, set mach_id to 0 so it evaluates False.
                                         file_mach_id = 0
 
                             if cur_pid == file_pid:
@@ -1163,7 +1164,11 @@ class SignalHandlingProcess(Process):
                             except OSError as exc:
                                 if exc.errno == errno.ENOENT:
                                     # No lock file present
-                                    msg = f"SIGTERM clean up of resources attempted to remove lock file {file_name}, pid '{file_pid}', machine identifier '{mach_id}' but it did not exist, exception : {exc} "
+                                    msg = (
+                                        "SIGTERM clean up of resources attempted to remove lock "
+                                        f"file {file_name}, pid '{file_pid}', machine identifier "
+                                        f"'{mach_id}' but it did not exist, exception : {exc} "
+                                    )
                                     log.debug(msg)
 
                                 elif exc.errno == errno.EISDIR:
@@ -1173,13 +1178,25 @@ class SignalHandlingProcess(Process):
                                     try:
                                         shutil.rmtree(file_name)
                                     except OSError as exc:
-                                        msg = f"SIGTERM clean up of resources, lock file '{file_name}', pid '{file_pid}', machine identifier '{file_mach_id}' was a directory, removed directory, exception : '{exc}'"
+                                        msg = (
+                                            f"SIGTERM clean up of resources, lock file '{file_name}'"
+                                            f", pid '{file_pid}', machine identifier '{file_mach_id}'"
+                                            f"was a directory, removed directory, exception : '{exc}'"
+                                        )
                                         log.debug(msg)
                                 else:
-                                    msg = f"SIGTERM clean up of resources, unable to remove lock file '{file_name}', pid '{file_pid}', machine identifier '{file_mach_id}', exception : '{exc}'"
+                                    msg = (
+                                        "SIGTERM clean up of resources, unable to remove lock file "
+                                        f"'{file_name}', pid '{file_pid}', machine identifier "
+                                        f"'{file_mach_id}', exception : '{exc}'"
+                                    )
                                     log.debug(msg)
                             else:
-                                msg = f"SIGTERM clean up of resources, removed lock file '{file_name}', pid '{file_pid}', machine identifier '{file_mach_id}'"
+                                msg = (
+                                    "SIGTERM clean up of resources, removed lock file "
+                                    f"'{file_name}', pid '{file_pid}', machine identifier "
+                                    f"'{file_mach_id}'"
+                                )
                                 log.debug(msg)
 
             except psutil.NoSuchProcess:

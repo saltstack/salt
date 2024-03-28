@@ -387,7 +387,10 @@ def test_git_provider_mp_gen_lock(main_class, caplog):
     test_msg1 = (
         f"Set update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
     )
-    test_msg2 = "Attempting to remove 'update' lock for 'gitfs' remote 'file://repo1.git' due to lock_set1 'True' or lock_set2"
+    test_msg2 = (
+        "Attempting to remove 'update' lock for 'gitfs' remote 'file://repo1.git' "
+        "due to lock_set1 'True' or lock_set2"
+    )
     test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
 
     provider = main_class.remotes[0]
