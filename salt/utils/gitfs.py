@@ -756,7 +756,10 @@ class GitProvider:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # No lock file present
-                msg = f"Attempt to remove lock {self.url} for file ({lock_file}) which does not exist, exception : {exc} "
+                msg = (
+                    f"Attempt to remove lock {self.url} for file ({lock_file}) "
+                    f"which does not exist, exception : {exc} "
+                )
                 log.debug(msg)
 
             elif exc.errno == errno.EISDIR:
@@ -770,7 +773,10 @@ class GitProvider:
             else:
                 _add_error(failed, exc)
         else:
-            msg = f"Removed {lock_type} lock for {self.role} remote '{self.id}' on machine_id '{self.mach_id}'"
+            msg = (
+                f"Removed {lock_type} lock for {self.role} remote '{self.id}' "
+                f"on machine_id '{self.mach_id}'"
+            )
             log.debug(msg)
             success.append(msg)
         return success, failed
@@ -975,8 +981,9 @@ class GitProvider:
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
                     msg = (
-                        f"{global_lock_key} is enabled and {lock_type} lockfile {lock_file} is present for "
-                        f"{self.role} remote '{self.id}' on machine_id {self.mach_id} with pid '{pid}'."
+                        f"{global_lock_key} is enabled and {lock_type} lockfile {lock_file} "
+                        f"is present for {self.role} remote '{self.id}' on machine_id "
+                        f"{self.mach_id} with pid '{pid}'."
                     )
                     if pid:
                         msg += f" Process {pid} obtained the lock"
@@ -1043,7 +1050,10 @@ class GitProvider:
                         raise
                     return
             else:
-                msg = f"Unable to set {lock_type} lock for {self.id} ({self._get_lock_file(lock_type)}) on machine_id {self.mach_id}: {exc}"
+                msg = (
+                    f"Unable to set {lock_type} lock for {self.id} "
+                    f"({self._get_lock_file(lock_type)}) on machine_id {self.mach_id}: {exc}"
+                )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
 
