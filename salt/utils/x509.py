@@ -1051,7 +1051,9 @@ def load_file_or_bytes(fob):
         with salt.utils.files.fopen(fob, "rb") as f:
             fob = f.read()
     if isinstance(fob, str):
-        if PEM_BEGIN.decode() in fob:
+        if fob.startswith("b64:"):
+            fob = base64.b64decode(fob[4:])
+        elif PEM_BEGIN.decode() in fob:
             fob = fob.encode()
         else:
             try:
