@@ -43,7 +43,10 @@ def test_obfuscate_with_kwargs(pillar_value):
     ) as pillar_items_mock:
         ret = pillarmod.obfuscate(saltenv="saltenv")
         # ensure the kwargs are passed along to pillar.items
-        assert call(saltenv="saltenv") in pillar_items_mock.mock_calls
+        assert (
+            call(pillar=None, pillar_enc=None, pillarenv=None, saltenv="saltenv")
+            in pillar_items_mock.mock_calls
+        )
         assert ret == dict(a="<int>", b="<str>")
 
 
