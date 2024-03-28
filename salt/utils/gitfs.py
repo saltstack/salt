@@ -39,7 +39,6 @@ import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
-from salt.grains.core import get_machine_id
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
@@ -250,7 +249,9 @@ class GitProvider:
             return str(y)
 
         # get machine_identifier
-        self.mach_id = get_machine_id().get("machine_id", "no_machine_id_available")
+        self.mach_id = salt.utils.files.get_machine_identifier().get(
+            "machine_id", "no_machine_id_available"
+        )
 
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
@@ -945,10 +946,10 @@ class GitProvider:
             )
             with os.fdopen(fh_, "wb"):
                 # Write the lock file and close the filehandle
-                os.write(fh_, salt.utils.stringutils.to_bytes(str(os.getpid())))
-                os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
-                os.write(fh_, salt.utils.stringutils.to_bytes(str(self.mach_id)))
-                os.write(fh_, salt.utils.stringutils.to_bytes("\n"))
+                os.write(
+                    fh_,
+                    salt.utils.stringutils.to_bytes(f"{os.getpid()}\n{self.mach_id}\n"),
+                )
 
         except OSError as exc:
             if exc.errno == errno.EEXIST:
@@ -1136,7 +1137,11 @@ class GitProvider:
                         continue
         finally:
             if lock_set1 or lock_set2:
-                msg = f"Attempting to remove '{lock_type}' lock for '{self.role}' remote '{self.id}' due to lock_set1 '{lock_set1}' or lock_set2 '{lock_set2}'"
+                msg = (
+                    f"Attempting to remove '{lock_type}' lock for "
+                    f"'{self.role}' remote '{self.id}' due to lock_set1 "
+                    f"'{lock_set1}' or lock_set2 '{lock_set2}'"
+                )
                 log.debug(msg)
                 self.clear_lock(lock_type=lock_type)
 

@@ -1137,7 +1137,14 @@ class SignalHandlingProcess(Process):
                             if cur_pid == file_pid:
                                 if mach_id != file_mach_id:
                                     if not file_mach_id:
-                                        msg = f"gitfs lock file for pid '{file_pid}' does not contain a machine id, deleting lock file which may affect if using multi-master with shared gitfs cache, the lock may have been obtained by another master recommend updating Salt version on other masters to a version which insert machine identification in lock a file."
+                                        msg = (
+                                            f"gitfs lock file for pid '{file_pid}' does not "
+                                            "contain a machine id, deleting lock file which may "
+                                            "affect if using multi-master with shared gitfs cache, "
+                                            "the lock may have been obtained by another master "
+                                            "recommend updating Salt version on other masters to a "
+                                            "version which insert machine identification in lock a file."
+                                        )
                                         log.debug(msg)
                                         file_del_list.append(
                                             (file_name, file_pid, file_mach_id)
