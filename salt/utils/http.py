@@ -355,6 +355,19 @@ def query(
         agent = f"{agent} http.query()"
     header_dict["User-agent"] = agent
 
+    if (
+        proxy_host
+        and proxy_port
+        and method == "POST"
+        and "Content-Type" not in header_dict
+    ):
+        log.debug(
+            "Content-Type not provided for POST request, assuming application/x-www-form-urlencoded"
+        )
+        header_dict["Content-Type"] = "application/x-www-form-urlencoded"
+        if "Content-Length" not in header_dict:
+            header_dict["Content-Length"] = f"{len(data)}"
+
     if backend == "requests":
         sess = requests.Session()
         sess.auth = auth

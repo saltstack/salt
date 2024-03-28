@@ -71,7 +71,7 @@ class MockFH:
         self.write = Mock(side_effect=self._write)
         self.writelines = Mock(side_effect=self._writelines)
         self.close = Mock()
-        self.seek = Mock()
+        self.seek = Mock(side_effect=self._seek)
         self.__loc = 0
         self.__read_data_ok = False
 
@@ -218,6 +218,14 @@ class MockFH:
 
     def __exit__(self, exc_type, exc_val, exc_tb):  # pylint: disable=unused-argument
         pass
+
+    # For some reason this gets called with additional args on Windows when
+    # running the following test:
+    # tests/pytests/unit/beacons/test_log_beacon.py::test_log_match
+    # Let's just absorb them with *args
+    def _seek(self, pos=0, *args):
+        self.__loc = pos
+        self.read_data_iter = self._iterate_read_data(self.read_data)
 
 
 class MockCall:

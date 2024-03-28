@@ -78,6 +78,7 @@ def test_update(bucket, s3):
         "top.sls": {"content": yaml.dump({"base": {"*": ["foo"]}})},
         "foo.sls": {"content": yaml.dump({"nginx": {"pkg.installed": []}})},
         "files/nginx.conf": {"content": "server {}"},
+        "files/conf.d/foo.conf": {"content": "server {}"},
     }
 
     make_keys(bucket, s3, keys)
@@ -89,6 +90,41 @@ def test_update(bucket, s3):
     make_keys(bucket, s3, keys)
     s3fs.update()
     verify_cache(bucket, keys)
+
+    # verify that when files get deleted from s3, they also get deleted in
+    # the local cache
+    delete_file = "files/nginx.conf"
+    del keys[delete_file]
+    s3.delete_object(Bucket=bucket, Key=delete_file)
+
+    s3fs.update()
+    verify_cache(bucket, keys)
+
+    cache_file = s3fs._get_cached_file_name(bucket, "base", delete_file)
+    assert not os.path.exists(cache_file)
+
+    # we want empty directories to get deleted from the local cache
+
+    # after this one, `files` should still exist
+    files_dir = os.path.dirname(cache_file)
+    assert os.path.exists(files_dir)
+
+    # but after the last file is deleted, the directory and any parents
+    # should be deleted too
+    delete_file = "files/conf.d/foo.conf"
+    del keys[delete_file]
+    s3.delete_object(Bucket=bucket, Key=delete_file)
+
+    s3fs.update()
+    verify_cache(bucket, keys)
+
+    cache_file = s3fs._get_cached_file_name(bucket, "base", delete_file)
+    assert not os.path.exists(cache_file)
+
+    # after this, `files/conf.d` and `files` should be deleted
+    conf_d_dir = os.path.dirname(cache_file)
+    assert not os.path.exists(conf_d_dir)
+    assert not os.path.exists(files_dir)
 
 
 @pytest.mark.skip_on_fips_enabled_platform
@@ -124,8 +160,7 @@ def test_s3_hash(bucket, s3):
 @pytest.mark.skip_on_fips_enabled_platform
 def test_cache_round_trip(bucket):
     metadata = {"foo": "bar"}
-    cache_file = s3fs._get_cached_file_name(bucket, "base", "somefile")
-
+    cache_file = s3fs._get_buckets_cache_filename()
     s3fs._write_buckets_cache_file(metadata, cache_file)
     assert s3fs._read_buckets_cache_file(cache_file) == metadata
 

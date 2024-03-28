@@ -4,3 +4,10 @@ relenv_version: "0.15.1"
 release_branches:
   - "3006.x"
   - "3007.x"
+mandatory_os_slugs:
+  - almalinux-9
+  - amazonlinux-2023-arm64
+  - archlinux-lts
+  - macos-13-arm64
+  - ubuntu-22.04-arm64
+  - windows-2022

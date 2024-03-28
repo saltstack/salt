@@ -109,7 +109,7 @@ pydantic==2.5.2
     #   inflect
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.15.1
+pygments==2.17.2
     # via sphinx
 pytz==2024.1
     # via

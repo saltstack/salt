@@ -7,7 +7,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.timeout(120),
+    pytest.mark.timeout(120, func_only=True),
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,

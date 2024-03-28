@@ -1,45 +1,33 @@
 ---
 name: build-onedir-deps
 description: Build Onedir Dependencies
+
 inputs:
   platform:
     required: true
-    type: string
     description: The platform to build
   arch:
     required: true
-    type: string
     description: The platform arch to build
   python-version:
     required: true
-    type: string
     description: The python version to build
   package-name:
     required: false
-    type: string
     description: The onedir package name to create
     default: salt
   cache-prefix:
     required: true
-    type: string
     description: Seed used to invalidate caches
-
-
-env:
-  COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-  RELENV_BUILDENV: 1
 
 
 runs:
   using: composite
 
   steps:
-
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
         key: >
@@ -56,6 +44,8 @@ runs:
     - name: Install Salt Onedir Package Dependencies
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      env:
+        RELENV_BUILDENV: "1"
       run: |
         tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
 

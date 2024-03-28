@@ -51,6 +51,8 @@ jobs:
       - self-hosted
       - linux
       - ${{ matrix.arch }}
+    env:
+      USE_S3_CACHE: 'true'
     steps:
 
       - name: "Throttle Builds"
@@ -63,7 +65,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-linux-${{ matrix.arch }}
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|linux|${{ matrix.arch }}
 
       - name: Setup Relenv
         id: setup-relenv
@@ -95,7 +97,8 @@ jobs:
           - arm64
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
-
+    env:
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"
@@ -113,7 +116,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-macos
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|macos
 
       - name: Setup Relenv
         id: setup-relenv
@@ -144,6 +147,8 @@ jobs:
           - x86
           - amd64
     runs-on: windows-latest
+    env:
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"
@@ -161,7 +166,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-windows-${{ matrix.arch }}
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|windows|${{ matrix.arch }}
 
       - name: Setup Relenv
         id: setup-relenv

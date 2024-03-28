@@ -69,6 +69,7 @@ env:
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  USE_S3_CACHE: 'true'
 
 jobs:
 

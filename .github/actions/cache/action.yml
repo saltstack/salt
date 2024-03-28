@@ -1,0 +1,112 @@
+---
+name: cache
+description: GitHub Actions Cache
+inputs:
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache and restore'
+    required: true
+  key:
+    description: 'An explicit key for restoring and saving the cache'
+    required: true
+  restore-keys:
+    description: 'An ordered list of keys to use for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.'
+    required: false
+  upload-chunk-size:
+    description: 'The chunk size used to split up large files during upload, in bytes'
+    required: false
+  enableCrossOsArchive:
+    description: 'An optional boolean when enabled, allows windows runners to save or restore caches that can be restored or saved respectively on other platforms'
+    default: 'false'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    default: 'false'
+    required: false
+  lookup-only:
+    description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
+    default: 'false'
+    required: false
+  save-always:
+    description: 'Run the post step to save the cache even if another step before fails'
+    default: 'false'
+    required: false
+
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+    value: ${{ steps.github-cache.outputs.cache-hit || steps.s3-cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Map inputs to environment variables
+      shell: bash
+      run: |
+        echo "GHA_CACHE_PATH=${{ inputs.path }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_KEY=${{ inputs.key }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE=${{ inputs.enableCrossOsArchive }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_FAIL_ON_CACHE_MISS=${{ inputs.fail-on-cache-miss }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_LOOKUP_ONLY=${{ inputs.lookup-only }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_SAVE_ALWAYS=${{ inputs.save-always }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_RESTORE_KEYS=${{ inputs.restore-keys }}" | tee -a "${GITHUB_ENV}"
+        echo "GHA_CACHE_UPLOAD_CHUNK_SIZE=${{ inputs.upload-chunk-size }}" | tee -a "${GITHUB_ENV}"
+
+    - name: Cache Provided Path (GitHub Actions)
+      id: github-cache
+      if: ${{ env.USE_S3_CACHE != 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.GHA_CACHE_PATH }}
+        key: ${{ env.GHA_CACHE_KEY }}
+        enableCrossOsArchive: ${{ env.GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE }}
+        fail-on-cache-miss: ${{ env.GHA_CACHE_FAIL_ON_CACHE_MISS }}
+        lookup-only: ${{ env.GHA_CACHE_LOOKUP_ONLY }}
+        save-always: ${{ env.GHA_CACHE_SAVE_ALWAYS }}
+        restore-keys: ${{ env.GHA_CACHE_RESTORE_KEYS }}
+        upload-chunk-size: ${{ env.GHA_CACHE_UPLOAD_CHUNK_SIZE }}
+
+    - name: Get Salt Project GitHub Actions Bot Environment
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      shell: bash
+      run: |
+        TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+        SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+        echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" | tee -a "$GITHUB_ENV"
+        REGION=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+        echo "GHA_CACHE_AWS_REGION=$REGION" | tee -a "$GITHUB_ENV"
+
+    - name: Configure AWS Credentials to access cache bucket
+      id: creds
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.GHA_CACHE_AWS_REGION }}
+
+    - name: Cache Provided Path (S3)
+      if: ${{ env.USE_S3_CACHE == 'true' }}
+      id: s3-cache
+      env:
+        AWS_REGION: ${{ env.GHA_CACHE_AWS_REGION }}
+        RUNS_ON_S3_BUCKET_CACHE: salt-project-${{ env.SPB_ENVIRONMENT}}-salt-github-actions-s3-cache
+      uses: runs-on/cache@v4
+      with:
+        path: ${{ env.GHA_CACHE_PATH }}
+        key: ${{ env.GHA_CACHE_KEY }}
+        enableCrossOsArchive: ${{ env.GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE }}
+        fail-on-cache-miss: ${{ env.GHA_CACHE_FAIL_ON_CACHE_MISS }}
+        lookup-only: ${{ env.GHA_CACHE_LOOKUP_ONLY }}
+        save-always: ${{ env.GHA_CACHE_SAVE_ALWAYS }}
+        restore-keys: ${{ env.GHA_CACHE_RESTORE_KEYS }}
+        upload-chunk-size: ${{ env.GHA_CACHE_UPLOAD_CHUNK_SIZE }}
+
+    - name: Verify 'fail-on-cache-miss'
+      if: ${{ inputs.fail-on-cache-miss == 'true' }}
+      shell: bash
+      run: |
+        CACHE_HIT="${{ steps.github-cache.outputs.cache-hit || steps.s3-cache.outputs.cache-hit }}"
+        if [ "$CACHE_HIT" != "true" ]; then
+          echo "No cache hit and fail-on-cache-miss is set to true."
+          exit 1
+        fi

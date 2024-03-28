@@ -26,6 +26,7 @@ def test_present_absent(salt_master, salt_minion, salt_call_cli):
         ret = salt_call_cli.run(
             "state.apply",
             "manage_beacons",
+            _timeout=120,
         )
         assert ret.returncode == 0
         state_id = "beacon_|-beacon-diskusage_|-diskusage_|-present"

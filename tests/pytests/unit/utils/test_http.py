@@ -1,4 +1,5 @@
 import sys
+import urllib
 
 import pytest
 import requests
@@ -314,3 +315,27 @@ def test_backends_decode_body_true(httpserver, backend):
     )
     body = ret.get("body", "")
     assert isinstance(body, str)
+
+
+def test_requests_post_content_type(httpserver):
+    url = httpserver.url_for("/post-content-type")
+    data = urllib.parse.urlencode({"payload": "test"})
+    opts = {
+        "proxy_host": "127.0.0.1",
+        "proxy_port": 88,
+    }
+    with patch("requests.Session") as mock_session:
+        sess = MagicMock()
+        sess.headers = {}
+        mock_session.return_value = sess
+        ret = http.query(
+            url,
+            method="POST",
+            data=data,
+            backend="tornado",
+            opts=opts,
+        )
+        assert "Content-Type" in sess.headers
+        assert sess.headers["Content-Type"] == "application/x-www-form-urlencoded"
+        assert "Content-Length" in sess.headers
+        assert sess.headers["Content-Length"] == "12"
