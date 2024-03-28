@@ -424,11 +424,22 @@ usermod -c "%{_SALT_NAME}" \
          %{_SALT_USER}
 
 %pre master
-# Reset permissions to fix previous installs
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
-find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-  \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
-  \( -user salt -o -group salt \) -exec chown root:root \{\} \;
+if [ $1 -gt 1 ] ; then
+  INSTALLED_VERSION=$(rpm  -q --queryformat "%{VERSION}" salt-master)
+
+  # if upgrading from 3006.0/3006.1/3006.2 reset permissions
+  # for salt user - issue 64193 and 65264
+
+  case "${INSTALLED_VERSION}" in
+    3006.0|3006.1|3006.2)
+      PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+      find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+        \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
+        \( -user salt -o -group salt \) -exec chown root:root \{\} \;
+
+      ;;
+    esac
+fi
 
 
 # assumes systemd for RHEL 7 & 8 & 9
