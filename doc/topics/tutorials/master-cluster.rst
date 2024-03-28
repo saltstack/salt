@@ -91,7 +91,7 @@ Master Config:
           - 10.27.7.126
           - 10.27.3.73
         cluster_pki_dir: /my/gluster/share/pki
-        cache_dir: /my/gluster/share/cache
+        cachedir: /my/gluster/share/cache
         file_roots:
             - /my/gluster/share/srv/salt
         pillar_roots:
