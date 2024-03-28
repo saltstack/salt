@@ -807,7 +807,7 @@ def pkg_matrix(
 
         if name == "amazonlinux":
             name = "amazon"
-        elif "centos" in name or name == "almalinux":
+        elif "centos" in name or name == "rockylinux":
             name = "redhat"
         elif "photon" in name:
             name = "photon"
