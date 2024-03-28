@@ -755,7 +755,7 @@ class GitProvider:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # No lock file present
-                msg = f"Attempt to remove lock {self.url} for file ({lock_file}) which was not found to exist, exception : {exc} "
+                msg = f"Attempt to remove lock {self.url} for file ({lock_file}) which does not exist, exception : {exc} "
                 log.debug(msg)
 
             elif exc.errno == errno.EISDIR:
