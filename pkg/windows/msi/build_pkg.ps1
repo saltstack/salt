@@ -76,6 +76,8 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 # Script Variables
 #-------------------------------------------------------------------------------
 
+$WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
+$DEPS_URL       = "https://repo.saltproject.io/windows/dependencies"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -123,6 +125,21 @@ Write-Host "- Salt Version: $Version"
 Write-Host $("-" * 80)
 
 #-------------------------------------------------------------------------------
+# Ensure cache dir exists
+#-------------------------------------------------------------------------------
+
+if ( ! (Test-Path -Path $WEBCACHE_DIR) ) {
+    Write-Host "Creating cache directory: " -NoNewline
+    New-Item -ItemType directory -Path $WEBCACHE_DIR | Out-Null
+    if ( Test-Path -Path $WEBCACHE_DIR ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+#-------------------------------------------------------------------------------
 # Ensure WIX environment variable is set, if not refresh and check again
 #-------------------------------------------------------------------------------
 # If wix is installed in the same session, the WIX environment variable won't be
@@ -140,6 +157,19 @@ if ( ! "$env:WIX" ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
+}
+
+#-------------------------------------------------------------------------------
+# Caching VC++ Runtimes
+#-------------------------------------------------------------------------------
+
+$RUNTIMES = @(
+    ("Microsoft_VC143_CRT_x64.msm", "64", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
+    ("Microsoft_VC143_CRT_x86.msm", "32", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
+)
+$RUNTIMES | ForEach-Object {
+    $name, $arch, $hash = $_
+    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$arch/$name" "$hash"
 }
 
 #-------------------------------------------------------------------------------
@@ -578,6 +608,7 @@ Push-Location $SCRIPT_DIR
     -dDisplayVersion="$Version" `
     -dInternalVersion="$INTERNAL_VERSION" `
     -dDISCOVER_INSTALLDIR="$($DISCOVER_INSTALLDIR[$i])" `
+    -dWEBCACHE_DIR="$WEBCACHE_DIR" `
     -dDISCOVER_CONFDIR="$DISCOVER_CONFDIR" `
     -ext "$($ENV:WIX)bin\WixUtilExtension.dll" `
     -ext "$($ENV:WIX)bin\WixUIExtension.dll" `
