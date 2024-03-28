@@ -30,6 +30,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from salt.ext.tornado import gen
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
 log = logging.getLogger(__name__)
 
@@ -1075,9 +1076,7 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        mach_id = salt.utils.files.get_machine_identifier().get(
-            "machine_id", "no_machine_id_available"
-        )
+        mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
         log.debug(
             "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
         )

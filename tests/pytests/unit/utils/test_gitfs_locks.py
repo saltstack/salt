@@ -20,6 +20,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 from salt.utils.immutabletypes import freeze
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.verify import verify_env
 
 try:
@@ -379,9 +380,7 @@ def test_git_provider_mp_gen_lock(main_class, caplog):
     Check that gen_lock is obtains lock, and then releases, provider.lock()
     """
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier().get(
-        "machine_id", "no_machine_id_available"
-    )
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     test_msg1 = (
@@ -418,9 +417,7 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
     Check that lock obtains lock, if previous pid in lock file doesn't exist for same machine id
     """
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier().get(
-        "machine_id", "no_machine_id_available"
-    )
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     test_msg1 = (
@@ -493,9 +490,7 @@ def test_git_provider_mp_lock_bad_machine(main_class, caplog):
     Check that lock obtains lock, if previous pid in lock file doesn't exist for same machine id
     """
     # get machine_identifier
-    mach_id = salt.utils.files.get_machine_identifier().get(
-        "machine_id", "no_machine_id_available"
-    )
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
     provider = main_class.remotes[0]

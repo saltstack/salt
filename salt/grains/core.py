@@ -39,6 +39,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
@@ -3048,7 +3049,7 @@ def get_machine_id():
     if platform.system() == "AIX":
         return _aix_get_machine_id()
 
-    return salt.utils.files.get_machine_identifier()
+    return _get_machine_identifier()
 
 
 def cwd():
