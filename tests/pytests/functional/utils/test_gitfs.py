@@ -255,14 +255,20 @@ def _test_lock(opts):
     assert repo.get_salt_working_dir() in repo._get_lock_file()
     assert repo.lock() == (
         [
-            f"Set update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            (
+                f"Set update lock for gitfs remote "
+                f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
         ],
         [],
     )
     assert os.path.isfile(repo._get_lock_file())
     assert repo.clear_lock() == (
         [
-            f"Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            (
+                f"Removed update lock for gitfs remote "
+                f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
         ],
         [],
     )

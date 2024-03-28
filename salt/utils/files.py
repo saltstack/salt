@@ -381,7 +381,8 @@ def fopen(*args, **kwargs):
     # Workaround callers with bad buffering setting for binary files
     if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
         log.debug(
-            "Line buffering (buffering=1) isn't supported in binary mode, the default buffer size will be used"
+            "Line buffering (buffering=1) isn't supported in binary mode, "
+            "the default buffer size will be used"
         )
         kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
