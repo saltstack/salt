@@ -248,6 +248,11 @@ class GitProvider:
         def _val_cb(x, y):
             return str(y)
 
+        # get machine_identifier
+        self.mach_id = salt.utils.files.get_machine_identifier().get(
+            "machine_id", "no_machine_id_available"
+        )
+
         self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get(f"{self.role}_saltenv", []),
             strict=True,
@@ -751,7 +756,12 @@ class GitProvider:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # No lock file present
-                pass
+                msg = (
+                    f"Attempt to remove lock {self.url} for file ({lock_file}) "
+                    f"which does not exist, exception : {exc} "
+                )
+                log.debug(msg)
+
             elif exc.errno == errno.EISDIR:
                 # Somehow this path is a directory. Should never happen
                 # unless some wiseguy manually creates a directory at this
@@ -763,8 +773,9 @@ class GitProvider:
             else:
                 _add_error(failed, exc)
         else:
-            msg = "Removed {} lock for {} remote '{}'".format(
-                lock_type, self.role, self.id
+            msg = (
+                f"Removed {lock_type} lock for {self.role} remote '{self.id}' "
+                f"on machine_id '{self.mach_id}'"
             )
             log.debug(msg)
             success.append(msg)
@@ -903,7 +914,19 @@ class GitProvider:
                     self._get_lock_file(lock_type="update"),
                     self.role,
                 )
+            else:
+                log.warning(
+                    "Update lock file generated an unexpected exception for %s remote '%s', "
+                    "The lock file %s for %s type=update operation, exception: %s .",
+                    self.role,
+                    self.id,
+                    self._get_lock_file(lock_type="update"),
+                    self.role,
+                    str(exc),
+                )
             return False
+        except NotImplementedError as exc:
+            log.warning("fetch got NotImplementedError exception %s", exc)
 
     def _lock(self, lock_type="update", failhard=False):
         """
@@ -929,7 +952,11 @@ class GitProvider:
             )
             with os.fdopen(fh_, "wb"):
                 # Write the lock file and close the filehandle
-                os.write(fh_, salt.utils.stringutils.to_bytes(str(os.getpid())))
+                os.write(
+                    fh_,
+                    salt.utils.stringutils.to_bytes(f"{os.getpid()}\n{self.mach_id}\n"),
+                )
+
         except OSError as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), "r") as fd_:
@@ -941,40 +968,66 @@ class GitProvider:
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.
                         pid = 0
+                    try:
+                        mach_id = salt.utils.stringutils.to_unicode(
+                            fd_.readline()
+                        ).rstrip()
+                    except ValueError as exc:
+                        # Lock file is empty, set machine id to 0 so it evaluates as
+                        # False.
+                        mach_id = 0
+
                 global_lock_key = self.role + "_global_lock"
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
                     msg = (
-                        "{} is enabled and {} lockfile {} is present for "
-                        "{} remote '{}'.".format(
-                            global_lock_key,
-                            lock_type,
-                            lock_file,
-                            self.role,
-                            self.id,
-                        )
+                        f"{global_lock_key} is enabled and {lock_type} lockfile {lock_file} "
+                        f"is present for {self.role} remote '{self.id}' on machine_id "
+                        f"{self.mach_id} with pid '{pid}'."
                     )
                     if pid:
                         msg += f" Process {pid} obtained the lock"
+                        if self.mach_id or mach_id:
+                            msg += f" for machine_id {mach_id}, current machine_id {self.mach_id}"
+
                         if not pid_exists(pid):
-                            msg += (
-                                " but this process is not running. The "
-                                "update may have been interrupted. If "
-                                "using multi-master with shared gitfs "
-                                "cache, the lock may have been obtained "
-                                "by another master."
-                            )
+                            if self.mach_id != mach_id:
+                                msg += (
+                                    " but this process is not running. The "
+                                    "update may have been interrupted. If "
+                                    "using multi-master with shared gitfs "
+                                    "cache, the lock may have been obtained "
+                                    f"by another master, with machine_id {mach_id}"
+                                )
+                            else:
+                                msg += (
+                                    " but this process is not running. The "
+                                    "update may have been interrupted. "
+                                    " Given this process is for the same machine"
+                                    " the lock will be reallocated to new process "
+                                )
+                                log.warning(msg)
+                                success, fail = self._clear_lock()
+                                if success:
+                                    return self.__lock(
+                                        lock_type="update", failhard=failhard
+                                    )
+                                elif failhard:
+                                    raise
+                                return
+
                     log.warning(msg)
                     if failhard:
                         raise
                     return
                 elif pid and pid_exists(pid):
                     log.warning(
-                        "Process %d has a %s %s lock (%s)",
+                        "Process %d has a %s %s lock (%s) on machine_id %s",
                         pid,
                         self.role,
                         lock_type,
                         lock_file,
+                        self.mach_id,
                     )
                     if failhard:
                         raise
@@ -982,12 +1035,13 @@ class GitProvider:
                 else:
                     if pid:
                         log.warning(
-                            "Process %d has a %s %s lock (%s), but this "
+                            "Process %d has a %s %s lock (%s) on machine_id %s, but this "
                             "process is not running. Cleaning up lock file.",
                             pid,
                             self.role,
                             lock_type,
                             lock_file,
+                            self.mach_id,
                         )
                     success, fail = self._clear_lock()
                     if success:
@@ -996,12 +1050,14 @@ class GitProvider:
                         raise
                     return
             else:
-                msg = "Unable to set {} lock for {} ({}): {} ".format(
-                    lock_type, self.id, self._get_lock_file(lock_type), exc
+                msg = (
+                    f"Unable to set {lock_type} lock for {self.id} "
+                    f"({self._get_lock_file(lock_type)}) on machine_id {self.mach_id}: {exc}"
                 )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
-        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}'"
+
+        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}' on machine_id '{self.mach_id}'"
         log.debug(msg)
         return msg
 
@@ -1018,6 +1074,15 @@ class GitProvider:
         try:
             result = self._lock(lock_type="update")
         except GitLockError as exc:
+            log.warning(
+                "Update lock file generated an unexpected exception for %s remote '%s', "
+                "The lock file %s for %s type=update operation, exception: %s .",
+                self.role,
+                self.id,
+                self._get_lock_file(lock_type="update"),
+                self.role,
+                str(exc),
+            )
             failed.append(exc.strerror)
         else:
             if result is not None:
@@ -1027,7 +1092,8 @@ class GitProvider:
     @contextlib.contextmanager
     def gen_lock(self, lock_type="update", timeout=0, poll_interval=0.5):
         """
-        Set and automatically clear a lock
+        Set and automatically clear a lock,
+        should be called from a context, for example: with self.gen_lock()
         """
         if not isinstance(lock_type, str):
             raise GitLockError(errno.EINVAL, f"Invalid lock_type '{lock_type}'")
@@ -1048,17 +1114,23 @@ class GitProvider:
         if poll_interval > timeout:
             poll_interval = timeout
 
-        lock_set = False
+        lock_set1 = False
+        lock_set2 = False
         try:
             time_start = time.time()
             while True:
                 try:
                     self._lock(lock_type=lock_type, failhard=True)
-                    lock_set = True
-                    yield
+                    lock_set1 = True
+                    # docs state need to yield a single value, lock_set will do
+                    yield lock_set1
+
                     # Break out of his loop once we've yielded the lock, to
                     # avoid continued attempts to iterate and establish lock
+                    # just ensuring lock_set is true (belts and braces)
+                    lock_set2 = True
                     break
+
                 except (OSError, GitLockError) as exc:
                     if not timeout or time.time() - time_start > timeout:
                         raise GitLockError(exc.errno, exc.strerror)
@@ -1074,7 +1146,13 @@ class GitProvider:
                         time.sleep(poll_interval)
                         continue
         finally:
-            if lock_set:
+            if lock_set1 or lock_set2:
+                msg = (
+                    f"Attempting to remove '{lock_type}' lock for "
+                    f"'{self.role}' remote '{self.id}' due to lock_set1 "
+                    f"'{lock_set1}' or lock_set2 '{lock_set2}'"
+                )
+                log.debug(msg)
                 self.clear_lock(lock_type=lock_type)
 
     def init_remote(self):
@@ -1364,9 +1442,7 @@ class GitPython(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        "Checkout lock exists for {} remote '{}'".format(
-                            self.role, self.id
-                        ),
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
                     )
                 else:
                     log.error(
@@ -1715,9 +1791,7 @@ class Pygit2(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        "Checkout lock exists for {} remote '{}'".format(
-                            self.role, self.id
-                        ),
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
                     )
                 else:
                     log.error(
@@ -2232,10 +2306,8 @@ class Pygit2(GitProvider):
             if not self.ssl_verify:
                 warnings.warn(
                     "pygit2 does not support disabling the SSL certificate "
-                    "check in versions prior to 0.23.2 (installed: {}). "
-                    "Fetches for self-signed certificates will fail.".format(
-                        PYGIT2_VERSION
-                    )
+                    f"check in versions prior to 0.23.2 (installed: {PYGIT2_VERSION}). "
+                    "Fetches for self-signed certificates will fail."
                 )
 
     def verify_auth(self):
@@ -2488,11 +2560,12 @@ class GitBase:
         if self.provider in AUTH_PROVIDERS:
             override_params += AUTH_PARAMS
         elif global_auth_params:
+            msg_auth_providers = "{}".format(", ".join(AUTH_PROVIDERS))
             msg = (
-                "{0} authentication was configured, but the '{1}' "
-                "{0}_provider does not support authentication. The "
-                "providers for which authentication is supported in {0} "
-                "are: {2}.".format(self.role, self.provider, ", ".join(AUTH_PROVIDERS))
+                f"{self.role} authentication was configured, but the '{self.provider}' "
+                f"{self.role}_provider does not support authentication. The "
+                f"providers for which authentication is supported in {self.role} "
+                f"are: {msg_auth_providers}."
             )
             if self.role == "gitfs":
                 msg += (
@@ -2664,6 +2737,7 @@ class GitBase:
             success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
             errors.extend(failed)
+
         return cleared, errors
 
     def fetch_remotes(self, remotes=None):
@@ -2875,15 +2949,13 @@ class GitBase:
         errors = []
         if GITPYTHON_VERSION < GITPYTHON_MINVER:
             errors.append(
-                "{} is configured, but the GitPython version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, GITPYTHON_MINVER, GITPYTHON_VERSION
-                )
+                f"{self.role} is configured, but the GitPython version is earlier than "
+                f"{GITPYTHON_MINVER}. Version {GITPYTHON_VERSION} detected."
             )
         if not salt.utils.path.which("git"):
             errors.append(
                 "The git command line utility is required when using the "
-                "'gitpython' {}_provider.".format(self.role)
+                f"'gitpython' {self.role}_provider."
             )
 
         if errors:
@@ -2922,24 +2994,20 @@ class GitBase:
         errors = []
         if PYGIT2_VERSION < PYGIT2_MINVER:
             errors.append(
-                "{} is configured, but the pygit2 version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, PYGIT2_MINVER, PYGIT2_VERSION
-                )
+                f"{self.role} is configured, but the pygit2 version is earlier than "
+                f"{PYGIT2_MINVER}. Version {PYGIT2_VERSION} detected."
             )
         if LIBGIT2_VERSION < LIBGIT2_MINVER:
             errors.append(
-                "{} is configured, but the libgit2 version is earlier than "
-                "{}. Version {} detected.".format(
-                    self.role, LIBGIT2_MINVER, LIBGIT2_VERSION
-                )
+                f"{self.role} is configured, but the libgit2 version is earlier than "
+                f"{LIBGIT2_MINVER}. Version {LIBGIT2_VERSION} detected."
             )
         if not getattr(pygit2, "GIT_FETCH_PRUNE", False) and not salt.utils.path.which(
             "git"
         ):
             errors.append(
                 "The git command line utility is required when using the "
-                "'pygit2' {}_provider.".format(self.role)
+                f"'pygit2' {self.role}_provider."
             )
 
         if errors:
@@ -3252,10 +3320,11 @@ class GitFS(GitBase):
         ret = {"hash_type": self.opts["hash_type"]}
         relpath = fnd["rel"]
         path = fnd["path"]
+        lc_hash_type = self.opts["hash_type"]
         hashdest = salt.utils.path.join(
             self.hash_cachedir,
             load["saltenv"],
-            "{}.hash.{}".format(relpath, self.opts["hash_type"]),
+            f"{relpath}.hash.{lc_hash_type}",
         )
         try:
             with salt.utils.files.fopen(hashdest, "rb") as fp_:
@@ -3290,13 +3359,14 @@ class GitFS(GitBase):
             except OSError:
                 log.error("Unable to make cachedir %s", self.file_list_cachedir)
                 return []
+        lc_path_adj = load["saltenv"].replace(os.path.sep, "_|-")
         list_cache = salt.utils.path.join(
             self.file_list_cachedir,
-            "{}.p".format(load["saltenv"].replace(os.path.sep, "_|-")),
+            f"{lc_path_adj}.p",
         )
         w_lock = salt.utils.path.join(
             self.file_list_cachedir,
-            ".{}.w".format(load["saltenv"].replace(os.path.sep, "_|-")),
+            f".{lc_path_adj}.w",
         )
         cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
             self.opts, form, list_cache, w_lock
