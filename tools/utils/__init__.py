@@ -1,22 +1,18 @@
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
-import fnmatch
 import hashlib
 import json
 import os
 import pathlib
 import shutil
 import sys
-import tempfile
-import zipfile
-from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from functools import cache
 
-import boto3
+import attr
 import packaging.version
-from botocore.exceptions import ClientError
+import yaml
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -40,6 +36,36 @@ class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
     SOFT_FAIL = 2
+
+
+@attr.s(frozen=True, slots=True)
+class OS:
+    platform: str = attr.ib()
+    slug: str = attr.ib()
+    display_name: str = attr.ib(default=None)
+    arch: str = attr.ib(default=None)
+    pkg_type: str = attr.ib(default=None)
+
+
+@attr.s(frozen=True, slots=True)
+class Linux(OS):
+    platform: str = attr.ib(default="linux")
+    fips: bool = attr.ib(default=False)
+
+
+@attr.s(frozen=True, slots=True)
+class MacOS(OS):
+    runner: str = attr.ib()
+    platform: str = attr.ib(default="macos")
+
+    @runner.default
+    def _default_runner(self):
+        return self.slug
+
+
+@attr.s(frozen=True, slots=True)
+class Windows(OS):
+    platform: str = attr.ib(default="windows")
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):
@@ -284,3 +310,23 @@ def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
         else:
             arch = "x86_64"
     return platform, arch
+
+
+@cache
+def get_cicd_shared_context():
+    """
+    Return the CI/CD shared context file contents.
+    """
+    shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    return yaml.safe_load(shared_context_file.read_text())
+
+
+@cache
+def get_golden_images():
+    """
+    Return the golden images information stored on file.
+    """
+    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+        "r", encoding="utf-8"
+    ) as rfh:
+        return json.load(rfh)

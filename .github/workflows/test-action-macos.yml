@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         description: The OS slug to run tests against
+      runner:
+        required: true
+        type: string
+        description: The GitHub runner name
       nox-session:
         required: true
         type: string
@@ -98,7 +102,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on: ${{ inputs.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}

@@ -7,6 +7,10 @@ on:
         required: true
         type: string
         description: The OS slug to run tests against
+      runner:
+        required: true
+        type: string
+        description: The GitHub runner name
       platform:
         required: true
         type: string
@@ -98,7 +102,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - generate-matrix

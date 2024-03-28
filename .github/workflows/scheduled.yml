@@ -77,7 +77,8 @@ jobs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.labels }}
+      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
@@ -93,7 +94,7 @@ jobs:
       - name: Get Changed Files
         if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         with:
           token: ${{ github.token }}
           list-files: json
@@ -231,18 +232,10 @@ jobs:
         run: |
           tools ci runner-types ${{ github.event_name }}
 
-      - name: Check Defined Runners
-        run: |
-          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
-
-      - name: Define Jobs
+      - name: Define Jobs To Run
         id: define-jobs
         run: |
           tools ci define-jobs ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Jobs
-        run: |
-          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Get Salt Releases
         id: get-salt-releases
@@ -262,10 +255,6 @@ jobs:
         id: define-testrun
         run: |
           tools ci define-testrun ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Test Run
-        run: |
-          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
@@ -998,6 +987,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
+      runner: macos-12
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1019,6 +1009,7 @@ jobs:
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-13
+      runner: macos-13
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1030,7 +1021,7 @@ jobs:
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  macos-13-xlarge-pkg-tests:
+  macos-13-arm64-pkg-tests:
     name: macOS 13 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
@@ -1039,7 +1030,8 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
-      distro-slug: macos-13-xlarge
+      distro-slug: macos-13-arm64
+      runner: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: macos
       arch: arm64
@@ -1249,6 +1241,7 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
+      runner: macos-12
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1270,6 +1263,7 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13
+      runner: macos-13
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
@@ -1282,7 +1276,7 @@ jobs:
       workflow-slug: scheduled
       default-timeout: 360
 
-  macos-13-xlarge:
+  macos-13-arm64:
     name: macOS 13 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
@@ -1290,7 +1284,8 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
-      distro-slug: macos-13-xlarge
+      distro-slug: macos-13-arm64
+      runner: macos-13-xlarge
       nox-session: ci-test-onedir
       platform: macos
       arch: arm64
@@ -1844,7 +1839,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
-      - macos-13-xlarge
+      - macos-13-arm64
       - almalinux-8
       - almalinux-8-arm64
       - almalinux-9
@@ -2000,7 +1995,7 @@ jobs:
       - windows-2022
       - macos-12
       - macos-13
-      - macos-13-xlarge
+      - macos-13-arm64
       - almalinux-8
       - almalinux-8-arm64
       - almalinux-9
@@ -2050,7 +2045,7 @@ jobs:
       - ubuntu-2204-arm64-pkg-tests
       - macos-12-pkg-tests
       - macos-13-pkg-tests
-      - macos-13-xlarge-pkg-tests
+      - macos-13-arm64-pkg-tests
       - windows-2016-nsis-pkg-tests
       - windows-2016-msi-pkg-tests
       - windows-2019-nsis-pkg-tests
