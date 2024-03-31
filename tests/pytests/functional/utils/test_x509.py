@@ -4,16 +4,7 @@ import pytest
 
 import salt.utils.x509 as x509
 
-try:
-    import cryptography.x509 as cx509
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
-
-pytestmark = [
-    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
-]
+cx509 = pytest.importorskip("cryptography.x509")
 
 
 @pytest.fixture
