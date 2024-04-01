@@ -62,12 +62,6 @@ def salt_auth_account_1(salt_auth_account_1_factory):
         yield account
 
 
-@pytest.fixture(scope="module")
-def salt_auto_account(salt_auto_account_factory):
-    with salt_auto_account_factory as account:
-        yield account
-
-
 def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key):
     low = {
         "client": "ssh",
