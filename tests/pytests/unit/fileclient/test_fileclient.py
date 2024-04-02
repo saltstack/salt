@@ -223,6 +223,8 @@ def test_get_file_client(file_client):
     with patch("salt.fileclient.RemoteClient", MagicMock(return_value="remote_client")):
         ret = fileclient.get_file_client(minion_opts)
         assert "remote_client" == ret
+
+
 def test_get_url_with_hash(client_opts):
     """
     Test get_url function with a URL containing a hash character.
