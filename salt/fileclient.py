@@ -481,9 +481,11 @@ class Client:
         """
         Get a single file from a URL.
         """
+        url = urllib.parse.quote(url, safe=":/")
         url_data = urllib.parse.urlparse(url)
         url_scheme = url_data.scheme
         url_path = os.path.join(url_data.netloc, url_data.path).rstrip(os.sep)
+        url_path = urllib.parse.unquote(url_path)
 
         # If dest is a directory, rewrite dest with filename
         if dest is not None and (os.path.isdir(dest) or dest.endswith(("/", "\\"))):
