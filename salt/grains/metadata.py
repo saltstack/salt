@@ -57,7 +57,7 @@ def _search(prefix="latest/"):
     return salt.utils.data.decode(ret)
 
 def metadata():
-    ret = {}
-    ret['dynamic'] = _search('dynamic')
-    ret['meta-data'] = _search('meta-data')
-    return ret
+    return {
+        "dynamic": _search("dynamic"),
+        "meta-data": _search("meta-data"),
+    }
