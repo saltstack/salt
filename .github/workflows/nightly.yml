@@ -57,6 +57,11 @@ jobs:
             echo "${MSG}"
             echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
           else
             MSG="Running workflow because ${{ github.repository }} is not a fork"
             echo "${MSG}"
@@ -2034,6 +2039,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-source-tarball
+      - build-pkgs-src
     strategy:
       fail-fast: false
       matrix:
@@ -2777,6 +2783,7 @@ jobs:
     environment: nightly
     needs:
       - prepare-workflow
+      - build-docs
       - build-src-repo
       - build-deb-repo
       - build-rpm-repo
@@ -2817,6 +2824,7 @@ jobs:
       - ubuntu-2204-arm64
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
