@@ -1852,6 +1852,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-source-tarball
+      - build-pkgs-src
     strategy:
       fail-fast: false
       matrix:
@@ -2607,6 +2608,7 @@ jobs:
     environment: staging
     needs:
       - prepare-workflow
+      - build-docs
       - build-src-repo
       - build-deb-repo
       - build-rpm-repo
@@ -2615,6 +2617,7 @@ jobs:
       - build-onedir-repo
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment

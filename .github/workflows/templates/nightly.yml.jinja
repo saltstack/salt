@@ -146,6 +146,7 @@ concurrency:
     environment: <{ gh_environment }>
     needs:
       - prepare-workflow
+      - build-docs
       <%- for need in build_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
@@ -156,6 +157,7 @@ concurrency:
       <%- endif %>
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
