@@ -13,7 +13,7 @@ import tempfile
 import pytest
 
 try:
-    from smbprotocol.exceptions import CannotDelete
+    from smbprotocol.exceptions import CannotDelete, SMBResponseException
 
     HAS_PSEXEC = True
 except ImportError:
@@ -249,7 +249,9 @@ def test_run_psexec_command_cleanup_lingering_paexec(caplog):
             "BarnicleBoy",
         )
         # pylint: disable=no-value-for-parameter
-        mock_client.return_value.cleanup = MagicMock(side_effect=CannotDelete())
+        mock_client.return_value.cleanup = MagicMock(
+            side_effect=CannotDelete(SMBResponseException)
+        )
 
         cloud.run_psexec_command(
             "spongebob",
