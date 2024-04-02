@@ -13,6 +13,9 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 
+pytest.importorskip("vcert.common")
+
+# pylint: enable=unused-import
 from tests.support.case import ShellCase
 
 
@@ -83,7 +86,6 @@ class VenafiTest(ShellCase):
     @with_random_name
     @pytest.mark.slow_test
     def test_sign(self, name):
-
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
 MIIFbDCCA1QCAQAwgbQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
 VQQHDAlTYWx0IExha2UxFDASBgNVBAoMC1ZlbmFmaSBJbmMuMRQwEgYDVQQLDAtJ

@@ -12,8 +12,9 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,unused-import
 try:
+    import boto
     import boto3
     from botocore.exceptions import ClientError
 
@@ -26,7 +27,7 @@ pytestmark = [
 ]
 
 
-# pylint: enable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 # the boto_lambda module relies on the connect_to_region() method
 # which was added in boto 2.8.0

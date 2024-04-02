@@ -153,9 +153,11 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a DNS lookup with dig
         """
-        with patch("salt.utils.path.which", MagicMock(return_value="dig")), patch.dict(
+        with patch.dict(
             network.__utils__, {"network.sanitize_host": MagicMock(return_value="A")}
-        ), patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="A")}):
+        ), patch("salt.utils.path.which", MagicMock(return_value="dig")), patch.dict(
+            network.__salt__, {"cmd.run": MagicMock(return_value="A")}
+        ):
             self.assertEqual(network.dig("host"), "A")
 
     def test_arp(self):
