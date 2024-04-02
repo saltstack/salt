@@ -545,8 +545,8 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
-  almalinux-8-pkg-tests:
-    name: Alma Linux 8 Package Test
+  rockylinux-8-pkg-tests:
+    name: Rocky Linux 8 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -554,7 +554,7 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
-      distro-slug: almalinux-8
+      distro-slug: rockylinux-8
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -566,8 +566,8 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  almalinux-8-arm64-pkg-tests:
-    name: Alma Linux 8 Arm64 Package Test
+  rockylinux-8-arm64-pkg-tests:
+    name: Rocky Linux 8 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -575,7 +575,7 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
-      distro-slug: almalinux-8-arm64
+      distro-slug: rockylinux-8-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -587,8 +587,8 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  almalinux-9-pkg-tests:
-    name: Alma Linux 9 Package Test
+  rockylinux-9-pkg-tests:
+    name: Rocky Linux 9 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -596,7 +596,7 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
-      distro-slug: almalinux-9
+      distro-slug: rockylinux-9
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -608,8 +608,8 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  almalinux-9-arm64-pkg-tests:
-    name: Alma Linux 9 Arm64 Package Test
+  rockylinux-9-arm64-pkg-tests:
+    name: Rocky Linux 9 Arm64 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -617,7 +617,7 @@ jobs:
       - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
-      distro-slug: almalinux-9-arm64
+      distro-slug: rockylinux-9-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -1332,15 +1332,15 @@ jobs:
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  almalinux-8:
-    name: Alma Linux 8 Test
+  rockylinux-8:
+    name: Rocky Linux 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: almalinux-8
+      distro-slug: rockylinux-8
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -1353,15 +1353,15 @@ jobs:
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  almalinux-8-arm64:
-    name: Alma Linux 8 Arm64 Test
+  rockylinux-8-arm64:
+    name: Rocky Linux 8 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: almalinux-8-arm64
+      distro-slug: rockylinux-8-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -1374,15 +1374,15 @@ jobs:
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  almalinux-9:
-    name: Alma Linux 9 Test
+  rockylinux-9:
+    name: Rocky Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: almalinux-9
+      distro-slug: rockylinux-9
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -1395,15 +1395,15 @@ jobs:
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  almalinux-9-arm64:
-    name: Alma Linux 9 Arm64 Test
+  rockylinux-9-arm64:
+    name: Rocky Linux 9 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: almalinux-9-arm64
+      distro-slug: rockylinux-9-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -1873,6 +1873,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-source-tarball
+      - build-pkgs-src
     strategy:
       fail-fast: false
       matrix:
@@ -2628,6 +2629,7 @@ jobs:
     environment: staging
     needs:
       - prepare-workflow
+      - build-docs
       - build-src-repo
       - build-deb-repo
       - build-rpm-repo
@@ -2636,6 +2638,7 @@ jobs:
       - build-onedir-repo
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
@@ -2773,10 +2776,10 @@ jobs:
       - macos-12
       - macos-13
       - macos-13-arm64
-      - almalinux-8
-      - almalinux-8-arm64
-      - almalinux-9
-      - almalinux-9-arm64
+      - rockylinux-8
+      - rockylinux-8-arm64
+      - rockylinux-9
+      - rockylinux-9-arm64
       - amazonlinux-2
       - amazonlinux-2-arm64
       - amazonlinux-2023
@@ -2798,10 +2801,10 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
-      - almalinux-8-pkg-tests
-      - almalinux-8-arm64-pkg-tests
-      - almalinux-9-pkg-tests
-      - almalinux-9-arm64-pkg-tests
+      - rockylinux-8-pkg-tests
+      - rockylinux-8-arm64-pkg-tests
+      - rockylinux-9-pkg-tests
+      - rockylinux-9-arm64-pkg-tests
       - amazonlinux-2-pkg-tests
       - amazonlinux-2-arm64-pkg-tests
       - amazonlinux-2023-pkg-tests

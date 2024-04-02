@@ -113,6 +113,7 @@ class SaltPkgInstall:
     def _default_pkg_mngr(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -129,6 +130,7 @@ class SaltPkgInstall:
     def _default_rm_pkg(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -144,6 +146,7 @@ class SaltPkgInstall:
         dbg_pkg = None
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -167,6 +170,7 @@ class SaltPkgInstall:
         ]
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -613,7 +617,7 @@ class SaltPkgInstall:
             "3006.0"
         )
         distro_name = self.distro_name
-        if distro_name in ("almalinux", "centos", "fedora"):
+        if distro_name in ("almalinux", "rocky", "centos", "fedora"):
             distro_name = "redhat"
         root_url = "salt/py3/"
         if self.classic:
@@ -621,6 +625,7 @@ class SaltPkgInstall:
 
         if self.distro_name in [
             "almalinux",
+            "rocky",
             "redhat",
             "centos",
             "amazon",

@@ -107,16 +107,16 @@ def generate_workflows(ctx: Context):
     test_salt_listing = PlatformDefinitions(
         {
             "linux": [
-                Linux(slug="almalinux-8", display_name="Alma Linux 8", arch="x86_64"),
+                Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
                 Linux(
-                    slug="almalinux-8-arm64",
-                    display_name="Alma Linux 8 Arm64",
+                    slug="rockylinux-8-arm64",
+                    display_name="Rocky Linux 8 Arm64",
                     arch="arm64",
                 ),
-                Linux(slug="almalinux-9", display_name="Alma Linux 9", arch="x86_64"),
+                Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
                 Linux(
-                    slug="almalinux-9-arm64",
-                    display_name="Alma Linux 9 Arm64",
+                    slug="rockylinux-9-arm64",
+                    display_name="Rocky Linux 9 Arm64",
                     arch="arm64",
                 ),
                 Linux(
@@ -211,26 +211,26 @@ def generate_workflows(ctx: Context):
         {
             "linux": [
                 Linux(
-                    slug="almalinux-8",
-                    display_name="Alma Linux 8",
+                    slug="rockylinux-8",
+                    display_name="Rocky Linux 8",
                     arch="x86_64",
                     pkg_type="rpm",
                 ),
                 Linux(
-                    slug="almalinux-8-arm64",
-                    display_name="Alma Linux 8 Arm64",
+                    slug="rockylinux-8-arm64",
+                    display_name="Rocky Linux 8 Arm64",
                     arch="arm64",
                     pkg_type="rpm",
                 ),
                 Linux(
-                    slug="almalinux-9",
-                    display_name="Alma Linux 9",
+                    slug="rockylinux-9",
+                    display_name="Rocky Linux 9",
                     arch="x86_64",
                     pkg_type="rpm",
                 ),
                 Linux(
-                    slug="almalinux-9-arm64",
-                    display_name="Alma Linux 9 Arm64",
+                    slug="rockylinux-9-arm64",
+                    display_name="Rocky Linux 9 Arm64",
                     arch="arm64",
                     pkg_type="rpm",
                 ),
@@ -419,7 +419,7 @@ def generate_workflows(ctx: Context):
         }
     )
     rpm_slugs = (
-        "almalinux",
+        "rockylinux",
         "amazonlinux",
         "centos",
         "fedora",
@@ -508,7 +508,7 @@ def generate_workflows(ctx: Context):
         if slug.endswith("-arm64"):
             continue
         if not slug.startswith(
-            ("amazonlinux", "almalinux", "centos", "fedora", "photonos")
+            ("amazonlinux", "rockylinux", "centos", "fedora", "photonos")
         ):
             continue
         os_name, os_version = slug.split("-")
