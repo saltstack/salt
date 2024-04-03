@@ -1,5 +1,5 @@
 """
-Functional tests for chocolatey state with Chocolatey < 2.0
+Functional tests for chocolatey state
 """
 
 import os
