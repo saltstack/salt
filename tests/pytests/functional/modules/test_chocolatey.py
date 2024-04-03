@@ -3,7 +3,7 @@ import pytest
 from salt.exceptions import CommandExecutionError
 
 pytestmark = [
-    pytest.mark.destructive_test,
+    pytest.mark.destructive,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
@@ -23,10 +23,8 @@ def clean(chocolatey):
     except CommandExecutionError:
         chocolatey_version = None
     assert chocolatey_version is None
-    try:
-        yield
-    finally:
-        chocolatey.unbootstrap()
+    yield
+    chocolatey.unbootstrap()
 
 
 def test_bootstrap(chocolatey, clean):
