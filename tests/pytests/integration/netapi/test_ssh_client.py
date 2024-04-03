@@ -275,6 +275,7 @@ def test_shell_inject_remote_port_forwards(
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
+        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
