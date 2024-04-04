@@ -12,6 +12,7 @@ from collections import OrderedDict
 import salt.config
 import salt.loader
 import salt.syspaths
+from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 
@@ -59,30 +60,28 @@ class Cache:
 
     def __init__(self, opts, cachedir=None, **kwargs):
         self.opts = opts
-        if cachedir is None:
-            self.cachedir = opts.get("cachedir", salt.syspaths.CACHE_DIR)
+
+        if kwargs.get("driver"):
+            self.driver = kwargs["driver"]
         else:
-            self.cachedir = cachedir
-        self.driver = kwargs.get(
-            "driver", opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+            self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+
+        self.cachedir = kwargs["cachedir"] = cachedir or opts.get(
+            "cachedir", salt.syspaths.CACHE_DIR
         )
         self._modules = None
         self._kwargs = kwargs
-        self._kwargs["cachedir"] = self.cachedir
 
-    def __lazy_init(self):
-        self._modules = salt.loader.cache(self.opts)
-        fun = f"{self.driver}.init_kwargs"
-        if fun in self.modules:
-            self._kwargs = self.modules[fun](self._kwargs)
-        else:
-            self._kwargs = {}
-
-    @property
+    @cached_property
     def modules(self):
-        if self._modules is None:
-            self.__lazy_init()
-        return self._modules
+        return salt.loader.cache(self.opts)
+
+    @cached_property
+    def kwargs(self):
+        try:
+            return self.modules[f"{self.driver}.init_kwargs"](self._kwargs)
+        except KeyError:
+            return {}
 
     def cache(self, bank, key, fun, loop_fun=None, **kwargs):
         """
@@ -148,7 +147,7 @@ class Cache:
         """
         fun = f"{self.driver}.store"
         try:
-            return self.modules[fun](bank, key, data, expires=expires, **self._kwargs)
+            return self.modules[fun](bank, key, data, expires=expires, **self.kwargs)
         except TypeError:
             # if the backing store doesnt natively support expiry, we handle it as a fallback
             if expires:
@@ -157,10 +156,10 @@ class Cache:
                 )
                 expires_at = int(expires_at.timestamp())
                 return self.modules[fun](
-                    bank, key, {"data": data, "_expires": expires_at}, **self._kwargs
+                    bank, key, {"data": data, "_expires": expires_at}, **self.kwargs
                 )
             else:
-                return self.modules[fun](bank, key, data, **self._kwargs)
+                return self.modules[fun](bank, key, data, **self.kwargs)
 
     def fetch(self, bank, key):
         """
@@ -184,7 +183,7 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.fetch"
-        ret = self.modules[fun](bank, key, **self._kwargs)
+        ret = self.modules[fun](bank, key, **self.kwargs)
 
         # handle fallback if necessary
         if isinstance(ret, dict) and set(ret.keys()) == {"data", "_expires"}:
@@ -218,7 +217,7 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.updated"
-        return self.modules[fun](bank, key, **self._kwargs)
+        return self.modules[fun](bank, key, **self.kwargs)
 
     def flush(self, bank, key=None):
         """
@@ -239,7 +238,7 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.flush"
-        return self.modules[fun](bank, key=key, **self._kwargs)
+        return self.modules[fun](bank, key=key, **self.kwargs)
 
     def list(self, bank):
         """
@@ -258,7 +257,7 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.list"
-        return self.modules[fun](bank, **self._kwargs)
+        return self.modules[fun](bank, **self.kwargs)
 
     def contains(self, bank, key=None):
         """
@@ -283,7 +282,7 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.contains"
-        return self.modules[fun](bank, key, **self._kwargs)
+        return self.modules[fun](bank, key, **self.kwargs)
 
 
 class MemCache(Cache):
@@ -336,10 +335,15 @@ class MemCache(Cache):
         if self.debug:
             self.call += 1
         now = time.time()
+        expires = None
         record = self.storage.pop((bank, key), None)
         # Have a cached value for the key
         if record is not None:
-            (created_at, expires, data) = record
+            if len(record) == 2:
+                (created_at, data) = record
+            elif len(record) == 3:
+                (created_at, expires, data) = record
+
             if (created_at + (expires or self.expire)) >= now:
                 if self.debug:
                     self.hit += 1
@@ -352,7 +356,7 @@ class MemCache(Cache):
                 # update atime and return
                 record[0] = now
                 self.storage[(bank, key)] = record
-                return record[1]
+                return data
 
         # Have no value for the key or value is expired
         data = super().fetch(bank, key)
@@ -361,12 +365,12 @@ class MemCache(Cache):
                 MemCache.__cleanup(self.expire)
             if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [now, data]
+        self.storage[(bank, key)] = [now, self.expire, data]
         return data
 
     def store(self, bank, key, data, expires=None):
         self.storage.pop((bank, key), None)
-        super().store(bank, key, data, expires)
+        super().store(bank, key, data, expires=expires)
         if len(self.storage) >= self.max:
             if self.cleanup:
                 MemCache.__cleanup(self.expire)

@@ -22,7 +22,7 @@ def test_connected_ids():
     )
     minion = "minion"
     ips = {"203.0.113.1", "203.0.113.2", "127.0.0.1"}
-    mdata = {"grains": {"ipv4": ips, "ipv6": []}}
+    mdata = {"ipv4": ips, "ipv6": []}
     patch_net = patch("salt.utils.network.local_port_tcp", return_value=ips)
     patch_list = patch("salt.cache.Cache.list", return_value=[minion])
     patch_fetch = patch("salt.cache.Cache.fetch", return_value=mdata)
@@ -51,8 +51,8 @@ def test_connected_ids_remote_minions():
     minion2 = "minion2"
     minion2_ip = "192.168.2.10"
     minion_ips = {"203.0.113.1", "203.0.113.2", "127.0.0.1"}
-    mdata = {"grains": {"ipv4": minion_ips, "ipv6": []}}
-    mdata2 = {"grains": {"ipv4": [minion2_ip], "ipv6": []}}
+    mdata = {"ipv4": minion_ips, "ipv6": []}
+    mdata2 = {"ipv4": [minion2_ip], "ipv6": []}
     patch_net = patch("salt.utils.network.local_port_tcp", return_value=minion_ips)
     patch_remote_net = patch(
         "salt.utils.network.remote_port_tcp", return_value={minion2_ip}
