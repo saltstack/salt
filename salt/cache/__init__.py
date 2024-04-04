@@ -63,9 +63,12 @@ class Cache:
             self.cachedir = opts.get("cachedir", salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = kwargs.get(
-            "driver", opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
-        )
+
+        if kwargs.get("driver"):
+            self.driver = kwargs["driver"]
+        else:
+            self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir
@@ -336,10 +339,15 @@ class MemCache(Cache):
         if self.debug:
             self.call += 1
         now = time.time()
+        expires = None
         record = self.storage.pop((bank, key), None)
         # Have a cached value for the key
         if record is not None:
-            (created_at, expires, data) = record
+            if len(record) == 2:
+                (created_at, data) = record
+            elif len(record) == 3:
+                (created_at, expires, data) = record
+
             if (created_at + (expires or self.expire)) >= now:
                 if self.debug:
                     self.hit += 1
@@ -352,7 +360,7 @@ class MemCache(Cache):
                 # update atime and return
                 record[0] = now
                 self.storage[(bank, key)] = record
-                return record[1]
+                return data
 
         # Have no value for the key or value is expired
         data = super().fetch(bank, key)
@@ -361,12 +369,12 @@ class MemCache(Cache):
                 MemCache.__cleanup(self.expire)
             if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [now, data]
+        self.storage[(bank, key)] = [now, self.expire, data]
         return data
 
     def store(self, bank, key, data, expires=None):
         self.storage.pop((bank, key), None)
-        super().store(bank, key, data, expires)
+        super().store(bank, key, data, expires=expires)
         if len(self.storage) >= self.max:
             if self.cleanup:
                 MemCache.__cleanup(self.expire)

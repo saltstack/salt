@@ -137,16 +137,15 @@ def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
 def test_pillar_get_cache_disk(temp_salt_minion, caplog):
     # create faked path for cache
     with pytest.helpers.temp_directory() as temp_path:
-        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
-        tmp_cachedir.mkdir(parents=True)
-        assert tmp_cachedir.exists()
-        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
+        opts = temp_salt_minion.config.copy()
+        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile.parent.mkdir(parents=True)
         tmp_cachefile.touch()
         assert tmp_cachefile.exists()
 
-        opts = temp_salt_minion.config.copy()
         opts["pillarenv"] = None
         opts["pillar_cache"] = True
+        opts["minion_data_cache"] = False
         opts["cachedir"] = str(temp_path)
 
         caplog.at_level(logging.DEBUG)
@@ -156,25 +155,23 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
             minion_id=temp_salt_minion.id,
             saltenv="base",
         )
-        fresh_pillar = pillar.fetch_pillar()
-        assert not (
-            f"Error reading cache file at '{tmp_cachefile}': Unpack failed: incomplete input"
-            in caplog.messages
-        )
+        fresh_pillar = pillar.compile_pillar()
+        assert "Unpack failed: incomplete input" not in caplog.messages
         assert fresh_pillar == {}
 
 
 def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
     with pytest.helpers.temp_directory() as temp_path:
-        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
-        tmp_cachedir.mkdir(parents=True)
-        assert tmp_cachedir.exists()
-        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
-        assert tmp_cachefile.exists() is False
+        opts = temp_salt_minion.config.copy()
+        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile.parent.mkdir(parents=True)
+        tmp_cachefile.touch()
+        assert tmp_cachefile.exists()
 
         opts = temp_salt_minion.config.copy()
         opts["pillarenv"] = None
         opts["pillar_cache"] = True
+        opts["minion_data_cache"] = False
         opts["cachedir"] = str(temp_path)
 
         pillar_override = {"inline_pillar": True}
@@ -188,8 +185,11 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
             pillar_override=pillar_override,
         )
 
-        fresh_pillar = pillar.fetch_pillar()
-        assert fresh_pillar == {}
+        fresh_pillar = pillar.compile_pillar()
+        assert "inline_pillar" in fresh_pillar
+
+        pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
+        assert "inline_pillar" not in pillar_cache
 
 
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
