@@ -231,7 +231,6 @@ def latest_version(*names, **kwargs):
     return ret
 
 
-# TODO: Support specific version installation
 def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     """
     Install the passed package, add refresh=True to update the apk database.
@@ -248,6 +247,9 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.install <package name>
+    
+    version
+        Install a specific version of the package, e.g. 1.8.10-r3.
 
     refresh
         Whether or not to refresh the package database before installing.
@@ -289,18 +291,21 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     pkg_to_install = []
 
     old = list_pkgs()
+    version = kwargs.get('version')
 
     if name and not (pkgs or sources):
         if "," in name:
             pkg_to_install = name.split(",")
+            if version:
+                log.warning("'version' argument will be ignored for multiple package targets")
         else:
-            pkg_to_install = [name]
+            pkg_to_install = [f"{name}={version}"] if version else [name]
 
     if pkgs:
-        # We don't support installing specific version for now
-        # so transform the dict in list ignoring version provided
-        pkgs = [next(iter(p)) for p in pkgs if isinstance(p, dict)]
-        pkg_to_install.extend(pkgs)
+        for i in pkgs:
+            ((pkg, version),) = i.items()
+            pkg_name = f"{pkg}={version}" if version else pkg
+            pkg_to_install.append(pkg_name)
 
     if not pkg_to_install:
         return {}
