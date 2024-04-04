@@ -283,6 +283,7 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
+            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -293,6 +294,7 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
+            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
@@ -355,6 +357,7 @@ def test_get_key():
         "trust": "Unknown",
         "ownerTrust": "Unknown",
         "expires": "2033-09-24",
+        "expired": False,
         "keyLength": "4096",
     }
 

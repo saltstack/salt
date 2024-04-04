@@ -139,16 +139,24 @@ def _get_user_info(user=None):
     """
     Wrapper for user.info Salt function
     """
+    user_from_config = False
     if not user:
-        # Get user Salt running as
+        # Get user Salt is running as
         user = __salt__["config.option"]("user")
+        # Ensure we don't get an infinite loop when `salt` is returned as the user,
+        # but it does not exist for some reason.
+        user_from_config = True
+        if salt.utils.platform.is_windows() and "\\" in user:
+            # At least in the test suite, this config option is set
+            # including the hostname, so split it off
+            user = user.split("\\", maxsplit=1)[1]
 
     userinfo = __salt__["user.info"](user)
 
     if not userinfo:
-        if user == "salt":
+        if user == "salt" and not user_from_config:
             # Special case with `salt` user:
-            # if it doesn't exist then fall back to user Salt running as
+            # if it doesn't exist then fall back to user Salt is running as
             userinfo = _get_user_info()
         else:
             raise SaltInvocationError(f"User {user} does not exist")
@@ -316,23 +324,7 @@ def search_keys(text, keyserver=None, user=None, gnupghome=None):
 
     _keys = []
     for _key in _search_keys(text, keyserver, user=user, gnupghome=gnupghome):
-        tmp = {"keyid": _key["keyid"], "uids": _key["uids"]}
-
-        expires = _key.get("expires", None)
-        date = _key.get("date", None)
-        length = _key.get("length", None)
-
-        if expires:
-            tmp["expires"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["expires"]))
-            )
-        if date:
-            tmp["created"] = time.strftime(
-                "%Y-%m-%d", time.localtime(float(_key["date"]))
-            )
-        if length:
-            tmp["keyLength"] = _key["length"]
-        _keys.append(tmp)
+        _keys.append(_render_key(_key))
     return _keys
 
 
@@ -403,9 +395,10 @@ def list_secret_keys(user=None, gnupghome=None, keyring=None):
 def _render_key(_key):
     tmp = {
         "keyid": _key["keyid"],
-        "fingerprint": _key["fingerprint"],
         "uids": _key["uids"],
     }
+    if "fingerprint" in _key:
+        tmp["fingerprint"] = _key["fingerprint"]
 
     expires = _key.get("expires", None)
     date = _key.get("date", None)
@@ -417,6 +410,7 @@ def _render_key(_key):
         tmp["expires"] = time.strftime(
             "%Y-%m-%d", time.localtime(float(_key["expires"]))
         )
+        tmp["expired"] = time.time() >= float(expires)
     if date:
         tmp["created"] = time.strftime("%Y-%m-%d", time.localtime(float(_key["date"])))
     if length:
@@ -731,41 +725,14 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None, keyring=Non
         salt '*' gpg.get_key keyid=3FAD9F1E user=username
 
     """
-    tmp = {}
     for _key in _list_keys(user=user, gnupghome=gnupghome, keyring=keyring):
         if (
             _key["fingerprint"] == fingerprint
             or _key["keyid"] == keyid
             or _key["keyid"][8:] == keyid
         ):
-            tmp["keyid"] = _key["keyid"]
-            tmp["fingerprint"] = _key["fingerprint"]
-            tmp["uids"] = _key["uids"]
-
-            expires = _key.get("expires", None)
-            date = _key.get("date", None)
-            length = _key.get("length", None)
-            owner_trust = _key.get("ownertrust", None)
-            trust = _key.get("trust", None)
-
-            if expires:
-                tmp["expires"] = time.strftime(
-                    "%Y-%m-%d", time.localtime(float(_key["expires"]))
-                )
-            if date:
-                tmp["created"] = time.strftime(
-                    "%Y-%m-%d", time.localtime(float(_key["date"]))
-                )
-            if length:
-                tmp["keyLength"] = _key["length"]
-            if owner_trust:
-                tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
-            if trust:
-                tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
-    if not tmp:
-        return False
-    else:
-        return tmp
+            return _render_key(_key)
+    return False
 
 
 def get_secret_key(
@@ -805,7 +772,6 @@ def get_secret_key(
         salt '*' gpg.get_secret_key keyid=3FAD9F1E user=username
 
     """
-    tmp = {}
     for _key in _list_keys(
         user=user, gnupghome=gnupghome, keyring=keyring, secret=True
     ):
@@ -814,34 +780,8 @@ def get_secret_key(
             or _key["keyid"] == keyid
             or _key["keyid"][8:] == keyid
         ):
-            tmp["keyid"] = _key["keyid"]
-            tmp["fingerprint"] = _key["fingerprint"]
-            tmp["uids"] = _key["uids"]
-
-            expires = _key.get("expires", None)
-            date = _key.get("date", None)
-            length = _key.get("length", None)
-            owner_trust = _key.get("ownertrust", None)
-            trust = _key.get("trust", None)
-
-            if expires:
-                tmp["expires"] = time.strftime(
-                    "%Y-%m-%d", time.localtime(float(_key["expires"]))
-                )
-            if date:
-                tmp["created"] = time.strftime(
-                    "%Y-%m-%d", time.localtime(float(_key["date"]))
-                )
-            if length:
-                tmp["keyLength"] = _key["length"]
-            if owner_trust:
-                tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
-            if trust:
-                tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
-    if not tmp:
-        return False
-    else:
-        return tmp
+            return _render_key(_key)
+    return False
 
 
 @_restore_ownership
@@ -1163,6 +1103,14 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None, keyring=N
                     elif result["ok"] == "0":
                         ret["message"].append(
                             f"Key {result['fingerprint']} already exists in keychain"
+                        )
+                    elif result["ok"] == "4":
+                        ret["message"].append(
+                            f"Key {result['fingerprint']} updated: new signatures"
+                        )
+                    elif result["ok"] == "8":
+                        ret["message"].append(
+                            f"Key {result['fingerprint']} updated: new subkeys"
                         )
                 elif "problem" in result:
                     ret["message"].append(
