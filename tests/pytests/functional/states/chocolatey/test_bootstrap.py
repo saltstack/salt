@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 
 from salt.exceptions import CommandExecutionError
@@ -10,8 +8,6 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
-
-log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -56,8 +52,9 @@ def clean(chocolatey_mod):
 
 @pytest.fixture()
 def installed(chocolatey_mod):
+    # Even though this variable is not used, it will be displayed in test output
+    # if there is an error
     result = chocolatey_mod.bootstrap(force=True)
-    log.debug("CHOCO: chocolatey install output\n%s", result)
     try:
         chocolatey_version = chocolatey_mod.chocolatey_version(refresh=True)
     except CommandExecutionError:

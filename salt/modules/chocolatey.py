@@ -90,10 +90,22 @@ def _no_progress():
     return __context__["chocolatey._no_progress"]
 
 
-def _find_chocolatey():
+def _find_chocolatey(refresh=False):
     """
-    Returns the full path to chocolatey.bat on the host.
+    Returns the full path to the chocolatey binary on the host. If found, the
+    location is cached in ``__context__``.
+
+    Args:
+
+        refresh (bool):
+            Refresh the cached location of the chocolatey binary in
+            ``__context__``
+
+            .. versionadded:: 3007.1
     """
+    if refresh:
+        __context__.pop("chocolatey._path", False)
+
     # Check context
     if "chocolatey._path" in __context__:
         return __context__["chocolatey._path"]
@@ -136,7 +148,7 @@ def chocolatey_version(refresh=False):
         refresh (bool):
             Refresh the cached version of chocolatey
 
-            .. versionadded:: 3008.0
+            .. versionadded:: 3007.1
 
     CLI Example:
 
@@ -150,8 +162,7 @@ def chocolatey_version(refresh=False):
     if "chocolatey._version" in __context__:
         return __context__["chocolatey._version"]
 
-    cmd = [_find_chocolatey()]
-    cmd.append("-v")
+    cmd = [_find_chocolatey(refresh=refresh), "-v"]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     __context__["chocolatey._version"] = out
 
@@ -202,7 +213,7 @@ def bootstrap(force=False, source=None, version=None):
             The version of chocolatey to install. The latest version is
             installed if this value is ``None``. Default is ``None``
 
-            .. versionadded:: 3008.0
+            .. versionadded:: 3007.1
 
     Returns:
         str: The stdout of the Chocolatey installation script
@@ -404,24 +415,24 @@ def unbootstrap():
         salt * chocolatey.unbootstrap
     """
     removed = []
-
-    # Delete the Chocolatey directory
-    choco_dir = os.environ.get("ChocolateyInstall", False)
-    if choco_dir:
-        if os.path.exists(choco_dir):
-            log.debug("Removing Chocolatey directory: %s", choco_dir)
-            __salt__["file.remove"](path=choco_dir, force=True)
-            removed.append(f"Removed Directory: {choco_dir}")
-    else:
-        known_paths = [
+    known_paths = []
+    # Get the install location from the registry first
+    if os.environ.get("ChocolateyInstall", False):
+        known_paths.append(os.environ.get("ChocolateyInstall"))
+    known_paths.extend(
+        [
+            # Default location
             os.path.join(os.environ.get("ProgramData"), "Chocolatey"),
+            # Old default location
             os.path.join(os.environ.get("SystemDrive"), "Chocolatey"),
         ]
-        for path in known_paths:
-            if os.path.exists(path):
-                log.debug("Removing Chocolatey directory: %s", path)
-                __salt__["file.remove"](path=path, force=True)
-                removed.append(f"Removed Directory: {path}")
+    )
+    # Delete all known Chocolatey directories
+    for path in known_paths:
+        if os.path.exists(path):
+            log.debug("Removing Chocolatey directory: %s", path)
+            __salt__["file.remove"](path=path, force=True)
+            removed.append(f"Removed Directory: {path}")
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():

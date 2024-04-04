@@ -517,7 +517,7 @@ def source_present(
 
 def bootstrapped(name, force=False, source=None, version=None):
     """
-    .. versionadded:: 3008.0
+    .. versionadded:: 3007.1
 
     Ensure chocolatey is installed on the system.
 
@@ -641,7 +641,7 @@ def bootstrapped(name, force=False, source=None, version=None):
 
 def unbootstrapped(name):
     """
-    .. versionadded:: 3008.0
+    .. versionadded:: 3007.1
 
     Ensure chocolatey is removed from the system.
 
