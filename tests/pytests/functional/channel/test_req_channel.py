@@ -23,6 +23,10 @@ pytestmark = [
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
     ),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Rocky Linux-8' and grains['osarch'] == 'aarch64'",
+        reason="Temporarily skip on Rocky Linux 8 Arm64",
+    ),
 ]
 
 

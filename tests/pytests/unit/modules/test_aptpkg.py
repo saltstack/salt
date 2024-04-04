@@ -2302,3 +2302,39 @@ def test_latest_version_calls_aptcache_once_per_run():
         ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
     mock_apt_cache.assert_called_once()
     assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}
+
+
+@pytest.mark.parametrize(
+    "oneline,result",
+    (
+        (
+            "deb [signed-by=/etc/apt/keyrings/example.key arch=amd64] https://example.com/pub/repos/apt xenial main",
+            {
+                "signedby": {
+                    "full": "signed-by=/etc/apt/keyrings/example.key",
+                    "value": "/etc/apt/keyrings/example.key",
+                },
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+            },
+        ),
+        (
+            "deb [arch=amd64 signed-by=/etc/apt/keyrings/example.key]  https://example.com/pub/repos/apt xenial main",
+            {
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+                "signedby": {
+                    "full": "signed-by=/etc/apt/keyrings/example.key",
+                    "value": "/etc/apt/keyrings/example.key",
+                },
+            },
+        ),
+        (
+            "deb [arch=amd64]  https://example.com/pub/repos/apt xenial main",
+            {
+                "arch": {"full": "arch=amd64", "value": ["amd64"]},
+            },
+        ),
+    ),
+)
+def test__get_opts(oneline, result):
+    ret = aptpkg._get_opts(oneline)
+    assert ret == result
