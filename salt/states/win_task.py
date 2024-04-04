@@ -406,9 +406,9 @@ def present(
     if __opts__["test"]:
         # if force is False and task is found then no changes will take place
         if not force and before["task_found"]:
-            ret[
-                "comment"
-            ] = '"force=True" will allow the new task to replace the old one'
+            ret["comment"] = (
+                '"force=True" will allow the new task to replace the old one'
+            )
             ret["result"] = None
             log.warning("force=False")
             return ret

@@ -108,10 +108,10 @@ def _build_members(members, anycheck=False):
             return "<member>any</member>"
         response = ""
         for m in members:
-            response += "<member>{}</member>".format(m)
+            response += f"<member>{m}</member>"
         return response
     else:
-        return "<member>{}</member>".format(members)
+        return f"<member>{members}</member>"
 
 
 def _default_ret(name):
@@ -354,19 +354,19 @@ def address_exists(
 
     # Verify the arguments
     if ipnetmask:
-        element = "<ip-netmask>{}</ip-netmask>".format(ipnetmask)
+        element = f"<ip-netmask>{ipnetmask}</ip-netmask>"
     elif iprange:
-        element = "<ip-range>{}</ip-range>".format(iprange)
+        element = f"<ip-range>{iprange}</ip-range>"
     elif fqdn:
-        element = "<fqdn>{}</fqdn>".format(fqdn)
+        element = f"<fqdn>{fqdn}</fqdn>"
     else:
         ret.update({"comment": "A valid address type must be specified."})
         return ret
 
     if description:
-        element += "<description>{}</description>".format(description)
+        element += f"<description>{description}</description>"
 
-    full_element = "<entry name='{}'>{}</entry>".format(addressname, element)
+    full_element = f"<entry name='{addressname}'>{element}</entry>"
 
     new_address = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -467,15 +467,15 @@ def address_group_exists(
 
     # Verify the arguments
     if members:
-        element = "<static>{}</static>".format(_build_members(members, True))
+        element = f"<static>{_build_members(members, True)}</static>"
     else:
         ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
-        element += "<description>{}</description>".format(description)
+        element += f"<description>{description}</description>"
 
-    full_element = "<entry name='{}'>{}</entry>".format(groupname, element)
+    full_element = f"<entry name='{groupname}'>{element}</entry>"
 
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1117,19 +1117,19 @@ def security_rule_exists(
     # Build the rule element
     element = ""
     if sourcezone:
-        element += "<from>{}</from>".format(_build_members(sourcezone, True))
+        element += f"<from>{_build_members(sourcezone, True)}</from>"
     else:
         ret.update({"comment": "The sourcezone field must be provided."})
         return ret
 
     if destinationzone:
-        element += "<to>{}</to>".format(_build_members(destinationzone, True))
+        element += f"<to>{_build_members(destinationzone, True)}</to>"
     else:
         ret.update({"comment": "The destinationzone field must be provided."})
         return ret
 
     if source:
-        element += "<source>{}</source>".format(_build_members(source, True))
+        element += f"<source>{_build_members(source, True)}</source>"
     else:
         ret.update({"comment": "The source field must be provided."})
         return
@@ -1151,13 +1151,13 @@ def security_rule_exists(
         return ret
 
     if service:
-        element += "<service>{}</service>".format(_build_members(service, True))
+        element += f"<service>{_build_members(service, True)}</service>"
     else:
         ret.update({"comment": "The service field must be provided."})
         return ret
 
     if action:
-        element += "<action>{}</action>".format(action)
+        element += f"<action>{action}</action>"
     else:
         ret.update({"comment": "The action field must be provided."})
         return ret
@@ -1169,10 +1169,10 @@ def security_rule_exists(
             element += "<disabled>no</disabled>"
 
     if description:
-        element += "<description>{}</description>".format(description)
+        element += f"<description>{description}</description>"
 
     if logsetting:
-        element += "<log-setting>{}</log-setting>".format(logsetting)
+        element += f"<log-setting>{logsetting}</log-setting>"
 
     if logstart is not None:
         if logstart:
@@ -1201,7 +1201,7 @@ def security_rule_exists(
     # Build the profile settings
     profile_string = None
     if profilegroup:
-        profile_string = "<group><member>{}</member></group>".format(profilegroup)
+        profile_string = f"<group><member>{profilegroup}</member></group>"
     else:
         member_string = ""
         if datafilter:
@@ -1212,16 +1212,16 @@ def security_rule_exists(
             )
         if fileblock:
             member_string += (
-                "<file-blocking><member>{}</member></file-blocking>".format(fileblock)
+                f"<file-blocking><member>{fileblock}</member></file-blocking>"
             )
         if spyware:
-            member_string += "<spyware><member>{}</member></spyware>".format(spyware)
+            member_string += f"<spyware><member>{spyware}</member></spyware>"
         if urlfilter:
             member_string += (
-                "<url-filtering><member>{}</member></url-filtering>".format(urlfilter)
+                f"<url-filtering><member>{urlfilter}</member></url-filtering>"
             )
         if virus:
-            member_string += "<virus><member>{}</member></virus>".format(virus)
+            member_string += f"<virus><member>{virus}</member></virus>"
         if vulnerability:
             member_string += (
                 "<vulnerability><member>{}</member></vulnerability>".format(
@@ -1235,12 +1235,12 @@ def security_rule_exists(
                 )
             )
         if member_string != "":
-            profile_string = "<profiles>{}</profiles>".format(member_string)
+            profile_string = f"<profiles>{member_string}</profiles>"
 
     if profile_string:
-        element += "<profile-setting>{}</profile-setting>".format(profile_string)
+        element += f"<profile-setting>{profile_string}</profile-setting>"
 
-    full_element = "<entry name='{}'>{}</entry>".format(rulename, element)
+    full_element = f"<entry name='{rulename}'>{element}</entry>"
 
     new_rule = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1380,9 +1380,9 @@ def service_exists(
     element = "<protocol><{0}><port>{1}</port></{0}></protocol>".format(protocol, port)
 
     if description:
-        element += "<description>{}</description>".format(description)
+        element += f"<description>{description}</description>"
 
-    full_element = "<entry name='{}'>{}</entry>".format(servicename, element)
+    full_element = f"<entry name='{servicename}'>{element}</entry>"
 
     new_service = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1483,15 +1483,15 @@ def service_group_exists(
 
     # Verify the arguments
     if members:
-        element = "<members>{}</members>".format(_build_members(members, True))
+        element = f"<members>{_build_members(members, True)}</members>"
     else:
         ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
-        element += "<description>{}</description>".format(description)
+        element += f"<description>{description}</description>"
 
-    full_element = "<entry name='{}'>{}</entry>".format(groupname, element)
+    full_element = f"<entry name='{groupname}'>{element}</entry>"
 
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 

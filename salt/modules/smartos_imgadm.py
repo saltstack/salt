@@ -42,8 +42,8 @@ def _exit_status(retcode, stderr=None):
         1: "An error occurred." if not stderr else stderr,
         2: "Usage error.",
         3: "Image not installed.",
-    }[retcode]
-    return ret
+    }
+    return ret[retcode]
 
 
 def _parse_image_meta(image=None, detail=False):

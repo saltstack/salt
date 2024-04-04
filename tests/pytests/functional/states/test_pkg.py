@@ -507,7 +507,7 @@ def test_pkg_012_installed_with_wildcard_version(PKG_TARGETS, states, modules):
     )
 
     expected_comment = (
-        "All specified packages are already installed and are at the " "desired version"
+        "All specified packages are already installed and are at the desired version"
     )
     assert ret.result is True
     assert ret.raw[next(iter(ret.raw))]["comment"] == expected_comment

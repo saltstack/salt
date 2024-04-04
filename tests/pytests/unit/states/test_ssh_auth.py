@@ -144,7 +144,7 @@ def test_manage():
         with patch("salt.states.ssh_auth.present") as call_mocked_present:
             mock_present = {
                 "comment": (
-                    "The authorized host key newkey for user {} was added".format(user)
+                    f"The authorized host key newkey for user {user} was added"
                 ),
                 "changes": {"newkey": "New"},
                 "result": True,

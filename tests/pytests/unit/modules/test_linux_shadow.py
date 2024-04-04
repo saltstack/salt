@@ -1,6 +1,7 @@
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
+
 import types
 
 import pytest

@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+
 import asyncio
 import collections
 import copy
@@ -181,21 +182,21 @@ class SMaster:
 
         if use_lock:
             with cls.secrets["cluster_aes"]["secret"].get_lock():
-                cls.secrets["cluster_aes"][
-                    "secret"
-                ].value = salt.utils.stringutils.to_bytes(
-                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                cls.secrets["cluster_aes"]["secret"].value = (
+                    salt.utils.stringutils.to_bytes(
+                        cls.secrets["cluster_aes"]["reload"](remove=owner)
+                    )
                 )
         else:
-            cls.secrets["cluster_aes"][
-                "secret"
-            ].value = salt.utils.stringutils.to_bytes(
-                cls.secrets["cluster_aes"]["reload"](remove=owner)
+            cls.secrets["cluster_aes"]["secret"].value = (
+                salt.utils.stringutils.to_bytes(
+                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                )
             )
 
         if event:
             event.fire_event(
-                {f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
+                {"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
             )
 
         if publisher:
@@ -363,7 +364,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 log.error("Found dropfile with incorrect permissions, ignoring...")
             if to_rotate:
                 os.remove(dfn)
-        except os.error:
+        except OSError:
             pass
 
         # There is no need to check key against publish_session if we're
@@ -373,7 +374,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
                 try:
                     stats = os.stat(keyfile)
-                except os.error as exc:
+                except OSError as exc:
                     log.error("Unexpected condition while reading keyfile %s", exc)
                     return
                 if now - stats.st_mtime >= self.opts["publish_session"]:
@@ -867,7 +868,9 @@ class Master(SMaster):
                     mod = ".".join(proc.split(".")[:-1])
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                    cls = _tmp.__getattribute__(cls)
+                    cls = _tmp.__getattribute__(  # pylint: disable=unnecessary-dunder-call
+                        cls
+                    )
                     name = f"ExtProcess({cls.__qualname__})"
                     self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
@@ -1042,7 +1045,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     # Cannot delete read-only files on Windows.
                     os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
-            except os.error:
+            except OSError:
                 pass
 
         # Wait for kill should be less then parent's ProcessManager.
@@ -1735,7 +1738,7 @@ class AESFuncs(TransportMethods):
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"

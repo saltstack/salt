@@ -15,7 +15,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         self.file = "/tmp/file"
         self.quoted_file = '"/tmp/file"'
         self.files = ["/tmp/file1", "/tmp/file2", "/tmp/file3 with whitespaces"]
-        self.quoted_files = ['"{}"'.format(f) for f in self.files]
+        self.quoted_files = [f'"{f}"' for f in self.files]
         self.u_acl = ["u", "myuser", "rwx"]
         self.user_acl = ["user", "myuser", "rwx"]
         self.user_acl_cmd = "u:myuser:rwx"

@@ -47,7 +47,7 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rs
     if update:
         options.append("--update")
     if rsh:
-        options.append("--rsh={}".format(rsh))
+        options.append(f"--rsh={rsh}")
     if passwordfile:
         options.extend(["--password-file", passwordfile])
     if excludefrom:
@@ -182,16 +182,16 @@ def rsync(
                 # get the contents not the tmpdir
                 # itself.
                 if not src.endswith("/"):
-                    src = "{}/".format(src)
+                    src = f"{src}/"
             else:
-                raise CommandExecutionError("{} does not exist".format(src))
+                raise CommandExecutionError(f"{src} does not exist")
         else:
             tmp_src = salt.utils.files.mkstemp()
             file_src = __salt__["cp.get_file"](_src, tmp_src, saltenv)
             if file_src:
                 src = tmp_src
             else:
-                raise CommandExecutionError("{} does not exist".format(src))
+                raise CommandExecutionError(f"{src} does not exist")
 
     option = _check(
         delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh
@@ -261,16 +261,14 @@ def config(conf_path="/etc/rsyncd.conf"):
                 ret += salt.utils.stringutils.to_unicode(line)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            raise CommandExecutionError("{} does not exist".format(conf_path))
+            raise CommandExecutionError(f"{conf_path} does not exist")
         elif exc.errno == errno.EACCES:
-            raise CommandExecutionError(
-                "Unable to read {}, access denied".format(conf_path)
-            )
+            raise CommandExecutionError(f"Unable to read {conf_path}, access denied")
         elif exc.errno == errno.EISDIR:
             raise CommandExecutionError(
-                "Unable to read {}, path is a directory".format(conf_path)
+                f"Unable to read {conf_path}, path is a directory"
             )
         else:
-            raise CommandExecutionError("Error {}: {}".format(exc.errno, exc.strerror))
+            raise CommandExecutionError(f"Error {exc.errno}: {exc.strerror}")
     else:
         return ret

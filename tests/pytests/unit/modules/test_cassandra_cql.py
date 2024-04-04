@@ -2,7 +2,6 @@
 Test case for the cassandra_cql module
 """
 
-
 import logging
 import ssl
 
@@ -86,7 +85,7 @@ def test_version(caplog):
     with pytest.raises(CommandExecutionError) as err:
         with patch.object(cassandra_cql, "cql_query", mock_cql_query):
             version = cassandra_cql.version()
-    assert "{}".format(err.value) == ""
+    assert f"{err.value}" == ""
     assert "Could not get Cassandra version." in caplog.text
     for record in caplog.records:
         assert record.levelname == "CRITICAL"

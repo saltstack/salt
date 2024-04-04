@@ -66,13 +66,13 @@ def test_copy(tmp_path):
     mock_grp = MagicMock(return_value=group)
     mock_io = MagicMock(side_effect=IOError)
     with patch.object(os.path, "isabs", mock_f):
-        comt = "Specified file {} is not an absolute path".format(name)
+        comt = f"Specified file {name} is not an absolute path"
         ret.update({"comment": comt, "name": name})
         assert filestate.copy_(name, source) == ret
 
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "exists", mock_f):
-            comt = 'Source file "{}" is not present'.format(source)
+            comt = f'Source file "{source}" is not present'
             ret.update({"comment": comt, "result": False})
             assert filestate.copy_(name, source) == ret
 
@@ -106,7 +106,7 @@ def test_copy(tmp_path):
                     'The target file "{}" exists and will not be '
                     "overwritten".format(name)
                 )
-                comt3 = 'File "{}" is set to be copied to "{}"'.format(source, name)
+                comt3 = f'File "{source}" is set to be copied to "{name}"'
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.object(os.path, "lexists", mock_t):
                         with patch.dict(filestate.__opts__, {"test": False}):
@@ -165,7 +165,7 @@ def test_copy(tmp_path):
                 },
             ):
 
-                comt = 'Copied "{}" to "{}"'.format(source, name)
+                comt = f'Copied "{source}" to "{name}"'
                 with patch.dict(filestate.__opts__, {"user": "salt"}), patch.object(
                     os.path, "isdir", mock_t
                 ), patch.object(os.path, "lexists", mock_f), patch.dict(
@@ -186,7 +186,7 @@ def test_copy(tmp_path):
                     res = filestate.copy_(name, source, group=group, preserve=False)
                     assert res == ret
 
-                comt = 'Copied "{}" to "{}"'.format(source, name)
+                comt = f'Copied "{source}" to "{name}"'
                 with patch.dict(filestate.__opts__, {"user": "salt"}), patch.object(
                     os.path, "isdir", MagicMock(side_effect=[False, True, False])
                 ), patch.object(os.path, "lexists", mock_f), patch.dict(

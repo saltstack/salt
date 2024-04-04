@@ -19,7 +19,6 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N36KPlatform(NXOSPlatform):
-
     """Cisco Systems N36K Platform Unit Test Object"""
 
     chassis = "Nexus3000 N3K-C36180YC-R Chassis"

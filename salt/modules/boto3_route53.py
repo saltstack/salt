@@ -919,10 +919,12 @@ def _aws_encode_changebatch(o):
                 )
                 rr_idx += 1
         if "AliasTarget" in o["Changes"][change_idx]["ResourceRecordSet"]:
-            o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"][
-                "DNSName"
-            ] = _aws_encode(
-                o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"]["DNSName"]
+            o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"]["DNSName"] = (
+                _aws_encode(
+                    o["Changes"][change_idx]["ResourceRecordSet"]["AliasTarget"][
+                        "DNSName"
+                    ]
+                )
             )
         change_idx += 1
     return o
@@ -952,7 +954,7 @@ def _aws_decode(x):
     if "\\" in x:
         return x.decode("unicode_escape")
 
-    if type(x) == bytes:
+    if isinstance(x, bytes):
         return x.decode("idna")
 
     return x
@@ -1032,13 +1034,17 @@ def get_resource_records(
         if done:
             return ret
         args = {"HostedZoneId": HostedZoneId}
-        args.update(
-            {"StartRecordName": _aws_encode(next_rr_name)}
-        ) if next_rr_name else None
+        (
+            args.update({"StartRecordName": _aws_encode(next_rr_name)})
+            if next_rr_name
+            else None
+        )
         # Grrr, can't specify type unless name is set...  We'll do this via filtering later instead
-        args.update(
-            {"StartRecordType": next_rr_type}
-        ) if next_rr_name and next_rr_type else None
+        (
+            args.update({"StartRecordType": next_rr_type})
+            if next_rr_name and next_rr_type
+            else None
+        )
         args.update({"StartRecordIdentifier": next_rr_id}) if next_rr_id else None
         try:
             r = conn.list_resource_record_sets(**args)

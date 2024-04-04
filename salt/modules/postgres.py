@@ -35,10 +35,6 @@ To prevent Postgres commands from running arbitrarily long, a timeout (in second
         postgres.bins_dir: '/usr/pgsql-9.5/bin/'
 """
 
-# This pylint error is popping up where there are no colons?
-# pylint: disable=E8203
-
-
 import base64
 import datetime
 import hashlib
@@ -273,7 +269,7 @@ def _run_initdb(
             "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
         ),
     )
-    cmdstr = " ".join([shlex.quote(c) for c in cmd])
+    cmdstr = shlex.join(cmd)
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
     if ret.get("retcode", 0) != 0:
@@ -1007,7 +1003,8 @@ def user_list(
         return False
 
     # will return empty string if return_password = False
-    _x = lambda s: s if return_password else ""
+    def _x(s):
+        return s if return_password else ""
 
     query = "".join(
         [

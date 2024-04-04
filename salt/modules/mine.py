@@ -186,7 +186,7 @@ def update(clear=False, mine_functions=None):
             res = salt.utils.functools.call_function(
                 __salt__[function_name or function_alias],
                 *function_args,
-                **function_kwargs
+                **function_kwargs,
             )
         except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
@@ -309,7 +309,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     # Load from local minion's cache
     if __opts__["file_client"] == "local":
         ret = {}
-        is_target = {
+        _targets = {
             "glob": __salt__["match.glob"],
             "pcre": __salt__["match.pcre"],
             "list": __salt__["match.list"],
@@ -319,8 +319,8 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
             "compound": __salt__["match.compound"],
             "pillar": __salt__["match.pillar"],
             "pillar_pcre": __salt__["match.pillar_pcre"],
-        }[tgt_type](tgt)
-        if not is_target:
+        }
+        if not _targets[tgt_type](tgt):
             return ret
 
         data = __salt__["data.get"]("mine_cache")

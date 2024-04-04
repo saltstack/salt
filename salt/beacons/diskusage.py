@@ -5,6 +5,7 @@ Beacon to monitor disk usage.
 
 :depends: python-psutil
 """
+
 import logging
 import re
 
@@ -94,7 +95,7 @@ def beacon(config):
         # if our mount doesn't end with a $, insert one.
         mount_re = mount
         if not mount.endswith("$"):
-            mount_re = "{}$".format(mount)
+            mount_re = f"{mount}$"
 
         if salt.utils.platform.is_windows():
             # mount_re comes in formatted with a $ at the end

@@ -3,6 +3,7 @@
 
     Tests for esxdatacenter proxy
 """
+
 import pytest
 
 import salt.exceptions

@@ -232,7 +232,7 @@ def get_fun(fun):
     client, path = _get_conn(__opts__)
     items = client.get("/".join((path, "minions")), recurse=True)
     for id, jid in items.items():
-        id = str(id).split("/")[-1]
+        id = str(id).rsplit("/", maxsplit=1)[-1]
         efun = salt.utils.json.loads(
             client.get("/".join((path, "jobs", str(jid), id, "fun")))
         )
@@ -251,7 +251,7 @@ def get_jids():
     items = client.get("/".join((path, "jobs")), recurse=True)
     for key, value in items.items():
         if isinstance(value, dict):  # dict means directory
-            jid = str(key).split("/")[-1]
+            jid = str(key).rsplit("/", maxsplit=1)[-1]
             ret.append(jid)
     return ret
 
@@ -265,7 +265,7 @@ def get_minions():
     client, path = _get_conn(__opts__)
     items = client.get("/".join((path, "minions")), recurse=True)
     for id, _ in items.items():
-        id = str(id).split("/")[-1]
+        id = str(id).rsplit("/", maxsplit=1)[-1]
         ret.append(id)
     return ret
 

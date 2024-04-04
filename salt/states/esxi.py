@@ -1397,11 +1397,11 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
     result = (
         True
         if not (changes or errors)
-        else None  # no changes/errors
-        if __opts__["test"]
-        else False  # running in test mode
-        if errors
-        else True
+        else (
+            None  # no changes/errors
+            if __opts__["test"]
+            else False if errors else True  # running in test mode
+        )
     )  # found errors; defaults to True
     ret.update(
         {"result": result, "comment": "\n".join(comments), "changes": diskgroup_changes}

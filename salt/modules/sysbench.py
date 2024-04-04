@@ -79,7 +79,7 @@ def cpu():
 
     # Test beings!
     for primes in max_primes:
-        key = "Prime numbers limit: {}".format(primes)
+        key = f"Prime numbers limit: {primes}"
         run_command = test_command.format(primes)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -110,7 +110,7 @@ def threads():
 
     # Test begins!
     for yields, locks in zip(thread_yields, thread_locks):
-        key = "Yields: {} Locks: {}".format(yields, locks)
+        key = f"Yields: {yields} Locks: {locks}"
         run_command = test_command.format(yields, locks)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -149,7 +149,7 @@ def mutex():
 
     # Test begins!
     for num, locks, loops in zip(mutex_num, mutex_locks, mutex_loops):
-        key = "Mutex: {} Locks: {} Loops: {}".format(num, locks, loops)
+        key = f"Mutex: {num} Locks: {locks} Loops: {loops}"
         run_command = test_command.format(num, locks, loops)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -187,7 +187,7 @@ def memory():
     # Test begins!
     for oper in memory_oper:
         for scope in memory_scope:
-            key = "Operation: {} Scope: {}".format(oper, scope)
+            key = f"Operation: {oper} Scope: {scope}"
             run_command = test_command.format(oper, scope)
             result = __salt__["cmd.run"](run_command)
             ret_val[key] = _parser(result)
@@ -228,7 +228,7 @@ def fileio():
 
     # Test begins!
     for mode in test_modes:
-        key = "Mode: {}".format(mode)
+        key = f"Mode: {mode}"
 
         # Prepare phase
         run_command = (test_command + "prepare").format(mode)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''\
+'''
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
 
@@ -91,9 +91,11 @@ def get_salt_vars():
         __pillar__ = {}
 
     # pylint: disable=invalid-name,unused-variable,possibly-unused-variable
-    JINJA = lambda x, **y: jinja2.Template(x).render(
-        grains=__grains__, salt=__salt__, opts=__opts__, pillar=__pillar__, **y
-    )
+    def JINJA(x, **y):
+        return jinja2.Template(x).render(
+            grains=__grains__, salt=__salt__, opts=__opts__, pillar=__pillar__, **y
+        )
+
     # pylint: enable=invalid-name,unused-variable,possibly-unused-variable
 
     return locals()

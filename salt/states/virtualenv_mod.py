@@ -4,7 +4,6 @@ Setup of Python virtualenv sandboxes.
 .. versionadded:: 0.17.0
 """
 
-
 import logging
 import os
 
@@ -58,7 +57,7 @@ def managed(
     pip_cache_dir=None,
     process_dependency_links=False,
     no_binary=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a virtualenv and optionally manage it with pip
@@ -172,21 +171,19 @@ def managed(
     # If it already exists, grab the version for posterity
     if venv_exists and clear:
         ret["changes"]["cleared_packages"] = __salt__["pip.freeze"](bin_env=name)
-        ret["changes"]["old"] = __salt__["cmd.run_stderr"](
-            "{} -V".format(venv_py)
-        ).strip("\n")
+        ret["changes"]["old"] = __salt__["cmd.run_stderr"](f"{venv_py} -V").strip("\n")
 
     # Create (or clear) the virtualenv
     if __opts__["test"]:
         if venv_exists and clear:
             ret["result"] = None
-            ret["comment"] = "Virtualenv {} is set to be cleared".format(name)
+            ret["comment"] = f"Virtualenv {name} is set to be cleared"
             return ret
         if venv_exists and not clear:
-            ret["comment"] = "Virtualenv {} is already created".format(name)
+            ret["comment"] = f"Virtualenv {name} is already created"
             return ret
         ret["result"] = None
-        ret["comment"] = "Virtualenv {} is set to be created".format(name)
+        ret["comment"] = f"Virtualenv {name} is set to be created"
         return ret
 
     if not venv_exists or (venv_exists and clear):
@@ -203,11 +200,11 @@ def managed(
                 prompt=prompt,
                 user=user,
                 use_vt=use_vt,
-                **kwargs
+                **kwargs,
             )
         except CommandNotFoundError as err:
             ret["result"] = False
-            ret["comment"] = "Failed to create virtualenv: {}".format(err)
+            ret["comment"] = f"Failed to create virtualenv: {err}"
             return ret
 
         if venv_ret["retcode"] != 0:
@@ -216,9 +213,7 @@ def managed(
             return ret
 
         ret["result"] = True
-        ret["changes"]["new"] = __salt__["cmd.run_stderr"](
-            "{} -V".format(venv_py)
-        ).strip("\n")
+        ret["changes"]["new"] = __salt__["cmd.run_stderr"](f"{venv_py} -V").strip("\n")
 
         if clear:
             ret["comment"] = "Cleared existing virtualenv"
@@ -329,7 +324,7 @@ def managed(
             env_vars=env_vars,
             no_cache_dir=pip_no_cache_dir,
             cache_dir=pip_cache_dir,
-            **kwargs
+            **kwargs,
         )
         ret["result"] &= pip_ret["retcode"] == 0
         if pip_ret["retcode"] > 0:

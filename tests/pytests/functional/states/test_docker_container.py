@@ -56,7 +56,7 @@ class Network:
         return ipaddress.ip_network(self.subnet)
 
     @_rand_indexes.default
-    def __rand_indexes(self):
+    def __rand_indexes(self):  # pylint: disable=unused-private-member
         return random.sample(
             range(2, self.net.num_addresses - 1), self.net.num_addresses - 3
         )

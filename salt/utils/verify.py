@@ -338,7 +338,7 @@ def check_user(user):
 
     try:
         if hasattr(os, "initgroups"):
-            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+            os.initgroups(user, pwuser.pw_gid)
         else:
             os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
         os.setgid(pwuser.pw_gid)
@@ -429,7 +429,10 @@ def check_max_open_files(opts):
         # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
         mof_s = mof_h = win32file._getmaxstdio()
     else:
-        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        mof_s, mof_h = resource.getrlimit(  # pylint: disable=used-before-assignment
+            resource.RLIMIT_NOFILE
+        )
 
     accepted_keys_dir = os.path.join(opts.get("pki_dir"), "minions")
     accepted_count = len(os.listdir(accepted_keys_dir))

@@ -1,6 +1,7 @@
 """
 Tests using nginx formula
 """
+
 import pytest
 
 pytestmark = [

@@ -19,7 +19,6 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N5KPlatform(NXOSPlatform):
-
     """Cisco Systems N5K Platform Unit Test Object"""
 
     chassis = "cisco Nexus 5672UP 16G-FC Chassis"

@@ -1,6 +1,7 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import glob
 import logging
 import os
@@ -83,7 +84,7 @@ def lgpo_bin():
         # download lgpo.zip
         log.debug("Downloading LGPO.exe from Microsoft")
         url = "https://download.microsoft.com/download/8/5/C/85C25433-A1B0-4FFA-9429-7E023E7DA8D8/LGPO.zip"
-        r = requests.get(url)
+        r = requests.get(url, timeout=60)
         with salt.utils.files.fopen(zip_file, "wb") as f:
             f.write(r.content)
         # extract zip

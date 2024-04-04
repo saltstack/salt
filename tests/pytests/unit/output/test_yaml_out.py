@@ -1,6 +1,7 @@
 """
 unittests for yaml outputter
 """
+
 import pytest
 
 import salt.output.yaml_out as yaml

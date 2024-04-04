@@ -4,7 +4,6 @@
     Test cases for salt.modules.http
 """
 
-
 import pytest
 
 import salt.modules.http as http

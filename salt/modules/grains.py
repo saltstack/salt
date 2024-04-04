@@ -9,7 +9,6 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-
 import collections
 import logging
 import math
@@ -39,8 +38,11 @@ __outputter__ = {
     "setval": "nested",
 }
 
+
 # http://stackoverflow.com/a/12414913/127816
-_infinitedict = lambda: collections.defaultdict(_infinitedict)
+def _infinitedict():
+    return collections.defaultdict(_infinitedict)
+
 
 _non_existent_key = "NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK"
 
@@ -54,21 +56,28 @@ def _serial_sanitizer(instr):
     return "{}{}".format(instr[:index], "X" * (length - index))
 
 
-_FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
-_HOSTNAME_SANITIZER = lambda x: "MINION"
-_DOMAINNAME_SANITIZER = lambda x: "DOMAINNAME"
+def _fqdn_sanitizer(x):
+    return "MINION.DOMAINNAME"
+
+
+def _hostname_sanitizer(x):
+    return "MINION"
+
+
+def _domainname_sanitizer(x):
+    return "DOMAINNAME"
 
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _SANITIZERS = {
     "serialnumber": _serial_sanitizer,
-    "domain": _DOMAINNAME_SANITIZER,
-    "fqdn": _FQDN_SANITIZER,
-    "id": _FQDN_SANITIZER,
-    "host": _HOSTNAME_SANITIZER,
-    "localhost": _HOSTNAME_SANITIZER,
-    "nodename": _HOSTNAME_SANITIZER,
+    "domain": _domainname_sanitizer,
+    "fqdn": _fqdn_sanitizer,
+    "id": _fqdn_sanitizer,
+    "host": _hostname_sanitizer,
+    "localhost": _hostname_sanitizer,
+    "nodename": _hostname_sanitizer,
 }
 
 
@@ -255,7 +264,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             try:
                 grains = salt.utils.yaml.safe_load(fp_)
             except salt.utils.yaml.YAMLError as exc:
-                return "Unable to read existing grains file: {}".format(exc)
+                return f"Unable to read existing grains file: {exc}"
         if not isinstance(grains, dict):
             grains = {}
     for key, val in new_grains.items():
@@ -351,9 +360,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         if not isinstance(grains, list):
             grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val in grains:
-        return "The val {} was already in the list {}".format(val, key)
+        return f"The val {val} was already in the list {key}"
     if isinstance(val, list):
         for item in val:
             grains.append(item)
@@ -398,9 +407,9 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     """
     grains = get(key, [], delimiter)
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val not in grains:
-        return "The val {} was not in the list {}".format(val, key)
+        return f"The val {val} was not in the list {key}"
     grains.remove(val)
 
     while delimiter in key:

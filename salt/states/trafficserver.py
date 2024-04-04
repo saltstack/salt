@@ -209,7 +209,7 @@ def config(name, value):
     __salt__["trafficserver.set_config"](name, value)
 
     ret["result"] = True
-    ret["comment"] = "Configured {} to {}".format(name, value)
+    ret["comment"] = f"Configured {name} to {value}"
     return ret
 
 
@@ -345,11 +345,11 @@ def offline(name, path):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "Setting {} to offline".format(path)
+        ret["comment"] = f"Setting {path} to offline"
         return ret
 
     __salt__["trafficserver.offline"](path)
 
     ret["result"] = True
-    ret["comment"] = "Set {} as offline".format(path)
+    ret["comment"] = f"Set {path} as offline"
     return ret

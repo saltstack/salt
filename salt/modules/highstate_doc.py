@@ -388,7 +388,7 @@ def _get_config(**kwargs):
         "note": None,
     }
     if "__salt__" in globals():
-        config_key = "{}.config".format(__virtualname__)
+        config_key = f"{__virtualname__}.config"
         config.update(__salt__["config.get"](config_key, {}))
     # pylint: disable=C0201
     for k in set(config.keys()) & set(kwargs.keys()):
@@ -437,7 +437,7 @@ def read_file(name):
 def render(
     jinja_template_text=None,
     jinja_template_function="highstate_doc.markdown_default_jinja_template",
-    **kwargs
+    **kwargs,
 ):
     """
     Render highstate to a text format (default Markdown)
@@ -573,13 +573,13 @@ def _format_markdown_system_file(filename, config):
         file_stats, whitelist=["user", "group", "mode", "uid", "gid", "size"]
     )
     if y:
-        ret += "file stat {1}\n```\n{0}```\n".format(y, filename)
+        ret += f"file stat {filename}\n```\n{y}```\n"
     file_size = file_stats.get("size")
     if file_size <= config.get("max_render_file_size"):
         is_binary = True
         try:
             # TODO: this is linux only should find somthing portable
-            file_type = __salt__["cmd.shell"]("\\file -i '{}'".format(filename))
+            file_type = __salt__["cmd.shell"](f"\\file -i '{filename}'")
             if "charset=binary" not in file_type:
                 is_binary = False
         except Exception as ex:  # pylint: disable=broad-except
@@ -591,11 +591,11 @@ def _format_markdown_system_file(filename, config):
             with salt.utils.files.fopen(filename, "r") as f:
                 file_data = salt.utils.stringutils.to_unicode(f.read())
         file_data = _md_fix(file_data)
-        ret += "file data {1}\n```\n{0}\n```\n".format(file_data, filename)
+        ret += f"file data {filename}\n```\n{file_data}\n```\n"
     else:
         ret += "```\n{}\n```\n".format(
             "SKIPPED LARGE FILE!\nSet {}:max_render_file_size > {} to render.".format(
-                "{}.config".format(__virtualname__), file_size
+                f"{__virtualname__}.config", file_size
             )
         )
     return ret
@@ -614,11 +614,11 @@ def _format_markdown_requisite(state, stateid, makelink=True):
     """
     format requisite as a link users can click
     """
-    fmt_id = "{}: {}".format(state, stateid)
+    fmt_id = f"{state}: {stateid}"
     if makelink:
-        return " * [{}](#{})\n".format(fmt_id, _format_markdown_link(fmt_id))
+        return f" * [{fmt_id}](#{_format_markdown_link(fmt_id)})\n"
     else:
-        return " * `{}`\n".format(fmt_id)
+        return f" * `{fmt_id}`\n"
 
 
 def processor_markdown(lowstate_item, config, **kwargs):
@@ -669,19 +669,19 @@ def processor_markdown(lowstate_item, config, **kwargs):
         if "source" in s:
             text = __salt__["cp.get_file_str"](s["source"])
             if text:
-                details += "\n{}\n".format(text)
+                details += f"\n{text}\n"
             else:
                 details += "\n{}\n".format("ERROR: opening {}".format(s["source"]))
 
     if state_function == "pkg.installed":
         pkgs = s.get("pkgs", s.get("name"))
-        details += "\n```\ninstall: {}\n```\n".format(pkgs)
+        details += f"\n```\ninstall: {pkgs}\n```\n"
 
     if state_function == "file.recurse":
         details += """recurse copy of files\n"""
         y = _state_data_to_yaml_string(s)
         if y:
-            details += "```\n{}\n```\n".format(y)
+            details += f"```\n{y}\n```\n"
         if "!doc_recurse" in id_full:
             findfiles = __salt__["file.find"](path=s.get("name"), type="f")
             if len(findfiles) < 10 or "!doc_recurse_force" in id_full:
@@ -715,7 +715,7 @@ def processor_markdown(lowstate_item, config, **kwargs):
     if not details:
         y = _state_data_to_yaml_string(s)
         if y:
-            details += "```\n{}```\n".format(y)
+            details += f"```\n{y}```\n"
 
     r = {
         "vars": lowstate_item,

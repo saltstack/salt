@@ -4,7 +4,6 @@
     Test cases for salt.modules.nfs3
 """
 
-
 import pytest
 
 import salt.modules.nfs3 as nfs3

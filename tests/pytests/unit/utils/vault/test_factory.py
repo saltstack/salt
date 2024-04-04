@@ -633,11 +633,12 @@ class TestFetchSecretId:
 
     @pytest.fixture(params=["plain", "wrapped", "dict"])
     def secret_id(self, secret_id_response, wrapped_secret_id_response, request):
-        return {
+        ret = {
             "plain": "test-secret-id",
             "wrapped": {"wrap_info": wrapped_secret_id_response["wrap_info"]},
             "dict": secret_id_response["data"],
-        }[request.param]
+        }
+        return ret[request.param]
 
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
     @pytest.mark.parametrize(
@@ -817,11 +818,12 @@ class TestFetchToken:
 
     @pytest.fixture(params=["plain", "wrapped", "dict"])
     def token(self, token_auth, wrapped_token_auth_response, request):
-        return {
+        ret = {
             "plain": token_auth["auth"]["client_token"],
             "wrapped": {"wrap_info": wrapped_token_auth_response["wrap_info"]},
             "dict": token_auth["auth"],
-        }[request.param]
+        }
+        return ret[request.param]
 
     @pytest.mark.parametrize(
         "test_remote_config", ["token", "wrapped_token"], indirect=True

@@ -587,7 +587,7 @@ def _source_encode(source, saltenv):
     try:
         source_url = urllib.parse.urlparse(source)
     except TypeError:
-        return "", {}, "Invalid format for source parameter"
+        return "", {}
 
     protos = ("salt", "http", "https", "ftp", "swift", "s3", "file")
 

@@ -1,6 +1,7 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
+
 import pytest
 
 import salt.states.sysfs as sysfs
@@ -18,7 +19,7 @@ def test_if_the_sysfs_attribute_exists():
     """
     name = "block/sda/queue/this_does_not_exist"
     value = "none"
-    comment = "SysFS attribute {} doesn't exist.".format(name)
+    comment = f"SysFS attribute {name} doesn't exist."
     ret = {"name": name, "result": False, "changes": {}, "comment": comment}
 
     mock_read = MagicMock(return_value=False)
@@ -32,7 +33,7 @@ def test_name_is_an_object_and_not_an_attribute():
     """
     name = "block/sda/queue"
     value = "none"
-    comment = "{} is not a SysFS attribute.".format(name)
+    comment = f"{name} is not a SysFS attribute."
     ret = {"name": name, "result": False, "changes": {}, "comment": comment}
 
     read_from_sysfs = {
@@ -52,7 +53,7 @@ def test_already_set():
     """
     name = "block/sda/queue"
     value = "none"
-    comment = "SysFS attribute {} is already set.".format(name)
+    comment = f"SysFS attribute {name} is already set."
     ret = {"name": name, "result": True, "changes": {}, "comment": comment}
 
     read_from_sysfs = "[none] mq-deadline"
@@ -68,7 +69,7 @@ def test_set_new_value_with_test_equals_true():
     """
     name = "devices/system/cpu/cpufreq/policy0"
     value = "powersave"
-    comment = "SysFS attribute {} set to be changed.".format(name)
+    comment = f"SysFS attribute {name} set to be changed."
     ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
     read_from_sysfs = "performance"
@@ -85,7 +86,7 @@ def test_set_new_value_with_success():
     """
     name = "block/sda/queue/scheduler"
     value = "mq-deadline"
-    comment = "Updated SysFS attribute {} to {}".format(name, value)
+    comment = f"Updated SysFS attribute {name} to {value}"
     ret = {"name": name, "result": True, "changes": {name: value}, "comment": comment}
 
     read_from_sysfs = "[none] mq-deadline"
@@ -104,7 +105,7 @@ def test_set_new_value_with_failure():
     """
     name = "block/sda/queue/scheduler"
     value = "imaginary_scheduler"
-    comment = "Failed to set {} to {}".format(name, value)
+    comment = f"Failed to set {name} to {value}"
     ret = {"name": name, "result": False, "changes": {}, "comment": comment}
 
     read_from_sysfs = "[none] mq-deadline"

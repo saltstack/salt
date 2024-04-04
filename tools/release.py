@@ -1,6 +1,7 @@
 """
 These commands are used to release Salt.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -78,7 +79,7 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
                     Delete={"Objects": objects},
                 )
             except ClientError:
-                log.exception(f"Failed to delete '{bucket_uri}'")
+                log.exception("Failed to delete '%s'", bucket_uri)
             finally:
                 progress.update(task, advance=1)
 
@@ -176,7 +177,7 @@ def download_onedir_artifact(
                 )
     except ClientError as exc:
         if "Error" not in exc.response:
-            log.exception(f"Error downloading {remote_path}: {exc}")
+            log.exception("Error downloading %s: %s", remote_path, exc)
             ctx.exit(1)
         if exc.response["Error"]["Code"] == "404":
             ctx.error(f"Could not find {remote_path} in bucket.")
@@ -185,7 +186,7 @@ def download_onedir_artifact(
             ctx.error(f"Could not download {remote_path} from bucket: {exc}")
             ctx.exit(1)
         else:
-            log.exception(f"Failed to download {remote_path}: {exc}")
+            log.exception("Failed to download %s: %s", remote_path, exc)
             ctx.exit(1)
 
     if not archive_path.exists():
@@ -230,7 +231,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
             files_to_copy = json.loads(local_release_files_path.read_text())
         except ClientError as exc:
             if "Error" not in exc.response:
-                log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+                log.exception("Error downloading %s: %s", repo_release_files_path, exc)
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
                 ctx.error(f"Could not find {repo_release_files_path} in bucket.")
@@ -240,7 +241,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
                     f"Could not download {repo_release_files_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
-            log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+            log.exception("Error downloading %s: %s", repo_release_files_path, exc)
             ctx.exit(1)
 
     # If we get approval, we can add RPM and DEB
@@ -278,7 +279,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
                     )
             except ClientError as exc:
                 if "Error" not in exc.response:
-                    log.exception(f"Error downloading {download_file}: {exc}")
+                    log.exception("Error downloading %s: %s", download_file, exc)
                     ctx.exit(1)
                 if exc.response["Error"]["Code"] == "404":
                     ctx.error(f"Could not find {download_file} in bucket.")
@@ -286,7 +287,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
                 if exc.response["Error"]["Code"] == "400":
                     ctx.error(f"Could not download {download_file} from bucket: {exc}")
                     ctx.exit(1)
-                log.exception(f"Error downloading {download_file}: {exc}")
+                log.exception("Error downloading %s: %s", download_file, exc)
                 ctx.exit(1)
 
             # API key should be an environment variable

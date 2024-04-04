@@ -22,7 +22,7 @@ class GoGridTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_str = self.run_cloud(
-            "-p gogrid-test {}".format(self.instance_name), timeout=TIMEOUT
+            f"-p gogrid-test {self.instance_name}", timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_str)
 

@@ -5,6 +5,7 @@ Management of Zabbix host groups.
 
 
 """
+
 __deprecated__ = (
     3009,
     "zabbix",

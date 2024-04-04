@@ -2,7 +2,6 @@
 Network tools to run from the Master
 """
 
-
 import logging
 import socket
 
@@ -32,11 +31,11 @@ def wollist(maclist, bcast="255.255.255.255", destport=9):
             for mac in ifile:
                 mac = salt.utils.stringutils.to_unicode(mac).strip()
                 wol(mac, bcast, destport)
-                print("Waking up {}".format(mac))
+                print(f"Waking up {mac}")
                 ret.append(mac)
     except Exception as err:  # pylint: disable=broad-except
         __jid_event__.fire_event(
-            {"error": "Failed to open the MAC file. Error: {}".format(err)}, "progress"
+            {"error": f"Failed to open the MAC file. Error: {err}"}, "progress"
         )
         return []
     return ret

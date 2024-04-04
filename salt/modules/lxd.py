@@ -31,7 +31,6 @@ several functions to help manage it and its containers.
 :platform: Linux
 """
 
-
 import logging
 import os
 from datetime import datetime
@@ -181,31 +180,31 @@ def init(
         salt '*' lxd.init
     """
 
-    cmd = 'lxd init --auto --storage-backend="{}"'.format(storage_backend)
+    cmd = f'lxd init --auto --storage-backend="{storage_backend}"'
 
     if trust_password is not None:
-        cmd = cmd + ' --trust-password="{}"'.format(trust_password)
+        cmd = cmd + f' --trust-password="{trust_password}"'
 
     if network_address is not None:
-        cmd = cmd + ' --network-address="{}"'.format(network_address)
+        cmd = cmd + f' --network-address="{network_address}"'
 
     if network_port is not None:
-        cmd = cmd + ' --network-port="{}"'.format(network_port)
+        cmd = cmd + f' --network-port="{network_port}"'
 
     if storage_create_device is not None:
-        cmd = cmd + ' --storage-create-device="{}"'.format(storage_create_device)
+        cmd = cmd + f' --storage-create-device="{storage_create_device}"'
 
     if storage_create_loop is not None:
-        cmd = cmd + ' --storage-create-loop="{}"'.format(storage_create_loop)
+        cmd = cmd + f' --storage-create-loop="{storage_create_loop}"'
 
     if storage_pool is not None:
-        cmd = cmd + ' --storage-pool="{}"'.format(storage_pool)
+        cmd = cmd + f' --storage-pool="{storage_pool}"'
 
     try:
         output = __salt__["cmd.run"](cmd)
     except ValueError as e:
         raise CommandExecutionError(
-            "Failed to call: '{}', error was: {}".format(cmd, str(e)),
+            f"Failed to call: '{cmd}', error was: {str(e)}",
         )
 
     if "error:" in output:
@@ -249,7 +248,7 @@ def config_set(key, value):
             output[output.index("error:") + 7 :],
         )
 
-    return ('Config value "{}" successfully set.'.format(key),)
+    return (f'Config value "{key}" successfully set.',)
 
 
 @salt.utils.decorators.path.which("lxd")
@@ -268,7 +267,7 @@ def config_get(key):
         salt '*' lxd.config_get core.https_address
     """
 
-    cmd = 'lxc config get "{}"'.format(key)
+    cmd = f'lxc config get "{key}"'
 
     output = __salt__["cmd.run"](cmd)
     if "error:" in output:
@@ -375,7 +374,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                     verify=verify_cert,
                 )
     except pylxd.exceptions.ClientConnectionFailed:
-        raise CommandExecutionError("Failed to connect to '{}'".format(remote_addr))
+        raise CommandExecutionError(f"Failed to connect to '{remote_addr}'")
 
     except TypeError as e:
         # Happens when the verification failed.
@@ -747,7 +746,7 @@ def container_get(
         try:
             containers = [client.containers.get(name)]
         except pylxd.exceptions.LXDAPIException:
-            raise SaltInvocationError("Container '{}' not found".format(name))
+            raise SaltInvocationError(f"Container '{name}' not found")
         if _raw:
             return containers[0]
 
@@ -834,9 +833,7 @@ def container_rename(
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
     if container.status_code == CONTAINER_STATUS_RUNNING:
-        raise SaltInvocationError(
-            "Can't rename the running container '{}'.".format(name)
-        )
+        raise SaltInvocationError(f"Can't rename the running container '{name}'.")
 
     container.rename(newname, wait=True)
     return _pylxd_model_to_dict(container)
@@ -879,7 +876,7 @@ def container_state(name=None, remote_addr=None, cert=None, key=None, verify_cer
         try:
             containers = [client.containers.get(name)]
         except pylxd.exceptions.LXDAPIException:
-            raise SaltInvocationError("Container '{}' not found".format(name))
+            raise SaltInvocationError(f"Container '{name}' not found")
 
     states = []
     for container in containers:
@@ -1387,7 +1384,7 @@ def container_device_add(
     cert=None,
     key=None,
     verify_cert=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Add a container device
@@ -1567,7 +1564,7 @@ def container_file_put(
     # and integer, handle it as if it where a octal representation.
     mode = str(mode)
     if not mode.startswith("0"):
-        mode = "0{}".format(mode)
+        mode = f"0{mode}"
 
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1577,7 +1574,7 @@ def container_file_put(
         if src.find("://") >= 0:
             cached_file = __salt__["cp.cache_file"](src, saltenv=saltenv)
             if not cached_file:
-                raise SaltInvocationError("File '{}' not found".format(src))
+                raise SaltInvocationError(f"File '{src}' not found")
             if not os.path.isabs(cached_file):
                 raise SaltInvocationError("File path must be absolute.")
             src = cached_file
@@ -1588,7 +1585,7 @@ def container_file_put(
         src = os.path.sep
 
     if not os.path.exists(src):
-        raise CommandExecutionError("No such file or directory '{}'".format(src))
+        raise CommandExecutionError(f"No such file or directory '{src}'")
 
     if os.path.isdir(src) and not recursive:
         raise SaltInvocationError(
@@ -1771,7 +1768,7 @@ def container_file_get(
     if mode is not None:
         mode = str(mode)
         if not mode.startswith("0"):
-            mode = "0{}".format(mode)
+            mode = f"0{mode}"
 
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1792,9 +1789,7 @@ def container_file_get(
     else:
         dst_path = os.path.dirname(dst)
         if not os.path.isdir(dst_path):
-            raise CommandExecutionError(
-                "No such file or directory '{}'".format(dst_path)
-            )
+            raise CommandExecutionError(f"No such file or directory '{dst_path}'")
         # Seems to be duplicate of line 1794, produces /path/file_name/file_name
         # dst = os.path.join(dst, os.path.basename(src))
 
@@ -2075,7 +2070,7 @@ def profile_get(
     try:
         profile = client.profiles.get(name)
     except pylxd.exceptions.LXDAPIException:
-        raise SaltInvocationError("Profile '{}' not found".format(name))
+        raise SaltInvocationError(f"Profile '{name}' not found")
 
     if _raw:
         return profile
@@ -2331,7 +2326,7 @@ def profile_device_set(
     cert=None,
     key=None,
     verify_cert=True,
-    **kwargs
+    **kwargs,
 ):
     """Set a profile device.
 
@@ -2532,9 +2527,7 @@ def image_get(
     try:
         image = client.images.get(fingerprint)
     except pylxd.exceptions.LXDAPIException:
-        raise SaltInvocationError(
-            "Image with fingerprint '{}' not found".format(fingerprint)
-        )
+        raise SaltInvocationError(f"Image with fingerprint '{fingerprint}' not found")
 
     if _raw:
         return image
@@ -2590,7 +2583,7 @@ def image_get_by_alias(
     try:
         image = client.images.get_by_alias(alias)
     except pylxd.exceptions.LXDAPIException:
-        raise SaltInvocationError("Image with alias '{}' not found".format(alias))
+        raise SaltInvocationError(f"Image with alias '{alias}' not found")
 
     if _raw:
         return image
@@ -3442,17 +3435,17 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
         if newconfig[k] != obj.config[k]:
             if not test:
-                config_changes[
-                    k
-                ] = 'Changed config key "{}" to "{}", its value was "{}"'.format(
-                    k, newconfig[k], obj.config[k]
+                config_changes[k] = (
+                    'Changed config key "{}" to "{}", its value was "{}"'.format(
+                        k, newconfig[k], obj.config[k]
+                    )
                 )
                 obj.config[k] = newconfig[k]
             else:
-                config_changes[
-                    k
-                ] = 'Would change config key "{}" to "{}", its current value is "{}"'.format(
-                    k, newconfig[k], obj.config[k]
+                config_changes[k] = (
+                    'Would change config key "{}" to "{}", its current value is "{}"'.format(
+                        k, newconfig[k], obj.config[k]
+                    )
                 )
 
     # New keys
@@ -3462,7 +3455,7 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            config_changes[k] = 'Added config key "{}" = "{}"'.format(k, newconfig[k])
+            config_changes[k] = f'Added config key "{k}" = "{newconfig[k]}"'
             obj.config[k] = newconfig[k]
         else:
             config_changes[k] = 'Would add config key "{}" = "{}"'.format(
@@ -3489,10 +3482,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            devices_changes[k] = 'Removed device "{}"'.format(k)
+            devices_changes[k] = f'Removed device "{k}"'
             del obj.devices[k]
         else:
-            devices_changes[k] = 'Would remove device "{}"'.format(k)
+            devices_changes[k] = f'Would remove device "{k}"'
 
     # Changed devices
     for k, v in obj.devices.items():
@@ -3506,10 +3499,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
         if newdevices[k] != v:
             if not test:
-                devices_changes[k] = 'Changed device "{}"'.format(k)
+                devices_changes[k] = f'Changed device "{k}"'
                 obj.devices[k] = newdevices[k]
             else:
-                devices_changes[k] = 'Would change device "{}"'.format(k)
+                devices_changes[k] = f'Would change device "{k}"'
 
     # New devices
     for k in ndk.difference(dk):
@@ -3518,10 +3511,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            devices_changes[k] = 'Added device "{}"'.format(k)
+            devices_changes[k] = f'Added device "{k}"'
             obj.devices[k] = newdevices[k]
         else:
-            devices_changes[k] = 'Would add device "{}"'.format(k)
+            devices_changes[k] = f'Would add device "{k}"'
 
     if devices_changes:
         changes["devices"] = devices_changes
@@ -3567,7 +3560,7 @@ def _set_property_dict_item(obj, prop, key, value):
 def _get_property_dict_item(obj, prop, key):
     attr = getattr(obj, prop)
     if key not in attr:
-        raise SaltInvocationError("'{}' doesn't exists".format(key))
+        raise SaltInvocationError(f"'{key}' doesn't exists")
 
     return attr[key]
 
@@ -3575,7 +3568,7 @@ def _get_property_dict_item(obj, prop, key):
 def _delete_property_dict_item(obj, prop, key):
     attr = getattr(obj, prop)
     if key not in attr:
-        raise SaltInvocationError("'{}' doesn't exists".format(key))
+        raise SaltInvocationError(f"'{key}' doesn't exists")
 
     del attr[key]
     pylxd_save_object(obj)
@@ -3599,7 +3592,7 @@ def _verify_image(image, remote_addr=None, cert=None, key=None, verify_cert=True
         except SaltInvocationError:
             image = image_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     elif not hasattr(image, "fingerprint"):
-        raise SaltInvocationError("Invalid image '{}'".format(image))
+        raise SaltInvocationError(f"Invalid image '{image}'")
     return image
 
 

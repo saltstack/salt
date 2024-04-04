@@ -1,6 +1,7 @@
 """
 Tests for salt.loader.lazy
 """
+
 import sys
 
 import pytest

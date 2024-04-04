@@ -4,6 +4,7 @@
 
     Salt Compatibility PyTest Fixtures
 """
+
 import logging
 import os
 import shutil
@@ -61,7 +62,7 @@ def host_docker_network_ip_address(docker_client):
             ipam_pools=[{"subnet": network_subnet, "gateway": network_gateway}],
         )
         assert isinstance(ret, dict), ret
-        assert ret["result"], "Failed to create docker network: {}".format(ret)
+        assert ret["result"], f"Failed to create docker network: {ret}"
         yield network_gateway
     finally:
         sminion.states.docker_network.absent(network_name)

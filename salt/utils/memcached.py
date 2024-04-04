@@ -34,7 +34,6 @@ specified, rather than top-level configurations. This being the case, it is
 better to always use a named configuration profile, as shown above.
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -92,7 +91,7 @@ def get_conn(opts, profile=None, host=None, port=None):
         raise SaltInvocationError("port must be an integer")
 
     if HAS_LIBS:
-        return memcache.Client(["{}:{}".format(host, port)])
+        return memcache.Client([f"{host}:{port}"])
     else:
         raise CommandExecutionError(
             "(unable to import memcache, module most likely not installed)"

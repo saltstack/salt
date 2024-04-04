@@ -1,6 +1,7 @@
 """
 Test for the chocolatey module
 """
+
 import os
 
 import pytest

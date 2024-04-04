@@ -294,9 +294,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {
-                "foo.bar": MagicMock(side_effect=range(1, 7))
-            },  # pylint: disable=incompatible-py3-code
+            {"foo.bar": MagicMock(side_effect=range(1, 7))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until(
@@ -312,9 +310,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {
-                "foo.bar": MagicMock(side_effect=range(1, 7))
-            },  # pylint: disable=incompatible-py3-code
+            {"foo.bar": MagicMock(side_effect=range(1, 7))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(
@@ -334,9 +330,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {
-                "foo.bar": MagicMock(side_effect=range(1, 7))
-            },  # pylint: disable=incompatible-py3-code
+            {"foo.bar": MagicMock(side_effect=range(1, 7))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until(
@@ -354,9 +348,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         # returning a lower number of attempts (because it's slower).
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {
-                "foo.bar": MagicMock(side_effect=range(1, 7))
-            },  # pylint: disable=incompatible-py3-code
+            {"foo.bar": MagicMock(side_effect=range(1, 7))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(

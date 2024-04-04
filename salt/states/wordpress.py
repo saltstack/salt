@@ -53,11 +53,11 @@ def installed(name, user, admin_user, admin_password, admin_email, title, url):
 
     if check:
         ret["result"] = True
-        ret["comment"] = "Wordpress is already installed: {}".format(name)
+        ret["comment"] = f"Wordpress is already installed: {name}"
         return ret
     elif __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Wordpress will be installed: {}".format(name)
+        ret["comment"] = f"Wordpress will be installed: {name}"
         return ret
 
     resp = __salt__["wordpress.install"](
@@ -65,10 +65,10 @@ def installed(name, user, admin_user, admin_password, admin_email, title, url):
     )
     if resp:
         ret["result"] = True
-        ret["comment"] = "Wordpress Installed: {}".format(name)
+        ret["comment"] = f"Wordpress Installed: {name}"
         ret["changes"] = {"new": resp}
     else:
-        ret["comment"] = "Failed to install wordpress: {}".format(name)
+        ret["comment"] = f"Failed to install wordpress: {name}"
 
     return ret
 
@@ -99,30 +99,30 @@ def activated(name, path, user):
 
     if check["status"] == "active":
         ret["result"] = True
-        ret["comment"] = "Plugin already activated: {}".format(name)
+        ret["comment"] = f"Plugin already activated: {name}"
         return ret
     elif __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Plugin will be activated: {}".format(name)
+        ret["comment"] = f"Plugin will be activated: {name}"
         return ret
 
     resp = __salt__["wordpress.activate"](name, path, user)
     if resp is True:
         ret["result"] = True
-        ret["comment"] = "Plugin activated: {}".format(name)
+        ret["comment"] = f"Plugin activated: {name}"
         ret["changes"] = {
             "old": check,
             "new": __salt__["wordpress.show_plugin"](name, path, user),
         }
     elif resp is None:
         ret["result"] = True
-        ret["comment"] = "Plugin already activated: {}".format(name)
+        ret["comment"] = f"Plugin already activated: {name}"
         ret["changes"] = {
             "old": check,
             "new": __salt__["wordpress.show_plugin"](name, path, user),
         }
     else:
-        ret["comment"] = "Plugin failed to activate: {}".format(name)
+        ret["comment"] = f"Plugin failed to activate: {name}"
 
     return ret
 
@@ -153,29 +153,29 @@ def deactivated(name, path, user):
 
     if check["status"] == "inactive":
         ret["result"] = True
-        ret["comment"] = "Plugin already deactivated: {}".format(name)
+        ret["comment"] = f"Plugin already deactivated: {name}"
         return ret
     elif __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Plugin will be deactivated: {}".format(name)
+        ret["comment"] = f"Plugin will be deactivated: {name}"
         return ret
 
     resp = __salt__["wordpress.deactivate"](name, path, user)
     if resp is True:
         ret["result"] = True
-        ret["comment"] = "Plugin deactivated: {}".format(name)
+        ret["comment"] = f"Plugin deactivated: {name}"
         ret["changes"] = {
             "old": check,
             "new": __salt__["wordpress.show_plugin"](name, path, user),
         }
     elif resp is None:
         ret["result"] = True
-        ret["comment"] = "Plugin already deactivated: {}".format(name)
+        ret["comment"] = f"Plugin already deactivated: {name}"
         ret["changes"] = {
             "old": check,
             "new": __salt__["wordpress.show_plugin"](name, path, user),
         }
     else:
-        ret["comment"] = "Plugin failed to deactivate: {}".format(name)
+        ret["comment"] = f"Plugin failed to deactivate: {name}"
 
     return ret

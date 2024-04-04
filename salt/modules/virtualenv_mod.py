@@ -4,7 +4,6 @@ Create virtualenv environments.
 .. versionadded:: 0.17.0
 """
 
-
 import glob
 import logging
 import os
@@ -21,7 +20,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 KNOWN_BINARY_NAMES = frozenset(
     [
         "virtualenv-{}.{}".format(*sys.version_info[:2]),
-        "virtualenv{}".format(sys.version_info[0]),
+        f"virtualenv{sys.version_info[0]}",
         "virtualenv",
     ]
 )
@@ -88,7 +87,7 @@ def create(
     user=None,
     use_vt=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Create a virtualenv
@@ -212,15 +211,13 @@ def create(
 
         if python is not None and python.strip() != "":
             if not salt.utils.path.which(python):
-                raise CommandExecutionError(
-                    "Cannot find requested python ({}).".format(python)
-                )
-            cmd.append("--python={}".format(python))
+                raise CommandExecutionError(f"Cannot find requested python ({python}).")
+            cmd.append(f"--python={python}")
         if extra_search_dir is not None:
             if isinstance(extra_search_dir, str) and extra_search_dir.strip() != "":
                 extra_search_dir = [e.strip() for e in extra_search_dir.split(",")]
             for entry in extra_search_dir:
-                cmd.append("--extra-search-dir={}".format(entry))
+                cmd.append(f"--extra-search-dir={entry}")
         if never_download is True:
             if (1, 10) <= virtualenv_version_info < (14, 0, 0):
                 log.info(
@@ -231,7 +228,7 @@ def create(
             else:
                 cmd.append("--never-download")
         if prompt is not None and prompt.strip() != "":
-            cmd.append("--prompt='{}'".format(prompt))
+            cmd.append(f"--prompt='{prompt}'")
     else:
         # venv module from the Python >= 3.3 standard library
 
@@ -500,7 +497,7 @@ def _install_script(source, cwd, python, user, saltenv="base", use_vt=False):
 def _verify_safe_py_code(*args):
     for arg in args:
         if not salt.utils.verify.safe_py_code(arg):
-            raise SaltInvocationError("Unsafe python code detected in '{}'".format(arg))
+            raise SaltInvocationError(f"Unsafe python code detected in '{arg}'")
 
 
 def _verify_virtualenv(venv_path):

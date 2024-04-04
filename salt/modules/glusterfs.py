@@ -73,12 +73,10 @@ def _gluster_xml(cmd):
         6,
     ):
         result = __salt__["cmd.run"](
-            'script -q -c "gluster --xml --mode=script"', stdin="{}\n\004".format(cmd)
+            'script -q -c "gluster --xml --mode=script"', stdin=f"{cmd}\n\004"
         )
     else:
-        result = __salt__["cmd.run"](
-            "gluster --xml --mode=script", stdin="{}\n".format(cmd)
-        )
+        result = __salt__["cmd.run"]("gluster --xml --mode=script", stdin=f"{cmd}\n")
 
     try:
         root = ET.fromstring(_gluster_output_cleanup(result))
@@ -206,9 +204,9 @@ def peer(name):
 
     """
     if salt.utils.cloud.check_name(name, "a-zA-Z0-9._-"):
-        raise SaltInvocationError('Invalid characters in peer name "{}"'.format(name))
+        raise SaltInvocationError(f'Invalid characters in peer name "{name}"')
 
-    cmd = "peer probe {}".format(name)
+    cmd = f"peer probe {name}"
     return _gluster(cmd)
 
 
@@ -288,13 +286,9 @@ def create_volume(
         try:
             peer_name, path = brick.split(":")
             if not path.startswith("/"):
-                raise SaltInvocationError(
-                    "Brick paths must start with / in {}".format(brick)
-                )
+                raise SaltInvocationError(f"Brick paths must start with / in {brick}")
         except ValueError:
-            raise SaltInvocationError(
-                "Brick syntax is <peer>:<path> got {}".format(brick)
-            )
+            raise SaltInvocationError(f"Brick syntax is <peer>:<path> got {brick}")
 
     # Validate arbiter config
     if arbiter and replica != 3:
@@ -303,17 +297,17 @@ def create_volume(
         )
 
     # Format creation call
-    cmd = "volume create {} ".format(name)
+    cmd = f"volume create {name} "
     if stripe:
-        cmd += "stripe {} ".format(stripe)
+        cmd += f"stripe {stripe} "
     if replica:
-        cmd += "replica {} ".format(replica)
+        cmd += f"replica {replica} "
     if arbiter:
         cmd += "arbiter 1 "
     if device_vg:
         cmd += "device vg "
     if transport != "tcp":
-        cmd += "transport {} ".format(transport)
+        cmd += f"transport {transport} "
     cmd += " ".join(bricks)
     if force:
         cmd += " force"
@@ -358,7 +352,7 @@ def status(name):
         salt '*' glusterfs.status myvolume
     """
     # Get volume status
-    root = _gluster_xml("volume status {}".format(name))
+    root = _gluster_xml(f"volume status {name}")
     if not _gluster_ok(root):
         # Most probably non-existing volume, the error output is logged
         # This return value is easy to test and intuitive
@@ -384,7 +378,7 @@ def status(name):
         hostname = node.find("hostname").text
         if hostname not in ("NFS Server", "Self-heal Daemon"):
             path = node.find("path").text
-            ret["bricks"]["{}:{}".format(hostname, path)] = etree_legacy_wrap(node)
+            ret["bricks"][f"{hostname}:{path}"] = etree_legacy_wrap(node)
         elif hostname == "NFS Server":
             peerid = node.find("peerid").text
             true_hostname = hostref[peerid]
@@ -427,7 +421,7 @@ def info(name=None):
 
         bricks = {}
         for i, brick in enumerate(_iter(volume, "brick"), start=1):
-            brickkey = "brick{}".format(i)
+            brickkey = f"brick{i}"
             bricks[brickkey] = {"path": brick.text}
             for child in brick:
                 if not child.tag == "name":
@@ -461,9 +455,9 @@ def start_volume(name, force=False):
 
         salt '*' glusterfs.start mycluster
     """
-    cmd = "volume start {}".format(name)
+    cmd = f"volume start {name}"
     if force:
-        cmd = "{} force".format(cmd)
+        cmd = f"{cmd} force"
 
     volinfo = info(name)
     if name not in volinfo:
@@ -503,7 +497,7 @@ def stop_volume(name, force=False):
         log.warning("Attempt to stop already stopped volume %s", name)
         return True
 
-    cmd = "volume stop {}".format(name)
+    cmd = f"volume stop {name}"
     if force:
         cmd += " force"
 
@@ -543,7 +537,7 @@ def delete_volume(target, stop=True):
         if not stop_volume(target, force=True):
             return False
 
-    cmd = "volume delete {}".format(target)
+    cmd = f"volume delete {target}"
     return _gluster(cmd)
 
 
@@ -571,7 +565,7 @@ def add_volume_bricks(name, bricks):
 
     new_bricks = []
 
-    cmd = "volume add-brick {}".format(name)
+    cmd = f"volume add-brick {name}"
 
     if isinstance(bricks, str):
         bricks = [bricks]
@@ -588,7 +582,7 @@ def add_volume_bricks(name, bricks):
 
     if new_bricks:
         for brick in new_bricks:
-            cmd += " {}".format(brick)
+            cmd += f" {brick}"
         return _gluster(cmd)
     return True
 
@@ -607,7 +601,7 @@ def enable_quota_volume(name):
         salt '*' glusterfs.enable_quota_volume <volume>
     """
 
-    cmd = "volume quota {} enable".format(name)
+    cmd = f"volume quota {name} enable"
     if not _gluster(cmd):
         return False
     return True
@@ -627,7 +621,7 @@ def disable_quota_volume(name):
         salt '*' glusterfs.disable_quota_volume <volume>
     """
 
-    cmd = "volume quota {} disable".format(name)
+    cmd = f"volume quota {name} disable"
     if not _gluster(cmd):
         return False
     return True
@@ -655,11 +649,11 @@ def set_quota_volume(name, path, size, enable_quota=False):
 
         salt '*' glusterfs.set_quota_volume <volume> <path> <size> enable_quota=True
     """
-    cmd = "volume quota {}".format(name)
+    cmd = f"volume quota {name}"
     if path:
-        cmd += " limit-usage {}".format(path)
+        cmd += f" limit-usage {path}"
     if size:
-        cmd += " {}".format(size)
+        cmd += f" {size}"
 
     if enable_quota:
         if not enable_quota_volume(name):
@@ -685,9 +679,9 @@ def unset_quota_volume(name, path):
 
         salt '*' glusterfs.unset_quota_volume <volume> <path>
     """
-    cmd = "volume quota {}".format(name)
+    cmd = f"volume quota {name}"
     if path:
-        cmd += " remove {}".format(path)
+        cmd += f" remove {path}"
 
     if not _gluster(cmd):
         return False
@@ -707,7 +701,7 @@ def list_quota_volume(name):
 
         salt '*' glusterfs.list_quota_volume <volume>
     """
-    cmd = "volume quota {}".format(name)
+    cmd = f"volume quota {name}"
     cmd += " list"
 
     root = _gluster_xml(cmd)
@@ -738,7 +732,7 @@ def get_op_version(name):
         salt '*' glusterfs.get_op_version <volume>
     """
 
-    cmd = "volume get {} cluster.op-version".format(name)
+    cmd = f"volume get {name} cluster.op-version"
     root = _gluster_xml(cmd)
 
     if not _gluster_ok(root):
@@ -816,7 +810,7 @@ def set_op_version(version):
         salt '*' glusterfs.set_op_version <volume>
     """
 
-    cmd = "volume set all cluster.op-version {}".format(version)
+    cmd = f"volume set all cluster.op-version {version}"
     root = _gluster_xml(cmd)
 
     if not _gluster_ok(root):

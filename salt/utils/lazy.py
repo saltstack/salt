@@ -2,7 +2,6 @@
 Lazily-evaluated data structures, primarily used by Salt's loader
 """
 
-
 import logging
 from collections.abc import MutableMapping
 
@@ -78,7 +77,7 @@ class LazyDict(MutableMapping):
 
         Override this to return a more meaningfull error message if possible
         """
-        return "'{}' is not available.".format(function_name)
+        return f"'{function_name}' is not available."
 
     def __setitem__(self, key, val):
         self._dict[key] = val

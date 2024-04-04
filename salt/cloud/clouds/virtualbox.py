@@ -368,12 +368,12 @@ def destroy(name, call=None):
     """
     log.info("Attempting to delete instance %s", name)
     if not vb_machine_exists(name):
-        return "{} doesn't exist and can't be deleted".format(name)
+        return f"{name} doesn't exist and can't be deleted"
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -384,7 +384,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

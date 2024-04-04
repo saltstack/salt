@@ -12,6 +12,7 @@ Connection module for Amazon SSM
 
 :depends: boto3
 """
+
 import logging
 
 import salt.utils.json as json

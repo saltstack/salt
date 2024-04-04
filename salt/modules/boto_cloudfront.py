@@ -46,6 +46,7 @@ Connection module for Amazon CloudFront
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

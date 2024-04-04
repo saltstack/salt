@@ -711,9 +711,9 @@ def salt_api_acl_tool(username, request):
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
     """
-    failure_str = "[api_acl] Authentication failed for " "user %s from IP %s"
+    failure_str = "[api_acl] Authentication failed for user %s from IP %s"
     success_str = "[api_acl] Authentication successful for user %s from IP %s"
-    pass_str = "[api_acl] Authentication not checked for " "user %s from IP %s"
+    pass_str = "[api_acl] Authentication not checked for user %s from IP %s"
 
     acl = None
     # Salt Configuration
@@ -777,7 +777,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     """
     # Redirect to the login page if the session hasn't been authed
-    if "token" not in cherrypy.session:  # pylint: disable=W8601
+    if "token" not in cherrypy.session:
         raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
@@ -898,9 +898,11 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": f"{traceback.format_exc()}"
-            if cherrypy.config["debug"]
-            else "An unexpected error occurred",
+            "return": (
+                f"{traceback.format_exc()}"
+                if cherrypy.config["debug"]
+                else "An unexpected error occurred"
+            ),
         }
 
     # Raises 406 if requested content-type is not supported
@@ -1145,7 +1147,7 @@ for hook, tool_list in tools_config.items():
     for idx, tool_config in enumerate(tool_list):
         tool_name, tool_fn = tool_config
         setattr(
-            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=(50 + idx))
+            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=50 + idx)
         )
 
 
@@ -1740,9 +1742,9 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers[
-            "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        headers["Content-Disposition"] = (
+            'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        )
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"

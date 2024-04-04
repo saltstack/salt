@@ -328,9 +328,7 @@ def get_size(vm_):
         combinations = (str(sizes[size]["id"]), str(size))
         if vm_size and str(vm_size) in combinations:
             return sizes[size]
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def get_datacenter_id():
@@ -415,7 +413,7 @@ def get_datacenter(conn):
             return item
 
     raise SaltCloudNotFound(
-        "The specified datacenter '{}' could not be found.".format(datacenter_id)
+        f"The specified datacenter '{datacenter_id}' could not be found."
     )
 
 
@@ -488,9 +486,7 @@ def get_image(vm_):
         if vm_image and vm_image in (images[key]["id"], images[key]["name"]):
             return images[key]
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def list_datacenters(conn=None, call=None):
@@ -725,7 +721,7 @@ def get_public_keys(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_public_key '{}' does not exist".format(key_filename)
+                f"The defined ssh_public_key '{key_filename}' does not exist"
             )
         ssh_keys = []
         with salt.utils.files.fopen(key_filename) as rfh:
@@ -746,7 +742,7 @@ def get_key_filename(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_private_key '{}' does not exist".format(key_filename)
+                f"The defined ssh_private_key '{key_filename}' does not exist"
             )
 
         return key_filename
@@ -941,7 +937,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -972,7 +968,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1142,9 +1138,7 @@ def _get_data_volumes(vm_):
         # Verify the required 'disk_size' property is present in the cloud
         # profile config
         if "disk_size" not in volumes[key].keys():
-            raise SaltCloudConfigError(
-                "The volume '{}' is missing 'disk_size'".format(key)
-            )
+            raise SaltCloudConfigError(f"The volume '{key}' is missing 'disk_size'")
         # Use 'HDD' if no 'disk_type' property is present in cloud profile
         if "disk_type" not in volumes[key].keys():
             volumes[key]["disk_type"] = "HDD"
@@ -1187,7 +1181,7 @@ def _get_firewall_rules(firewall_rules):
         # profile config
         if "protocol" not in firewall_rules[key].keys():
             raise SaltCloudConfigError(
-                "The firewall rule '{}' is missing 'protocol'".format(key)
+                f"The firewall rule '{key}' is missing 'protocol'"
             )
         ret.append(
             FirewallRule(

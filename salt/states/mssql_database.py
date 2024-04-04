@@ -25,7 +25,7 @@ def __virtual__():
 
 def _normalize_options(options):
     if type(options) in [dict, collections.OrderedDict]:
-        return ["{}={}".format(k, v) for k, v in options.items()]
+        return [f"{k}={v}" for k, v in options.items()]
     if type(options) is list and (not options or type(options[0]) is str):
         return options
     # Invalid options
@@ -51,22 +51,22 @@ def present(name, containment="NONE", options=None, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if __salt__["mssql.db_exists"](name, **kwargs):
-        ret[
-            "comment"
-        ] = "Database {} is already present (Not going to try to set its options)".format(
-            name
+        ret["comment"] = (
+            "Database {} is already present (Not going to try to set its options)".format(
+                name
+            )
         )
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Database {} is set to be added".format(name)
+        ret["comment"] = f"Database {name} is set to be added"
         return ret
 
     db_created = __salt__["mssql.db_create"](
         name,
         containment=containment,
         new_database_options=_normalize_options(options),
-        **kwargs
+        **kwargs,
     )
     if (
         db_created is not True
@@ -76,7 +76,7 @@ def present(name, containment="NONE", options=None, **kwargs):
             name, db_created
         )
         return ret
-    ret["comment"] += "Database {} has been added".format(name)
+    ret["comment"] += f"Database {name} has been added"
     ret["changes"][name] = "Present"
     return ret
 
@@ -91,17 +91,17 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if not __salt__["mssql.db_exists"](name):
-        ret["comment"] = "Database {} is not present".format(name)
+        ret["comment"] = f"Database {name} is not present"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Database {} is set to be removed".format(name)
+        ret["comment"] = f"Database {name} is set to be removed"
         return ret
     if __salt__["mssql.db_remove"](name, **kwargs):
-        ret["comment"] = "Database {} has been removed".format(name)
+        ret["comment"] = f"Database {name} has been removed"
         ret["changes"][name] = "Absent"
         return ret
     # else:
     ret["result"] = False
-    ret["comment"] = "Database {} failed to be removed".format(name)
+    ret["comment"] = f"Database {name} failed to be removed"
     return ret

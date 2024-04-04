@@ -277,7 +277,6 @@ For example:
 
 """
 
-
 import copy
 import difflib
 import itertools
@@ -566,6 +565,8 @@ def _gen_keep_files(name, require, walk_d=None):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     """
+
+    walk_ret = set()
 
     def _is_child(path, directory):
         """
@@ -1137,7 +1138,7 @@ def _get_template_texts(
 
     txtl = []
 
-    for (source, source_hash) in source_list:
+    for source, source_hash in source_list:
 
         tmpctx = defaults if defaults else {}
         if context:
@@ -1233,7 +1234,9 @@ def _shortcut_check(
 
     if os.path.isfile(name):
         with salt.utils.winapi.Com():
-            shell = win32com.client.Dispatch("WScript.Shell")
+            shell = win32com.client.Dispatch(  # pylint: disable=used-before-assignment
+                "WScript.Shell"
+            )
             scut = shell.CreateShortcut(name)
             state_checks = [scut.TargetPath.lower() == target.lower()]
             if arguments is not None:
@@ -1898,9 +1901,7 @@ def symlink(
             fs_entry_type = (
                 "File"
                 if os.path.isfile(name)
-                else "Directory"
-                if os.path.isdir(name)
-                else "File system entry"
+                else "Directory" if os.path.isdir(name) else "File system entry"
             )
             return _error(
                 ret,
@@ -3306,9 +3307,9 @@ def managed(
             else:
                 ret["comment"] = f"File {name} not updated"
         elif not ret["changes"] and ret["result"]:
-            ret[
-                "comment"
-            ] = f"File {name} exists with proper permissions. No changes made."
+            ret["comment"] = (
+                f"File {name} exists with proper permissions. No changes made."
+            )
         return ret
 
     accum_data, _ = _load_accumulators()
@@ -4258,9 +4259,9 @@ def directory(
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, str):
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = f"Failed to enforce group ownership for group {group}"
+                    ret["comment"] = (
+                        f"Failed to enforce group ownership for group {group}"
+                    )
             else:
                 ret["result"] = False
                 ret["comment"] = (
@@ -6274,9 +6275,9 @@ def blockreplace(
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error managing block")
-        ret[
-            "comment"
-        ] = f"Encountered error managing block: {exc}. See the log for details."
+        ret["comment"] = (
+            f"Encountered error managing block: {exc}. See the log for details."
+        )
         return ret
 
     if changes:
@@ -7775,9 +7776,9 @@ def copy_(
             )
             ret["result"] = None
         else:
-            ret[
-                "comment"
-            ] = f'The target file "{name}" exists and will not be overwritten'
+            ret["comment"] = (
+                f'The target file "{name}" exists and will not be overwritten'
+            )
             ret["result"] = True
         return ret
 
@@ -7877,9 +7878,9 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret[
-                "comment"
-            ] = f'The target file "{name}" exists and will not be overwritten'
+            ret["comment"] = (
+                f'The target file "{name}" exists and will not be overwritten'
+            )
             return ret
         elif not __opts__["test"]:
             # Remove the destination to prevent problems later
@@ -8636,10 +8637,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "b":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a block device. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a block device. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a block device
@@ -8671,10 +8672,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "p":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a fifo pipe. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a fifo pipe. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a fifo
@@ -9335,10 +9336,10 @@ def cached(
                 )
                 if local_hash == source_sum["hsum"]:
                     ret["result"] = True
-                    ret[
-                        "comment"
-                    ] = "File {} is present on the minion and has hash {}".format(
-                        full_path, local_hash
+                    ret["comment"] = (
+                        "File {} is present on the minion and has hash {}".format(
+                            full_path, local_hash
+                        )
                     )
                 else:
                     ret["comment"] = (
@@ -9392,14 +9393,14 @@ def cached(
             name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
         )
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(str(exc))
         return ret
 
     if not local_copy:
-        ret[
-            "comment"
-        ] = "Failed to cache {}, check minion log for more information".format(
-            salt.utils.url.redact_http_basic_auth(name)
+        ret["comment"] = (
+            "Failed to cache {}, check minion log for more information".format(
+                salt.utils.url.redact_http_basic_auth(name)
+            )
         )
         return ret
 
@@ -9479,7 +9480,7 @@ def not_cached(name, saltenv="base"):
         try:
             os.remove(local_copy)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = f"Failed to delete {local_copy}: {exc.__str__()}"
+            ret["comment"] = f"Failed to delete {local_copy}: {exc}"
         else:
             ret["result"] = True
             ret["changes"]["deleted"] = True

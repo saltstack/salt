@@ -54,7 +54,6 @@ def __virtual__():
 
 
 def _default_ret(name):
-
     """
     Returns a default structure of the dictionary to be returned as output of the state functions.
     """
@@ -63,7 +62,6 @@ def _default_ret(name):
 
 
 def _retrieve_rpm_probes():
-
     """
     Will retrieve the probes from the network device using salt module "probes" throught NAPALM proxy.
     """
@@ -72,7 +70,6 @@ def _retrieve_rpm_probes():
 
 
 def _expand_probes(probes, defaults):
-
     """
     Updates the probes dictionary with different levels of default values.
     """
@@ -80,7 +77,7 @@ def _expand_probes(probes, defaults):
     expected_probes = {}
 
     for probe_name, probe_test in probes.items():
-        if probe_name not in expected_probes.keys():
+        if probe_name not in expected_probes:
             expected_probes[probe_name] = {}
         probe_defaults = probe_test.pop("defaults", {})
         for test_name, test_details in probe_test.items():
@@ -97,14 +94,13 @@ def _expand_probes(probes, defaults):
             expected_test_details.update(
                 test_details
             )  # update with the actual config of the test
-            if test_name not in expected_probes[probe_name].keys():
+            if test_name not in expected_probes[probe_name]:
                 expected_probes[probe_name][test_name] = expected_test_details
 
     return expected_probes
 
 
 def _clean_probes(probes):
-
     """
     Will remove empty and useless values from the probes dictionary.
     """
@@ -127,7 +123,6 @@ def _clean_probes(probes):
 
 
 def _compare_probes(configured_probes, expected_probes):
-
     """
     Compares configured probes on the device with the expected configuration and returns the differences.
     """
@@ -167,12 +162,12 @@ def _compare_probes(configured_probes, expected_probes):
 
         # new tests for common probes
         for test_name in new_tests_keys_set:
-            if probe_name not in new_probes.keys():
+            if probe_name not in new_probes:
                 new_probes[probe_name] = {}
             new_probes[probe_name].update({test_name: probe_tests.pop(test_name)})
         # old tests for common probes
         for test_name in remove_tests_keys_set:
-            if probe_name not in remove_probes.keys():
+            if probe_name not in remove_probes:
                 remove_probes[probe_name] = {}
             remove_probes[probe_name].update(
                 {test_name: configured_probe_tests.pop(test_name)}
@@ -182,7 +177,7 @@ def _compare_probes(configured_probes, expected_probes):
             configured_test_params = configured_probe_tests.get(test_name, {})
             # if test params are different, probe goes to update probes dict!
             if test_params != configured_test_params:
-                if probe_name not in update_probes.keys():
+                if probe_name not in update_probes:
                     update_probes[probe_name] = {}
                 update_probes[probe_name].update({test_name: test_params})
 
@@ -190,14 +185,12 @@ def _compare_probes(configured_probes, expected_probes):
 
 
 def _ordered_dict_to_dict(probes):
-
     """Mandatory to be dict type in order to be used in the NAPALM Jinja template."""
 
     return salt.utils.json.loads(salt.utils.json.dumps(probes))
 
 
 def _set_rpm_probes(probes):
-
     """
     Calls the Salt module "probes" to configure the probes on the device.
     """
@@ -209,7 +202,6 @@ def _set_rpm_probes(probes):
 
 
 def _schedule_probes(probes):
-
     """
     Calls the Salt module "probes" to schedule the configured probes on the device.
     """
@@ -221,7 +213,6 @@ def _schedule_probes(probes):
 
 
 def _delete_rpm_probes(probes):
-
     """
     Calls the Salt module "probes" to delete probes from the device.
     """
@@ -240,7 +231,6 @@ def _delete_rpm_probes(probes):
 
 
 def managed(name, probes, defaults=None):
-
     """
     Ensure the networks device is configured as specified in the state SLS file.
     Probes not specified will be removed, while probes not confiured as expected will trigger config updates.

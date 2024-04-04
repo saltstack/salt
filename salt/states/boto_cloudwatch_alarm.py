@@ -52,7 +52,6 @@ as a passed in dict, or as a string to pull from pillars or minion config:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 """
 
-
 import salt.utils.data
 
 __deprecated__ = (

@@ -2,7 +2,6 @@
 Tests for minion blackout
 """
 
-
 import logging
 
 import pytest
