@@ -65,7 +65,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-salt-onedir-windows
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|linux
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-salt-onedir-macos
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|macos
 
       - name: Setup Salt Version
         id: setup-salt-version
@@ -185,7 +185,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-salt-onedir-macos
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|windows
 
       - name: Setup Salt Version
         id: setup-salt-version

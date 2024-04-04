@@ -22,7 +22,7 @@ def assistive(modules):
 def osa_script(assistive):
     osa_script_path = "/usr/bin/osascript"
     try:
-        ret = assistive.install(osa_script_path, True)
+        assistive.install(osa_script_path, True)
         yield osa_script_path
     except CommandExecutionError as exc:
         pytest.skip(f"Unable to install {osa_script}: {exc}")
@@ -33,7 +33,7 @@ def osa_script(assistive):
 
 
 @pytest.fixture
-def install_remove_pkg_name(assistive):
+def install_remove_pkg_name(assistive, grains):
     smile_bundle = "com.smileonmymac.textexpander"
     try:
         yield smile_bundle
@@ -44,12 +44,19 @@ def install_remove_pkg_name(assistive):
 
 
 @pytest.mark.slow_test
-def test_install_and_remove(assistive, install_remove_pkg_name):
+def test_install_and_remove(assistive, install_remove_pkg_name, grains):
     """
     Tests installing and removing a bundled ID or command to use assistive access.
     """
-    ret = assistive.install(install_remove_pkg_name)
-    assert ret
+    try:
+        ret = assistive.install(install_remove_pkg_name)
+        assert ret
+    except CommandExecutionError as exc:
+        if grains["osmajorrelease"] != 12:
+            raise exc from None
+        if "attempt to write a readonly database" not in str(exc):
+            raise exc from None
+        pytest.skip("Test fails on MacOS 12(attempt to write a readonly database)")
     ret = assistive.remove(install_remove_pkg_name)
     assert ret
 

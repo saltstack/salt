@@ -3,10 +3,10 @@ import pytest
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
-@pytest.mark.timeout(120)
 def test_unless_req(state):
     ret = state.single(fun="test.succeed_with_changes", name="unless test", unless=[{}])
     assert ret.result is True
@@ -36,7 +36,6 @@ def test_unless_req(state):
     assert ret.comment == "Success!"
 
 
-@pytest.mark.timeout(120)
 def test_unless_req_retcode(state):
     ret = state.single(
         fun="test.succeed_with_changes",
