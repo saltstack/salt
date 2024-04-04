@@ -17,6 +17,8 @@
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       <%- if type not in ("src", "onedir") %>
@@ -25,6 +27,7 @@
       - build-salt-onedir
       <%- elif type == 'src' %>
       - build-source-tarball
+      - build-pkgs-src
       <%- endif %>
 
     <%- include "build-{}-repo.yml.jinja".format(type) %>

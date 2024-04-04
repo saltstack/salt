@@ -5,24 +5,21 @@ description: Setup a cached python virtual environment
 inputs:
   name:
     required: true
-    type: string
     description: The Virtualenv Name
   cache-seed:
     required: true
-    type: string
     description: Seed used to invalidate caches
+
 outputs:
   cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
     value: ${{ steps.cache-virtualenv.outputs.cache-hit }}
   cache-key:
+    description: The value of the cache key
     value: ${{ steps.setup-cache-key.outputs.cache-key }}
   python-executable:
+    description: The path to the virtualenv's python executable
     value: ${{ steps.define-python-executable.outputs.python-executable }}
-
-
-env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:
@@ -54,7 +51,7 @@ runs:
 
     - name: Cache VirtualEnv
       id: cache-virtualenv
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         key: ${{ steps.setup-cache-key.outputs.cache-key }}
         path: ${{ steps.virtualenv-path.outputs.venv-path }}

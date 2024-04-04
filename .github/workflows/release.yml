@@ -21,7 +21,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -52,6 +52,8 @@ jobs:
       - self-hosted
       - linux
       - repo-release
+    env:
+      USE_S3_CACHE: 'true'
     environment: release
     needs:
       - check-requirements
@@ -125,6 +127,8 @@ jobs:
       - self-hosted
       - linux
       - repo-release
+    env:
+      USE_S3_CACHE: 'true'
     environment: release
     needs:
       - prepare-workflow
@@ -191,6 +195,8 @@ jobs:
       - repo-release
     needs:
       - prepare-workflow
+    env:
+      USE_S3_CACHE: 'true'
     environment: release
     outputs:
       backup-complete: ${{ steps.backup.outputs.backup-complete }}
@@ -220,12 +226,13 @@ jobs:
       - self-hosted
       - linux
       - repo-release
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - backup
       - download-onedir-artifact
     environment: release
-
     steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v4
@@ -275,6 +282,8 @@ jobs:
       - self-hosted
       - linux
       - repo-release
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - backup
@@ -389,6 +398,8 @@ jobs:
       - self-hosted
       - linux
       - repo-release
+    env:
+      USE_S3_CACHE: 'true'
     steps:
       - uses: actions/checkout@v4
 

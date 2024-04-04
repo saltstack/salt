@@ -22,7 +22,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -54,6 +54,11 @@ jobs:
             echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
           elif [ "${{ github.event.repository.fork }}" = "true" ]; then
             MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
             echo "${MSG}"
             echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
@@ -2031,9 +2036,12 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-source-tarball
+      - build-pkgs-src
     strategy:
       fail-fast: false
       matrix:
@@ -2131,6 +2139,8 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2268,6 +2278,8 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2456,6 +2468,8 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2558,6 +2572,8 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2648,6 +2664,8 @@ jobs:
       - self-hosted
       - linux
       - repo-nightly
+    env:
+      USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -2777,6 +2795,7 @@ jobs:
     environment: nightly
     needs:
       - prepare-workflow
+      - build-docs
       - build-src-repo
       - build-deb-repo
       - build-rpm-repo
@@ -2817,6 +2836,7 @@ jobs:
       - ubuntu-2204-arm64
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Get Salt Project GitHub Actions Bot Environment
