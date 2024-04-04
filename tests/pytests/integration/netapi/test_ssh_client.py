@@ -245,6 +245,7 @@ def test_shell_inject_ssh_port(
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "ssh_port": f"hhhhh|id>{path} #",
+        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
@@ -272,6 +273,7 @@ def test_shell_inject_remote_port_forwards(
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
+        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False

@@ -113,6 +113,7 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_contain
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(ssh_keys.priv_path),
+        base_script_args=["--ignore-host-keys"],
     )
 
 
