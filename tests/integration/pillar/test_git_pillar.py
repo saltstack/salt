@@ -113,9 +113,9 @@ def _rand_key_name(length):
 
 
 def _check_skip(grains):
-    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
-        return True
-    if grains["os"] == "AlmaLinux" and grains["osmajorrelease"] == 9:
+    if (grains["os"] in ("CentOS Stream", "AlmaLinux", "Rocky")) and grains[
+        "osmajorrelease"
+    ] == 9:
         return True
     return False
 

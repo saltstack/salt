@@ -69,24 +69,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro-slug: almalinux-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-8-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: almalinux-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-9-arm64
-            arch: arm64
-            pkg-type: package
           - distro-slug: amazonlinux-2
             arch: x86_64
             pkg-type: package
@@ -157,6 +139,24 @@ jobs:
             arch: aarch64
             pkg-type: package
           - distro-slug: photonos-5-arm64
+            arch: arm64
+            pkg-type: package
+          - distro-slug: rockylinux-8
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: rockylinux-8-arm64
+            arch: aarch64
+            pkg-type: package
+          - distro-slug: rockylinux-8-arm64
+            arch: arm64
+            pkg-type: package
+          - distro-slug: rockylinux-9
+            arch: x86_64
+            pkg-type: package
+          - distro-slug: rockylinux-9-arm64
+            arch: aarch64
+            pkg-type: package
+          - distro-slug: rockylinux-9-arm64
             arch: arm64
             pkg-type: package
           - distro-slug: ubuntu-20.04
@@ -380,7 +380,7 @@ jobs:
 
   macos:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     env:
       USE_S3_CACHE: 'false'
     environment: ${{ inputs.environment }}
@@ -395,10 +395,10 @@ jobs:
           - distro-slug: macos-13
             arch: x86_64
             pkg-type: package
-          - distro-slug: macos-13-xlarge
+          - distro-slug: macos-13-arm64
             arch: arm64
             pkg-type: package
-          - distro-slug: macos-13-xlarge
+          - distro-slug: macos-13-arm64
             arch: arm64
             pkg-type: onedir
 
