@@ -8,9 +8,12 @@ import os
 
 import pytest
 
-import salt.utils.files
-from salt import fileclient
-from tests.support.mock import AsyncMock, MagicMock, Mock, patch
+try:
+    import salt.utils.files
+    from salt import fileclient
+    from tests.support.mock import AsyncMock, MagicMock, Mock, patch
+except ImportError:
+    ...
 
 log = logging.getLogger(__name__)
 
