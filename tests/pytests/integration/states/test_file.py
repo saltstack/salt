@@ -6,6 +6,8 @@ import logging
 import os
 import pathlib
 import re
+import stat
+import subprocess
 import textwrap
 
 import pytest
@@ -1206,3 +1208,45 @@ def test_contents_file(salt_master, salt_call_cli, tmp_path):
             assert state_run["result"] is True
             # Check to make sure the file was created
             assert target_path.is_file()
+
+
+def test_directory_recurse(salt_master, salt_call_cli, tmp_path):
+    """
+    Test modifying ownership of symlink without affecting the link target's
+    permissions.
+    """
+    target_path = tmp_path / "test"
+    target_path.mkdir()
+
+    (target_path / "target").write_text("this is a test file")
+    (target_path / "link").symlink_to(target_path / "target")
+    # Change the ownership of the sybolic link to 'nobody'
+    subprocess.run(["chown", "-h", "nobody", str(target_path / "link")], check=True)
+    file_perms = (
+        stat.S_IFREG | stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+    )
+    # The permissions of the file should be 644.
+    mode = (target_path / "target").stat().st_mode
+    assert file_perms == mode
+
+    sls_name = "test"
+    sls_contents = f"""
+    {target_path}:
+      file.directory:
+        - user: root
+        - recurse:
+          - user
+    """
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        f"{sls_name}.sls", sls_contents
+    )
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.sls", sls_name)
+        key = f"file_|-{target_path}_|-{target_path}_|-directory"
+        assert key in ret.json
+        result = ret.json[key]
+        assert "changes" in result and result["changes"]
+
+    # Permissions of file should not have changed.
+    mode = (target_path / "target").stat().st_mode
+    assert file_perms == mode
