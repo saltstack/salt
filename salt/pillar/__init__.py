@@ -574,14 +574,14 @@ class Pillar:
                     opts,
                     utils=utils,
                     file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
-                    pillar=salt.pillar_data,
+                    pillar=self.pillar_data,
                 )
             else:
                 self.functions = salt.loader.minion_mods(
                     self.opts,
                     utils=utils,
                     file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
-                    pillar=salt.pillar_data,
+                    pillar=self.pillar_data,
                 )
         else:
             self.functions = functions
