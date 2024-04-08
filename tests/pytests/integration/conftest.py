@@ -107,3 +107,9 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir):
         client_key=str(sshd_config_dir / "client_key"),
         base_script_args=["--ignore-host-keys"],
     )
+
+
+@pytest.fixture(scope="module")
+def salt_auto_account(salt_auto_account_factory):
+    with salt_auto_account_factory as account:
+        yield account

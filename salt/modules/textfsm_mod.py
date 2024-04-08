@@ -19,7 +19,7 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 import logging
 import os
 
-from salt.utils.files import fopen
+import salt.utils.files
 
 try:
     import textfsm
@@ -188,11 +188,14 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         # Disabling pylint W8470 to nto complain about fopen.
         # Unfortunately textFSM needs the file handle rather than the content...
         # pylint: disable=W8470
-        tpl_file_handle = fopen(tpl_cached_path, "r")
-        # pylint: disable=W8470
-        log.debug(tpl_file_handle.read())
-        tpl_file_handle.seek(0)  # move the object position back at the top of the file
-        fsm_handler = textfsm.TextFSM(tpl_file_handle)
+        with salt.utils.files.fopen(tpl_cached_path, "r") as tpl_file_handle:
+            # pylint: disable=W8470
+            tpl_file_data = tpl_file_handle.read()
+            log.debug(tpl_file_data)
+            tpl_file_handle.seek(
+                0
+            )  # move the object position back at the top of the file
+            fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
         log.error("Unable to parse the TextFSM template", exc_info=True)
         ret["comment"] = (

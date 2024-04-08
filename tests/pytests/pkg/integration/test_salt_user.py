@@ -190,6 +190,7 @@ def test_paths_log_rotation(
 
     if install_salt.distro_id not in (
         "almalinux",
+        "rocky",
         "centos",
         "redhat",
         "amzn",

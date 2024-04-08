@@ -45,6 +45,7 @@ vcert; sys_platform != 'win32'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4
+textfsm
 # Available template libraries that can be used
 genshi>=0.7.3
 cheetah3>=3.2.2
