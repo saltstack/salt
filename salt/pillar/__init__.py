@@ -460,12 +460,15 @@ class PillarCache:
         """
         return os.path.join(self.opts["cachedir"], "pillar_cache", minion_id)
 
-    def fetch_pillar(self):
+    def fetch_pillar(self, save_override=True):
         """
         In the event of a cache miss, we need to incur the overhead of caching
         a new pillar.
         """
         log.debug("Pillar cache getting external pillar with ext: %s", self.ext)
+        override = None
+        if save_override:
+            override = self.pillar_override
         fresh_pillar = Pillar(
             self.opts,
             self.grains,
@@ -473,7 +476,7 @@ class PillarCache:
             self.saltenv,
             ext=self.ext,
             functions=self.functions,
-            pillar_override=self.pillar_override,
+            pillar_override=override,
             pillarenv=self.pillarenv,
             extra_minion_data=self.extra_minion_data,
         )
@@ -528,7 +531,7 @@ class PillarCache:
                 return fresh_pillar
         else:
             # We haven't seen this minion yet in the cache. Store it.
-            fresh_pillar = self.fetch_pillar()
+            fresh_pillar = self.fetch_pillar(save_override=False)
             self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
             log.debug("Pillar cache miss for minion %s", self.minion_id)
             log.debug("Current pillar cache: %s", cache_dict)  # FIXME hack!
