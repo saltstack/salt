@@ -133,12 +133,12 @@ def managed(
         if new_cert.not_valid_after < existing_cert.not_valid_after:
             ret[
                 "comment"
-            ] += "New certificate expires sooner than existing one (skip with pillar='{skip_conditions: True}')."
+            ] += "New certificate expires sooner than existing one (skip with pillar='{skip_conditions: True}')\n"
             failed_conditions = True
         if new_cert.subject.rfc4514_string() != existing_cert.subject.rfc4514_string():
             ret[
                 "comment"
-            ] += "Certificates CN does not match (skip with pillar='{skip_conditions: True}')."
+            ] += "Certificates CN does not match (skip with pillar='{skip_conditions: True}')\n"
             failed_conditions = True
 
         if failed_conditions:
