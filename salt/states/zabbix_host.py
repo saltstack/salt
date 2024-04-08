@@ -332,9 +332,17 @@ def present(host, groups, interfaces, **kwargs):
         if hostinterfaces:
             hostinterfaces = sorted(hostinterfaces, key=lambda k: k["main"])
             hostinterfaces_copy = deepcopy(hostinterfaces)
+            hostinterface_read_only_fields = [
+                "interfaceid",
+                "hostid",
+                "available",
+                "error",
+                "errors_from",
+                "disable_until",
+            ]
             for hostintf in hostinterfaces_copy:
-                hostintf.pop("interfaceid")
-                hostintf.pop("hostid")
+                for field in hostinterface_read_only_fields:
+                    hostintf.pop(field, None)
                 # "bulk" is present only in snmp interfaces with Zabbix < 5.0
                 if "bulk" in hostintf:
                     hostintf.pop("bulk")
