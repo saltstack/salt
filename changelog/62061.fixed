@@ -1,0 +1,4 @@
+This is to make sure user-data will be returned correctly, because currently some user-data content will be cut by this condition in grains metadata:
+elif "=" in line:
+    key, value = line.split("=")
+    ret[value] = _search(prefix=os.path.join(prefix, key))
