@@ -1142,16 +1142,17 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             ret["netbox"]["interfaces"] = _associate_ips_to_interfaces(
                 interfaces_list, interface_ips_list
             )
-    site_id = ret["netbox"]["site"]["id"]
-    site_name = ret["netbox"]["site"]["name"]
-    if site_details:
-        ret["netbox"]["site"] = _get_site_details(
-            api_url, minion_id, site_name, site_id, headers
-        )
-    if site_prefixes:
-        ret["netbox"]["site"]["prefixes"] = _get_site_prefixes(
-            api_url, minion_id, site_name, site_id, headers, api_query_result_limit
-        )
+    if ret["netbox"].get("site"):
+        site_id = ret["netbox"]["site"]["id"]
+        site_name = ret["netbox"]["site"]["name"]
+        if site_details:
+            ret["netbox"]["site"] = _get_site_details(
+                api_url, minion_id, site_name, site_id, headers
+            )
+        if site_prefixes:
+            ret["netbox"]["site"]["prefixes"] = _get_site_prefixes(
+                api_url, minion_id, site_name, site_id, headers, api_query_result_limit
+            )
     if connected_devices:
         ret["netbox"]["connected_devices"] = _get_connected_devices(
             api_url, minion_id, ret["netbox"]["interfaces"], headers

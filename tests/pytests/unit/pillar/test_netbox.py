@@ -108,6 +108,13 @@ def device_results():
 
 
 @pytest.fixture
+def device_without_site_results(device_results):
+    result = device_results
+    result["dict"]["results"][0]["site"] = None
+    return result
+
+
+@pytest.fixture
 def multiple_device_results():
     return {
         "dict": {
@@ -1587,6 +1594,13 @@ def pillar_results():
 
 
 @pytest.fixture
+def pillar_without_site_results(pillar_results):
+    result = pillar_results
+    result["netbox"]["site"] = None
+    return result
+
+
+@pytest.fixture
 def connected_devices_results():
     return {
         512: {
@@ -2310,6 +2324,49 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         get_interface_ips.return_value = device_ip_results["dict"]["results"]
         get_site_details.return_value = site_results["dict"]
         get_site_prefixes.return_value = site_prefixes
+        get_proxy_details.return_value = proxy_details
+        get_connected_decvices.return_value = connected_devices_results
+
+        actual_result = netbox.ext_pillar(**default_kwargs)
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_everything_successfully_without_site_then_return_dict(
+    default_kwargs,
+    device_without_site_results,
+    no_results,
+    device_interfaces_list,
+    device_ip_results,
+    proxy_details,
+    pillar_without_site_results,
+    connected_devices_results,
+):
+
+    expected_result = pillar_without_site_results
+
+    default_kwargs["virtual_machines"] = False
+    default_kwargs["interfaces"] = True
+    default_kwargs["interface_ips"] = True
+    default_kwargs["proxy_return"] = True
+    default_kwargs["connected_devices"] = True
+
+    with patch("salt.pillar.netbox._get_devices", autospec=True) as get_devices, patch(
+        "salt.pillar.netbox._get_virtual_machines", autospec=True
+    ) as get_virtual_machines, patch(
+        "salt.pillar.netbox._get_interfaces", autospec=True
+    ) as get_interfaces, patch(
+        "salt.pillar.netbox._get_interface_ips", autospec=True
+    ) as get_interface_ips, patch(
+        "salt.pillar.netbox._get_proxy_details", autospec=True
+    ) as get_proxy_details, patch(
+        "salt.pillar.netbox._get_connected_devices", autospec=True
+    ) as get_connected_decvices:
+
+        get_devices.return_value = device_without_site_results["dict"]["results"]
+        get_virtual_machines.return_value = no_results["dict"]["results"]
+        get_interfaces.return_value = device_interfaces_list
+        get_interface_ips.return_value = device_ip_results["dict"]["results"]
         get_proxy_details.return_value = proxy_details
         get_connected_decvices.return_value = connected_devices_results
 
