@@ -17,13 +17,7 @@ def chocolatey(modules):
 
 @pytest.fixture()
 def clean(chocolatey):
-    try:
-        # If chocolatey is not installed, this will throw an error
-        chocolatey.chocolatey_version(refresh=True)
-        # If we get this far, chocolatey is installed... let's uninstall
-        chocolatey.unbootstrap()
-    except CommandExecutionError:
-        pass
+    result = chocolatey.unbootstrap()
 
     # Try to get the new version, should throw an error
     try:
@@ -34,7 +28,9 @@ def clean(chocolatey):
     # Assert the chocolatey is not installed
     assert chocolatey_version is None
     try:
-        yield
+        # We're yielding "result" here so we can see any problems with
+        # unbootstrap if the test fails
+        yield result
     finally:
         try:
             # If chocolatey is not installed, this will throw an error
@@ -46,7 +42,10 @@ def clean(chocolatey):
 
 
 def test_bootstrap(chocolatey, clean):
-    chocolatey.bootstrap()
+    # We're defining "result" here to see the output of the bootstrap function
+    # if the test fails
+    result = chocolatey.bootstrap()
+    # Let's run it outside the try/except to see what the error is
     try:
         chocolatey_version = chocolatey.chocolatey_version(refresh=True)
     except CommandExecutionError:
