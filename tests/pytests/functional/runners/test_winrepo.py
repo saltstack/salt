@@ -41,6 +41,7 @@ def test_update_git_repos(winrepo_remotes):
         assert res[remote]
 
         # Make sure there are package definitions in the root
+        assert res[remote].endswith("_")
         pkg_def = os.path.join(res[remote], "7zip.sls")
         assert os.path.exists(pkg_def)
 
@@ -63,9 +64,9 @@ def test_legacy_update_git_repos(winrepo_remotes, minion_opts):
             # update only returns True or False, not a path
             if "-ng" in remote:
                 path = minion_opts["winrepo_dir_ng"]
-                pkg_def = os.path.join(path, "salt-winrepo-ng", "7zip.sls")
+                pkg_def = os.path.join(path, "salt-winrepo-ng", "_", "7zip.sls")
             else:
                 path = minion_opts["winrepo_dir"]
-                pkg_def = os.path.join(path, "salt-winrepo", "7zip.sls")
+                pkg_def = os.path.join(path, "salt-winrepo", "_", "7zip.sls")
 
             assert os.path.exists(pkg_def)
