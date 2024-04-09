@@ -131,7 +131,7 @@ class PublishClient(salt.transport.base.PublishClient):
                         url = "https://ipc.saltproject.io/ws"
                     else:
                         url = "http://ipc.saltproject.io/ws"
-                log.error("pub client connect %r %r", url, ctx)
+                log.debug("pub client connect %r %r", url, ctx)
                 ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
@@ -397,7 +397,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         self.clients.add(ws)
@@ -512,7 +512,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         async for msg in ws:
@@ -550,7 +550,7 @@ class RequestClient(salt.transport.base.RequestClient):
             ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)
         self.session = aiohttp.ClientSession()
         URL = self.get_master_uri(self.opts)
-        log.error("Connect to %s %s", URL, ctx)
+        log.debug("Connect to %s %s", URL, ctx)
         self.ws = await self.session.ws_connect(URL, ssl=ctx)
 
     async def send(self, load, timeout=60):
