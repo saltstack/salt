@@ -2,10 +2,9 @@
 Provide easier operations on certificate files
 =====================================================================
 
-Main purpose for this is to provide easier and human readable info
-regarding changes if files contains certificates.
+Provides human-readable information regarding changes of files containing certificates.
 
-Requirement is `cryptography` python package.
+Requires `cryptography` python package.
 
 .. code-block:: yaml
 
@@ -59,20 +58,23 @@ def managed(
     **kwargs,
 ):
     """
-    State manage certificates as files and provide minimal overview of
-    expiration and common name in comment.
+    Manage certificates as files and provide certificate expiration and common name in the comment.
 
     It can handle one certificate or full privkey->cert->chain files.
 
-    Conditions can provide easy way how to match agains Common name,
-    or make sure that only newer certificates will be salted.
-    If conditions are not required use this as argument to state:
-    `skip_conditions=True`
-    Or set pillar in same manner on command line:
-    `salt-call state.apply some_other_state pillar="{skip_conditions: True}"`
+    Conditions provides an easy way to match against the certificate's Common Name
+    or to make sure that only newer certificates are copied down.
 
     State can handle everything that file.managed can handle,
-    because it is used underneat to process changes to files.
+    because it is used underneath to process changes to files.
+
+    For all parameters refer to file.managed documentation:
+    https://docs.saltproject.io/en/master/ref/states/all/salt.states.file.html#salt.states.file.managed
+
+    Args:
+
+        skip_conditions (bool): Do not check expiration or Common name match (default: False)
+                                Also pillar can be used: pillar="{skip_conditions: True}"
     """
 
     skip_conditions = __pillar__.get("skip_conditions", skip_conditions)
