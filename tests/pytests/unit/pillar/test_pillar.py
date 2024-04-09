@@ -164,7 +164,7 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
         assert fresh_pillar == {}
 
 
-def test_pillar_save_cache(temp_salt_minion, caplog):
+def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
     with pytest.helpers.temp_directory() as temp_path:
         tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
         tmp_cachedir.mkdir(parents=True)
@@ -188,10 +188,8 @@ def test_pillar_save_cache(temp_salt_minion, caplog):
             pillar_override=pillar_override,
         )
 
-        fresh_pillar = pillar.fetch_pillar(save_override=False)
+        fresh_pillar = pillar.fetch_pillar()
         assert fresh_pillar == {}
-        fresh_pillar2 = pillar.fetch_pillar()
-        assert fresh_pillar2 == pillar_override
 
 
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
