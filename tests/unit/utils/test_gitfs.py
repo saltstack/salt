@@ -117,11 +117,11 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_get_cachedir_basename(self):
         self.assertEqual(
             self.main_class.remotes[0].get_cache_basename(),
-            "",
+            "_",
         )
         self.assertEqual(
             self.main_class.remotes[1].get_cache_basename(),
-            "",
+            "_",
         )
 
     def test_git_provider_mp_lock(self):
