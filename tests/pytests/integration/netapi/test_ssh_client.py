@@ -191,6 +191,7 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_acco
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
+        "ignore_host_keys": True,
     }
     ret = client.run(low)
     assert path.exists() is False
