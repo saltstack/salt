@@ -71,21 +71,46 @@ def _present_test(
     """
     result = None
     if source:
-        keys = __salt__["ssh.check_key_file"](
-            user,
-            source,
-            config,
-            saltenv=__env__,
-            fingerprint_hash_type=fingerprint_hash_type,
-        )
-        if keys:
-            comment = ""
-            for key, status in keys.items():
+        if options:
+            key = __salt__["cp.get_file_str"](source, saltenv=__env__)
+            key = key.rstrip().split("\n")
+            for keyline in key:
+                comment = ""
+                keyline = keyline.split(" ")
+                key_type = keyline[0]
+                key_value = keyline[1]
+                key_comment = keyline[2] if len(keyline) > 2 else ""
+                status = __salt__["ssh.check_key"](
+                    user,
+                    key_value,
+                    enc=key_type,
+                    comment=key_comment,
+                    options=options,
+                    config=config,
+                    cache_keys=None,
+                    fingerprint_hash_type=fingerprint_hash_type,
+                )
                 if status == "exists":
                     continue
-                comment += f"Set to {status}: {key}\n"
-            if comment:
-                return result, comment
+                comment += f"Set to {status}: {','.join(options)} {key_value}\n"
+                if comment:
+                    return result, comment
+        else:
+            keys = __salt__["ssh.check_key_file"](
+                user,
+                source,
+                config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+            )
+            if keys:
+                comment = ""
+                for key, status in list(keys.items()):
+                    if status == "exists":
+                        continue
+                    comment += f"Set to {status}: {key}\n"
+                if comment:
+                    return result, comment
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(
             "ssh_auth.error", None
         )
@@ -132,9 +157,7 @@ def _present_test(
         comment = f"Key {name} for user {user} is set to be added"
     elif check == "exists":
         result = True
-        comment = "The authorized host key {} is already present for user {}".format(
-            name, user
-        )
+        comment = f"The authorized host key {name} is already present for user {user}"
 
     return result, comment
 
@@ -147,21 +170,46 @@ def _absent_test(
     """
     result = None
     if source:
-        keys = __salt__["ssh.check_key_file"](
-            user,
-            source,
-            config,
-            saltenv=__env__,
-            fingerprint_hash_type=fingerprint_hash_type,
-        )
-        if keys:
-            comment = ""
-            for key, status in list(keys.items()):
+        if options:
+            key = __salt__["cp.get_file_str"](source, saltenv=__env__)
+            key = key.rstrip().split("\n")
+            for keyline in key:
+                comment = ""
+                keyline = keyline.split(" ")
+                key_type = keyline[0]
+                key_value = keyline[1]
+                key_comment = keyline[2] if len(keyline) > 2 else ""
+                status = __salt__["ssh.check_key"](
+                    user,
+                    key_value,
+                    enc=key_type,
+                    comment=key_comment,
+                    options=options,
+                    config=config,
+                    cache_keys=None,
+                    fingerprint_hash_type=fingerprint_hash_type,
+                )
                 if status == "add":
                     continue
-                comment += f"Set to remove: {key}\n"
-            if comment:
-                return result, comment
+                comment += f"Set to remove: {','.join(options)} {key_value}\n"
+                if comment:
+                    return result, comment
+        else:
+            keys = __salt__["ssh.check_key_file"](
+                user,
+                source,
+                config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+            )
+            if keys:
+                comment = ""
+                for key, status in list(keys.items()):
+                    if status == "add":
+                        continue
+                    comment += f"Set to remove: {key}\n"
+                if comment:
+                    return result, comment
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(
             "ssh_auth.error", None
         )
@@ -308,13 +356,13 @@ def present(
         data = "no key"
     elif source != "" and source_path:
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
+        filewithoutoptions = False
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
+            filewithoutoptions = sshre.match(keyline)
+            if filewithoutoptions and not options:
                 data = __salt__["ssh.set_auth_key_from_file"](
                     user,
                     source,
@@ -350,26 +398,18 @@ def present(
 
     if data == "replace":
         ret["changes"][name] = "Updated"
-        ret["comment"] = "The authorized host key {} for user {} was updated".format(
-            name, user
-        )
+        ret["comment"] = f"The authorized host key {name} for user {user} was updated"
         return ret
     elif data == "no change":
         ret["comment"] = (
-            "The authorized host key {} is already present for user {}".format(
-                name, user
-            )
+            f"The authorized host key {name} is already present for user {user}"
         )
     elif data == "new":
         ret["changes"][name] = "New"
-        ret["comment"] = "The authorized host key {} for user {} was added".format(
-            name, user
-        )
+        ret["comment"] = f"The authorized host key {name} for user {user} was added"
     elif data == "no key":
         ret["result"] = False
-        ret["comment"] = "Failed to add the ssh key. Source file {} is missing".format(
-            source
-        )
+        ret["comment"] = f"Failed to add the ssh key. Source file {source} is missing"
     elif data == "fail":
         ret["result"] = False
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(
@@ -457,13 +497,13 @@ def absent(
     # Extract Key from file if source is present
     if source != "":
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
+        filewithoutoptions = False
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
+            filewithoutoptions = sshre.match(keyline)
+            if filewithoutoptions and not options:
                 ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
                     user,
                     source,
