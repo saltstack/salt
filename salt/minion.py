@@ -3231,10 +3231,10 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self._handle_decoded_payload(payload["load"])
+                await self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
