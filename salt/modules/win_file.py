@@ -12,10 +12,10 @@ import errno
 import logging
 import os
 import os.path
+import pathlib
 import stat
 import sys
 import tempfile
-from pathlib import Path
 
 import salt.utils.files
 import salt.utils.path
@@ -1346,14 +1346,14 @@ def remove(path, force=False):
     # Symlinks. The shutil.rmtree function will remove the contents of
     # the Symlink source in windows.
 
-    path = Path(os.path.expanduser(path))
+    path = pathlib.Path(os.path.expanduser(path))
 
     if not path.is_absolute():
-        raise SaltInvocationError(f"File path must be absolute: {str(path)}")
+        raise SaltInvocationError(f"File path must be absolute: {path}")
 
     # Does the file/folder exists
     if not path.exists() and not path.is_symlink():
-        raise CommandExecutionError(f"Path not found: {str(path)}")
+        raise CommandExecutionError(f"Path not found: {path}")
 
     # Remove ReadOnly Attribute
     file_attributes = win32api.GetFileAttributes(str(path))
@@ -1376,7 +1376,7 @@ def remove(path, force=False):
         if force:
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(str(path), file_attributes)
-        raise CommandExecutionError(f"Could not remove '{str(path)}': {exc}")
+        raise CommandExecutionError(f"Could not remove '{path}': {exc}")
 
     return True
 
