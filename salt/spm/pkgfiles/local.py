@@ -184,7 +184,7 @@ def hash_file(path, hashobj, conn=None):
     if os.path.isdir(path):
         return ""
 
-    with salt.utils.files.fopen(path, "r") as f:
+    with salt.utils.files.fopen(path, "rb") as f:
         hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
         return hashobj.hexdigest()
 
