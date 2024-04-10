@@ -968,7 +968,9 @@ def get_pr_test_labels(
     if labels:
         ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
         for name, description in sorted(labels):
-            ctx.info(f" * [yellow]{name}[/yellow]: {description}")
+            ctx.info(
+                f" * [yellow]{name}[/yellow]: {description or '[red][No description][/red]'}"
+            )
             if name.startswith("test:os:"):
                 slug = name.split("test:os:", 1)[-1]
                 if slug not in available and name != "test:os:all":
