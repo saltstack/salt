@@ -932,6 +932,7 @@ def get_pr_test_labels(
     """
     Set the pull-request labels.
     """
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
         labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
@@ -982,6 +983,17 @@ def get_pr_test_labels(
 
     else:
         ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    if "test:coverage" in test_labels:
+        ctx.info(
+            "Selecting ALL available OS'es because the label 'test:coverage' is set."
+        )
+        selected.add("all")
+        if github_step_summary is not None:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "Selecting ALL available OS'es because the label `test:coverage` is set.\n"
+                )
 
     if "all" in selected:
         selected = select_all
