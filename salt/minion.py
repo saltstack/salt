@@ -3366,7 +3366,6 @@ class Syndic(Minion):
             data["jid"],
             data["to"],
             io_loop=self.io_loop,
-            callback=lambda _: None,
             **kwargs,
         )
 
@@ -3693,11 +3692,7 @@ class SyndicManager(MinionBase):
         self.raw_events = []
 
     def reconnect_event_bus(self, something):
-        # XXX: set_event_handler does not return anything!
-        # pylint: disable=assignment-from-no-return
-        future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
-        # pylint: enable=assignment-from-no-return
+        self.local.event.set_event_handler(self._process_event)
 
     # Syndic Tune In
     def tune_in(self):
@@ -3718,11 +3713,7 @@ class SyndicManager(MinionBase):
         self.raw_events = []
         self._reset_event_aggregation()
 
-        # XXX: set_event_handler does not return anything!
-        # pylint: disable=assignment-from-no-return
-        future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
-        # pylint: enable=assignment-from-no-return
+        self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(
@@ -3736,7 +3727,7 @@ class SyndicManager(MinionBase):
 
         self.io_loop.start()
 
-    def _process_event(self, raw):
+    async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw)
         log.trace("Got event %s", mtag)  # pylint: disable=no-member
@@ -3923,7 +3914,7 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
         return mp_call(self, payload)
 
