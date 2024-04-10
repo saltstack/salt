@@ -1057,7 +1057,7 @@ def test_file_managed_remote_source_does_not_refetch_existing_file_with_correct_
     Issue #64373
     """
     name = tmp_path / "scene33"
-    name.write_text(grail_scene33_file.read_text())
+    name.write_bytes(grail_scene33_file.read_bytes())
     ret = file.managed(
         str(name),
         source="http://127.0.0.1:1337/does/not/exist",
