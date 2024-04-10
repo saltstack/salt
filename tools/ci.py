@@ -1248,12 +1248,15 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
         commit_sha,
     ]
 
+    from_pull_request = False
+
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
             pr_event_data = gh_event.get("pull_request")
             if pr_event_data:
+                from_pull_request = True
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
@@ -1314,6 +1317,15 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 ctx.error(f"Failed to upload {fpath} to codecov:")
                 ctx.console_stdout.print(stdout)
                 ctx.console.print(stderr)
+                if from_pull_request is True:
+                    # Codecov is having some issues with tokenless uploads
+                    # Don't let PR's fail, but do fail otherwise so we know
+                    # we should fix it.
+                    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                    if github_step_summary is not None:
+                        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                            wfh.write(f"Failed to upload `{fpath}` to codecov\n")
+                    ctx.exit(0)
                 ctx.exit(1)
 
             ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
