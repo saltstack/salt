@@ -147,18 +147,15 @@ def test_mac_deluser(group, existing_group_name, existing_user):
 
 
 def test_mac_members(
-    group,
-    existing_group_name,
-    existing_user,
-    non_existing_group_member,
-    non_existing_user,
+    group, existing_group_name, existing_user, non_existing_group_member
 ):
     """
     Test replacing members of a group
     """
+    group.members(existing_group_name, existing_user)
     group_info = group.info(existing_group_name)
     assert non_existing_group_member not in group_info["members"]
-    assert non_existing_user in group_info["members"]
+    assert existing_user in group_info["members"]
 
     # Replace group members
     rep_group_mem = group.members(existing_group_name, non_existing_group_member)
@@ -167,7 +164,7 @@ def test_mac_members(
     # ensure new user is added to group and previous user is removed
     group_info = group.info(existing_group_name)
     assert non_existing_group_member in group_info["members"]
-    assert non_existing_user not in group_info["members"]
+    assert existing_user not in group_info["members"]
 
 
 def test_mac_getent(group, existing_user, existing_group_name):
