@@ -501,11 +501,13 @@ def _verify_safe_py_code(*args):
 
 
 def _verify_virtualenv(venv_path):
-    bin_path = os.path.join(venv_path, "bin/python")
+    if salt.utils.platform.is_windows():
+        bin_path = os.path.join(venv_path, "Scripts", "python.exe")
+    else:
+        bin_path = os.path.join(venv_path, "bin", "python")
+
     if not os.path.exists(bin_path):
         raise CommandExecutionError(
-            "Path '{}' does not appear to be a virtualenv: bin/python not found.".format(
-                venv_path
-            )
+            f"Path '{venv_path}' does not appear to be a virtualenv: '{bin_path}' not found."
         )
     return bin_path
