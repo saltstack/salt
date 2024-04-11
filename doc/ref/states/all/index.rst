@@ -238,6 +238,7 @@ state modules
     pcs
     pdbedit
     pecl
+    pem
     pip_state
     pkg
     pkgbuild
