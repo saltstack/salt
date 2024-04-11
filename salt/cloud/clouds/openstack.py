@@ -2,12 +2,12 @@
 Openstack Cloud Driver
 ======================
 
-:depends: `shade>=1.19.0 <https://pypi.python.org/pypi/shade>`_
+:depends: `openstacksdk <https://pypi.org/project/openstacksdk/>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
-This OpenStack driver uses a the shade python module which is managed by the
+This OpenStack driver uses a the openstacksdk python module which is managed by the
 OpenStack Infra team.  This module is written to handle all the different
 versions of different OpenStack tools for salt, so most commands are just passed
 over to the module to handle everything.
@@ -16,7 +16,7 @@ Provider
 --------
 
 There are two ways to configure providers for this driver.  The first one is to
-just let shade handle everything, and configure using os-client-config_ and
+just let openstacksdk handle everything, and configure using os-client-config_ and
 setting up `/etc/openstack/clouds.yml`.
 
 .. code-block:: yaml
@@ -83,7 +83,7 @@ Profile
 -------
 
 Most of the options for building servers are just passed on to the
-create_server_ function from shade.
+create_server_ function from openstacksdk.
 
 The salt specific ones are:
 
@@ -219,9 +219,9 @@ Anything else from the create_server_ docs can be passed through here.
     If there is anything added, that is not in this list, it can be added to an `extras`
     dictionary for the profile, and that will be to the create_server function.
 
-.. _create_server: https://docs.openstack.org/shade/latest/user/usage.html#shade.OpenStackCloud.create_server
-.. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
-.. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
+.. _create_server: https://docs.openstack.org/openstacksdk/latest/user/connection.html#openstack.connection.Connection.create_server
+.. _vendor: https://docs.openstack.org/openstacksdk/latest/user/config/vendor-support.html
+.. _os-client-config: https://docs.openstack.org/python-openstackclient/latest/configuration/index.html#configuration-files
 """
 
 import copy
@@ -231,26 +231,21 @@ import pprint
 import socket
 
 import salt.config as config
+import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-from salt.utils.versions import Version
 
 try:
-    import os_client_config
-    import shade
-    import shade.exc
-    import shade.openstackcloud
+    import openstack
+    import openstack.config.vendors
 
-    HAS_SHADE = (
-        Version(shade.__version__) >= Version("1.19.0"),
-        "Please install newer version of shade: >= 1.19.0",
-    )
+    HAS_OPENSTACKSDK = (True, "")
 except ImportError:
-    HAS_SHADE = (False, "Install pypi module shade >= 1.19.0")
+    HAS_OPENSTACKSDK = (False, "Install pypi module python-openstackclient")
 
 
 log = logging.getLogger(__name__)
@@ -264,7 +259,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
     if get_dependencies() is False:
-        return HAS_SHADE
+        return HAS_OPENSTACKSDK
     return __virtualname__
 
 
@@ -298,13 +293,13 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    if not HAS_SHADE:
-        log.warning('"shade" not found')
+    if not HAS_OPENSTACKSDK:
+        log.warning('"openstacksdk" not found')
         return False
-    elif hasattr(HAS_SHADE, "__len__") and not HAS_SHADE[0]:
-        log.warning(HAS_SHADE[1])
+    elif hasattr(HAS_OPENSTACKSDK, "__len__") and not HAS_OPENSTACKSDK[0]:
+        log.warning(HAS_OPENSTACKSDK[1])
         return False
-    deps = {"shade": HAS_SHADE[0], "os_client_config": HAS_SHADE[0]}
+    deps = {"openstacksdk": HAS_OPENSTACKSDK[0]}
     return config.check_driver_dependencies(__virtualname__, deps)
 
 
@@ -371,9 +366,9 @@ def get_conn():
     profile = vm_.pop("profile", None)
     if profile is not None:
         vm_ = __utils__["dictupdate.update"](
-            os_client_config.vendors.get_profile(profile), vm_
+            openstack.config.vendors.get_profileget_profile(profile), vm_
         )
-    conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
+    conn = openstack.connection.from_config(cloud_config=None, **vm_)
     if _get_active_provider_name() is not None:
         __context__[_get_active_provider_name()] = conn
     return conn
@@ -443,11 +438,9 @@ def _get_ips(node, addr_type="public"):
                 "OS-EXT-IPS:type"
             ):
                 ret.append(addr["addr"])
-            elif addr_type == "public" and __utils__["cloud.is_public_ip"](
-                addr["addr"]
-            ):
+            elif addr_type == "public" and salt.utils.cloud.is_public_ip(addr["addr"]):
                 ret.append(addr["addr"])
-            elif addr_type == "private" and not __utils__["cloud.is_public_ip"](
+            elif addr_type == "private" and not salt.utils.cloud.is_public_ip(
                 addr["addr"]
             ):
                 ret.append(addr["addr"])
@@ -719,7 +712,7 @@ def request_instance(vm_, conn=None, call=None):
     kwargs["wait"] = True
     try:
         conn.create_server(**_clean_create_kwargs(**kwargs))
-    except shade.exc.OpenStackCloudException as exc:
+    except openstack.exceptions.OpenStackCloudException as exc:
         log.error("Error creating server %s: %s", vm_["name"], exc)
         destroy(vm_["name"], conn=conn, call="action")
         raise SaltCloudSystemExit(str(exc))
@@ -885,11 +878,11 @@ def destroy(name, conn=None, call=None):
 
 def call(conn=None, call=None, kwargs=None):
     """
-    Call function from shade.
+    Call function from openstacksdk.
 
     func
 
-        function to call from shade.openstackcloud library
+        function to call from openstacksdk.openstackcloud library
 
     CLI Example
 
@@ -917,6 +910,6 @@ def call(conn=None, call=None, kwargs=None):
             continue
     try:
         return getattr(conn, func)(**kwargs)
-    except shade.exc.OpenStackCloudException as exc:
+    except openstack.exceptions.OpenStackCloudException as exc:
         log.error("Error running %s: %s", func, exc)
         raise SaltCloudSystemExit(str(exc))
