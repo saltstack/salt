@@ -44,7 +44,7 @@ gitdb==4.0.11
     # via gitpython
 gitpython==3.1.42 ; sys_platform == "win32"
     # via -r requirements/base.txt
-idna==3.4
+idna==3.7
     # via
     #   requests
     #   yarl

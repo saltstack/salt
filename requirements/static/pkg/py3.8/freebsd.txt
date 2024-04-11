@@ -36,7 +36,7 @@ frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.7
     # via
     #   requests
     #   yarl
