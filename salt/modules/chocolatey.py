@@ -1204,8 +1204,8 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     if installed:
         for pkg in installed:
             if lower_name == pkg.lower():
-                packages.setdefault(pkg, {})
-                packages[pkg]["installed"] = installed[pkg]
+                packages.setdefault(lower_name, {})
+                packages[lower_name]["installed"] = installed[pkg]
 
     if check_remote:
         # If there's a remote package available, then also include that
@@ -1216,8 +1216,8 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         if available:
             for pkg in available:
                 if lower_name == pkg.lower():
-                    packages.setdefault(pkg, {})
-                    packages[pkg]["available"] = available[pkg]
+                    packages.setdefault(lower_name, {})
+                    packages[lower_name]["available"] = available[pkg]
 
     return packages
 
