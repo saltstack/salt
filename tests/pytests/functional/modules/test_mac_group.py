@@ -147,7 +147,11 @@ def test_mac_deluser(group, existing_group_name, existing_user):
 
 
 def test_mac_members(
-    group, existing_group_name, existing_user, non_existing_group_member
+    group,
+    existing_group_name,
+    existing_user,
+    non_existing_group_member,
+    non_existing_user,
 ):
     """
     Test replacing members of a group
