@@ -478,7 +478,7 @@ class Client:
         """
         Get a single file from a URL.
         """
-        url_data = urllib.parse.urlparse(url)
+        url_data = urllib.parse.urlparse(url, allow_fragments=False)
         url_scheme = url_data.scheme
         url_path = os.path.join(url_data.netloc, url_data.path).rstrip(os.sep)
 
