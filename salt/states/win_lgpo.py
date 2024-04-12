@@ -285,6 +285,7 @@ def set_(
     user_policy=None,
     cumulative_rights_assignments=True,
     adml_language="en-US",
+    refresh_cache=False,
 ):
     """
     Ensure the specified policy is set.
@@ -323,6 +324,18 @@ def set_(
         adml_language (str):
             The adml language to use for AMDX policy data/display conversions.
             Default is ``en-US``
+
+        refresh_cache (bool):
+            Clear the cached policy definitions before applying the state. This
+            is useful when the underlying policy files (ADMX/ADML) have been
+            added/modified in the same state. This will allow those new policies
+            to be picked up. This adds time to the state run when applied to
+            multiple states within the same run. Therefore, it is best to only
+            apply this to the first policy that is applied. For individual runs
+            this will have no effect. Default is ``False``
+
+            .. versionadded:: 3006.8
+            .. versionadded:: 3007.1
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
     policy_classes = ["machine", "computer", "user", "both"]
@@ -386,6 +399,10 @@ def set_(
         "user": {"requested_policy": user_policy, "policy_lookup": {}},
         "machine": {"requested_policy": computer_policy, "policy_lookup": {}},
     }
+
+    if refresh_cache:
+        # Remove cached policies so new policies can be picked up
+        __salt__["lgpo.clear_policy_cache"]()
 
     current_policy = {}
     deprecation_comments = []
