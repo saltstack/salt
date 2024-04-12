@@ -113,7 +113,7 @@ distro==1.8.0
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.3.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
