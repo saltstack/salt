@@ -7,6 +7,7 @@ from salt.utils.gitfs import GitPillar, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 
 pytestmark = [
+    pytest.mark.windows_whitelisted,
     pytest.mark.slow_test,
 ]
 
