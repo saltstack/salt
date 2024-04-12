@@ -225,3 +225,7 @@ systems, then additional labels can be used such as:
   on the currently selected operating systems.
 * ``test:full``: Run all tests in the Salt test suite that can be ran on the currently
   selected operating systems.
+* ``test:coverage``: Run all tests in the Salt test suite on all operating systems while
+  collecting code coverage.
+* ``test:random-cache-seed``: Randomize the GH Actions cache seed to make sure no caches
+  are used during the build.
