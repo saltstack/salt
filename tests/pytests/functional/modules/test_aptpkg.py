@@ -13,7 +13,6 @@ import salt.modules.file as file
 import salt.modules.gpg as gpg
 import salt.utils.files
 import salt.utils.stringutils
-from salt.loader.dunder import __opts__
 from tests.support.mock import Mock, patch
 
 pytestmark = [
@@ -77,7 +76,7 @@ def configure_loader_modules(minion_opts):
         },
         gpg: {},
         cp: {
-            "__opts__": __opts__.with_default(minion_opts),
+            "__opts__": minion_opts,
         },
         config: {
             "__opts__": minion_opts,
