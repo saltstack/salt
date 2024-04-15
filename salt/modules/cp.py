@@ -20,7 +20,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.loader.dunder import __context__, __file_client__, __grains__, __pillar__, __opts__
+from salt.loader.dunder import __context__, __file_client__, __grains__, __pillar__
 
 log = logging.getLogger(__name__)
 
