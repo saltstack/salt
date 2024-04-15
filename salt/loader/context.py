@@ -43,9 +43,6 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.loader_context = loader_context
         self.default = default
 
-    def with_default(self, default):
-        return NamedLoaderContext(self.name, self.loader_context, default=default)
-
     def loader(self):
         """
         The LazyLoader in the current context. This will return None if there
