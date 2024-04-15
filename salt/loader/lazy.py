@@ -1257,10 +1257,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.parent_loader = current_loader
         token = salt.loader.context.loader_ctxvar.set(self)
         try:
-            ret = _func_or_method(*args, **kwargs)
-            if isinstance(ret, salt.loader.context.NamedLoaderContext):
-                return ret.value()
-            return ret
+            return _func_or_method(*args, **kwargs)
         finally:
             self.parent_loader = None
             salt.loader.context.loader_ctxvar.reset(token)
