@@ -9,11 +9,11 @@ import shlex
 import subprocess
 import sys
 import time
-import shutil
 
 import salt.defaults.exitcodes
 import salt.utils.json
 import salt.utils.nb_popen
+import salt.utils.path
 import salt.utils.vt
 
 log = logging.getLogger(__name__)
@@ -34,9 +34,10 @@ SUDO_PROMPT_RE = re.compile(
 RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 RSTR_RE = re.compile(r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)")
 
-SSH_KEYGEN_PATH = shutil.which('ssh-keygen') or 'ssh-keygen'
-SSH_PATH = shutil.which('ssh') or 'ssh'
-SCP_PATH = shutil.which('scp') or 'scp'
+SSH_KEYGEN_PATH = salt.utils.path.which("ssh-keygen") or "ssh-keygen"
+SSH_PATH = salt.utils.path.which("ssh") or "ssh"
+SCP_PATH = salt.utils.path.which("scp") or "scp"
+
 
 def gen_key(path):
     """
