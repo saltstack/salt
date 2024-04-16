@@ -211,7 +211,7 @@ google-auth==2.1.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   kubernetes
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt

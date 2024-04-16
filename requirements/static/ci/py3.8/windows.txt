@@ -135,7 +135,7 @@ gitpython==3.1.41
     #   -r requirements/windows.txt
 google-auth==2.1.0
     # via kubernetes
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   etcd3-py

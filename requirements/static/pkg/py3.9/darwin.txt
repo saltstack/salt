@@ -28,7 +28,7 @@ gitdb==4.0.7
     # via gitpython
 gitpython==3.1.41
     # via -r requirements/darwin.txt
-idna==3.2
+idna==3.7
     # via
     #   -r requirements/darwin.txt
     #   requests

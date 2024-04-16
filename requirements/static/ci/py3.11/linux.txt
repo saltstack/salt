@@ -140,7 +140,7 @@ google-auth==2.1.0
     # via kubernetes
 hglib==2.6.1
     # via -r requirements/static/ci/linux.in
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   etcd3-py
