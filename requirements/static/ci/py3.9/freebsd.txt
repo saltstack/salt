@@ -108,7 +108,7 @@ distro==1.5.0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse

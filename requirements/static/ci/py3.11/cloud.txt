@@ -142,7 +142,7 @@ distro==1.5.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
