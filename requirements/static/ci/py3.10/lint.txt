@@ -624,7 +624,7 @@ smmap==4.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
