@@ -142,7 +142,7 @@ distro==1.5.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -192,7 +192,7 @@ google-auth==2.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   kubernetes
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -601,7 +601,7 @@ smmap==4.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in

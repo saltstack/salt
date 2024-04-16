@@ -34,7 +34,7 @@ distro==1.5.0
     #   -r requirements/base.txt
 docutils==0.16
     # via sphinx
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   requests
