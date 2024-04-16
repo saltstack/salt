@@ -19,6 +19,8 @@ Requires `cryptography` python package.
 """
 
 import logging
+import os
+from collections.abc import Iterable, Mapping
 
 import salt.utils.files
 
@@ -28,6 +30,8 @@ try:
     HAS_CRYPTOGRAPHY = True
 except ImportError:
     HAS_CRYPTOGRAPHY = False
+
+__NOT_FOUND = object()
 
 __virtualname__ = "pem"
 
@@ -39,6 +43,26 @@ def __virtual__():
 
 
 log = logging.getLogger(__name__)
+
+
+def _validate_str_list(arg, encoding=None):
+    """
+    ensure ``arg`` is a list of strings
+    """
+    if isinstance(arg, bytes):
+        ret = [salt.utils.stringutils.to_unicode(arg, encoding=encoding)]
+    elif isinstance(arg, str):
+        ret = [arg]
+    elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
+        ret = []
+        for item in arg:
+            if isinstance(item, str):
+                ret.append(item)
+            else:
+                ret.append(str(item))
+    else:
+        ret = [str(arg)]
+    return ret
 
 
 def managed(
@@ -54,6 +78,14 @@ def managed(
     attrs=None,
     context=None,
     saltenv="base",
+    template=None,
+    allow_empty=False,
+    contents=None,
+    contents_pillar=None,
+    contents_grains=None,
+    contents_delimiter=":",
+    contents_newline=True,
+    encoding=None,
     skip_conditions=False,
     **kwargs,
 ):
@@ -81,6 +113,142 @@ def managed(
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     existing_cert_info = ""
     new_cert_info = ""
+    source_content = None
+
+    # contents, contents_pillar and content_grains management
+    if contents_pillar is not None:
+        if isinstance(contents_pillar, list):
+            list_contents = []
+            for nextp in contents_pillar:
+                nextc = __salt__["pillar.get"](
+                    nextp, __NOT_FOUND, delimiter=contents_delimiter
+                )
+                if nextc is __NOT_FOUND:
+                    return _error(ret, f"Pillar {nextp} does not exist")
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__["pillar.get"](
+                contents_pillar, __NOT_FOUND, delimiter=contents_delimiter
+            )
+            if use_contents is __NOT_FOUND:
+                return _error(ret, f"Pillar {contents_pillar} does not exist")
+
+    elif contents_grains is not None:
+        if isinstance(contents_grains, list):
+            list_contents = []
+            for nextg in contents_grains:
+                nextc = __salt__["grains.get"](
+                    nextg, __NOT_FOUND, delimiter=contents_delimiter
+                )
+                if nextc is __NOT_FOUND:
+                    return _error(ret, f"Grain {nextc} does not exist")
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__["grains.get"](
+                contents_grains, __NOT_FOUND, delimiter=contents_delimiter
+            )
+            if use_contents is __NOT_FOUND:
+                return _error(ret, f"Grain {contents_grains} does not exist")
+
+    elif contents is not None:
+        use_contents = contents
+
+    else:
+        use_contents = None
+
+    if use_contents is not None:
+        if not allow_empty and not use_contents:
+            if contents_pillar:
+                contents_id = f"contents_pillar {contents_pillar}"
+            elif contents_grains:
+                contents_id = f"contents_grains {contents_grains}"
+            else:
+                contents_id = "'contents'"
+            return _error(
+                ret,
+                "{} value would result in empty contents. Set allow_empty "
+                "to True to allow the managed file to be empty.".format(contents_id),
+            )
+
+        try:
+            validated_contents = _validate_str_list(use_contents, encoding=encoding)
+            if not validated_contents:
+                return _error(
+                    ret,
+                    "Contents specified by contents/contents_pillar/"
+                    "contents_grains is not a string or list of strings, and "
+                    "is not binary data. SLS is likely malformed.",
+                )
+            source_content = ""
+            for part in validated_contents:
+                for line in part.splitlines():
+                    source_content += line.rstrip("\n").rstrip("\r") + os.linesep
+            if not contents_newline:
+                # If source_content newline is set to False, strip out the newline
+                # character and carriage return character
+                source_content = source_content.rstrip("\n").rstrip("\r")
+
+        except UnicodeDecodeError:
+            # Either something terrible happened, or we have binary data.
+            if template:
+                return _error(
+                    ret,
+                    "Contents specified by source_content/contents_pillar/"
+                    "contents_grains appears to be binary data, and"
+                    " as will not be able to be treated as a Jinja"
+                    " template.",
+                )
+            source_content = use_contents
+
+    # If no contents specified, get content from salt
+    if source_content is None:
+        try:
+            source_content = __salt__["cp.get_file_str"](
+                path=source,
+                saltenv=saltenv,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["result"] = False
+            ret["comment"] = f"Unable to get file str: {exc}"
+            return ret
+
+    # Apply template
+    if template:
+        source_content = __salt__["file.apply_template_on_contents"](
+            source_content,
+            template=template,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv,
+        )
+        if not isinstance(source_content, str):
+            if "result" in source_content:
+                ret["result"] = source_content["result"]
+            else:
+                ret["result"] = False
+            if "comment" in source_content:
+                ret["comment"] = source_content["comment"]
+            else:
+                ret["comment"] = "Error while applying template on source_content"
+            return ret
+
+    if source_content is None:
+        return _error(ret, "source_content is empty")
+
+    try:
+        new_cert = x509.load_pem_x509_certificate(source_content.encode())
+        new_cert_info = f"+ Subject: {new_cert.subject.rfc4514_string()}\n+ Not valid after: {new_cert.not_valid_after}"
+    except ValueError as val_err:
+        # This is not a certificate, but we can still continue with file.managed backend
+        log.debug("pem: %s", val_err)
+        log.debug("pem: Value error found, continue normally as file.managed state")
+        skip_conditions = True
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = f"Problem with source file: {exc}"
+        return ret
 
     # Load existing certificate
     try:
@@ -90,41 +258,32 @@ def managed(
     except FileNotFoundError:
         # Old certificate initialy does not need to exist if it is a first time state is running
         skip_conditions = True
-
-    try:
-        tmp_local_file, source_sum, comment_ = __salt__["file.get_managed"](
-            name,
-            source=source,
-            source_hash=source_hash,
-            source_hash_name=source_hash_name,
-            user=user,
-            group=group,
-            mode=mode,
-            attrs=attrs,
-            saltenv=saltenv,
-            defaults=defaults,
-            skip_verify=skip_verify,
-            context=context,
-            **kwargs,
-        )
+    except ValueError as val_err:
+        # This is not a certificate, but we can still continue with file.managed backend
+        log.debug("pem: %s", val_err)
+        log.debug("pem: Value error found, continue normally as file.managed state")
+        skip_conditions = True
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = f"Unable to manage file: {exc}"
+        ret["comment"] = f"Unable to determine existing file: {exc}"
         return ret
 
-    if not tmp_local_file:
-        return _error(ret, f"Source file {source} not found")
-
-    try:
-        with salt.utils.files.fopen(tmp_local_file, "rb") as new_cert_file:
-            new_cert = x509.load_pem_x509_certificate(new_cert_file.read())
-            new_cert_info = f"+ Subject: {new_cert.subject.rfc4514_string()}\n+ Not valid after: {new_cert.not_valid_after}"
-    except FileNotFoundError:
-        return _error(ret, f"New cached file {tmp_local_file} not found")
-
-    ret["comment"] = (
-        f"Existing cert info:\n{existing_cert_info}\nNew cert info:\n{new_cert_info}\n"
-    )
+    if existing_cert_info == "" and new_cert_info == "":
+        log.debug(
+            "pem: No certificate information was found - state is running as normal file.managed state"
+        )
+    elif existing_cert_info != "" and new_cert_info != "":
+        if (
+            new_cert.subject.rfc4514_string() == existing_cert.subject.rfc4514_string()
+            and new_cert.not_valid_after == existing_cert.not_valid_after
+        ):
+            ret["comment"] = f"Certificates are the same:\n{existing_cert_info}\n"
+    elif existing_cert_info == "" and new_cert_info != "":
+        ret["comment"] = f"New cert info:\n{new_cert_info}\n"
+    else:
+        ret["comment"] = (
+            f"Existing cert info:\n{existing_cert_info}\nNew cert info:\n{new_cert_info}\n"
+        )
 
     # Conditions when certificates are salted
     if skip_conditions:
@@ -159,6 +318,13 @@ def managed(
         defaults=defaults,
         attrs=attrs,
         context=context,
+        template=template,
+        allow_empty=allow_empty,
+        contents=contents,
+        contents_pillar=contents_pillar,
+        contents_grains=contents_grains,
+        contents_delimiter=contents_delimiter,
+        contents_newline=contents_newline,
         **kwargs,
     )
 
