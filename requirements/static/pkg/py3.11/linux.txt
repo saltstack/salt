@@ -22,7 +22,7 @@ cryptography==42.0.5
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
-idna==3.2
+idna==3.7
     # via requests
 immutables==0.15
     # via contextvars

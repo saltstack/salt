@@ -98,7 +98,7 @@ distro==1.5.0
     #   pytest-skip-markers
 dmidecode==0.9.0
     # via -r requirements/static/ci/windows.in
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
@@ -133,7 +133,7 @@ gitpython==3.1.41
     #   -r requirements/windows.txt
 google-auth==2.1.0
     # via kubernetes
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   etcd3-py
@@ -434,7 +434,7 @@ smmap==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
