@@ -1,3 +1,4 @@
+import importlib
 import logging
 import re
 from textwrap import dedent
@@ -5,6 +6,7 @@ from textwrap import dedent
 import pytest
 
 import salt.client.ssh.client
+import salt.client.ssh.shell as shell
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -12,8 +14,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.thin
 import salt.utils.yaml
-import salt.client.ssh.shell as shell
-import importlib
 from salt.client import ssh
 from tests.support.mock import MagicMock, call, patch
 
@@ -29,6 +29,7 @@ def opts(master_opts):
     ]
     return master_opts
 
+
 @pytest.fixture()
 def mock_bin_paths():
     with patch("salt.utils.path.which") as mock_which:
@@ -40,6 +41,7 @@ def mock_bin_paths():
         importlib.reload(shell)
         yield
     importlib.reload(shell)
+
 
 @pytest.fixture
 def target():
