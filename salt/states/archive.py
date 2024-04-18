@@ -172,27 +172,47 @@ def _check_sig(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
 ):
     try:
-        verify = __salt__["gpg.verify"]
+        verify = __salt__[f"{sig_backend}.verify"]
     except KeyError:
         raise CommandExecutionError(
-            "Signature verification requires the gpg module, "
+            f"Signature verification requires the {sig_backend} module, "
             "which could not be found. Make sure you have the "
-            "necessary tools and libraries intalled (gpg, python-gnupg)"
+            "necessary tools and libraries intalled"
         )
-    sig = None
+    # The GPG module does not understand URLs as signatures currently.
+    # Also, we want to ensure that, when verification fails, we get rid
+    # of the cached signatures.
+    final_sigs = None
     if signature is not None:
-        # fetch detached signature
-        sig = __salt__["cp.cache_file"](signature, __env__)
-        if not sig:
-            raise CommandExecutionError(
-                f"Detached signature file {signature} not found"
-            )
+        sigs = [signature] if isinstance(signature, str) else signature
+        sigs_cached = []
+        final_sigs = []
+        for sig in sigs:
+            cached_sig = None
+            try:
+                urlparse(sig)
+            except (TypeError, ValueError):
+                pass
+            else:
+                cached_sig = __salt__["cp.cache_file"](sig, __env__)
+            if not cached_sig:
+                # The GPG module expects signatures as a single file path currently
+                if sig_backend == "gpg":
+                    raise CommandExecutionError(
+                        f"Detached signature file {sig} not found"
+                    )
+            else:
+                sigs_cached.append(cached_sig)
+            final_sigs.append(cached_sig or sig)
+        if isinstance(signature, str):
+            final_sigs = final_sigs[0]
 
     res = verify(
         filename=on_file,
-        signature=sig,
+        signature=final_sigs,
         keyring=keyring,
         gnupghome=gnupghome,
         signed_by_any=signed_by_any,
@@ -203,8 +223,9 @@ def _check_sig(
         return
     # Ensure detached signature and file are deleted from cache
     # on signature verification failure.
-    if sig:
-        salt.utils.files.safe_rm(sig)
+    if signature is not None:
+        for sig in sigs_cached:
+            salt.utils.files.safe_rm(sig)
     salt.utils.files.safe_rm(on_file)
     raise CommandExecutionError(
         f"The file's signature could not be verified: {res['message']}"
@@ -242,6 +263,7 @@ def extracted(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -781,6 +803,13 @@ def extracted(
 
         .. versionadded:: 3007.0
 
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -935,12 +964,12 @@ def extracted(
         )
 
     if signature or source_hash_sig:
-        # Fail early in case the gpg module is not present
+        # Fail early in case the signature verification backend is not present
         try:
-            __salt__["gpg.verify"]
+            __salt__[f"{sig_backend}.verify"]
         except KeyError:
             ret["comment"] = (
-                "Cannot verify signatures because the gpg module was not loaded"
+                f"Cannot verify signatures because the {sig_backend} module was not loaded"
             )
             return ret
 
@@ -1108,6 +1137,7 @@ def extracted(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -1193,6 +1223,7 @@ def extracted(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
@@ -1223,6 +1254,7 @@ def extracted(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as err:
             ret["comment"] = f"Failed verifying the source file's signature: {err}"
