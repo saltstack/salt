@@ -6,7 +6,6 @@ import logging
 
 import pytest
 
-import salt.loader.dunder
 import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.pkg_resource as pkg_resource
@@ -58,7 +57,7 @@ def configure_loader_modules(minion_opts):
     opts = minion_opts
     opts["master_uri"] = "localhost"
     return {
-        cp: {"__opts__": salt.loader.dunder.__opts__.with_default(opts)},
+        cp: {"__opts__": opts},
         win_pkg: {
             "_get_latest_package_version": MagicMock(return_value="3.03"),
             "_get_package_info": MagicMock(return_value=pkg_info),

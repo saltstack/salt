@@ -1132,7 +1132,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     log.info(
                         "%s decrementing inherited ReqServer niceness to 0", self.name
                     )
-                    log.info(os.nice())
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
