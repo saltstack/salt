@@ -761,4 +761,5 @@ allowed-3rd-party-modules=msgpack,
                           pytestskipmarkers,
                           cryptography,
                           aiohttp,
-                          pytest_timeout
+                          pytest_timeout,
+                          networkx

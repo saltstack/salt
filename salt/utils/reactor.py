@@ -188,7 +188,16 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                         reactors,
                     )
                     return []  # We'll return nothing since there was an error
-                chunks = self.order_chunks(self.compile_high_data(high))
+                chunks, errors = self.compile_high_data(high)
+                if errors:
+                    log.error(
+                        "Unable to render reactions for event %s due to "
+                        "errors (%s) in one or more of the sls files (%s)",
+                        tag,
+                        errors,
+                        reactors,
+                    )
+                    return []  # We'll return nothing since there was an error
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception encountered while compiling reactions")
 
