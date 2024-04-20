@@ -1402,7 +1402,7 @@ repos:
     hooks:
       - id: pyupgrade
         name: Upgrade code for Py3.8+
-        args: [--py38-plus, --keep-mock]
+        args: [--py38-plus, --keep-mock, --keep-runtime-typing]
         exclude: >
           (?x)^(
             salt/client/ssh/ssh_py_shim.py
