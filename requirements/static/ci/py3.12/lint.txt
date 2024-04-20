@@ -412,6 +412,11 @@ netutils==1.6.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   napalm
+networkx==3.2.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 ntc-templates==4.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

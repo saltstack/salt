@@ -253,6 +253,10 @@ multidict==6.0.4
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   aiohttp
     #   yarl
+networkx==3.2.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   -r requirements/base.txt
 packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
