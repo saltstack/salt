@@ -199,7 +199,7 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ matrix.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \

@@ -574,6 +574,13 @@ def bootstrap(vm_, opts=None):
             "smb_port", vm_, opts, default=445
         )
         deploy_kwargs["win_installer"] = win_installer
+        deploy_kwargs["win_delay_start"] = salt.config.get_cloud_config_value(
+            "win_delay_start", vm_, opts, default=""
+        )
+        deploy_kwargs["win_install_dir"] = salt.config.get_cloud_config_value(
+            "win_install_dir", vm_, opts, default=""
+        )
+
         minion = minion_config(opts, vm_)
         deploy_kwargs["master"] = minion["master"]
         deploy_kwargs["username"] = salt.config.get_cloud_config_value(
@@ -1236,6 +1243,8 @@ def deploy_windows(
     port_timeout=15,
     preseed_minion_keys=None,
     win_installer=None,
+    win_delay_start=False,
+    win_install_dir="",
     master=None,
     tmp_dir="C:\\salttmp",
     opts=None,
@@ -1357,6 +1366,11 @@ def deploy_windows(
             f"/master={_format_master_param(master)}",
             f"/minion-name={name}",
         ]
+        if win_delay_start:
+            args.append("/start-minion-delayed")
+
+        if win_install_dir:
+            args.append(f'/install-dir="{win_install_dir}"')
 
         if use_winrm:
             winrm_cmd(winrm_session, cmd, args)
@@ -1423,7 +1437,7 @@ def deploy_windows(
             if ret_code != 0:
                 return False
 
-            log.debug("Run psexec: sc start salt-minion")
+            log.debug("Run psexec: net start salt-minion")
             stdout, stderr, ret_code = run_psexec_command(
                 "cmd.exe", "/c net start salt-minion", host, username, password
             )

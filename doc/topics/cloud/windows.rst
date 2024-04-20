@@ -31,7 +31,6 @@ which Salt Cloud is running. See
 and using the Salt Minion Windows installer.
 
 
-
 .. _new-pywinrm:
 
 Self Signed Certificates with WinRM
@@ -39,18 +38,18 @@ Self Signed Certificates with WinRM
 
 Salt-Cloud can use versions of ``pywinrm<=0.1.1`` or ``pywinrm>=0.2.1``.
 
-For versions greater than `0.2.1`, ``winrm_verify_ssl`` needs to be set to
-`False` if the certificate is self signed and not verifiable.
+For versions greater than ``0.2.1``, ``winrm_verify_ssl`` needs to be set to
+``False`` if the certificate is self signed and not verifiable.
 
 Firewall Settings
 =================
-Because Salt Cloud makes use of `smbclient` and `winexe`, port 445 must be open
-on the target image. This port is not generally open by default on a standard
-Windows distribution, and care must be taken to use an image in which this port
-is open, or the Windows firewall is disabled.
+Because Salt Cloud makes use of ``smbclient`` and ``winexe``, port 445 must be
+open on the target image. This port is not generally open by default on a
+standard Windows distribution, and care must be taken to use an image in which
+this port is open, or the Windows firewall is disabled.
 
 If supported by the cloud provider, a PowerShell script may be used to open up
-this port automatically, using the cloud provider's `userdata`. The following
+this port automatically, using the cloud provider's ``userdata``. The following
 script would open up port 445, and apply the changes:
 
 .. code-block:: text
@@ -62,7 +61,7 @@ script would open up port 445, and apply the changes:
     </powershell>
 
 For EC2, this script may be saved as a file, and specified in the provider or
-profile configuration as `userdata_file`. For instance:
+profile configuration as ``userdata_file``. For instance:
 
 .. code-block:: yaml
 
@@ -142,9 +141,9 @@ the following userdata example:
     Restart-Service winrm
     </powershell>
 
-No certificate store is available by default on EC2 images and creating
-one does not seem possible without an MMC (cannot be automated). To use the
-default EC2 Windows images the above copies the RDP store.
+No certificate store is available by default on EC2 images and creating one does
+not seem possible without an MMC (cannot be automated). To use the default EC2
+Windows images the above copies the RDP store.
 
 Configuration
 =============
@@ -168,23 +167,42 @@ Setting the installer in ``/etc/salt/cloud.providers``:
       win_password: letmein
       smb_port: 445
 
-The default Windows user is `Administrator`, and the default Windows password
+The default Windows user is ``Administrator``, and the default Windows password
 is blank.
 
-If WinRM is to be used ``use_winrm`` needs to be set to `True`. ``winrm_port``
+If WinRM is to be used ``use_winrm`` needs to be set to ``True``. ``winrm_port``
 can be used to specify a custom port (must be HTTPS listener).  And
-``winrm_verify_ssl`` can be set to `False` to use a self signed certificate.
+``winrm_verify_ssl`` can be set to ``False`` to use a self signed certificate.
 
+Two new options have been added to allow you to set some additional parameters
+to pass to the installer. ``win_delay_start`` will set the minion service to
+start delayed. ``win_install_dir`` will allow you to specify the Salt install
+location.
+
+.. code-block:: yaml
+
+    my-softlayer:
+      driver: softlayer
+      user: MYUSER1138
+      apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
+      minion:
+        master: saltmaster.example.com
+      win_installer: /root/Salt-Minion-2014.7.0-AMD64-Setup.exe
+      win_delay_start: True
+      win_install_dir: D:\Program Files\Salt Project\Salt
+      win_username: Administrator
+      win_password: letmein
+      smb_port: 445
 
 Auto-Generated Passwords on EC2
 ===============================
-On EC2, when the `win_password` is set to `auto`, Salt Cloud will query EC2 for
-an auto-generated password. This password is expected to take at least 4 minutes
-to generate, adding additional time to the deploy process.
+On EC2, when the ``win_password`` is set to ``auto``, Salt Cloud will query EC2
+for an auto-generated password. This password is expected to take at least 4
+minutes to generate, adding additional time to the deploy process.
 
 When the EC2 API is queried for the auto-generated password, it will be returned
-in a message encrypted with the specified `keyname`. This requires that the
-appropriate `private_key` file is also specified. Such a profile configuration
+in a message encrypted with the specified ``keyname``. This requires that the
+appropriate ``private_key`` file is also specified. Such a profile configuration
 might look like:
 
 .. code-block:: yaml

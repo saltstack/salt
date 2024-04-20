@@ -61,16 +61,18 @@ jobs:
       - self-hosted
       - linux
       - bastion
+    env:
+      USE_S3_CACHE: 'true'
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
       matrix:
         include:
-        <%- for slug, arch, pkg_type in test_salt_pkg_downloads_listing["linux"] %>
-          - distro-slug: <{ slug }>
-            arch: <{ arch }>
-            pkg-type: <{ pkg_type }>
+        <%- for os in test_salt_pkg_downloads_listing["linux"] %>
+          - distro-slug: <{ os.slug }>
+            arch: <{ os.arch }>
+            pkg-type: <{ os.pkg_type }>
         <%- endfor %>
 
     steps:
@@ -269,17 +271,19 @@ jobs:
 
   macos:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
+    env:
+      USE_S3_CACHE: 'false'
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
       matrix:
         include:
-        <%- for slug, arch, pkg_type in test_salt_pkg_downloads_listing["macos"] %>
-          - distro-slug: <{ slug }>
-            arch: <{ arch }>
-            pkg-type: <{ pkg_type }>
+        <%- for os in test_salt_pkg_downloads_listing["macos"] %>
+          - distro-slug: <{ os.slug }>
+            arch: <{ os.arch }>
+            pkg-type: <{ os.pkg_type }>
         <%- endfor %>
 
     steps:
@@ -469,6 +473,8 @@ jobs:
 
   windows:
     name: Windows
+    env:
+      USE_S3_CACHE: 'true'
     runs-on:
       - self-hosted
       - linux
@@ -479,10 +485,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        <%- for slug, arch, pkg_type in test_salt_pkg_downloads_listing["windows"] %>
-          - distro-slug: <{ slug }>
-            arch: <{ arch }>
-            pkg-type: <{ pkg_type }>
+        <%- for os in test_salt_pkg_downloads_listing["windows"] %>
+          - distro-slug: <{ os.slug }>
+            arch: <{ os.arch }>
+            pkg-type: <{ os.pkg_type }>
         <%- endfor %>
 
     steps:

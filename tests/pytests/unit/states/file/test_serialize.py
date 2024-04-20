@@ -2,8 +2,6 @@ import pytest
 
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 from tests.support.mock import MagicMock, patch
@@ -18,9 +16,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},

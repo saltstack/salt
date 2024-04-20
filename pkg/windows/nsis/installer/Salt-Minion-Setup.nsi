@@ -602,9 +602,9 @@ Section -install_ucrt
 SectionEnd
 
 
-# Check and install Visual C++ redist 2013 packages
+# Check and install Visual C++ redist 2022 packages
 # Hidden section (-) to install VCRedist
-Section -install_vcredist_2013
+Section -install_vcredist_2022
 
     Var /GLOBAL VcRedistName
     Var /GLOBAL VcRedistReg
@@ -613,11 +613,11 @@ Section -install_vcredist_2013
     # Use RunningX64 here to get the Architecture for the system running the
     # installer.
     ${If} ${RunningX64}
-        StrCpy $VcRedistName "vcredist_x64_2013"
-        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x64"
+        StrCpy $VcRedistName "vcredist_x64_2022"
+        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64"
     ${Else}
-        StrCpy $VcRedistName "vcredist_x86_2013"
-        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86"
+        StrCpy $VcRedistName "vcredist_x86_2022"
+        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86"
     ${EndIf}
 
     # Detecting VCRedist Installation

@@ -2356,7 +2356,7 @@ def test_fqdns_return():
 
 
 @pytest.mark.skip_unless_on_linux
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(60, func_only=True)
 def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain

@@ -53,6 +53,8 @@ jobs:
       - self-hosted
       - linux
       - bastion
+    env:
+      USE_S3_CACHE: 'true'
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -74,7 +76,7 @@ jobs:
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: ./.github/actions/cache
         with:
           path: nox.linux.${{ matrix.arch }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|linux|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
@@ -161,7 +163,7 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -169,7 +171,7 @@ jobs:
         include:
           - distro-slug: macos-12
             arch: x86_64
-          - distro-slug: macos-13-xlarge
+          - distro-slug: macos-13-arm64
             arch: arm64
     steps:
 
@@ -183,7 +185,7 @@ jobs:
 
       - name: Cache nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: ./.github/actions/cache
         with:
           path: nox.macos.${{ matrix.arch }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|macos|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}
@@ -253,6 +255,8 @@ jobs:
       - self-hosted
       - linux
       - bastion
+    env:
+      USE_S3_CACHE: 'true'
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -272,7 +276,7 @@ jobs:
 
       - name: Cache nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: ./.github/actions/cache
         with:
           path: nox.windows.${{ matrix.arch }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ matrix.arch }}|windows|${{ inputs.nox-session }}|${{ inputs.python-version }}|${{ inputs.nox-archive-hash }}

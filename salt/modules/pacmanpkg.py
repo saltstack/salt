@@ -551,7 +551,7 @@ def install(
         cmd.append("-S")
         if refresh is True:
             cmd.append("-y")
-        if sysupgrade is True or (sysupgrade is None and refresh is True):
+        if sysupgrade is True:
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []

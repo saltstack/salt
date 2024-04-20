@@ -74,15 +74,15 @@ if ( (Get-WindowsOptionalFeature -Online -FeatureName "NetFx3").State -eq "Enabl
 #-------------------------------------------------------------------------------
 
 Write-Host "Looking for Wix Toolset: " -NoNewline
-$guid_64 = "{A2D09E18-32F8-4E34-946A-33AC8C8303E9}"
-$guid_32 = "{00A0C4F8-9F6C-40FB-A02D-3EAE1D7FD352}"
+$guid_64 = "{F0F0AEBC-3FF8-46E4-80EC-625C2CCF241D}"
+$guid_32 = "{87475CA3-0418-47E5-A51F-DE5BD3D0D9FB}"
 if ( (ProductcodeExists $guid_64) -or (ProductcodeExists $guid_32) ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Missing" -ForegroundColor Yellow
 
     Write-Host "Downloading Wix Toolset: " -NoNewline
-    $url = "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe"
+    $url = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe"
     $file = "$env:TEMP\wix_installer.exe"
     Invoke-WebRequest -Uri $url -OutFile "$file"
     if ( Test-Path -Path "$file" ) {

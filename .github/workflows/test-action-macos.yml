@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         description: The OS slug to run tests against
+      runner:
+        required: true
+        type: string
+        description: The GitHub runner name
       nox-session:
         required: true
         type: string
@@ -97,7 +101,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     needs:
       - generate-matrix
@@ -172,7 +176,7 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
