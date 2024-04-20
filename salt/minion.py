@@ -3428,7 +3428,7 @@ class Syndic(Minion):
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
         self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
-    def _process_cmd_socket(self, payload):
+    async def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
             log.trace("Handling payload")
             self._handle_decoded_payload(payload["load"])
