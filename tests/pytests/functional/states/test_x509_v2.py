@@ -412,11 +412,11 @@ O68=
 
 
 @pytest.fixture
-def cert_args(tmp_path, ca_cert, ca_key):
+def cert_args(tmp_path, ca_cert_file, ca_key_file):
     return {
         "name": f"{tmp_path}/cert",
-        "signing_private_key": ca_key,
-        "signing_cert": ca_cert,
+        "signing_private_key": str(ca_key_file),
+        "signing_cert": str(ca_cert_file),
         "CN": "success",
     }
 
@@ -443,11 +443,11 @@ def cert_args_exts():
 
 
 @pytest.fixture
-def crl_args(tmp_path, ca_cert, ca_key):
+def crl_args(tmp_path, ca_cert_file, ca_key_file):
     return {
         "name": f"{tmp_path}/crl",
-        "signing_private_key": ca_key,
-        "signing_cert": ca_cert,
+        "signing_private_key": str(ca_key_file),
+        "signing_cert": str(ca_cert_file),
         "revoked": [],
     }
 
