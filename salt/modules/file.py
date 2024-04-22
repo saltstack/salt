@@ -5147,7 +5147,7 @@ def check_perms(
                 if err:
                     ret["result"] = False
                     ret["comment"].append(err)
-                elif not is_link:
+                else:
                     # Python os.chown() resets the suid and sgid, hence we
                     # setting the previous mode again. Pending mode changes
                     # will be applied later.
@@ -5198,6 +5198,7 @@ def check_perms(
                 ret["comment"].append(f"Failed to change group to {group}")
         elif "cgroup" in perms:
             ret["changes"]["group"] = group
+
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
