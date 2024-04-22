@@ -1210,7 +1210,6 @@ def test_contents_file(salt_master, salt_call_cli, tmp_path):
             assert target_path.is_file()
 
 
-@pytest.mark.skip_on_windows
 def test_directory_recurse(salt_master, salt_call_cli, tmp_path):
     """
     Test modifying ownership of symlink without affecting the link target's
