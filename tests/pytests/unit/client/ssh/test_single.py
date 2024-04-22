@@ -1,3 +1,4 @@
+import importlib
 import logging
 import re
 from textwrap import dedent
@@ -5,6 +6,7 @@ from textwrap import dedent
 import pytest
 
 import salt.client.ssh.client
+import salt.client.ssh.shell as shell
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -28,6 +30,19 @@ def opts(master_opts):
     return master_opts
 
 
+@pytest.fixture()
+def mock_bin_paths():
+    with patch("salt.utils.path.which") as mock_which:
+        mock_which.side_effect = lambda x: {
+            "ssh-keygen": "ssh-keygen",
+            "ssh": "ssh",
+            "scp": "scp",
+        }.get(x, None)
+        importlib.reload(shell)
+        yield
+    importlib.reload(shell)
+
+
 @pytest.fixture
 def target():
     return {
@@ -45,7 +60,7 @@ def target():
     }
 
 
-def test_single_opts(opts, target):
+def test_single_opts(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options"""
 
     single = ssh.Single(
@@ -370,7 +385,7 @@ def test_shim_cmd_copy_fails(opts, target, caplog):
         mock_cmd.assert_not_called()
 
 
-def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog):
+def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_paths):
     """
     test Single.run_ssh_pre_flight when you
     cannot connect to the target
@@ -464,7 +479,7 @@ def test_run_ssh_pre_flight_permission_denied(opts, target, tmp_path):
     mock_exec_cmd.assert_not_called()
 
 
-def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog):
+def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog, mock_bin_paths):
     """
     test Single.run_ssh_pre_flight when you
     can connect to the target

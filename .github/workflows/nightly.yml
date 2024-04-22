@@ -752,27 +752,6 @@ jobs:
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  debian-10-pkg-tests:
-    name: Debian 10 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: debian-10
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: deb
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: false
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
   debian-11-pkg-tests:
     name: Debian 11 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1560,27 +1539,6 @@ jobs:
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  debian-10:
-    name: Debian 10 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: debian-10
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
-      skip-code-coverage: false
-      workflow-slug: nightly
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
   debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1902,7 +1860,6 @@ jobs:
       - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
-      - debian-10
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2143,14 +2100,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pkg-type: deb
-            distro: debian
-            version: "10"
-            arch: x86_64
-          - pkg-type: deb
-            distro: debian
-            version: "10"
-            arch: arm64
           - pkg-type: deb
             distro: debian
             version: "11"
@@ -2814,7 +2763,6 @@ jobs:
       - amazonlinux-2023-arm64
       - archlinux-lts
       - centos-7
-      - debian-10
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2897,7 +2845,6 @@ jobs:
       - amazonlinux-2023-pkg-tests
       - amazonlinux-2023-arm64-pkg-tests
       - centos-7-pkg-tests
-      - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
       - debian-12-pkg-tests

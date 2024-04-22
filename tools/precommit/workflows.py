@@ -141,7 +141,6 @@ def generate_workflows(ctx: Context):
                     slug="archlinux-lts", display_name="Arch Linux LTS", arch="x86_64"
                 ),
                 Linux(slug="centos-7", display_name="CentOS 7", arch="x86_64"),
-                Linux(slug="debian-10", display_name="Debian 10", arch="x86_64"),
                 Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
                 Linux(
                     slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"
@@ -263,12 +262,6 @@ def generate_workflows(ctx: Context):
                     display_name="CentOS 7",
                     arch="x86_64",
                     pkg_type="rpm",
-                ),
-                Linux(
-                    slug="debian-10",
-                    display_name="Debian 10",
-                    arch="x86_64",
-                    pkg_type="deb",
                 ),
                 Linux(
                     slug="debian-11",
