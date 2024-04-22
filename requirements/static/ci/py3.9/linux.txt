@@ -19,7 +19,7 @@ aiosignal==1.3.1
     #   aiohttp
 anyio==4.1.0
     # via httpcore
-apache-libcloud==3.7.0
+apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 asn1crypto==1.5.1
     # via
