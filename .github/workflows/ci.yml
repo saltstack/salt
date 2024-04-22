@@ -818,7 +818,7 @@ jobs:
 
   photonos-5-arm64-pkg-tests:
     name: Photon OS 5 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'photonos-5-arm64') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -1647,7 +1647,7 @@ jobs:
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'photonos-5-arm64') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
