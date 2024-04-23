@@ -86,67 +86,26 @@ def mm_master_2_salt_cli(salt_mm_master_2):
 
 
 @pytest.fixture(scope="package")
-def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
+def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
     config_defaults = {
         "transport": salt_mm_master_1.config["transport"],
     }
 
     mm_master_1_port = salt_mm_master_1.config["ret_port"]
-    # mm_master_1_addr = salt_mm_master_1.config["interface"]
     mm_master_2_port = salt_mm_master_2.config["ret_port"]
-    # mm_master_2_addr = salt_mm_master_2.config["interface"]
     config_overrides = {
         "master": [
             f"master1.local:{mm_master_1_port}",
             f"master2.local:{mm_master_2_port}",
         ],
         "publish_port": salt_mm_master_1.config["publish_port"],
-        # "master_type": "failover",
-        "master_alive_interval": 5,
+        "master_alive_interval": master_alive_interval,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
-        "retry_dns": 1,
+        "retry_dns": True,
     }
     factory = salt_mm_master_1.salt_minion_daemon(
         "mm-minion-1",
-        defaults=config_defaults,
-        overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-    )
-    # Need to grab the public signing key from the master, either will do
-    shutil.copyfile(
-        os.path.join(salt_mm_master_1.config["pki_dir"], "master_sign.pub"),
-        os.path.join(factory.config["pki_dir"], "master_sign.pub"),
-    )
-    # with factory.started(start_timeout=180):
-    yield factory
-
-
-@pytest.fixture(scope="package")
-def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
-    config_defaults = {
-        "transport": salt_mm_master_1.config["transport"],
-    }
-
-    mm_master_1_port = salt_mm_master_1.config["ret_port"]
-    mm_master_1_addr = salt_mm_master_1.config["interface"]
-    mm_master_2_port = salt_mm_master_2.config["ret_port"]
-    mm_master_2_addr = salt_mm_master_2.config["interface"]
-    # We put the second master first in the list so it has the right startup checks every time.
-    config_overrides = {
-        "master": [
-            f"{mm_master_2_addr}:{mm_master_2_port}",
-            f"{mm_master_1_addr}:{mm_master_1_port}",
-        ],
-        "publish_port": salt_mm_master_1.config["publish_port"],
-        "master_type": "failover",
-        "master_alive_interval": 5,
-        "master_tries": -1,
-        "verify_master_pubkey_sign": True,
-        "retry_dns": 1,
-    }
-    factory = salt_mm_master_2.salt_minion_daemon(
-        "mm-failover-minion-2",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],

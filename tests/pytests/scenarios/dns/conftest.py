@@ -7,6 +7,11 @@ import pytest
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="package")
+def master_alive_interval():
+    return 5
+
+
 class HostsFile:
     """
     Simple helper class for tests that need to modify /etc/hosts.
@@ -70,7 +75,7 @@ def salt_cli(master):
 
 
 @pytest.fixture(scope="package")
-def minion(master):
+def minion(master, master_alive_interval):
     config_defaults = {
         "transport": master.config["transport"],
     }
@@ -78,9 +83,7 @@ def minion(master):
     config_overrides = {
         "master": f"master.local:{port}",
         "publish_port": master.config["publish_port"],
-        "master_alive_interval": 5,
-        "master_tries": -1,
-        "auth_safemode": False,
+        "master_alive_interval": master_alive_interval,
     }
     factory = master.salt_minion_daemon(
         "minion",
