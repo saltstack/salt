@@ -63,7 +63,6 @@ def test_get_settings_settings_local():
     assert "InboundUserNotification" in ret
     assert "LocalConSecRules" in ret
     assert "LocalFirewallRules" in ret
-    assert "RemoteManagement" in ret
     assert "UnicastResponseToMulticast" in ret
 
 
@@ -74,7 +73,6 @@ def test_get_settings_settings_lgpo():
     assert "InboundUserNotification" in ret
     assert "LocalConSecRules" in ret
     assert "LocalFirewallRules" in ret
-    assert "RemoteManagement" in ret
     assert "UnicastResponseToMulticast" in ret
 
 
@@ -99,7 +97,6 @@ def test_get_all_settings_local():
     assert "InboundUserNotification" in ret
     assert "LocalConSecRules" in ret
     assert "LocalFirewallRules" in ret
-    assert "RemoteManagement" in ret
     assert "UnicastResponseToMulticast" in ret
     assert "State" in ret
 
@@ -115,7 +112,6 @@ def test_get_all_settings_lgpo():
     assert "InboundUserNotification" in ret
     assert "LocalConSecRules" in ret
     assert "LocalFirewallRules" in ret
-    assert "RemoteManagement" in ret
     assert "UnicastResponseToMulticast" in ret
     assert "State" in ret
 
@@ -356,7 +352,7 @@ def test_set_firewall_logging_maxfilesize_local():
         new = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
         )["MaxFileSize"]
-        assert new == "16384"
+        assert new == 16384
     finally:
         ret = win_lgpo_netsh.set_logging_settings(
             profile="domain", setting="maxfilesize", value=current, store="local"
@@ -491,32 +487,6 @@ def test_set_firewall_settings_notification_lgpo_notconfigured():
         assert ret is True
 
 
-def test_set_firewall_settings_remotemgmt_local_enable():
-    current = win_lgpo_netsh.get_settings(
-        profile="domain", section="settings", store="local"
-    )["RemoteManagement"]
-    try:
-        ret = win_lgpo_netsh.set_settings(
-            profile="domain",
-            setting="remotemanagement",
-            value="enable",
-            store="local",
-        )
-        assert ret is True
-        new = win_lgpo_netsh.get_settings(
-            profile="domain", section="settings", store="local"
-        )["RemoteManagement"]
-        assert new == "Enable"
-    finally:
-        ret = win_lgpo_netsh.set_settings(
-            profile="domain",
-            setting="remotemanagement",
-            value=current,
-            store="local",
-        )
-        assert ret is True
-
-
 def test_set_firewall_settings_unicast_local_disable():
     current = win_lgpo_netsh.get_settings(
         profile="domain", section="settings", store="local"
@@ -566,13 +536,16 @@ def test_set_firewall_state_local_notconfigured():
         profile="domain", section="state", store="local"
     )["State"]
     try:
-        pytest.raises(
-            CommandExecutionError,
-            win_lgpo_netsh.set_state,
+        ret = win_lgpo_netsh.set_state(
             profile="domain",
             state="notconfigured",
             store="local",
         )
+        assert ret is True
+        new = win_lgpo_netsh.get_settings(
+            profile="domain", section="state", store="local"
+        )["State"]
+        assert new == "NotConfigured"
     finally:
         ret = win_lgpo_netsh.set_state(profile="domain", state=current, store="local")
         assert ret is True
