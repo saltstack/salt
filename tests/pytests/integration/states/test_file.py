@@ -1211,28 +1211,34 @@ def test_contents_file(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skip_on_windows
-def test_directory_recurse(salt_master, salt_call_cli, tmp_path):
+def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
     """
     Test modifying ownership of symlink without affecting the link target's
     permissions.
     """
-    target_path = tmp_path / "test"
-    target_path.mkdir()
+    target_dir = tmp_path / "test-dir"
+    target_dir.mkdir()
 
-    (target_path / "target").write_text("this is a test file")
-    (target_path / "link").symlink_to(target_path / "target")
+    target_file = target_dir / "test-file"
+    target_file.write_text("this is a test file")
+
+    target_link = target_dir / "test-link"
+    target_link.symlink_to(target_file)
+
     # Change the ownership of the sybolic link to 'nobody'
-    subprocess.run(["chown", "-h", "nobody", str(target_path / "link")], check=True)
-    file_perms = (
-        stat.S_IFREG | stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
-    )
+    ret = subprocess.run(["chown", "-h", "nobody", str(target_link)], check=False)
+    assert ret.returncode == 0
+
+    file_perms = stat.S_IFREG | stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP
+    if grains["os"] != "VMware Photon OS":
+        file_perms |= stat.S_IROTH
+
     # The permissions of the file should be 644.
-    mode = (target_path / "target").stat().st_mode
-    assert file_perms == mode
+    assert target_file.stat().st_mode == file_perms
 
     sls_name = "test"
     sls_contents = f"""
-    {target_path}:
+    {target_dir}:
       file.directory:
         - user: root
         - recurse:
@@ -1243,11 +1249,10 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path):
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
-        key = f"file_|-{target_path}_|-{target_path}_|-directory"
+        key = f"file_|-{target_dir}_|-{target_dir}_|-directory"
         assert key in ret.json
         result = ret.json[key]
         assert "changes" in result and result["changes"]
 
     # Permissions of file should not have changed.
-    mode = (target_path / "target").stat().st_mode
-    assert file_perms == mode
+    assert target_file.stat().st_mode == file_perms
