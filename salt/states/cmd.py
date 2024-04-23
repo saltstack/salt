@@ -229,6 +229,14 @@ To use it, one may pass it like this. Example:
       cmd.run:
         - env: {{ salt['pillar.get']('example:key', {}) }}
 
+Better yet, use the slots feature to insert the data at runtime and minimize pillar data exposure:
+
+.. code-block:: yaml
+
+    printenv:
+      cmd.run:
+        - env: __slot__:salt:pillar.get(example:key)
+
 """
 
 import copy
