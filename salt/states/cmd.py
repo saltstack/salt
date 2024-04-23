@@ -237,6 +237,31 @@ Better yet, use the slots feature to insert the data at runtime and minimize pil
       cmd.run:
         - env: __slot__:salt:pillar.get(example:key)
 
+How do I pass sensitive data to a command?
+------------------------------------------
+
+Passing sensitive data to commands using command line arguments
+or environment variables is a well-known security loophole and is not recommended.
+
+If your command can read from stdin, use the stdin option
+in combination with the slots feature. Example:
+
+.. code-block:: yaml
+
+    my-command --read-password-from-stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(example:secret)
+
+If your command can read from a file and is running on a Unix-ish system,
+pass /dev/stdin as the file and feed the data to stdin. Example:
+
+.. code-block:: yaml
+
+    step ca certificate server.example.com cert.pem key.pem --provisioner JWK --provisioner-password-file /dev/stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(server:provisioner_password)
+
+The use of the slots feature keeps minions who can render the state file from stealing the password.
 """
 
 import copy
