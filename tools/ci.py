@@ -664,15 +664,6 @@ def matrix(
         "scenarios": 1,
         "unit": 4,
     }
-    # On nightly and scheduled builds we don't want splits at all
-    if workflow.lower() in ("nightly", "scheduled"):
-        ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
-        for key in _splits:
-            new_value = _splits[key] - 2
-            if new_value < 1:
-                new_value = 1
-            _splits[key] = new_value
-
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
