@@ -3,18 +3,6 @@ import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-__virtualname__ = "win_pwsh"
-
-
-def __virtual__():
-    """
-    Only load if windows
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "This utility will only run on Windows"
-
-    return __virtualname__
-
 
 def run_dict(cmd, cwd=None):
     """

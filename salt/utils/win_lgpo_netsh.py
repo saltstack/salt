@@ -74,8 +74,6 @@ Usage:
                                                     store='lgpo')
 """
 
-import socket
-
 import salt.utils.platform
 import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError
@@ -105,21 +103,6 @@ OUTBOUND = {
     "allowoutbound": "Allow",
     "blockoutbound": "Block",
 }
-
-__virtualname__ = "netsh"
-__hostname__ = socket.gethostname()
-
-
-# Although utils are often directly imported, it is also possible to use the
-# loader.
-def __virtual__():
-    """
-    Only load if on a Windows system
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "This utility only available on Windows"
-
-    return __virtualname__
 
 
 def _get_inbound_text(rule, action):
