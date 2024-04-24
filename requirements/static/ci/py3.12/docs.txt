@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.12/docs.txt requirements/base.txt requirements/static/ci/docs.in requirements/zeromq.txt
 #
-aiohttp==3.9.2
+aiohttp==3.9.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -69,7 +69,7 @@ frozenlist==1.4.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   requests

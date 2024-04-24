@@ -484,6 +484,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         self.message_handler = message_handler
         self._run = asyncio.Event()
+        self._started = asyncio.Event()
         self._run.set()
 
         async def server():
@@ -496,6 +497,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
+            self._started.set()
             # pause here for very long time by serving HTTP requests and
             # waiting for keyboard interruption
             while self._run.is_set():
