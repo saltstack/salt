@@ -1,6 +1,7 @@
 """
 Tests for dynamically loading configuration
 """
+
 import json
 
 import pytest
@@ -15,7 +16,7 @@ def sls_contents():
 
 
 def get_pillar_top_file(*pillar_files):
-    top = f"""
+    top = """
     base:
       '*':
     """
