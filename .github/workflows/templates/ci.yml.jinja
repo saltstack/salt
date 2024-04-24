@@ -378,7 +378,9 @@
           nox --force-color -e create-xml-coverage-reports
 
       - name: Upload Code Coverage To Codecov
-        if: ${{ ! github.event.repository.private }}
+        if: ${{ ! github.event.repository.private && ! github.event.repository.fork }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
