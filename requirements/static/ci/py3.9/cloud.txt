@@ -26,7 +26,7 @@ cryptography==42.0.5
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
