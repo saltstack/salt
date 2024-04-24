@@ -178,16 +178,16 @@ def test_copy_iterator(base_dict, ddict, dyn_func):
     )
 
 
+def _dyn_func(data=None, dyn_dict=None, key=None):
+    return 7
+
+
 def test_delete_dyn_key(ddict):
-
-    def dyn_func(data=None, dyn_dict=None, key=None):
-        return 7
-
-    ddict.add_dyn("foo", dyn_func)
+    ddict.add_dyn("foo", _dyn_func)
     val = ddict.pop("foo")
-    assert val == dyn_func(), f"Failed pop(): {val} != {dyn_func()}"
+    assert val == _dyn_func(), f"Failed pop(): {val} != {_dyn_func()}"
     assert "foo" not in ddict, "Failed to remove key 'foo' when pop()ed"
 
-    ddict.add_dyn("foo", dyn_func)
+    ddict.add_dyn("foo", _dyn_func)
     del ddict["foo"]
     assert "foo" not in ddict, "Failed to delete dynamic key 'foo'"
