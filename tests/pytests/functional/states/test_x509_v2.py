@@ -48,9 +48,6 @@ def minion_config_overrides():
                 "CN": "from_signing_policy",
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
     }
 
 
