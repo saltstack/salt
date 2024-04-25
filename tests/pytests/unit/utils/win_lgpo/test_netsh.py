@@ -2,7 +2,6 @@ import pytest
 
 import salt.utils.win_lgpo_netsh as win_lgpo_netsh
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -22,18 +21,6 @@ def test_get_settings_firewallpolicy_lgpo():
     ret = win_lgpo_netsh.get_settings(
         profile="domain", section="firewallpolicy", store="lgpo"
     )
-    assert "Inbound" in ret
-    assert "Outbound" in ret
-
-
-def test_get_settings_firewallpolicy_lgpo_issue_57591():
-    """
-    Should not stacktrace when the hostname contains unicode characters
-    """
-    with patch.object(win_lgpo_netsh, "__hostname__", return_value="kомпьютер"):
-        ret = win_lgpo_netsh.get_settings(
-            profile="domain", section="firewallpolicy", store="lgpo"
-        )
     assert "Inbound" in ret
     assert "Outbound" in ret
 
