@@ -664,15 +664,6 @@ def matrix(
         "scenarios": 1,
         "unit": 4,
     }
-    # On nightly and scheduled builds we don't want splits at all
-    if workflow.lower() in ("nightly", "scheduled"):
-        ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
-        for key in _splits:
-            new_value = _splits[key] - 2
-            if new_value < 1:
-                new_value = 1
-            _splits[key] = new_value
-
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
@@ -932,6 +923,7 @@ def get_pr_test_labels(
     """
     Set the pull-request labels.
     """
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
         labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
@@ -967,7 +959,9 @@ def get_pr_test_labels(
     if labels:
         ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
         for name, description in sorted(labels):
-            ctx.info(f" * [yellow]{name}[/yellow]: {description}")
+            ctx.info(
+                f" * [yellow]{name}[/yellow]: {description or '[red][No description][/red]'}"
+            )
             if name.startswith("test:os:"):
                 slug = name.split("test:os:", 1)[-1]
                 if slug not in available and name != "test:os:all":
@@ -982,6 +976,17 @@ def get_pr_test_labels(
 
     else:
         ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    if "test:coverage" in test_labels:
+        ctx.info(
+            "Selecting ALL available OS'es because the label 'test:coverage' is set."
+        )
+        selected.add("all")
+        if github_step_summary is not None:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "Selecting ALL available OS'es because the label `test:coverage` is set.\n"
+                )
 
     if "all" in selected:
         selected = select_all
@@ -1234,12 +1239,15 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
         commit_sha,
     ]
 
+    from_pull_request = False
+
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
             pr_event_data = gh_event.get("pull_request")
             if pr_event_data:
+                from_pull_request = True
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
@@ -1300,6 +1308,15 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 ctx.error(f"Failed to upload {fpath} to codecov:")
                 ctx.console_stdout.print(stdout)
                 ctx.console.print(stderr)
+                if from_pull_request is True:
+                    # Codecov is having some issues with tokenless uploads
+                    # Don't let PR's fail, but do fail otherwise so we know
+                    # we should fix it.
+                    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                    if github_step_summary is not None:
+                        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                            wfh.write(f"Failed to upload `{fpath}` to codecov\n")
+                    ctx.exit(0)
                 ctx.exit(1)
 
             ctx.warn(f"Waiting {sleep_time} seconds until next retry...")

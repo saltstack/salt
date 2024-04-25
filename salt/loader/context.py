@@ -43,9 +43,6 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.loader_context = loader_context
         self.default = default
 
-    def with_default(self, default):
-        return NamedLoaderContext(self.name, self.loader_context, default=default)
-
     def loader(self):
         """
         The LazyLoader in the current context. This will return None if there
@@ -71,19 +68,9 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         loader = self.loader()
         if loader is None:
             return self.default
-        elif self.name == "__context__":
+        if self.name == "__context__":
             return loader.pack[self.name]
-        elif self.name == "__opts__":
-            # XXX: This behaviour tires to mimick what the loader does when
-            # __opts__ was not imported from dunder. It would be nice to just
-            # pass the value of __opts__ here. However, un-winding this
-            # behavior will be tricky.
-            opts = {}
-            if self.default:
-                opts.update(copy.deepcopy(self.default))
-            opts.update(copy.deepcopy(loader.opts))
-            return opts
-        elif self.name == loader.pack_self:
+        if self.name == loader.pack_self:
             return loader
         try:
             return loader.pack[self.name]
