@@ -327,11 +327,11 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.14.5
+pydantic-core==2.16.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   pydantic
-pydantic==2.5.2
+pydantic==2.6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   inflect
