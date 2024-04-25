@@ -15,10 +15,12 @@
 %global __requires_exclude_from ^.*$
 %define _source_payload w2.gzdio
 %define _binary_payload w2.gzdio
-%define _SALT_GROUP salt
-%define _SALT_USER salt
-%define _SALT_NAME Salt
-%define _SALT_HOME /opt/saltstack/salt
+%global _SALT_GROUP salt
+%global _SALT_USER salt
+%global _SALT_NAME Salt
+%global _SALT_HOME /opt/saltstack/salt
+%global _CUR_USER %{_SALT_USER}
+%global _CUR_GROUP %{_SALT_GROUP}
 
 # Disable debugsource template
 %define _debugsource_template %{nil}
@@ -426,22 +428,37 @@ usermod -c "%{_SALT_NAME}" \
 
 %pre master
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
-    _CUR_USER=$(command -v salt-master | xargs ls -l | cut -d ' ' -f 3)
-    _CUR_GROUP=$(command -v salt-master | xargs ls -l | cut -d ' ' -f 4)
-    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-      \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
-      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+    # Reset permissions to match previous installs - performing upgrade
+#    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+#    _CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+#    # TBD DGM this find command will overwrite any ownership if a minion - user is preinstalled first
+#    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+#      \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o \
+#      -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
+#      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+    _LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+    _LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    %global _CUR_USER  %{_LCUR_USER}
+    %global _CUR_GROUP %{_LCUR_GROUP}
 fi
 
 %pre minion
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs
-    _CUR_USER=$(command -v salt-minion | xargs ls -l | cut -d ' ' -f 3)
-    _CUR_GROUP=$(command -v salt-minion | xargs ls -l | cut -d ' ' -f 4)
-    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+    # Reset permissions to match previous installs - performing upgrade
+#    _CUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
+#    if [ ! -e "/var/log/salt/master" ]; then
+#        find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+#          \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+#    else
+#        # master exists, it takes precedence
+#        find /etc/salt/minion /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion \
+#          \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
+    _LCUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
+    _LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
+    %global _CUR_USER  %{_LCUR_USER}
+    %global _CUR_GROUP %{_LCUR_GROUP}
 fi
 
 
@@ -571,7 +588,14 @@ if [ ! -e "/var/log/salt/cloud" ]; then
   touch /var/log/salt/cloud
   chmod 640 /var/log/salt/cloud
 fi
-chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+#    _CUR_USER=$(ls -dl /var/log/salt/cloud | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /var/log/salt/cloud | cut -d ' ' -f 4)
+    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+fi
 
 
 %posttrans master
@@ -583,7 +607,14 @@ if [ ! -e "/var/log/salt/key" ]; then
   touch /var/log/salt/key
   chmod 640 /var/log/salt/key
 fi
-chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+#    _CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+fi
 
 
 %posttrans api
@@ -591,7 +622,14 @@ if [ ! -e "/var/log/salt/api" ]; then
   touch /var/log/salt/api
   chmod 640 /var/log/salt/api
 fi
-chown %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+#    _CUR_USER=$(ls -dl /var/log/salt/api | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /var/log/salt/api | cut -d ' ' -f 4)
+    chown -R %{_CUR_USER}:%{_CUR_GROUP} /var/log/salt/api
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
+fi
 
 
 %preun
@@ -748,6 +786,7 @@ fi
 
 # Fixed
 
+- Fix issue with ownership on upgrade of master and minion files
 - Fix an issue with mac_shadow that was causing a command execution error when
   retrieving values that were not yet set. For example, retrieving last login
   before the user had logged in. [#34658](https://github.com/saltstack/salt/issues/34658)
