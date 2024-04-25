@@ -38,7 +38,7 @@ packaging==23.1
     # via -r requirements/static/ci/tools.in
 pydantic-core==2.16.2
     # via pydantic
-pydantic==2.6.1
+pydantic==1.10.13
     # via python-tools-scripts
 pygments==2.17.2
     # via rich
