@@ -89,7 +89,7 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pydantic==1.10.8
+pydantic==1.10.13
     # via inflect
 pyopenssl==24.0.0
     # via -r requirements/base.txt
