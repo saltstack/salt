@@ -353,11 +353,11 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.16.2
+pydantic-core==2.16.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   pydantic
-pydantic==2.6.1
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   inflect
