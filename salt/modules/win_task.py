@@ -253,6 +253,8 @@ def _reverse_lookup(dictionary, value):
             value_index = idx
             break
 
+    if value_index < 0:
+        return "invalid value"
     return list(dictionary)[value_index]
 
 
@@ -1494,7 +1496,7 @@ def info(name, location="\\"):
                 duration, def_set.DeleteExpiredTaskAfter
             )
 
-        if def_set.ExecutionTimeLimit == "":
+        if def_set.ExecutionTimeLimit == "" or def_set.ExecutionTimeLimit == "PT0S":
             settings["execution_time_limit"] = False
         else:
             settings["execution_time_limit"] = _reverse_lookup(
