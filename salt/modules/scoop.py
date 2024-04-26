@@ -63,7 +63,14 @@ def _clear_context():
     for var in scoop_items:
         __context__.pop(var)
 
-def _find_scoop():
+def _get_env(env_name: str=None, user=None):
+    if user:
+        # When passing runas to cmd.run, OSError: The system could not find the environment option that was entered.
+        return __salt__["cmd.run"](f'cmd.exe /c echo %{env_name}%', shell="powershell", runas=user)[:-1]
+    else:
+        return os.environ.get(env_name)
+
+def _find_scoop(user=None):
     """
     Returns the full path to scoop.bat on the host.
     """
@@ -71,28 +78,35 @@ def _find_scoop():
     if "scoop._path" in __context__:
         return __context__["scoop._path"]
     
-    # TODO: correctly detect is global or not
     __context__["scoop._global"] = True
+    if user:
+        __context__["scoop._global"] = False
 
     # Check the path
-    scoop_path = __salt__["cmd.which"]("scoop")
+    if user:
+        scoop_path = __salt__["cmd.run"]('(Get-Command scoop).Path', shell="powershell", runas=user)[:-1] # cut last \n
+    else:
+        scoop_path = __salt__["cmd.which"]("scoop")
     if scoop_path:
         __context__["scoop._path"] = scoop_path
         return __context__["scoop._path"]
 
     # Check in common locations
-    scoop_defaults = [
-        os.path.join(
-            os.environ.get("USERPROFILE"), "scoop", "shims", "scoop.cmd"
-        ),
-        os.path.join(
-            os.path.abspath(os.sep), "Scoop", "shims", "scoop.cmd"
-        ),
-    ]
-    for scoop_exe in scoop_defaults:
+    if __context__["scoop._global"]:
+        global_dir=os.path.join(os.path.abspath(os.sep), "Scoop")
+        scoop_exe = os.path.join(global_dir, "shims", "scoop.ps1")
         if os.path.isfile(scoop_exe):
+            log.warning("Scoop not found in PATH. Scoop may be broken.")
             __context__["scoop._path"] = scoop_exe
             return __context__["scoop._path"]
+    else:
+        user_profile = _get_env('USERPROFILE', user=user)
+        for scoop_dir in ["scoop", "Scoop"]:
+            scoop_exe = os.path.join(user_profile, scoop_dir, "shims", "scoop.ps1")
+            if os.path.isfile(scoop_exe):
+                log.warning("Scoop not found in PATH. Scoop may be broken.")
+                __context__["scoop._path"] = scoop_exe
+                return __context__["scoop._path"]
 
     # Not installed, raise an error
     err = (
@@ -101,7 +115,7 @@ def _find_scoop():
     )
     raise CommandExecutionError(err)
 
-def scoop_version():
+def scoop_version(user=None):
     """
     Returns the version of Scoop installed on the minion.
 
@@ -114,15 +128,15 @@ def scoop_version():
     if "scoop._version" in __context__:
         return __context__["scoop._version"]
 
-    cmd = [_find_scoop()]
+    cmd = [_find_scoop(user=user)]
     cmd.append("-v")
-    out = __salt__["cmd.run"](cmd, python_shell=False)
+    out = __salt__["cmd.run"](cmd, python_shell=False, shell="powershell", runas=user)
     # Scoop version is kept in first line. Other lines are bucket versions.
-    __context__["scoop._version"] = re.search(r'(\d.\d.\d)', out.splitlines()[0].search())[0]
+    __context__["scoop._version"] = re.search(r'v(\d.\d.\d)', out).group(1)
 
     return __context__["scoop._version"]
 
-def bootstrap(source=None, user=None, password=None):
+def bootstrap(source=None, user=None):
     """
     Download and install the latest version of the Scoop package manager
     using install script by Scoop authors.
@@ -145,10 +159,7 @@ def bootstrap(source=None, user=None, password=None):
             - file:// - A local file on the system
             
         user (str):
-            Install for defined user. Requries password, marked in 'password' argument.
-            
-        password (str):
-            Password for user, marked in 'user' argument.
+            Install for defined user.
 
     Returns:
         str: The stdout of the Scoop installation script
@@ -166,10 +177,7 @@ def bootstrap(source=None, user=None, password=None):
         # To bootstrap Scoop from a file on C:\\Temp
         salt '*' scoop.bootstrap source=C:\\Temp\\scoop.ps1
     """
-    if user:
-        if not password:
-            return CommandExecutionError("User defined, but password is not")
-    else:
+    if not user:
         # We print this warning because scoop is typically installed for user
         # and global installed is not supported yet. See https://github.com/ScoopInstaller/Scoop/issues/3875
         log.warning("Installing scoop globally is not recommended")
@@ -219,12 +227,13 @@ def bootstrap(source=None, user=None, password=None):
 
     result = __salt__["cmd.script"](
             script, cwd=os.path.dirname(script), shell="powershell", python_shell=True,
-            runas=user, password=password, args=scoop_args
+            runas=user, args=scoop_args
         )
     
     if not user and result["retcode"] == 0:
         log.debug("Adding Scoop to global PATH")
         __salt__["win_path.add"](path=os.path.join(global_dir, "shims"), rehash=True)
+        log.info('Consider restarting salt-minion service to apply new PATH env')
             
     if result["retcode"] != 0:
         err = "Bootstrapping Scoop failed:\n stderr: {},\n stdout: {}".format(result["stderr"], result["stdout"])
@@ -232,21 +241,20 @@ def bootstrap(source=None, user=None, password=None):
 
     return result["stdout"]
 
-def unbootstrap():
+def unbootstrap(user=None, purge=False):
     """
     Uninstall scoop from the system by doing the following:
 
     - Run 'scoop uninstall scoop'
-    - Remove 'scoop' directory
     - Remove scoop from the path
     
     Args:
     
         user (str):
-            Install for defined user. Requries password, marked in 'password' argument.
+            Install for defined user.
             
-        password (str):
-            Password for user, marked in 'user' argument.
+        purge (bool):
+            Remove config file for scoop. Default is False.
             
     .. note::
         Uninstalling user-mode installed scoop is not supported
@@ -259,46 +267,53 @@ def unbootstrap():
 
         salt * scoop.unbootstrap
     """
-    #if user:
-    #    if not password:
-    #        return CommandExecutionError("User defined, but password is not")
+    
+    # TODO: Add force flag to bypass 7zip remove problem (Access to the path 'Codecs' is denied)
     
     removed = []
     
     # First of all we try to use scoop internal remove
     try:
-        scoop_path = _find_scoop()
+        scoop_path = _find_scoop(user=user)
     except CommandExecutionError:
+        log.warning("Scoop not found.")
         scoop_path = None
     # We try to use internal remove if scoop is detected
     if scoop_path:
-        cmd = [scoop_path]
+        # For some reason, we have to run powershell from cmd to catch stdin
+        cmd = ['cmd.exe', '/c', 'powershell', '-executionpolicy', 'bypass', scoop_path]
         cmd.append("uninstall")
         cmd.append("scoop")
         # Scoop asks "Are you sure? (yN):"
         # Also scoop always returns 1 error-code.
-        out = __salt__["cmd.run"](cmd, python_shell=False, stdin='y', success_retcodes=[1])
+        out = __salt__["cmd.run"](cmd, stdin='y', shell="powershell", runas=user, success_retcodes=[1])
         log.debug("Result of running internal scoop remove: {}".format(out))
+        removed.append("internal scoop remove: {}".format(out))
 
     # Delete the Scoop directory
     known_paths = [
-        os.path.join(os.environ.get("ProgramData"), "scoop"),
-        os.path.join(os.environ.get("USERPROFILE"), "scoop"),
-        os.path.join(os.environ.get("USERPROFILE"), ".config", "scoop", "config.conf"),
-        os.path.join(os.path.abspath(os.sep), "Scoop")
+        os.path.join(_get_env("USERPROFILE", user=user), "scoop")
     ]
+    if purge:
+        known_paths.append(os.path.join(_get_env("USERPROFILE", user=user), ".config", "scoop"))
+    if not user:
+        known_paths.append(os.path.join(_get_env("ProgramData", user=user), "scoop"))
+        known_paths.append(os.path.join(os.path.abspath(os.sep), "Scoop"))
     for path in known_paths:
         if os.path.exists(path):
             log.debug("Removing Scoop directory: %s", path)
             __salt__["file.remove"](path=path, force=True)
-            removed.append("Removed Directory: {}".format(path))
-
-    # Remove Scoop from the path:
-    for path in __salt__["win_path.get_path"]():
-        if "scoop" in path.lower():
-            log.debug("Removing Scoop path item: %s", path)
-            __salt__["win_path.remove"](path=path, rehash=True)
-            removed.append("Removed Path Item: {}".format(path))
+            removed.append(path)
+        
+    if not user:
+        # Remove Scoop from the path:
+        for path in __salt__["win_path.get_path"]():
+            if "scoop" in path.lower():
+                log.debug("Removing Scoop path item: %s", path)
+                __salt__["win_path.remove"](path=path, rehash=True)
+                removed.append("Removed Path Item: {}".format(path))
+    
+    _clear_context()
 
     return removed
 
