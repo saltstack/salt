@@ -1,5 +1,5 @@
 """
-Functional tests for chocolatey state
+Functional tests for chocolatey state with Chocolatey 2.0+
 """
 
 import os
@@ -109,6 +109,13 @@ def vim(chocolatey_mod):
     chocolatey_mod.uninstall(name="vim", force=True)
 
 
+@pytest.fixture(scope="function")
+def everything(chocolatey_mod):
+    chocolatey_mod.install(name="everything", version="1.4.1935")
+    yield
+    chocolatey_mod.uninstall(name="everything", force=True)
+
+
 def test_installed_latest(clean, chocolatey, chocolatey_mod):
     chocolatey.installed(name="vim")
     result = chocolatey_mod.version(name="vim")
@@ -120,6 +127,14 @@ def test_installed_version(clean, chocolatey, chocolatey_mod):
     result = chocolatey_mod.version(name="vim")
     assert "vim" in result
     assert result["vim"]["installed"][0] == "9.0.1672"
+
+
+def test_installed_version_existing_capitalization(
+    everything, chocolatey, chocolatey_mod
+):
+    result = chocolatey.installed(name="everything", version="1.4.11024")
+    expected_changes = {"Everything": {"new": ["1.4.11024"], "old": ["1.4.1935"]}}
+    assert result["changes"] == expected_changes
 
 
 def test_uninstalled(vim, chocolatey, chocolatey_mod):

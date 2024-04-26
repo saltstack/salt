@@ -7,19 +7,10 @@ import salt.exceptions
 import salt.utils.x509 as x509
 from tests.support.mock import ANY, Mock, patch
 
-try:
-    import cryptography
-    import cryptography.x509 as cx509
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
-
-pytestmark = [
-    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
-]
-
-CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
+cryptography = pytest.importorskip(
+    "cryptography", reason="Needs cryptography library", minversion="37.0"
+)
+cx509 = pytest.importorskip("cryptography.x509", reason="Needs cryptography library")
 
 
 @pytest.fixture
@@ -701,10 +692,6 @@ class TestCreateExtension:
                     )
                 ],
                 True,
-                marks=pytest.mark.skipif(
-                    CRYPTOGRAPHY_VERSION[0] < 37,
-                    reason="At least cryptography v37 is required for parsing RFC4514 strings",
-                ),
             ),
         ],
     )
@@ -1144,10 +1131,6 @@ class TestCreateExtension:
                     ]
                 ),
             ],
-            marks=pytest.mark.skipif(
-                CRYPTOGRAPHY_VERSION[0] < 37,
-                reason="At least cryptography v37 is required for parsing RFC4514 strings",
-            ),
         ),
         (
             (
@@ -1238,7 +1221,7 @@ class TestCreateExtension:
         (
             ("DNS", "می\u200cخواهم\u200c.iran"),
             salt.exceptions.CommandExecutionError,
-            "^Unknown codepoint adjacent to joiner.* at position 9",
+            r"Joiner U\+200C not allowed at position 9 in '.*'",
         ),
         (
             ("DNS", ".*.wildcard-dot.test"),
@@ -1426,10 +1409,6 @@ def test_parse_general_names_rejects_invalid(inpt):
                 cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
                 cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
             ],
-            marks=pytest.mark.skipif(
-                CRYPTOGRAPHY_VERSION[0] < 37,
-                reason="At least cryptography v37 is required for parsing RFC4514 strings",
-            ),
         ),
         pytest.param(
             ["C=US", "O=Example Inc", "CN=example.com"],
@@ -1438,10 +1417,6 @@ def test_parse_general_names_rejects_invalid(inpt):
                 cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
                 cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
             ],
-            marks=pytest.mark.skipif(
-                CRYPTOGRAPHY_VERSION[0] < 37,
-                reason="At least cryptography v37 is required for parsing RFC4514 strings",
-            ),
         ),
         pytest.param(
             ["C=US", "O=Example Inc", "OU=foo+CN=example.com"],
@@ -1455,10 +1430,6 @@ def test_parse_general_names_rejects_invalid(inpt):
                     }
                 ),
             ],
-            marks=pytest.mark.skipif(
-                CRYPTOGRAPHY_VERSION[0] < 37,
-                reason="At least cryptography v37 is required for parsing RFC4514 strings",
-            ),
         ),
         (
             {"CN": "example.com", "O": "Example Inc", "C": "US", "irrelevant": "bar"},
