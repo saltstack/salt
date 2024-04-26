@@ -361,7 +361,6 @@ MISSING_DOCSTRINGS = {
         "machine_get_machinestate_tuple",
     ],
     "salt/utils/win_osinfo.py": ["get_os_version_info"],
-    "salt/utils/win_runas.py": ["split_username"],
     "salt/utils/yamldumper.py": [
         "represent_undefined",
         "represent_ordereddict",
