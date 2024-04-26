@@ -165,6 +165,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - medium
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -263,6 +264,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - medium
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
