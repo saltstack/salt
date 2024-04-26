@@ -6,17 +6,9 @@
    :alt: PyPi Package Downloads
    :target: https://pypi.org/project/salt
 
-.. image:: https://img.shields.io/lgtm/grade/python/github/saltstack/salt
-   :alt: PyPi Package Downloads
-   :target: https://lgtm.com/projects/g/saltstack/salt/context:python
-
 .. image:: https://img.shields.io/badge/slack-SaltProject-blue.svg?logo=slack
    :alt: Salt Project Slack Community
    :target: https://via.vmw.com/salt-slack
-
-.. image:: https://img.shields.io/twitch/status/saltprojectoss
-   :alt: Salt Project Twitch Channel
-   :target: https://www.twitch.tv/saltprojectoss
 
 .. image:: https://img.shields.io/reddit/subreddit-subscribers/saltstack?style=social
    :alt: Salt Project subreddit

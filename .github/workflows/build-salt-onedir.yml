@@ -32,7 +32,7 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_INDEX_URL: https://lb-salt-project-pypi-proxy-test-ed0bb33903cbbdf3.elb.us-west-2.amazonaws.com/root/pypi/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
