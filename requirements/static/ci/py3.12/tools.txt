@@ -36,9 +36,9 @@ mdurl==0.1.2
     # via markdown-it-py
 packaging==23.1
     # via -r requirements/static/ci/tools.in
-pydantic-core==2.16.2
+pydantic-core==2.16.3
     # via pydantic
-pydantic==2.6.1
+pydantic==2.6.4
     # via python-tools-scripts
 pygments==2.17.2
     # via rich

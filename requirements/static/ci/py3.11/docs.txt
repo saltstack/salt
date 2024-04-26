@@ -99,11 +99,11 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cherrypy
-pydantic-core==2.16.2
+pydantic-core==2.16.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   pydantic
-pydantic==2.6.1
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   inflect
