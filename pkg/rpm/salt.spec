@@ -631,6 +631,24 @@ else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
 fi
 
+%posttrans minion
+if [ ! -e "/var/log/salt/minion" ]; then
+  touch /var/log/salt/minion
+  chmod 640 /var/log/salt/minion
+fi
+if [ ! -e "/var/log/salt/key" ]; then
+  touch /var/log/salt/key
+  chmod 640 /var/log/salt/key
+fi
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+#    _CUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
+#    _CUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
+    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+fi
+
 
 %preun
 if [ $1 -eq 0 ]; then
