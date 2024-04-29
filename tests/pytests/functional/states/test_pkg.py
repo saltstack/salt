@@ -238,7 +238,7 @@ def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
+def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes two packages
     """
@@ -254,6 +254,7 @@ def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
     try:
         ret = states.pkg.installed(name=None, pkgs=PKG_TARGETS, refresh=False)
         assert ret.result is True
+        assert "WARNING" not in caplog.text
     finally:
         ret = states.pkg.removed(name=None, pkgs=PKG_TARGETS)
         assert ret.result is True
