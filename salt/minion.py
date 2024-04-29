@@ -3920,13 +3920,14 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
+    # @tornado.gen.coroutine
     async def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
-        return mp_call(self, payload)
+        return await mp_call(self, payload)
 
     async def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, "handle_decoded_payload")
-        return mp_call(self, data)
+        return await mp_call(self, data)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected, creds_map):
