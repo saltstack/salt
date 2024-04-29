@@ -83,6 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+      build-reports: ${{ steps.generate-matrix.outputs.build-reports }}
     steps:
 
       - name: "Throttle Builds"
@@ -300,10 +301,11 @@ jobs:
 
   report:
     name: Test Reports
-    if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
       - test
+      - generate-matrix
 
     steps:
       - name: Checkout Source Code
