@@ -258,11 +258,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*
@@ -460,11 +458,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*
@@ -668,11 +664,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*
