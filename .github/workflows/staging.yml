@@ -2367,6 +2367,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS Arch64 Packages
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
@@ -2471,6 +2472,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz

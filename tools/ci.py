@@ -19,6 +19,7 @@ from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.gh
+from tools.precommit.workflows import TEST_SALT_LISTING
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -657,6 +658,24 @@ def matrix(
     """
     Generate the test matrix.
     """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    gh_event = None
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event is not None
+
     _matrix = []
     _splits = {
         "functional": 4,
@@ -710,10 +729,19 @@ def matrix(
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
 
+    if (
+        gh_event["repository"]["fork"] is True
+        and "macos" in distro_slug
+        and "arm64" in distro_slug
+    ):
+        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
+        _matrix.clear()
+
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"matrix={json.dumps(_matrix)}\n")
+            wfh.write(f"build-reports={json.dumps(len(_matrix) > 0)}\n")
     ctx.exit(0)
 
 
@@ -746,9 +774,28 @@ def pkg_matrix(
     """
     Generate the test matrix.
     """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    gh_event = None
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event is not None
+
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+
     if TYPE_CHECKING:
         assert testing_releases
 
@@ -869,6 +916,175 @@ def pkg_matrix(
                     _matrix.append({"fips": "fips", **_matrix[-1]})
         else:
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
+
+    ctx.info("Generated matrix:")
+    ctx.print(_matrix, soft_wrap=True)
+
+    if (
+        gh_event["repository"]["fork"] is True
+        and "macos" in distro_slug
+        and "arm64" in distro_slug
+    ):
+        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
+        _matrix.clear()
+
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+            wfh.write(f"build-reports={json.dumps(len(_matrix) > 0)}\n")
+    ctx.exit(0)
+
+
+@ci.command(name="deps-matrix")
+def get_ci_deps_matrix(ctx: Context):
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    gh_event = None
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event is not None
+
+    _matrix = {
+        "linux": [
+            {"distro-slug": "centos-7", "arch": "x86_64"},
+            {"distro-slug": "centos-7-arm64", "arch": "arm64"},
+        ],
+        "macos": [
+            {"distro-slug": "macos-12", "arch": "x86_64"},
+        ],
+        "windows": [
+            {"distro-slug": "windows-2022", "arch": "amd64"},
+        ],
+    }
+    if gh_event["repository"]["fork"] is not True:
+        _matrix["macos"].append(
+            {
+                "distro-slug": "macos-13-arm64",
+                "arch": "arm64",
+            }
+        )
+
+    ctx.info("Generated matrix:")
+    ctx.print(_matrix, soft_wrap=True)
+
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    ctx.exit(0)
+
+
+@ci.command(name="pkg-downloads-matrix")
+def get_pkg_downloads_matrix(ctx: Context):
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    gh_event = None
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event is not None
+
+    _matrix: dict[str, list[dict[str, str]]] = {
+        "linux": [],
+        "macos": [],
+        "windows": [],
+    }
+
+    rpm_slugs = (
+        "rockylinux",
+        "amazonlinux",
+        "centos",
+        "fedora",
+        "photon",
+    )
+    linux_skip_pkg_download_tests = (
+        "archlinux-lts",
+        "opensuse-15",
+        "windows",
+    )
+    for slug in sorted(tools.utils.get_golden_images()):
+        if slug.startswith(linux_skip_pkg_download_tests):
+            continue
+        if "arm64" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+        if slug.startswith(rpm_slugs) and arch == "arm64":
+            # While we maintain backwards compatible urls
+            _matrix["linux"].append(
+                {"distro-slug": slug, "arch": "aarch64", "pkg-type": "package"}
+            )
+        _matrix["linux"].append(
+            {"distro-slug": slug, "arch": arch, "pkg-type": "package"}
+        )
+        if slug.startswith("ubuntu-22"):
+            _matrix["linux"].append(
+                {"distro-slug": slug, "arch": arch, "pkg-type": "onedir"}
+            )
+    for mac in TEST_SALT_LISTING["macos"]:
+        if gh_event["repository"]["fork"] is True and mac.arch == "arm64":
+            continue
+        _matrix["macos"].append(
+            {"distro-slug": mac.slug, "arch": mac.arch, "pkg-type": "package"}
+        )
+
+    if gh_event["repository"]["fork"] is True:
+        macos_idx = 0  # macos-12
+    else:
+        macos_idx = 1  # macos-13
+    _matrix["macos"].append(
+        {
+            "distro-slug": TEST_SALT_LISTING["macos"][macos_idx].slug,
+            "arch": TEST_SALT_LISTING["macos"][macos_idx].arch,
+            "pkg-type": "onedir",
+        }
+    )
+
+    for win in TEST_SALT_LISTING["windows"][-1:]:
+        for pkg_type in ("nsis", "msi", "onedir"):
+            _matrix["windows"].append(
+                {
+                    "distro-slug": win.slug,
+                    "arch": win.arch,
+                    "pkg-type": pkg_type,
+                }
+            )
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)

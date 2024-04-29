@@ -55,8 +55,35 @@ env:
 
 jobs:
 
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci pkg-downloads-matrix
+
   linux:
     name: Linux
+    needs:
+      - generate-matrix
     runs-on:
       - self-hosted
       - linux
@@ -68,115 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: amazonlinux-2
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: amazonlinux-2-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: amazonlinux-2-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: centos-7
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centos-7-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centos-7-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: debian-11
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-11-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: debian-12
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-12-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: fedora-39
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: fedora-39-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: fedora-39-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: photonos-4
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-4-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-4-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: photonos-5
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-5-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-5-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: rockylinux-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: rockylinux-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: rockylinux-8-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: rockylinux-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: rockylinux-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: rockylinux-9-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: ubuntu-22.04-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04-arm64
-            arch: arm64
-            pkg-type: onedir
-          - distro-slug: ubuntu-23.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-23.04-arm64
-            arch: arm64
-            pkg-type: package
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
 
     steps:
 
@@ -372,6 +291,8 @@ jobs:
 
   macos:
     name: MacOS
+    needs:
+      - generate-matrix
     runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     env:
       USE_S3_CACHE: 'false'
@@ -380,19 +301,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: macos-12
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: macos-13
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: macos-13-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: macos-13-arm64
-            arch: arm64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
 
     steps:
 
@@ -579,6 +488,8 @@ jobs:
 
   windows:
     name: Windows
+    needs:
+      - generate-matrix
     env:
       USE_S3_CACHE: 'true'
     runs-on:
@@ -590,16 +501,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: nsis
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: msi
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
 
     steps:
       - name: Checkout Source Code
