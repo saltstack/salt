@@ -50,7 +50,11 @@ async def test_handle_decoded_payload_metaproxy_called(io_loop):
         jid_queue=copy.copy(mock_jid_queue),
         io_loop=io_loop,
     )
-    mock_metaproxy_call = MagicMock()
+
+    async def mock_metaproxy_call(*args, **kwargs):
+        mock_metaproxy_call.calls += 1
+
+    mock_metaproxy_call.calls = 0
     with patch(
         "salt.minion._metaproxy_call",
         return_value=mock_metaproxy_call,
@@ -59,7 +63,7 @@ async def test_handle_decoded_payload_metaproxy_called(io_loop):
         try:
             ret = await proxy_minion._handle_decoded_payload(mock_data)
             assert proxy_minion.jid_queue, mock_jid_queue
-            salt.minion._metaproxy_call.assert_called_once()
+            assert mock_metaproxy_call.calls == 1
         finally:
             proxy_minion.destroy()
 
@@ -79,7 +83,11 @@ async def test_handle_payload_metaproxy_called(io_loop):
         jid_queue=copy.copy(mock_jid_queue),
         io_loop=io_loop,
     )
-    mock_metaproxy_call = MagicMock()
+
+    async def mock_metaproxy_call(*args, **kwargs):
+        mock_metaproxy_call.calls += 1
+
+    mock_metaproxy_call.calls = 0
     with patch(
         "salt.minion._metaproxy_call",
         return_value=mock_metaproxy_call,
@@ -88,7 +96,7 @@ async def test_handle_payload_metaproxy_called(io_loop):
         try:
             ret = await proxy_minion._handle_decoded_payload(mock_data)
             assert proxy_minion.jid_queue == mock_jid_queue
-            mock_metaproxy_call.assert_called_once()
+            assert mock_metaproxy_call.calls == 1
         finally:
             proxy_minion.destroy()
 
