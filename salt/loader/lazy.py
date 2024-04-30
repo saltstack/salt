@@ -382,7 +382,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         to last-minute inject globals
         """
         _ = super().__getitem__(item)  # try to get the item from the dictionary
-        if inspect.iscoroutinefunction(_):
+        if not isinstance(_, LoadedFunc) and inspect.iscoroutinefunction(_):
             return LoadedCoro(item, self)
         return LoadedFunc(item, self)
 
