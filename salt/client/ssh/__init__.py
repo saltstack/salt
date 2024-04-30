@@ -1008,6 +1008,7 @@ class Single:
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
+        self.ssh_pre_hook = kwargs.get("ssh_pre_hook", None)
         self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
         self.ssh_pre_flight_args = kwargs.get("ssh_pre_flight_args", None)
 
@@ -1093,6 +1094,12 @@ class Single:
             return arg
         return "".join(["\\" + char if re.match(r"\W", char) else char for char in arg])
 
+    def run_ssh_pre_hook(self):
+        """
+        Run a pre_hook script on the host machine before running any ssh commands
+        """
+        return self.shell.exec_cmd(self.ssh_pre_hook)
+
     def run_ssh_pre_flight(self):
         """
         Run our pre_flight script before running any ssh commands
@@ -1167,6 +1174,13 @@ class Single:
         """
         stdout = stderr = ""
         retcode = salt.defaults.exitcodes.EX_OK
+
+        if self.ssh_pre_hook:
+            stdout, stderr, retcode = self.run_ssh_pre_hook()
+            if retcode != salt.defaults.exitcodes.EX_OK:
+                log.error("Error running ssh_pre_hook script %s", self.ssh_pre_hook)
+                return stdout, stderr, retcode
+            log.info("Successfully ran the ssh_pre_hook script: %s", self.ssh_pre_hook)
 
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
