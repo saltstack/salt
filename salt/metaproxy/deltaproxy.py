@@ -1052,7 +1052,6 @@ async def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            #        yield tornado.gen.sleep(0.5)
             await asyncio.sleep(0.5)
             process_count = self.subprocess_list.count
 

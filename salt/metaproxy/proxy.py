@@ -808,7 +808,6 @@ async def handle_decoded_payload(self, data):
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
-            # yield tornado.gen.sleep(10)
             await asyncio.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
 
