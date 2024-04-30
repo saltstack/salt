@@ -30,8 +30,8 @@ case "$1" in
 ##     find ${SALT_HOME} /etc/salt /var/log/salt /var/cache/salt /var/run/salt \
 ##         \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
 ##         \( -user ${SALT_USER} -o -group ${SALT_GROUP} \) -exec chown root:root \{\} \;
-    CUR_USER = $(ls -dl /run/salt/master | cur -d ' ' -f 3)
-    CUR_GROUP = $(ls -dl /run/salt/master | cur -d ' ' -f 4)
+    CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+    CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
     db_set salt-master/user $CUR_USER
     chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master \
         /var/log/salt/key /var/cache/salt/master /var/run/salt/master
