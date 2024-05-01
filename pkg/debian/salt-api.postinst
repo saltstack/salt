@@ -2,7 +2,7 @@
 
 case "$1" in
   configure)
-    db_get salt-master/user
+    db_get salt-api/user
     if [ "$RET" != "root" ]; then
       if [ ! -e "/var/log/salt/api" ]; then
         touch /var/log/salt/api
@@ -10,6 +10,17 @@ case "$1" in
       fi
       chown $RET:$RET /var/log/salt/api
     fi
-    if command -v systemctl; then systemctl enable salt-api; fi
+    if command -v systemctl; then
+        db_get salt-api/active
+        if [ "$RET" == "active" ]; then
+            systemctl restart salt-api
+        fi
+        db_get salt-api/enabled
+        if [ "$RET" == "enabled" ]; then
+            systemctl enable salt-api
+        else
+            systemctl disable salt-api
+        fi
+    fi
   ;;
 esac

@@ -1,0 +1,30 @@
+#!/bin/sh -x
+
+. /usr/share/debconf/confmodule
+
+## TBD DGM need to allow for salt-minion having been installed previously and need to allow for it's ownership
+
+case "$1" in
+  upgrade)
+    [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
+    [ -z "$SALT_USER" ] && SALT_USER=salt
+    [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
+    [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
+
+    # Reset permissions to fix previous installs
+    CUR_USER=$(ls -dl /run/salt-api.pid | cut -d ' ' -f 3)
+    CUR_GROUP=$(ls -dl /run/salt-api.pid | cut -d ' ' -f 4)
+    db_set salt-api/user $CUR_USER
+    chown -R $CUR_USER:$CUR_GROUP /var/log/salt/api
+    if command -v systemctl; then
+        SM_ENABLED=$(systemctl show salt-api | grep -w UnitFileState | cut -d '=' -f 2)
+        db_get salt-api/enabled $SM_ENABLED
+        SM_ACTIVE=$(systemctl is-active salt-api)
+        db_get salt-api/active $SM_ACTIVE
+    else
+        db_get salt-api/enabled enabled
+        db_get salt-api/active active
+
+    fi
+    ;;
+esac
