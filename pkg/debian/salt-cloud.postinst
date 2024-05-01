@@ -5,8 +5,7 @@ case "$1" in
     db_get salt-master/user
     if [ "$RET" != "root" ]; then
       PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
-      # TBD DGM what is this salt:salt doing here, should this be $RET:$RET
-      chown -R salt:salt /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+      chown -R $RET:$RET /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
     fi
   ;;
 esac

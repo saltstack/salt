@@ -17,7 +17,16 @@ case "$1" in
       chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     fi
     if command -v systemctl; then
-        systemctl enable salt-master
+        db_get salt-master/active
+        if [ "$RET" == "active" ]; then
+            systemctl restart salt-master
+        fi
+        db_get salt-master/enabled
+        if [ "$RET" == "enabled" ]; then
+            systemctl enable salt-master
+        else
+            systemctl disable salt-master
+        fi
     fi
   ;;
 esac
