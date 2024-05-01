@@ -19,8 +19,14 @@
 %global _SALT_USER salt
 %global _SALT_NAME Salt
 %global _SALT_HOME /opt/saltstack/salt
-%global _CUR_USER %{_SALT_USER}
-%global _CUR_GROUP %{_SALT_GROUP}
+
+# salt-master current user and group
+%global _MS_CUR_USER %{_SALT_USER}
+%global _MS_CUR_GROUP %{_SALT_GROUP}
+
+# salt-minion current user and group
+%global _MN_CUR_USER %{_SALT_USER}
+%global _MN_CUR_GROUP %{_SALT_GROUP}
 
 # Disable debugsource template
 %define _debugsource_template %{nil}
@@ -429,36 +435,19 @@ usermod -c "%{_SALT_NAME}" \
 %pre master
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
-#    _CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-#    # TBD DGM this find command will overwrite any ownership if a minion - user is preinstalled first
-#    find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-#      \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o \
-#      -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
-#      \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
-    _LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-    _LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    %global _CUR_USER  %{_LCUR_USER}
-    %global _CUR_GROUP %{_LCUR_GROUP}
+    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    %global _MS_CUR_USER  %{_MS_LCUR_USER}
+    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
 fi
 
 %pre minion
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    _CUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
-#    if [ ! -e "/var/log/salt/master" ]; then
-#        find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
-#          \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
-#    else
-#        # master exists, it takes precedence
-#        find /etc/salt/minion /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion \
-#          \( -user salt -o -group salt \) -exec chown -R ${_CUR_USER}:${_CUR_GROUP} \{\} \;
-    _LCUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
-    _LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
-    %global _CUR_USER  %{_LCUR_USER}
-    %global _CUR_GROUP %{_LCUR_GROUP}
+    _MN_LCUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
+    _MN_LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
+    %global _MN_CUR_USER  %{_MN_LCUR_USER}
+    %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
 fi
 
 
@@ -590,9 +579,7 @@ if [ ! -e "/var/log/salt/cloud" ]; then
 fi
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    _CUR_USER=$(ls -dl /var/log/salt/cloud | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /var/log/salt/cloud | cut -d ' ' -f 4)
-    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
 fi
@@ -609,9 +596,7 @@ if [ ! -e "/var/log/salt/key" ]; then
 fi
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    _CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 fi
@@ -624,9 +609,7 @@ if [ ! -e "/var/log/salt/api" ]; then
 fi
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    _CUR_USER=$(ls -dl /var/log/salt/api | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /var/log/salt/api | cut -d ' ' -f 4)
-    chown -R %{_CUR_USER}:%{_CUR_GROUP} /var/log/salt/api
+    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /var/log/salt/api
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
 fi
@@ -642,9 +625,7 @@ if [ ! -e "/var/log/salt/key" ]; then
 fi
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
-#    _CUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
-#    _CUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
-    chown -R %{_CUR_USER}:%{_CUR_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+    chown -R %{_MN_CUR_USER}:%{_MN_CUR_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
 fi
