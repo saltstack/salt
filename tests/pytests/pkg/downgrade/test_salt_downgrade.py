@@ -90,7 +90,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
 
 
 @pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
-def test_salt_downgrade_master(salt_cli, install_salt):
+def test_salt_downgrade_master(install_salt):
     """
     Test an downgrade of Salt Master.
     """
@@ -105,11 +105,12 @@ def test_salt_downgrade_master(salt_cli, install_salt):
         original_py_version = install_salt.package_python_version()
 
     # Verify current install version is setup correctly and works
-    ret = salt_cli.run("--version")
+    bin_file = "salt"
+    ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(ret.data) == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert packaging.version.parse(
+        ret.stdout.strip().split()[1]
+    ) == packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running master by getting its PID
     salt_name = "salt"
@@ -131,7 +132,6 @@ def test_salt_downgrade_master(salt_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
-    bin_file = "salt"
 
     # Verify there is a new running master by getting its PID and comparing it
     # with the PID from before the upgrade
