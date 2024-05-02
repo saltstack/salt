@@ -660,7 +660,7 @@ def matrix(
     _matrix = []
     _splits = {
         "functional": 4,
-        "integration": 5,
+        "integration": 7,
         "scenarios": 1,
         "unit": 4,
     }
