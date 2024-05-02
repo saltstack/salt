@@ -172,6 +172,8 @@ def test_list_all_no_check_files(
     shutil.copytree(salt_master.config["pki_dir"], str(pki_dir))
     with pytest.helpers.change_cwd(str(config_dir)):
         master_config = copy.deepcopy(salt_master.config)
+        # Convert the file roots to a static dict before appending any roots
+        master_config["file_roots"] = master_config["file_roots"].static_dict()
         master_config["pki_check_files"] = False
         master_config["pki_dir"] = "pki_dir"
         master_config["root_dir"] = str(config_dir)
