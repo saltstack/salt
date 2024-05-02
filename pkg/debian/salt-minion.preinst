@@ -19,7 +19,7 @@ case "$1" in
     chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion \
         /var/cache/salt/minion /var/run/salt/minion
     if command -v systemctl; then
-        SM_ENABLED=$(systemctl show salt-minion | grep -w UnitFileState | cut -d '=' -f 2)
+        SM_ENABLED=$(systemctl show -p UnitFileState salt-minion | cut -d '=' -f 2)
         db_get salt-minion/enabled $SM_ENABLED
         SM_ACTIVE=$(systemctl is-active salt-minion)
         db_get salt-minion/active $SM_ACTIVE
