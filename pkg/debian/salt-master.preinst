@@ -34,7 +34,7 @@ case "$1" in
     chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master \
         /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     if command -v systemctl; then
-        SM_ENABLED=$(systemctl show salt-master | grep -w UnitFileState | cut -d '=' -f 2)
+        SM_ENABLED=$(systemctl show -p UnitFileState salt-master | cut -d '=' -f 2)
         db_get salt-master/enabled $SM_ENABLED
         SM_ACTIVE=$(systemctl is-active salt-master)
         db_get salt-master/active $SM_ACTIVE

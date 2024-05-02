@@ -17,7 +17,7 @@ case "$1" in
     db_set salt-api/user $CUR_USER
     chown -R $CUR_USER:$CUR_GROUP /var/log/salt/api
     if command -v systemctl; then
-        SM_ENABLED=$(systemctl show salt-api | grep -w UnitFileState | cut -d '=' -f 2)
+        SM_ENABLED=$(systemctl show -p UnitFileState salt-api | cut -d '=' -f 2)
         db_get salt-api/enabled $SM_ENABLED
         SM_ACTIVE=$(systemctl is-active salt-api)
         db_get salt-api/active $SM_ACTIVE
