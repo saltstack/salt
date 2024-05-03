@@ -626,8 +626,6 @@ fi
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
     chown -R %{_MN_CUR_USER}:%{_MN_CUR_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
-else
-    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
 fi
 
 

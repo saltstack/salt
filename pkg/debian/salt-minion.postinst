@@ -2,6 +2,8 @@
 
 . /usr/share/debconf/confmodule
 
+echo "DGM salt-minion.postinst dollar $@"
+
 case "$1" in
   configure)
     db_get salt-minion/user
@@ -18,14 +20,16 @@ case "$1" in
     fi
     if command -v systemctl; then
         db_get salt-minion/active
-        if [ "$RET" == "active" ]; then
-            systemctl restart salt-minion
-        fi
-        db_get salt-minion/enabled
-        if [ "$RET" == "enabled" ]; then
-            systemctl enable salt-minion
-        else
-            systemctl disable salt-minion
+        if [ "$RET" != 10 ]; then
+            if [ "$RET" == "active" ]; then
+                systemctl restart salt-minion
+            fi
+            db_get salt-minion/enabled
+            if [ "$RET" == "enabled" ]; then
+                systemctl enable salt-minion
+            else
+                systemctl disable salt-minion
+            fi
         fi
     fi
   ;;

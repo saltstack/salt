@@ -1,5 +1,7 @@
 . /usr/share/debconf/confmodule
 
+echo "DGM salt-cloud.postinst dollar $@"
+
 case "$1" in
   configure)
     db_get salt-master/user

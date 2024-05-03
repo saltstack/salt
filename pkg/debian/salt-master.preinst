@@ -4,6 +4,9 @@
 
 ## TBD DGM need to allow for salt-minion having been installed previously and need to allow for it's ownership
 
+echo "DGM salt-master.preinst dollar $@"
+
+
 case "$1" in
   install)
     [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
@@ -35,12 +38,12 @@ case "$1" in
         /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     if command -v systemctl; then
         SM_ENABLED=$(systemctl show -p UnitFileState salt-master | cut -d '=' -f 2)
-        db_get salt-master/enabled $SM_ENABLED
+        db_set salt-master/enabled $SM_ENABLED
         SM_ACTIVE=$(systemctl is-active salt-master)
-        db_get salt-master/active $SM_ACTIVE
+        db_set salt-master/active $SM_ACTIVE
     else
-        db_get salt-master/enabled enabled
-        db_get salt-master/active active
+        db_set salt-master/enabled enabled
+        db_set salt-master/active active
 
     fi
     ;;
