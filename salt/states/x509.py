@@ -13,9 +13,9 @@ Manage X509 Certificates
     modules. For breaking changes between both versions,
     you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
 
-    They will become the default ``x509`` modules in Salt 3008 (Argon).
-    You can explicitly switch to the new modules before that release
-    by setting ``features: {x509_v2: true}`` in your minion configuration.
+    They have become the default ``x509`` modules in Salt 3008.0 (Argon).
+    Until they are removed, you can still revert to the deprecated modules
+    by setting ``features: {x509_v2: false}`` in your minion configuration.
 
 
 This module can enable managing a complete PKI infrastructure including creating private keys, CAs,
@@ -204,7 +204,7 @@ def __virtual__():
     """
     only load this module if the corresponding execution module is loaded
     """
-    if __opts__["features"].get("x509_v2"):
+    if __opts__["features"].get("x509_v2", True):
         return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
         salt.utils.versions.warn_until(

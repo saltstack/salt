@@ -211,12 +211,8 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__["features"].get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
+    if not __opts__["features"].get("x509_v2", True):
+        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
