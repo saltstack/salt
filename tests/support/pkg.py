@@ -22,6 +22,7 @@ from pytestshellutils.utils.processes import (
     ProcessResult,
     _get_cmdline,
     terminate_process,
+    terminate_process_list,
 )
 from pytestskipmarkers.utils import platform
 from saltfactories.bases import SystemdSaltDaemonImpl
@@ -1011,6 +1012,17 @@ class SaltPkgInstall:
     def __exit__(self, *_):
         if not self.no_uninstall:
             self.uninstall()
+
+        # Did we left anything running?!
+        procs = []
+        for proc in psutil.process_iter():
+            if "salt" in proc.name():
+                cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
+                if "/opt/saltstack" in cmdl_strg:
+                    procs.append(proc)
+
+        if procs:
+            terminate_process_list(procs, kill=True, slow_stop=True)
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
