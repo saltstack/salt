@@ -820,7 +820,7 @@ def pkg_matrix(
     paginator = s3.get_paginator("list_objects_v2")
     _matrix = [
         {
-            "test-chunk": "install",
+            "tests-chunk": "install",
             "version": None,
         }
     ]
@@ -856,7 +856,7 @@ def pkg_matrix(
                     session += "-classic"
                 _matrix.append(
                     {
-                        "test-chunk": session,
+                        "tests-chunk": session,
                         "version": str(version),
                     }
                 )
