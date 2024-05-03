@@ -1326,8 +1326,6 @@ def get_testing_releases(
     """
     Get a list of releases to use for the upgrade and downgrade tests.
     """
-    # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-    threshold_major = 3005
     parsed_salt_version = tools.utils.Version(salt_version)
     # We want the latest 4 major versions, removing the oldest if this version is a new major
     num_major_versions = 4
@@ -1335,7 +1333,15 @@ def get_testing_releases(
         num_major_versions = 3
     majors = sorted(
         list(
-            {version.major for version in releases if version.major >= threshold_major}
+            {
+                version.major
+                for version in releases
+                # We aren't testing upgrades from anything before
+                # 3006.0 except the latest 3005.x
+                if version.major >= 3005
+                # We don't want to test 3007.? on the 3006.x branch
+                and version.major <= parsed_salt_version.major
+            }
         )
     )[-num_major_versions:]
     testing_releases = []
