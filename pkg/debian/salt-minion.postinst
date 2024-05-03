@@ -20,15 +20,16 @@ case "$1" in
     fi
     if command -v systemctl; then
         db_get salt-minion/active
-        if [ "$RET" != 10 ]; then
-            if [ "$RET" == "active" ]; then
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            if [ "$RESLT" == "active" ]; then
                 systemctl restart salt-minion
             fi
             db_get salt-minion/enabled
-            if [ "$RET" == "enabled" ]; then
-                systemctl enable salt-minion
+            if [ "$RESLT" == "disabled" ]; then
+                systemctl disable salt-api
             else
-                systemctl disable salt-minion
+                systemctl enable salt-api
             fi
         fi
     fi
