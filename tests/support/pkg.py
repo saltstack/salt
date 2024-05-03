@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 import attr
 import distro
-import packaging
+import packaging.version
 import psutil
 import pytest
 import requests
@@ -85,7 +85,7 @@ class SaltPkgInstall:
 
     @proc.default
     def _default_proc(self):
-        return Subprocess()
+        return Subprocess(timeout=240)
 
     @distro_id.default
     def _default_distro_id(self):
@@ -105,7 +105,7 @@ class SaltPkgInstall:
 
     @distro_version.default
     def _default_distro_version(self):
-        if self.distro_name == "photon":
+        if self.distro_name in ("photon", "rocky"):
             return distro.version().split(".")[0]
         return distro.version().lower()
 
@@ -508,7 +508,6 @@ class SaltPkgInstall:
                 upgrade_cmd,
                 "-y",
                 *args,
-                _timeout=120,
                 env=env,
             )
         else:
