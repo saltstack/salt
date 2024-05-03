@@ -1,5 +1,7 @@
 . /usr/share/debconf/confmodule
 
+echo "DGM salt-api.postinst dollar $@"
+
 case "$1" in
   configure)
     db_get salt-api/user
@@ -12,14 +14,16 @@ case "$1" in
     fi
     if command -v systemctl; then
         db_get salt-api/active
-        if [ "$RET" == "active" ]; then
-            systemctl restart salt-api
-        fi
-        db_get salt-api/enabled
-        if [ "$RET" == "enabled" ]; then
-            systemctl enable salt-api
-        else
-            systemctl disable salt-api
+        if [ "$RET" != 10 ]; then
+            if [ "$RET" == "active" ]; then
+                systemctl restart salt-api
+            fi
+            db_get salt-api/enabled
+            if [ "$RET" == "enabled" ]; then
+                systemctl enable salt-api
+            else
+                systemctl disable salt-api
+            fi
         fi
     fi
   ;;
