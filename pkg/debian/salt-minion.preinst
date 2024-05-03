@@ -4,6 +4,8 @@
 
 ## TBD DGM need to allow for salt-minion having been installed previously and need to allow for it's ownership
 
+echo "DGM salt-minion.preinst dollar $@"
+
 case "$1" in
   upgrade)
     [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
@@ -20,12 +22,12 @@ case "$1" in
         /var/cache/salt/minion /var/run/salt/minion
     if command -v systemctl; then
         SM_ENABLED=$(systemctl show -p UnitFileState salt-minion | cut -d '=' -f 2)
-        db_get salt-minion/enabled $SM_ENABLED
+        db_set salt-minion/enabled $SM_ENABLED
         SM_ACTIVE=$(systemctl is-active salt-minion)
-        db_get salt-minion/active $SM_ACTIVE
+        db_set salt-minion/active $SM_ACTIVE
     else
-        db_get salt-minion/enabled enabled
-        db_get salt-minion/active active
+        db_set salt-minion/enabled enabled
+        db_set salt-minion/active active
 
     fi
     ;;
