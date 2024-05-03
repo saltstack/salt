@@ -20,15 +20,16 @@ case "$1" in
     fi
     if command -v systemctl; then
         db_get salt-master/active
-        if [ "$RET" != 10 ]; then
-            if [ "$RET" == "active" ]; then
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            if [ "$RESLT" == "active" ]; then
                 systemctl restart salt-master
             fi
             db_get salt-master/enabled
-            if [ "$RET" == "enabled" ]; then
-                systemctl enable salt-master
+            if [ "$RESLT" == "disabled" ]; then
+                systemctl disable salt-api
             else
-                systemctl disable salt-master
+                systemctl enable salt-api
             fi
         fi
     fi
