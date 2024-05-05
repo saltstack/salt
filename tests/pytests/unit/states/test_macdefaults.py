@@ -88,12 +88,12 @@ def test_write_boolean_match():
     """
     expected = {
         "changes": {},
-        "comment": "com.apple.something Key is already set to YES",
+        "comment": "com.apple.something Key is already set to True",
         "name": "Key",
         "result": True,
     }
 
-    read_mock = MagicMock(return_value="1")
+    read_mock = MagicMock(return_value=True)
     write_mock = MagicMock(return_value={"retcode": 0})
     with patch.dict(
         macdefaults.__salt__,
@@ -141,7 +141,7 @@ def test_write_integer_match():
         "result": True,
     }
 
-    read_mock = MagicMock(return_value="1337")
+    read_mock = MagicMock(return_value=1337)
     write_mock = MagicMock(return_value={"retcode": 0})
     with patch.dict(
         macdefaults.__salt__,
