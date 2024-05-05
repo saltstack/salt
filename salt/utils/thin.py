@@ -15,7 +15,6 @@ import tarfile
 import tempfile
 import zipfile
 
-import Cryptodome
 import distro
 import jinja2
 import looseversion
@@ -274,7 +273,6 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "jinja2",
         "yaml",
         "tornado",
-        "Cryptodome",
         "msgpack",
         "certifi",
         "singledispatch",
@@ -424,7 +422,6 @@ def get_tops(extra_mods="", so_mods=""):
         jinja2,
         yaml,
         tornado,
-        Cryptodome,
         msgpack,
         certifi,
         singledispatch,
