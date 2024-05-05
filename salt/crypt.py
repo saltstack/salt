@@ -62,8 +62,9 @@ HAS_CRYPTO = salt.crypt_legacy.HAS_CRYPTO
 
 
 def fips_enabled():
-   import cryptography.hazmat.backends.openssl.backend
-   return cryptography.hazmat.backends.openssl.backend._fips_enabled
+    if HAS_CRYPTOGRAPHY:
+        import cryptography.hazmat.backends.openssl.backend
+        return cryptography.hazmat.backends.openssl.backend._fips_enabled
 
 
 def clean_key(key):
@@ -1656,11 +1657,7 @@ class Crypticle:
         return payload
 
 
-if _fips_enabled() or not HAS_CRYPTOGRAPHY:
-    if not HAS_CRYPTO:
-        raise RuntimeError(
-            "One of cryptography, pycrpto or pycryptodomex must be installed"
-        )
+if fips_enabled() and HAS_CRYPTO:
     generate_private_key = salt.crypt_legacy.generate_private_key
     public_from_private = salt.crypt_legacy.public_from_private
     save_private_key = salt.crypt_legacy.save_private_key
