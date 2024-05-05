@@ -5,6 +5,7 @@ Writing/reading defaults from a macOS minion
 """
 
 import logging
+import re
 
 import salt.utils.platform
 
@@ -15,11 +16,11 @@ __virtualname__ = "macdefaults"
 
 def __virtual__():
     """
-    Only work on Mac OS
+    Only work on macOS
     """
     if salt.utils.platform.is_darwin():
         return __virtualname__
-    return (False, "Only supported on Mac OS")
+    return (False, "Only supported on macOS")
 
 
 def write(name, domain, value, vtype="string", user=None):
@@ -46,30 +47,16 @@ def write(name, domain, value, vtype="string", user=None):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    def safe_cast(val, to_type, default=None):
-        try:
-            return to_type(val)
-        except ValueError:
-            return default
-
     current_value = __salt__["macdefaults.read"](domain, name, user)
+    value = _cast_value(value, vtype)
 
-    if (vtype in ["bool", "boolean"]) and (
-        (value in [True, "TRUE", "YES"] and current_value == "1")
-        or (value in [False, "FALSE", "NO"] and current_value == "0")
-    ):
-        ret["comment"] += f"{domain} {name} is already set to {value}"
-    elif vtype in ["int", "integer"] and safe_cast(current_value, int) == safe_cast(
-        value, int
-    ):
-        ret["comment"] += f"{domain} {name} is already set to {value}"
-    elif current_value == value:
+    if _compare_values(value, current_value, strict=re.match(r"-add$", vtype) is None):
         ret["comment"] += f"{domain} {name} is already set to {value}"
     else:
         out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
         if out["retcode"] != 0:
             ret["result"] = False
-            ret["comment"] = "Failed to write default. {}".format(out["stdout"])
+            ret["comment"] = f"Failed to write default. {out['stdout']}"
         else:
             ret["changes"]["written"] = f"{domain} {name} is set to {value}"
 
@@ -101,3 +88,49 @@ def absent(name, domain, user=None):
         ret["changes"]["absent"] = f"{domain} {name} is now absent"
 
     return ret
+
+
+def _compare_values(new, current, strict=True):
+    """
+    Compare two values
+
+    new
+        The new value to compare
+
+    current
+        The current value to compare
+
+    strict
+        If True, the values must be exactly the same, if False, the new value
+        must be in the current value
+    """
+    if strict:
+        return new == current
+    return new in current
+
+
+def _cast_value(value, vtype):
+    def safe_cast(val, to_type, default=None):
+        try:
+            return to_type(val)
+        except ValueError:
+            return default
+
+    if vtype in ("bool", "boolean"):
+        if value not in [True, "TRUE", "YES", False, "FALSE", "NO"]:
+            raise ValueError(f"Invalid value for boolean: {value}")
+        return value in [True, "TRUE", "YES"]
+
+    if vtype in ("int", "integer"):
+        return safe_cast(value, int)
+
+    if vtype == "float":
+        return safe_cast(value, float)
+
+    if vtype in ("dict", "dict-add"):
+        return safe_cast(value, dict)
+
+    if vtype in ["array", "array-add"]:
+        return safe_cast(value, list)
+
+    return value
