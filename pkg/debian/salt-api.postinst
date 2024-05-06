@@ -25,6 +25,9 @@ case "$1" in
             else
                 systemctl enable salt-api
             fi
+        else
+            systemctl restart salt-api
+            systemctl enable salt-api
         fi
     fi
   ;;
