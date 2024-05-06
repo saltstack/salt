@@ -1,6 +1,6 @@
 ---
 name: build-onedir-deps
-description: Build Onedir Dependencies
+description: Build Onedir Dependencies Test
 
 inputs:
   platform:
