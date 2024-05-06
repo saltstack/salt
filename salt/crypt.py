@@ -64,6 +64,7 @@ HAS_CRYPTO = salt.crypt_legacy.HAS_CRYPTO
 def fips_enabled():
     if HAS_CRYPTOGRAPHY:
         import cryptography.hazmat.backends.openssl.backend
+
         return cryptography.hazmat.backends.openssl.backend._fips_enabled
 
 

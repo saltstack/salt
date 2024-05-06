@@ -182,7 +182,8 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
 
 def test_pwdata_decrypt():
     key_string = dedent(
-        """-----BEGIN RSA PRIVATE KEY-----
+        """
+        -----BEGIN RSA PRIVATE KEY-----
         MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
         Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
         ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
@@ -208,9 +209,9 @@ def test_pwdata_decrypt():
         G3aMplUCgYEAmMFgB/6Ox4OsQPPC6g4G+Ezytkc4iVkMEcjiVWzEsYATITjq3weO
         /XDGBYJoBhYwWPi9oBufFc/2pNtWy1FKKXPuVyXQATdA0mfEPbtsHjMFQNZbeKnm
         0na/SysSDCK3P+9ijlbjqLjMmPEmhJxGWTJ7khnTTkfre7/w9ZxJxi8=
-        -----END RSA PRIVATE KEY-----"""
+        -----END RSA PRIVATE KEY-----
+        """
     )
-
     pwdata = (
         b"V\x80+b\xca\x06M\xb6\x12\xc6\xe8\xf2\xb5\xbb\xd8m\xc0\x97\x9a\xeb\xb9q\x19\xc3"
         b'\xcdi\xb84\x90\xaf\x12kT\xe2@u\xd6\xe8T\x89\xa3\xc7\xb2Y\xd1N\x00\xa9\xc0"\xbe'
