@@ -51,21 +51,337 @@ def _clear_instance_map():
         pass
 
 
-class AdaptedConfigurationTestCaseMixin:
+## class AdaptedConfigurationTestCaseMixin:
+##
+##     def __init__(
+##         self,
+##         salt_factories,
+##         salt_master_factory,
+##         salt_minion_factory,
+##         tmp_path,
+##     ):
+##         self._tmp_name = str(tmp_path)
+##
+##         self._master_cfg = str(salt_master_factory.config["conf_file"])
+##         self._minion_cfg = str(salt_minion_factory.config["conf_file"])
+##         self._root_dir = str(salt_factories.root_dir.resolve())
+##         self._user = _get_user()
+##
+##     def get_temp_config(self, config_for, **config_overrides):
+##
+##         rootdir = config_overrides.get("root_dir", self._root_dir)
+##
+##         if not pathlib.Path(rootdir).exists():
+##             pathlib.Path(rootdir).mkdir(exist_ok=True, parents=True)
+##
+##         conf_dir = config_overrides.pop(
+##             "conf_dir", str(pathlib.PurePath(rootdir).joinpath("conf"))
+##         )
+##
+##         for key in ("cachedir", "pki_dir", "sock_dir"):
+##             if key not in config_overrides:
+##                 config_overrides[key] = key
+##         if "log_file" not in config_overrides:
+##             config_overrides["log_file"] = f"logs/{config_for}.log".format()
+##         if "user" not in config_overrides:
+##             config_overrides["user"] = self._user
+##         config_overrides["root_dir"] = rootdir
+##
+##         cdict = self.get_config(
+##             config_for,
+##             from_scratch=True,
+##         )
+##
+##         if config_for in ("master", "client_config"):
+##             rdict = salt.config.apply_master_config(config_overrides, cdict)
+##         if config_for == "minion":
+##             minion_id = (
+##                 config_overrides.get("id")
+##                 or config_overrides.get("minion_id")
+##                 or cdict.get("id")
+##                 or cdict.get("minion_id")
+##                 or random_string("temp-minion-")
+##             )
+##             config_overrides["minion_id"] = config_overrides["id"] = minion_id
+##             rdict = salt.config.apply_minion_config(
+##                 config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
+##             )
+##
+##         verify_env(
+##             [
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("minions"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("minions_pre"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("minions_rejected"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("minions_denied"),
+##                 pathlib.PurePath(rdict["cachedir"]).joinpath("jobs"),
+##                 pathlib.PurePath(rdict["cachedir"]).joinpath("tokens"),
+##                 pathlib.PurePath(rdict["root_dir"]).joinpath("cache", "tokens"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("accepted"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("rejected"),
+##                 pathlib.PurePath(rdict["pki_dir"]).joinpath("pending"),
+##                 pathlib.PurePath(rdict["log_file"]).parent,
+##                 rdict["sock_dir"],
+##                 conf_dir,
+##             ],
+##             self._user,
+##             root_dir=rdict["root_dir"],
+##         )
+##
+##         rdict["conf_file"] = pathlib.PurePath(conf_dir).joinpath(config_for)
+##         with salt.utils.files.fopen(rdict["conf_file"], "w") as wfh:
+##             salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
+##         return rdict
+##
+##     def get_config(
+##         self,
+##         config_for,
+##         from_scratch=False,
+##     ):
+##         if from_scratch:
+##             if config_for in ("master"):
+##                 return salt.config.master_config(self._master_cfg)
+##             elif config_for in ("minion"):
+##                 return salt.config.minion_config(self._minion_cfg)
+##             elif config_for == "client_config":
+##                 return salt.config_client_config(self._master_cfg)
+##         if config_for not in ("master", "minion", "client_config"):
+##             if config_for in ("master"):
+##                 return freeze(salt.config.master_config(self._master_cfg))
+##             elif config_for in ("minion"):
+##                 return freeze(salt.config.minion_config(self._minion_cfg))
+##             elif config_for == "client_config":
+##                 return freeze(salt.config.client_config(self._master_cfg))
+##
+##         log.error(
+##             "Should not reach this section of code for get_config, missing support for input config_for %s",
+##             config_for,
+##         )
+##
+##         # at least return master's config
+##         return freeze(salt.config.master_config(self._master_cfg))
+##
+##     @property
+##     def config_dir(self):
+##         return str(pathlib.PurePath(self._master_cfg).parent)
+##
+##     def get_config_dir(self):
+##         log.warning("Use the config_dir attribute instead of calling get_config_dir()")
+##         return self.config_dir
+##
+##     def get_config_file_path(self, filename):
+##         if filename == "master":
+##             return str(self._master_cfg)
+##
+##         if filename == "minion":
+##             return str(self._minion_cfg)
+##
+##         return str(self._master_cfg)
+##
+##     @property
+##     def master_opts(self):
+##         """
+##         Return the options used for the master
+##         """
+##         return self.get_config("master")
+##
+##     @property
+##     def minion_opts(self):
+##         """
+##         Return the options used for the minion
+##         """
+##         return self.get_config("minion")
+##
+##
+## class MyGitBase(AdaptedConfigurationTestCaseMixin):
+##     """
+##     mocked GitFS provider leveraging tmp_path
+##     """
+##
+##     def __init__(
+##         self,
+##         salt_factories,
+##         salt_master_factory,
+##         salt_minion_factory,
+##         tmp_path,
+##     ):
+##         super().__init__(
+##             salt_factories,
+##             salt_master_factory,
+##             salt_minion_factory,
+##             tmp_path,
+##         )
+##
+##         tmp_name = self._tmp_name.join("/git_test")
+##         pathlib.Path(tmp_name).mkdir(exist_ok=True, parents=True)
+##
+##         class MockedProvider(
+##             salt.utils.gitfs.GitProvider
+##         ):  # pylint: disable=abstract-method
+##             def __init__(
+##                 self,
+##                 opts,
+##                 remote,
+##                 per_remote_defaults,
+##                 per_remote_only,
+##                 override_params,
+##                 cache_root,
+##                 role="gitfs",
+##             ):
+##                 self.provider = "mocked"
+##                 self.fetched = False
+##                 super().__init__(
+##                     opts,
+##                     remote,
+##                     per_remote_defaults,
+##                     per_remote_only,
+##                     override_params,
+##                     cache_root,
+##                     role,
+##                 )
+##
+##             def init_remote(self):
+##                 self.gitdir = salt.utils.path.join(tmp_name, ".git")
+##                 self.repo = True
+##                 new = False
+##                 return new
+##
+##             def envs(self):
+##                 return ["base"]
+##
+##             def _fetch(self):
+##                 self.fetched = True
+##
+##         # Clear the instance map so that we make sure to create a new instance
+##         # for this test class.
+##         _clear_instance_map()
+##
+##         git_providers = {
+##             "mocked": MockedProvider,
+##         }
+##         gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
+##
+##         self.opts = self.get_temp_config(
+##             "master",
+##             gitfs_remotes=gitfs_remotes,
+##             verified_gitfs_provider="mocked",
+##         )
+##         self.main_class = salt.utils.gitfs.GitFS(
+##             self.opts,
+##             self.opts["gitfs_remotes"],
+##             per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+##             per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
+##             git_providers=git_providers,
+##         )
+##
+##     def cleanup(self):
+##         # Providers are preserved with GitFS's instance_map
+##         for remote in self.main_class.remotes:
+##             remote.fetched = False
+##         del self.main_class
+
+
+class MyMockedGitProvider:
+    """
+    mocked GitFS provider leveraging tmp_path
+    """
 
     def __init__(
         self,
         salt_factories,
         salt_master_factory,
         salt_minion_factory,
+        salt_factories_root_dir,
+        temp_salt_master,
+        temp_salt_minion,
         tmp_path,
     ):
         self._tmp_name = str(tmp_path)
 
+        # TBD DGM
+        # pylint: disable=W1203
+        self._root_dir = str(salt_factories.root_dir.resolve())
         self._master_cfg = str(salt_master_factory.config["conf_file"])
         self._minion_cfg = str(salt_minion_factory.config["conf_file"])
-        self._root_dir = str(salt_factories.root_dir.resolve())
+        log.warning(
+            f"DGM MyMockedGitProvider dunder init old, root_dir '{self._root_dir}', master_cfg '{self._master_cfg}', minion_cfg '{self._minion_cfg}'"
+        )
+
+        self._root_dir = str(salt_factories_root_dir)
+        self._master_cfg = str(temp_salt_master.config["conf_file"])
+        self._minion_cfg = str(temp_salt_minion.config["conf_file"])
         self._user = _get_user()
+
+        log.warning(
+            f"DGM MyMockedGitProvider dunder init new, root_dir '{self._root_dir}', master_cfg '{self._master_cfg}', minion_cfg '{self._minion_cfg}'"
+        )
+
+        tmp_name = self._tmp_name.join("/git_test")
+        pathlib.Path(tmp_name).mkdir(exist_ok=True, parents=True)
+
+        class MockedProvider(
+            salt.utils.gitfs.GitProvider
+        ):  # pylint: disable=abstract-method
+            def __init__(
+                self,
+                opts,
+                remote,
+                per_remote_defaults,
+                per_remote_only,
+                override_params,
+                cache_root,
+                role="gitfs",
+            ):
+                self.provider = "mocked"
+                self.fetched = False
+                super().__init__(
+                    opts,
+                    remote,
+                    per_remote_defaults,
+                    per_remote_only,
+                    override_params,
+                    cache_root,
+                    role,
+                )
+
+            def init_remote(self):
+                self.gitdir = salt.utils.path.join(tmp_name, ".git")
+                self.repo = True
+                new = False
+                return new
+
+            def envs(self):
+                return ["base"]
+
+            def _fetch(self):
+                self.fetched = True
+
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        _clear_instance_map()
+
+        git_providers = {
+            "mocked": MockedProvider,
+        }
+        gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
+
+        self.opts = self.get_temp_config(
+            "master",
+            gitfs_remotes=gitfs_remotes,
+            verified_gitfs_provider="mocked",
+        )
+        self.main_class = salt.utils.gitfs.GitFS(
+            self.opts,
+            self.opts["gitfs_remotes"],
+            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
+            git_providers=git_providers,
+        )
+
+    def cleanup(self):
+        # Providers are preserved with GitFS's instance_map
+        for remote in self.main_class.remotes:
+            remote.fetched = False
+        del self.main_class
 
     def get_temp_config(self, config_for, **config_overrides):
 
@@ -192,105 +508,33 @@ class AdaptedConfigurationTestCaseMixin:
         return self.get_config("minion")
 
 
-class MyGitBase(AdaptedConfigurationTestCaseMixin):
-    """
-    mocked GitFS provider leveraging tmp_path
-    """
-
-    def __init__(
-        self,
-        salt_factories,
-        salt_master_factory,
-        salt_minion_factory,
-        tmp_path,
-    ):
-        super().__init__(
-            salt_factories,
-            salt_master_factory,
-            salt_minion_factory,
-            tmp_path,
-        )
-
-        tmp_name = self._tmp_name.join("/git_test")
-        pathlib.Path(tmp_name).mkdir(exist_ok=True, parents=True)
-
-        class MockedProvider(
-            salt.utils.gitfs.GitProvider
-        ):  # pylint: disable=abstract-method
-            def __init__(
-                self,
-                opts,
-                remote,
-                per_remote_defaults,
-                per_remote_only,
-                override_params,
-                cache_root,
-                role="gitfs",
-            ):
-                self.provider = "mocked"
-                self.fetched = False
-                super().__init__(
-                    opts,
-                    remote,
-                    per_remote_defaults,
-                    per_remote_only,
-                    override_params,
-                    cache_root,
-                    role,
-                )
-
-            def init_remote(self):
-                self.gitdir = salt.utils.path.join(tmp_name, ".git")
-                self.repo = True
-                new = False
-                return new
-
-            def envs(self):
-                return ["base"]
-
-            def _fetch(self):
-                self.fetched = True
-
-        # Clear the instance map so that we make sure to create a new instance
-        # for this test class.
-        _clear_instance_map()
-
-        git_providers = {
-            "mocked": MockedProvider,
-        }
-        gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
-
-        self.opts = self.get_temp_config(
-            "master",
-            gitfs_remotes=gitfs_remotes,
-            verified_gitfs_provider="mocked",
-        )
-        self.main_class = salt.utils.gitfs.GitFS(
-            self.opts,
-            self.opts["gitfs_remotes"],
-            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
-            git_providers=git_providers,
-        )
-
-    def cleanup(self):
-        # Providers are preserved with GitFS's instance_map
-        for remote in self.main_class.remotes:
-            remote.fetched = False
-        del self.main_class
-
-
 @pytest.fixture
 def main_class(
     salt_factories,
     salt_master_factory,
     salt_minion_factory,
+    salt_factories_root_dir,
+    temp_salt_master,
+    temp_salt_minion,
     tmp_path,
 ):
-    my_git_base = MyGitBase(
+    ## my_git_base = MyGitBase(
+    ##     salt_factories,
+    ##     salt_master_factory,
+    ##     salt_minion_factory,
+    ##     tmp_path,
+    ## )
+    ## yield my_git_base.main_class
+
+    ## my_git_base.cleanup()
+
+    my_git_base = MyMockedGitProvider(
         salt_factories,
         salt_master_factory,
         salt_minion_factory,
+        salt_factories_root_dir,
+        temp_salt_master,
+        temp_salt_minion,
         tmp_path,
     )
     yield my_git_base.main_class
