@@ -83,7 +83,6 @@ def sync(
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            ## DGM with salt.fileclient.get_file_client(opts) as fileclient:
             with salt.fileclient.get_file_client(
                 opts, pillar=False, force_local=force_local
             ) as fileclient:

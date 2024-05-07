@@ -468,7 +468,6 @@ def test_state_highstate_custom_grains_masterless_mode(
         return {'custom_grain': 'test_value'}
     """
 
-    ## DGM TBD need to get masterless mode
     assert salt_master.is_running()
     with salt_minion_factory.started():
         salt_minion = salt_minion_factory
@@ -484,7 +483,8 @@ def test_state_highstate_custom_grains_masterless_mode(
         ), salt_minion.state_tree.base.temp_file(
             "_grains/custom_grain.py", salt_custom_grains_py
         ):
-            ret = salt_call_cli.run("state.highstate")
+            ## need to try masterless mode
+            ret = salt_call_cli.run("--local", "state.highstate")
             assert ret.returncode == 0
             ret = salt_call_cli.run("pillar.items")
             assert ret.returncode == 0
@@ -493,55 +493,7 @@ def test_state_highstate_custom_grains_masterless_mode(
             assert "mypillar" in pillar_items
             assert pillar_items["mypillar"] == "test_value"
 
-
-def test_state_highstate_custom_grains_master_mode(salt_master, salt_minion_factory):
-    """
-    This test ensure that custom grains in salt://_grains are loaded before pillar compilation
-    to ensure that any use of custom grains in pillar files are unaffected by changes for
-    sync custom grains for the salt-minion in masterless mode,
-    """
-    pillar_top_sls = """
-    base:
-      '*':
-        - defaults
-        """
-
-    pillar_defaults_sls = """
-    mypillar: "{{ grains['custom_grain'] }}"
-    """
-
-    salt_top_sls = """
-    base:
-      '*':
-        - test
-        """
-
-    salt_test_sls = """
-    "donothing":
-      test.nop: []
-    """
-
-    salt_custom_grains_py = """
-    def main():
-        return {'custom_grain': 'test_value'}
-    """
-
-    ## DGM TBD need to ensure master mode
-    assert salt_master.is_running()
-    with salt_minion_factory.started():
-        salt_minion = salt_minion_factory
-        salt_call_cli = salt_minion_factory.salt_call_cli()
-        with salt_minion.pillar_tree.base.temp_file(
-            "top.sls", pillar_top_sls
-        ), salt_minion.pillar_tree.base.temp_file(
-            "defaults.sls", pillar_defaults_sls
-        ), salt_minion.state_tree.base.temp_file(
-            "top.sls", salt_top_sls
-        ), salt_minion.state_tree.base.temp_file(
-            "test.sls", salt_test_sls
-        ), salt_minion.state_tree.base.temp_file(
-            "_grains/custom_grain.py", salt_custom_grains_py
-        ):
+            ## need to try with master mode
             ret = salt_call_cli.run("state.highstate")
             assert ret.returncode == 0
             ret = salt_call_cli.run("pillar.items")
