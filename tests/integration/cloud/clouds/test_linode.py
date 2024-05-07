@@ -79,3 +79,6 @@ class LinodeTest(CloudTest):
         self.run_cloud(" ".join(args), timeout=TIMEOUT)
 
         self.assertDestroyInstance()
+
+    def test_instance_with_multiple_interfaces(self):
+        self._test_instance("linode-test-with-multiple-interfaces")

@@ -44,29 +44,38 @@ The following profile parameters are supported:
 - **ssh_pubkey**: (optional) The public key to authorize for SSH with the VM.
 - **swap**: (optional) The amount of disk space to allocate for the swap partition. Defaults to ``256``.
 - **clonefrom**: (optional) The name of the Linode to clone from.
+- **interfaces**: (optional) The list of networking interface to be attached to the Linode.
 
 Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
 
 .. code-block:: yaml
 
     my-linode-profile:
-        # a minimal configuration
-        provider: my-linode-provider
-        size: g6-standard-1
-        image: linode/ubuntu22.04
-        location: us-east
+      # a minimal configuration
+      provider: my-linode-provider
+      size: g6-standard-1
+      image: linode/ubuntu22.04
+      location: us-east
 
     my-linode-profile-advanced:
-        # an advanced configuration
-        provider: my-linode-provider
-        size: g6-standard-3
-        image: linode/ubuntu22.04
-        location: eu-west
-        password: bogus123X
-        assign_private_ip: true
-        ssh_interface: private_ips
-        ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...
-        swap_size: 512
+      # an advanced configuration
+      provider: my-linode-provider
+      size: g6-standard-3
+      image: linode/ubuntu22.04
+      location: eu-west
+      password: bogus123X
+      assign_private_ip: true
+      ssh_interface: private_ips
+      ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...
+      swap_size: 512
+      interfaces:
+        - purpose: public
+        - purpose: vlan
+          label: cool-vlan
+        - purpose: vpc
+          subnet_id: 20222
+          ipv4:
+            vpc: 10.0.4.10
 
 Migrating to APIv4
 ------------------
@@ -129,6 +138,18 @@ def _get_active_provider_name():
         return __active_provider_name__.value()
     except AttributeError:
         return __active_provider_name__
+
+
+def _get_interfaces(vm_):
+    """
+    Return the list of explicitly configured interface
+    """
+    return config.get_cloud_config_value(
+        "interfaces",
+        vm_,
+        __opts__,
+        default=[{"purpose": "public"}],
+    )
 
 
 def _get_backup_enabled(vm_):
@@ -649,6 +670,7 @@ class LinodeAPIv4(LinodeAPI):
         password = _get_password(vm_)
         swap_size = _get_swap_size(vm_)
         backups_enabled = _get_backup_enabled(vm_)
+        interfaces = _get_interfaces(vm_)
 
         clonefrom_name = vm_.get("clonefrom", None)
         instance_type = vm_.get("size", None)
@@ -687,6 +709,7 @@ class LinodeAPIv4(LinodeAPI):
                     "booted": True,
                     "root_pass": password,
                     "authorized_keys": pub_ssh_keys,
+                    "interfaces": interfaces,
                     "image": image,
                     "swap_size": swap_size,
                 },
