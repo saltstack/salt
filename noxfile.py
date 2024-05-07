@@ -1944,6 +1944,9 @@ def ci_test_onedir_pkgs(session):
         try:
             _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
         except CommandFailed:
+            if os.environ.get("RERUN_FAILURES", "0") == "0":
+                # Don't rerun on failures
+                return
             cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
