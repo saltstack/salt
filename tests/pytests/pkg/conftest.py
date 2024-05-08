@@ -11,6 +11,7 @@ from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
 import salt.config
+import salt.utils.files
 from tests.conftest import CODE_DIR
 from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkgInstall
 
@@ -235,16 +236,20 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         "fips_mode": FIPS_TESTRUN,
         "open_mode": True,
     }
-    test_user = False
+    salt_user_in_config_file = False
     master_config = install_salt.config_path / "master"
-    if master_config.exists():
+    if master_config.exists() and master_config.stat().st_size:
         with salt.utils.files.fopen(master_config) as fp:
             data = yaml.safe_load(fp)
-            if data and "user" in data:
-                test_user = True
+            if data is None:
+                # File exists but is mostly commented out
+                data = {}
+            user_in_config_file = data.get("user")
+            if user_in_config_file and user_in_config_file == "salt":
+                salt_user_in_config_file = True
                 # We are testing a different user, so we need to test the system
                 # configs, or else permissions will not be correct.
-                config_overrides["user"] = data["user"]
+                config_overrides["user"] = user_in_config_file
                 config_overrides["log_file"] = salt.config.DEFAULT_MASTER_OPTS.get(
                     "log_file"
                 )
@@ -331,7 +336,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
             salt_pkg_install=install_salt,
         )
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
-    if test_user:
+    if salt_user_in_config_file:
         # Salt factories calls salt.utils.verify.verify_env
         # which sets root perms on /etc/salt/pki/master since we are running
         # the test suite as root, but we want to run Salt master as salt
