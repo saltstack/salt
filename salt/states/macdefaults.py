@@ -100,7 +100,7 @@ def _compare_values(new, current, vtype):
     if vtype == "array-add":
         return _is_subarray(new, current)
     if vtype == "dict-add":
-        return all([key in current and new[key] == current[key] for key in new.keys()])
+        return all(key in current and new[key] == current[key] for key in new.keys())
 
     return new == current
 
