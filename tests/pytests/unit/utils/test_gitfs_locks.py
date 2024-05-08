@@ -290,7 +290,7 @@ class MyMockedGitProvider:
         salt_factories,
         salt_master_factory,
         salt_minion_factory,
-        salt_factories_root_dir,
+        salt_factories_default_root_dir,
         temp_salt_master,
         temp_salt_minion,
         tmp_path,
@@ -306,7 +306,7 @@ class MyMockedGitProvider:
             f"DGM MyMockedGitProvider dunder init old, root_dir '{self._root_dir}', master_cfg '{self._master_cfg}', minion_cfg '{self._minion_cfg}'"
         )
 
-        self._root_dir = str(salt_factories_root_dir)
+        self._root_dir = str(salt_factories_default_root_dir)
         self._master_cfg = str(temp_salt_master.config["conf_file"])
         self._minion_cfg = str(temp_salt_minion.config["conf_file"])
         self._user = _get_user()
@@ -513,7 +513,7 @@ def main_class(
     salt_factories,
     salt_master_factory,
     salt_minion_factory,
-    salt_factories_root_dir,
+    salt_factories_default_root_dir,
     temp_salt_master,
     temp_salt_minion,
     tmp_path,
@@ -532,7 +532,7 @@ def main_class(
         salt_factories,
         salt_master_factory,
         salt_minion_factory,
-        salt_factories_root_dir,
+        salt_factories_default_root_dir,
         temp_salt_master,
         temp_salt_minion,
         tmp_path,
