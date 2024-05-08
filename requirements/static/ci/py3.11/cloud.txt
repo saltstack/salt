@@ -667,7 +667,7 @@ wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   moto

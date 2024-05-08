@@ -479,7 +479,7 @@ websocket-client==0.40.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   moto
     #   pytest-httpserver
