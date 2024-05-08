@@ -2,7 +2,6 @@ import logging
 
 import packaging.version
 import psutil
-import pytest
 from pytestskipmarkers.utils import platform
 
 log = logging.getLogger(__name__)
@@ -26,9 +25,6 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     """
     Test an upgrade of Salt.
     """
-    if not install_salt.upgrade:
-        pytest.skip("Not testing an upgrade, do not run")
-
     if install_salt.relenv:
         original_py_version = install_salt.package_python_version()
 

@@ -119,8 +119,9 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
+    pkg_tests_path = pathlib.Path(__file__).parent
     if (
-        str(item.fspath).startswith(str(pathlib.Path(__file__).parent / "download"))
+        str(item.fspath).startswith(str(pkg_tests_path / "download"))
         and item.config.getoption("--download-pkgs") is False
     ):
         raise pytest.skip.Exception(
@@ -128,6 +129,17 @@ def pytest_runtest_setup(item):
             "to enable them.",
             _use_item_location=True,
         )
+
+    for key in ("upgrade", "downgrade"):
+        if (
+            str(item.fspath).startswith(str(pkg_tests_path / key))
+            and item.config.getoption(f"--{key}") is False
+        ):
+            raise pytest.skip.Exception(
+                f"The package {key} tests are disabled. Pass '--{key}' to pytest "
+                "to enable them.",
+                _use_item_location=True,
+            )
 
 
 @pytest.fixture(scope="session")
