@@ -476,13 +476,21 @@ def salt_minion(salt_factories, salt_master, install_salt):
     # which sets root perms on /srv/salt and /srv/pillar since we are running
     # the test suite as root, but we want to run Salt master as salt
     if not platform.is_windows() and not platform.is_darwin():
-        state_tree = "/srv/salt"
-        pillar_tree = "/srv/pillar"
-        check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
-        for path in check_paths:
-            if os.path.exists(path) is False:
-                continue
-            subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
+        import pwd
+
+        try:
+            pwd.getpwnam("salt")
+        except KeyError:
+            # The salt user does not exist
+            pass
+        else:
+            state_tree = "/srv/salt"
+            pillar_tree = "/srv/pillar"
+            check_paths = [state_tree, pillar_tree, CODE_DIR / ".nox"]
+            for path in check_paths:
+                if os.path.exists(path) is False:
+                    continue
+                subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
 
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
