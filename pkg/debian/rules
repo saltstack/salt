@@ -17,6 +17,7 @@ override_dh_auto_clean:
 
 ifeq ("${SALT_ONEDIR_ARCHIVE}", "")
 override_dh_auto_build:
+	export PIP_CONSTRAINT=requirements/constraints.txt
 	export FETCH_RELENV_VERSION=$${SALT_RELENV_VERSION}
 	mkdir -p build/onedir
 	python3 -m venv --clear --copies build/onedir/venv
