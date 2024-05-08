@@ -178,7 +178,7 @@ def test_cmd_run_encoded_cmd(shell, cmd, expected, encoded_cmd):
     """
     Ensure that cmd.run supports running shell='powershell'
     """
-    ret = cmdmod.run(cmd=cmd, shell=shell, encoded_cmd=encoded_cmd)
+    ret = cmdmod.run(cmd=cmd, shell=shell, encoded_cmd=encoded_cmd, redirect_stderr=False)
     assert ret == expected
 
 
