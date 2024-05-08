@@ -52,7 +52,7 @@ def test_write_default():
         )
 
 
-def test_write_with_user():
+def test_write_default_with_user():
     """
     Test writing a default setting with a specific user
     """
@@ -67,9 +67,9 @@ def test_write_with_user():
         )
 
 
-def test_write_true_boolean():
+def test_write_default_true_boolean():
     """
-    Test writing a True boolean setting
+    Test writing a default True boolean setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -80,9 +80,9 @@ def test_write_true_boolean():
         )
 
 
-def test_write_false_bool():
+def test_write_default_false_bool():
     """
-    Test writing a False boolean setting
+    Test writing a default False boolean setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -93,9 +93,9 @@ def test_write_false_bool():
         )
 
 
-def test_write_int():
+def test_write_default_int():
     """
-    Test writing an int setting
+    Test writing a default int setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -106,9 +106,9 @@ def test_write_int():
         )
 
 
-def test_write_integer():
+def test_write_default_integer():
     """
-    Test writing an integer setting
+    Test writing a default integer setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -119,9 +119,9 @@ def test_write_integer():
         )
 
 
-def test_write_float():
+def test_write_default_float():
     """
-    Test writing a float setting
+    Test writing a default float setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -132,9 +132,9 @@ def test_write_float():
         )
 
 
-def test_write_array():
+def test_write_default_array():
     """
-    Test writing an array setting
+    Test writing a default array setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -147,9 +147,9 @@ def test_write_array():
         )
 
 
-def test_write_dictionary():
+def test_write_default_dictionary():
     """
-    Test writing a dictionary setting
+    Test writing a default dictionary setting
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
@@ -186,7 +186,7 @@ def test_read_default():
         assert result == "Server"
 
 
-def test_read_with_user():
+def test_read_default_with_user():
     """
     Test reading a default setting as a specific user
     """
@@ -210,9 +210,9 @@ def test_read_with_user():
         assert result == "Server"
 
 
-def test_read_integer():
+def test_read_default_integer():
     """
-    Test reading an integer setting
+    Test reading a default integer setting
     """
 
     def custom_run_defaults_cmd(action, runas=None):
@@ -234,9 +234,9 @@ def test_read_integer():
         assert result == 12
 
 
-def test_read_float():
+def test_read_default_float():
     """
-    Test reading a float setting
+    Test reading a default float setting
     """
 
     def custom_run_defaults_cmd(action, runas=None):
@@ -258,15 +258,15 @@ def test_read_float():
         assert result == 0.85
 
 
-def test_read_array():
+def test_read_default_array():
     """
-    Test reading an array setting
+    Test reading a default array setting
     """
 
     defaults_output = """(
         element 1,
         element 2,
-        0.1,
+        0.1000,
         1
     )"""
 
@@ -289,14 +289,16 @@ def test_read_array():
         assert result == ["element 1", "element 2", 0.1, 1]
 
 
-def test_read_dictionary():
+def test_read_default_dictionary():
     """
-    Test reading a dictionary setting
+    Test reading a default dictionary setting
     """
 
     defaults_output = """{
         keyCode = 36;
         modifierFlags = 786432;
+        anotherKey = "another value with spaces";
+        floatNumber = 0.8500;
     }"""
 
     def custom_run_defaults_cmd(action, runas=None):
@@ -315,7 +317,12 @@ def test_read_dictionary():
                 call('read-type "com.apple.CrashReporter" "Crash"', runas=None),
             ]
         )
-        assert result == {"keyCode": 36, "modifierFlags": 786432}
+        assert result == {
+            "keyCode": 36,
+            "modifierFlags": 786432,
+            "anotherKey": "another value with spaces",
+            "floatNumber": 0.85,
+        }
 
 
 def test_delete_default():
@@ -331,9 +338,9 @@ def test_delete_default():
         )
 
 
-def test_delete_with_user():
+def test_delete_default_with_user():
     """
-    Test delete a setting as a specific user
+    Test delete a default setting as a specific user
     """
     mock = MagicMock(return_value={"retcode": 0})
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):

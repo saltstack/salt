@@ -1,11 +1,11 @@
 """
-Set defaults on macOS.
+Set defaults settings on macOS.
 
 This module uses defaults cli under the hood to read and write defaults on macOS.
 
-So the module is limited to the capabilities of the defaults command.
+Thus, the module is limited to the capabilities of the defaults command.
 
-Read macOS defaults help page for more information on the defaults command.
+Read macOS defaults help page for more information on defaults command.
 
 """
 
@@ -33,11 +33,11 @@ def __virtual__():
 
 def write(domain, key, value, vtype=None, user=None, type=None):
     """
-    Write a default to the system.
+    Write a default to the system
 
     Limitations:
-      - There is no multi-level support for arrays and dictionaries.
-      - Internal values types for arrays and dictionaries cannot be specified.
+      - There is no multi-level support for arrays and dictionaries
+      - Internal values types for arrays and dictionaries cannot be specified
 
     CLI Example:
 
@@ -45,28 +45,28 @@ def write(domain, key, value, vtype=None, user=None, type=None):
 
         salt '*' macdefaults.write com.apple.CrashReporter DialogType Server
 
-        salt '*' macdefaults.write NSGlobalDomain ApplePersistence True type=bool
+        salt '*' macdefaults.write NSGlobalDomain ApplePersistence True vtype=bool
 
     domain
-        The name of the domain to write to.
+        The name of the domain to write to
 
     key
-        The key of the given domain to write to.
+        The key of the given domain to write to
 
     value
-        The value to write to the given key.
+        The value to write to the given key
 
     vtype
         The type of value to be written, valid types are string, data, int[eger],
         float, bool[ean], date, array, array-add, dict, dict-add
 
     type
-        Deprecated! Use vtype instead.
-        type collides with Python's built-in type() function.
-        This parameter will be removed in 3009.
+        Deprecated! Use vtype instead
+        type collides with Python's built-in type() function
+        This parameter will be removed in 3009
 
     user
-        The user to write the defaults to.
+        The user to write the defaults to
 
     """
     if type is not None:
@@ -95,7 +95,7 @@ def write(domain, key, value, vtype=None, user=None, type=None):
     elif not isinstance(value, list):
         raise ValueError("Value must be a list, dict, int, float, bool, or string")
 
-    # Quote values that are not integers or floats
+    # Quote values that are neither integers nor floats
     value = map(lambda v: str(v) if isinstance(v, (int, float)) else f'"{v}"', value)
 
     cmd = f'write "{domain}" "{key}" -{vtype} {" ".join(value)}'
@@ -169,25 +169,25 @@ def delete(domain, key, user=None):
 
 def read_type(domain, key, user=None):
     """
-    Read the type of the given type.
-    If the given key is not found, then return None.
+    Read a default type from the system
+    If the key is not found, None is returned.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' macdefaults.read-type com.apple.CrashReporter DialogType
+        salt '*' macdefaults.read_type com.apple.CrashReporter DialogType
 
         salt '*' macdefaults.read_type NSGlobalDomain ApplePersistence
 
     domain
-        The name of the domain to read from.
+        The name of the domain to read from
 
     key
-        The key of the given domain to read the type of.
+        The key of the given domain to read the type of
 
     user
-        The user to read the defaults as.
+        The user to read the defaults as
 
     """
     cmd = f'read-type "{domain}" "{key}"'
@@ -203,23 +203,13 @@ def read_type(domain, key, user=None):
 
 def _default_to_python(value, vtype=None):
     """
-    Cast a value returned by defaults in vytpe to Python type.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' macdefaults.cast_value_to_type "1" int
-
-        salt '*' macdefaults.cast_value_to_type "1.0" float
-
-        salt '*' macdefaults.cast_value_to_type "TRUE" bool
+    Cast the value returned by the defaults command in vytpe to Python type
 
     value
-        The value to cast.
+        The value to cast
 
     vtype
-        The type to cast the value to.
+        The type to cast the value to
 
     """
     if vtype in ["integer", "int"]:
@@ -238,10 +228,10 @@ def _default_to_python(value, vtype=None):
 def _parse_defaults_array(value):
     """
     Parse an array from a string returned by `defaults read`
-    and returns the array content as a list.
+    and returns the array content as a list
 
     value
-        A multiline string with the array content, including the surrounding parenthesis.
+        A multiline string with the array content, including the surrounding parenthesis
 
     """
     lines = value.splitlines()
@@ -268,12 +258,11 @@ def _parse_defaults_array(value):
 def _parse_defaults_dict(value):
     """
     Parse a dictionary from a string returned by `defaults read`
+    and returns the dictionary content as a Python dictionary
 
     value (str):
-        A multiline string with the dictionary content, including the surrounding curly braces.
+        A multiline string with the dictionary content, including the surrounding curly braces
 
-    Returns:
-        dict: The dictionary content as a Python dictionary.
     """
     lines = value.splitlines()
     if not re.match(r"\s*\{", lines[0]) or not re.match(r"\s*\}", lines[-1]):
@@ -294,10 +283,10 @@ def _parse_defaults_dict(value):
 
 def _convert_to_number_if_possible(value):
     """
-    Convert a string to a number if possible.
+    Convert a string to a number if possible
 
     value
-        The string to convert.
+        The string to convert
 
     """
     try:
@@ -311,15 +300,15 @@ def _convert_to_number_if_possible(value):
 
 def _convert_to_defaults_boolean(value):
     """
-    Convert a boolean to a string that can be used with the defaults command.
+    Convert a boolean to a string that can be used with the defaults command
 
     value
-        The boolean value to convert.
+        The boolean value to convert
 
     """
-    if value is True:
+    if value in (True, 1):
         return "TRUE"
-    if value is False:
+    if value in (False, 0):
         return "FALSE"
 
     BOOLEAN_ALLOWED_VALUES = ["TRUE", "YES", "FALSE", "NO"]
@@ -333,14 +322,14 @@ def _convert_to_defaults_boolean(value):
 
 def _run_defaults_cmd(action, runas=None):
     """
-    Run a 'defaults' command.
+    Run the 'defaults' command with the given action
 
     action
-        The action to perform with all of its parameters.
+        The action to perform with all of its parameters
         Example: 'write com.apple.CrashReporter DialogType "Server"'
 
     runas
-        The user to run the command as.
+        The user to run the command as
 
     """
     ret = __salt__["cmd.run_all"](f"defaults {action}", runas=runas)
@@ -354,10 +343,10 @@ def _run_defaults_cmd(action, runas=None):
 
 def _remove_timestamp(text):
     """
-    Remove the timestamp from the output of the defaults command.
+    Remove the timestamp from the output of the defaults command if found
 
     text
-        The text to remove the timestamp from.
+        The text to remove the timestamp from
 
     """
     pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?\s+defaults\[\d+\:\d+\]"

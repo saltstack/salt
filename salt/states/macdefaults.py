@@ -4,12 +4,7 @@ Writing/reading defaults from a macOS minion
 
 """
 
-import logging
-import re
-
 import salt.utils.platform
-
-log = logging.getLogger(__name__)
 
 __virtualname__ = "macdefaults"
 
@@ -43,14 +38,13 @@ def write(name, domain, value, vtype="string", user=None):
     user
         The user to write the defaults to
 
-
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     current_value = __salt__["macdefaults.read"](domain, name, user)
     value = _cast_value(value, vtype)
 
-    if _compare_values(value, current_value, strict=re.match(r"-add$", vtype) is None):
+    if _compare_values(value, current_value, vtype):
         ret["comment"] += f"{domain} {name} is already set to {value}"
     else:
         out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
@@ -76,7 +70,6 @@ def absent(name, domain, user=None):
     user
         The user to write the defaults to
 
-
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
@@ -90,9 +83,9 @@ def absent(name, domain, user=None):
     return ret
 
 
-def _compare_values(new, current, strict=True):
+def _compare_values(new, current, vtype):
     """
-    Compare two values
+    Compare two values based on their type
 
     new
         The new value to compare
@@ -100,24 +93,73 @@ def _compare_values(new, current, strict=True):
     current
         The current value to compare
 
-    strict
-        If True, the values must be exactly the same, if False, the new value
-        must be in the current value
+    vtype
+        The type of default value to be compared
+
     """
-    if strict:
-        return new == current
-    return new in current
+    if vtype == "array-add":
+        return _is_subarray(new, current)
+    if vtype == "dict-add":
+        return all([key in current and new[key] == current[key] for key in new.keys()])
+
+    return new == current
+
+
+def _is_subarray(new, current):
+    """
+    Check if new is a subarray of current array.
+
+    This method does not check only whether all elements in new array
+    are present in current array, but also whether the elements are in
+    the same order.
+
+    new
+        The new array to compare
+
+    current
+        The current array to compare
+
+    """
+    current_len = len(current)
+    new_len = len(new)
+
+    if new_len == 0:
+        return True
+    if new_len > current_len:
+        return False
+
+    for i in range(current_len - new_len + 1):
+        # Check if the new array is found at this position
+        if current[i : i + new_len] == new:
+            return True
+
+    return False
 
 
 def _cast_value(value, vtype):
+    """
+    Cast the given macOS default value to Python type
+
+    value
+        The value to cast from macOS default
+
+    vtype
+        The type to cast the value from
+
+    """
+
     def safe_cast(val, to_type, default=None):
+        """
+        Auxiliary function to safely cast a value to a given type
+
+        """
         try:
             return to_type(val)
         except ValueError:
             return default
 
     if vtype in ("bool", "boolean"):
-        if value not in [True, "TRUE", "YES", False, "FALSE", "NO"]:
+        if value not in [True, 1, "TRUE", "YES", False, 0, "FALSE", "NO"]:
             raise ValueError(f"Invalid value for boolean: {value}")
         return value in [True, "TRUE", "YES"]
 
