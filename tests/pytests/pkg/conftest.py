@@ -114,6 +114,58 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_collection_modifyitems(config, items):
+    """
+    called after collection has been performed, may filter or re-order
+    the items in-place.
+
+    :param _pytest.main.Session session: the pytest session object
+    :param _pytest.config.Config config: pytest config object
+    :param List[_pytest.nodes.Item] items: list of item objects
+    """
+    # Let PyTest or other plugins handle the initial collection
+    yield
+    selected = []
+    deselected = []
+    pkg_tests_path = pathlib.Path(__file__).parent
+
+    if config.getoption("--upgrade"):
+        for item in items:
+            if str(item.fspath).startswith(str(pkg_tests_path / "upgrade")):
+                selected.append(item)
+            else:
+                deselected.append(item)
+    elif config.getoption("--downgrade"):
+        for item in items:
+            if str(item.fspath).startswith(str(pkg_tests_path / "downgrade")):
+                selected.append(item)
+            else:
+                deselected.append(item)
+    elif config.getoption("--download-pkgs"):
+        for item in items:
+            if str(item.fspath).startswith(str(pkg_tests_path / "download")):
+                selected.append(item)
+            else:
+                deselected.append(item)
+    else:
+        exclude_paths = (
+            str(pkg_tests_path / "upgrade"),
+            str(pkg_tests_path / "downgrade"),
+            str(pkg_tests_path / "download"),
+        )
+        for item in items:
+            if str(item.fspath).startswith(exclude_paths):
+                deselected.append(item)
+            else:
+                selected.append(item)
+
+    if deselected:
+        # Selection changed
+        items[:] = selected
+        config.hook.pytest_deselected(items=deselected)
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     """

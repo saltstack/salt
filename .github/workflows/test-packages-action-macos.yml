@@ -185,7 +185,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
-          ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Fix file ownership
         run: |
