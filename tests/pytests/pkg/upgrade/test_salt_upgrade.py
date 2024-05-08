@@ -29,7 +29,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
         original_py_version = install_salt.package_python_version()
 
     # Verify previous install version is setup correctly and works
-    ret = salt_call_cli.run("test.version")
+    ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_version = packaging.version.parse(ret.data)
     assert installed_version < packaging.version.parse(install_salt.artifact_version)
@@ -58,7 +58,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
 
     # Upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
-    ret = salt_call_cli.run("test.version")
+    ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_version = packaging.version.parse(ret.data)
     assert installed_version == packaging.version.parse(install_salt.artifact_version)
