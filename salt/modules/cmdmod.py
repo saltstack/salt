@@ -1053,7 +1053,7 @@ def run(
     ignore_retcode=False,
     saltenv=None,
     use_vt=False,
-    redirect_stderr=False,
+    redirect_stderr=True,
     bg=False,
     password=None,
     encoded_cmd=False,
@@ -1191,7 +1191,7 @@ def run(
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
         redirected to stdout. This is helpful for cases where obtaining both
-        the retcode and output is desired.
+        the retcode and output is desired. Default is ``True``
 
         .. versionadded:: 3006.9
 
