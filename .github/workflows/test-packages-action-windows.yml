@@ -199,7 +199,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ matrix.fips && '--fips ' || '' }}\
           --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
-          ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
