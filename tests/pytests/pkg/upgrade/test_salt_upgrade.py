@@ -2,6 +2,7 @@ import logging
 
 import packaging.version
 import psutil
+import pytest
 from pytestskipmarkers.utils import platform
 
 log = logging.getLogger(__name__)
