@@ -12,7 +12,8 @@ import sys
 import distro
 
 from salt.utils.decorators import memoize as real_memoize
-from salt.utils.files import fopen as _fopen
+
+## from salt.utils.files import fopen as _fopen
 
 
 def linux_distribution(full_distribution_name=True):
@@ -246,6 +247,7 @@ def get_machine_identifier():
     """
     Provide the machine-id for machine/virtualization combination
     """
+    # pylint: disable=resource-leakage
     # Provides:
     #   machine-id
     locations = ["/etc/machine-id", "/var/lib/dbus/machine-id"]
@@ -253,5 +255,9 @@ def get_machine_identifier():
     if not existing_locations:
         return {}
     else:
-        with _fopen(existing_locations[0]) as machineid:
+        ## with _fopen(existing_locations[0]) as machineid:
+        # cannot use salt.utils.files.fopen due to circular dependency
+        with open(
+            existing_locations[0], encoding=__salt_system_encoding__
+        ) as machineid:
             return {"machine_id": machineid.read().strip()}
