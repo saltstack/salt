@@ -18,23 +18,23 @@ case "$1" in
       fi
       chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
     fi
-##    if command -v systemctl; then
-##        db_get salt-minion/active
-##        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-##        if [ "$RESLT" != 10 ]; then
-##            if [ "$RESLT" == "active" ]; then
-##                systemctl restart salt-minion
-##            fi
-##            db_get salt-minion/enabled
-##            if [ "$RESLT" == "disabled" ]; then
-##                systemctl disable salt-api
-##            else
-##                systemctl enable salt-api
-##            fi
-##        else
-##            systemctl restart salt-minion
-##            systemctl enable salt-minion
-##        fi
-##    fi
+    if command -v systemctl; then
+        db_get salt-minion/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            if [ "$RESLT" == "active" ]; then
+                systemctl restart salt-minion
+            fi
+            db_get salt-minion/enabled
+            if [ "$RESLT" == "disabled" ]; then
+                systemctl disable salt-minion
+            else
+                systemctl enable salt-minion
+            fi
+        else
+            systemctl restart salt-minion
+            systemctl enable salt-minion
+        fi
+    fi
   ;;
 esac

@@ -18,23 +18,23 @@ case "$1" in
       fi
       chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     fi
-##    if command -v systemctl; then
-##        db_get salt-master/active
-##        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-##        if [ "$RESLT" != 10 ]; then
-##            if [ "$RESLT" == "active" ]; then
-##                systemctl restart salt-master
-##            fi
-##            db_get salt-master/enabled
-##            if [ "$RESLT" == "disabled" ]; then
-##                systemctl disable salt-api
-##            else
-##                systemctl enable salt-api
-##            fi
-##        else
-##            systemctl restart salt-master
-##            systemctl enable salt-master
-##        fi
-##    fi
+    if command -v systemctl; then
+        db_get salt-master/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            if [ "$RESLT" == "active" ]; then
+                systemctl restart salt-master
+            fi
+            db_get salt-master/enabled
+            if [ "$RESLT" == "disabled" ]; then
+                systemctl disable salt-master
+            else
+                systemctl enable salt-master
+            fi
+        else
+            systemctl restart salt-master
+            systemctl enable salt-master
+        fi
+    fi
   ;;
 esac
