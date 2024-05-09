@@ -1865,32 +1865,25 @@ def ci_test_onedir_pkgs(session):
     ]
 
     chunks = {
-        "install": [
-            "tests/pytests/pkg/",
-        ],
+        "install": [],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
         ],
         "upgrade-classic": [
             "--upgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
         ],
         "downgrade-classic": [
             "--downgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "tests/pytests/pkg/download/",
         ],
     }
 
@@ -1931,6 +1924,17 @@ def ci_test_onedir_pkgs(session):
         ]
         + session.posargs
     )
+    append_tests_path = True
+    test_paths = (
+        "tests/pytests/pkg/",
+        str(REPO_ROOT / "tests" / "pytests" / "pkg"),
+    )
+    for arg in session.posargs:
+        if arg.startswith(test_paths):
+            append_tests_path = False
+            break
+    if append_tests_path:
+        pytest_args.append("tests/pytests/pkg/")
     try:
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     except CommandFailed:
@@ -1954,6 +1958,8 @@ def ci_test_onedir_pkgs(session):
             ]
             + session.posargs
         )
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         _pytest(
             session,
             coverage=False,
@@ -1978,9 +1984,14 @@ def ci_test_onedir_pkgs(session):
             pytest_args.append("--use-prev-version")
         if chunk in ("upgrade-classic", "downgrade-classic"):
             pytest_args.append("--classic")
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         try:
             _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
         except CommandFailed:
+            if os.environ.get("RERUN_FAILURES", "0") == "0":
+                # Don't rerun on failures
+                return
             cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
@@ -1997,6 +2008,8 @@ def ci_test_onedir_pkgs(session):
                 pytest_args.append("--use-prev-version")
             if chunk in ("upgrade-classic", "downgrade-classic"):
                 pytest_args.append("--classic")
+            if append_tests_path:
+                pytest_args.append("tests/pytests/pkg/")
             _pytest(
                 session,
                 coverage=False,
