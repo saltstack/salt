@@ -15,6 +15,7 @@ def shell(request):
     This will run the test on powershell and powershell core (pwsh). If
     powershell core is not installed that test run will be skipped
     """
+
     if request.param == "pwsh" and salt.utils.path.which("pwsh") is None:
         pytest.skip("Powershell 7 Not Present")
     return request.param
@@ -178,7 +179,9 @@ def test_cmd_run_encoded_cmd(shell, cmd, expected, encoded_cmd):
     """
     Ensure that cmd.run supports running shell='powershell'
     """
-    ret = cmdmod.run(cmd=cmd, shell=shell, encoded_cmd=encoded_cmd, redirect_stderr=False)
+    ret = cmdmod.run(
+        cmd=cmd, shell=shell, encoded_cmd=encoded_cmd, redirect_stderr=False
+    )
     assert ret == expected
 
 

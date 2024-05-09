@@ -333,6 +333,9 @@ def test_setpassword_int(user, account_int):
 )
 def test_update_str(user, value_name, new_value, info_field, expected, account_str):
     setting = {value_name: new_value}
+    # You can't expire an account if the password never expires
+    if value_name == "expired":
+        setting.update({"password_never_expires": not new_value})
     ret = user.update(account_str.username, **setting)
     assert ret is True
     ret = user.info(account_str.username)

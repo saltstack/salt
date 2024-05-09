@@ -1125,8 +1125,8 @@ def test_prep_powershell_cmd_script():
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
-            "-File",
-            script,
+            "-Command",
+            f"& {script}",
         ]
         assert ret == expected
 
