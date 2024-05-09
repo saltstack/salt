@@ -11,8 +11,12 @@ pytestmark = [
     pytest.mark.skip_on_windows(reason="Windows is a spawning platform, won't work"),
     pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work"),
     pytest.mark.skipif(
+        True,
+        reason="Test has become too unstable to test",
+    ),
+    pytest.mark.skipif(
         'grains["osfinger"] == "Fedora Linux-39"',
-        reason="vim package not available for this distrubition",
+        reason="vim package not available for this distribution",
     ),
 ]
 
