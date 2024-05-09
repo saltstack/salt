@@ -276,16 +276,21 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     stack = traceback.extract_stack(limit=3)
     if stack[-3][2] == "script":
         # If this is cmd.script, then we're running a file
-        new_cmd.extend(["-File", f"{cmd}"])
+        # You might be tempted to use -File here instead of -Command
+        # The problem with using -File is that any arguments that contain
+        # powershell commands themselves will not be evaluated
+        # See GitHub issue #56195
+        new_cmd.append("-Command")
+        if isinstance(cmd, list):
+            cmd = " ".join(cmd)
+        new_cmd.append(f"& {cmd.strip()}")
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", f"{cmd}"])
     else:
         # Strip whitespace
-        if isinstance(cmd, str):
-            cmd = cmd.strip()
-        elif isinstance(cmd, list):
-            cmd = " ".join(cmd).strip()
-        new_cmd.extend(["-Command", f"& {{{cmd}}}"])
+        if isinstance(cmd, list):
+            cmd = " ".join(cmd)
+        new_cmd.extend(["-Command", f"& {{{cmd.strip()}}}"])
 
     log.debug(new_cmd)
     return new_cmd
