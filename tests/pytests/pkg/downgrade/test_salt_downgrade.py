@@ -1,5 +1,6 @@
 import packaging.version
 import psutil
+import pytest
 from pytestskipmarkers.utils import platform
 
 
