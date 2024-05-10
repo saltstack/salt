@@ -345,7 +345,7 @@ def _test_lock(opts):
     assert repo.lock() == (
         [
             (
-                f"Set update lock for gitfs remote "
+                f"Set update lock for git_pillar remote "
                 f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
             )
         ],
@@ -355,7 +355,7 @@ def _test_lock(opts):
     assert repo.clear_lock() == (
         [
             (
-                f"Removed update lock for gitfs remote "
+                f"Removed update lock for git_pillar remote "
                 f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
             )
         ],
