@@ -1,3 +1,5 @@
+#!/bin/sh -x
+
 . /usr/share/debconf/confmodule
 
 echo "DGM salt-cloud.postinst dollar $@"
