@@ -1896,11 +1896,10 @@ jobs:
 
       - name: Get coverage reports
         id: get-coverage-reports
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
+          pattern: all-testrun-coverage-artifacts-*
+          merge-multiple: true
           path: artifacts/coverage/
 
       - name: Display structure of downloaded files
@@ -2080,7 +2079,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-src
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2211,7 +2210,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2401,7 +2400,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2550,6 +2549,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS Arch64 Packages
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
@@ -2597,7 +2597,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-macos
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2654,6 +2654,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
@@ -2725,7 +2726,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-onedir
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2796,11 +2797,10 @@ jobs:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          pattern: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-*
+          merge-multiple: true
           path: repo/
 
       - name: Decompress Repository Artifacts
@@ -2871,7 +2871,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: technote-space/workflow-conclusion-action@v3
+        uses: im-open/workflow-conclusion@v2
 
       - name: Notify Slack
         id: slack
@@ -2935,7 +2935,7 @@ jobs:
       - name: Set Pipeline Exit Status
         shell: bash
         run: |
-          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
             exit 1
           else
             exit 0

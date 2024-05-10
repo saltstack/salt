@@ -291,7 +291,9 @@ Default: ``0``
 
 Configures how often, in seconds, the minion will verify that the current
 master is alive and responding.  The minion will try to establish a connection
-to the next master in the list if it finds the existing one is dead.
+to the next master in the list if it finds the existing one is dead. This
+setting can also be used to detect master DNS record changes when a minion has
+been disconnected.
 
 .. code-block:: yaml
 
