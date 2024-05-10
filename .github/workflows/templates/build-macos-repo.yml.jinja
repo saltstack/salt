@@ -26,6 +26,7 @@
           path: artifacts/pkgs/incoming
 
       - name: Download macOS Arch64 Packages
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
@@ -73,7 +74,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-macos
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
