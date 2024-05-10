@@ -22,11 +22,12 @@ case "$1" in
         db_get salt-master/active
         RESLT=$(echo "$RET" | cut -d ' ' -f 1)
         if [ "$RESLT" != 10 ]; then
-            if [ "$RESLT" == "active" ]; then
+            if [ "$RESLT" = "active" ]; then
                 systemctl restart salt-master
             fi
             db_get salt-master/enabled
-            if [ "$RESLT" == "disabled" ]; then
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
                 systemctl disable salt-master
             else
                 systemctl enable salt-master
