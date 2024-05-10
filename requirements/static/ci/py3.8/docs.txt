@@ -6,6 +6,10 @@
 #
 alabaster==0.7.13
     # via sphinx
+annotated-types==0.6.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   pydantic
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -103,7 +107,11 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   cherrypy
-pydantic==1.10.8
+pydantic-core==2.16.3
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   pydantic
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   inflect
@@ -158,8 +166,10 @@ tempora==5.3.0
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
+    #   annotated-types
     #   inflect
     #   pydantic
+    #   pydantic-core
 uc-micro-py==1.0.2
     # via linkify-it-py
 urllib3==1.26.18

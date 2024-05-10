@@ -99,9 +99,9 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pydantic-core==2.14.5
+pydantic-core==2.16.3
     # via pydantic
-pydantic==2.5.2
+pydantic==2.6.4
     # via inflect
 pymssql==2.2.7 ; sys_platform == "win32"
     # via -r requirements/base.txt
