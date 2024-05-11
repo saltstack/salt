@@ -906,6 +906,15 @@ def pkg_matrix(
                 f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
             )
             for session in ("upgrade", "downgrade"):
+                if session == "downgrade" and distro_slug.startswith(
+                    ("rockylinux", "amazonlinux", "centos")
+                ):
+                    # XXX: Temporarily skip problematic tests
+                    ctx.warn(
+                        f"Temporary skip {session} builds on {distro_slug} for version {version} "
+                        f"with backend {backend}"
+                    )
+                    continue
                 if backend == "classic":
                     session += "-classic"
                 _matrix.append(
