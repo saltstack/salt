@@ -13,7 +13,7 @@ click==8.1.3
     #   towncrier
 incremental==17.5.0
     # via towncrier
-jinja2==3.1.3
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   towncrier

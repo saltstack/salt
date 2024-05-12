@@ -22,7 +22,7 @@ charset-normalizer==3.2.0
     # via requests
 idna==3.7
     # via requests
-jinja2==3.1.3
+jinja2==3.1.4
     # via -r requirements/static/ci/tools.in
 jmespath==1.0.1
     # via
@@ -36,9 +36,9 @@ mdurl==0.1.2
     # via markdown-it-py
 packaging==23.1
     # via -r requirements/static/ci/tools.in
-pydantic-core==2.16.2
+pydantic-core==2.16.3
     # via pydantic
-pydantic==2.6.1
+pydantic==2.6.4
     # via python-tools-scripts
 pygments==2.17.2
     # via rich
