@@ -101,7 +101,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
+          tools ci pkg-matrix ${{ inputs.distro-slug }} \
             ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
 
@@ -198,7 +198,7 @@ jobs:
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ matrix.fips && '--fips ' || '' }}\
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ inputs.fips && '--fips ' || '' }}\
           --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -221,7 +221,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
           path: |
             artifacts
             !artifacts/pkg/*
@@ -242,8 +242,8 @@ jobs:
       - name: Merge Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
-          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-*
           separate-directories: true
           delete-merged: true
 
@@ -251,7 +251,7 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
           path: artifacts
 
       - name: Show Test Run Artifacts
