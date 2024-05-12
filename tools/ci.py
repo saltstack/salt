@@ -643,9 +643,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "workflow": {
             "help": "Which workflow is running",
         },
-        "fips": {
-            "help": "Include FIPS entries in the matrix",
-        },
     },
 )
 def matrix(
@@ -653,7 +650,6 @@ def matrix(
     distro_slug: str,
     full: bool = False,
     workflow: str = "ci",
-    fips: bool = False,
 ):
     """
     Generate the test matrix.
@@ -713,18 +709,8 @@ def matrix(
                             "test-group-count": splits,
                         }
                     )
-                    if fips is True and distro_slug.startswith(
-                        ("photonos-4", "photonos-5")
-                    ):
-                        # Repeat the last one, but with fips
-                        _matrix.append({"fips": "fips", **_matrix[-1]})
             else:
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
-                if fips is True and distro_slug.startswith(
-                    ("photonos-4", "photonos-5")
-                ):
-                    # Repeat the last one, but with fips
-                    _matrix.append({"fips": "fips", **_matrix[-1]})
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -759,9 +745,6 @@ def matrix(
             "nargs": "+",
             "required": True,
         },
-        "fips": {
-            "help": "Include FIPS entries in the matrix",
-        },
     },
 )
 def pkg_matrix(
@@ -769,7 +752,6 @@ def pkg_matrix(
     distro_slug: str,
     pkg_type: str,
     testing_releases: list[tools.utils.Version] = None,
-    fips: bool = False,
 ):
     """
     Generate the test matrix.
@@ -913,13 +895,6 @@ def pkg_matrix(
                         "version": str(version),
                     }
                 )
-                if (
-                    backend == "relenv"
-                    and fips is True
-                    and distro_slug.startswith(("photonos-4", "photonos-5"))
-                ):
-                    # Repeat the last one, but with fips
-                    _matrix.append({"fips": "fips", **_matrix[-1]})
         else:
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
@@ -1489,14 +1464,19 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
             flags = fpath.stem
         else:
             try:
-                section, distro_slug, nox_session = fpath.stem.split("..")
+                section, distro_slug, _, _ = fpath.stem.split("..")
+                fips = ",fips"
             except ValueError:
-                ctx.error(
-                    f"The file {fpath} does not respect the expected naming convention "
-                    "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
-                )
-                continue
-            flags = f"{section},{distro_slug}"
+                fips = ""
+                try:
+                    section, distro_slug, _ = fpath.stem.split("..")
+                except ValueError:
+                    ctx.error(
+                        f"The file {fpath} does not respect the expected naming convention "
+                        "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
+                    )
+                    continue
+            flags = f"{section},{distro_slug}{fips}"
 
         max_attempts = 3
         current_attempt = 0

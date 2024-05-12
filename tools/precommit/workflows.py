@@ -59,6 +59,10 @@ TEST_SALT_LISTING = PlatformDefinitions(
             Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
             Linux(slug="fedora-39", display_name="Fedora 39", arch="x86_64"),
             Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
+            Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
+            Linux(
+                slug="photonos-4-arm64", display_name="Photon OS 4 Arm64", arch="arm64"
+            ),
             Linux(
                 slug="photonos-4",
                 display_name="Photon OS 4",
@@ -70,6 +74,10 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 display_name="Photon OS 4 Arm64",
                 arch="arm64",
                 fips=True,
+            ),
+            Linux(slug="photonos-5", display_name="Photon OS 5", arch="x86_64"),
+            Linux(
+                slug="photonos-5-arm64", display_name="Photon OS 5 Arm64", arch="arm64"
             ),
             Linux(
                 slug="photonos-5",
@@ -266,6 +274,18 @@ def generate_workflows(ctx: Context):
                     display_name="Photon OS 4",
                     arch="x86_64",
                     pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-4-arm64",
+                    display_name="Photon OS 4 Arm64",
+                    arch="arm64",
+                    pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-4",
+                    display_name="Photon OS 4",
+                    arch="x86_64",
+                    pkg_type="rpm",
                     fips=True,
                 ),
                 Linux(
@@ -274,6 +294,18 @@ def generate_workflows(ctx: Context):
                     arch="arm64",
                     pkg_type="rpm",
                     fips=True,
+                ),
+                Linux(
+                    slug="photonos-5",
+                    display_name="Photon OS 5",
+                    arch="x86_64",
+                    pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-5-arm64",
+                    display_name="Photon OS 5 Arm64",
+                    arch="arm64",
+                    pkg_type="rpm",
                 ),
                 Linux(
                     slug="photonos-5",
