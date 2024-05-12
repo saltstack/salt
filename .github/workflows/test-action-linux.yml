@@ -79,7 +79,7 @@ env:
 jobs:
 
   generate-matrix:
-    name: Test Matrix
+    name: Test Matrix${{ inputs.fips && ' (fips)' || '' }}
     runs-on: ubuntu-latest
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
@@ -266,7 +266,7 @@ jobs:
           rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}${{ matrix.fips && '-fips ' || '' }}
           fi
 
       - name: Destroy VM
@@ -299,7 +299,7 @@ jobs:
             artifacts/logs
 
   report:
-    name: Test Reports
+    name: Test Reports${{ inputs.fips && ' (fips)' || '' }}
     if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
@@ -310,13 +310,38 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Merge JUnit XML Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}${{ inputs.fips && '-fips ' || '' }}
+          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*${{ inputs.fips && '-fips ' || '' }}
+          separate-directories: false
+          delete-merged: true
+
+      - name: Merge Log Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}${{ inputs.fips && '-fips ' || '' }}
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*${{ inputs.fips && '-fips ' || '' }}
+          separate-directories: false
+          delete-merged: true
+
+      - name: Merge Code Coverage Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        if: ${{ inputs.skip-code-coverage == false }}
+        id: merge-coverage-artifacts
+        with:
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}${{ inputs.fips && '-fips ' || '' }}
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*${{ inputs.fips && '-fips ' || '' }}
+          separate-directories: false
+          delete-merged: true
+
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v4
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
-          merge-multiple: true
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}${{ inputs.fips && '-fips ' || '' }}
           path: artifacts/coverage/
 
       - name: Show Downloaded Test Run Artifacts
@@ -350,11 +375,11 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}${{ inputs.fips && '.fips ' || '' }}
 
       - name: Upload Code Coverage DB
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}.${{ inputs.nox-session }}
+          name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}.${{ inputs.nox-session }}${{ inputs.fips && '-fips ' || '' }}
           path: artifacts/coverage
