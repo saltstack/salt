@@ -311,13 +311,38 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Merge JUnit XML Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          separate-directories: false
+          delete-merged: true
+
+      - name: Merge Log Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          separate-directories: false
+          delete-merged: true
+
+      - name: Merge Code Coverage Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        if: ${{ inputs.skip-code-coverage == false }}
+        id: merge-coverage-artifacts
+        with:
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          separate-directories: false
+          delete-merged: true
+
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v4
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
-          merge-multiple: true
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
 
       - name: Show Downloaded Test Run Artifacts

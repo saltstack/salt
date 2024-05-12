@@ -1847,12 +1847,20 @@ jobs:
 
 
 
+      - name: Merge All Code Coverage Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        id: merge-coverage-artifacts
+        with:
+          name: all-testrun-coverage-artifacts
+          pattern: all-testrun-coverage-artifacts-*
+          separate-directories: false
+          delete-merged: true
+
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          pattern: all-testrun-coverage-artifacts-*
-          merge-multiple: true
+          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
 
       - name: Display structure of downloaded files
