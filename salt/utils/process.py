@@ -13,6 +13,7 @@ import logging
 import multiprocessing
 import multiprocessing.util
 import os
+import pathlib
 import queue
 import shutil
 import signal
@@ -21,7 +22,6 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
 import salt._logging
 import salt.defaults.exitcodes
@@ -1106,7 +1106,7 @@ class SignalHandlingProcess(Process):
                 if cache_dir and gitfs_active:
                     # check for gitfs file locks to ensure no resource leaks
                     # last chance to clean up any missed unlock droppings
-                    cache_dir = Path(cache_dir + "/gitfs/work")
+                    cache_dir = pathlib.Path(cache_dir + "/gitfs/work")
                     if cache_dir.exists and cache_dir.is_dir():
                         file_list = list(cache_dir.glob("**/*.lk"))
                         file_del_list = []
