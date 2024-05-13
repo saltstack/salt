@@ -69,10 +69,11 @@
   <%- endfor %>
 
   <%- for os in test_salt_listing["linux"] %>
+    <%- set job_name = "{}{}".format(os.slug.replace(".", ""), os.fips and '-fips' or '') %>
 
-  <{ os.slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(os.slug.replace(".", "")) %>
-    name: <{ os.display_name }> Test
+  <{ job_name }>:
+    <%- do test_salt_needs.append(job_name) %>
+    name: <{ os.display_name }> Test<%- if os.fips %> (fips)<%- endif %>
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- else %>
