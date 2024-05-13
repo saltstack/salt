@@ -65,17 +65,10 @@ class MyMockedGitProvider:
     ):
         self._tmp_name = str(tmp_path)
 
-        # TBD DGM
-        # pylint: disable=W1203
-
         self._root_dir = str(salt_factories_default_root_dir)
         self._master_cfg = str(temp_salt_master.config["conf_file"])
         self._minion_cfg = str(temp_salt_minion.config["conf_file"])
         self._user = _get_user()
-
-        log.warning(
-            f"DGM MyMockedGitProvider dunder init new, root_dir '{self._root_dir}', master_cfg '{self._master_cfg}', minion_cfg '{self._minion_cfg}'"
-        )
 
         tmp_name = self._tmp_name.join("/git_test")
         pathlib.Path(tmp_name).mkdir(exist_ok=True, parents=True)
