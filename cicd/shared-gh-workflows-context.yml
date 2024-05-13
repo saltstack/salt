@@ -6,6 +6,6 @@ mandatory_os_slugs:
   - amazonlinux-2023-arm64
   - archlinux-lts
   - photonos-5-arm64
-  - macos-13-arm64
-  - ubuntu-22.04-arm64
+  - macos-12
+  - ubuntu-24.04-arm64
   - windows-2022
