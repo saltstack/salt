@@ -22,6 +22,7 @@ case "$1" in
         db_get salt-master/active
         RESLT=$(echo "$RET" | cut -d ' ' -f 1)
         if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
             if [ "$RESLT" = "active" ]; then
                 systemctl restart salt-master
             fi
@@ -33,6 +34,7 @@ case "$1" in
                 systemctl enable salt-master
             fi
         else
+            systemctl daemon-reload
             systemctl restart salt-master
             systemctl enable salt-master
         fi
