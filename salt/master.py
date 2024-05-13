@@ -1268,11 +1268,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             start = time.time()
             self.stats[cmd]["runs"] += 1
 
-        def run_func(data):
-            return self.aes_funcs.run_func(data["cmd"], data)
-
         with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = run_func(data)
+            ret = self.aes_funcs.run_func(data["cmd"], data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
