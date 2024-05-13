@@ -18,6 +18,7 @@ case "$1" in
         db_get salt-api/active
         RESLT=$(echo "$RET" | cut -d ' ' -f 1)
         if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
             if [ "$RESLT" = "active" ]; then
                 systemctl restart salt-api
             fi
@@ -29,6 +30,7 @@ case "$1" in
                 systemctl enable salt-api
             fi
         else
+            systemctl daemon-reload
             systemctl restart salt-api
             systemctl enable salt-api
         fi

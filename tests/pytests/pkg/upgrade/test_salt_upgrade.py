@@ -8,7 +8,10 @@ from pytestskipmarkers.utils import platform
 log = logging.getLogger(__name__)
 
 
-def _get_running_salt_minion_pid(process_name):
+def _get_running_salt_minion_pid(
+    process_name,
+):  # pylint: disable=logging-fstring-interpolation
+
     # psutil process name only returning first part of the command '/opt/saltstack/'
     # need to check all of command line for salt-minion
     # ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
@@ -19,13 +22,21 @@ def _get_running_salt_minion_pid(process_name):
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
             if process_name in cmdl_strg:
                 pids.append(proc.pid)
+
+    log.warning(
+        f"DGM _get_running_salt_minion_pid, returning for process_name '{process_name}', pids '{pids}'"
+    )
     return pids
 
 
-def test_salt_upgrade_minion(salt_call_cli, install_salt):
+def test_salt_upgrade_minion(
+    salt_call_cli, install_salt
+):  # pylint: disable=logging-fstring-interpolation
     """
     Test an upgrade of Salt Minion.
     """
+
+    log.warning("DGM test_salt_upgrade_minion entry")
     if install_salt.relenv:
         original_py_version = install_salt.package_python_version()
 
@@ -33,6 +44,10 @@ def test_salt_upgrade_minion(salt_call_cli, install_salt):
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_version = packaging.version.parse(ret.data)
+    dgm_pkg_version_parsed = packaging.version.parse(install_salt.artifact_version)
+    log.warning(
+        f"DGM test_salt_upgrade_minion, installed_version '{installed_version}', artifact_version '{install_salt.artifact_version}', pkg_version_parsed '{dgm_pkg_version_parsed}'"
+    )
     assert installed_version < packaging.version.parse(install_salt.artifact_version)
 
     # Test pip install before an upgrade
@@ -60,8 +75,16 @@ def test_salt_upgrade_minion(salt_call_cli, install_salt):
     # Upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
     ret = salt_call_cli.run("--local", "test.version")
+    log.warning(f"DGM test_salt_upgrade_minion, upgrade test_version ret '{ret}'")
+
     assert ret.returncode == 0
     installed_version = packaging.version.parse(ret.data)
+
+    dgm_pkg_version_parsed = packaging.version.parse(install_salt.artifact_version)
+    log.warning(
+        f"DGM test_salt_upgrade_minion, upgrade installed_version '{installed_version}', artifact_version '{install_salt.artifact_version}', pkg_version_parsed '{dgm_pkg_version_parsed}'"
+    )
+
     assert installed_version == packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a new running minion by getting its PID and comparing it
@@ -88,10 +111,13 @@ def test_salt_upgrade_minion(salt_call_cli, install_salt):
 
 
 @pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
-def test_salt_upgrade_master(install_salt):
+def test_salt_upgrade_master(
+    install_salt,
+):  # pylint: disable=logging-fstring-interpolation
     """
     Test an upgrade of Salt Master.
     """
+    log.warning("DGM test_salt_upgrade_master entry")
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
@@ -101,6 +127,13 @@ def test_salt_upgrade_master(install_salt):
     # Verify previous install version is setup correctly and works
     bin_file = "salt"
     ret = install_salt.proc.run(bin_file, "--version")
+    log.warning(f"DGM test_salt_upgrade_master , installed_version ret '{ret}'")
+    dgm_ret_version = packaging.version.parse(ret.stdout.strip().split()[1])
+    dgm_pkg_version_parsed = packaging.version.parse(install_salt.artifact_version)
+    log.warning(
+        f"DGM test_salt_upgrade_master , installed_version ret parsed '{dgm_ret_version}', artifact_version '{install_salt.artifact_version}', pkg_version_parsed '{dgm_pkg_version_parsed}'"
+    )
+
     assert ret.returncode == 0
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
@@ -127,6 +160,13 @@ def test_salt_upgrade_master(install_salt):
     # Upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
     ret = install_salt.proc.run(bin_file, "--version")
+    log.warning(f"DGM test_salt_upgrade_master , upgrade_version ret '{ret}'")
+    dgm_ret_version = packaging.version.parse(ret.stdout.strip().split()[1])
+    dgm_pkg_version_parsed = packaging.version.parse(install_salt.artifact_version)
+    log.warning(
+        f"DGM test_salt_upgrade_master , upgrade_version ret parsed '{dgm_ret_version}', artifact_version '{install_salt.artifact_version}', pkg_version_parsed '{dgm_pkg_version_parsed}'"
+    )
+
     assert ret.returncode == 0
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
