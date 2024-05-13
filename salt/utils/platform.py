@@ -13,8 +13,6 @@ import distro
 
 from salt.utils.decorators import memoize as real_memoize
 
-## from salt.utils.files import fopen as _fopen
-
 
 def linux_distribution(full_distribution_name=True):
     """
@@ -255,7 +253,6 @@ def get_machine_identifier():
     if not existing_locations:
         return {}
     else:
-        ## with _fopen(existing_locations[0]) as machineid:
         # cannot use salt.utils.files.fopen due to circular dependency
         with open(
             existing_locations[0], encoding=__salt_system_encoding__

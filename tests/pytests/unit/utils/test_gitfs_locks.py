@@ -28,7 +28,7 @@ try:
 except ImportError:
     import salt.utils.win_functions
 
-pytestmark = [pytest.mark.skip_unless_on_linux]
+pytestmark = [pytest.mark.skip_on_windows]
 
 log = logging.getLogger(__name__)
 
