@@ -3163,11 +3163,6 @@ def managed(
                     source_hash_name,
                     __env__,
                     verify_ssl=verify_ssl,
-                    source_hash_sig=source_hash_sig,
-                    signed_by_any=signed_by_any,
-                    signed_by_all=signed_by_all,
-                    keyring=keyring,
-                    gnupghome=gnupghome,
                 )
                 hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
         except (CommandExecutionError, OSError) as err:
