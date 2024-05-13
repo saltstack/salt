@@ -11,6 +11,13 @@ from saltfactories.utils.tempfiles import temp_directory
 pytestmark = [
     pytest.mark.skip_on_windows,
     pytest.mark.skip_on_darwin,
+    pytest.mark.skipif(
+        True,
+        reason=(
+            "Package permissions are getting reworked in "
+            "https://github.com/saltstack/salt/pull/66218"
+        ),
+    ),
 ]
 
 

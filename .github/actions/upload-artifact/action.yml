@@ -46,9 +46,7 @@ runs:
         shopt -s globstar || echo "'globstar' not available"
         tar -cavf ${{ inputs.archive-name || inputs.name || 'archive' }}.tar.gz ${{ inputs.path }}
 
-    - uses: actions/upload-artifact@v3
-      # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-      # under the same name something that actions/upload-artifact@v4 does not do.
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.archive-name || inputs.name || 'archive' }}.tar.gz
