@@ -376,6 +376,27 @@ def service(name, ports=None, protocols=None):
     return ret
 
 
+def _normalize_rich_rules(rich_rules):
+    normalized_rules = []
+    for rich_rule in rich_rules:
+        normalized_rule = ""
+        for cmd in rich_rule.split(" "):
+            cmd_components = cmd.split("=", 1)
+            if len(cmd_components) == 2:
+                assigned_component = cmd_components[1]
+                if not assigned_component.startswith(
+                    '"'
+                ) and not assigned_component.endswith('"'):
+                    if assigned_component.startswith(
+                        "'"
+                    ) and assigned_component.endswith("'"):
+                        assigned_component = assigned_component[1:-1]
+                    cmd_components[1] = f'"{assigned_component}"'
+            normalized_rule = f"{normalized_rule} {'='.join(cmd_components)}"
+        normalized_rules.append(normalized_rule.lstrip())
+    return normalized_rules
+
+
 def _present(
     name,
     block_icmp=None,
@@ -767,6 +788,7 @@ def _present(
 
     if rich_rules or prune_rich_rules:
         rich_rules = rich_rules or []
+        rich_rules = _normalize_rich_rules(rich_rules)
         try:
             _current_rich_rules = __salt__["firewalld.get_rich_rules"](
                 name, permanent=True
