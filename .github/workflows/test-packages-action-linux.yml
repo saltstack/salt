@@ -101,7 +101,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
+          tools ci pkg-matrix ${{ inputs.distro-slug }} \
             ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
 
@@ -198,7 +198,7 @@ jobs:
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ matrix.fips && '--fips ' || '' }}\
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ inputs.fips && '--fips ' || '' }}\
           --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -221,7 +221,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
           path: |
             artifacts
             !artifacts/pkg/*
@@ -234,21 +234,24 @@ jobs:
     if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
-      - generate-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Merge Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-*
+          separate-directories: true
+          delete-merged: true
+
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
           path: artifacts
 
       - name: Show Test Run Artifacts
