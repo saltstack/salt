@@ -220,7 +220,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
           path: |
             artifacts
             !artifacts/pkg/*
@@ -233,21 +233,24 @@ jobs:
     if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
-      - generate-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Merge Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
+          separate-directories: true
+          delete-merged: true
+
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
           path: artifacts
 
       - name: Show Test Run Artifacts
