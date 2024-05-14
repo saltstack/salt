@@ -39,6 +39,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.jid
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
@@ -757,7 +758,21 @@ class State:
         loader="states",
         initial_pillar=None,
         file_client=None,
+        __invocation_id=None,
     ):
+        """
+        When instantiating an object of this class, do not pass
+        ``__invocation_id``. It is an internal field for tracking
+        parallel executions where no jid is available (Salt-SSH) and
+        only exposed as an init argument to work on spawning platforms.
+        """
+        if jid is not None:
+            __invocation_id = jid
+        if __invocation_id is None:
+            # For salt-ssh parallel states, we need a unique identifier
+            # for a single execution. self.jid should not be set there
+            # since it's used for other purposes as well.
+            __invocation_id = salt.utils.jid.gen_jid(opts)
         self._init_kwargs = {
             "opts": opts,
             "pillar_override": pillar_override,
@@ -768,6 +783,7 @@ class State:
             "mocked": mocked,
             "loader": loader,
             "initial_pillar": initial_pillar,
+            "__invocation_id": __invocation_id,
         }
         self.states_loader = loader
         if "grains" not in opts:
@@ -814,6 +830,7 @@ class State:
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
+        self.invocation_id = __invocation_id
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
@@ -2236,7 +2253,7 @@ class State:
                     ]
                 )
 
-        troot = os.path.join(instance.opts["cachedir"], instance.jid)
+        troot = os.path.join(instance.opts["cachedir"], instance.invocation_id)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
@@ -2820,7 +2837,7 @@ class State:
                 if not proc.is_alive():
                     ret_cache = os.path.join(
                         self.opts["cachedir"],
-                        self.jid,
+                        self.invocation_id,
                         salt.utils.hashutils.sha1_digest(tag),
                     )
                     if not os.path.isfile(ret_cache):
