@@ -2066,7 +2066,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       skip-code-coverage: false
       workflow-slug: nightly
-      default-timeout: 360
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
   ubuntu-2404-arm64:
     name: Ubuntu 24.04 Arm64 Test
@@ -2087,7 +2087,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       skip-code-coverage: false
       workflow-slug: nightly
-      default-timeout: 360
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
   combine-all-code-coverage:
     name: Combine Code Coverage
