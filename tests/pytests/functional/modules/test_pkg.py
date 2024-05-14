@@ -213,11 +213,14 @@ def test_mod_del_repo_multiline_values(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
-    binary = shutil.which("ls")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+
     ret = modules.pkg.owner(binary)
     assert len(ret) != 0
 
@@ -225,11 +228,14 @@ def test_owner(modules):
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
-def test_which(modules):
+def test_which(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.which("/usr/local/bin/salt-call")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+    ret = modules.pkg.which(binary)
     assert len(ret) != 0
 
 
