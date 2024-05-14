@@ -213,11 +213,14 @@ def test_mod_del_repo_multiline_values(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
-    binary = shutil.which("ls")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+
     ret = modules.pkg.owner(binary)
     assert len(ret) != 0
 
