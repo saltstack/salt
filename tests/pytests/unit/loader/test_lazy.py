@@ -27,6 +27,9 @@ def loader_dir(tmp_path):
 
     def get_context(key):
         return __context__[key]
+
+    async def myasync(foo):
+        return foo
     """
     with pytest.helpers.temp_file(
         "mod_a.py", directory=tmp_path, contents=mod_contents
@@ -140,3 +143,11 @@ def test_loader_pack_opts_not_overwritten(loader_dir):
     assert "foo" not in loader.pack["__opts__"]
     assert "baz" in loader.pack["__opts__"]
     assert loader.pack["__opts__"]["baz"] == "bif"
+
+
+async def test_loader_async(loader_dir):
+    opts = {"optimization_order": [0, 1, 2]}
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    myasync = loader["mod_a.myasync"]
+    ret = await myasync("foo")
+    assert ret == "foo"

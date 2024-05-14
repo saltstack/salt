@@ -38,6 +38,7 @@
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
@@ -109,7 +110,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-onedir
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

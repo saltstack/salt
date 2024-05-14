@@ -24,6 +24,11 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
+if sys.version_info < (3, 11):
+    from typing_extensions import TypedDict
+else:
+    from typing import TypedDict  # pylint: disable=no-name-in-module
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "test"
@@ -45,9 +50,20 @@ class ExitCode(IntEnum):
 class OS:
     platform: str = attr.ib()
     slug: str = attr.ib()
+    arch: str = attr.ib()
     display_name: str = attr.ib(default=None)
-    arch: str = attr.ib(default=None)
     pkg_type: str = attr.ib(default=None)
+
+    @arch.default
+    def _default_arch(self):
+        return self._get_default_arch()
+
+    def _get_default_arch(self):
+        if "aarch64" in self.slug:
+            return "arm64"
+        if "arm64" in self.slug:
+            return "arm64"
+        return "x86_64"
 
 
 @attr.s(frozen=True, slots=True)
@@ -69,6 +85,15 @@ class MacOS(OS):
 @attr.s(frozen=True, slots=True)
 class Windows(OS):
     platform: str = attr.ib(default="windows")
+
+    def _get_default_arch(self):
+        return "amd64"
+
+
+class PlatformDefinitions(TypedDict):
+    linux: list[Linux]
+    macos: list[MacOS]
+    windows: list[Windows]
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):

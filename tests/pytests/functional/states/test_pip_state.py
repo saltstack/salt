@@ -21,13 +21,6 @@ from tests.support.helpers import (
     patched_environ,
 )
 
-try:
-    import pwd
-
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
-
 log = logging.getLogger(__name__)
 
 pytestmark = [
@@ -38,7 +31,7 @@ pytestmark = [
 def _win_user_where(username, password, program):
     cmd = f"cmd.exe /c where {program}"
     ret = salt.utils.win_runas.runas(cmd, username, password)
-    assert ret["retcode"] == 0, "{} returned {}".format(cmd, ret["retcode"])
+    assert ret["retcode"] == 0
     return ret["stdout"].strip().split("\n")[-1].strip()
 
 
@@ -51,6 +44,12 @@ def pkg_name():
 def venv(tmp_path):
     with VirtualEnv(venv_dir=tmp_path) as venv:
         yield venv
+
+
+@pytest.fixture
+def account():
+    with pytest.helpers.create_account(username="pip-account") as _account:
+        yield _account
 
 
 @pytest.fixture(scope="module")
@@ -135,12 +134,11 @@ def test_pip_installed_errors(tmp_path, modules, state_tree):
     #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
     #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
     sls_contents = f"""
-pep8-pip:
-  pip.installed:
-    - name: pep8
-    - bin_env: '{venv_dir}'
-"""
-
+    pep8-pip:
+      pip.installed:
+        - name: pep8
+        - bin_env: '{venv_dir}'
+    """
     with patched_environ(SHELL="/bin/sh"):
         with pytest.helpers.temp_file(
             "pip-installed-errors.sls", sls_contents, state_tree
@@ -186,33 +184,33 @@ def test_issue_2028_pip_installed_state(
     venv_dir = tmp_path / "issue-2028-pip-installed"
 
     sls_contents = """
-{%- set virtualenv_base = salt['pillar.get']('venv_dir') %}
-{%- set python_executable = salt['pillar.get']('python_executable') %}
+    {%- set virtualenv_base = salt['pillar.get']('venv_dir') %}
+    {%- set python_executable = salt['pillar.get']('python_executable') %}
 
-{{ virtualenv_base }}:
-  virtualenv.managed:
-    - system_site_packages: False
-    - distribute: False
-    {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
-    {%- if python_executable %}
-    - python: {{ python_executable }}
-    {%- endif %}
+    {{ virtualenv_base }}:
+      virtualenv.managed:
+        - system_site_packages: False
+        - distribute: False
+        {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
+        {%- if python_executable %}
+        - python: {{ python_executable }}
+        {%- endif %}
 
-install-working-setuptools:
-  pip.installed:
-    - name: 'setuptools!=50.*,!=51.*,!=52.*'
-    - bin_env: {{ virtualenv_base }}
-    - require:
-      - virtualenv: {{ virtualenv_base }}
+    install-working-setuptools:
+      pip.installed:
+        - name: 'setuptools!=50.*,!=51.*,!=52.*'
+        - bin_env: {{ virtualenv_base }}
+        - require:
+          - virtualenv: {{ virtualenv_base }}
 
-pep8-pip:
-  pip.installed:
-    - name: pep8
-    - bin_env: {{ virtualenv_base }}
-    - require:
-      - pip: install-working-setuptools
-      - virtualenv: {{ virtualenv_base }}
-"""
+    pep8-pip:
+      pip.installed:
+        - name: pep8
+        - bin_env: {{ virtualenv_base }}
+        - require:
+          - pip: install-working-setuptools
+          - virtualenv: {{ virtualenv_base }}
+    """
     with pytest.helpers.temp_file(
         "issue-2028-pip-installed.sls", sls_contents, state_tree
     ):
@@ -278,64 +276,56 @@ def test_issue_2087_missing_pip(modules, venv, pkg_name, state_tree):
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
-def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
+def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, states, account):
     # Setup virtual environment directory to be used throughout the test
     venv_dir = tmp_path / "6912-wrong-owner"
     venv_kwargs = {}
 
-    with pytest.helpers.create_account(
-        username="issue-6912", password="PassWord1!"
-    ) as account:
-        # The virtual environment needs to be in a location that is accessible
-        # by both the user running the test and the runas user
-        if salt.utils.platform.is_windows():
-            salt.utils.win_dacl.set_permissions(
-                tmp_path, account.username, "full_control"
-            )
-            # Make sure we're calling a virtualenv and python
-            # program that the user has access too.
-            venv_kwargs["venv_bin"] = _win_user_where(
-                account.username,
-                "PassWord1!",
-                "virtualenv",
-            )
-            venv_kwargs["python"] = _win_user_where(
-                account.username,
-                "PassWord1!",
-                "python",
-            )
-        else:
-            uid = modules.file.user_to_uid(account.username)
-            os.chown(str(tmp_path), uid, -1)
-
-        # Create the virtual environment
-        venv_create = create_virtualenv(
-            str(venv_dir), user=account.username, password="PassWord1!", **venv_kwargs
+    # The virtual environment needs to be in a location that is accessible
+    # by both the user running the test and the runas user
+    if salt.utils.platform.is_windows():
+        salt.utils.win_dacl.set_permissions(tmp_path, account.username, "full_control")
+        # Make sure we're calling a virtualenv and python
+        # program that the user has access too.
+        venv_kwargs["venv_bin"] = _win_user_where(
+            account.username,
+            account.password,
+            "virtualenv",
         )
-        if venv_create.get("retcode", 1) > 0:
-            pytest.skip(f"Failed to create testcase virtual environment: {venv_create}")
-
-        # pip install passing the package name in `name`
-        ret = states.pip.installed(
-            name="pep8",
-            user=account.username,
-            bin_env=str(venv_dir),
-            password="PassWord1!",
+        venv_kwargs["python"] = _win_user_where(
+            account.username,
+            account.password,
+            "python",
         )
-        assert ret.result is True
+    else:
+        os.chown(str(tmp_path), account.info.uid, -1)
 
-        if HAS_PWD:
-            uid = pwd.getpwnam(account.username).pw_uid
-        for globmatch in (
-            os.path.join(str(venv_dir), "**", "pep8*"),
-            os.path.join(str(venv_dir), "*", "**", "pep8*"),
-            os.path.join(str(venv_dir), "*", "*", "**", "pep8*"),
-        ):
-            for path in glob.glob(globmatch):
-                if HAS_PWD:
-                    assert uid == os.stat(path).st_uid
-                elif salt.utils.platform.is_windows():
-                    assert salt.utils.win_dacl.get_owner(path) == account.username
+    # Create the virtual environment
+    venv_create = create_virtualenv(
+        str(venv_dir), user=account.username, password=account.password, **venv_kwargs
+    )
+    if venv_create.get("retcode", 1) > 0:
+        pytest.skip(f"Failed to create testcase virtual environment: {venv_create}")
+
+    # pip install passing the package name in `name`
+    ret = states.pip.installed(
+        name="pep8",
+        user=account.username,
+        password=account.password,
+        bin_env=str(venv_dir),
+    )
+    assert ret.result is True
+
+    for globmatch in (
+        os.path.join(str(venv_dir), "**", "pep8*"),
+        os.path.join(str(venv_dir), "*", "**", "pep8*"),
+        os.path.join(str(venv_dir), "*", "*", "**", "pep8*"),
+    ):
+        for path in glob.glob(globmatch):
+            if salt.utils.platform.is_windows():
+                assert salt.utils.win_dacl.get_owner(path) == account.username
+            else:
+                assert os.stat(path).st_uid == account.info.uid
 
 
 @SKIP_INITIAL_PHOTONOS_FAILURES
@@ -344,70 +334,62 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
 def test_issue_6912_wrong_owner_requirements_file(
-    tmp_path, create_virtualenv, state_tree, modules, states
+    tmp_path, create_virtualenv, state_tree, states, account
 ):
     # Setup virtual environment directory to be used throughout the test
     venv_dir = tmp_path / "6912-wrong-owner"
     venv_kwargs = {}
 
-    with pytest.helpers.create_account(
-        username="issue-6912", password="PassWord1!"
-    ) as account:
-        # The virtual environment needs to be in a location that is accessible
-        # by both the user running the test and the runas user
-        if salt.utils.platform.is_windows():
-            salt.utils.win_dacl.set_permissions(
-                str(tmp_path), account.username, "full_control"
-            )
-            # Make sure we're calling a virtualenv and python
-            # program that the user has access too.
-            venv_kwargs["venv_bin"] = _win_user_where(
-                account.username,
-                "PassWord1!",
-                "virtualenv",
-            )
-            venv_kwargs["python"] = _win_user_where(
-                account.username,
-                "PassWord1!",
-                "python",
-            )
-        else:
-            uid = modules.file.user_to_uid(account.username)
-            os.chown(str(tmp_path), uid, -1)
-
-        # Create the virtual environment again as it should have been removed
-        venv_create = create_virtualenv(
-            str(venv_dir), user=account.username, password="PassWord1!", **venv_kwargs
+    # The virtual environment needs to be in a location that is accessible
+    # by both the user running the test and the runas user
+    if salt.utils.platform.is_windows():
+        salt.utils.win_dacl.set_permissions(
+            str(tmp_path), account.username, "full_control"
         )
-        if venv_create.get("retcode", 1) > 0:
-            pytest.skip(f"failed to create testcase virtual environment: {venv_create}")
+        # Make sure we're calling a virtualenv and python
+        # program that the user has access too.
+        venv_kwargs["venv_bin"] = _win_user_where(
+            account.username,
+            account.password,
+            "virtualenv",
+        )
+        venv_kwargs["python"] = _win_user_where(
+            account.username,
+            account.password,
+            "python",
+        )
+    else:
+        os.chown(str(tmp_path), account.info.uid, -1)
 
-        # pip install using a requirements file
-        contents = "pep8\n"
-        with pytest.helpers.temp_file(
-            "issue-6912-requirements.txt", contents, state_tree
-        ):
-            ret = states.pip.installed(
-                name="",
-                user=account.username,
-                bin_env=str(venv_dir),
-                requirements="salt://issue-6912-requirements.txt",
-                password="PassWord1!",
-            )
-            assert ret.result is True
+    # Create the virtual environment again as it should have been removed
+    venv_create = create_virtualenv(
+        str(venv_dir), user=account.username, password=account.password, **venv_kwargs
+    )
+    if venv_create.get("retcode", 1) > 0:
+        pytest.skip(f"failed to create testcase virtual environment: {venv_create}")
 
-        if HAS_PWD:
-            uid = pwd.getpwnam(account.username).pw_uid
-        for globmatch in (
-            os.path.join(str(venv_dir), "**", "pep8*"),
-            os.path.join(str(venv_dir), "*", "**", "pep8*"),
-            os.path.join(str(venv_dir), "*", "*", "**", "pep8*"),
-        ):
-            for path in glob.glob(globmatch):
-                if HAS_PWD:
-                    assert uid == os.stat(path).st_uid
-                elif salt.utils.platform.is_windows():
-                    assert salt.utils.win_dacl.get_owner(path) == account.username
+    # pip install using a requirements file
+    contents = "pep8\n"
+    with pytest.helpers.temp_file("issue-6912-requirements.txt", contents, state_tree):
+        ret = states.pip.installed(
+            name="",
+            user=account.username,
+            password=account.password,
+            bin_env=str(venv_dir),
+            requirements="salt://issue-6912-requirements.txt",
+        )
+        assert ret.result is True
+
+    for globmatch in (
+        os.path.join(str(venv_dir), "**", "pep8*"),
+        os.path.join(str(venv_dir), "*", "**", "pep8*"),
+        os.path.join(str(venv_dir), "*", "*", "**", "pep8*"),
+    ):
+        for path in glob.glob(globmatch):
+            if salt.utils.platform.is_windows():
+                assert salt.utils.win_dacl.get_owner(path) == account.username
+            else:
+                assert os.stat(path).st_uid == account.info.uid
 
 
 @pytest.mark.destructive_test

@@ -5314,6 +5314,25 @@ def _get_policy_definitions(path="c:\\Windows\\PolicyDefinitions", language="en-
     return __context__["lgpo.policy_definitions"]
 
 
+def clear_policy_cache():
+    """
+    Clears the policy definitions and resource stored in ``__context__``. They
+    will be rebuilt the next time a policy is applied.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lgpo.clear_policy_cache
+    """
+    if "lgpo.policy_definitions" in __context__:
+        log.debug("LGPO: Removing cached policy definitions")
+        __context__.pop("lgpo.policy_definitions")
+    if "lgpo.policy_resources" in __context__:
+        log.debug("LGPO: Removing cached policy resources")
+        __context__.pop("lgpo.policy_resources")
+
+
 def _get_policy_resources(path="c:\\Windows\\PolicyDefinitions", language="en-US"):
     if "lgpo.policy_resources" not in __context__:
         log.debug("LGPO: Loading policy resources")

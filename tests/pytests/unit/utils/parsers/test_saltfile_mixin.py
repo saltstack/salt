@@ -2,7 +2,7 @@
 Tests the SaltfileMixIn.
 """
 
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import shutil
 
 import pytest

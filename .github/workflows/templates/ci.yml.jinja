@@ -347,11 +347,18 @@
 
 #}
 
+      - name: Merge All Code Coverage Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        id: merge-coverage-artifacts
+        with:
+          name: all-testrun-coverage-artifacts
+          pattern: all-testrun-coverage-artifacts-*
+          separate-directories: false
+          delete-merged: true
+
       - name: Get coverage reports
         id: get-coverage-reports
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
           name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
@@ -378,7 +385,9 @@
           nox --force-color -e create-xml-coverage-reports
 
       - name: Upload Code Coverage To Codecov
-        if: ${{ ! github.event.repository.private }}
+        if: ${{ ! github.event.repository.private && ! github.event.repository.fork }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 

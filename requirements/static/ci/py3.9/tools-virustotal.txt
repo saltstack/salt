@@ -12,7 +12,7 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../ci/py3.9/tools.txt
     #   requests
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/../ci/py3.9/tools.txt
     #   requests

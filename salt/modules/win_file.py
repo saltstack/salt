@@ -12,6 +12,7 @@ import errno
 import logging
 import os
 import os.path
+import pathlib
 import stat
 import sys
 import tempfile
@@ -1345,40 +1346,36 @@ def remove(path, force=False):
     # Symlinks. The shutil.rmtree function will remove the contents of
     # the Symlink source in windows.
 
-    path = os.path.expanduser(path)
+    path = pathlib.Path(os.path.expanduser(path))
 
-    if not os.path.isabs(path):
+    if not path.is_absolute():
         raise SaltInvocationError(f"File path must be absolute: {path}")
 
     # Does the file/folder exists
-    if not os.path.exists(path) and not is_link(path):
+    if not path.exists() and not path.is_symlink():
         raise CommandExecutionError(f"Path not found: {path}")
 
     # Remove ReadOnly Attribute
+    file_attributes = win32api.GetFileAttributes(str(path))
     if force:
         # Get current file attributes
-        file_attributes = win32api.GetFileAttributes(path)
-        win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
+        win32api.SetFileAttributes(str(path), win32con.FILE_ATTRIBUTE_NORMAL)
 
     try:
-        if os.path.isfile(path):
+        if path.is_file() or path.is_symlink():
             # A file and a symlinked file are removed the same way
-            os.remove(path)
-        elif is_link(path):
-            # If it's a symlink directory, use the rmdir command
-            os.rmdir(path)
+            path.unlink()
         else:
-            for name in os.listdir(path):
-                item = f"{path}\\{name}"
-                # If its a normal directory, recurse to remove it's contents
-                remove(item, force)
+            for child in path.iterdir():
+                # If it's a normal directory, recurse to remove its contents
+                remove(str(child), force)
 
             # rmdir will work now because the directory is empty
-            os.rmdir(path)
+            path.rmdir()
     except OSError as exc:
         if force:
             # Reset attributes to the original if delete fails.
-            win32api.SetFileAttributes(path, file_attributes)
+            win32api.SetFileAttributes(str(path), file_attributes)
         raise CommandExecutionError(f"Could not remove '{path}': {exc}")
 
     return True

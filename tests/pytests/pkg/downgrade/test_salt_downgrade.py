@@ -1,6 +1,5 @@
 import packaging.version
 import psutil
-import pytest
 from pytestskipmarkers.utils import platform
 
 
@@ -8,9 +7,6 @@ def test_salt_downgrade(salt_call_cli, install_salt):
     """
     Test an upgrade of Salt.
     """
-    if not install_salt.downgrade:
-        pytest.skip("Not testing a downgrade, do not run")
-
     is_downgrade_to_relenv = packaging.version.parse(
         install_salt.prev_version
     ) >= packaging.version.parse("3006.0")

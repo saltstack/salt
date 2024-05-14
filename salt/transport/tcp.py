@@ -1403,12 +1403,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             ssl=ctx,
         )
         if self.pub_path:
-            log.error(
+            log.debug(
                 "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
             )
             sock = tornado.netutil.bind_unix_socket(self.pub_path)
         else:
-            log.error(
+            log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
                 self.pub_host,
                 self.pub_port,

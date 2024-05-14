@@ -172,11 +172,10 @@ concurrency:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          pattern: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-*
+          merge-multiple: true
           path: repo/
 
       - name: Decompress Repository Artifacts

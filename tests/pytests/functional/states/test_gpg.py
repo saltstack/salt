@@ -1,3 +1,4 @@
+import contextlib
 import shutil
 import subprocess
 from pathlib import Path
@@ -129,6 +130,49 @@ y9KvnTFP2+oeDX2Z/m4SoWw=
 
 
 @pytest.fixture
+def key_e_fp():
+    return "2401C402776328D78D6B4C5D67D35BC98502D9B9"
+
+
+# expires 2022-12-01
+@pytest.fixture
+def key_e_pub():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4gjEQEEAKYpWezZQWiAUDvAMcMhBkjHGY2fM4MMiXc6+fRbNV4VCL9TtJYE
+gjccYVu44DtIYQzMVimrPQ6xepUmFRalezCG0OO4v25Ciwyeg8LX+Tb3kyAYFAxi
+qLXAJyr3aZ/539xBak/Vf5xdURIi7WF5qBGQxd87tRDDqyPFnr87JJtFABEBAAG0
+LUtleSBFIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5ZUBleGFtcGxlPojX
+BBMBCABBFiEEJAHEAndjKNeNa0xdZ9NbyYUC2bkFAmOIIxECGy8FCQAAZh8FCwkI
+BwICIgIGFQoJCAsCBBYCAwECHgcCF4AACgkQZ9NbyYUC2bmn1QP/WPVhj1bC9/9R
+hifv29MG9maRNIkuEkZKtRJj7HMSaamD5IOtGoyMuBwicb38n2Z2KQZUiJbvyZTt
+PS328F8YSUSyWQKqmhwL0iLlnDzx8l/nFr5tiss2b/ZzjlMP4iXtAgEdVMJnfjrM
+J7xvL0cNSsHha4hUIrekvzM+SNwYkzs=
+=nue4
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def key_e_pub_notexpired():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4gjEQEEAKYpWezZQWiAUDvAMcMhBkjHGY2fM4MMiXc6+fRbNV4VCL9TtJYE
+gjccYVu44DtIYQzMVimrPQ6xepUmFRalezCG0OO4v25Ciwyeg8LX+Tb3kyAYFAxi
+qLXAJyr3aZ/539xBak/Vf5xdURIi7WF5qBGQxd87tRDDqyPFnr87JJtFABEBAAG0
+LUtleSBFIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5ZUBleGFtcGxlPojR
+BBMBCAA7AhsvBQsJCAcCAiICBhUKCQgLAgQWAgMBAh4HAheAFiEEJAHEAndjKNeN
+a0xdZ9NbyYUC2bkFAmYOi8gACgkQZ9NbyYUC2bmTyAP+Jo5WUP9LYtXgcbKdhcbz
+Kt6Cgbk39rzpmAYpejRSmiu0VrSuSou5W+60YhPPLOVdNOOsKFK1n1wO6sNwCTRU
+xrQwNI2yBnuCIV/ZmuOdXLRKc4L8nGXW4lmDKK1PqrXDNH14Bpw0e+FVOR+iR3nW
+G5lpc2BZ/RGsECq/HcbpFIM=
+=qG1x
+-----END PGP PUBLIC KEY BLOCK-----
+"""
+
+
+@pytest.fixture
 def gnupg(gpghome):
     return gnupglib.GPG(gnupghome=str(gpghome))
 
@@ -164,19 +208,28 @@ def keyring(gpghome, tmp_path, request):
     # cleanup is taken care of by gpghome and tmp_path
 
 
+@pytest.fixture(params=(False, True))
+def testmode(request):
+    return request.param
+
+
 @pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
-def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp):
+def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp, testmode):
     assert gnupg.list_keys(keys=key_a_fp)
     ret = gpg.present(
-        key_a_fp[-16:], trust="unknown", gnupghome=str(gpghome), keyserver="nonexistent"
+        key_a_fp[-16:],
+        trust="unknown",
+        gnupghome=str(gpghome),
+        keyserver="nonexistent",
+        test=testmode,
     )
     assert ret.result
     assert not ret.changes
 
 
 def test_gpg_present_keyring_no_changes(
-    gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp
+    gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp, testmode
 ):
     """
     The keyring tests are not whitelisted on Windows since they are just
@@ -190,6 +243,7 @@ def test_gpg_present_keyring_no_changes(
         gnupghome=str(gpghome),
         keyserver="nonexistent",
         keyring=keyring,
+        test=testmode,
     )
     assert ret.result
     assert not ret.changes
@@ -197,24 +251,26 @@ def test_gpg_present_keyring_no_changes(
 
 @pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("_pubkeys_present")
-def test_gpg_present_trust_change(gpghome, gpg, gnupg, key_a_fp):
+def test_gpg_present_trust_change(gpghome, gpg, gnupg, key_a_fp, testmode):
     assert gnupg.list_keys(keys=key_a_fp)
     ret = gpg.present(
         key_a_fp[-16:],
         gnupghome=str(gpghome),
         trust="ultimately",
         keyserver="nonexistent",
+        test=testmode,
     )
-    assert ret.result
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
     assert ret.changes
     assert ret.changes == {key_a_fp[-16:]: {"trust": "ultimately"}}
     key_info = gnupg.list_keys(keys=key_a_fp)
     assert key_info
-    assert key_info[0]["trust"] == "u"
+    assert (key_info[0]["trust"] == "u") is not testmode
 
 
 def test_gpg_present_keyring_trust_change(
-    gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp
+    gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp, testmode
 ):
     assert not gnupg.list_keys(keys=key_a_fp)
     assert gnupg_keyring.list_keys(keys=key_a_fp)
@@ -224,17 +280,21 @@ def test_gpg_present_keyring_trust_change(
         trust="ultimately",
         keyserver="nonexistent",
         keyring=keyring,
+        test=testmode,
     )
-    assert ret.result
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
     assert ret.changes
     assert ret.changes == {key_a_fp[-16:]: {"trust": "ultimately"}}
     key_info = gnupg_keyring.list_keys(keys=key_a_fp)
     assert key_info
-    assert key_info[0]["trust"] == "u"
+    assert (key_info[0]["trust"] == "u") is not testmode
 
 
+# Cannot whitelist source/text tests for Windows since it uses a
+# keyring internally, which causes test timeouts for some reason.
 def test_gpg_present_source(
-    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp, testmode
 ):
     with pytest.helpers.temp_file(
         "keys", contents=key_a_pub + "\n" + key_b_pub
@@ -244,29 +304,108 @@ def test_gpg_present_source(
             gnupghome=str(gpghome),
             skip_keyserver=True,
             source=str(keyfile),
+            test=testmode,
         )
-    assert ret.result
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
     assert ret.changes
     assert key_a_fp[-16:] in ret.changes
     assert ret.changes[key_a_fp[-16:]]["added"]
-    assert gnupg.list_keys(keys=key_a_fp)
+    assert bool(gnupg.list_keys(keys=key_a_fp)) is not testmode
     assert not gnupg.list_keys(keys=key_b_fp)
+
+
+@pytest.mark.parametrize("keyring", ((),), indirect=True)
+def test_gpg_present_source_keyring(
+    gpghome,
+    gpg,
+    gnupg,
+    gnupg_keyring,
+    keyring,
+    key_a_fp,
+    key_a_pub,
+    key_b_pub,
+    key_b_fp,
+    testmode,
+):
+    """
+    Ensure imports from a list of file sources to a keyring work
+    """
+    with pytest.helpers.temp_file(
+        "keys", contents=key_a_pub + "\n" + key_b_pub
+    ) as keyfile:
+        ret = gpg.present(
+            key_a_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            source=str(keyfile),
+            keyring=keyring,
+            test=testmode,
+        )
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert bool(gnupg_keyring.list_keys(keys=key_a_fp)) is not testmode
+    assert not gnupg_keyring.list_keys(keys=key_b_fp)
 
 
 @pytest.mark.skipif(
     PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
 )
 def test_gpg_present_text(
-    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp
+    gpghome, gpg, gnupg, key_a_fp, key_a_pub, key_b_pub, key_b_fp, testmode
 ):
     concat = key_a_pub + "\n" + key_b_pub
-    ret = gpg.present(key_a_fp[-16:], gnupghome=str(gpghome), text=concat)
-    assert ret.result
+    ret = gpg.present(
+        key_a_fp[-16:], gnupghome=str(gpghome), text=concat, test=testmode
+    )
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
     assert ret.changes
     assert key_a_fp[-16:] in ret.changes
     assert ret.changes[key_a_fp[-16:]]["added"]
-    assert gnupg.list_keys(keys=key_a_fp)
+    assert bool(gnupg.list_keys(keys=key_a_fp)) is not testmode
     assert not gnupg.list_keys(keys=key_b_fp)
+
+
+@pytest.mark.skipif(
+    PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+)
+@pytest.mark.parametrize("keyring", ((),), indirect=True)
+def test_gpg_present_text_keyring(
+    gpghome,
+    gpg,
+    gnupg,
+    gnupg_keyring,
+    keyring,
+    key_a_fp,
+    key_a_pub,
+    key_b_pub,
+    key_b_fp,
+    testmode,
+):
+    """
+    Ensure imports from a textual source to a keyring work
+    """
+    concat = key_a_pub + "\n" + key_b_pub
+    ret = gpg.present(
+        key_a_fp[-16:],
+        gnupghome=str(gpghome),
+        keyring=keyring,
+        text=concat,
+        test=testmode,
+    )
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
+    assert ret.changes
+    assert key_a_fp[-16:] in ret.changes
+    assert ret.changes[key_a_fp[-16:]]["added"]
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert bool(gnupg_keyring.list_keys(keys=key_a_fp)) is not testmode
+    assert not gnupg_keyring.list_keys(keys=key_b_fp)
 
 
 @pytest.mark.skipif(
@@ -320,7 +459,8 @@ def test_gpg_present_source_not_contained(
     assert not gnupg.list_keys(keys=key_a_fp)
     assert not gnupg.list_keys(keys=key_b_fp)
     assert (
-        "none of the specified sources were found or contained the key" in ret.comment
+        "none of the specified sources were found or contained the (unexpired) key"
+        in ret.comment
     )
 
 
@@ -343,6 +483,162 @@ def test_gpg_present_source_bad_keyfile(
     assert ret.changes[key_a_fp[-16:]]["added"]
     assert gnupg.list_keys(keys=key_a_fp)
     assert not gnupg.list_keys(keys=key_b_fp)
+
+
+@pytest.mark.parametrize(
+    "method",
+    (
+        "source",
+        pytest.param(
+            "text",
+            marks=pytest.mark.skipif(
+                PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+            ),
+        ),
+    ),
+)
+def test_gpg_present_import_expired_key(
+    method, gpghome, gpg, gnupg, key_e_fp, key_e_pub
+):
+    """
+    Ensure that when a newly imported key is expired, the state fails.
+    The key should be imported though if it was not present before.
+    """
+    if method == "source":
+        ctx = pytest.helpers.temp_file("keys", contents=key_e_pub)
+    else:
+        ctx = contextlib.nullcontext()
+        params = {"text": key_e_pub}
+    with ctx as inst:
+        if method == "source":
+            params = {"source": [str(inst)]}
+        ret = gpg.present(
+            key_e_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            **params,
+        )
+    assert ret.result is False
+    assert "is expired" in ret.comment
+    assert ret.changes
+    assert ret.changes[key_e_fp[-16:]]["added"]
+    assert gnupg.list_keys(keys=key_e_fp)
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
+@pytest.mark.parametrize("_pubkeys_present", (("e",),), indirect=True)
+@pytest.mark.parametrize(
+    "method",
+    (
+        "source",
+        pytest.param(
+            "text",
+            marks=pytest.mark.skipif(
+                PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+            ),
+        ),
+    ),
+)
+def test_gpg_present_expired_key_already_present_fails(
+    method, gpghome, gpg, gnupg, key_e_fp, key_e_pub
+):
+    """
+    Ensure that when a present key is expired and no new one can be found,
+    the state fails without changes.
+    """
+    if method == "source":
+        ctx = pytest.helpers.temp_file("keys", contents=key_e_pub)
+    else:
+        ctx = contextlib.nullcontext()
+        params = {"text": key_e_pub}
+    with ctx as inst:
+        if method == "source":
+            params = {"source": [str(inst)]}
+        ret = gpg.present(
+            key_e_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            **params,
+        )
+    assert ret.result is False
+    if method == "source":
+        assert "contained the (unexpired) key" in ret.comment
+    else:
+        assert "but it's expired" in ret.comment
+    assert not ret.changes
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
+@pytest.mark.parametrize("_pubkeys_present", (("e",),), indirect=True)
+@pytest.mark.parametrize(
+    "method",
+    (
+        "source",
+        pytest.param(
+            "text",
+            marks=pytest.mark.skipif(
+                PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+            ),
+        ),
+    ),
+)
+def test_gpg_present_expired_key_already_present_refresh(
+    method, gpghome, gpg, gnupg, key_e_fp, key_e_pub_notexpired, testmode
+):
+    """
+    Ensure that when a present key is expired and a new one is available,
+    the key is reimported.
+    """
+    if method == "source":
+        ctx = pytest.helpers.temp_file("keys", contents=key_e_pub_notexpired)
+    else:
+        ctx = contextlib.nullcontext()
+        params = {"text": key_e_pub_notexpired}
+    with ctx as inst:
+        if method == "source":
+            params = {"source": [str(inst)]}
+        ret = gpg.present(
+            key_e_fp[-16:],
+            gnupghome=str(gpghome),
+            skip_keyserver=True,
+            **params,
+            test=testmode,
+        )
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
+    assert "the existing one was expired" in ret.comment
+    assert ret.changes
+    assert ret.changes[key_e_fp[-16:]]["added"]
+    assert ret.changes[key_e_fp[-16:]]["refresh"]
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
+@pytest.mark.parametrize("_pubkeys_present", (("e",),), indirect=True)
+def test_gpg_present_expired_key_trust_change(
+    gpghome, gpg, gnupg, key_e_fp, key_e_pub_notexpired, testmode
+):
+    """
+    Test that key expiry updates and trust changes work together
+    """
+    assert gnupg.list_keys(keys=key_e_fp)
+    with pytest.helpers.temp_file("keys", contents=key_e_pub_notexpired) as keyfile:
+        ret = gpg.present(
+            key_e_fp[-16:],
+            gnupghome=str(gpghome),
+            trust="ultimately",
+            skip_keyserver=True,
+            source=[str(keyfile)],
+            test=testmode,
+        )
+    assert ret.result is not False
+    assert (ret.result is None) is testmode
+    assert ret.changes
+    assert ret.changes == {
+        key_e_fp[-16:]: {"added": True, "refresh": True, "trust": "ultimately"}
+    }
+    key_info = gnupg.list_keys(keys=key_e_fp)
+    assert key_info
+    assert (key_info[0]["trust"] == "u") is not testmode
 
 
 @pytest.mark.windows_whitelisted

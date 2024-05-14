@@ -85,7 +85,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

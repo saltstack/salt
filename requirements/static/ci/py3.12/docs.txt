@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.12/docs.txt requirements/base.txt requirements/static/ci/docs.in requirements/zeromq.txt
 #
-aiohttp==3.9.2
+aiohttp==3.9.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -69,7 +69,7 @@ frozenlist==1.4.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   requests
@@ -106,7 +106,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jaraco.collections
-jinja2==3.1.3
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -179,11 +179,11 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.14.5
+pydantic-core==2.16.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pydantic
-pydantic==2.5.2
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   inflect

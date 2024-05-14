@@ -18,6 +18,7 @@ import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
 import salt.utils.win_dacl as win_dacl
+from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +107,19 @@ def lgpo_bin():
     else:
         log.debug("LGPO.exe already present")
         yield str(sys_dir / "lgpo.exe")
+
+
+def test_clear_policy_cache():
+    context = {
+        "lgpo.policy_definitions": "spongebob",
+        "lgpo.policy_resources": "squarepants",
+    }
+    with patch.dict(win_lgpo.__context__, context):
+        assert "lgpo.policy_definitions" in win_lgpo.__context__
+        assert "lgpo.policy_resources" in win_lgpo.__context__
+        win_lgpo.clear_policy_cache()
+        assert "lgpo.policy_definitions" not in win_lgpo.__context__
+        assert "lgpo.policy_resources" not in win_lgpo.__context__
 
 
 @pytest.mark.destructive_test
@@ -449,6 +463,7 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
         ),
     ],
 )
+@pytest.mark.destructive_test
 def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -519,6 +534,7 @@ def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_reg
         ),
     ],
 )
+@pytest.mark.destructive_test
 def test_set_user_policy(clean_user, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_user_policy(
         lgpo_bin=lgpo_bin,
@@ -529,6 +545,7 @@ def test_set_user_policy(clean_user, lgpo_bin, shell, name, setting, exp_regexes
     )
 
 
+@pytest.mark.destructive_test
 def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     """
     Test setting/unsetting/changing WindowsUpdate policy
@@ -668,6 +685,7 @@ def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     )
 
 
+@pytest.mark.destructive_test
 def test_set_computer_policy_multiple_policies(clean_comp, lgpo_bin, shell):
     """
     Tests setting several ADMX policies in succession and validating the

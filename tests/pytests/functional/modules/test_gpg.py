@@ -12,6 +12,37 @@ pytestmark = [
 ]
 
 
+def _kill_gpg_agent(root):
+    gpg_connect_agent = shutil.which("gpg-connect-agent")
+    if gpg_connect_agent:
+        gnupghome = root / ".gnupg"
+        if not gnupghome.is_dir():
+            gnupghome = root
+        try:
+            subprocess.run(
+                [gpg_connect_agent, "killagent", "/bye"],
+                env={"GNUPGHOME": str(gnupghome)},
+                shell=False,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            # This is likely CentOS 7 or Amazon Linux 2
+            pass
+
+    # If the above errored or was not enough, as a last resort, let's check
+    # the running processes.
+    for proc in psutil.process_iter():
+        try:
+            if "gpg-agent" in proc.name():
+                for arg in proc.cmdline():
+                    if str(root) in arg:
+                        proc.terminate()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
 @pytest.fixture
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
@@ -20,34 +51,7 @@ def gpghome(tmp_path):
         yield root
     finally:
         # Make sure we don't leave any gpg-agents running behind
-        gpg_connect_agent = shutil.which("gpg-connect-agent")
-        if gpg_connect_agent:
-            gnupghome = root / ".gnupg"
-            if not gnupghome.is_dir():
-                gnupghome = root
-            try:
-                subprocess.run(
-                    [gpg_connect_agent, "killagent", "/bye"],
-                    env={"GNUPGHOME": str(gnupghome)},
-                    shell=False,
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            except subprocess.CalledProcessError:
-                # This is likely CentOS 7 or Amazon Linux 2
-                pass
-
-        # If the above errored or was not enough, as a last resort, let's check
-        # the running processes.
-        for proc in psutil.process_iter():
-            try:
-                if "gpg-agent" in proc.name():
-                    for arg in proc.cmdline():
-                        if str(root) in arg:
-                            proc.terminate()
-            except Exception:  # pylint: disable=broad-except
-                pass
+        _kill_gpg_agent(root)
 
 
 @pytest.fixture
@@ -931,3 +935,17 @@ def test_read_key_multiple(
     else:
         assert len(res) == 1
     assert any(key["fingerprint"] == key_a_fp for key in res)
+
+
+def test_missing_gnupghome(gpg, tmp_path):
+    """
+    Ensure the directory passed as `gnupghome` is created before
+    python-gnupg is invoked. Issue #66312.
+    """
+    gnupghome = tmp_path / "gnupghome"
+    try:
+        res = gpg.list_keys(gnupghome=tmp_path / "gnupghome")
+        assert res == []
+    finally:
+        # Make sure we don't leave any gpg-agents running behind
+        _kill_gpg_agent(gnupghome)
