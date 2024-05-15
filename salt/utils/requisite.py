@@ -96,6 +96,8 @@ class DependencyGraph:
     between the states.
     """
 
+    __slots__ = ("dag", "nodes_lookup_map", "sls_to_nodes")
+
     def __init__(self) -> None:
         self.dag = nx.MultiDiGraph()
         # a mapping to node_id to be able to find nodes with
@@ -245,7 +247,6 @@ class DependencyGraph:
         self, low: LowChunk, req_type: RequisiteType, req_key: str, req_val: str
     ) -> bool:
         found = False
-        prereq_tag = None
         has_prereq_node = low.get("__prereq__", False)
         if req_key == "sls":
             # Allow requisite tracking of entire sls files
