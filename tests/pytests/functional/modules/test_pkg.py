@@ -396,7 +396,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     Test running a system upgrade when there are packages that need upgrading
     """
     if grains["os"] == "Arch":
-        pytest.skipTest("Arch moved to Python 3.8 and we're not ready for it yet")
+        pytest.skip("Arch moved to Python 3.8 and we're not ready for it yet")
 
     modules.pkg.upgrade()
 
@@ -434,7 +434,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
         ret = modules.pkg.install(target, version=old)
         if not isinstance(ret, dict):
             if ret.startswith("ERROR"):
-                pytest.skipTest(f"Could not install older {target} to complete test.")
+                pytest.skip(f"Could not install older {target} to complete test.")
 
         # Run a system upgrade, which should catch the fact that the
         # targeted package needs upgrading, and upgrade it.
@@ -448,7 +448,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     else:
         ret = modules.pkg.list_upgrades()
         if ret == "" or ret == {}:
-            pytest.skipTest(
+            pytest.skip(
                 "No updates available for this machine.  Skipping pkg.upgrade test."
             )
         else:
