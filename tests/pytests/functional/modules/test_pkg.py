@@ -234,11 +234,10 @@ def test_which(grains, modules):
     """
     test finding the package owning a file
     """
-    if grains["os_family"] in ["Debian", "RedHat"]:
-        file = "/bin/mknod"
-    else:
-        file = "/usr/local/bin/salt-call"
-    ret = modules.pkg.which(file)
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+    ret = modules.pkg.which(binary)
     assert len(ret) != 0
 
 
