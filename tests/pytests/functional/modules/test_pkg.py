@@ -123,7 +123,7 @@ def test_mod_del_repo(grains, modules):
 
     try:
         # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
-        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] < 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")
@@ -213,11 +213,15 @@ def test_mod_del_repo_multiline_values(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.owner("/bin/ls")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+
+    ret = modules.pkg.owner(binary)
     assert len(ret) != 0
 
 

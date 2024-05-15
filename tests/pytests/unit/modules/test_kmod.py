@@ -4,7 +4,7 @@ import pytest
 
 import salt.modules.kmod as kmod
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def test_available():
     Tests return a list of all available kernel modules
     """
     with patch("salt.modules.kmod.available", MagicMock(return_value=["kvm"])):
-        assert ["kvm"] == kmod.available()
+        assert kmod.available() == ["kvm"]
 
 
 def test_check_available():
@@ -42,7 +42,7 @@ def test_lsmod():
     ), patch.dict(kmod.__salt__, {"cmd.run": mock_cmd}):
         with pytest.raises(CommandExecutionError):
             kmod.lsmod()
-        assert expected == kmod.lsmod()
+        assert kmod.lsmod() == expected
 
 
 @pytest.mark.skipif(
@@ -55,15 +55,12 @@ def test_mod_list():
     with patch(
         "salt.modules.kmod._get_modules_conf",
         MagicMock(return_value="/etc/modules"),
-    ):
-        with patch(
-            "salt.modules.kmod._strip_module_name", MagicMock(return_value="lp")
-        ):
-            assert ["lp"] == kmod.mod_list(True)
+    ), patch("salt.utils.files.fopen", mock_open(read_data="lp")):
+        assert kmod.mod_list(True) == ["lp"]
 
     mock_ret = [{"size": 100, "module": None, "depcount": 10, "deps": None}]
     with patch("salt.modules.kmod.lsmod", MagicMock(return_value=mock_ret)):
-        assert [None] == kmod.mod_list(False)
+        assert kmod.mod_list(False) == [None]
 
 
 def test_load():
@@ -90,10 +87,10 @@ def test_load():
                 kmod.load(mod, True)
 
             with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_0}):
-                assert [mod] == kmod.load(mod, True)
+                assert kmod.load(mod, True) == [mod]
 
             with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_1}):
-                assert f"Error loading module {mod}: {err_msg}" == kmod.load(mod)
+                assert kmod.load(mod) == f"Error loading module {mod}: {err_msg}"
 
 
 def test_is_loaded():
@@ -126,11 +123,11 @@ def test_remove():
                 with pytest.raises(CommandExecutionError):
                     kmod.remove(mod)
 
-                assert [mod] == kmod.remove(mod, True)
+                assert kmod.remove(mod, True) == [mod]
 
-                assert [] == kmod.remove(mod)
+                assert kmod.remove(mod) == []
 
             with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_1}):
-                assert "Error removing module {}: {}".format(
-                    mod, err_msg
-                ) == kmod.remove(mod, True)
+                assert (
+                    kmod.remove(mod, True) == f"Error removing module {mod}: {err_msg}"
+                )

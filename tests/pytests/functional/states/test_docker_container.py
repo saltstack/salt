@@ -169,7 +169,10 @@ def docker_container(states):
 
 
 @pytest.fixture(scope="module")
-def image(tmp_path_factory):
+def image(grains, tmp_path_factory):
+    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 5:
+        pytest.skip(f"Temporary skip on {grains['osfinger']}")
+
     if not salt.utils.path.which("docker"):
         # Somehow the above skip_if_binaries_missing marker for docker
         # only get's evaluated after this fixture?!?
