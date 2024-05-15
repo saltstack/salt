@@ -57,7 +57,7 @@ TEST_SALT_LISTING = PlatformDefinitions(
             Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
             Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
             Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
-            Linux(slug="fedora-39", display_name="Fedora 39", arch="x86_64"),
+            Linux(slug="fedora-40", display_name="Fedora 40", arch="x86_64"),
             Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
             Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
             Linux(
@@ -101,6 +101,12 @@ TEST_SALT_LISTING = PlatformDefinitions(
             Linux(
                 slug="ubuntu-22.04-arm64",
                 display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
+            Linux(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
                 arch="arm64",
             ),
         ],
@@ -342,6 +348,18 @@ def generate_workflows(ctx: Context):
                 Linux(
                     slug="ubuntu-22.04-arm64",
                     display_name="Ubuntu 22.04 Arm64",
+                    arch="arm64",
+                    pkg_type="deb",
+                ),
+                Linux(
+                    slug="ubuntu-24.04",
+                    display_name="Ubuntu 24.04",
+                    arch="x86_64",
+                    pkg_type="deb",
+                ),
+                Linux(
+                    slug="ubuntu-24.04-arm64",
+                    display_name="Ubuntu 24.04 Arm64",
                     arch="arm64",
                     pkg_type="deb",
                 ),
