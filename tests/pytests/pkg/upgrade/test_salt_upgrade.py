@@ -19,8 +19,12 @@ def _get_running_salt_minion_pid(
     # and psutil is only returning the salt-minion once
     pids = []
     for proc in psutil.process_iter():
+        log.warning(f"DGM _get_running_salt_minion_pid, proc.name '{proc.name()}'")
         if "salt" in proc.name():
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+            log.warning(
+                f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
+            )
             if process_name in cmdl_strg:
                 pids.append(proc.pid)
 
