@@ -3177,6 +3177,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-include-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_include_saltexts",
+            help=("Include Salt extension modules in generated Thin Salt."),
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,

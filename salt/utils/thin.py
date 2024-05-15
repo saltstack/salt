@@ -2,9 +2,12 @@
 Generate the salt thin tarball from the installed python files
 """
 
+import contextlib
 import contextvars as py_contextvars
 import copy
 import importlib.util
+import inspect
+import io
 import logging
 import os
 import shutil
@@ -13,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import types
 import zipfile
 
 import distro
@@ -25,6 +29,7 @@ import yaml
 
 import salt
 import salt.exceptions
+import salt.utils.entrypoints
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
@@ -583,6 +588,103 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
                             tfp.add(os.path.join(root, name), arcname=arcname)
 
 
+@contextlib.contextmanager
+def _catch_entry_points_exception(entry_point):
+    context = types.SimpleNamespace(exception_caught=False)
+    try:
+        yield context
+    except Exception as exc:  # pylint: disable=broad-except
+        context.exception_caught = True
+        entry_point_details = salt.utils.entrypoints.name_and_version_from_entry_point(
+            entry_point
+        )
+        log.error(
+            "Error processing Salt Extension %s(version: %s): %s",
+            entry_point_details.name,
+            entry_point_details.version,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
+
+
+def _discover_saltexts():
+    mods = set()
+    loaded_saltexts = {}
+    for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
+        with _catch_entry_points_exception(entry_point) as ctx:
+            loaded_entry_point = entry_point.load()
+        if ctx.exception_caught:
+            continue
+        if not isinstance(loaded_entry_point, (types.FunctionType, types.ModuleType)):
+            log.debug(
+                "Skipping entry point '%s' of '%s': Not a function/module",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
+        if entry_point.dist.name not in loaded_saltexts:
+            # We could get this via entry_point.dist._path.name, but that is hacky
+            dist_name = next(
+                iter(
+                    file.parent.name
+                    for file in entry_point.dist.files
+                    if "dist-info" in file.parent.name
+                )
+            )
+            loaded_saltexts[entry_point.dist.name] = {
+                "name": dist_name,
+                "entrypoints": {},
+                "mods": {},
+            }
+
+        if isinstance(loaded_entry_point, types.FunctionType):
+            func_mod = inspect.getmodule(loaded_entry_point)
+            try:
+                mod = sys.modules[func_mod.__package__]
+            except KeyError:
+                mod = func_mod
+            except AttributeError:
+                # func_mod was None
+                log.debug(
+                    "Failed discovering module for entrypoint function defined by '%s' in '%s'",
+                    entry_point.name,
+                    entry_point.dist.name,
+                )
+                continue
+        else:
+            mod = loaded_entry_point
+        loaded_saltexts[entry_point.dist.name]["entrypoints"][
+            entry_point.name
+        ] = entry_point.value
+        loaded_saltexts[entry_point.dist.name]["mods"][mod.__name__] = mod
+        if os.path.basename(mod.__file__).split(".")[0] == "__init__":
+            mods.add(os.path.dirname(mod.__file__))
+        else:
+            mods.add(mod.__file__.replace(".pyc", ".py"))
+
+    return mods, loaded_saltexts
+
+
+def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
+    """
+    Take the output of discover_saltexts and add appropriate entry point definitions
+    for the loader to be able to discover the extensions.
+    """
+    for dist, data in saltext_dists.items():
+        if not data["entrypoints"]:
+            log.debug("No entrypoints for distribution '%s'", dist)
+            continue
+        log.debug("Packing entrypoints for distribution '%s'", dist)
+        defs = (
+            "[salt.loader]\n"
+            + "\n".join(f"{name} = {val}" for name, val in data["entrypoints"].items())
+        ).encode("utf-8")
+        info = tarfile.TarInfo(name="py3/" + data["name"] + "/entry_points.txt")
+        info.size = len(defs)
+        tfp.addfile(tarinfo=info, fileobj=io.BytesIO(defs))
+        digest_collector.add_data(defs)
+
+
 def gen_thin(
     cachedir,
     extra_mods="",
@@ -591,6 +693,7 @@ def gen_thin(
     absonly=True,
     compress="gzip",
     extended_cfg=None,
+    include_saltexts=False,
 ):
     """
     Generate the salt-thin tarball and print the location of the tarball
@@ -660,6 +763,10 @@ def gen_thin(
     tops_failure_msg = "Failed %s tops for Python binary %s."
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
+    if include_saltexts:
+        mods, saltext_dists = _discover_saltexts()
+        tops.extend(mods)
+
     tops_py_version_mapping[sys.version_info.major] = tops
 
     with salt.utils.files.fopen(pymap_cfg, "wb") as fp_:
@@ -732,6 +839,9 @@ def gen_thin(
                 shutil.rmtree(tempdir)
                 tempdir = None
 
+    if include_saltexts:
+        log.debug("Packing saltext distribution entrypoints")
+        _pack_saltext_dists(saltext_dists, digest_collector, tfp)
     if extended_cfg:
         log.debug("Packing libraries based on alternative Salt versions")
         _pack_alternative(extended_cfg, digest_collector, tfp)

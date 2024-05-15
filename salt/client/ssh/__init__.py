@@ -315,6 +315,7 @@ class SSH(MultiprocessingStateMixin):
             extra_mods=self.opts.get("thin_extra_mods"),
             overwrite=self.opts["regen_thin"],
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
+            include_saltexts=self.opts.get("thin_include_saltexts", False),
         )
         self.mods = mod_data(self.fsclient)
 
