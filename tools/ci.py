@@ -791,28 +791,29 @@ def pkg_matrix(
     if TYPE_CHECKING:
         assert testing_releases
 
-    still_testing_3005 = False
-    for release_version in testing_releases:
-        if still_testing_3005:
-            break
-        if release_version < tools.utils.Version("3006.0"):
-            still_testing_3005 = True
+    ## DGM still_testing_3005 = False
+    ## DGM for release_version in testing_releases:
+    ## DGM     if still_testing_3005:
+    ## DGM         break
+    ## DGM     if release_version < tools.utils.Version("3006.0"):
+    ## DGM         still_testing_3005 = True
 
-    if still_testing_3005 is False:
-        ctx.error(
-            f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error. There may "
-            "be other places that need code removed as well."
-        )
-        ctx.exit(1)
+    ## DGM if still_testing_3005 is False:
+    ## DGM     ctx.error(
+    ## DGM         f"No longer testing 3005.x releases please update {__file__} "
+    ## DGM         "and remove this error and the logic above the error. There may "
+    ## DGM         "be other places that need code removed as well."
+    ## DGM     )
+    ## DGM     ctx.exit(1)
 
     adjusted_versions = []
     for ver in testing_releases:
-        if ver < tools.utils.Version("3006.0"):
-            adjusted_versions.append((ver, "classic"))
-            adjusted_versions.append((ver, "tiamat"))
-        else:
-            adjusted_versions.append((ver, "relenv"))
+        ## DGM if ver < tools.utils.Version("3006.0"):
+        ## DGM     adjusted_versions.append((ver, "classic"))
+        ## DGM     adjusted_versions.append((ver, "tiamat"))
+        ## DGM else:
+        ## DGM     adjusted_versions.append((ver, "relenv"))
+        adjusted_versions.append((ver, "relenv"))
     ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
     # Filter out the prefixes to look under
@@ -1329,13 +1330,18 @@ def get_testing_releases(
     majors = sorted(
         list(
             {
+                ## DGM version.major
+                ## DGM for version in releases
+                ## DGM # We aren't testing upgrades from anything before
+                ## DGM # 3006.0 except the latest 3005.x
+                ## DGM if version.major >= 3005
+                ## DGM # We don't want to test 3007.? on the 3006.x branch
+                ## DGM and version.major <= parsed_salt_version.major
+                # We aren't testing upgrades from anything before 3006.0
+                # and we don't want to test 3007.? on the 3006.x branch
                 version.major
                 for version in releases
-                # We aren't testing upgrades from anything before
-                # 3006.0 except the latest 3005.x
-                if version.major >= 3005
-                # We don't want to test 3007.? on the 3006.x branch
-                and version.major <= parsed_salt_version.major
+                if version.major > 3005 and version.major <= parsed_salt_version.major
             }
         )
     )[-num_major_versions:]
