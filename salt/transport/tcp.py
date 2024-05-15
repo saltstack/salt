@@ -304,6 +304,19 @@ class PublishClient(salt.transport.base.PublishClient):
                     await asyncio.wait_for(stream.connect(self.path), 1)
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug("PubClient conencted to %r %r", self, self.path)
+            except tornado.iostream.StreamClosedError as exc:
+                if self.path:
+                    _connect_to = self.path
+                else:
+                    _connect_to = f"{self.host}:{self.port}"
+                log.warning(
+                    "TCP Publish Client unable to connect %s, retry in %s seconds",
+                    _connect_to,
+                    self.backoff,
+                )
+                if timeout and time.monotonic() - start > timeout:
+                    break
+                await asyncio.sleep(self.backoff)
             except Exception as exc:  # pylint: disable=broad-except
                 if self.path:
                     _connect_to = self.path

@@ -153,11 +153,15 @@ class AsyncReqChannel:
         return self.transport.ttype
 
     def _package_load(self, load):
-        return {
+        ret = {
             "enc": self.crypt,
             "load": load,
             "version": 2,
         }
+        if self.crypt == "aes":
+            ret["enc_algo"] = self.opts["rsa_encryption_algorithm"]
+            ret["sig_algo"] = self.opts["rsa_signing_algorithm"]
+        return ret
 
     @tornado.gen.coroutine
     def _send_with_retry(self, load, tries, timeout):
@@ -208,7 +212,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        aes = key.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], self.opts["rsa_encryption_algorithm"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -231,7 +235,9 @@ class AsyncReqChannel:
         raise tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.verify_signature(self.master_pubkey_path, data, sig)
+        return salt.crypt.verify_signature(
+            self.master_pubkey_path, data, sig, self.opts["rsa_signing_algorithm"]
+        )
 
     @tornado.gen.coroutine
     def _crypted_transfer(self, load, timeout, raw=False):
@@ -578,7 +584,10 @@ class AsyncPubChannel:
 
             # Verify that the signature is valid
             if not salt.crypt.verify_signature(
-                self.master_pubkey_path, payload["load"], payload.get("sig")
+                self.master_pubkey_path,
+                payload["load"],
+                payload.get("sig"),
+                algorithm=payload["sig_algo"],
             ):
                 raise salt.crypt.AuthenticationError(
                     "Message signature failed to validate."

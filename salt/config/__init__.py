@@ -1004,6 +1004,7 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_interval": int,
         "request_channel_timeout": int,
         "request_channel_tries": int,
+        "pub_channel_hash_algo": str,
     }
 )
 
@@ -1230,6 +1231,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
         "random_reauth_delay": 10,
+        "rsa_encryption_algorithm": "OAEP-SHA224",
+        "rsa_signing_algorithm": "PKCS1v15-SHA224",
         "winrepo_source_dir": "salt://win/repo-ng/",
         "winrepo_dir": os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo"),
         "winrepo_dir_ng": os.path.join(
@@ -1318,6 +1321,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
     {
         "interface": "0.0.0.0",
         "publish_port": 4505,
+        "publish_encryption_algorithm": "AES-256-CBC-HMAC-SHA256",
+        "publish_signing_algorithm": "PKCS1v15-SHA224",
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
         "auth_mode": 1,
@@ -1614,6 +1619,14 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "master_sign_pubkey": False,
         "master_pubkey_signature": "master_pubkey_signature",
         "master_use_pubkey_signature": False,
+        "rsa_encryption_algorithms": [
+            "oaep-sha1",
+            "oaep-sha224",
+        ],
+        "rsa_signing_algorithms": [
+            "pkcs1v15-sha1",
+            "pkcs1v15-sha224",
+        ],
         "zmq_filtering": False,
         "zmq_monitor": False,
         "con_cache": False,
