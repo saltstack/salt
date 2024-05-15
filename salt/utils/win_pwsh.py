@@ -3,26 +3,16 @@ import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-__virtualname__ = "win_pwsh"
-
-
-def __virtual__():
-    """
-    Only load if windows
-    """
-    if not salt.utils.platform.is_windows():
-        return False, "This utility will only run on Windows"
-
-    return __virtualname__
-
 
 def run_dict(cmd, cwd=None):
     """
     Execute the powershell command and return the data as a dictionary
 
+    .. versionadded:: 3006.9
+
     Args:
 
-        cmd (str): The powershell command to run
+        cmd (str,list): The powershell command to run
 
         cwd (str): The current working directory
 
@@ -34,6 +24,8 @@ def run_dict(cmd, cwd=None):
             If an error is encountered or the command does not complete
             successfully
     """
+    if isinstance(cmd, list):
+        cmd = " ".join(map(str, cmd))
     if "convertto-json" not in cmd.lower():
         cmd = f"{cmd} | ConvertTo-Json"
     if "progresspreference" not in cmd.lower():
