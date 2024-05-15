@@ -608,7 +608,7 @@ def _catch_entry_points_exception(entry_point):
 
 
 def _discover_saltexts():
-    mods = set()
+    mods = []
     loaded_saltexts = {}
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
         with _catch_entry_points_exception(entry_point) as ctx:
@@ -623,18 +623,26 @@ def _discover_saltexts():
             )
             continue
         if entry_point.dist.name not in loaded_saltexts:
-            # We could get this via entry_point.dist._path.name, but that is hacky
-            dist_name = next(
-                iter(
-                    file.parent.name
-                    for file in entry_point.dist.files
-                    if "dist-info" in file.parent.name
+            try:
+                # We could get this via entry_point.dist._path.name, but that is hacky
+                dist_name = next(
+                    iter(
+                        file.parent.name
+                        for file in entry_point.dist.files
+                        if "dist-info" in file.parent.name
+                    )
                 )
-            )
+            except StopIteration:
+                # This should never happen since we have the data to arrive here
+                log.debug(
+                    "Skipping entry point '%s' of '%s': Failed discovering dist-info",
+                    entry_point.name,
+                    entry_point.dist.name,
+                )
+                continue
             loaded_saltexts[entry_point.dist.name] = {
                 "name": dist_name,
                 "entrypoints": {},
-                "mods": {},
             }
 
         if isinstance(loaded_entry_point, types.FunctionType):
@@ -646,23 +654,21 @@ def _discover_saltexts():
             except AttributeError:
                 # func_mod was None
                 log.debug(
-                    "Failed discovering module for entrypoint function defined by '%s' in '%s'",
+                    "Failed discovering module for function entrypoint '%s' defined by '%s'",
                     entry_point.name,
                     entry_point.dist.name,
                 )
                 continue
         else:
             mod = loaded_entry_point
+
         loaded_saltexts[entry_point.dist.name]["entrypoints"][
             entry_point.name
         ] = entry_point.value
-        loaded_saltexts[entry_point.dist.name]["mods"][mod.__name__] = mod
-        if os.path.basename(mod.__file__).split(".")[0] == "__init__":
-            mods.add(os.path.dirname(mod.__file__))
-        else:
-            mods.add(mod.__file__.replace(".pyc", ".py"))
+        _add_dependency(mods, mod)
 
-    return mods, loaded_saltexts
+    # We need the mods to be in a deterministic order for the hash digest later
+    return list(sorted(set(mods))), loaded_saltexts
 
 
 def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
@@ -670,7 +676,9 @@ def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
     Take the output of discover_saltexts and add appropriate entry point definitions
     for the loader to be able to discover the extensions.
     """
-    for dist, data in saltext_dists.items():
+    # Again, we need this to execute in a deterministic order for the hash digest
+    for dist in sorted(saltext_dists):
+        data = saltext_dists[dist]
         if not data["entrypoints"]:
             log.debug("No entrypoints for distribution '%s'", dist)
             continue
@@ -678,6 +686,7 @@ def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
         defs = (
             "[salt.loader]\n"
             + "\n".join(f"{name} = {val}" for name, val in data["entrypoints"].items())
+            + "\n"
         ).encode("utf-8")
         info = tarfile.TarInfo(name="py3/" + data["name"] + "/entry_points.txt")
         info.size = len(defs)
@@ -760,12 +769,20 @@ def gen_thin(
         else:
             return thintar
 
-    tops_failure_msg = "Failed %s tops for Python binary %s."
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
     if include_saltexts:
-        mods, saltext_dists = _discover_saltexts()
-        tops.extend(mods)
+        if compress != "gzip":
+            # The reason being that we're generating the filtered entrypoints
+            # and adding them from memory - if this is deemed as unnecessary,
+            # we would need the absolute path to the entry_points.txt file for
+            # the distribution, which is only available as a protected attribute.
+            # Salt-SSH never overrides `compress` from gzip though.
+            log.warning("Cannot include saltexts in thin when compression is not gzip")
+            include_saltexts = False
+        else:
+            mods, saltext_dists = _discover_saltexts()
+            tops.extend(mods)
 
     tops_py_version_mapping[sys.version_info.major] = tops
 
