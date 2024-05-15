@@ -35,7 +35,6 @@ except ImportError:
     HAS_CRYPTOGRAPHY = False
 
 import salt.channel.client
-import salt.crypt_legacy
 import salt.defaults.exitcodes
 import salt.payload
 import salt.utils.crypt
@@ -57,8 +56,6 @@ from salt.exceptions import (
 )
 
 log = logging.getLogger(__name__)
-
-HAS_CRYPTO = salt.crypt_legacy.HAS_CRYPTO
 
 
 OAEP = "OAEP"
@@ -1739,15 +1736,3 @@ class Crypticle:
                     return {}
                 self.serial = serial
         return payload
-
-
-# if fips_enabled() and HAS_CRYPTO:
-#    generate_private_key = salt.crypt_legacy.generate_private_key
-#    public_from_private = salt.crypt_legacy.public_from_private
-#    save_private_key = salt.crypt_legacy.save_private_key
-#    save_public_key = salt.crypt_legacy.save_public_key
-#    pwdata_decrypt = salt.crypt_legacy.pwdata_decrypt
-#    aes_encrypt = salt.crypt_legacy.aes_encrypt
-#    aes_decrypt = salt.crypt_legacy.aes_decrypt
-#    PrivateKey = salt.crypt_legacy.PrivateKey
-#    PublicKey = salt.crypt_legacy.PublicKey
