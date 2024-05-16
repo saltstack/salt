@@ -229,18 +229,19 @@ def _is_shareable(mod):
     return os.path.basename(mod) in shareable
 
 
-def _add_dependency(container, obj):
+def _add_dependency(container, obj, namespace=None):
     """
     Add a dependency to the top list.
 
     :param obj:
     :param is_file:
+    :param namespace: Optional tuple of parent namespaces for namespace packages
     :return:
     """
     if os.path.basename(obj.__file__).split(".")[0] == "__init__":
-        container.append(os.path.dirname(obj.__file__))
+        container.append((os.path.dirname(obj.__file__), namespace))
     else:
-        container.append(obj.__file__.replace(".pyc", ".py"))
+        container.append((obj.__file__.replace(".pyc", ".py"), None))
 
 
 def gte():
@@ -459,9 +460,9 @@ def get_tops(extra_mods="", so_mods=""):
                 moddir, modname = os.path.split(locals()[mod].__file__)
                 base, _ = os.path.splitext(modname)
                 if base == "__init__":
-                    tops.append(moddir)
+                    tops.append((moddir, None))
                 else:
-                    tops.append(os.path.join(moddir, base + ".py"))
+                    tops.append((os.path.join(moddir, base + ".py"), None))
             except ImportError as err:
                 log.error(
                     'Unable to import extra-module "%s": %s', mod, err, exc_info=True
@@ -470,8 +471,8 @@ def get_tops(extra_mods="", so_mods=""):
     for mod in [m for m in so_mods.split(",") if m]:
         try:
             locals()[mod] = __import__(mod)
-            tops.append(locals()[mod].__file__)
-        except ImportError as err:
+            tops.append((locals()[mod].__file__, None))
+        except ImportError:
             log.error('Unable to import so-module "%s"', mod, exc_info=True)
 
     return tops
@@ -607,10 +608,32 @@ def _catch_entry_points_exception(entry_point):
         )
 
 
+def _get_package_root_mod(mod):
+    """
+    Given an imported module, find the topmost module
+    that is not a namespace package.
+    Returns a tuple of (root_mod, tuple), where the
+    second value is a tuple of parent namespaces.
+    Needed for saltext discovery if the entrypoint is not
+    part of the root module.
+    """
+    parts = mod.__name__.split(".")
+    level = 0
+    while level < len(parts):
+        root_mod_name = ".".join(parts[: level + 1])
+        root_mod = sys.modules[root_mod_name]
+        # importlib.machinery.NamespaceLoader requires Python 3.11+
+        if type(root_mod.__path__) is list:
+            return root_mod, tuple(parts[:level])
+        level += 1
+    raise RuntimeError(f"Unable to determine package root mod for {mod}")
+
+
 def _discover_saltexts(allowlist=None, blocklist=None):
     mods = []
     loaded_saltexts = {}
     blocklist = blocklist or []
+
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
         if allowlist is not None and entry_point.dist.name not in allowlist:
             log.debug(
@@ -660,27 +683,16 @@ def _discover_saltexts(allowlist=None, blocklist=None):
                 "entrypoints": {},
             }
 
-        if isinstance(loaded_entry_point, types.FunctionType):
-            func_mod = inspect.getmodule(loaded_entry_point)
-            try:
-                mod = sys.modules[func_mod.__package__]
-            except KeyError:
-                mod = func_mod
-            except AttributeError:
-                # func_mod was None
-                log.debug(
-                    "Failed discovering module for function entrypoint '%s' defined by '%s'",
-                    entry_point.name,
-                    entry_point.dist.name,
-                )
-                continue
-        else:
-            mod = loaded_entry_point
+        mod = inspect.getmodule(loaded_entry_point)
+        with _catch_entry_points_exception(entry_point) as ctx:
+            root_mod, namespace = _get_package_root_mod(mod)
+        if ctx.exception_caught:
+            continue
 
         loaded_saltexts[entry_point.dist.name]["entrypoints"][
             entry_point.name
         ] = entry_point.value
-        _add_dependency(mods, mod)
+        _add_dependency(mods, root_mod, namespace=namespace)
 
     # We need the mods to be in a deterministic order for the hash digest later
     return list(sorted(set(mods))), loaded_saltexts
@@ -832,7 +844,7 @@ def gen_thin(
     # Pack default data
     log.debug("Packing default libraries based on current Salt version")
     for py_ver, tops in tops_py_version_mapping.items():
-        for top in tops:
+        for top, namespace in tops:
             if absonly and not os.path.isabs(top):
                 continue
             base = os.path.basename(top)
@@ -859,7 +871,9 @@ def gen_thin(
                 for name in files:
                     if not name.endswith((".pyc", ".pyo")):
                         digest_collector.add(os.path.join(root, name))
-                        arcname = os.path.join(site_pkg_dir, root, name)
+                        arcname = os.path.join(
+                            site_pkg_dir, *(namespace or ()), root, name
+                        )
                         if hasattr(tfp, "getinfo"):
                             try:
                                 # This is a little slow but there's no clear way to detect duplicates

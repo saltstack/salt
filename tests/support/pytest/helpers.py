@@ -486,9 +486,9 @@ class FakeSaltExtension:
         if not setup_cfg.exists():
             setup_cfg.write_text(
                 textwrap.dedent(
-                    """\
+                    f"""\
             [metadata]
-            name = {0}
+            name = {self.name}
             version = 1.0
             description = Salt Extension Test
             author = Pedro
@@ -509,27 +509,30 @@ class FakeSaltExtension:
             [options]
             zip_safe = False
             include_package_data = True
-            packages = find:
+            package_dir =
+                =src
+            packages = find{'_namespace' if '.' in self.pkgname else ''}:
             python_requires = >= 3.5
             setup_requires =
               wheel
               setuptools>=50.3.2
 
+            [options.packages.find]
+            where = src
+
             [options.entry_points]
             salt.loader=
-              module_dirs = {1}
-              runner_dirs = {1}.loader:get_runner_dirs
-              states_dirs = {1}.loader:get_state_dirs
-              wheel_dirs = {1}.loader:get_new_style_entry_points
-            """.format(
-                        self.name, self.pkgname
-                    )
+              module_dirs = {self.pkgname}
+              runner_dirs = {self.pkgname}.loader:get_runner_dirs
+              states_dirs = {self.pkgname}.loader:get_state_dirs
+              wheel_dirs = {self.pkgname}.loader:get_new_style_entry_points
+            """
                 )
             )
 
-        extension_package_dir = self.srcdir / self.pkgname
+        extension_package_dir = self.srcdir.joinpath("src", *self.pkgname.split("."))
         if not extension_package_dir.exists():
-            extension_package_dir.mkdir()
+            extension_package_dir.mkdir(parents=True)
             extension_package_dir.joinpath("__init__.py").write_text("")
             extension_package_dir.joinpath("loader.py").write_text(
                 textwrap.dedent(
