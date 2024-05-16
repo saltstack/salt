@@ -230,7 +230,7 @@ def test_owner(modules, grains):
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
-def test_which(grains, modules):
+def test_which(modules, grains):
     """
     test finding the package owning a file
     """
