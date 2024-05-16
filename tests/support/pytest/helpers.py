@@ -450,6 +450,7 @@ class FakeSaltExtension:
     name = attr.ib()
     pkgname = attr.ib(init=False)
     srcdir = attr.ib(init=False)
+    virtualname = attr.ib(default="foobar")
 
     @srcdir.default
     def _srcdir(self):
@@ -555,10 +556,10 @@ class FakeSaltExtension:
             runners1_dir = extension_package_dir / "runners1"
             runners1_dir.mkdir()
             runners1_dir.joinpath("__init__.py").write_text("")
-            runners1_dir.joinpath("foobar1.py").write_text(
+            runners1_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -572,10 +573,10 @@ class FakeSaltExtension:
             runners2_dir = extension_package_dir / "runners2"
             runners2_dir.mkdir()
             runners2_dir.joinpath("__init__.py").write_text("")
-            runners2_dir.joinpath("foobar2.py").write_text(
+            runners2_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -589,10 +590,10 @@ class FakeSaltExtension:
             modules_dir = extension_package_dir / "modules"
             modules_dir.mkdir()
             modules_dir.joinpath("__init__.py").write_text("")
-            modules_dir.joinpath("foobar1.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -602,10 +603,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            modules_dir.joinpath("foobar2.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -619,10 +620,10 @@ class FakeSaltExtension:
             wheel_dir = extension_package_dir / "the_wheel_modules"
             wheel_dir.mkdir()
             wheel_dir.joinpath("__init__.py").write_text("")
-            wheel_dir.joinpath("foobar1.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -632,10 +633,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            wheel_dir.joinpath("foobar2.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -649,16 +650,16 @@ class FakeSaltExtension:
             states_dir = extension_package_dir / "states1"
             states_dir.mkdir()
             states_dir.joinpath("__init__.py").write_text("")
-            states_dir.joinpath("foobar1.py").write_text(
+            states_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
 
             def echoed(string):
-                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                ret = {{"name": name, "changes": {{}}, "result": True, "comment": string}}
                 return ret
             """
                 )
@@ -667,10 +668,10 @@ class FakeSaltExtension:
             utils_dir = extension_package_dir / "utils"
             utils_dir.mkdir()
             utils_dir.joinpath("__init__.py").write_text("")
-            utils_dir.joinpath("foobar1.py").write_text(
+            utils_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
