@@ -55,12 +55,12 @@ def test_salt_upgrade_minion(
     if install_salt.relenv:
         original_py_version = install_salt.package_python_version()
 
+    ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
+    print(f"DGM test_salt_upgrade_minion, ps aux ret '{ret}'")
+    assert ret.returncode == 0
     # Verify previous install version is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     print(f"DGM test_salt_upgrade_minion, test.version ret '{ret}'")
-    assert ret.returncode == 0
-    ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
-    print(f"DGM test_salt_upgrade_minion, ps aux ret '{ret}'")
     assert ret.returncode == 0
     installed_version = packaging.version.parse(ret.data)
     dgm_pkg_version_parsed = packaging.version.parse(install_salt.artifact_version)
