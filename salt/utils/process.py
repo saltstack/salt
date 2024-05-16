@@ -13,9 +13,7 @@ import logging
 import multiprocessing
 import multiprocessing.util
 import os
-import pathlib
 import queue
-import shutil
 import signal
 import socket
 import subprocess
@@ -31,6 +29,10 @@ import salt.utils.platform
 import salt.utils.versions
 from salt.ext.tornado import gen
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
+
+## DGM import pathlib
+## DGM import shutil
+
 
 log = logging.getLogger(__name__)
 
@@ -210,7 +212,7 @@ def get_process_info(pid=None):
 
     # pid_exists can have false positives
     # for example Windows reserves PID 5 in a hack way
-    # another reasons is the the process requires kernel permissions
+    # another reasons is the process requires kernel permissions
     try:
         raw_process_info.status()
     except psutil.NoSuchProcess:
@@ -1076,15 +1078,16 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
-        log.debug(
-            "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
-        )
+        ## DGM mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
+        ## DGM log.debug(
+        ## DGM     "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
+        ## DGM )
+        ## DGM
+        ## DGM cur_pid = os.getpid()
 
-        cur_pid = os.getpid()
         if HAS_PSUTIL:
             try:
-                process = psutil.Process(cur_pid)
+                process = psutil.Process(os.getpid())
                 if hasattr(process, "children"):
                     for child in process.children(recursive=True):
                         try:
@@ -1098,105 +1101,105 @@ class SignalHandlingProcess(Process):
                                 os.getpid(),
                             )
 
-                # need to clean up any resources left around like lock files if using gitfs
-                # example: lockfile i
-                # /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
-                cache_dir = self.opts.get("cachedir", None)
-                gitfs_active = self.opts.get("gitfs_remotes", None)
-                if cache_dir and gitfs_active:
-                    # check for gitfs file locks to ensure no resource leaks
-                    # last chance to clean up any missed unlock droppings
-                    cache_dir = pathlib.Path(cache_dir + "/gitfs/work")
-                    if cache_dir.exists and cache_dir.is_dir():
-                        file_list = list(cache_dir.glob("**/*.lk"))
-                        file_del_list = []
-                        file_pid = 0
-                        file_mach_id = 0
-                        try:
-                            for file_name in file_list:
-                                with salt.utils.files.fopen(file_name, "r") as fd_:
-                                    try:
-                                        file_pid = int(
-                                            salt.utils.stringutils.to_unicode(
-                                                fd_.readline()
-                                            ).rstrip()
-                                        )
-                                    except ValueError:
-                                        # Lock file is empty, set pid to 0 so it evaluates as False.
-                                        file_pid = 0
-                                    try:
-                                        file_mach_id = (
-                                            salt.utils.stringutils.to_unicode(
-                                                fd_.readline()
-                                            ).rstrip()
-                                        )
-                                    except ValueError:
-                                        # Lock file is empty, set mach_id to 0 so it evaluates False.
-                                        file_mach_id = 0
+                ## DGM # need to clean up any resources left around like lock files if using gitfs
+                ## DGM # example: lockfile i
+                ## DGM # /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
+                ## DGM cache_dir = self.opts.get("cachedir", None)
+                ## DGM gitfs_active = self.opts.get("gitfs_remotes", None)
+                ## DGM if cache_dir and gitfs_active:
+                ## DGM     # check for gitfs file locks to ensure no resource leaks
+                ## DGM     # last chance to clean up any missed unlock droppings
+                ## DGM     cache_dir = pathlib.Path(cache_dir + "/gitfs/work")
+                ## DGM     if cache_dir.exists and cache_dir.is_dir():
+                ## DGM         file_list = list(cache_dir.glob("**/*.lk"))
+                ## DGM         file_del_list = []
+                ## DGM         file_pid = 0
+                ## DGM         file_mach_id = 0
+                ## DGM         try:
+                ## DGM             for file_name in file_list:
+                ## DGM                 with salt.utils.files.fopen(file_name, "r") as fd_:
+                ## DGM                     try:
+                ## DGM                         file_pid = int(
+                ## DGM                             salt.utils.stringutils.to_unicode(
+                ## DGM                                 fd_.readline()
+                ## DGM                             ).rstrip()
+                ## DGM                         )
+                ## DGM                     except ValueError:
+                ## DGM                         # Lock file is empty, set pid to 0 so it evaluates as False.
+                ## DGM                         file_pid = 0
+                ## DGM                     try:
+                ## DGM                         file_mach_id = (
+                ## DGM                             salt.utils.stringutils.to_unicode(
+                ## DGM                                 fd_.readline()
+                ## DGM                             ).rstrip()
+                ## DGM                         )
+                ## DGM                     except ValueError:
+                ## DGM                         # Lock file is empty, set mach_id to 0 so it evaluates False.
+                ## DGM                         file_mach_id = 0
 
-                            if cur_pid == file_pid:
-                                if mach_id != file_mach_id:
-                                    if not file_mach_id:
-                                        msg = (
-                                            f"gitfs lock file for pid '{file_pid}' does not "
-                                            "contain a machine id, deleting lock file which may "
-                                            "affect if using multi-master with shared gitfs cache, "
-                                            "the lock may have been obtained by another master "
-                                            "recommend updating Salt version on other masters to a "
-                                            "version which insert machine identification in lock a file."
-                                        )
-                                        log.debug(msg)
-                                        file_del_list.append(
-                                            (file_name, file_pid, file_mach_id)
-                                        )
-                                else:
-                                    file_del_list.append(
-                                        (file_name, file_pid, file_mach_id)
-                                    )
+                ## DGM             if cur_pid == file_pid:
+                ## DGM                 if mach_id != file_mach_id:
+                ## DGM                     if not file_mach_id:
+                ## DGM                         msg = (
+                ## DGM                             f"gitfs lock file for pid '{file_pid}' does not "
+                ## DGM                             "contain a machine id, deleting lock file which may "
+                ## DGM                             "affect if using multi-master with shared gitfs cache, "
+                ## DGM                             "the lock may have been obtained by another master "
+                ## DGM                             "recommend updating Salt version on other masters to a "
+                ## DGM                             "version which insert machine identification in lock a file."
+                ## DGM                         )
+                ## DGM                         log.debug(msg)
+                ## DGM                         file_del_list.append(
+                ## DGM                             (file_name, file_pid, file_mach_id)
+                ## DGM                         )
+                ## DGM                 else:
+                ## DGM                     file_del_list.append(
+                ## DGM                         (file_name, file_pid, file_mach_id)
+                ## DGM                     )
 
-                        except FileNotFoundError:
-                            log.debug("gitfs lock file: %s not found", file_name)
+                ## DGM         except FileNotFoundError:
+                ## DGM             log.debug("gitfs lock file: %s not found", file_name)
 
-                        for file_name, file_pid, file_mach_id in file_del_list:
-                            try:
-                                os.remove(file_name)
-                            except OSError as exc:
-                                if exc.errno == errno.ENOENT:
-                                    # No lock file present
-                                    msg = (
-                                        "SIGTERM clean up of resources attempted to remove lock "
-                                        f"file {file_name}, pid '{file_pid}', machine identifier "
-                                        f"'{mach_id}' but it did not exist, exception : {exc} "
-                                    )
-                                    log.debug(msg)
+                ## DGM         for file_name, file_pid, file_mach_id in file_del_list:
+                ## DGM             try:
+                ## DGM                 os.remove(file_name)
+                ## DGM             except OSError as exc:
+                ## DGM                 if exc.errno == errno.ENOENT:
+                ## DGM                     # No lock file present
+                ## DGM                     msg = (
+                ## DGM                         "SIGTERM clean up of resources attempted to remove lock "
+                ## DGM                         f"file {file_name}, pid '{file_pid}', machine identifier "
+                ## DGM                         f"'{mach_id}' but it did not exist, exception : {exc} "
+                ## DGM                     )
+                ## DGM                     log.debug(msg)
 
-                                elif exc.errno == errno.EISDIR:
-                                    # Somehow this path is a directory. Should never happen
-                                    # unless some wiseguy manually creates a directory at this
-                                    # path, but just in case, handle it.
-                                    try:
-                                        shutil.rmtree(file_name)
-                                    except OSError as exc:
-                                        msg = (
-                                            f"SIGTERM clean up of resources, lock file '{file_name}'"
-                                            f", pid '{file_pid}', machine identifier '{file_mach_id}'"
-                                            f"was a directory, removed directory, exception : '{exc}'"
-                                        )
-                                        log.debug(msg)
-                                else:
-                                    msg = (
-                                        "SIGTERM clean up of resources, unable to remove lock file "
-                                        f"'{file_name}', pid '{file_pid}', machine identifier "
-                                        f"'{file_mach_id}', exception : '{exc}'"
-                                    )
-                                    log.debug(msg)
-                            else:
-                                msg = (
-                                    "SIGTERM clean up of resources, removed lock file "
-                                    f"'{file_name}', pid '{file_pid}', machine identifier "
-                                    f"'{file_mach_id}'"
-                                )
-                                log.debug(msg)
+                ## DGM                 elif exc.errno == errno.EISDIR:
+                ## DGM                     # Somehow this path is a directory. Should never happen
+                ## DGM                     # unless some wiseguy manually creates a directory at this
+                ## DGM                     # path, but just in case, handle it.
+                ## DGM                     try:
+                ## DGM                         shutil.rmtree(file_name)
+                ## DGM                     except OSError as exc:
+                ## DGM                         msg = (
+                ## DGM                             f"SIGTERM clean up of resources, lock file '{file_name}'"
+                ## DGM                             f", pid '{file_pid}', machine identifier '{file_mach_id}'"
+                ## DGM                             f"was a directory, removed directory, exception : '{exc}'"
+                ## DGM                         )
+                ## DGM                         log.debug(msg)
+                ## DGM                 else:
+                ## DGM                     msg = (
+                ## DGM                         "SIGTERM clean up of resources, unable to remove lock file "
+                ## DGM                         f"'{file_name}', pid '{file_pid}', machine identifier "
+                ## DGM                         f"'{file_mach_id}', exception : '{exc}'"
+                ## DGM                     )
+                ## DGM                     log.debug(msg)
+                ## DGM             else:
+                ## DGM                 msg = (
+                ## DGM                     "SIGTERM clean up of resources, removed lock file "
+                ## DGM                     f"'{file_name}', pid '{file_pid}', machine identifier "
+                ## DGM                     f"'{file_mach_id}'"
+                ## DGM                 )
+                ## DGM                 log.debug(msg)
 
             except psutil.NoSuchProcess:
                 log.warning(
