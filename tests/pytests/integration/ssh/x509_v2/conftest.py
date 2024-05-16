@@ -58,11 +58,6 @@ def x509_data(
 
 @pytest.fixture(scope="module")
 def x509_master_config(ca_minion_id):
-    enable_v2 = {
-        "features": {
-            "x509_v2": True,
-        }
-    }
     return {
         "open_mode": True,
         "peer": {
@@ -73,10 +68,6 @@ def x509_master_config(ca_minion_id):
                 "match.compound",
             ],
         },
-        "ssh_minion_opts": enable_v2,
-        # It's necessary to enable it on the master as well,
-        # see the wrapper docs for details.
-        **enable_v2,
     }
 
 
