@@ -2,37 +2,17 @@
 Manage X.509 certificates
 =========================
 
-.. versionadded:: 3007.0
+.. versionadded:: 3008.0
 
 General configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
-
-Configuration
--------------
-Explicit activation
-~~~~~~~~~~~~~~~~~~~
-Since this module uses the same virtualname as the previous ``x509`` modules,
-but is incompatible with them, it needs to be explicitly activated on each
-SSH minion **and the master itself** (the latter one is a technical limitation/
-bordering a bug: The wrapper modules are loaded with the master opts the first time
-and only those that were registered successfully will be reloaded with the
-merged opts after).
-
-.. code-block:: yaml
-
-    # /etc/salt/master.d/x509.conf
-
-    features:
-      x509_v2: true
-    ssh_minion_opts:
-      features:
-        x509_v2: true
 
 .. note::
 
     Compound matching allowed callers is **not supported** with salt-ssh
     minions. They will always be denied.
 """
+
 import copy
 import logging
 from pathlib import Path
@@ -58,13 +38,8 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    # salt.features appears to not be setup when invoked via peer publishing
-    if not __opts__.get("features", {}).get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
+    if not __opts__.get("features", {}).get("x509_v2", True):
+        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
@@ -482,7 +457,7 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
         )
     result = result[next(iter(result))]
     if not isinstance(result, dict) or "data" not in result:
-        log.error(f"Received invalid return value from ca_server: {result}")
+        log.error("Received invalid return value from ca_server: %s", result)
         raise CommandExecutionError(
             "Received invalid return value from ca_server. See minion log for details"
         )
@@ -931,9 +906,9 @@ def certificate_managed_wrapper(
                 encoding=certificate_managed["encoding"],
                 append_certs=certificate_managed["append_certs"],
                 private_key=pk_args["name"] if pk_args else private_key,
-                private_key_passphrase=pk_args.get("passphrase")
-                if pk_args
-                else private_key,
+                private_key_passphrase=(
+                    pk_args.get("passphrase") if pk_args else private_key
+                ),
                 pkcs12_passphrase=certificate_managed.get("pkcs12_passphrase"),
                 pkcs12_encryption_compat=certificate_managed.get(
                     "pkcs12_encryption_compat"

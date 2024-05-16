@@ -182,7 +182,6 @@ according to the www policy.
 """
 
 import base64
-import copy
 import logging
 import os.path
 from datetime import datetime, timedelta, timezone
