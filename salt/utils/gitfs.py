@@ -13,6 +13,7 @@ import io
 import logging
 import multiprocessing
 import os
+import pathlib
 import shlex
 import shutil
 import stat
@@ -81,6 +82,14 @@ _INVALID_REPO = (
 )
 
 log = logging.getLogger(__name__)
+
+HAS_PSUTIL = False
+try:
+    import psutil
+
+    HAS_PSUTIL = True
+except ImportError:
+    pass
 
 # pylint: disable=import-error
 try:
@@ -515,6 +524,18 @@ class GitProvider:
         if not os.path.isdir(self._salt_working_dir):
             os.makedirs(self._salt_working_dir)
         self.fetch_request_check()
+
+        if HAS_PSUTIL:
+            cur_pid = os.getpid()
+            process = psutil.Process(cur_pid)
+            if isinstance(process, salt.utils.process.Process):
+                cache_dir = self.opts.get("cachedir", None)
+                gitfs_active = self.opts.get("gitfs_remotes", None)
+                if cache_dir and gitfs_active:
+                    log.warning(
+                        "DGM class GitProvider registering gitfs_zombie_cleanup"
+                    )
+                    process.register_finalize_method(gitfs_zombie_cleanup, cache_dir)
 
     def get_cache_basehash(self):
         return self._cache_basehash
@@ -3631,3 +3652,104 @@ class WinRepo(GitBase):
             cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
                 self.winrepo_dirs[repo.id] = cachedir
+
+
+## DGM  wip code
+def gitfs_zombie_cleanup(cache_dir):
+    """
+    Clean up zombie processes that used gitfs
+    Initial wip
+    """
+    log.warning("DGM class GitProvider gitfs_zombie_cleanup entry")
+    cur_pid = os.getpid()
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
+    log.debug("exiting for process id %s and machine identifer %s", cur_pid, mach_id)
+
+    # need to clean up any resources left around like lock files if using gitfs
+    # example: lockfile
+    # /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
+    # check for gitfs file locks to ensure no resource leaks
+    # last chance to clean up any missed unlock droppings
+    cache_dir = pathlib.Path(cache_dir + "/gitfs/work")
+    if cache_dir.exists and cache_dir.is_dir():
+        file_list = list(cache_dir.glob("**/*.lk"))
+        file_del_list = []
+        file_pid = 0
+        file_mach_id = 0
+        try:
+            for file_name in file_list:
+                with salt.utils.files.fopen(file_name, "r") as fd_:
+                    try:
+                        file_pid = int(
+                            salt.utils.stringutils.to_unicode(fd_.readline()).rstrip()
+                        )
+                    except ValueError:
+                        # Lock file is empty, set pid to 0 so it evaluates as False.
+                        file_pid = 0
+                    try:
+                        file_mach_id = salt.utils.stringutils.to_unicode(
+                            fd_.readline()
+                        ).rstrip()
+                    except ValueError:
+                        # Lock file is empty, set mach_id to 0 so it evaluates False.
+                        file_mach_id = 0
+
+            if cur_pid == file_pid:
+                if mach_id != file_mach_id:
+                    if not file_mach_id:
+                        msg = (
+                            f"gitfs lock file for pid '{file_pid}' does not "
+                            "contain a machine id, deleting lock file which may "
+                            "affect if using multi-master with shared gitfs cache, "
+                            "the lock may have been obtained by another master "
+                            "recommend updating Salt version on other masters to a "
+                            "version which insert machine identification in lock a file."
+                        )
+                        log.debug(msg)
+                        file_del_list.append((file_name, file_pid, file_mach_id))
+                else:
+                    file_del_list.append((file_name, file_pid, file_mach_id))
+
+        except FileNotFoundError:
+            log.debug("gitfs lock file: %s not found", file_name)
+
+        for file_name, file_pid, file_mach_id in file_del_list:
+            try:
+                os.remove(file_name)
+            except OSError as exc:
+                if exc.errno == errno.ENOENT:
+                    # No lock file present
+                    msg = (
+                        "SIGTERM clean up of resources attempted to remove lock "
+                        f"file {file_name}, pid '{file_pid}', machine identifier "
+                        f"'{mach_id}' but it did not exist, exception : {exc} "
+                    )
+                    log.debug(msg)
+
+                elif exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(file_name)
+                    except OSError as exc:
+                        msg = (
+                            f"SIGTERM clean up of resources, lock file '{file_name}'"
+                            f", pid '{file_pid}', machine identifier '{file_mach_id}'"
+                            f"was a directory, removed directory, exception : '{exc}'"
+                        )
+                        log.debug(msg)
+                else:
+                    msg = (
+                        "SIGTERM clean up of resources, unable to remove lock file "
+                        f"'{file_name}', pid '{file_pid}', machine identifier "
+                        f"'{file_mach_id}', exception : '{exc}'"
+                    )
+                    log.debug(msg)
+            else:
+                msg = (
+                    "SIGTERM clean up of resources, removed lock file "
+                    f"'{file_name}', pid '{file_pid}', machine identifier "
+                    f"'{file_mach_id}'"
+                )
+                log.debug(msg)
