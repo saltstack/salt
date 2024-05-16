@@ -543,9 +543,7 @@ def check_cert_changes(
             curr_not_after = current.not_valid_after_utc
         except AttributeError:
             # naive datetime object, release <42 (it's always UTC)
-            curr_not_after = current.not_valid_after.replace(
-                tzinfo=timezone.utc
-            )
+            curr_not_after = current.not_valid_after.replace(tzinfo=timezone.utc)
 
         if curr_not_after < datetime.now(tz=timezone.utc) + timedelta(
             days=days_remaining
