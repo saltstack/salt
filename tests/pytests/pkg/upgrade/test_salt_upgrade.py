@@ -13,26 +13,31 @@ def _get_running_salt_minion_pid(
     process_name,
 ):  # pylint: disable=logging-fstring-interpolation
 
-    # psutil process name only returning first part of the command '/opt/saltstack/'
     # need to check all of command line for salt-minion
-    # ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
+    #
+    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
+    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
+    #
+    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
+    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
+    #
     # and psutil is only returning the salt-minion once
+
     pids = []
     for proc in psutil.process_iter():
         log.warning(f"DGM _get_running_salt_minion_pid, proc.name '{proc.name()}'")
         print(
             f"DGM _get_running_salt_minion_pid, proc.name '{proc.name()}', and proc.cmdline '{proc.cmdline()}'"
         )
-        if "salt" in proc.name():
-            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-            log.warning(
-                f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
-            )
-            print(
-                f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
-            )
-            if process_name in cmdl_strg:
-                pids.append(proc.pid)
+        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        log.warning(
+            f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
+        )
+        print(
+            f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
+        )
+        if process_name in cmdl_strg:
+            pids.append(proc.pid)
 
     log.warning(
         f"DGM _get_running_salt_minion_pid, returning for process_name '{process_name}', pids '{pids}'"
