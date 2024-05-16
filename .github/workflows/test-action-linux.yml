@@ -310,6 +310,11 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
       - name: Merge JUnit XML Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
