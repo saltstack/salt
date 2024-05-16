@@ -191,12 +191,6 @@ jobs:
         run: |
           tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
-      ## DGM - name: Downgrade importlib-metadata
-      ## DGM   if: ${{ contains(fromJSON('["amazonlinux-2", "centos-7"]'), inputs.distro-slug) && contains(fromJSON('["upgrade-classic", "downgrade-classic"]'), matrix.tests-chunk) }}
-      ## DGM   run: |
-      ## DGM     # This step can go away once we stop testing classic packages upgrade/downgrades to/from 3005.x
-      ## DGM     tools --timestamps vm ssh ${{ inputs.distro-slug }} -- "sudo python3 -m pip install -U 'importlib-metadata<=4.13.0' 'virtualenv<=20.21.1'"
-
       - name: Show System Info
         run: |
           tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
