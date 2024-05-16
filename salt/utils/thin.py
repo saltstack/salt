@@ -607,10 +607,25 @@ def _catch_entry_points_exception(entry_point):
         )
 
 
-def _discover_saltexts():
+def _discover_saltexts(allowlist=None, blocklist=None):
     mods = []
     loaded_saltexts = {}
+    blocklist = blocklist or []
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
+        if allowlist is not None and entry_point.dist.name not in allowlist:
+            log.debug(
+                "Skipping entry point '%s' of '%s': not in allowlist",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
+        if entry_point.dist.name in blocklist:
+            log.debug(
+                "Skipping entry point '%s' of '%s': in blocklist",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
         with _catch_entry_points_exception(entry_point) as ctx:
             loaded_entry_point = entry_point.load()
         if ctx.exception_caught:
@@ -702,7 +717,9 @@ def gen_thin(
     absonly=True,
     compress="gzip",
     extended_cfg=None,
-    include_saltexts=False,
+    exclude_saltexts=False,
+    saltext_allowlist=None,
+    saltext_blocklist=None,
 ):
     """
     Generate the salt-thin tarball and print the location of the tarball
@@ -771,7 +788,7 @@ def gen_thin(
 
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
-    if include_saltexts:
+    if not exclude_saltexts:
         if compress != "gzip":
             # The reason being that we're generating the filtered entrypoints
             # and adding them from memory - if this is deemed as unnecessary,
@@ -779,10 +796,13 @@ def gen_thin(
             # the distribution, which is only available as a protected attribute.
             # Salt-SSH never overrides `compress` from gzip though.
             log.warning("Cannot include saltexts in thin when compression is not gzip")
-            include_saltexts = False
+            exclude_saltexts = True
         else:
-            mods, saltext_dists = _discover_saltexts()
-            tops.extend(mods)
+            mods, saltext_dists = _discover_saltexts(
+                allowlist=saltext_allowlist, blocklist=saltext_blocklist
+            )
+            # Deduplicate in case some saltexts were passed in thin_extra_modules
+            tops.extend(mod for mod in mods if mod not in tops)
 
     tops_py_version_mapping[sys.version_info.major] = tops
 
@@ -856,7 +876,7 @@ def gen_thin(
                 shutil.rmtree(tempdir)
                 tempdir = None
 
-    if include_saltexts:
+    if not exclude_saltexts:
         log.debug("Packing saltext distribution entrypoints")
         _pack_saltext_dists(saltext_dists, digest_collector, tfp)
     if extended_cfg:

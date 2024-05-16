@@ -3177,11 +3177,11 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
-            "--thin-include-saltexts",
+            "--thin-exclude-saltexts",
             default=False,
             action="store_true",
-            dest="thin_include_saltexts",
-            help=("Include Salt extension modules in generated Thin Salt."),
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
         )
         self.add_option(
             "-v",
