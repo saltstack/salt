@@ -3,6 +3,7 @@
 """
 
 import copy
+import os
 import pathlib
 import shutil
 import sys
@@ -326,7 +327,7 @@ def test_find_file_symlink_destination_not_in_root(tmp_state_tree):
     symlink.symlink_to(str(dirname))
     ret = roots.find_file("bar/testfile")
     assert ret["path"] == str(symlink / "testfile")
-    assert ret["rel"] == "bar/testfile"
+    assert ret["rel"] == f"bar{os.sep}testfile"
 
 
 def test_serve_file_symlink_destination_not_in_root(tmp_state_tree):
