@@ -1,4 +1,5 @@
 import logging
+import time
 
 import packaging.version
 import psutil
@@ -102,6 +103,9 @@ def test_salt_upgrade_minion(
 
     # Upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
+
+    time.sleep(60)  # give it some time, DGM
+
     ret = salt_call_cli.run("--local", "test.version")
     log.warning(f"DGM test_salt_upgrade_minion, upgrade test_version ret '{ret}'")
     print(f"DGM test_salt_upgrade_minion, upgrade test_version ret '{ret}'")
