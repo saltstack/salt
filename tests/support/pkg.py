@@ -483,9 +483,9 @@ class SaltPkgInstall:
             log.debug("Installing: %s", str(pkg))
             ret = self.proc.run("installer", "-pkg", str(pkg), "-target", "/")
             self._check_retcode(ret)
-            # Stop the service installed by the installer
-            self.proc.run("launchctl", "disable", f"system/{service_name}")
-            self.proc.run("launchctl", "bootout", "system", str(plist_file))
+            ## DGM # Stop the service installed by the installer
+            ## DGM self.proc.run("launchctl", "disable", f"system/{service_name}")
+            ## DGM self.proc.run("launchctl", "bootout", "system", str(plist_file))
         elif upgrade:
             env = os.environ.copy()
             extra_args = []
