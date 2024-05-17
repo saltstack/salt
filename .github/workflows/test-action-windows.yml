@@ -306,7 +306,7 @@ jobs:
 
   report:
     name: Test Reports
-    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
       - test
@@ -323,6 +323,7 @@ jobs:
 
       - name: Merge JUnit XML Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
+        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -331,6 +332,7 @@ jobs:
 
       - name: Merge Log Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
+        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -356,6 +358,7 @@ jobs:
           path: artifacts/coverage/
 
       - name: Show Downloaded Test Run Artifacts
+        if: ${{ inputs.skip-code-coverage == false }}
         run: |
           tree -a artifacts
 
