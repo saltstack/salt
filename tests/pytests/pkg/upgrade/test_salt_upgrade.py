@@ -24,17 +24,18 @@ def _get_running_salt_minion_pid(
     # and psutil is only returning the salt-minion once
 
     pids = []
+    log.warning(
+        f"DGM _get_running_salt_minion_pid entry, process_name '{process_name}'"
+    )
+    print(f"DGM _get_running_salt_minion_pid entry, process_name '{process_name}'")
     for proc in psutil.process_iter():
-        log.warning(f"DGM _get_running_salt_minion_pid, proc.name '{proc.name()}'")
-        print(
-            f"DGM _get_running_salt_minion_pid, proc.name '{proc.name()}', and proc.cmdline '{proc.cmdline()}'"
-        )
+        dgm_cmdline = proc.cmdline()
         cmdl_strg = " ".join(str(element) for element in proc.cmdline())
         log.warning(
-            f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
+            f"DGM _get_running_salt_minion_pid, cmdline, cmdl_strg '{cmdl_strg}'"
         )
         print(
-            f"DGM _get_running_salt_minion_pid, proc.name exists, process_name '{process_name}', cmdl_strg '{cmdl_strg}'"
+            f"DGM _get_running_salt_minion_pid, cmdline, cmdl_strg '{cmdl_strg}', from cmdline '{dgm_cmdline}'"
         )
         if process_name in cmdl_strg:
             pids.append(proc.pid)
@@ -61,7 +62,7 @@ def test_salt_upgrade_minion(
         original_py_version = install_salt.package_python_version()
 
     ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
-    print(f"DGM test_salt_upgrade_minion, ps aux ret '{ret}'")
+    print(f"DGM test_salt_upgrade_minion, initial minion ps aux ret '{ret}'")
     assert ret.returncode == 0
     # Verify previous install version is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
@@ -128,6 +129,11 @@ def test_salt_upgrade_minion(
             process_name = "salt-minion.exe"
         else:
             process_name = "salt-minion"
+
+    ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
+    print(f"DGM test_salt_upgrade_minion, upgraded minion ps aux ret '{ret}'")
+    assert ret.returncode == 0
+
     new_pids = _get_running_salt_minion_pid(process_name)
 
     assert new_pids
