@@ -1018,6 +1018,13 @@ class Process(multiprocessing.Process):
                 # Run any registered process finalization routines
                 try:
                     for method, args, kwargs in self._finalize_methods:
+                        # pylint: disable=logging-fstring-interpolation
+                        log.warning(
+                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'"
+                        )
+                        print(
+                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'"
+                        )
                         try:
                             method(*args, **kwargs)
                         except Exception:  # pylint: disable=broad-except
@@ -1050,8 +1057,21 @@ class Process(multiprocessing.Process):
         """
         Register a function to run as process terminates
         """
+        # pylint: disable=logging-fstring-interpolation
+        log.warning(
+            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'"
+        )
+        print(
+            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'"
+        )
         finalize_method_tuple = (function, args, kwargs)
         if finalize_method_tuple not in self._finalize_methods:
+            log.warning(
+                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'"
+            )
+            print(
+                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'"
+            )
             self._finalize_methods.append(finalize_method_tuple)
 
 
