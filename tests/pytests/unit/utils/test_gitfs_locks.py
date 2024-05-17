@@ -562,11 +562,16 @@ class KillProcessTest(salt.utils.process.SignalHandlingProcess):
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.timeout_unless_on_windows(120)
-def test_git_provider_sigterm_cleanup(main_class):
+def test_git_provider_sigterm_cleanup(
+    main_class,
+):  # pylint: disable=logging-fstring-interpolation
     """
     Start process which will obtain lock, and leave it locked
     then kill the process via SIGTERM and ensure locked resources are cleaned up
     """
+    log.warning("DGM test_git_provider_sigterm_cleanup entry")
+    print("DGM test_git_provider_sigterm_cleanup entry")
+
     provider = main_class.remotes[0]
 
     with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
@@ -576,6 +581,11 @@ def test_git_provider_sigterm_cleanup(main_class):
     while not proc.is_alive():
         time.sleep(1)  # give some time for it to be started
 
+    log.warning(
+        f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'"
+    )
+    print(f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'")
+
     procmgr.run(asynchronous=True)
 
     time.sleep(2)  # give some time for it to terminate
@@ -583,12 +593,15 @@ def test_git_provider_sigterm_cleanup(main_class):
     # child process should be alive
     file_name = provider._get_lock_file("update")
 
+    log.warning(f"DGM test_git_provider_sigterm_cleanup, file_name '{file_name}'")
+    print(f"DGM test_git_provider_sigterm_cleanup, file_name '{file_name}'")
+
     assert pathlib.Path(file_name).exists()
     assert pathlib.Path(file_name).is_file()
 
     procmgr.terminate()  # sends a SIGTERM
 
-    time.sleep(1)  # give some time for it to terminate
+    time.sleep(2)  # give some time for it to terminate
 
     assert not proc.is_alive()
     assert not pathlib.Path(file_name).exists()
