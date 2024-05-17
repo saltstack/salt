@@ -255,7 +255,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
-          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-*
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}*
           separate-directories: true
           delete-merged: true
 
