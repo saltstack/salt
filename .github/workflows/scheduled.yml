@@ -2139,7 +2139,7 @@ jobs:
         id: merge-coverage-artifacts
         with:
           name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
+          pattern: all-testrun-coverage-artifacts*
           separate-directories: false
           delete-merged: true
 
