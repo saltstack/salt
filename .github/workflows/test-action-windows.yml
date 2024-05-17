@@ -130,6 +130,11 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
@@ -278,7 +283,7 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
 
@@ -286,7 +291,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/xml-unittests-output/
 
@@ -294,7 +299,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
 
