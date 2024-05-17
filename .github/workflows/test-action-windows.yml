@@ -323,7 +323,7 @@ jobs:
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
 
@@ -332,7 +332,7 @@ jobs:
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
 
@@ -342,7 +342,7 @@ jobs:
         id: merge-coverage-artifacts
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
 
