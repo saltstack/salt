@@ -35,14 +35,6 @@ from salt.exceptions import (
 )
 from salt.template import compile_template
 
-try:
-    import Cryptodome.Random
-except ImportError:
-    try:
-        import Crypto.Random  # nosec
-    except ImportError:
-        pass  # pycrypto < 2.1
-
 log = logging.getLogger(__name__)
 
 
