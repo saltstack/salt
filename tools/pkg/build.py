@@ -494,6 +494,7 @@ def onedir_dependencies(
         assert python_version
         assert relenv_version
     os.environ["RELENV_FETCH_VERSION"] = relenv_version
+    os.environ["RELENV_BUILDENV"] = "1"
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
     try:
