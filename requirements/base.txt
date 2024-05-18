@@ -24,7 +24,7 @@ python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 importlib-metadata>=3.3.0
-cryptography>=42.0.0
+cryptography>=42.0.7
 
 # From old requirements/static/pkg/linux.in
 rpm-vercmp; sys_platform == 'linux'
