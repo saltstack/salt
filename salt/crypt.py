@@ -321,7 +321,10 @@ class PrivateKey(BaseKey):
 class PublicKey(BaseKey):
     def __init__(self, path):
         with salt.utils.files.fopen(path, "rb") as fp:
-            self.key = serialization.load_pem_public_key(fp.read())
+            try:
+                self.key = serialization.load_pem_public_key(fp.read())
+            except ValueError as exc:
+                raise InvalidKeyError("Invalid key")
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)

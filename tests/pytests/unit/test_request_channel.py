@@ -24,17 +24,6 @@ import salt.utils.stringutils
 from salt.master import SMaster
 from tests.support.mock import MagicMock, patch
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP  # nosec
-
 log = logging.getLogger(__name__)
 
 
@@ -504,15 +493,8 @@ def test_req_server_chan_encrypt_v2(master_opts, pki_dir):
         ret = server._encrypt_private(pillar_data, dictkey, "minion", nonce)
         assert "key" in ret
         assert dictkey in ret
-
-        key = salt.crypt.get_rsa_key(
-            str(pki_dir.joinpath("minion", "minion.pem")), None
-        )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
-            aes = cipher.decrypt(ret["key"])
+        key = salt.crypt.PrivateKey(str(pki_dir.joinpath("minion", "minion.pem")), None)
+        aes = key.decrypt(ret["key"])
         pcrypt = salt.crypt.Crypticle(master_opts, aes)
         signed_msg = pcrypt.loads(ret[dictkey])
 
@@ -558,15 +540,8 @@ def test_req_server_chan_encrypt_v1(master_opts, pki_dir):
 
         assert "key" in ret
         assert dictkey in ret
-
-        key = salt.crypt.get_rsa_key(
-            str(pki_dir.joinpath("minion", "minion.pem")), None
-        )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        key = salt.crypt.PrivateKey(str(pki_dir.joinpath("minion", "minion.pem")), None)
+        aes = key.decrypt(ret["key"])
         pcrypt = salt.crypt.Crypticle(master_opts, aes)
         data = pcrypt.loads(ret[dictkey])
         assert data == pillar_data
@@ -600,11 +575,7 @@ def test_req_chan_decode_data_dict_entry_v1(minion_opts, master_opts, pki_dir):
         pillar_data = {"pillar1": "meh"}
         ret = server._encrypt_private(pillar_data, dictkey, target, sign_messages=False)
         key = client.auth.get_keys()
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"])
         pcrypt = salt.crypt.Crypticle(client.opts, aes)
         ret_pillar_data = pcrypt.loads(ret[dictkey])
         assert ret_pillar_data == pillar_data
@@ -656,7 +627,13 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
         ret = server._encrypt_private(
-            pillar_data, dictkey, target, nonce=load["nonce"], sign_messages=True
+            pillar_data,
+            dictkey,
+            target,
+            nonce=load["nonce"],
+            sign_messages=True,
+            encryption_algorithm=minion_opts["rsa_encryption_algorithm"],
+            signing_algorithm=minion_opts["rsa_signing_algorithm"],
         )
         raise tornado.gen.Return(ret)
 
@@ -728,7 +705,13 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
     client.transport = MagicMock()
     real_transport.close()
     ret = server._encrypt_private(
-        pillar_data, dictkey, target, nonce=badnonce, sign_messages=True
+        pillar_data,
+        dictkey,
+        target,
+        nonce=badnonce,
+        sign_messages=True,
+        encryption_algorithm=minion_opts["rsa_encryption_algorithm"],
+        signing_algorithm=minion_opts["rsa_signing_algorithm"],
     )
 
     @tornado.gen.coroutine
@@ -809,15 +792,17 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
         ret = server._encrypt_private(
-            pillar_data, dictkey, target, nonce=load["nonce"], sign_messages=True
+            pillar_data,
+            dictkey,
+            target,
+            nonce=load["nonce"],
+            sign_messages=True,
+            encryption_algorithm=minion_opts["rsa_encryption_algorithm"],
+            signing_algorithm=minion_opts["rsa_signing_algorithm"],
         )
 
         key = client.auth.get_keys()
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], minion_opts["rsa_encryption_algorithm"])
         pcrypt = salt.crypt.Crypticle(client.opts, aes)
         signed_msg = pcrypt.loads(ret[dictkey])
         # Changing the pillar data will cause the signature verification to
@@ -901,15 +886,17 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
         ret = server._encrypt_private(
-            pillar_data, dictkey, target, nonce=load["nonce"], sign_messages=True
+            pillar_data,
+            dictkey,
+            target,
+            nonce=load["nonce"],
+            sign_messages=True,
+            encryption_algorithm=minion_opts["rsa_encryption_algorithm"],
+            signing_algorithm=minion_opts["rsa_signing_algorithm"],
         )
 
         key = client.auth.get_keys()
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], minion_opts["rsa_encryption_algorithm"])
         pcrypt = salt.crypt.Crypticle(client.opts, aes)
         signed_msg = pcrypt.loads(ret[dictkey])
 
@@ -917,14 +904,10 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         key = salt.crypt.Crypticle.generate_key_string()
         pcrypt = salt.crypt.Crypticle(minion_opts, key)
         pubfn = os.path.join(master_opts["pki_dir"], "minions", "minion")
-        pub = salt.crypt.get_rsa_pub_key(pubfn)
+        pub = salt.crypt.PublicKey(pubfn)
         ret[dictkey] = pcrypt.dumps(signed_msg)
         key = salt.utils.stringutils.to_bytes(key)
-        if HAS_M2:
-            ret["key"] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(pub)
-            ret["key"] = cipher.encrypt(key)
+        ret["key"] = pub.encrypt(key, minion_opts["rsa_encryption_algorithm"])
         raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
@@ -988,7 +971,7 @@ async def test_req_serv_auth_v1(minion_opts, master_opts, pki_dir):
     server.cache_cli = False
     server.master_key = salt.crypt.MasterKeys(server.opts)
 
-    pub = salt.crypt.get_rsa_pub_key(str(pki_dir.joinpath("minion", "minion.pub")))
+    # pub = salt.crypt.get_rsa_pub_key(str(pki_dir.joinpath("minion", "minion.pub")))
     token = salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
     nonce = uuid.uuid4().hex
 
@@ -1031,6 +1014,8 @@ async def test_req_serv_auth_v2(minion_opts, master_opts, pki_dir):
             "master_sign_pubkey": False,
             "publish_port": 4505,
             "auth_mode": 1,
+            "rsa_signing_algorithm": "PKCS1v15-SHA1",
+            "rsa_encryption_algorithm": "OAEP-SHA1",
         }
     )
     SMaster.secrets["aes"] = {
@@ -1161,7 +1146,7 @@ async def test_req_chan_auth_v2_with_master_signing(
     master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
     master_opts["master_sign_pubkey"] = True
     master_opts["master_use_pubkey_signature"] = False
-    master_opts["signing_key_pass"] = True
+    master_opts["signing_key_pass"] = ""
     master_opts["master_sign_key_name"] = "master_sign"
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)

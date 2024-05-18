@@ -5,6 +5,10 @@ Cluster integration tests.
 import salt.utils.event
 
 
+def test_wtf(cluster_master_1):
+    pass
+
+
 def test_basic_cluster_setup(
     cluster_master_1, cluster_master_2, cluster_pki_path, cluster_cache_path
 ):

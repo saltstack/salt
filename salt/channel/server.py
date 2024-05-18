@@ -674,7 +674,6 @@ class ReqServerChannel:
                 key_pass = salt.utils.sdb.sdb_get(
                     self.opts["signing_key_pass"], self.opts
                 )
-
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(
                     self.master_key.get_sign_paths()[1],
