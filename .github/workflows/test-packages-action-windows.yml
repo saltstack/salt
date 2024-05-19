@@ -252,9 +252,10 @@ jobs:
 
       - name: Merge Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
+        continue-on-error: true
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
-          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}*
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
           separate-directories: true
           delete-merged: true
 

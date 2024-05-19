@@ -319,8 +319,9 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Merge JUnit XML Test Run Artifacts
-        uses: actions/upload-artifact/merge@v4
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
@@ -328,8 +329,9 @@ jobs:
           delete-merged: true
 
       - name: Merge Log Test Run Artifacts
-        uses: actions/upload-artifact/merge@v4
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
@@ -337,9 +339,9 @@ jobs:
           delete-merged: true
 
       - name: Merge Code Coverage Test Run Artifacts
-        uses: actions/upload-artifact/merge@v4
         if: ${{ inputs.skip-code-coverage == false }}
-        id: merge-coverage-artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
