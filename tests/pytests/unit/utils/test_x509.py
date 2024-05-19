@@ -1,5 +1,5 @@
-import datetime
 import ipaddress
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -11,6 +11,9 @@ cryptography = pytest.importorskip(
     "cryptography", reason="Needs cryptography library", minversion="37.0"
 )
 cx509 = pytest.importorskip("cryptography.x509", reason="Needs cryptography library")
+cprim = pytest.importorskip(
+    "cryptography.hazmat.primitives", reason="Needs cryptography library"
+)
 
 
 @pytest.fixture
@@ -1019,12 +1022,12 @@ class TestCreateExtension:
         [
             (
                 "critical, 2022-10-11 13:37:42",
-                datetime.datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
+                datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
                 True,
             ),
             (
                 "2022-10-11 13:37:42",
-                datetime.datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
+                datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"),
                 False,
             ),
         ],
@@ -1875,9 +1878,7 @@ def test_get_dn(inpt, expected):
             cx509.Extension(
                 cx509.InvalidityDate.oid,
                 value=cx509.InvalidityDate(
-                    datetime.datetime.strptime(
-                        "2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S"
-                    )
+                    datetime.strptime("2022-10-11 13:37:42", "%Y-%m-%d %H:%M:%S")
                 ),
                 critical=False,
             ),
@@ -1888,3 +1889,86 @@ def test_get_dn(inpt, expected):
 def test_render_extension(inpt, expected):
     ret = x509.render_extension(inpt)
     assert ret == expected
+
+
+@pytest.fixture
+def ca_cert():
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIDODCCAiCgAwIBAgIIbfpgqP0VGPgwDQYJKoZIhvcNAQELBQAwKzELMAkGA1UE
+BhMCVVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHQwHhcNMjIxMTE1MTQw
+NDMzWhcNMzIxMTEyMTQwNDMzWjArMQswCQYDVQQGEwJVUzENMAsGA1UEAwwEVGVz
+dDENMAsGA1UECgwEU2FsdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+AOGTScvrjcEt6vsJcG9RUp6fKaDNDWZnJET0omanK9ZwaoGpJPp8UDYe/8ADeI7N
+10wdyB4oDM9gRDjInBtdQO/PsrmKZF6LzqVFgLMxu2up+PHMi9z6B2P4esIAzMu9
+PYxc9zH4HzLImHqscVD2HCabsjp9X134Af7hVY5NN/W/4qTP7uOM20wSG2TPI6+B
+tA9VyPbEPMPRzXzrqc45rVYe6kb2bT84GE93Vcu/e5JZ/k2AKD8Hoa2cxLPsTLq5
+igl+D+k+dfUtiABiKPvVQiYBsD1fyHDn2m7B6pCgvrGqHjsoAKufgFnXy6PJRg7n
+vQfaxSiusM5s+VS+fjlvgwsCAwEAAaNgMF4wDwYDVR0TBAgwBgEB/wIBATALBgNV
+HQ8EBAMCAQYwHQYDVR0OBBYEFFzy8fRTKSOe7kBakqO0Ki71potnMB8GA1UdIwQY
+MBaAFFzy8fRTKSOe7kBakqO0Ki71potnMA0GCSqGSIb3DQEBCwUAA4IBAQBZS4MP
+fXYPoGZ66seM+0eikScZHirbRe8vHxHkujnTBUjQITKm86WeQgeBCD2pobgBGZtt
+5YFozM4cERqY7/1BdemUxFvPmMFFznt0TM5w+DfGWVK8un6SYwHnmBbnkWgX4Srm
+GsL0HHWxVXkGnFGFk6Sbo3vnN7CpkpQTWFqeQQ5rHOw91pt7KnNZwc6I3ZjrCUHJ
++UmKKrga16a4Q+8FBpYdphQU609npo/0zuaE6FyiJYlW3tG+mlbbNgzY/+eUaxt2
+9Bp9mtA+Hkox551Mfpq45Oi+ehwMt0xjZCjuFCM78oiUdHCGO+EmcT7ogiYALiOF
+LN1w5sybsYwIw6QN
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_key():
+    return """\
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA4ZNJy+uNwS3q+wlwb1FSnp8poM0NZmckRPSiZqcr1nBqgakk
++nxQNh7/wAN4js3XTB3IHigMz2BEOMicG11A78+yuYpkXovOpUWAszG7a6n48cyL
+3PoHY/h6wgDMy709jFz3MfgfMsiYeqxxUPYcJpuyOn1fXfgB/uFVjk039b/ipM/u
+44zbTBIbZM8jr4G0D1XI9sQ8w9HNfOupzjmtVh7qRvZtPzgYT3dVy797kln+TYAo
+PwehrZzEs+xMurmKCX4P6T519S2IAGIo+9VCJgGwPV/IcOfabsHqkKC+saoeOygA
+q5+AWdfLo8lGDue9B9rFKK6wzmz5VL5+OW+DCwIDAQABAoIBAFfImc9hu6iR1gAb
+jEXFwAE6r1iEc9KGEPdEvG52X/jzhn8u89UGy7BEIAL5VtE8Caz1agtSSqnpLKNs
+blO31q18hnDuCmFAxwpKIeuaTvV3EAoJL+Su6HFfIWaeKRSgcHNPOmOXy4xXw/75
+XJ/FJu9fZ9ybLaHEAgLObh0Sr9RSPQbZ72ZawPP8+5WCbR+2w90RApHXQL0piSbW
+lIx1NE6o5wQb3vik8z/k5FqLCY2a8++WNyfvS+WWFY5WXGI7ZiDDQk46gnslquH2
+Lon5CEn3JlTGQFhxaaa2ivssscf2lA2Rvm2E8o1rdZJS2OpSE0ai4TXY9XnyjZj1
+5usWIwECgYEA+3Mwu03A7PyLEBksS/u3MSo/176S9lF/uXcecQNdhAIalUZ8AgV3
+7HP2yI9ZC0ekA809ZzFjGFostXm9VfUOEZ549jLOMzvBtCdaI0aBUE8icu52fX4r
+fT2NY6hYgz5/fxD8sq1XH/fqNNexABwtViH6YAly/9A1/8M3BOWt72UCgYEA5ag8
+sIfiBUoWd1sS6qHDuugWlpx4ZWYC/59XEJyCN2wioP8qFji/aNZxF1wLfyQe/zaa
+YBFusjsBnSfBU1p4UKCRHWQ9/CnC0DzqTkyKC4Fv8GuxgywNm5W9gPKk7idHP7mw
+e+7Uvf1pOQccqEPh7yltpW+Xw27gfsC2DMAIGa8CgYByv/q5P56PiCCeVB6W/mR3
+l2RTPLEsn7y+EtJdmL+QgrVG8kedVImJ6tHwbRqhvyvmYD9pXGxwrJZCqy/wjkjB
+WaSyFjVrxBV99Yd5Ga/hyntaH+ELHA0UtoZTuHvMSTU9866ei+R6vlSvkM9B0ZoO
++KqeMTG99HLwKVJudbKO0QKBgQCd33U49XBOqoufKSBr4yAmUH2Ws6GgMuxExUiY
+xr5NUyzK+B36gLA0ZZYAtOnCURZt4x9kgxdRtnZ5jma74ilrY7XeOpbRzfN6KyX3
+BW6wUh6da6rvvUztc5Z+Gk9+18mG6SOFTr04jgfTiCwPD/s06YnSfFAbrRDukZOU
+WD45SQKBgBvjSwl3AbPoJnRjZjGuCUMKQKrLm30xCeorxasu+di/4YV5Yd8VUjaO
+mYyqXW6bQndKLuXT+AXtCd/Xt2sI96z8mc0G5fImDUxQjMUuS3RyQK357cEOu8Zy
+HdI7Pfaf/l0HozAw/Al+LXbpmSBdfmz0U/EGAKRqXMW5+vQ7XHXD
+-----END RSA PRIVATE KEY-----"""
+
+
+def test_build_crl_accounts_for_local_time_zone(ca_key, ca_cert):
+    curr_time = datetime.now(tz=timezone(timedelta(hours=1)))
+    curr_time_naive = curr_time.replace(tzinfo=None)
+
+    def dtn(tz=None):
+        if tz is None:
+            return curr_time_naive
+        return curr_time
+
+    curr_time_utc = curr_time.astimezone(timezone.utc).replace(microsecond=0)
+    curr_time_utc_naive = curr_time_utc.replace(tzinfo=None)
+    privkey = cprim.serialization.load_pem_private_key(ca_key.encode(), password=None)
+    cert = cx509.load_pem_x509_certificate(ca_cert.encode())
+    with patch("salt.utils.x509.datetime") as fakedate:
+        fakedate.today.return_value = curr_time_naive
+        fakedate.now.side_effect = dtn
+        fakedate.utcnow.return_value = curr_time_utc_naive
+        builder, _ = x509.build_crl(privkey, [], signing_cert=cert)
+        crl = builder.sign(privkey, algorithm=cprim.hashes.SHA256())
+    try:
+        assert crl.last_update_utc == curr_time_utc
+    except AttributeError:
+        assert crl.last_update == curr_time_utc_naive

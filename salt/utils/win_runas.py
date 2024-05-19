@@ -52,6 +52,9 @@ def __virtual__():
 
 
 def split_username(username):
+    """
+    Splits out the username from the domain name and returns both.
+    """
     domain = "."
     user_name = username
     if "@" in username:
@@ -234,7 +237,7 @@ def runas(cmdLine, username, password=None, cwd=None):
         fd_out = msvcrt.open_osfhandle(stdout_read.handle, os.O_RDONLY | os.O_TEXT)
         with os.fdopen(fd_out, "r") as f_out:
             stdout = f_out.read()
-            ret["stdout"] = stdout
+            ret["stdout"] = stdout.strip()
 
         # Read standard error
         fd_err = msvcrt.open_osfhandle(stderr_read.handle, os.O_RDONLY | os.O_TEXT)

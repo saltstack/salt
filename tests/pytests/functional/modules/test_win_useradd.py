@@ -320,19 +320,22 @@ def test_setpassword_int(user, account_int):
         ("logonscript", "\\\\server\\script.cmd", "", None),
         ("expiration_date", "3/19/2024", "", "2024-03-19 00:00:00"),
         ("expiration_date", "Never", "", None),
-        ("expired", True, "", None),
-        ("expired", False, "", None),
         ("account_disabled", True, "", None),
         ("account_disabled", False, "", None),
         ("unlock_account", True, "account_locked", False),
         ("password_never_expires", True, "", None),
         ("password_never_expires", False, "", None),
+        ("expired", True, "", None),
+        ("expired", False, "", None),
         ("disallow_change_password", True, "", None),
         ("disallow_change_password", False, "", None),
     ],
 )
 def test_update_str(user, value_name, new_value, info_field, expected, account_str):
     setting = {value_name: new_value}
+    # You can't expire an account if the password never expires
+    if value_name == "expired":
+        setting.update({"password_never_expires": not new_value})
     ret = user.update(account_str.username, **setting)
     assert ret is True
     ret = user.info(account_str.username)

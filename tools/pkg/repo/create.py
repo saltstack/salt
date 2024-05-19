@@ -38,11 +38,6 @@ create = command_group(
 
 _deb_distro_info = {
     "debian": {
-        "10": {
-            "label": "deb10ary",
-            "codename": "buster",
-            "suitename": "oldoldstable",
-        },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
@@ -63,9 +58,9 @@ _deb_distro_info = {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
         },
-        "23.04": {
-            "label": "salt_ubuntu2304",
-            "codename": "lunar",
+        "24.04": {
+            "label": "salt_ubuntu2404",
+            "codename": "noble",
         },
     },
 }
@@ -316,8 +311,8 @@ def debian(
 _rpm_distro_info = {
     "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
-    "fedora": ["36", "37", "38", "39"],
-    "photon": ["3", "4", "5"],
+    "fedora": ["40"],
+    "photon": ["4", "5"],
 }
 
 

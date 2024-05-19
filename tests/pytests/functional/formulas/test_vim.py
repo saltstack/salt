@@ -9,6 +9,7 @@ import pytest
 pytestmark = [
     pytest.mark.skip_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.timeout_unless_on_windows(240),
     pytest.mark.skipif(
         'grains["oscodename"] == "Photon"',
         reason="vim package not available for this distribution",
