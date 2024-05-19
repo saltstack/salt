@@ -667,7 +667,7 @@ def _discover_saltexts(allowlist=None, blocklist=None):
                     iter(
                         file.parent.name
                         for file in entry_point.dist.files
-                        if "dist-info" in file.parent.name
+                        if file.parent.suffix == ".dist-info"
                     )
                 )
             except StopIteration:
