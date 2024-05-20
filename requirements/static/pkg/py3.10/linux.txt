@@ -12,7 +12,7 @@ async-timeout==4.0.3
     # via aiohttp
 attrs==23.2.0
     # via aiohttp
-autocommand==2.2.2
+autocommand==2.2.0
     # via jaraco.text
 certifi==2023.07.22
     # via requests
@@ -26,7 +26,7 @@ cherrypy==18.8.0
     # via -r requirements/base.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.7
+cryptography==41.0.7
     # via
     #   -r requirements/base.txt
     #   pyopenssl
