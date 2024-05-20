@@ -9,6 +9,7 @@ alabaster==0.7.13
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/static/ci/docs.in
     #   jaraco.text
 babel==2.12.1
     # via sphinx

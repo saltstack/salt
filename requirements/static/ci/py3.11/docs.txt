@@ -13,6 +13,7 @@ annotated-types==0.6.0
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/static/ci/docs.in
     #   jaraco.text
 babel==2.12.1
     # via sphinx
