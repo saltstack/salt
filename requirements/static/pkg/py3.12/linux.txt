@@ -13,7 +13,9 @@ annotated-types==0.6.0
 attrs==23.2.0
     # via aiohttp
 autocommand==2.2.2
-    # via jaraco.text
+    # via
+    #   -r requirements/base.txt
+    #   jaraco.text
 certifi==2023.07.22
     # via requests
 cffi==1.16.0
