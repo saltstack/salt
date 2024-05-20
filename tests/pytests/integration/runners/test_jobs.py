@@ -1,6 +1,7 @@
 """
 Tests for the salt-run command
 """
+
 import os
 
 import pytest
