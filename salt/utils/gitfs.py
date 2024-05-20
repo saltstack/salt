@@ -528,11 +528,12 @@ class GitProvider:
         if HAS_PSUTIL:
             cur_pid = os.getpid()
             process = psutil.Process(cur_pid)
+            dgm_process_dir = dir(process)
             log.warning(
                 f"DGM class GitProvider dunder init, cur_pid '{cur_pid}', process '{process}'"
             )
             print(
-                f"DGM class GitProvider  dunder init, cur_pid '{cur_pid}', process '{process}'"
+                f"DGM class GitProvider  dunder init, cur_pid '{cur_pid}', process '{process}', process dir '{dgm_process_dir}'"
             )
             if isinstance(process, salt.utils.process.Process):
                 cache_dir = self.opts.get("cachedir", None)
