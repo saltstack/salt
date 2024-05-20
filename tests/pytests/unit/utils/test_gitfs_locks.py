@@ -9,6 +9,7 @@ import pathlib
 import signal
 import time
 
+import psutil
 import pytest
 from saltfactories.utils import random_string
 
@@ -585,6 +586,39 @@ def test_git_provider_sigterm_cleanup(
         f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'"
     )
     print(f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'")
+
+    print("DGM test area entry")
+
+    dgm_proc_dir = dir(proc)
+    print(
+        f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}', proc dir '{dgm_proc_dir}'"
+    )
+
+    dgm_pid = proc.pid
+    print(f"DGM test_git_provider_sigterm_cleanup, proc pid '{proc.pid}'")
+
+    dgm_process = psutil.Process(dgm_pid)
+    print(f"DGM test_git_provider_sigterm_cleanup, psutil process '{dgm_process}'")
+
+    if isinstance(proc, salt.utils.process.Process):
+        print(
+            "DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is TRUE"
+        )
+    else:
+        print(
+            "DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is FALSE"
+        )
+
+    if isinstance(dgm_process, salt.utils.process.Process):
+        print(
+            "DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is TRUE"
+        )
+    else:
+        print(
+            "DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is FALSE"
+        )
+
+    print("DGM test area exit")
 
     procmgr.run(asynchronous=True)
 
