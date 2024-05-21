@@ -48,7 +48,7 @@ python-tools-scripts==0.20.0
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.1
     # via -r requirements/static/ci/tools.in
-requests==2.31.0
+requests==2.32.0
     # via python-tools-scripts
 rich==13.4.2
     # via python-tools-scripts

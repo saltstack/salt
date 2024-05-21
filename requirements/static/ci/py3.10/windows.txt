@@ -408,7 +408,7 @@ pyzmq==25.1.2
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.31.0
+requests==2.32.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
