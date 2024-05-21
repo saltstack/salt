@@ -1070,6 +1070,68 @@ def test_mod_aggregate(minion_opts):
             # Ensure pkgs were aggregated
             assert low_ret["pkgs"] == ["figlet", "sl"]
 
+def test_mod_aggregate_order(minion_opts):
+    """
+    Test to ensure that the state_aggregate setting correctly aggregates package installations
+    while respecting the 'require' requisite to enforce execution order.
+    """
+    # Setup the chunks based on the provided scenario
+    chunks = [
+        {
+            "state": "pkg",
+            "name": "first packages",
+            "__id__": "first packages",
+            "pkgs": ["drpm"],
+            "fun": "installed",
+            "order": 1,
+            "__env__": "base",
+            "__sls__": "base",
+        },
+        {
+            "state": "test",
+            "name": "requirement",
+            "__id__": "requirement",
+            "fun": "nop",
+            "order": 2,
+            "__env__": "base",
+            "__sls__": "base",
+        },
+        {
+            "state": "pkg",
+            "name": "second packages",
+            "__id__": "second packages",
+            "pkgs": ["gc"],
+            "fun": "installed",
+            "order": 3,
+            "require": [{"test": "requirement"}],
+            "__env__": "base",
+            "__sls__": "base",
+        },
+    ]
+
+
+    # Setup the State object
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.opts["state_aggregate"] = True  # Ensure state aggregation is enabled
+
+        # Process each chunk with _mod_aggregate to simulate state execution
+        running = state_obj.call_chunks(chunks)
+
+        first_key = 'pkg_|-first packages_|-first packages_|-installed'
+        requirement_key = 'test_|-requirement_|-requirement_|-nop'
+        second_key = 'pkg_|-second packages_|-second packages_|-installed'
+
+        # Check if the "second packages" have been executed after "requirement"
+        # by checking their run numbers
+        assert running[first_key]["__run_num__"] < running[requirement_key]["__run_num__"], "Requirement should execute before second packages"
+        assert running[requirement_key]["__run_num__"] < running[second_key]["__run_num__"], "Second packages should execute after requirement"
+
+        # Further, we should verify that the "second packages" have "gc" only after "requirement" is complete
+        assert 'gc' in running[second_key].get('pkgs', []), "GC should be in second packages"
+        assert 'drpm' in running[first_key].get('pkgs', []), "DRPM should be in first packages"
+
+
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):
     """
