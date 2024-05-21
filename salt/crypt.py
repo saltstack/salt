@@ -144,11 +144,15 @@ def save_private_key(path, key, passphrase=None):
     with salt.utils.files.fopen(path, "wb+") as f:
         if passphrase:
             enc = serialization.BestAvailableEncryption(passphrase.encode())
+            _format = serialization.PrivateFormat.TraditionalOpenSSL
+            if fips_enabled():
+                _format = serialization.PrivateFormat.PKCS8
         else:
             enc = serialization.NoEncryption()
+            _format = serialization.PrivateFormat.TraditionalOpenSSL
         pem = key.private_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            format=_format,
             encryption_algorithm=enc,
         )
         f.write(pem)

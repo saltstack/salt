@@ -46,17 +46,16 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         ],
         "cluster_pki_dir": str(cluster_pki_path),
         "cache_dir": str(cluster_cache_path),
-        "log_level": "debug",
-        #        "log_granular_levels": {
-        #            "salt": "info",
-        #            "salt.transport": "debug",
-        #            "salt.channel": "debug",
-        #            "salt.utils.event": "debug",
-        #        },
-        #        "fips_mode": FIPS_TESTRUN,
-        #        "publish_signing_algorithm": (
-        #            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
-        #        ),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "127.0.0.1",
