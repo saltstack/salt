@@ -310,7 +310,7 @@ pymssql==2.2.7 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
-pymysql==1.1.0 ; sys_platform == "win32"
+pymysql==1.1.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
