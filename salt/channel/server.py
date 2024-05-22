@@ -966,7 +966,9 @@ class MasterPubServerChannel:
                     hashlib.sha256(aes).hexdigest()
                 )
                 data["peers"][peer] = {
-                    "aes": pub.encrypt(aes),
+                    "aes": pub.encrypt(
+                        aes, algorithm=self.opts["cluster_encryption_algorithm"]
+                    ),
                     "sig": salt.crypt.private_encrypt(
                         self.master_key.master_key, digest
                     ),
@@ -1064,7 +1066,9 @@ class MasterPubServerChannel:
                 peer = data["peer_id"]
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
-                key_str = self.master_key.master_private_decrypt(aes)
+                key_str = self.master_key.master_private_decrypt(
+                    aes, self.opts["cluster_encryption_algorithm"]
+                )
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )

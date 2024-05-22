@@ -700,8 +700,8 @@ class MasterKeys(dict):
             log.debug("Writing shared key %s", shared_pub)
             shared_pub.write_bytes(master_pub.read_bytes())
 
-    def master_private_decrypt(self, data):
-        return self.master_key.decrypt(data)
+    def master_private_decrypt(self, data, algorithm=OAEP_SHA1):
+        return self.master_key.decrypt(data, algorithm)
 
 
 class AsyncAuth:

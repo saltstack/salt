@@ -1323,6 +1323,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "publish_encryption_algorithm": "AES-256-CBC-HMAC-SHA256",
         "publish_signing_algorithm": "PKCS1v15-SHA224",
+        "cluster_encryption_algorithm": "OAEP-SHA1",
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
         "auth_mode": 1,

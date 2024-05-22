@@ -56,6 +56,9 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
         ),
+        "cluster_encryption_algorithm": (
+            "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "127.0.0.1",
@@ -94,6 +97,9 @@ def cluster_master_2(salt_factories, cluster_master_1):
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+        "cluster_encryption_algorithm": (
+            "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
         ),
     }
 
@@ -140,6 +146,9 @@ def cluster_master_3(salt_factories, cluster_master_1):
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+        "cluster_encryption_algorithm": (
+            "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
         ),
     }
 
