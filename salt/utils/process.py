@@ -51,6 +51,9 @@ try:
 except ImportError:
     HAS_SETPROCTITLE = False
 
+## DGM
+_INTERNAL_PROCESS_ZOMBIE_LIST = []
+
 
 def appendproctitle(name):
     """
@@ -530,6 +533,9 @@ class ProcessManager:
                 target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
             )
 
+        ## DGM try cleaning up call
+        process.register_finalize_method(cleanup_zombie_process, args, kwargs)
+
         if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process.start()
@@ -684,6 +690,7 @@ class ProcessManager:
         else:
             for pid, p_map in self._process_map.copy().items():
                 log.trace("Terminating pid %s: %s", pid, p_map["Process"])
+                print("Terminating pid %s: %s", pid, p_map["Process"])
                 if args:
                     # escalate the signal to the process
                     try:
@@ -706,9 +713,11 @@ class ProcessManager:
         end_time = time.time() + self.wait_for_kill  # when to die
 
         log.trace("Waiting to kill process manager children")
+        print("Waiting to kill process manager children")
         while self._process_map and time.time() < end_time:
             for pid, p_map in self._process_map.copy().items():
                 log.trace("Joining pid %s: %s", pid, p_map["Process"])
+                print("Joining pid %s: %s", pid, p_map["Process"])
                 p_map["Process"].join(0)
 
                 if not p_map["Process"].is_alive():
@@ -757,7 +766,15 @@ class ProcessManager:
                         for (k, v) in self._process_map.items()
                     ),
                 )
+                print(
+                    "Some processes failed to respect the KILL signal: %s",
+                    "; ".join(
+                        "Process: {} (Pid: {})".format(v["Process"], k)
+                        for (k, v) in self._process_map.items()
+                    ),
+                )
                 log.info("kill_children retries left: %s", available_retries)
+                print("kill_children retries left: %s", available_retries)
                 kwargs["retry"] = available_retries - 1
                 return self.kill_children(*args, **kwargs)
             else:
@@ -771,7 +788,21 @@ class ProcessManager:
                         ) in self._process_map.items()
                     ),
                 )
+                print(
+                    "Failed to kill the following processes: %s",
+                    "; ".join(
+                        "Process: {} (Pid: {})".format(v["Process"], k)
+                        for (
+                            k,
+                            v,
+                        ) in self._process_map.items()
+                    ),
+                )
                 log.warning(
+                    "Salt will either fail to terminate now or leave some "
+                    "zombie processes behind"
+                )
+                print(
                     "Salt will either fail to terminate now or leave some "
                     "zombie processes behind"
                 )
@@ -780,9 +811,11 @@ class ProcessManager:
         """
         Properly terminate this process manager instance
         """
+        print("DGM class ProcessManager terminate entry", flush=True)
         self.stop_restarting()
         self.send_signal_to_processes(signal.SIGTERM)
         self.kill_children()
+        print("DGM class ProcessManager terminate exit", flush=True)
 
     def _handle_signals(self, *args, **kwargs):
         # first lets reset signal handlers to default one to prevent running this twice
@@ -1023,7 +1056,8 @@ class Process(multiprocessing.Process):
                             f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'"
                         )
                         print(
-                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'"
+                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'",
+                            flush=True,
                         )
                         try:
                             method(*args, **kwargs)
@@ -1062,7 +1096,8 @@ class Process(multiprocessing.Process):
             f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'"
         )
         print(
-            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'"
+            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'",
+            flush=True,
         )
         finalize_method_tuple = (function, args, kwargs)
         if finalize_method_tuple not in self._finalize_methods:
@@ -1070,7 +1105,8 @@ class Process(multiprocessing.Process):
                 f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'"
             )
             print(
-                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'"
+                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'",
+                flush=True,
             )
             self._finalize_methods.append(finalize_method_tuple)
 
@@ -1098,12 +1134,44 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
+        print(f"DGM class SignalHandlingProcess, _handle_signals {msg}", flush=True)
+
         ## DGM mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
         ## DGM log.debug(
         ## DGM     "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
         ## DGM )
         ## DGM
         ## DGM cur_pid = os.getpid()
+
+        # Run any registered process finalization routines
+        print(
+            "DGM class SignalHandlingProcess, attempt to print out _finalize_methods",
+            flush=True,
+        )
+        for method, args, kwargs in self._finalize_methods:
+            # pylint: disable=logging-fstring-interpolation
+            log.warning(
+                f"DGM class SignalHandlingProcess, method '{method}', args '{args}', kwargs '{kwargs}'"
+            )
+            print(
+                f"DGM class SignalHandlingProcess, method '{method}', args '{args}', kwargs '{kwargs}', flush=True"
+            )
+            try:
+                method(*args, **kwargs)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to run finalize callback on %s; method=%r; args=%r; and kwargs=%r",
+                    self,
+                    method,
+                    args,
+                    kwargs,
+                )
+                continue
+
+        print(
+            "DGM class SignalHandlingProcess, done to print out _finalize_methods",
+            flush=True,
+        )
 
         if HAS_PSUTIL:
             try:
@@ -1292,3 +1360,72 @@ class SubprocessList:
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)
+
+
+def cleanup_zombie_process(*args, **kwargs):
+    """
+    Generic process to allow for any registered process cleanup routines to execute.
+
+    While class Process has a register_finalize_method, when a process is looked up by pid
+    using psutil.Process, there is no method available to register a cleanup process.
+
+    Hence, this function is added as part of the add_process to allow usage of other cleanup processes
+    which cannot be added by the register_finalize_method.
+    """
+
+    print("\nDGM cleanup_zombie_process entry\n", flush=True)
+
+    # Run any register process cleanup routines
+    for method, args, kwargs in _INTERNAL_PROCESS_ZOMBIE_LIST:
+        # pylint: disable=logging-fstring-interpolation
+        log.warning(
+            f"DGM cleanup_zombie_process, method '{method}', args '{args}', kwargs '{kwargs}'"
+        )
+        print(
+            f"DGM cleanup_zombie_process, method '{method}', args '{args}', kwargs '{kwargs}'",
+            flush=True,
+        )
+        try:
+            method(*args, **kwargs)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to run registered function finalize callback; method=%r; args=%r; and kwargs=%r",
+                method,
+                args,
+                kwargs,
+            )
+            continue
+
+    print("\nDGM cleanup_zombie_process exit\n", flush=True)
+
+
+def register_cleanup_zombie_function(function, *args, **kwargs):
+    """
+    Register a function to run as process terminates
+
+    While class Process has a register_finalize_method, when a process is looked up by pid
+    using psutil.Process, there is no method available to register a cleanup process.
+
+    Hence, this function can be used to register a function to allow cleanup processes
+    which cannot be added by the register_finalize_method.
+
+    Note: there is no deletion, since it is assummed that if something is registered, it will continue to be used
+    """
+    # pylint: disable=logging-fstring-interpolation
+    log.warning(
+        f"DGM register_cleanup_zombie_function entry, function '{function}', args '{args}', kwargs '{kwargs}'"
+    )
+    print(
+        f"DGM register_cleanup_zombie_function entry, function '{function}', args '{args}', kwargs '{kwargs}'",
+        flush=True,
+    )
+    finalize_function_tuple = (function, args, kwargs)
+    if finalize_function_tuple not in _INTERNAL_PROCESS_ZOMBIE_LIST:
+        log.warning(
+            f"DGM register_cleanup_zombie_function, appending tuple finalize_function_tuple '{finalize_function_tuple}'"
+        )
+        print(
+            f"DGM register_cleanup_zombie_function, appending tuple finalize_function_tuple '{finalize_function_tuple}'",
+            flush=True,
+        )
+        _INTERNAL_PROCESS_ZOMBIE_LIST.append(finalize_function_tuple)
