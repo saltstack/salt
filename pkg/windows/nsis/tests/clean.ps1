@@ -12,8 +12,17 @@ clean.ps1
 clean.ps1
 
 #>
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+# Don't pretify the output of the Write-Result
+    [Switch] $CICD
+)
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
@@ -21,15 +30,19 @@ $ErrorActionPreference = "Stop"
 # Script Variables
 #-------------------------------------------------------------------------------
 
-$SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
+$SCRIPT_DIR = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 
 #-------------------------------------------------------------------------------
 # Script Functions
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -61,6 +74,7 @@ if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
         Write-Result "Success" -ForegroundColor Green
     }
 }
+
 #-------------------------------------------------------------------------------
 # Remove test-setup.exe
 #-------------------------------------------------------------------------------
@@ -68,6 +82,20 @@ if ( Test-Path -Path "$SCRIPT_DIR\test-setup.exe" ) {
     Write-Host "Removing test-setup.exe: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\test-setup.exe" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\test-setup.exe" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Result "Success" -ForegroundColor Green
+    }
+}
+
+#-------------------------------------------------------------------------------
+# Remove custom_conf
+#-------------------------------------------------------------------------------
+if ( Test-Path -Path "$SCRIPT_DIR\custom_conf" ) {
+    Write-Host "Removing custom_conf: " -NoNewline
+    Remove-Item -Path "$SCRIPT_DIR\custom_conf" -Recurse -Force
+    if ( Test-Path -Path "$SCRIPT_DIR\custom_conf" ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {

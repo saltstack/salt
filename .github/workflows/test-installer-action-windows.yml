@@ -1,0 +1,34 @@
+name: Test Installer
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+  pull_request:
+    paths:
+      - 'pkg/windows/**'
+
+jobs:
+
+  test:
+    name: Test NSIS Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install NSIS
+        run: pkg/windows/install_nsis.cmd -CICD
+
+      - name: Setup test environment
+        run: pkg/windows/nsis/tests/setup.ps1 -CICD
+
+      - name: Run Installer Tests
+        run: pkg/windows/nsis/tests/test.ps1 -CICD
+
+      - name: Clean up environment
+        run: pkg/windows/nsis/tests/clean.ps1 -CICD

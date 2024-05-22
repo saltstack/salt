@@ -254,6 +254,14 @@ jobs:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+  installer:
+    name: Windows Installer
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/test-installer-action-windows.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -2172,6 +2180,7 @@ jobs:
       - prepare-workflow
       - pre-commit
       - lint
+      - installer
       - build-docs
       - build-deps-onedir
       - build-salt-onedir

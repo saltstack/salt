@@ -28,6 +28,8 @@ def install(inst_dir):
 
 
 def test_binaries_present(install, inst_dir):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(f'cmd /c dir "{pytest.INST_DIR}"')
     assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 
@@ -37,7 +39,7 @@ def test_config_present(install):
 
 def test_config_correct(install):
     # The config file should be the custom config, unchanged
-    with open(rf"{pytest.REPO_DIR}\custom_conf") as f:
+    with open(rf"{pytest.SCRIPT_DIR}\custom_conf") as f:
         expected = f.readlines()
 
     with open(rf"{pytest.DATA_DIR}\conf\minion") as f:

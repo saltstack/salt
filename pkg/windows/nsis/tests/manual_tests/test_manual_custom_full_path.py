@@ -8,10 +8,9 @@ def install():
     pytest.helpers.clean_env()
 
     # Create a custom config
-    pytest.helpers.custom_config()
+    full_path_conf = pytest.helpers.custom_config()
 
-    full_path_conf = f"{pytest.REPO_DIR}\\custom_conf"
-
+    # Install salt passing custom-config
     pytest.helpers.run_command([pytest.INST_BIN, f"/custom-config={full_path_conf}"])
     yield
     pytest.helpers.clean_env()
@@ -27,7 +26,7 @@ def test_config_present(install):
 
 def test_config_correct(install):
     # The config file should be the default, unchanged
-    with open(f"{pytest.REPO_DIR}\\custom_conf") as f:
+    with open(f"{pytest.SCRIPT_DIR}\\custom_conf") as f:
         expected = f.readlines()
 
     with open(f"{pytest.DATA_DIR}\\conf\\minion") as f:
