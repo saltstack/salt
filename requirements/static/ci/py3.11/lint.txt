@@ -498,7 +498,7 @@ redis==3.5.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   redis-py-cluster
-requests==2.31.0
+requests==2.32.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt

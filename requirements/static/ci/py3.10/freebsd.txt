@@ -391,7 +391,7 @@ pyzmq==23.2.0
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.31.0
+requests==2.32.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
