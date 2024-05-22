@@ -251,14 +251,12 @@ class GitProvider:
         override_params,
         cache_root,
         role="gitfs",
-    ):  # pylint: disable=logging-fstring-interpolation
+    ):
         self.opts = opts
         self.role = role
 
         def _val_cb(x, y):
             return str(y)
-
-        ## DGM print(f"DGM class GitProvider dunder init, opts '{opts}'", flush=True)
 
         # get machine_identifier
         self.mach_id = _get_machine_identifier().get(
@@ -531,32 +529,11 @@ class GitProvider:
             cur_pid = os.getpid()
             process = psutil.Process(cur_pid)
             dgm_process_dir = dir(process)
-            log.warning(
-                f"DGM class GitProvider dunder init, cur_pid '{cur_pid}', process '{process}'"
-            )
-            print(
-                f"DGM class GitProvider  dunder init, cur_pid '{cur_pid}', process '{process}', process dir '{dgm_process_dir}'",
-                flush=True,
-            )
             cache_dir = self.opts.get("cachedir", None)
             gitfs_active = self.opts.get("gitfs_remotes", None)
-            log.warning(
-                f"DGM class GitProvider dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'"
-            )
-            print(
-                f"DGM class GitProvider  dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'",
-                flush=True,
-            )
             if cache_dir and gitfs_active:
-                log.warning(
-                    f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'"
-                )
-                print(
-                    f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'",
-                    flush=True,
-                )
-                salt.utils.process.register_cleanup_zombie_function(
-                    gitfs_zombie_cleanup, cache_dir
+                salt.utils.process.register_cleanup_finalize_function(
+                    gitfs_finalize_cleanup, cache_dir
                 )
 
     def get_cache_basehash(self):
@@ -3676,27 +3653,12 @@ class WinRepo(GitBase):
                 self.winrepo_dirs[repo.id] = cachedir
 
 
-## DGM wip code
-# pylint: disable=logging-fstring-interpolation
-def gitfs_zombie_cleanup(cache_dir):
+def gitfs_finalize_cleanup(cache_dir):
     """
-    Clean up zombie processes that used gitfs
-    Initial wip
+    Clean up finalize processes that used gitfs
     """
-    log.warning(
-        f"DGM class GitProvider gitfs_zombie_cleanup entry, cache_dir '{cache_dir}'"
-    )
-    print(
-        f"DGM class GitProvider gitfs_zombie_cleanup entry, cache_dir '{cache_dir}'",
-        flush=True,
-    )
     cur_pid = os.getpid()
     mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
-    log.debug("exiting for process id %s and machine identifer %s", cur_pid, mach_id)
-    print(
-        f"DGM exiting for process id '{cur_pid}' and machine identifer '{mach_id}'",
-        flush=True,
-    )
 
     # need to clean up any resources left around like lock files if using gitfs
     # example: lockfile
