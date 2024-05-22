@@ -416,7 +416,7 @@ pylint==3.1.0
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.0.2
+pymysql==1.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/linux.in

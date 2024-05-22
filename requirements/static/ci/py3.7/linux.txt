@@ -351,7 +351,7 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
     # via twilio
-pymysql==1.0.2
+pymysql==1.1.1
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via
