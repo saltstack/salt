@@ -33,6 +33,7 @@ import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.user
@@ -43,7 +44,6 @@ from salt.exceptions import FileserverConfigError, GitLockError, get_error_messa
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
-from salt.utils.process import os_is_running as pid_exists
 from salt.utils.versions import Version
 
 VALID_REF_TYPES = _DEFAULT_MASTER_OPTS["gitfs_ref_types"]
@@ -257,6 +257,8 @@ class GitProvider:
 
         def _val_cb(x, y):
             return str(y)
+
+        ## DGM print(f"DGM class GitProvider dunder init, opts '{opts}'", flush=True)
 
         # get machine_identifier
         self.mach_id = _get_machine_identifier().get(
@@ -533,25 +535,29 @@ class GitProvider:
                 f"DGM class GitProvider dunder init, cur_pid '{cur_pid}', process '{process}'"
             )
             print(
-                f"DGM class GitProvider  dunder init, cur_pid '{cur_pid}', process '{process}', process dir '{dgm_process_dir}'"
+                f"DGM class GitProvider  dunder init, cur_pid '{cur_pid}', process '{process}', process dir '{dgm_process_dir}'",
+                flush=True,
             )
-            if isinstance(process, salt.utils.process.Process):
-                cache_dir = self.opts.get("cachedir", None)
-                gitfs_active = self.opts.get("gitfs_remotes", None)
+            cache_dir = self.opts.get("cachedir", None)
+            gitfs_active = self.opts.get("gitfs_remotes", None)
+            log.warning(
+                f"DGM class GitProvider dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'"
+            )
+            print(
+                f"DGM class GitProvider  dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'",
+                flush=True,
+            )
+            if cache_dir and gitfs_active:
                 log.warning(
-                    f"DGM class GitProvider dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'"
+                    f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'"
                 )
                 print(
-                    f"DGM class GitProvider  dunder init, cache_dir '{cache_dir}', gitfs_active '{gitfs_active}'"
+                    f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'",
+                    flush=True,
                 )
-                if cache_dir and gitfs_active:
-                    log.warning(
-                        f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'"
-                    )
-                    print(
-                        f"DGM class GitProvider registering gitfs_zombie_cleanup with cache_dir '{cache_dir}'"
-                    )
-                    process.register_finalize_method(gitfs_zombie_cleanup, cache_dir)
+                salt.utils.process.register_cleanup_zombie_function(
+                    gitfs_zombie_cleanup, cache_dir
+                )
 
     def get_cache_basehash(self):
         return self._cache_basehash
@@ -1028,7 +1034,7 @@ class GitProvider:
                         if self.mach_id or mach_id:
                             msg += f" for machine_id {mach_id}, current machine_id {self.mach_id}"
 
-                        if not pid_exists(pid):
+                        if not salt.utils.process.os_is_running(pid):
                             if self.mach_id != mach_id:
                                 msg += (
                                     " but this process is not running. The "
@@ -1058,7 +1064,7 @@ class GitProvider:
                     if failhard:
                         raise
                     return
-                elif pid and pid_exists(pid):
+                elif pid and salt.utils.process.os_is_running(pid):
                     log.warning(
                         "Process %d has a %s %s lock (%s) on machine_id %s",
                         pid,
@@ -3680,11 +3686,17 @@ def gitfs_zombie_cleanup(cache_dir):
     log.warning(
         f"DGM class GitProvider gitfs_zombie_cleanup entry, cache_dir '{cache_dir}'"
     )
-    print(f"DGM class GitProvider gitfs_zombie_cleanup entry, cache_dir '{cache_dir}'")
+    print(
+        f"DGM class GitProvider gitfs_zombie_cleanup entry, cache_dir '{cache_dir}'",
+        flush=True,
+    )
     cur_pid = os.getpid()
     mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     log.debug("exiting for process id %s and machine identifer %s", cur_pid, mach_id)
-    print(f"exiting for process id '{cur_pid}' and machine identifer '{mach_id}'")
+    print(
+        f"DGM exiting for process id '{cur_pid}' and machine identifer '{mach_id}'",
+        flush=True,
+    )
 
     # need to clean up any resources left around like lock files if using gitfs
     # example: lockfile

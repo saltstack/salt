@@ -9,7 +9,7 @@ import pathlib
 import signal
 import time
 
-import psutil
+## import psutil
 import pytest
 from saltfactories.utils import random_string
 
@@ -552,6 +552,9 @@ class KillProcessTest(salt.utils.process.SignalHandlingProcess):
         lockfile = self.provider._get_lock_file()
         log.debug("KillProcessTest acquried lock file %s", lockfile)
 
+        killtest_pid = os.getpid()
+        print(f"KillProcessTest pid '{killtest_pid}', acquried lock file '{lockfile}'")
+
         # check that lock has been released
         assert self.provider._master_lock.acquire(timeout=5)
 
@@ -571,7 +574,7 @@ def test_git_provider_sigterm_cleanup(
     then kill the process via SIGTERM and ensure locked resources are cleaned up
     """
     log.warning("DGM test_git_provider_sigterm_cleanup entry")
-    print("DGM test_git_provider_sigterm_cleanup entry")
+    print("DGM test_git_provider_sigterm_cleanup entry", flush=True)
 
     provider = main_class.remotes[0]
 
@@ -585,40 +588,45 @@ def test_git_provider_sigterm_cleanup(
     log.warning(
         f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'"
     )
-    print(f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}'")
 
-    print("DGM test area entry")
+    ## DGM print("DGM test area entry\n\n\n\n", flush=True)
 
-    dgm_proc_dir = dir(proc)
-    print(
-        f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}', proc dir '{dgm_proc_dir}'"
-    )
+    ## DGM dgm_proc_dir = dir(proc)
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, post add_process, proc '{proc}', proc dir '{dgm_proc_dir}'", flush=True)
 
-    dgm_pid = proc.pid
-    print(f"DGM test_git_provider_sigterm_cleanup, proc pid '{proc.pid}'")
+    ## DGM dgm_pid = proc.pid
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, proc pid '{proc.pid}'", flush=True)
 
-    dgm_process = psutil.Process(dgm_pid)
-    print(f"DGM test_git_provider_sigterm_cleanup, psutil process '{dgm_process}'")
+    ## DGM dgm_process = psutil.Process(dgm_pid)
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, psutil process '{dgm_process}'", flush=True)
 
-    if isinstance(proc, salt.utils.process.Process):
-        print(
-            "DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is TRUE"
-        )
-    else:
-        print(
-            "DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is FALSE"
-        )
+    ## DGM dgm_process_dir = dir(dgm_process)
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, psutil process '{dgm_process}', process dir '{dgm_process_dir}'", flush=True)
+    ## DGM ## DGM print(f"DGM test_git_provider_sigterm_cleanup, checking values psutil process '{dgm_process}', pid '{dgm_process.pid}', name '{dgm_process.name()}', username '{dgm_process.username()}', as_dict '{dgm_process.as_dict()}', cmdline '{dgm_process.cmdline()}'", flush=True)
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, checking values psutil process '{dgm_process}', pid '{dgm_process.pid}', ppid '{dgm_process.ppid}', name '{dgm_process.name()}', username '{dgm_process.username()}', cmdline '{dgm_process.cmdline()}'", flush=True)
 
-    if isinstance(dgm_process, salt.utils.process.Process):
-        print(
-            "DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is TRUE"
-        )
-    else:
-        print(
-            "DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is FALSE"
-        )
+    ## DGM dgm_dict = dgm_process.as_dict()
+    ## DGM dgm_process_parent_pid = dgm_dict["ppid"]
+    ## DGM dgm_process_parent = psutil.Process(dgm_process_parent_pid)
+    ## DGM dgm_process_parent_dir = dir(dgm_process_parent)
+    ## DGM print(f"DGM test_git_provider_sigterm_cleanup, parent pid '{dgm_process_parent_pid}' psutil process '{dgm_process_parent}', name '{dgm_process_parent.name()}', cmdline '{dgm_process_parent.cmdline()}', dir '{dgm_process_parent_dir}'", flush=True)
 
-    print("DGM test area exit")
+    ## DGM if isinstance(proc, salt.utils.process.Process):
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is TRUE", flush=True)
+    ## DGM else:
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  proc isinstance salt utils process Process is FALSE", flush=True)
+
+    ## DGM if isinstance(dgm_process, salt.utils.process.Process):
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is TRUE", flush=True)
+    ## DGM else:
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process Process is FALSE", flush=True)
+
+    ## DGM if isinstance(dgm_process_parent, salt.utils.process.ProcessManager):
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process ProcessManager is TRUE", flush=True)
+    ## DGM else:
+    ## DGM     print("DGM test_git_provider_sigterm_cleanup,  process isinstance salt utils process ProcessManager is FALSE", flush=True)
+
+    ## DGM print("DGM test area exit\n\n\n\n", flush=True)
 
     procmgr.run(asynchronous=True)
 
@@ -628,14 +636,17 @@ def test_git_provider_sigterm_cleanup(
     file_name = provider._get_lock_file("update")
 
     log.warning(f"DGM test_git_provider_sigterm_cleanup, file_name '{file_name}'")
-    print(f"DGM test_git_provider_sigterm_cleanup, file_name '{file_name}'")
+    print(f"DGM test_git_provider_sigterm_cleanup, file_name '{file_name}'", flush=True)
 
     assert pathlib.Path(file_name).exists()
     assert pathlib.Path(file_name).is_file()
 
+    print("DGM test_git_provider_sigterm_cleanup, terminate procmgr start", flush=True)
     procmgr.terminate()  # sends a SIGTERM
 
     time.sleep(2)  # give some time for it to terminate
+
+    print("DGM test_git_provider_sigterm_cleanup, terminate procmgr exit", flush=True)
 
     assert not proc.is_alive()
     assert not pathlib.Path(file_name).exists()
