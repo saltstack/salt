@@ -3177,6 +3177,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-exclude-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,
