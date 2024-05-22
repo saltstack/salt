@@ -30,10 +30,6 @@ import salt.utils.versions
 from salt.ext.tornado import gen
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
-## DGM import pathlib
-## DGM import shutil
-
-
 log = logging.getLogger(__name__)
 
 HAS_PSUTIL = False
@@ -51,8 +47,8 @@ try:
 except ImportError:
     HAS_SETPROCTITLE = False
 
-## DGM
-_INTERNAL_PROCESS_ZOMBIE_LIST = []
+# Process finalization function list
+_INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST = []
 
 
 def appendproctitle(name):
@@ -533,8 +529,7 @@ class ProcessManager:
                 target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
             )
 
-        ## DGM try cleaning up call
-        process.register_finalize_method(cleanup_zombie_process, args, kwargs)
+        process.register_finalize_method(cleanup_finalize_process, args, kwargs)
 
         if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
@@ -690,7 +685,6 @@ class ProcessManager:
         else:
             for pid, p_map in self._process_map.copy().items():
                 log.trace("Terminating pid %s: %s", pid, p_map["Process"])
-                print("Terminating pid %s: %s", pid, p_map["Process"])
                 if args:
                     # escalate the signal to the process
                     try:
@@ -713,11 +707,9 @@ class ProcessManager:
         end_time = time.time() + self.wait_for_kill  # when to die
 
         log.trace("Waiting to kill process manager children")
-        print("Waiting to kill process manager children")
         while self._process_map and time.time() < end_time:
             for pid, p_map in self._process_map.copy().items():
                 log.trace("Joining pid %s: %s", pid, p_map["Process"])
-                print("Joining pid %s: %s", pid, p_map["Process"])
                 p_map["Process"].join(0)
 
                 if not p_map["Process"].is_alive():
@@ -766,15 +758,7 @@ class ProcessManager:
                         for (k, v) in self._process_map.items()
                     ),
                 )
-                print(
-                    "Some processes failed to respect the KILL signal: %s",
-                    "; ".join(
-                        "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (k, v) in self._process_map.items()
-                    ),
-                )
                 log.info("kill_children retries left: %s", available_retries)
-                print("kill_children retries left: %s", available_retries)
                 kwargs["retry"] = available_retries - 1
                 return self.kill_children(*args, **kwargs)
             else:
@@ -788,21 +772,7 @@ class ProcessManager:
                         ) in self._process_map.items()
                     ),
                 )
-                print(
-                    "Failed to kill the following processes: %s",
-                    "; ".join(
-                        "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (
-                            k,
-                            v,
-                        ) in self._process_map.items()
-                    ),
-                )
                 log.warning(
-                    "Salt will either fail to terminate now or leave some "
-                    "zombie processes behind"
-                )
-                print(
                     "Salt will either fail to terminate now or leave some "
                     "zombie processes behind"
                 )
@@ -811,11 +781,9 @@ class ProcessManager:
         """
         Properly terminate this process manager instance
         """
-        print("DGM class ProcessManager terminate entry", flush=True)
         self.stop_restarting()
         self.send_signal_to_processes(signal.SIGTERM)
         self.kill_children()
-        print("DGM class ProcessManager terminate exit", flush=True)
 
     def _handle_signals(self, *args, **kwargs):
         # first lets reset signal handlers to default one to prevent running this twice
@@ -1051,14 +1019,6 @@ class Process(multiprocessing.Process):
                 # Run any registered process finalization routines
                 try:
                     for method, args, kwargs in self._finalize_methods:
-                        # pylint: disable=logging-fstring-interpolation
-                        log.warning(
-                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'"
-                        )
-                        print(
-                            f"DGM class Process wrapped_run_func, method '{method}', args '{args}', kwargs '{kwargs}'",
-                            flush=True,
-                        )
                         try:
                             method(*args, **kwargs)
                         except Exception:  # pylint: disable=broad-except
@@ -1091,23 +1051,8 @@ class Process(multiprocessing.Process):
         """
         Register a function to run as process terminates
         """
-        # pylint: disable=logging-fstring-interpolation
-        log.warning(
-            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'"
-        )
-        print(
-            f"DGM class Process register_finalize_method entry, function '{function}', args '{args}', kwargs '{kwargs}'",
-            flush=True,
-        )
         finalize_method_tuple = (function, args, kwargs)
         if finalize_method_tuple not in self._finalize_methods:
-            log.warning(
-                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'"
-            )
-            print(
-                f"DGM register_finalize_method, appending tuple finalize_method_tuple '{finalize_method_tuple}'",
-                flush=True,
-            )
             self._finalize_methods.append(finalize_method_tuple)
 
 
@@ -1134,28 +1079,8 @@ class SignalHandlingProcess(Process):
         msg += ". Exiting"
         log.debug(msg)
 
-        print(f"DGM class SignalHandlingProcess, _handle_signals {msg}", flush=True)
-
-        ## DGM mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
-        ## DGM log.debug(
-        ## DGM     "exiting for process id %s and machine identifer %s", os.getpid(), mach_id
-        ## DGM )
-        ## DGM
-        ## DGM cur_pid = os.getpid()
-
         # Run any registered process finalization routines
-        print(
-            "DGM class SignalHandlingProcess, attempt to print out _finalize_methods",
-            flush=True,
-        )
         for method, args, kwargs in self._finalize_methods:
-            # pylint: disable=logging-fstring-interpolation
-            log.warning(
-                f"DGM class SignalHandlingProcess, method '{method}', args '{args}', kwargs '{kwargs}'"
-            )
-            print(
-                f"DGM class SignalHandlingProcess, method '{method}', args '{args}', kwargs '{kwargs}', flush=True"
-            )
             try:
                 method(*args, **kwargs)
             except Exception:  # pylint: disable=broad-except
@@ -1167,11 +1092,6 @@ class SignalHandlingProcess(Process):
                     kwargs,
                 )
                 continue
-
-        print(
-            "DGM class SignalHandlingProcess, done to print out _finalize_methods",
-            flush=True,
-        )
 
         if HAS_PSUTIL:
             try:
@@ -1188,106 +1108,6 @@ class SignalHandlingProcess(Process):
                                 self.pid,
                                 os.getpid(),
                             )
-
-                ## DGM # need to clean up any resources left around like lock files if using gitfs
-                ## DGM # example: lockfile i
-                ## DGM # /var/cache/salt/master/gitfs/work/NlJQs6Pss_07AugikCrmqfmqEFrfPbCDBqGLBiCd3oU=/_/update.lk
-                ## DGM cache_dir = self.opts.get("cachedir", None)
-                ## DGM gitfs_active = self.opts.get("gitfs_remotes", None)
-                ## DGM if cache_dir and gitfs_active:
-                ## DGM     # check for gitfs file locks to ensure no resource leaks
-                ## DGM     # last chance to clean up any missed unlock droppings
-                ## DGM     cache_dir = pathlib.Path(cache_dir + "/gitfs/work")
-                ## DGM     if cache_dir.exists and cache_dir.is_dir():
-                ## DGM         file_list = list(cache_dir.glob("**/*.lk"))
-                ## DGM         file_del_list = []
-                ## DGM         file_pid = 0
-                ## DGM         file_mach_id = 0
-                ## DGM         try:
-                ## DGM             for file_name in file_list:
-                ## DGM                 with salt.utils.files.fopen(file_name, "r") as fd_:
-                ## DGM                     try:
-                ## DGM                         file_pid = int(
-                ## DGM                             salt.utils.stringutils.to_unicode(
-                ## DGM                                 fd_.readline()
-                ## DGM                             ).rstrip()
-                ## DGM                         )
-                ## DGM                     except ValueError:
-                ## DGM                         # Lock file is empty, set pid to 0 so it evaluates as False.
-                ## DGM                         file_pid = 0
-                ## DGM                     try:
-                ## DGM                         file_mach_id = (
-                ## DGM                             salt.utils.stringutils.to_unicode(
-                ## DGM                                 fd_.readline()
-                ## DGM                             ).rstrip()
-                ## DGM                         )
-                ## DGM                     except ValueError:
-                ## DGM                         # Lock file is empty, set mach_id to 0 so it evaluates False.
-                ## DGM                         file_mach_id = 0
-
-                ## DGM             if cur_pid == file_pid:
-                ## DGM                 if mach_id != file_mach_id:
-                ## DGM                     if not file_mach_id:
-                ## DGM                         msg = (
-                ## DGM                             f"gitfs lock file for pid '{file_pid}' does not "
-                ## DGM                             "contain a machine id, deleting lock file which may "
-                ## DGM                             "affect if using multi-master with shared gitfs cache, "
-                ## DGM                             "the lock may have been obtained by another master "
-                ## DGM                             "recommend updating Salt version on other masters to a "
-                ## DGM                             "version which insert machine identification in lock a file."
-                ## DGM                         )
-                ## DGM                         log.debug(msg)
-                ## DGM                         file_del_list.append(
-                ## DGM                             (file_name, file_pid, file_mach_id)
-                ## DGM                         )
-                ## DGM                 else:
-                ## DGM                     file_del_list.append(
-                ## DGM                         (file_name, file_pid, file_mach_id)
-                ## DGM                     )
-
-                ## DGM         except FileNotFoundError:
-                ## DGM             log.debug("gitfs lock file: %s not found", file_name)
-
-                ## DGM         for file_name, file_pid, file_mach_id in file_del_list:
-                ## DGM             try:
-                ## DGM                 os.remove(file_name)
-                ## DGM             except OSError as exc:
-                ## DGM                 if exc.errno == errno.ENOENT:
-                ## DGM                     # No lock file present
-                ## DGM                     msg = (
-                ## DGM                         "SIGTERM clean up of resources attempted to remove lock "
-                ## DGM                         f"file {file_name}, pid '{file_pid}', machine identifier "
-                ## DGM                         f"'{mach_id}' but it did not exist, exception : {exc} "
-                ## DGM                     )
-                ## DGM                     log.debug(msg)
-
-                ## DGM                 elif exc.errno == errno.EISDIR:
-                ## DGM                     # Somehow this path is a directory. Should never happen
-                ## DGM                     # unless some wiseguy manually creates a directory at this
-                ## DGM                     # path, but just in case, handle it.
-                ## DGM                     try:
-                ## DGM                         shutil.rmtree(file_name)
-                ## DGM                     except OSError as exc:
-                ## DGM                         msg = (
-                ## DGM                             f"SIGTERM clean up of resources, lock file '{file_name}'"
-                ## DGM                             f", pid '{file_pid}', machine identifier '{file_mach_id}'"
-                ## DGM                             f"was a directory, removed directory, exception : '{exc}'"
-                ## DGM                         )
-                ## DGM                         log.debug(msg)
-                ## DGM                 else:
-                ## DGM                     msg = (
-                ## DGM                         "SIGTERM clean up of resources, unable to remove lock file "
-                ## DGM                         f"'{file_name}', pid '{file_pid}', machine identifier "
-                ## DGM                         f"'{file_mach_id}', exception : '{exc}'"
-                ## DGM                     )
-                ## DGM                     log.debug(msg)
-                ## DGM             else:
-                ## DGM                 msg = (
-                ## DGM                     "SIGTERM clean up of resources, removed lock file "
-                ## DGM                     f"'{file_name}', pid '{file_pid}', machine identifier "
-                ## DGM                     f"'{file_mach_id}'"
-                ## DGM                 )
-                ## DGM                 log.debug(msg)
 
             except psutil.NoSuchProcess:
                 log.warning(
@@ -1362,7 +1182,7 @@ class SubprocessList:
                 log.debug("Subprocess %s cleaned up", proc.name)
 
 
-def cleanup_zombie_process(*args, **kwargs):
+def cleanup_finalize_process(*args, **kwargs):
     """
     Generic process to allow for any registered process cleanup routines to execute.
 
@@ -1373,17 +1193,13 @@ def cleanup_zombie_process(*args, **kwargs):
     which cannot be added by the register_finalize_method.
     """
 
-    print("\nDGM cleanup_zombie_process entry\n", flush=True)
-
-    # Run any register process cleanup routines
-    for method, args, kwargs in _INTERNAL_PROCESS_ZOMBIE_LIST:
-        # pylint: disable=logging-fstring-interpolation
-        log.warning(
-            f"DGM cleanup_zombie_process, method '{method}', args '{args}', kwargs '{kwargs}'"
-        )
-        print(
-            f"DGM cleanup_zombie_process, method '{method}', args '{args}', kwargs '{kwargs}'",
-            flush=True,
+    # Run any registered process cleanup routines
+    for method, args, kwargs in _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST:
+        log.debug(
+            "cleanup_finalize_process, method=%r, args=%r, kwargs=%r",
+            method,
+            args,
+            kwargs,
         )
         try:
             method(*args, **kwargs)
@@ -1396,10 +1212,8 @@ def cleanup_zombie_process(*args, **kwargs):
             )
             continue
 
-    print("\nDGM cleanup_zombie_process exit\n", flush=True)
 
-
-def register_cleanup_zombie_function(function, *args, **kwargs):
+def register_cleanup_finalize_function(function, *args, **kwargs):
     """
     Register a function to run as process terminates
 
@@ -1407,25 +1221,16 @@ def register_cleanup_zombie_function(function, *args, **kwargs):
     using psutil.Process, there is no method available to register a cleanup process.
 
     Hence, this function can be used to register a function to allow cleanup processes
-    which cannot be added by the register_finalize_method.
+    which cannot be added by class Process register_finalize_method.
 
     Note: there is no deletion, since it is assummed that if something is registered, it will continue to be used
     """
-    # pylint: disable=logging-fstring-interpolation
-    log.warning(
-        f"DGM register_cleanup_zombie_function entry, function '{function}', args '{args}', kwargs '{kwargs}'"
-    )
-    print(
-        f"DGM register_cleanup_zombie_function entry, function '{function}', args '{args}', kwargs '{kwargs}'",
-        flush=True,
+    log.debug(
+        "register_cleanup_finalize_function entry, function=%r, args=%r, kwargs=%r",
+        function,
+        args,
+        kwargs,
     )
     finalize_function_tuple = (function, args, kwargs)
-    if finalize_function_tuple not in _INTERNAL_PROCESS_ZOMBIE_LIST:
-        log.warning(
-            f"DGM register_cleanup_zombie_function, appending tuple finalize_function_tuple '{finalize_function_tuple}'"
-        )
-        print(
-            f"DGM register_cleanup_zombie_function, appending tuple finalize_function_tuple '{finalize_function_tuple}'",
-            flush=True,
-        )
-        _INTERNAL_PROCESS_ZOMBIE_LIST.append(finalize_function_tuple)
+    if finalize_function_tuple not in _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST:
+        _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST.append(finalize_function_tuple)
