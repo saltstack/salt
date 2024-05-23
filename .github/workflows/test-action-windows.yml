@@ -334,7 +334,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -344,7 +344,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
