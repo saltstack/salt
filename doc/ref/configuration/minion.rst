@@ -3171,6 +3171,28 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+``encryption_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: OAEP-SHA1
+
+Then RSA encryption algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``OAEP-SHA1`` and ``OAEP-SHA224``
+
+
+``signing_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+Then RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``
+
 
 Reactor Settings
 ================

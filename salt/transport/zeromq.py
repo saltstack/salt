@@ -746,9 +746,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         @salt.ext.tornado.gen.coroutine
         def on_recv(packages):
-            for package in packages:
-                payload = salt.payload.loads(package)
-                yield publish_payload(payload)
+            try:
+                for package in packages:
+                    payload = salt.payload.loads(package)
+                    log.error("on recv")
+                    yield publish_payload(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Un-handled error in publisher %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
 
         pull_sock.on_recv(on_recv)
         try:
