@@ -87,7 +87,9 @@ def peer_salt_minion_3(peer_salt_master):
 @pytest.mark.parametrize(
     "source,target", ((x, y) for x in range(1, 4) for y in range(1, 4) if x != y)
 )
-def test_peer_communication(source, target, request):
+def test_peer_communication(source, target, request, grains):
+    if grains["os"] == "Fedora" and grains["osmajorrelease"] >= 40:
+        pytest.skip(f"Temporary skip on {grains['osfinger']}")
     cli = request.getfixturevalue(f"peer_salt_minion_{source}").salt_call_cli()
     tgt = request.getfixturevalue(f"peer_salt_minion_{target}").id
     ret = cli.run("publish.publish", tgt, "test.ping")

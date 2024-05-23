@@ -524,25 +524,28 @@ def _realpath(path):
     return os.path.realpath(path)
 
 
-def clean_path(root, path, subdir=False):
+def clean_path(root, path, subdir=False, realpath=True):
     """
     Accepts the root the path needs to be under and verifies that the path is
     under said root. Pass in subdir=True if the path can result in a
-    subdirectory of the root instead of having to reside directly in the root
+    subdirectory of the root instead of having to reside directly in the root.
+    Pass realpath=False if filesystem links should not be resolved.
     """
-    real_root = _realpath(root)
-    if not os.path.isabs(real_root):
+    if not os.path.isabs(root):
         return ""
+    root = os.path.normpath(root)
     if not os.path.isabs(path):
         path = os.path.join(root, path)
     path = os.path.normpath(path)
-    real_path = _realpath(path)
+    if realpath:
+        root = _realpath(root)
+        path = _realpath(path)
     if subdir:
-        if real_path.startswith(real_root):
-            return real_path
+        if os.path.commonpath([path, root]) == root:
+            return path
     else:
-        if os.path.dirname(real_path) == os.path.normpath(real_root):
-            return real_path
+        if os.path.dirname(path) == root:
+            return path
     return ""
 
 
