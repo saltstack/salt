@@ -2025,6 +2025,20 @@ The number of seconds between AES key rotations on the master.
 
 .. conf_master:: ssl
 
+
+``publish_signing_algorithm``
+-----------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+Then RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``. Minions must be at version ``3006.9`` or greater if this
+is changed from the default setting.
+
+
 ``ssl``
 -------
 
