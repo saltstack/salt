@@ -24,29 +24,30 @@ def _get_running_named_salt_pid(
 
     pids = []
     log.warning(f"DGM _get_running_named_salt_pid entry, process_name '{process_name}'")
-    ## DGM print(
-    ## DGM     f"DGM _get_running_named_salt_pid entry, process_name '{process_name}'",
-    ## DGM     flush=True,
-    ## DGM )
+    print(
+        f"DGM _get_running_named_salt_pid entry, process_name '{process_name}'",
+        flush=True,
+    )
     for proc in psutil.process_iter():
         dgm_cmdline = proc.cmdline()
         cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        ## DGM log.warning(
-        ## DGM     f"DGM _get_running_named_salt_pid, cmdline, cmdl_strg '{cmdl_strg}'"
-        ## DGM )
-        ## DGM print(
-        ## DGM     f"DGM _get_running_named_salt_pid, cmdline, cmdl_strg '{cmdl_strg}', from cmdline '{dgm_cmdline}'", flush=True
-        ## DGM )
+        log.warning(
+            f"DGM _get_running_named_salt_pid, cmdline, cmdl_strg '{cmdl_strg}'"
+        )
+        print(
+            f"DGM _get_running_named_salt_pid, cmdline, cmdl_strg '{cmdl_strg}', from cmdline '{dgm_cmdline}'",
+            flush=True,
+        )
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
     log.warning(
         f"DGM _get_running_named_salt_pid, returning for process_name '{process_name}', pids '{pids}'"
     )
-    ## DGM print(
-    ## DGM     f"DGM _get_running_named_salt_pid, returning for process_name '{process_name}', pids '{pids}'",
-    ## DGM     flush=True,
-    ## DGM )
+    print(
+        f"DGM _get_running_named_salt_pid, returning for process_name '{process_name}', pids '{pids}'",
+        flush=True,
+    )
     return pids
 
 
@@ -131,7 +132,6 @@ def test_salt_upgrade(
     ) < packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running master by getting its PID
-    salt_name = "salt"
     process_master_name = "salt-master"
 
     old_master_pids = _get_running_named_salt_pid(process_master_name)
@@ -165,9 +165,11 @@ def test_salt_upgrade(
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
 
-    ## DGM ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
-    ## DGM print(f"DGM test_salt_upgrade_minion, upgraded minion ps aux ret '{ret}'", flush=True)
-    ## DGM assert ret.returncode == 0
+    ret = salt_call_cli.run("--local", "cmd.run", "ps aux")
+    print(
+        f"DGM test_salt_upgrade_minion, upgraded minion ps aux ret '{ret}'", flush=True
+    )
+    assert ret.returncode == 0
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
 
