@@ -163,7 +163,7 @@ def test_salt_wrk(
             f"DGM salt_systemd_setup, '{test_item}' systemctl enabled test,  ret '{ret}'",
             flush=True,
         )
-        test_enabled = ret.stdout.strip().split("=")[1]
+        test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
         print(
             f"DGM salt_systemd_setup, '{test_item}' systemctl enabled test produced, line '{ret.stdout.strip().split('=')}', result '{test_enabled}'",
             flush=True,
@@ -177,7 +177,7 @@ def test_salt_wrk(
             f"DGM salt_systemd_setup, '{test_item}' systemctl active test,  ret '{ret}'",
             flush=True,
         )
-        test_active = ret.stdout.strip().split()[2]
+        test_active = ret.stdout.strip().split()[2].strip('"').strip()
         print(
             f"DGM salt_systemd_setup, '{test_item}' systemctl active test produced, line '{ret.stdout.strip().split()}', result '{test_active}'",
             flush=True,
@@ -227,7 +227,7 @@ def test_salt_wrk(
                 flush=True,
             )
             assert ret.returncode == 0
-            if test_name == "salt-minion":
+            if test_item == "salt-minion":
                 assert test_user == "root"
             else:
                 assert test_user == "salt"
@@ -243,7 +243,7 @@ def test_salt_wrk(
                 flush=True,
             )
             assert ret.returncode == 0
-            if test_name == "salt-minion":
+            if test_item == "salt-minion":
                 assert test_group == "root"
             else:
                 assert test_group == "salt"
