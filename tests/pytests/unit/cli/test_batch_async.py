@@ -1,6 +1,6 @@
 import pytest
+import tornado
 
-import salt.ext.tornado
 from salt.cli.batch_async import BatchAsync, batch_async_required
 from tests.support.mock import MagicMock, patch
 
@@ -79,12 +79,12 @@ def test_batch_size(batch):
 
 
 def test_batch_start_on_batch_presence_ping_timeout(batch):
-    future_ret = salt.ext.tornado.gen.Future()
+    future_ret = tornado.gen.Future()
     future_ret.set_result({"minions": ["foo", "bar"]})
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "events_channel", MagicMock()), patch(
-        "salt.ext.tornado.gen.sleep", return_value=future
+        "tornado.gen.sleep", return_value=future
     ), patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
         batch.events_channel.local_client.run_job_async.return_value = future_ret
         ret = batch.start()
@@ -102,13 +102,13 @@ def test_batch_start_on_batch_presence_ping_timeout(batch):
 
 
 def test_batch_start_on_gather_job_timeout(batch):
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
-    future_ret = salt.ext.tornado.gen.Future()
+    future_ret = tornado.gen.Future()
     future_ret.set_result({"minions": ["foo", "bar"]})
     batch.batch_presence_ping_timeout = None
     with patch.object(batch, "events_channel", MagicMock()), patch(
-        "salt.ext.tornado.gen.sleep", return_value=future
+        "tornado.gen.sleep", return_value=future
     ), patch.object(
         batch, "start_batch", return_value=future
     ) as start_batch_mock, patch.object(
@@ -138,7 +138,7 @@ def test_batch_fire_start_event(batch):
 
 def test_start_batch_calls_next(batch):
     batch.initialized = False
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "event", MagicMock()), patch.object(
         batch, "events_channel", MagicMock()
@@ -184,9 +184,9 @@ def test_batch_next(batch):
     batch.opts["fun"] = "my.fun"
     batch.opts["arg"] = []
     batch.batch_size = 2
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
-    with patch("salt.ext.tornado.gen.sleep", return_value=future), patch.object(
+    with patch("tornado.gen.sleep", return_value=future), patch.object(
         batch, "events_channel", MagicMock()
     ), patch.object(batch, "_get_next", return_value={"foo", "bar"}), patch.object(
         batch, "find_job", return_value=future
@@ -273,7 +273,7 @@ def test_batch__event_handler_ping_return(batch):
 
 def test_batch__event_handler_call_start_batch_when_all_pings_return(batch):
     batch.targeted_minions = {"foo"}
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
         batch.start()
@@ -285,7 +285,7 @@ def test_batch__event_handler_call_start_batch_when_all_pings_return(batch):
 
 def test_batch__event_handler_not_call_start_batch_when_not_all_pings_return(batch):
     batch.targeted_minions = {"foo", "bar"}
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
         batch.start()
@@ -296,7 +296,7 @@ def test_batch__event_handler_not_call_start_batch_when_not_all_pings_return(bat
 
 
 def test_batch__event_handler_batch_run_return(batch):
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(
         batch, "schedule_next", return_value=future
@@ -320,7 +320,7 @@ def test_batch__event_handler_find_job_return(batch):
 
 
 def test_batch_run_next_end_batch_when_no_next(batch):
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(
         batch, "_get_next", return_value={}
@@ -332,10 +332,10 @@ def test_batch_run_next_end_batch_when_no_next(batch):
 
 
 def test_batch_find_job(batch):
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     batch.minions = {"foo", "bar"}
-    with patch("salt.ext.tornado.gen.sleep", return_value=future), patch.object(
+    with patch("tornado.gen.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
     ) as check_find_job_mock, patch.object(
         batch, "jid_gen", return_value="1236"
@@ -350,10 +350,10 @@ def test_batch_find_job(batch):
 
 def test_batch_find_job_with_done_minions(batch):
     batch.done_minions = {"bar"}
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     batch.minions = {"foo", "bar"}
-    with patch("salt.ext.tornado.gen.sleep", return_value=future), patch.object(
+    with patch("tornado.gen.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
     ) as check_find_job_mock, patch.object(
         batch, "jid_gen", return_value="1236"
@@ -369,7 +369,7 @@ def test_batch_find_job_with_done_minions(batch):
 def test_batch_check_find_job_did_not_return(batch):
     batch.active = {"foo"}
     batch.find_job_returned = set()
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "find_job", return_value=future) as find_job_mock:
         batch.check_find_job({"foo"}, jid="1234")
@@ -380,7 +380,7 @@ def test_batch_check_find_job_did_not_return(batch):
 
 def test_batch_check_find_job_did_return(batch):
     batch.find_job_returned = {"foo"}
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     with patch.object(batch, "find_job", return_value=future) as find_job_mock:
         batch.check_find_job({"foo"}, jid="1234")
@@ -403,7 +403,7 @@ def test_batch_check_find_job_multiple_states(batch):
     # both not yet done but only 'foo' responded to find_job
     not_done = {"foo", "bar"}
 
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
 
     with patch.object(batch, "schedule_next", return_value=future), patch.object(
@@ -422,7 +422,7 @@ def test_batch_check_find_job_multiple_states(batch):
 
 
 def test_only_on_run_next_is_scheduled(batch):
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     batch.scheduled = True
     with patch.object(batch, "run_next", return_value=future) as run_next_mock:
