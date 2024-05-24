@@ -2,14 +2,15 @@
 Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 """
 
+import asyncio
 import logging
 import re
+import tornado
 
 import salt.client
-import salt.ext.tornado
 import salt.utils.event
 from salt.cli.batch import batch_get_eauth, batch_get_opts, get_bnum
-from salt.ext.tornado.iostream import StreamClosedError
+from tornado.iostream import StreamClosedError
 
 log = logging.getLogger(__name__)
 
@@ -111,15 +112,13 @@ class SharedEventsChannel:
         if not self._subscribers[subscriber_id]:
             del self._subscribers[subscriber_id]
 
-    @salt.ext.tornado.gen.coroutine
-    def __handle_close(self):
+    async def __handle_close(self):
         if not self._subscriptions:
             return
         log.warning("Master Event Subscriber was closed. Trying to reconnect...")
-        yield self.__reconnect_subscriber()
+        await self.__reconnect_subscriber()
 
-    @salt.ext.tornado.gen.coroutine
-    def __handle_event(self, raw):
+    async def __handle_event(self, raw):
         if self.master_event is None:
             return
         try:
@@ -129,7 +128,7 @@ class SharedEventsChannel:
                 jid = tag_match.group(1)
                 if jid in self._subscriptions:
                     for op, _, handler in self._subscriptions[jid]:
-                        yield handler(tag, data, op)
+                        await handler(tag, data, op)
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Exception occured while processing event: %s: %s",
@@ -138,8 +137,7 @@ class SharedEventsChannel:
                 exc_info=True,
             )
 
-    @salt.ext.tornado.gen.coroutine
-    def __reconnect_subscriber(self):
+    async def __reconnect_subscriber(self):
         if self.master_event.subscriber.connected() or self._reconnecting_subscriber:
             return
         self._reconnecting_subscriber = True
@@ -152,7 +150,7 @@ class SharedEventsChannel:
                 max_tries,
             )
             try:
-                yield self.master_event.subscriber.connect()
+                await self.master_event.subscriber.connect()
             except StreamClosedError:
                 log.warning(
                     "Unable to reconnect to event publisher (try %d of %d)",
@@ -167,7 +165,7 @@ class SharedEventsChannel:
                 self._reconnecting_subscriber = False
                 return
             if _try < max_tries:
-                yield salt.ext.tornado.gen.sleep(self._subscriber_reconnect_interval)
+                await asyncio.sleep(self._subscriber_reconnect_interval)
             _try += 1
         self._reconnecting_subscriber = False
 
@@ -228,7 +226,7 @@ class BatchAsync:
                 self.extra_job_kwargs[kwarg] = kwargs[kwarg]
             elif kwarg in opts:
                 self.extra_job_kwargs[kwarg] = opts[kwarg]
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = tornado.ioloop.IOLoop.current()
         self.events_channel = _get_shared_events_channel(opts, self.io_loop).use(
             id(self)
         )
@@ -276,8 +274,7 @@ class BatchAsync:
             self.batch_jid, "batch_run", id(self), self.__event_handler
         )
 
-    @salt.ext.tornado.gen.coroutine
-    def __event_handler(self, tag, data, op):
+    async def __event_handler(self, tag, data, op):
         if not self.event:
             return
         try:
@@ -285,7 +282,7 @@ class BatchAsync:
             if op == "ping_return":
                 self.minions.add(minion)
                 if self.targeted_minions == self.minions:
-                    yield self.start_batch()
+                    await self.start_batch()
             elif op == "find_job_return":
                 if data.get("return", None):
                     self.find_job_returned.add(minion)
@@ -293,7 +290,7 @@ class BatchAsync:
                 if minion in self.active:
                     self.active.remove(minion)
                     self.done_minions.add(minion)
-                    yield self.schedule_next()
+                    await self.schedule_next()
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Exception occured while processing event: %s: %s",
@@ -314,8 +311,7 @@ class BatchAsync:
         )
         return set(list(to_run)[:next_batch_size])
 
-    @salt.ext.tornado.gen.coroutine
-    def check_find_job(self, batch_minions, jid):
+    async def check_find_job(self, batch_minions, jid):
         """
         Check if the job with specified ``jid`` was finished on the minions
         """
@@ -333,14 +329,13 @@ class BatchAsync:
         )
 
         if timedout_minions:
-            yield self.schedule_next()
+            await self.schedule_next()
 
         if self.event and running:
             self.find_job_returned = self.find_job_returned.difference(running)
-            yield self.find_job(running)
+            await self.find_job(running)
 
-    @salt.ext.tornado.gen.coroutine
-    def find_job(self, minions):
+    async def find_job(self, minions):
         """
         Find if the job was finished on the minions
         """
@@ -356,7 +351,7 @@ class BatchAsync:
             self.events_channel.subscribe(
                 jid, "find_job_return", id(self), self.__event_handler
             )
-            ret = yield self.events_channel.local_client.run_job_async(
+            ret = await self.events_channel.local_client.run_job_async(
                 not_done,
                 "saltutil.find_job",
                 [self.batch_jid],
@@ -367,9 +362,9 @@ class BatchAsync:
                 listen=False,
                 **self.eauth,
             )
-            yield salt.ext.tornado.gen.sleep(self.opts["gather_job_timeout"])
+            await asyncio.sleep(self.opts["gather_job_timeout"])
             if self.event:
-                yield self.check_find_job(not_done, jid)
+                await self.check_find_job(not_done, jid)
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Exception occured handling batch async: %s. Aborting execution.",
@@ -378,15 +373,14 @@ class BatchAsync:
             )
             self.close_safe()
 
-    @salt.ext.tornado.gen.coroutine
-    def start(self):
+    async def start(self):
         """
         Start the batch execution
         """
         if not self.event:
             return
         self.__set_event_handler()
-        ping_return = yield self.events_channel.local_client.run_job_async(
+        ping_return = await self.events_channel.local_client.run_job_async(
             self.opts["tgt"],
             "test.ping",
             [],
@@ -400,14 +394,13 @@ class BatchAsync:
         )
         self.targeted_minions = set(ping_return["minions"])
         # start batching even if not all minions respond to ping
-        yield salt.ext.tornado.gen.sleep(
+        await asyncio.sleep(
             self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
         )
         if self.event:
-            yield self.start_batch()
+            await self.start_batch()
 
-    @salt.ext.tornado.gen.coroutine
-    def start_batch(self):
+    async def start_batch(self):
         """
         Fire `salt/batch/*/start` and continue batch with `run_next`
         """
@@ -420,14 +413,13 @@ class BatchAsync:
             "down_minions": self.targeted_minions.difference(self.minions),
             "metadata": self.metadata,
         }
-        yield self.events_channel.master_event.fire_event_async(
+        await self.events_channel.master_event.fire_event_async(
             data, f"salt/batch/{self.batch_jid}/start"
         )
         if self.event:
-            yield self.run_next()
+            await self.run_next()
 
-    @salt.ext.tornado.gen.coroutine
-    def end_batch(self):
+    async def end_batch(self):
         """
         End the batch and call safe closing
         """
@@ -446,13 +438,13 @@ class BatchAsync:
             "timedout_minions": self.timedout_minions,
             "metadata": self.metadata,
         }
-        yield self.events_channel.master_event.fire_event_async(
+        await self.events_channel.master_event.fire_event_async(
             data, f"salt/batch/{self.batch_jid}/done"
         )
 
         # release to the IOLoop to allow the event to be published
         # before closing batch async execution
-        yield salt.ext.tornado.gen.sleep(1)
+        await asyncio.sleep(1)
         self.close_safe()
 
     def close_safe(self):
@@ -463,29 +455,27 @@ class BatchAsync:
             _destroy_unused_shared_events_channel()
         self.event = None
 
-    @salt.ext.tornado.gen.coroutine
-    def schedule_next(self):
+    async def schedule_next(self):
         if self.scheduled:
             return
         self.scheduled = True
         # call later so that we maybe gather more returns
-        yield salt.ext.tornado.gen.sleep(self.batch_delay)
+        await asyncio.sleep(self.batch_delay)
         if self.event:
-            yield self.run_next()
+            await self.run_next()
 
-    @salt.ext.tornado.gen.coroutine
-    def run_next(self):
+    async def run_next(self):
         """
         Continue batch execution with the next targets
         """
         self.scheduled = False
         next_batch = self._get_next()
         if not next_batch:
-            yield self.end_batch()
+            await self.end_batch()
             return
         self.active = self.active.union(next_batch)
         try:
-            ret = yield self.events_channel.local_client.run_job_async(
+            ret = await self.events_channel.local_client.run_job_async(
                 next_batch,
                 self.opts["fun"],
                 self.opts["arg"],
@@ -501,11 +491,11 @@ class BatchAsync:
                 **self.extra_job_kwargs,
             )
 
-            yield salt.ext.tornado.gen.sleep(self.opts["timeout"])
+            await asyncio.sleep(self.opts["timeout"])
 
             # The batch can be done already at this point, which means no self.event
             if self.event:
-                yield self.find_job(set(next_batch))
+                await self.find_job(set(next_batch))
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Error in scheduling next batch: %s. Aborting execution",
