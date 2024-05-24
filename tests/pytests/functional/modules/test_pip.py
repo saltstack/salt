@@ -331,6 +331,10 @@ def test_pip_non_existent_log_file(venv, pip, tmp_path, touch):
 @pytest.mark.skip_initial_gh_actions_failure(
     reason="This was skipped on older golden images and is failing on newer."
 )
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_system_pip3(pip):
     pkg = "lazyimport"
     pkgver = f"{pkg}==0.0.1"
