@@ -1050,11 +1050,12 @@ def diskusage(*args):
     # query the filesystems disk usage
     ret = {}
     for path in selected:
-        fsstats = os.statvfs(path)
-        blksz = fsstats.f_bsize
-        available = fsstats.f_bavail * blksz
-        total = fsstats.f_blocks * blksz
-        ret[path] = {"available": available, "total": total}
+        if os.path.exists(path):
+            fsstats = os.statvfs(path)
+            blksz = fsstats.f_bsize
+            available = fsstats.f_bavail * blksz
+            total = fsstats.f_blocks * blksz
+            ret[path] = {"available": available, "total": total}
     return ret
 
 
