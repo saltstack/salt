@@ -23,7 +23,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.timeout_unless_on_windows(240),
     pytest.mark.skipif(
-        salt.utils.path.which("transactional-update"),
+        bool(salt.utils.path.which("transactional-update")),
         reason="Skipping on transactional systems",
     ),
 ]
