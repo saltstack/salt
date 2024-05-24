@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from tests.conftest import CODE_DIR
 from salt.utils.versions import Version
+from tests.conftest import CODE_DIR
 
 docker = pytest.importorskip("docker")
 
