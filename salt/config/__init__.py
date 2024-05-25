@@ -1658,7 +1658,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "maintenance_interval": 3600,
         "fileserver_interval": 3600,
         "features": {},
-        "publish_signing_algorithm": "PKCS1v15-SHA224",
+        "publish_signing_algorithm": "PKCS1v15-SHA1",
     }
 )
 
