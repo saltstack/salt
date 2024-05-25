@@ -37,7 +37,6 @@ import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
-import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -1156,7 +1155,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         )
         self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
-        salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 

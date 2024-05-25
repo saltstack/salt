@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 
+import cryptography.exceptions
 import pytest
 from cryptography.hazmat.backends.openssl import backend
 from cryptography.hazmat.primitives import serialization
@@ -27,6 +28,45 @@ if HAS_M2:
     from . import EVP, RSA
 else:
     from . import AES, PKCS1_OAEP
+
+
+OPENSSL_ENCRYPTED_KEY = """
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-256-CBC,12E2FE8CA93672B629477073867DE7E4
+
+3wgKQlgjT3G+8rIQt97AXMDByh5u9JMZPYOB9/wg3iC3qoJXfoFAsCNUjODJBnkI
+j9Zgj/bOCaSM3UshMQXmYY+2Rfi1SVQPnETlqEH/plMZS38tB8mN5pBdthgGTw6c
+rhpj/S23eZT5d+z5ODeVYlWCVhx8CtE8OQEzOQk8dxLWbVHhvgC3uJGWOPR3P7VM
+BlxH5LxWRCrC8vzbnwwaJnX8BTQ7fc4qeGwHlXBjpnxQhxO27pEj08NQ0/lfKh1b
+seX5uiCjuQhHFKNGTuA16rQIe6BkYRHIWCDhySftl/lqSfLQif0OAXaHEdL2EdIS
+ySD12RYyNUDotEzYFF+qzJ5OAtraqvc8kYror7oN52bHKCjJyrp4+DWA4/N7FjTV
++FqUyJNKqw1DAQAxlZlq+GgNyi8+g/Zs2TKTc/ZXaPLjtWYOQEQkYaNBoaD3ydY3
+c7x+uQtJLVW9BF9FSl9A7BItpqZQWKiHiGtUdhYOkemlR+zMatjBe/eTq8LrnEDa
+IyI+rRo1PSDAz3n1pdEAzGAOeqwT+j7YG9O8+dybMY5FcAtiiPX21nIpmP+Rtx4X
+GqzHsT7nM6QG4O8GPKuK6TniG+Q0doNWomwuau/cjQgL4C+yFiX3kIPpHz9kA/aS
+NL1SJqSsvc3D/KlRbHXaJZJyhmzDuEbQynkaAdvejiajlJWAwA3BZWw1RUK7Wn8m
+XcNPJL3g02uKq8SUDgVQl/cx4QawuWri2Xh8/xakNYWzNU2feoWBmV+gN2qDSxyz
+Qi+xu3CzdJVrPs71lW0rEAIQvU3K3Umava9M4CUF6R7N9+Zv+m1EuMQs0IGt8VCY
+Wo1KY5PAb/V718d1C3I6kXvLSDXG8xqyEleilPLhKCRGPK+2g0nGYu562EV1i6by
+gr+PLnFJTfgHEzwIfsqfNoR8ReQ6AJKJoniQr4vqex9xtifuhes0odpqmUB4/B2C
+UfY/SpJR6tzdrGndpB/vb1vjHumHklHHWrLONtz70BhR8Zaisc7SCmL5bFgWqzMC
+MJKPulRRGQCPAzy5OI/ZULY8+dzlva1MyoCYlWjeUtcUAy+9dyA8GZv75ez9g71b
+10nNINDcvGG7zWShSYrAKrvLlsoE7eZ+flG+XhI2CfiC9/zHBzy/slbaH9H+1tlO
+VWKiw6iBb2TEvBk4Wpk2nUFlWKtkkBVAlgbShbE2K8pTHrJeIRv5J897k693NFZE
+DjVVJirzMv/OiZTami0qBQ4nDtUZpH8FsFZ8DtREkhROsDmrjq9PGkOVaxEyF/ke
+avJT34gp4OoNWj7/Rd1YNbGiWjMEB3zi9y1Q6Ufiod9ZlK3RQb4tNrpzDn/msdJo
+pIkuByWjXjF4YQRKtAoeCn+CWiY7L/Qi8X7jmX27JLILlZPtTJ+aNp3eCr6ZX0dW
+y0uhN89sgMewlvDA/pduL/VJRHUBZC2eD8FbD7p6K+yRKhdciS9A8F6aIhx615s6
+mngRBfwzh8ST6yQgLwCgle/XaRYTWJKjzAe3lkaIBBhHpeuq1UMAjunoS8JnLNiy
+xQJ0PznzY57sYKpIiClwMjfpnX47nTU2DFWuPEXvBtG1xMjacGPbVrUslesY5bii
+-----END RSA PRIVATE KEY-----
+"""
+
+
+@pytest.fixture
+def openssl_encrypted_key():
+    return OPENSSL_ENCRYPTED_KEY
 
 
 @pytest.fixture
@@ -284,3 +324,51 @@ def test_sign_message_with_passphrase(signature, signing_algorithm):
 def test_verify_signature():
     with patch("salt.utils.files.fopen", mock_open(read_data=PUBKEY_DATA.encode())):
         assert salt.crypt.verify_signature("/keydir/keyname.pub", MSG, SIG)
+
+
+def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp_path):
+    path = tmp_path / "key"
+    path.write_text(openssl_encrypted_key)
+    if FIPS_TESTRUN:
+        with pytest.raises(ValueError):
+            salt.crypt.get_rsa_key(path, passphrase)
+    else:
+        try:
+            salt.crypt.get_rsa_key(path, passphrase)
+        # BaseException to catch errors bubbling up from the cryptogrphy's
+        # rust layer.
+        except BaseException as exc:  # pylint: disable=broad-except
+            pytest.fail(f"Unexpected exception: {exc}")
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
+def test_fips_bad_signing_algo(private_key, passphrase):
+    key = salt.crypt.PrivateKey(private_key, passphrase)
+    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+        key.sign("meh", salt.crypt.PKCS1v15_SHA1)
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
+def test_fips_bad_signing_algo_verification(private_key, passphrase):
+    lpriv = LegacyPrivateKey(private_key.encode(), passphrase.encode())
+    data = b"meh"
+    signature = lpriv.sign(data)
+    pubkey = salt.crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    # cryptogrpahy silently returns False on unsuppoted algorithm
+    assert pubkey.verify(signature, salt.crypt.PKCS1v15_SHA1) is False
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
+def test_fips_bad_encryption_algo(private_key, passphrase):
+    key = salt.crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+        key.encrypt("meh", salt.crypt.OAEP_SHA1)
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
+def test_fips_bad_decryption_algo(private_key, passphrase):
+    pubkey = LegacyPublicKey(private_key.replace(".pem", ".pub"))
+    data = pubkey.encrypt("meh")
+    key = salt.crypt.PrivateKey(private_key, passphrase)
+    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+        key.decrypt(data)
