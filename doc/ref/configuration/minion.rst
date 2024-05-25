@@ -3178,7 +3178,7 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
 
 Default: OAEP-SHA1
 
-Then RSA encryption algorithm used by this minion when connecting to the
+The RSA encryption algorithm used by this minion when connecting to the
 master's request channel. Valid values are ``OAEP-SHA1`` and ``OAEP-SHA224``
 
 
@@ -3189,7 +3189,7 @@ master's request channel. Valid values are ``OAEP-SHA1`` and ``OAEP-SHA224``
 
 Default: PKCS1v15-SHA1
 
-Then RSA signing algorithm used by this minion when connecting to the
+The RSA signing algorithm used by this minion when connecting to the
 master's request channel. Valid values are ``PKCS1v15-SHA1`` and
 ``PKCS1v15-SHA224``
 
