@@ -91,7 +91,7 @@ class SharedEventsChannel:
         self._subscribers[subscriber_id].add(jid)
         if (op, subscriber_id, handler) not in self._subscriptions[jid]:
             self._subscriptions[jid].append((op, subscriber_id, handler))
-        if not self.master_event.subscriber.connected():
+        if not self.master_event.subscriber.connected:
             self.__reconnect_subscriber()
 
     def unsubscribe(self, jid, op, subscriber_id):
