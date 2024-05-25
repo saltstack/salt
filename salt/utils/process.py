@@ -73,7 +73,6 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
-            salt.utils.crypt.reinit_crypto()
             os._exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error("fork #1 failed: %s (%s)", exc.errno, exc)
@@ -89,13 +88,10 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
-            salt.utils.crypt.reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error("fork #2 failed: %s (%s)", exc.errno, exc)
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-
-    salt.utils.crypt.reinit_crypto()
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
