@@ -39,7 +39,6 @@ import salt.syspaths
 import salt.transport
 import salt.utils.args
 import salt.utils.context
-import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.dictupdate
@@ -1811,7 +1810,6 @@ class Minion(MinionBase):
                     name=name,
                     args=(instance, self.opts, data, self.connected, creds_map),
                 )
-                process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:
             process = threading.Thread(
                 target=self._target,

@@ -622,8 +622,6 @@ class AsyncAuth:
             self.get_keys()
 
         self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
-
-        salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:

@@ -17,7 +17,6 @@ import os
 import subprocess
 import sys
 
-import salt.utils.crypt
 import salt.utils.files
 import salt.utils.fsutils
 import salt.utils.path
@@ -579,10 +578,9 @@ if __name__ == "__main__":
     # Double-fork stuff
     try:
         if os.fork() > 0:
-            salt.utils.crypt.reinit_crypto()
             sys.exit(0)
         else:
-            salt.utils.crypt.reinit_crypto()
+            pass
     except OSError as ex:
         sys.exit(1)
 
@@ -592,7 +590,6 @@ if __name__ == "__main__":
     try:
         pid = os.fork()
         if pid > 0:
-            salt.utils.crypt.reinit_crypto()
             with salt.utils.files.fopen(
                 os.path.join(pidfile, EnvLoader.PID_FILE), "w"
             ) as fp_:
@@ -601,5 +598,4 @@ if __name__ == "__main__":
     except OSError as ex:
         sys.exit(1)
 
-    salt.utils.crypt.reinit_crypto()
     main(dbfile, pidfile, mode)
