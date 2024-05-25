@@ -304,21 +304,10 @@ def _get_key_with_evict(path, timestamp, passphrase):
     else:
         password = None
     with salt.utils.files.fopen(path, "rb") as f:
-        try:
-            return serialization.load_pem_private_key(
-                f.read(),
-                password=password,
-            )
-        except BaseException as exc:
-            log.error("Exception is %r", exc)
-            if (
-                exc.__class__.__module__ == "pyo3_runtime"
-                and exc.__class__.__name__ == "PanicException"
-            ):
-                if 'reason: "unsupported"' in exc.args[0]:
-                    log.error("Unsupported key")
-                    raise InvalidKeyError("Unsupported encryption algorithm")
-            raise
+        return serialization.load_pem_private_key(
+            f.read(),
+            password=password,
+        )
 
 
 def get_rsa_key(path, passphrase):

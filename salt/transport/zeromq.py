@@ -749,7 +749,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             try:
                 for package in packages:
                     payload = salt.payload.loads(package)
-                    log.error("on recv")
                     yield publish_payload(payload)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(

@@ -11,7 +11,6 @@ def minion_opts(tmp_path):
     """
     Default minion configuration with relative temporary paths to not require root permissions.
     """
-    print(f"WTF {FIPS_TESTRUN}")
     root_dir = tmp_path / "minion"
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     opts["__role"] = "minion"

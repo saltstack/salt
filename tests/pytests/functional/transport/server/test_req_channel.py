@@ -31,6 +31,7 @@ pytestmark = [
 
 
 class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
+
     def __init__(self, config, req_channel_crypt):
         super().__init__()
         self._closing = False
@@ -104,6 +105,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
 @pytest.fixture
 def req_server_channel(salt_master, req_channel_crypt):
+    print(f"master pub {salt_master.config['publish_signing_algorithm']}")
     req_server_channel_process = ReqServerChannelProcess(
         salt_master.config.copy(), req_channel_crypt
     )
@@ -127,6 +129,7 @@ def req_channel_crypt(request):
 
 @pytest.fixture
 def push_channel(req_server_channel, salt_minion, req_channel_crypt):
+    print(f"minion encryption {salt_minion.config['encryption_algorithm']}")
     with salt.channel.client.ReqChannel.factory(
         salt_minion.config, crypt=req_channel_crypt
     ) as _req_channel:
