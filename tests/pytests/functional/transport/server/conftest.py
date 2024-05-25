@@ -19,6 +19,7 @@ def salt_master(salt_factories, transport):
         "transport": transport,
         "auto_accept": True,
         "sign_pub_messages": False,
+        "publish_signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_factories.salt_master_daemon(
         random_string(f"server-{transport}-master-"),
