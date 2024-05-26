@@ -4129,6 +4129,12 @@ def apply_master_config(overrides=None, defaults=None):
     _update_ssl_config(opts)
     _update_discovery_config(opts)
 
+    if opts["publish_signing_algorithm"] not in salt.crypt.VALID_SIGNING_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The  publish signging algorithm '{opts['publish_signing_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
+
     return opts
 
 
