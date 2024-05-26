@@ -64,7 +64,6 @@ def legacy_gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     if HAS_M2:
         gen = RSA.gen_key(keysize, 65537, lambda: None)
     else:
-        salt.utils.crypt.reinit_crypto()
         gen = RSA.generate(bits=keysize, e=65537)
 
     if os.path.isfile(priv):
@@ -115,6 +114,7 @@ def legacy_gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
 
 
 class LegacyPrivateKey:
+
     def __init__(self, path, passphrase=None):
         if HAS_M2:
             self.key = RSA.load_key(path, lambda x: bytes(passphrase))
