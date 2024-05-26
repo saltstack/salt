@@ -979,7 +979,20 @@ def render(
             "the needed software is unavailable".format(opts["renderer"])
         )
         log.critical(err)
-        raise LoaderError(err)
+        if opts.get("__role") == "minion":
+            default_renderer_config = salt.config.DEFAULT_MINION_OPTS["renderer"]
+        else:
+            default_renderer_config = salt.config.DEFAULT_MASTER_OPTS["renderer"]
+        log.warning(
+            "Attempting fallback to default render pipe: %s", default_renderer_config
+        )
+        if not check_render_pipe_str(
+            default_renderer_config,
+            rend,
+            opts["renderer_blacklist"],
+            opts["renderer_whitelist"],
+        ):
+            raise LoaderError(err)
     return rend
 
 
