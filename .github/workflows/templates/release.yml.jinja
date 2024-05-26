@@ -372,7 +372,7 @@ permissions:
           branch: ${{ github.ref }}
 
       - name: Create Github Release
-        uses: ncipollo/release-action@v1.12.0
+        uses: ncipollo/release-action@v1
         with:
           artifactErrorsFailBuild: true
           artifacts: ${{ steps.prepare-release.outputs.release-artifacts }}

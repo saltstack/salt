@@ -2088,8 +2088,8 @@ jobs:
 
 
       - name: Merge All Code Coverage Test Run Artifacts
+        continue-on-error: true
         uses: actions/upload-artifact/merge@v4
-        id: merge-coverage-artifacts
         with:
           name: all-testrun-coverage-artifacts
           pattern: all-testrun-coverage-artifacts-*

@@ -325,7 +325,7 @@ class SSHThinTestCase(TestCase):
         for pth in ["/foo/bar.py", "/something/else/__init__.py"]:
             thin._add_dependency(container, type("obj", (), {"__file__": pth})())
         assert "__init__" not in container[1]
-        assert container == ["/foo/bar.py", "/something/else"]
+        assert container == [("/foo/bar.py", None), ("/something/else", None)]
 
     def test_thin_path(self):
         """
@@ -479,7 +479,7 @@ class SSHThinTestCase(TestCase):
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
         tops = []
-        for top in thin.get_tops(extra_mods="foo,bar"):
+        for top, _ in thin.get_tops(extra_mods="foo,bar"):
             if top.find("/") != -1:
                 spl = "/"
             else:
@@ -594,7 +594,7 @@ class SSHThinTestCase(TestCase):
                 MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
             ):
                 tops = []
-                for top in thin.get_tops(extra_mods="foo,bar"):
+                for top, _ in thin.get_tops(extra_mods="foo,bar"):
                     if top.find("/") != -1:
                         spl = "/"
                     else:
@@ -712,7 +712,7 @@ class SSHThinTestCase(TestCase):
                 ),
             ):
                 tops = []
-                for top in thin.get_tops(so_mods="foo,bar"):
+                for top, _ in thin.get_tops(so_mods="foo,bar"):
                     if top.find("/") != -1:
                         spl = "/"
                     else:
@@ -776,7 +776,12 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.files.fopen", MagicMock())
     @patch("salt.utils.thin._get_salt_call", MagicMock())
     @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+    @patch(
+        "salt.utils.thin.get_tops",
+        MagicMock(
+            return_value=[("/foo3", None), ("/bar3", None), ("/ns/package", ("ns",))]
+        ),
+    )
     @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
     @patch("salt.utils.thin.os.path.isfile", MagicMock())
     @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=True))
@@ -825,9 +830,13 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
     @patch("salt.utils.thin._get_salt_call", MagicMock())
     @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+    @patch(
+        "salt.utils.thin.get_tops",
+        MagicMock(return_value=[("/foo3", None), ("/bar3", None)]),
+    )
     @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
     @patch("salt.utils.thin.os.path.isfile", MagicMock())
     @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
@@ -875,9 +884,15 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
     @patch("salt.utils.thin._get_salt_call", MagicMock())
     @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/salt", "/bar3"]))
+    @patch(
+        "salt.utils.thin.get_tops",
+        MagicMock(
+            return_value=[("/salt", None), ("/bar3", None), ("/ns/package", ("ns",))]
+        ),
+    )
     @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
     @patch("salt.utils.thin.os.path.isfile", MagicMock())
     @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=True))
@@ -921,8 +936,12 @@ class SSHThinTestCase(TestCase):
         for py in ("py3", "pyall"):
             for i in range(1, 4):
                 files.append(os.path.join(py, "root", f"r{i}"))
+                if py == "py3":
+                    files.append(os.path.join(py, "ns", "root", f"r{i}"))
             for i in range(4, 7):
                 files.append(os.path.join(py, "root2", f"r{i}"))
+                if py == "py3":
+                    files.append(os.path.join(py, "ns", "root2", f"r{i}"))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
@@ -933,6 +952,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
     @patch("salt.utils.thin._get_salt_call", MagicMock())
     @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
     @patch("salt.utils.thin.get_tops", MagicMock(return_value=[]))
@@ -1060,9 +1080,13 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
     @patch("salt.utils.thin._get_salt_call", MagicMock())
     @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+    @patch(
+        "salt.utils.thin.get_tops",
+        MagicMock(return_value=[("/foo3", None), ("/bar3", None)]),
+    )
     @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
     @patch("salt.utils.thin.os.path.isfile", MagicMock())
     @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
