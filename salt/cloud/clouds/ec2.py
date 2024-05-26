@@ -192,7 +192,7 @@ def get_dependencies():
     """
     deps = {
         "requests": HAS_REQUESTS,
-        "pycrypto or m2crypto": salt.crypt.HAS_M2 or salt.crypt.HAS_CRYPTO,
+        "cryptography": salt.crypt.HAS_CRYPTOGRAPHY,
     }
     return config.check_driver_dependencies(__virtualname__, deps)
 
@@ -4929,7 +4929,7 @@ def get_password_data(
     for item in data:
         ret[next(iter(item.keys()))] = next(iter(item.values()))
 
-    if not salt.crypt.HAS_M2 and not salt.crypt.HAS_CRYPTO:
+    if not salt.crypt.HAS_CRYPTOGRAPHY:
         if "key" in kwargs or "key_file" in kwargs:
             log.warning("No crypto library is installed, can not decrypt password")
         return ret
