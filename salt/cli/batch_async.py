@@ -179,7 +179,6 @@ class SharedEventsChannel:
     def destroy_unused(self):
         if self._used_by:
             return False
-        self.master_event.remove_event_handler(self.__handle_event)
         self.master_event.destroy()
         self.master_event = None
         self.local_client.destroy()
