@@ -3843,7 +3843,7 @@ class ClearFuncs(TransportMethods):
             lambda: self._prep_jid(clear_load, {}),
             batch_load,
         )
-        asyncio.create_task(batch.start)
+        asyncio.create_task(batch.start())
 
         return {
             "enc": "clear",
