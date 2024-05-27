@@ -269,6 +269,9 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         )
         assert ret.data == ["salt_minion", f"salt_minion_{pillar_salt_minion.id}"]
 
+    @pytest.mark.skipif(
+        FIPS_TESTRUN, reason="Signing with SHA1 not supported in FIPS mode."
+    )
     def test_policy_compilation_prevents_loop_for_execution_module(
         self,
         pillar_salt_run_cli,
@@ -290,6 +293,9 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert "Pillar render error: Rendering SLS 'exe_loop' failed" in ret.stderr
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
 
+    @pytest.mark.skipif(
+        FIPS_TESTRUN, reason="Signing with SHA1 not supported in FIPS mode."
+    )
     def test_policy_compilation_prevents_loop_for_sdb_module(
         self,
         pillar_salt_run_cli,
