@@ -9,11 +9,9 @@ import pytest
 
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.runtests import RUNTIME_VARS
+from tests.conftest import CODE_DIR
 
-MISSING_SETUP_PY_FILE = not os.path.exists(
-    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
-)
+MISSING_SETUP_PY_FILE = not CODE_DIR.joinpath("setup.py").exists()
 
 pytestmark = [
     pytest.mark.core_test,

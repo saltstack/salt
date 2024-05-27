@@ -9,13 +9,7 @@ import salt.cache
 import salt.loader
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
-try:
-    import consul  # pylint: disable=unused-import
-
-    HAS_CONSUL = True
-except ImportError:
-    HAS_CONSUL = False
-
+pytest.importorskip("consul", reason="Please install python-consul package to use consul data cache driver")
 docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
@@ -24,10 +18,6 @@ pytestmark = [
     pytest.mark.skip_on_fips_enabled_platform,
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
-    pytest.mark.skipif(
-        not HAS_CONSUL,
-        reason="Please install python-consul package to use consul data cache driver",
-    ),
 ]
 
 
