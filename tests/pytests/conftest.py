@@ -383,6 +383,9 @@ def salt_proxy_factory(salt_master_factory):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
@@ -421,9 +424,15 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         "metaproxy": "deltaproxy",
         "master": "127.0.0.1",
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
@@ -450,9 +459,16 @@ def temp_salt_master(
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
@@ -464,9 +480,15 @@ def temp_salt_minion(temp_salt_master):
         "open_mode": True,
         "transport": temp_salt_master.config["transport"],
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
