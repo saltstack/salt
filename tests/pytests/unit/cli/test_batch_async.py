@@ -3,7 +3,7 @@ import pytest
 import tornado
 
 from salt.cli.batch_async import BatchAsync, batch_async_required
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -125,9 +125,13 @@ async def test_batch_start_on_gather_job_timeout(batch):
 async def test_batch_fire_start_event(batch):
     batch.minions = {"foo", "bar"}
     batch.opts = {"batch": "2", "timeout": 5}
-    with patch.object(batch, "events_channel", MagicMock()):
+    with patch.object(batch, "events_channel", MagicMock()), patch.object(
+        batch.events_channel.master_event,
+        "fire_event_async",
+        AsyncMock(return_value={}),
+    ) as fire_event_async_mock:
         await batch.start_batch()
-        assert batch.events_channel.master_event.fire_event_async.call_args[0] == (
+        assert fire_event_async_mock.call_args[0] == (
             {
                 "available_minions": {"foo", "bar"},
                 "down_minions": set(),
@@ -155,9 +159,13 @@ async def test_batch_fire_done_event(batch):
     batch.minions = {"foo", "bar"}
     batch.done_minions = {"foo"}
     batch.timedout_minions = {"bar"}
-    with patch.object(batch, "events_channel", MagicMock()):
+    with patch.object(batch, "events_channel", MagicMock()), patch.object(
+        batch.events_channel.master_event,
+        "fire_event_async",
+        AsyncMock(return_value={}),
+    ) as fire_event_async_mock:
         await batch.end_batch()
-        assert batch.events_channel.master_event.fire_event_async.call_args[0] == (
+        assert fire_event_async_mock.call_args[0] == (
             {
                 "available_minions": {"foo", "bar"},
                 "done_minions": batch.done_minions,
@@ -263,34 +271,59 @@ def test_next_batch_all_timedout(batch):
 
 async def test_batch__event_handler_ping_return(batch):
     batch.targeted_minions = {"foo"}
-    await batch.start()
-    assert batch.minions == set()
-    batch._BatchAsync__event_handler(
-        "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
-    )
-    assert batch.minions == {"foo"}
-    assert batch.done_minions == set()
+    with patch.object(
+        batch.events_channel.local_client,
+        "run_job_async",
+        AsyncMock(return_value={"minions": ["foo"]}),
+    ) as local_client_mock, patch.object(
+        batch.events_channel.master_event,
+        "fire_event_async",
+        AsyncMock(return_value={}),
+    ) as fire_event_async_mock:
+        asyncio.create_task(batch.start())
+        assert batch.minions == set()
+        await batch._BatchAsync__event_handler(
+            "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
+        )
+        assert batch.minions == {"foo"}
+        assert batch.done_minions == set()
 
 
 async def test_batch__event_handler_call_start_batch_when_all_pings_return(batch):
     batch.targeted_minions = {"foo"}
     future = tornado.gen.Future()
     future.set_result({})
-    with patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
-        await batch.start()
-        batch._BatchAsync__event_handler(
+    with patch.object(
+        batch.events_channel.local_client,
+        "run_job_async",
+        AsyncMock(return_value={"minions": ["foo"]}),
+    ) as local_client_mock, patch.object(
+        batch, "start_batch", AsyncMock(return_value=future)
+    ) as start_batch_mock:
+        asyncio.create_task(batch.start())
+        await asyncio.sleep(1)
+        await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
         start_batch_mock.assert_called_once()
 
 
-async def test_batch__event_handler_not_call_start_batch_when_not_all_pings_return(batch):
+async def test_batch__event_handler_not_call_start_batch_when_not_all_pings_return(
+    batch,
+):
     batch.targeted_minions = {"foo", "bar"}
     future = tornado.gen.Future()
     future.set_result({})
-    with patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
-        await batch.start()
-        batch._BatchAsync__event_handler(
+    with patch.object(
+        batch.events_channel.local_client,
+        "run_job_async",
+        AsyncMock(return_value={"minions": ["foo", "bar"]}),
+    ) as local_client_mock, patch.object(
+        batch, "start_batch", AsyncMock(return_value=future)
+    ) as start_batch_mock:
+        asyncio.create_task(batch.start())
+        await asyncio.sleep(1)
+        await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
         start_batch_mock.assert_not_called()
@@ -300,11 +333,16 @@ async def test_batch__event_handler_batch_run_return(batch):
     future = tornado.gen.Future()
     future.set_result({})
     with patch.object(
-        batch, "schedule_next", return_value=future
+        batch.events_channel.local_client,
+        "run_job_async",
+        AsyncMock(return_value={"minions": ["foo", "bar"]}),
+    ) as local_client_mock, patch.object(
+        batch, "schedule_next", AsyncMock(return_value=future)
     ) as schedule_next_mock:
-        await batch.start()
+        asyncio.create_task(batch.start())
+        await asyncio.sleep(1)
         batch.active = {"foo"}
-        batch._BatchAsync__event_handler(
+        await batch._BatchAsync__event_handler(
             "salt/job/1235/ret/foo", {"id": "foo"}, "batch_run"
         )
         assert batch.active == set()
@@ -313,8 +351,8 @@ async def test_batch__event_handler_batch_run_return(batch):
 
 
 async def test_batch__event_handler_find_job_return(batch):
-    await batch.start()
-    batch._BatchAsync__event_handler(
+    asyncio.create_task(batch.start())
+    await batch._BatchAsync__event_handler(
         "salt/job/1236/ret/foo", {"id": "foo", "return": "deadbeaf"}, "find_job_return"
     )
     assert batch.find_job_returned == {"foo"}
@@ -323,9 +361,7 @@ async def test_batch__event_handler_find_job_return(batch):
 async def test_batch_run_next_end_batch_when_no_next(batch):
     future = tornado.gen.Future()
     future.set_result({})
-    with patch.object(
-        batch, "_get_next", return_value={}
-    ), patch.object(
+    with patch.object(batch, "_get_next", return_value={}), patch.object(
         batch, "end_batch", return_value=future
     ) as end_batch_mock:
         await batch.run_next()
@@ -338,9 +374,7 @@ async def test_batch_find_job(batch):
     batch.minions = {"foo", "bar"}
     with patch("tornado.gen.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
-    ) as check_find_job_mock, patch.object(
-        batch, "jid_gen", return_value="1236"
-    ):
+    ) as check_find_job_mock, patch.object(batch, "jid_gen", return_value="1236"):
         batch.events_channel.local_client.run_job_async.return_value = future
         await batch.find_job({"foo", "bar"})
         assert check_find_job_mock.call_args[0] == (
@@ -356,9 +390,7 @@ async def test_batch_find_job_with_done_minions(batch):
     batch.minions = {"foo", "bar"}
     with patch("tornado.gen.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
-    ) as check_find_job_mock, patch.object(
-        batch, "jid_gen", return_value="1236"
-    ):
+    ) as check_find_job_mock, patch.object(batch, "jid_gen", return_value="1236"):
         batch.events_channel.local_client.run_job_async.return_value = future
         await batch.find_job({"foo", "bar"})
         assert check_find_job_mock.call_args[0] == (
