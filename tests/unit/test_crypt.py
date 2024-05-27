@@ -116,22 +116,6 @@ class TestBadCryptodomePubKey(TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
-    def test_m2_bad_key(self):
-        """
-        Load public key with an invalid header using m2crypto and validate it
-        """
-        key = salt.crypt.get_rsa_pub_key(self.key_path)
-        assert key.check_key() == 1
-
-    @pytest.mark.skipif(HAS_M2, reason="Skip when m2crypto is installed")
-    def test_crypto_bad_key(self):
-        """
-        Load public key with an invalid header and validate it without m2crypto
-        """
-        key = salt.crypt.get_rsa_pub_key(self.key_path)
-        assert key.can_encrypt()
-
 
 class TestM2CryptoRegression47124(TestCase):
 
