@@ -7,6 +7,8 @@ import shutil
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 log = logging.getLogger(__name__)
 
 
@@ -47,8 +49,16 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
         },
         "minion_data_cache": False,
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
-        "vault-policy-int-master-uncached", defaults=config_defaults
+        "vault-policy-int-master-uncached",
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -72,8 +82,16 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree):
         },
         "minion_data_cache": True,
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
-        "vault-policy-int-master-cached", defaults=config_defaults
+        "vault-policy-int-master-cached",
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -85,6 +103,11 @@ def pillar_salt_minion(pillar_salt_master):
     factory = pillar_salt_master.salt_minion_daemon(
         "vault-policy-int-minion-uncached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -100,6 +123,11 @@ def pillar_caching_salt_minion(pillar_caching_salt_master):
     factory = pillar_caching_salt_master.salt_minion_daemon(
         "vault-policy-int-minion-cached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
