@@ -4,12 +4,21 @@ from contextlib import ExitStack
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @pytest.fixture(scope="package")
 def salt_master_factory(salt_factories):
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         random_string("swarm-master-"),
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        overrides=config_overrides,
     )
     return factory
 
