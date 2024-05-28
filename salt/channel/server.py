@@ -53,10 +53,10 @@ class ReqServerChannel:
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
-        self.event = salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=False
-        )
-        self.master_key = salt.crypt.MasterKeys(self.opts)
+        # self.event = salt.utils.event.get_master_event(
+        #     self.opts, self.opts["sock_dir"], listen=False
+        # )
+        # self.master_key = salt.crypt.MasterKeys(self.opts)
 
     def pre_fork(self, process_manager):
         """
