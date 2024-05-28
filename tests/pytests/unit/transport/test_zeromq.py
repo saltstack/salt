@@ -1061,7 +1061,6 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         "ver": "2",
         "cmd": "_pillar",
     }
-
     try:
         with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
             await client.crypted_transfer_decode_dictentry(
@@ -1104,8 +1103,12 @@ async def test_req_serv_auth_v1(pki_dir, minion_opts, master_opts):
     }
     master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
 
     pub = salt.crypt.get_rsa_pub_key(str(pki_dir.joinpath("minion", "minion.pub")))
@@ -1163,6 +1166,9 @@ async def test_req_serv_auth_v2(pki_dir, minion_opts, master_opts):
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
 
     pub = salt.crypt.get_rsa_pub_key(str(pki_dir.joinpath("minion", "minion.pub")))
@@ -1224,6 +1230,9 @@ async def test_req_chan_auth_v2(pki_dir, io_loop, minion_opts, master_opts):
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
     minion_opts["verify_master_pubkey_sign"] = False
     minion_opts["always_verify_signature"] = False
@@ -1280,6 +1289,9 @@ async def test_req_chan_auth_v2_with_master_signing(
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
     minion_opts["verify_master_pubkey_sign"] = True
     minion_opts["always_verify_signature"] = True
@@ -1319,6 +1331,9 @@ async def test_req_chan_auth_v2_with_master_signing(
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
 
     signin_payload = client.auth.minion_sign_in_payload()
@@ -1374,6 +1389,9 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
     minion_opts["verify_master_pubkey_sign"] = False
     minion_opts["always_verify_signature"] = False
@@ -1437,6 +1455,9 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
     minion_opts["verify_master_pubkey_sign"] = False
     minion_opts["always_verify_signature"] = False
@@ -1494,6 +1515,9 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
     server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
     server.master_key = salt.crypt.MasterKeys(server.opts)
     minion_opts["verify_master_pubkey_sign"] = False
     minion_opts["always_verify_signature"] = False
