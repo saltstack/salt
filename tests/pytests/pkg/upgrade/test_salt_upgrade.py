@@ -389,7 +389,7 @@ def test_salt_systemd_inactive_preservation(
             f"DGM salt_systemd_setup, '{test_item}' systemctl inactive test produced, line '{ret.stdout.strip().split()}', result '{test_active}'",
             flush=True,
         )
-        assert ret.returncode == 0
+        assert ret.returncode == 1
         assert test_active == "inactive"
 
 
