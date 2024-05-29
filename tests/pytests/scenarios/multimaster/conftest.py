@@ -26,7 +26,6 @@ def salt_mm_master_1(request, salt_factories):
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
         ),
     }
-
     factory = salt_factories.salt_master_daemon(
         "mm-master-1",
         defaults=config_defaults,

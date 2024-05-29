@@ -64,6 +64,15 @@ def minion_swarm(salt_master, minion_count):
             minion_factory = salt_master.salt_minion_daemon(
                 random_string(f"swarm-minion-{idx}-"),
                 extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+                overrides={
+                    "fips_mode": FIPS_TESTRUN,
+                    "encryption_algorithm": (
+                        "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+                    ),
+                    "signing_algorithm": (
+                        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                    ),
+                },
             )
             stack.enter_context(minion_factory.started())
             minions.append(minion_factory)
