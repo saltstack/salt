@@ -132,7 +132,7 @@ def salt_master(salt_factories, pillar_state_tree):
         "interface": "127.0.0.1",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
     factory = salt_factories.salt_master_daemon(

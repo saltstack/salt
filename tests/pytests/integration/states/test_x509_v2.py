@@ -127,7 +127,7 @@ def x509_salt_master(salt_factories, ca_minion_id, x509_master_config):
     config_overrides = {
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
     factory = salt_factories.salt_master_daemon(

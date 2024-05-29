@@ -75,7 +75,7 @@ def master_config(root_dir, transport):
         pki_dir=str(root_dir / "pki"),
         fips_mode=FIPS_TESTRUN,
         publish_signing_algorithm=(
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     )
     # master_conf["transport"] = transport
@@ -88,7 +88,7 @@ def master_config(root_dir, transport):
     # master_conf["pki_dir"] = str(root_dir / "pki")
     #    "fips_mode": FIPS_TESTRUN,
     #    "publish_signing_algorithm": (
-    #        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+    #        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     #    ),
     os.makedirs(master_conf["pki_dir"])
     salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)

@@ -12,7 +12,7 @@ def salt_master_factory(salt_factories):
         overrides={
             "fips_mode": FIPS_TESTRUN,
             "publish_signing_algorithm": (
-                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
             ),
         },
     )
