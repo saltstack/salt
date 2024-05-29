@@ -29,7 +29,7 @@ def test_reauth(salt_master_factory, event_listener):
             "log_level": "info",
             "fips_mode": FIPS_TESTRUN,
             "publish_signing_algorithm": (
-                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
             ),
         },
     )

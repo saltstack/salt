@@ -18,7 +18,7 @@ def salt_master_1(request, salt_factories):
         "interface": "127.0.0.1",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
 
@@ -45,7 +45,7 @@ def salt_master_2(salt_factories, salt_master_1):
         "interface": "127.0.0.2",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
 

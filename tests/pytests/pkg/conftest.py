@@ -299,7 +299,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         },
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
         "open_mode": True,
     }

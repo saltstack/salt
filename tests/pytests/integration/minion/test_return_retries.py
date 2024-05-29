@@ -16,7 +16,7 @@ def salt_minion_retry(salt_master, salt_minion_id):
         "return_retry_tries": 30,
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
     factory = salt_master.salt_minion_daemon(
@@ -78,7 +78,7 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
         "minion_data_cache": False,
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
-            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA224"
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     }
     minion_overrides = {
