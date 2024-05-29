@@ -17,6 +17,9 @@ def salt_master(salt_master_factory):
     """
     A running salt-master fixture
     """
+    print("*" * 80)
+    print(repr(salt_master_factory))
+    print("*" * 80)
     with salt_master_factory.started():
         yield salt_master_factory
 
