@@ -99,6 +99,12 @@ discovery: false
 #enable_ssh_minions: True
 #ignore_host_keys: True
 
+# Ensure pytest-salt-factories is not included
+# in the thin tar during integration tests
+# (it defines a saltext, which are autodiscovered by default)
+thin_saltext_blocklist:
+  - pytest-salt-factories
+
 sdbetcd:
   driver: etcd
   etcd.host: 127.0.0.1

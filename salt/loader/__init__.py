@@ -1003,7 +1003,6 @@ def grain_funcs(opts, proxy=None, context=None, loaded_base_name=None):
           grainfuncs = salt.loader.grain_funcs(__opts__)
     """
     _utils = utils(opts, proxy=proxy)
-    pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
     ret = LazyLoader(
         _module_dirs(
             opts,
@@ -1014,10 +1013,9 @@ def grain_funcs(opts, proxy=None, context=None, loaded_base_name=None):
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
-        pack=pack,
+        pack={"__utils__": _utils, "__context__": context},
         loaded_base_name=loaded_base_name,
     )
-    ret.pack["__utils__"] = _utils
     return ret
 
 

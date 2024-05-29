@@ -34,6 +34,7 @@ execution modules
     archive
     arista_pyeapi
     artifactory
+    asymmetric
     at
     at_solaris
     baredoc

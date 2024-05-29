@@ -714,7 +714,11 @@ def matrix(
                 _matrix.append({"transport": transport, "tests-chunk": chunk})
 
     ctx.info("Generated matrix:")
-    ctx.print(_matrix, soft_wrap=True)
+    if not _matrix:
+        ctx.print(" * `None`")
+    else:
+        for entry in _matrix:
+            ctx.print(" * ", entry, soft_wrap=True)
 
     if (
         gh_event["repository"]["fork"] is True
@@ -724,11 +728,17 @@ def matrix(
         ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
         _matrix.clear()
 
+    if not _matrix:
+        build_reports = False
+        ctx.info("Not building reports because the matrix is empty")
+    else:
+        build_reports = True
+
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"matrix={json.dumps(_matrix)}\n")
-            wfh.write(f"build-reports={json.dumps(len(_matrix) > 0)}\n")
+            wfh.write(f"build-reports={json.dumps(build_reports)}\n")
     ctx.exit(0)
 
 
@@ -909,7 +919,11 @@ def pkg_matrix(
             ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
-    ctx.print(_matrix, soft_wrap=True)
+    if not _matrix:
+        ctx.print(" * `None`")
+    else:
+        for entry in _matrix:
+            ctx.print(" * ", entry, soft_wrap=True)
 
     if (
         gh_event is not None
@@ -920,10 +934,16 @@ def pkg_matrix(
         ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
         _matrix.clear()
 
+    if not _matrix:
+        build_reports = False
+        ctx.info("Not building reports because the matrix is empty")
+    else:
+        build_reports = True
+
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"matrix={json.dumps(_matrix)}\n")
-            wfh.write(f"build-reports={json.dumps(len(_matrix) > 0)}\n")
+            wfh.write(f"build-reports={json.dumps(build_reports)}\n")
     ctx.exit(0)
 
 

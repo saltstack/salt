@@ -327,6 +327,24 @@ def b_fp():
 
 
 @pytest.fixture
+def pub_ec():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEACXBqu2ndMLUS/Z0X/fKUGAgRUfe
+nYBie3erw/QNOYfQpgDIjNu+6xVxMLRRvSYGrQ2JREwUVXR0SR5pERAnoQ==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def pub_ec2():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErtBZ3qL5m97SzlSwOoxFzzG/1v5a
+sLzOIrXykh4yO8tDn4h6JMOe+P0HuoUbENxk4+f/1D9hTEI88rj70bi7Ig==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
 def gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
     pubkeys = [a_pubkey, b_pubkey]
     fingerprints = [a_fp, b_fp]
@@ -344,9 +362,11 @@ def sig_files_present(web_root, modules):
     for file in [
         "custom.tar.gz",
         "custom.tar.gz.asc",
+        "custom.tar.gz.sig",
         "custom.tar.gz.SHA256",
         "custom.tar.gz.SHA256.clearsign.asc",
         "custom.tar.gz.SHA256.asc",
+        "custom.tar.gz.SHA256.sig",
     ]:
         modules.file.copy(base / file, Path(web_root) / file)
 
@@ -366,6 +386,31 @@ def test_archive_extracted_signature(tmp_path, gpghome, free_port, modules, stat
         options="z",
         signature=signature,
         gnupghome=str(gpghome),
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_archive_extracted_signature_sig_backend(
+    tmp_path, free_port, modules, states, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_archive_extracted_signature"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".sig"
+    source_hash = source + ".SHA256"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
     )
     assert ret.result is True
     assert ret.changes
@@ -395,6 +440,33 @@ def test_archive_extracted_signature_fail(
         gnupghome=str(gpghome),
     )
     assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_archive_extracted_signature_sig_backend_fail(
+    tmp_path, free_port, modules, states, pub_ec2
+):
+    name = tmp_path / "test_archive_extracted_signature"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".sig"
+    source_hash = source + ".SHA256"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=signature,
+        signed_by_any=[pub_ec2],
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
     assert not ret.changes
     assert not name.exists()
     assert not modules.cp.is_cached(source)
@@ -429,6 +501,31 @@ def test_archive_extracted_source_hash_sig(
     assert modules.file.find(str(name))
 
 
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_archive_extracted_source_hash_sig_sig_backend(
+    tmp_path, pub_ec, free_port, modules, states, is_list
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256"
+    sig = source_hash + ".sig"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=[sig] if is_list else sig,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
 @pytest.mark.usefixtures("gpg_keys_present")
 @pytest.mark.parametrize("sig", [True, ".asc"])
@@ -450,6 +547,33 @@ def test_archive_extracted_source_hash_sig_fail(
         gnupghome=str(gpghome),
     )
     assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(source_hash)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_archive_extracted_source_hash_sig_sig_backend_fail(
+    tmp_path, pub_ec2, free_port, modules, states
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256"
+    sig = source_hash + ".sig"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=[sig],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
     assert not ret.changes
     assert not name.exists()
     assert not modules.cp.is_cached(source)

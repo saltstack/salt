@@ -127,6 +127,11 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
@@ -275,7 +280,7 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
 
@@ -283,7 +288,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/xml-unittests-output/
 
@@ -291,14 +296,14 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
 
 
   report:
     name: Test Reports
-    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
       - test
@@ -314,6 +319,8 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Merge JUnit XML Test Run Artifacts
+        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+        continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
@@ -322,6 +329,8 @@ jobs:
           delete-merged: true
 
       - name: Merge Log Test Run Artifacts
+        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+        continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
@@ -330,9 +339,9 @@ jobs:
           delete-merged: true
 
       - name: Merge Code Coverage Test Run Artifacts
-        uses: actions/upload-artifact/merge@v4
         if: ${{ inputs.skip-code-coverage == false }}
-        id: merge-coverage-artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -348,6 +357,7 @@ jobs:
           path: artifacts/coverage/
 
       - name: Show Downloaded Test Run Artifacts
+        if: ${{ inputs.skip-code-coverage == false }}
         run: |
           tree -a artifacts
 

@@ -2153,8 +2153,8 @@ jobs:
 
 
       - name: Merge All Code Coverage Test Run Artifacts
+        continue-on-error: true
         uses: actions/upload-artifact/merge@v4
-        id: merge-coverage-artifacts
         with:
           name: all-testrun-coverage-artifacts
           pattern: all-testrun-coverage-artifacts-*
@@ -2770,7 +2770,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo-windows
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
