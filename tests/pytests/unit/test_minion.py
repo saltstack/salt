@@ -490,7 +490,7 @@ def test_process_count_max(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_beacons_before_connect(minion_opts):
+async def test_beacons_before_connect(minion_opts):
     """
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
     """
@@ -511,7 +511,7 @@ def test_beacons_before_connect(minion_opts):
         try:
 
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -523,7 +523,7 @@ def test_beacons_before_connect(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_scheduler_before_connect(minion_opts):
+async def test_scheduler_before_connect(minion_opts):
     """
     Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
     """
@@ -543,7 +543,7 @@ def test_scheduler_before_connect(minion_opts):
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -613,7 +613,7 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
+async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
     minion_opts,
 ):
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
@@ -634,7 +634,7 @@ def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_call
             try:
                 minion.connected = MagicMock(side_effect=(False, True))
                 minion._fire_master_minion_start = MagicMock()
-                minion.tune_in(start=False)
+                await minion.tune_in(start=False)
             except RuntimeError:
                 pass
 
