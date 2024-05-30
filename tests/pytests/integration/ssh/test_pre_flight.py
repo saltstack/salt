@@ -230,6 +230,10 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
     """
     Test to ensure standard user cannot run pre flight script
