@@ -139,7 +139,7 @@ class FunctionWrapper:
     ):
         super().__init__()
         self.cmd_prefix = cmd_prefix
-        self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
+        self.wfuncs = wfuncs if wfuncs is not None else {}
         self.opts = opts
         self.mods = mods if isinstance(mods, dict) else {}
         self.kwargs = {"id_": id_, "host": host}
