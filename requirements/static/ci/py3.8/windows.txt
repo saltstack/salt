@@ -34,6 +34,7 @@ attrs==23.2.0
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
     #   jaraco.text
 bcrypt==4.0.1
     # via -r requirements/static/ci/common.in
@@ -97,7 +98,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==41.0.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt

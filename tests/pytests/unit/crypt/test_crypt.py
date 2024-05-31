@@ -18,6 +18,36 @@ from tests.support.helpers import dedent
 from . import PRIV_KEY, PRIV_KEY2, PUB_KEY, PUB_KEY2
 
 
+@pytest.fixture
+def key_data():
+    return [
+        "-----BEGIN PUBLIC KEY-----",
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoe5QSDYRWKyknbVyRrIj",
+        "rm1ht5HgKzAVUber0x54+b/UgxTd1cqI6I+eDlx53LqZSH3G8Rd5cUh8LHoGedSa",
+        "E62vEiLAjgXa+RdgcGiQpYS8+Z2RvQJ8oIcZgO+2AzgBRHboNWHTYRRmJXCd3dKs",
+        "9tcwK6wxChR06HzGqaOTixAuQlegWbOTU+X4dXIbW7AnuQBt9MCib7SxHlscrqcS",
+        "cBrRvq51YP6cxPm/rZJdBqZhVrlghBvIpa45NApP5PherGi4AbEGYte4l+gC+fOA",
+        "osEBis1V27djPpIyQS4qk3XAPQg6CYQMDltHqA4Fdo0Nt7SMScxJhfH0r6zmBFAe",
+        "BQIDAQAB",
+        "-----END PUBLIC KEY-----",
+    ]
+
+
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test__clean_key(key_data, linesep):
+    tst_key = linesep.join(key_data)
+    chk_key = "\n".join(key_data)
+    assert salt.crypt.clean_key(tst_key) == salt.crypt.clean_key(chk_key)
+
+
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test__clean_key_mismatch(key_data, linesep):
+    tst_key = linesep.join(key_data)
+    tst_key = tst_key.replace("5", "4")
+    chk_key = "\n".join(key_data)
+    assert salt.crypt.clean_key(tst_key) != salt.crypt.clean_key(chk_key)
+
+
 def test_get_rsa_pub_key_bad_key(tmp_path):
     """
     get_rsa_pub_key raises InvalidKeyError when encoutering a bad key
@@ -152,7 +182,8 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
 
 def test_pwdata_decrypt():
     key_string = dedent(
-        """-----BEGIN RSA PRIVATE KEY-----
+        """
+        -----BEGIN RSA PRIVATE KEY-----
         MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
         Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
         ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
@@ -178,9 +209,9 @@ def test_pwdata_decrypt():
         G3aMplUCgYEAmMFgB/6Ox4OsQPPC6g4G+Ezytkc4iVkMEcjiVWzEsYATITjq3weO
         /XDGBYJoBhYwWPi9oBufFc/2pNtWy1FKKXPuVyXQATdA0mfEPbtsHjMFQNZbeKnm
         0na/SysSDCK3P+9ijlbjqLjMmPEmhJxGWTJ7khnTTkfre7/w9ZxJxi8=
-        -----END RSA PRIVATE KEY-----"""
+        -----END RSA PRIVATE KEY-----
+        """
     )
-
     pwdata = (
         b"V\x80+b\xca\x06M\xb6\x12\xc6\xe8\xf2\xb5\xbb\xd8m\xc0\x97\x9a\xeb\xb9q\x19\xc3"
         b'\xcdi\xb84\x90\xaf\x12kT\xe2@u\xd6\xe8T\x89\xa3\xc7\xb2Y\xd1N\x00\xa9\xc0"\xbe'

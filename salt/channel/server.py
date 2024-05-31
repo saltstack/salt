@@ -29,18 +29,6 @@ import salt.utils.verify
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP  # nosec
-
-
 log = logging.getLogger(__name__)
 
 
@@ -197,13 +185,24 @@ class ReqServerChannel:
                     req_opts["tgt"],
                     nonce,
                     sign_messages,
+                    payload.get("enc_algo", salt.crypt.OAEP_SHA1),
+                    payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
                 ),
             )
         log.error("Unknown req_fun %s", req_fun)
         # always attempt to return an error to the minion
         raise tornado.gen.Return("Server-side exception handling payload")
 
-    def _encrypt_private(self, ret, dictkey, target, nonce=None, sign_messages=True):
+    def _encrypt_private(
+        self,
+        ret,
+        dictkey,
+        target,
+        nonce=None,
+        sign_messages=True,
+        encryption_algorithm=salt.crypt.OAEP_SHA1,
+        signing_algorithm=salt.crypt.PKCS1v15_SHA1,
+    ):
         """
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         """
@@ -222,7 +221,7 @@ class ReqServerChannel:
             log.error("AES key not found")
             return {"error": "AES key not found"}
         pret = {}
-        pret["key"] = pub.encrypt(key)
+        pret["key"] = pub.encrypt(key, encryption_algorithm)
         if ret is False:
             ret = {}
         if sign_messages:
@@ -233,19 +232,23 @@ class ReqServerChannel:
             )
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(tosign),
+                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
+                    tosign, signing_algorithm
+                ),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
             pret[dictkey] = pcrypt.dumps(ret)
         return pret
 
-    def _clear_signed(self, load):
+    def _clear_signed(self, load, algorithm):
         tosign = salt.payload.dumps(load)
         return {
             "enc": "clear",
             "load": tosign,
-            "sig": salt.crypt.sign_message(self.master_key.rsa_path, tosign),
+            "sig": salt.crypt.sign_message(
+                self.master_key.rsa_path, tosign, algorithm=algorithm
+            ),
         }
 
     def _update_aes(self):
@@ -306,10 +309,15 @@ class ReqServerChannel:
         """
         import salt.master
 
+        enc_algo = load.get("enc_algo", salt.crypt.OAEP_SHA1)
+        sig_algo = load.get("sig_algo", salt.crypt.PKCS1v15_SHA1)
+
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
             if sign_messages:
-                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
             else:
                 return {"enc": "clear", "load": {"ret": False}}
         log.info("Authentication request from %s", load["id"])
@@ -351,7 +359,7 @@ class ReqServerChannel:
                         )
                     if sign_messages:
                         return self._clear_signed(
-                            {"ret": "full", "nonce": load["nonce"]}
+                            {"ret": "full", "nonce": load["nonce"]}, sig_algo
                         )
                     else:
                         return {"enc": "clear", "load": {"ret": "full"}}
@@ -371,6 +379,7 @@ class ReqServerChannel:
         pubfn_pend = os.path.join(pki_dir, "minions_pre", load["id"])
         pubfn_rejected = os.path.join(pki_dir, "minions_rejected", load["id"])
         pubfn_denied = os.path.join(pki_dir, "minions_denied", load["id"])
+
         if self.opts["open_mode"]:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -385,7 +394,9 @@ class ReqServerChannel:
             if self.opts.get("auth_events") is True:
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
-                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
             else:
                 return {"enc": "clear", "load": {"ret": False}}
         elif os.path.isfile(pubfn):
@@ -413,7 +424,7 @@ class ReqServerChannel:
                         )
                     if sign_messages:
                         return self._clear_signed(
-                            {"ret": False, "nonce": load["nonce"]}
+                            {"ret": False, "nonce": load["nonce"]}, sig_algo
                         )
                     else:
                         return {"enc": "clear", "load": {"ret": False}}
@@ -427,7 +438,9 @@ class ReqServerChannel:
                 if self.opts.get("auth_events") is True:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
-                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
                 else:
                     return {"enc": "clear", "load": {"ret": False}}
 
@@ -462,7 +475,7 @@ class ReqServerChannel:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
-                        {"ret": key_result, "nonce": load["nonce"]}
+                        {"ret": key_result, "nonce": load["nonce"]}, sig_algo
                     )
                 else:
                     return {"enc": "clear", "load": {"ret": key_result}}
@@ -490,7 +503,9 @@ class ReqServerChannel:
                 if self.opts.get("auth_events") is True:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
-                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
                 else:
                     return {"enc": "clear", "load": {"ret": False}}
 
@@ -522,7 +537,7 @@ class ReqServerChannel:
                             )
                         if sign_messages:
                             return self._clear_signed(
-                                {"ret": False, "nonce": load["nonce"]}
+                                {"ret": False, "nonce": load["nonce"]}, sig_algo
                             )
                         else:
                             return {"enc": "clear", "load": {"ret": False}}
@@ -546,7 +561,7 @@ class ReqServerChannel:
                             )
                         if sign_messages:
                             return self._clear_signed(
-                                {"ret": True, "nonce": load["nonce"]}
+                                {"ret": True, "nonce": load["nonce"]}, sig_algo
                             )
                         else:
                             return {"enc": "clear", "load": {"ret": True}}
@@ -573,7 +588,7 @@ class ReqServerChannel:
                             )
                         if sign_messages:
                             return self._clear_signed(
-                                {"ret": False, "nonce": load["nonce"]}
+                                {"ret": False, "nonce": load["nonce"]}, sig_algo
                             )
                         else:
                             return {"enc": "clear", "load": {"ret": False}}
@@ -587,7 +602,9 @@ class ReqServerChannel:
             if self.opts.get("auth_events") is True:
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
-                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
             else:
                 return {"enc": "clear", "load": {"ret": False}}
 
@@ -609,7 +626,9 @@ class ReqServerChannel:
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
                 if sign_messages:
-                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
                 else:
                     return {"enc": "clear", "load": {"ret": False}}
 
@@ -622,20 +641,21 @@ class ReqServerChannel:
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            pub = salt.crypt.get_rsa_pub_key(pubfn)
+            pub = salt.crypt.PublicKey(pubfn)
         except salt.crypt.InvalidKeyError as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
             if sign_messages:
-                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
             else:
                 return {"enc": "clear", "load": {"ret": False}}
 
-        if not HAS_M2:
-            cipher = PKCS1_OAEP.new(pub)  # pylint: disable=used-before-assignment
         ret = {
             "enc": "pub",
             "pub_key": self.master_key.get_pub_str(),
             "publish_port": self.opts["publish_port"],
+            # "publish_hash_algo": self.opts["publish_hash_algo"],
         }
 
         # sign the master's pubkey (if enabled) before it is
@@ -654,24 +674,19 @@ class ReqServerChannel:
                 key_pass = salt.utils.sdb.sdb_get(
                     self.opts["signing_key_pass"], self.opts
                 )
-
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(
-                    self.master_key.get_sign_paths()[1], ret["pub_key"], key_pass
+                    self.master_key.get_sign_paths()[1],
+                    ret["pub_key"],
+                    key_pass,
+                    algorithm=sig_algo,
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
-        if not HAS_M2:
-            mcipher = PKCS1_OAEP.new(self.master_key.key)
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(
-                            load["token"], RSA.pkcs1_oaep_padding
-                        )
-                    else:
-                        mtoken = mcipher.decrypt(load["token"])
+                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
                     aes = f"{self.aes_key}_|-{mtoken}"
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
@@ -680,33 +695,19 @@ class ReqServerChannel:
             else:
                 aes = self.aes_key
 
-            if HAS_M2:
-                ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
-            else:
-                ret["aes"] = cipher.encrypt(aes)
+            ret["aes"] = pub.encrypt(aes, enc_algo)
         else:
             if "token" in load:
                 try:
-                    if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(
-                            load["token"], RSA.pkcs1_oaep_padding
-                        )
-                        ret["token"] = pub.public_encrypt(
-                            mtoken, RSA.pkcs1_oaep_padding
-                        )
-                    else:
-                        mtoken = mcipher.decrypt(load["token"])
-                        ret["token"] = cipher.encrypt(mtoken)
-                except Exception:  # pylint: disable=broad-except
+                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    ret["token"] = pub.encrypt(mtoken, enc_algo)
+                except Exception as exc:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
-                    pass
+                    log.warning("Token failed to decrypt: %s", exc)
 
             aes = self.aes_key
-            if HAS_M2:
-                ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
-            else:
-                ret["aes"] = cipher.encrypt(aes)
+            ret["aes"] = pub.encrypt(aes, enc_algo)
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
@@ -716,7 +717,7 @@ class ReqServerChannel:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
         if sign_messages:
             ret["nonce"] = load["nonce"]
-            return self._clear_signed(ret)
+            return self._clear_signed(ret, sig_algo)
         return ret
 
     def close(self):
@@ -898,9 +899,10 @@ class PubServerChannel:
         payload["load"] = crypticle.dumps(load)
         if self.opts["sign_pub_messages"]:
             log.debug("Signing data packet")
+            payload["sig_algo"] = self.opts["publish_signing_algorithm"]
             payload["sig"] = salt.crypt.PrivateKey(
                 self.master_key.rsa_path,
-            ).sign(payload["load"])
+            ).sign(payload["load"], self.opts["publish_signing_algorithm"])
         int_payload = {"payload": salt.payload.dumps(payload)}
 
         # If topics are upported, target matching has to happen master side
@@ -964,7 +966,9 @@ class MasterPubServerChannel:
                     hashlib.sha256(aes).hexdigest()
                 )
                 data["peers"][peer] = {
-                    "aes": pub.encrypt(aes),
+                    "aes": pub.encrypt(
+                        aes, algorithm=self.opts["cluster_encryption_algorithm"]
+                    ),
                     "sig": salt.crypt.private_encrypt(
                         self.master_key.master_key, digest
                     ),
@@ -1062,7 +1066,9 @@ class MasterPubServerChannel:
                 peer = data["peer_id"]
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
-                key_str = self.master_key.master_private_decrypt(aes)
+                key_str = self.master_key.master_private_decrypt(
+                    aes, self.opts["cluster_encryption_algorithm"]
+                )
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )
