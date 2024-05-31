@@ -561,4 +561,4 @@ def items():
 
         salt '*' config.items
     """
-    return __opts__
+    return __opts__.value()
