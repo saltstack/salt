@@ -104,7 +104,7 @@ foo:
 def test_wrapper_attribute_access_get(_jinja_loader_get_template, salt_ssh_cli):
     """
     Ensure a function named `.get` is not shadowed when accessed via attribute syntax.
-    It's not recommended to use this syntax, but the regular loader supports it
+    It's not recommended to use it, but the regular loader supports it
     as well, so we should have feature parity.
     Issue #41794.
     """
