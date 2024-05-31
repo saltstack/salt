@@ -59,7 +59,7 @@ def test_raw_mod_functions():
     "Ensure functions loaded by raw_mod are LoaderFunc instances"
     opts = {
         "extension_modules": "",
-        "optimization_order": [0],
+        "optimization_order": [0, 1, 2],
     }
     ret = salt.loader.raw_mod(opts, "grains", "get")
     for k, v in ret.items():
