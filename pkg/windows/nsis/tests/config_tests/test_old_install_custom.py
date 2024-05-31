@@ -19,10 +19,14 @@ def install():
 
 
 def test_ssm_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(rf'cmd /c dir "{pytest.OLD_DIR}\bin\"')
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\ssm.exe")
 
 
 def test_binaries_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(rf'cmd /c dir "{pytest.OLD_DIR}\bin\"')
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\python.exe")
 
 
@@ -32,7 +36,7 @@ def test_config_present_old_location(install):
 
 def test_config_correct(install):
     # The config file should be the custom config, unchanged
-    with open(rf"{pytest.REPO_DIR}\custom_conf") as f:
+    with open(rf"{pytest.SCRIPT_DIR}\custom_conf") as f:
         expected = f.readlines()
 
     with open(rf"{pytest.OLD_DIR}\conf\minion") as f:

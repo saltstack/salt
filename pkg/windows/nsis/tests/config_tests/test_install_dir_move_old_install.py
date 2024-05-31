@@ -23,6 +23,8 @@ def install(inst_dir):
 
 
 def test_binaries_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(rf'cmd /c dir "{pytest.OLD_DIR}\bin\"')
     # Apparently we don't move the binaries even if they pass install-dir
     # TODO: Decide if this is expected behavior
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\ssm.exe")

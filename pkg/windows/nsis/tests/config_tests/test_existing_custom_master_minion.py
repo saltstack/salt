@@ -27,6 +27,8 @@ def install():
 
 
 def test_binaries_present(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(f'cmd /c dir "{pytest.INST_DIR}"')
     assert os.path.exists(rf"{pytest.INST_DIR}\ssm.exe")
 
 

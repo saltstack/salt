@@ -49,16 +49,21 @@ INST_DIR = r"C:\Program Files\Salt Project\Salt"
 DATA_DIR = r"C:\ProgramData\Salt Project\Salt"
 SYSTEM_DRIVE = os.environ.get("SystemDrive")
 OLD_DIR = f"{SYSTEM_DRIVE}\\salt"
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+INST_BIN = rf"{SCRIPT_DIR}\test-setup.exe"
 
 
 def reg_key_exists(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
+    """
+    Helper function to determine if a registry key exists. It does this by
+    opening the key. If the connection is successful, the key exists. Otherwise
+    an error is returned, which means the key does not exist
+    """
     try:
         with winreg.OpenKey(hive, key, 0, winreg.KEY_READ):
-            exists = True
+            return True
     except:
-        exists = False
-
-    return exists
+        return False
 
 
 def delete_key(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
@@ -66,14 +71,15 @@ def delete_key(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
         parent, _, base = key.rpartition("\\")
         with winreg.OpenKey(hive, parent, 0, winreg.KEY_ALL_ACCESS) as reg:
             winreg.DeleteKey(reg, base)
+    assert not reg_key_exists(hive=hive, key=key)
 
 
 def pytest_configure():
     pytest.DATA_DIR = DATA_DIR
     pytest.INST_DIR = INST_DIR
-    pytest.REPO_DIR = REPO_DIR
     pytest.INST_BIN = INST_BIN
     pytest.OLD_DIR = OLD_DIR
+    pytest.SCRIPT_DIR = SCRIPT_DIR
     pytest.EXISTING_CONTENT = existing_content
     pytest.CUSTOM_CONTENT = custom_content
     pytest.OLD_CONTENT = old_content
@@ -95,6 +101,11 @@ def clean_env(inst_dir=INST_DIR):
                             proc.kill()
                 time.sleep(0.1)
 
+    # Verify that the Un_A.exe process is not running
+    for proc in psutil.process_iter():
+        if proc.name() == "Un_A.exe":
+            assert False, "Failed to kill Un_A.exe"
+
     # This is needed to avoid a race condition where the installer isn't closed
     start_time = time.time()
     while os.path.basename(INST_BIN) in (p.name() for p in psutil.process_iter()):
@@ -105,21 +116,43 @@ def clean_env(inst_dir=INST_DIR):
                     proc.kill()
                 time.sleep(0.1)
 
+    # Verify that an installer is not running
+    for proc in psutil.process_iter():
+        if proc.name() == os.path.basename(INST_BIN):
+            assert False, "Failed to kill the installer"
+
     # Remove root_dir
     if os.path.exists(DATA_DIR):
         shutil.rmtree(DATA_DIR)
+    assert not os.path.exists(DATA_DIR)
+
     # Remove install dir
     if os.path.exists(inst_dir):
         shutil.rmtree(inst_dir)
+    assert not os.path.exists(inst_dir)
+
     # Remove old salt dir (C:\salt)
     if os.path.exists(OLD_DIR):
         shutil.rmtree(OLD_DIR)
+    assert not os.path.exists(OLD_DIR)
+
     # Remove custom config
-    if os.path.exists(rf"{REPO_DIR}\custom_conf"):
-        os.remove(rf"{REPO_DIR}\custom_conf")
+    if os.path.exists(rf"{SCRIPT_DIR}\custom_conf"):
+        os.remove(rf"{SCRIPT_DIR}\custom_conf")
+    assert not os.path.exists(rf"{SCRIPT_DIR}\custom_conf")
+
     # Remove registry entries
     delete_key(key="SOFTWARE\\Salt Project\\Salt")
+    assert not reg_key_exists(
+        hive=winreg.HKEY_LOCAL_MACHINE, key="SOFTWARE\\Salt Project\\Salt"
+    )
+
     delete_key(key="SOFTWARE\\Salt Project")
+    assert not reg_key_exists(
+        hive=winreg.HKEY_LOCAL_MACHINE, key="SOFTWARE\\Salt Project"
+    )
+
+    return True
 
 
 @pytest.helpers.register
@@ -134,12 +167,14 @@ def existing_config():
 
 @pytest.helpers.register
 def custom_config():
-    if os.path.exists(rf"{REPO_DIR}\custom_conf"):
-        os.remove(rf"{REPO_DIR}\custom_conf")
+    conf_file = rf"{SCRIPT_DIR}\custom_conf"
+    if os.path.exists(conf_file):
+        os.remove(conf_file)
     # Create a custom config
-    with open(rf"{REPO_DIR}\custom_conf", "w") as f:
+    with open(conf_file, "w") as f:
         # \n characters are converted to os.linesep
         f.writelines(custom_content)
+    return conf_file
 
 
 @pytest.helpers.register
@@ -173,10 +208,3 @@ def old_install():
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout.strip().replace("/", "\\")
-
-
-# These are at the bottom because they depend on some of the functions
-REPO_DIR = run_command(["git", "rev-parse", "--show-toplevel"])
-REPO_DIR = rf"{REPO_DIR}\pkg\windows\nsis\tests"
-os.chdir(REPO_DIR)
-INST_BIN = rf"{REPO_DIR}\test-setup.exe"

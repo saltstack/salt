@@ -18,10 +18,14 @@ def install():
 
 
 def test_ssm_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(rf'cmd /c dir "{pytest.OLD_DIR}\bin\"')
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\ssm.exe")
 
 
 def test_binaries_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(rf'cmd /c dir "{pytest.OLD_DIR}\bin\"')
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\python.exe")
 
 

@@ -9,7 +9,7 @@ def install():
 
     # Create a custom config
     pytest.helpers.custom_config()
-
+    # Install salt with custom config
     pytest.helpers.run_command(
         [
             pytest.INST_BIN,
@@ -23,6 +23,8 @@ def install():
 
 
 def test_binaries_present(install):
+    # This will show the contents of the directory on failure
+    dir_contents = pytest.helpers.run_command(f'cmd /c dir "{pytest.INST_DIR}"')
     assert os.path.exists(rf"{pytest.INST_DIR}\ssm.exe")
 
 

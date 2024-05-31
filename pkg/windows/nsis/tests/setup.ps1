@@ -9,6 +9,12 @@ installer for testing
 .EXAMPLE
 setup.ps1
 #>
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+# Don't pretify the output of the Write-Result
+    [Switch] $CICD
+)
 
 #-------------------------------------------------------------------------------
 # Script Preferences
@@ -22,8 +28,12 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -127,7 +137,7 @@ if ( Test-Path -Path "$test_installer" ) {
 #-------------------------------------------------------------------------------
 
 Write-Host "Setting up venv: " -NoNewline
-python.exe -m venv venv
+python.exe -m venv "$SCRIPT_DIR\venv"
 if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
     Write-Result "Success"
 } else {
@@ -136,7 +146,7 @@ if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
 }
 
 Write-Host "Activating venv: " -NoNewline
-.\venv\Scripts\activate
+& $SCRIPT_DIR\venv\Scripts\activate.ps1
 if ( "$env:VIRTUAL_ENV" ) {
     Write-Result "Success"
 } else {
