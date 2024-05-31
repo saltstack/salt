@@ -213,7 +213,9 @@ class ReqServerChannel:
             log.error("AES key not found")
             return {"error": "AES key not found"}
         pret = {}
-        pret["key"] = pub.encrypt(key, encryption_algorithm)
+        pret["key"] = pub.encrypt(
+            salt.utils.stringutils.to_bytes(key), encryption_algorithm
+        )
         if ret is False:
             ret = {}
         if sign_messages:
