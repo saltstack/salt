@@ -321,8 +321,8 @@ def version_compare(ver1, oper, ver2, ignore_epoch=False):
 
     .. code-block:: jinja
 
-        {%- set postfix_version = salt.pkg.version('postfix') %}
-        {%- if postfix_version and salt.pkg_resource.version_compare(postfix_version, '>=', '3.3', ignore_epoch=True) %}
+        {%- set postfix_version = salt['pkg.version']('postfix') %}
+        {%- if postfix_version and salt['pkg_resource.version_compare'](postfix_version, '>=', '3.3', ignore_epoch=True) %}
           {#- do stuff #}
         {%- endif %}
 
