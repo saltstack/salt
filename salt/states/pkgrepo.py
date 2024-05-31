@@ -498,7 +498,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                     else:
                         break
                 else:
-                    break
+                    if kwarg in ("comps", "key_url"):
+                        break
+                    else:
+                        continue
             elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
