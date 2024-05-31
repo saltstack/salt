@@ -994,7 +994,7 @@ class LocalClient:
 
                 self._clean_up_subscriptions(pub_data["jid"])
         finally:
-            if not was_listening:
+            if not was_listening and not self.event.pending_events:
                 self.event.close_pub()
 
     def cmd_full_return(
