@@ -124,7 +124,9 @@ def recursive_copy(source, dest):
             shutil.copyfile(file_path_from_source, target_path)
 
 
-def copyfile(source, dest, backup_mode="", cachedir=""):
+def copyfile(
+    source, dest, backup_mode="", cachedir="", mode=None, user=None, group=None
+):
     """
     Copy files from a source to a destination in an atomic way, and if
     specified cache the file.
@@ -163,7 +165,12 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
         __clean_tmp(tgt)
         raise
 
-    if fstat is not None:
+    if mode:
+        os.chmod(dest, int(normalize_mode(mode), 8))
+    if any((user, group)) and not salt.utils.platform.is_windows():
+        shutil.chown(dest, user, group)
+
+    if not any((user, group, mode)) and fstat is not None:
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
