@@ -18,7 +18,7 @@ Authentication events
 
     :var id: The minion ID.
     :var act: The current status of the minion key: ``accept``, ``pend``,
-        ``reject``.
+        ``reject``, ``full``, ``denied``, ``error``.
     :var pub: The minion public key.
 
 
