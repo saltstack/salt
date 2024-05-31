@@ -394,8 +394,8 @@ For example:
 .. code-block:: jinja
 
     # /srv/salt/orchestrate/do_complex_thing.sls
-    {% set tag = salt.pillar.get('event_tag') %}
-    {% set data = salt.pillar.get('event_data') %}
+    {% set tag = salt['pillar.get']('event_tag') %}
+    {% set data = salt['pillar.get']('event_data') %}
 
     # Pass data from the event to a custom runner function.
     # The function expects a 'foo' argument.
