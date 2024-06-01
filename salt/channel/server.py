@@ -762,7 +762,6 @@ class PubServerChannel:
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.present = {}
-        self.master_key = salt.crypt.MasterKeys(self.opts)
 
     def close(self):
         self.transport.close()
