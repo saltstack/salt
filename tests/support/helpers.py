@@ -1675,7 +1675,8 @@ class VirtualEnv:
         kwargs.setdefault("universal_newlines", True)
         env = kwargs.pop("env", None)
         if env:
-            env = self.environ.copy().update(env)
+            env = self.environ.copy()
+            env.update(env)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1780,8 +1781,7 @@ class SaltVirtualEnv(VirtualEnv):
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)
