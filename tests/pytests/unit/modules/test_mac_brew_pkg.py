@@ -644,8 +644,164 @@ def test_version():
         assert mac_brew.version("foo") == "0.1.5"
 
 
-# 'latest_version' function tests: 0
-# It has not been fully implemented
+# 'latest_version' function tests: 3
+
+
+def test_latest_version():
+    """
+    Tests latest version name returned
+    """
+    mock_refresh_db = MagicMock()
+    mock_call_brew = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+                    {
+                      "name": "neovim",
+                      "full_name": "neovim",
+                      "tap": "homebrew/core",
+                      "aliases": [
+                        "nvim"
+                      ],
+                      "versions": {
+                        "stable": "0.10.0",
+                        "head": "HEAD",
+                        "bottle": true
+                      },
+                      "revision": 0
+                    }
+                  ],
+                  "casks": [
+                  ]
+                }
+             """
+            ),
+        }
+    )
+
+    with patch("salt.modules.mac_brew_pkg.refresh_db", mock_refresh_db), patch(
+        "salt.modules.mac_brew_pkg._call_brew", mock_call_brew
+    ):
+        assert mac_brew.latest_version("neovim") == "0.10.0"
+        mock_refresh_db.assert_called_once()
+
+
+def test_latest_version_multiple_names():
+    """
+    Tests latest version name returned
+    """
+    mock_refresh_db = MagicMock()
+    mock_call_brew = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+                    {
+                      "name": "salt",
+                      "full_name": "cdalvaro/tap/salt",
+                      "tap": "cdalvaro/tap",
+                      "aliases": [],
+                      "versions": {
+                        "stable": "3007.1",
+                        "head": "HEAD",
+                        "bottle": true
+                      },
+                      "revision": 2
+                    },
+                    {
+                      "name": "neovim",
+                      "full_name": "neovim",
+                      "tap": "homebrew/core",
+                      "aliases": [
+                        "nvim"
+                      ],
+                      "versions": {
+                        "stable": "0.10.0",
+                        "head": "HEAD",
+                        "bottle": true
+                      },
+                      "revision": 0
+                    }
+                  ],
+                  "casks": [
+                    {
+                      "token": "visual-studio-code",
+                      "full_token": "visual-studio-code",
+                      "tap": "homebrew/cask",
+                      "version": "1.89.1",
+                      "installed": "1.86.0"
+                    }
+                  ]
+                }
+             """
+            ),
+        }
+    )
+
+    exptected_versions = {
+        "cdalvaro/tap/salt": "3007.1_2",
+        "nvim": "0.10.0",
+        "visual-studio-code": "1.89.1",
+    }
+
+    with patch("salt.modules.mac_brew_pkg.refresh_db", mock_refresh_db), patch(
+        "salt.modules.mac_brew_pkg._call_brew", mock_call_brew
+    ):
+        assert (
+            mac_brew.latest_version("cdalvaro/tap/salt", "nvim", "visual-studio-code")
+            == exptected_versions
+        )
+        mock_refresh_db.assert_called_once()
+
+
+def test_latest_version_with_options():
+    mock_refresh_db = MagicMock()
+    mock_call_brew = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+
+                  ],
+                  "casks": [
+                    {
+                      "token": "salt",
+                      "full_token": "cdalvaro/tap/salt",
+                      "tap": "cdalvaro/tap",
+                      "version": "3007.1",
+                      "installed": "3007.1"
+                    }
+                  ]
+                }
+             """
+            ),
+        }
+    )
+
+    with patch("salt.modules.mac_brew_pkg.refresh_db", mock_refresh_db), patch(
+        "salt.modules.mac_brew_pkg._call_brew", mock_call_brew
+    ):
+        assert (
+            mac_brew.latest_version("cdalvaro/tap/salt", options=["--cask"]) == "3007.1"
+        )
+        mock_refresh_db.assert_called_once()
+        mock_call_brew.assert_called_once_with(
+            "info", "--json=v2", "--cask", "cdalvaro/tap/salt"
+        )
+
 
 # 'remove' function tests: 1
 # Only tested a few basics

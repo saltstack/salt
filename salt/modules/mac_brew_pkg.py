@@ -299,7 +299,7 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def latest_version(*names, **kwargs):
+def latest_version(*names, options=None, **kwargs):
     """
     Return the latest version of the named package available for upgrade or
     installation
@@ -307,30 +307,47 @@ def latest_version(*names, **kwargs):
     Currently chooses stable versions, falling back to devel if that does not
     exist.
 
+    options
+        Additional options to pass to brew. Useful to remove ambiguous packages
+        that can conflict between formulae and casks.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
+        salt '*' pkg.latest_version <package name> options='["--cask"]'
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
     if refresh:
         refresh_db()
 
     def get_version(pkg_info):
-        # Perhaps this will need an option to pick devel by default
-        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
-        if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
-            version = "{}_{}".format(version, pkg_info["revision"])
-        return version
+        if "versions" in pkg_info.keys():
+            # Typically, formulae uses the 'versions' token
+            # Perhaps this will need an option to pick devel by default
+            pkg_version = (
+                pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+            )
+            if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
+                pkg_version = f"{pkg_version}_{pkg_info['revision']}"
+            return pkg_version
 
-    versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
+        if "version" in pkg_info.keys():
+            # Typically, casks use the 'version' token
+            return pkg_info["version"]
+
+        return None
+
+    versions_dict = {
+        key: get_version(val) for key, val in _info(*names, options=options).items()
+    }
 
     if len(names) == 1:
         return next(iter(versions_dict.values()))
-    else:
-        return versions_dict
+
+    return versions_dict
 
 
 # available_version is being deprecated
