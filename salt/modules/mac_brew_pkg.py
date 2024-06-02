@@ -460,7 +460,10 @@ def _info(*pkgs, options=None):
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
 
-    meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
+    meta_info = {
+        "formulae": ["name", "full_name", "aliases"],
+        "casks": ["token", "full_token"],
+    }
 
     pkgs_info = dict()
     for tap, keys in meta_info.items():
@@ -469,9 +472,14 @@ def _info(*pkgs, options=None):
             continue
 
         for _pkg in data:
+            pkg_names = []
             for key in keys:
-                if _pkg[key] in pkgs:
-                    pkgs_info[_pkg[key]] = _pkg
+                pkg_names.append(_pkg[key])
+            pkg_names = set(salt.utils.data.flatten(pkg_names))
+
+            for name in pkg_names:
+                if name in pkgs:
+                    pkgs_info[name] = _pkg
 
     return pkgs_info
 
