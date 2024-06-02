@@ -1017,6 +1017,29 @@ def test_info_installed(HOMEBREW_BIN):
             )
 
 
+def test_info_installed_extra_options():
+    mock = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+                  ],
+                  "casks": [
+                  ]
+                }
+             """
+            ),
+        }
+    )
+    with patch("salt.modules.mac_brew_pkg._call_brew", mock):
+        mac_brew.info_installed("salt", options=["--cask"])
+        mock.assert_called_once_with("info", "--json=v2", "--cask", "salt")
+
+
 def test_list_upgrades(HOMEBREW_BIN):
     """
     Tests list_upgrades method

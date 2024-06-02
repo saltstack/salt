@@ -414,7 +414,7 @@ def refresh_db(**kwargs):
     return True
 
 
-def _info(*pkgs):
+def _info(*pkgs, options=None):
     """
     Get all info brew can provide about a list of packages.
 
@@ -426,10 +426,18 @@ def _info(*pkgs):
     On success, returns a dict mapping each item in pkgs to its corresponding
     object in the output of 'brew info'.
 
+    options
+        Additional options to pass to brew. Useful to remove ambiguous packages
+        that can conflict between formulae and casks.
+
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    brew_result = _call_brew("info", "--json=v2", *pkgs)
+    cmd = ["info", "--json=v2"]
+    if options:
+        cmd.extend(options)
+
+    brew_result = _call_brew(*cmd, *pkgs)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
@@ -668,8 +676,9 @@ def info_installed(*names, **kwargs):
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> options='["--cask"]'
     """
-    return _info(*names)
+    return _info(*names, **kwargs)
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
