@@ -78,18 +78,6 @@ def master_config(root_dir, transport):
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
     )
-    # master_conf["transport"] = transport
-    # master_conf["id"] = "master"
-    # master_conf["root_dir"] = str(root_dir)
-    # master_conf["sock_dir"] = str(root_dir)
-    # master_conf["interface"] = "127.0.0.1"
-    # master_conf["publish_port"] = ports.get_unused_localhost_port()
-    # master_conf["ret_port"] = ports.get_unused_localhost_port()
-    # master_conf["pki_dir"] = str(root_dir / "pki")
-    #    "fips_mode": FIPS_TESTRUN,
-    #    "publish_signing_algorithm": (
-    #        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-    #    ),
     os.makedirs(master_conf["pki_dir"])
     salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)
     minions_keys = os.path.join(master_conf["pki_dir"], "minions")
