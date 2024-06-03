@@ -480,7 +480,7 @@ class SSH(MultiprocessingStateMixin):
             )
             deploy = input("[Y/n] ")
             if deploy.startswith(("n", "N")):
-                return ret
+                return ret, None
             target["passwd"] = getpass.getpass(
                 "Password for {}@{}: ".format(target["user"], host)
             )
