@@ -356,7 +356,7 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, options=None, **kwargs):
     """
     Removes packages with ``brew uninstall``.
 
@@ -370,6 +370,10 @@ def remove(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    options
+        Additional options to pass to brew. Useful to remove ambiguous packages
+        that can conflict between formulae and casks.
+
     .. versionadded:: 0.16.0
 
 
@@ -382,6 +386,7 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+        salt '*' pkg.remove pkgs='["foo", "bar"]' options='["--cask"]'
     """
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
@@ -393,7 +398,12 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    out = _call_brew("uninstall", *targets)
+    cmd = ["uninstall"]
+    if options:
+        cmd.extend(options)
+    cmd.extend(list(targets))
+
+    out = _call_brew(*cmd)
     if out["retcode"] != 0 and out["stderr"]:
         errors = [out["stderr"]]
     else:
