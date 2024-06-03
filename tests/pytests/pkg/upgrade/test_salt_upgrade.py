@@ -449,15 +449,82 @@ def test_salt_ownership_premission(
     # pylint: disable=pointless-statement
     salt_systemd_setup
 
-    # ensure known ownership
-    # TBD DGM need to create master user, and minion user, change conf, restart and test ownership
-
     # restart and check ownership is correct
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl restart {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
+
+    time.sleep(10)  # allow some time for restart
+
+    # test ownership for Minion, Master and Api
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        if "salt-api" == test_item:
+            test_cmd = f"ls -dl /run/{test_item}.pid"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                flush=True,
+            )
+            test_user = ret.stdout.strip().split()[4]
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            assert test_user == "salt"
+
+            test_cmd = f"ls -dl /run/{test_item}.pid"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                flush=True,
+            )
+            test_group = ret.stdout.strip().split()[5]
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            assert test_group == "salt"
+        else:
+            test_name = test_item.strip().split("-")[1]
+            test_cmd = f"ls -dl /run/salt/{test_name}"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                flush=True,
+            )
+            test_user = ret.stdout.strip().split()[4]
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            if test_item == "salt-minion":
+                assert test_user == "root"
+            else:
+                assert test_user == "salt"
+
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                flush=True,
+            )
+            test_group = ret.stdout.strip().split()[5]
+            print(
+                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            if test_item == "salt-minion":
+                assert test_group == "root"
+            else:
+                assert test_group == "salt"
+
+    # TBD DGM need to create master user, and minion user, change conf, restart and test ownership
 
     # perform Salt package upgrade test
     # pylint: disable=pointless-statement
