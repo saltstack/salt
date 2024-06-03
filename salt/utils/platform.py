@@ -231,6 +231,14 @@ def is_aarch64():
     return platform.machine().startswith("aarch64")
 
 
+@real_memoize
+def is_arm64():
+    """
+    Simple function to return if host is ARM64 or not
+    """
+    return platform.machine().startswith("arm64")
+
+
 def spawning_platform():
     """
     Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"

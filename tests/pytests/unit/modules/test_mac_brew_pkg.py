@@ -520,7 +520,7 @@ def test_homebrew_prefix_returns_none_even_with_execution_errors():
 # '_homebrew_os_bin' function tests: 1
 
 
-def test_homebrew_os_bin_fallback_apple_silicon():
+def test_homebrew_os_bin_appends_prefix_to_path():
     """
     Test the path to the homebrew executable for Apple Silicon.
 
@@ -543,8 +543,31 @@ def test_homebrew_os_bin_fallback_apple_silicon():
             return apple_silicon_homebrew_bin
         return None
 
-    with patch("salt.utils.path.which", mock_utils_path_which):
+    with patch("salt.utils.platform.is_darwin", return_value=True), patch(
+        "salt.utils.platform.is_arm64", return_value=True
+    ), patch("salt.utils.path.which", mock_utils_path_which):
         assert mac_brew._homebrew_os_bin() == apple_silicon_homebrew_bin
+
+
+# '_homebrew_default_prefix' function tests: 1
+
+
+def test_homebrew_default_prefix():
+    """
+    Tests homebrew's default prefix
+    """
+    with patch("salt.utils.platform.is_darwin", return_value=True), patch(
+        "salt.utils.platform.is_arm64", return_value=True
+    ):
+        assert mac_brew._homebrew_default_prefix() == "/opt/homebrew"
+
+    with patch("salt.utils.platform.is_darwin", return_value=True), patch(
+        "salt.utils.platform.is_arm64", return_value=False
+    ):
+        assert mac_brew._homebrew_default_prefix() == "/usr/local"
+
+    with patch("salt.utils.platform.is_darwin", return_value=False):
+        assert mac_brew._homebrew_default_prefix() == "/home/linuxbrew/.linuxbrew"
 
 
 # '_homebrew_bin' function tests: 1
