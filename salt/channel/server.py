@@ -53,11 +53,9 @@ class ReqServerChannel:
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
+        # The event and master_key attributes will be populated after fork.
         self.event = None
-        # self.event = salt.utils.event.get_master_event(
-        #     self.opts, self.opts["sock_dir"], listen=False
-        # )
-        # self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.master_key = None
 
     def pre_fork(self, process_manager):
         """
