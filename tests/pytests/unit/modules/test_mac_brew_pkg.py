@@ -994,6 +994,30 @@ def test_remove():
         assert mac_brew.remove("foo") == {}
 
 
+def test_remove_with_options():
+    """
+    Tests if call_brew is called with the expected options
+    """
+    first_call = True
+
+    def mock_list_pkgs():
+        nonlocal first_call
+        if first_call:
+            first_call = False
+            return {"foo": "0.1.5"}
+        return {}
+
+    mock_params = MagicMock(return_value=({"foo": None}, "repository"))
+    mock_call_brew = MagicMock(return_value={"retcode": 0})
+    with patch("salt.modules.mac_brew_pkg.list_pkgs", mock_list_pkgs), patch(
+        "salt.modules.mac_brew_pkg._call_brew", mock_call_brew
+    ), patch.dict(mac_brew.__salt__, {"pkg_resource.parse_targets": mock_params}):
+        assert mac_brew.remove("foo", options=["--cask"]) == {
+            "foo": {"new": "", "old": "0.1.5"}
+        }
+        mock_call_brew.assert_called_once_with("uninstall", "--cask", "foo")
+
+
 # 'refresh_db' function tests: 2
 
 
