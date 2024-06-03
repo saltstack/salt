@@ -524,7 +524,8 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         works, modifying chosen options requires a full uninstall followed by a
         fresh install. Note that if "pkgs" is used, all options will be passed
         to all packages. Unrecognized options for a package will be silently
-        ignored by brew.
+        ignored by brew. It can also be used to avoid conflicts between formulae
+        and casks.
 
         CLI Example:
 
@@ -532,6 +533,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
+            salt '*' pkg.install cdalvaro/tap/salt options='["--cask"]'
 
     Multiple Package Installation Options:
 
