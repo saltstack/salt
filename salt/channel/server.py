@@ -22,7 +22,7 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-from salt.exceptions import SaltDeserializationError
+from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
 from salt.utils.cache import CacheCli
 
 log = logging.getLogger(__name__)
@@ -237,15 +237,22 @@ class ReqServerChannel:
         return pret
 
     def _clear_signed(self, load, algorithm):
-        master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
-        tosign = salt.payload.dumps(load)
-        return {
-            "enc": "clear",
-            "load": tosign,
-            "sig": salt.crypt.PrivateKey(master_pem_path).sign(
-                tosign, algorithm=algorithm
-            ),
-        }
+        try:
+            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
+            tosign = salt.payload.dumps(load)
+            return {
+                "enc": "clear",
+                "load": tosign,
+                "sig": salt.crypt.PrivateKey(master_pem_path).sign(
+                    tosign, algorithm=algorithm
+                ),
+            }
+        except UnsupportedAlgorithm:
+            log.info(
+                "Minion tried to authenticate with unsupported signing algorithm: %s",
+                algorithm,
+            )
+            return {"enc": "clear", "load": {"ret": "bad sig algo"}}
 
     def _update_aes(self):
         """
@@ -678,6 +685,13 @@ class ReqServerChannel:
                     aes = "{}_|-{}".format(
                         salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
                     )
+                except UnsupportedAlgorithm as exc:
+                    log.info(
+                        "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
+                        load["id"],
+                        enc_algo,
+                    )
+                    return {"enc": "clear", "load": {"ret": "bad enc algo"}}
                 except Exception as exc:  # pylint: disable=broad-except
                     log.warning("Token failed to decrypt %s", exc)
                     # Token failed to decrypt, send back the salty bacon to
@@ -691,10 +705,17 @@ class ReqServerChannel:
                 try:
                     mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
                     ret["token"] = pub.encrypt(mtoken, enc_algo)
+                except UnsupportedAlgorithm as exc:
+                    log.info(
+                        "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
+                        load["id"],
+                        enc_algo,
+                    )
+                    return {"enc": "clear", "load": {"ret": "bad enc algo"}}
                 except Exception as exc:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
-                    log.warning("Token failed to decrypt: %s", exc)
+                    log.warning("Token failed to decrypt: %r", exc)
 
             aes = salt.master.SMaster.secrets["aes"]["secret"].value
             ret["aes"] = pub.encrypt(aes, enc_algo)

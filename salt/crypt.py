@@ -40,6 +40,7 @@ from salt.exceptions import (
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
+    UnsupportedAlgorithm,
 )
 
 try:
@@ -238,19 +239,27 @@ class PrivateKey(BaseKey):
     def sign(self, data, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
         _hash = self.parse_hash(algorithm)
-        return self.key.sign(salt.utils.stringutils.to_bytes(data), _padding(), _hash())
+        try:
+            return self.key.sign(
+                salt.utils.stringutils.to_bytes(data), _padding(), _hash()
+            )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
     def decrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
-        return self.key.decrypt(
-            data,
-            _padding(
-                mgf=padding.MGF1(algorithm=_hash()),
-                algorithm=_hash(),
-                label=None,
-            ),
-        )
+        try:
+            return self.key.decrypt(
+                data,
+                _padding(
+                    mgf=padding.MGF1(algorithm=_hash()),
+                    algorithm=_hash(),
+                    label=None,
+                ),
+            )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
 
 class PublicKey(BaseKey):
@@ -265,14 +274,17 @@ class PublicKey(BaseKey):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
         bdata = salt.utils.stringutils.to_bytes(data)
-        return self.key.encrypt(
-            bdata,
-            _padding(
-                mgf=padding.MGF1(algorithm=_hash()),
-                algorithm=_hash(),
-                label=None,
-            ),
-        )
+        try:
+            return self.key.encrypt(
+                bdata,
+                _padding(
+                    mgf=padding.MGF1(algorithm=_hash()),
+                    algorithm=_hash(),
+                    label=None,
+                ),
+            )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
     def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
@@ -752,6 +764,18 @@ class AsyncAuth:
                             "Authentication wait time is %s", acceptance_wait_time
                         )
                     continue
+                elif creds == "bad enc algo":
+                    log.error(
+                        "This minion is using a encryption algorithm that is "
+                        "not supported by it's Master. Please check your minion configutation."
+                    )
+                    break
+                elif creds == "bad sig algo":
+                    log.error(
+                        "This minion is using a signing algorithm that is "
+                        "not supported by it's Master. Please check your minion configutation."
+                    )
+                    break
                 break
             if not isinstance(creds, dict) or "aes" not in creds:
                 if self.opts.get("detect_mode") is True:
@@ -853,6 +877,13 @@ class AsyncAuth:
         if not isinstance(payload, dict) or "load" not in payload:
             log.error("Sign-in attempt failed: %s", payload)
             return False
+        elif isinstance(payload["load"], dict) and "ret" in payload["load"]:
+            if payload["load"]["ret"] == "bad enc algo":
+                log.error("Sign-in attempt failed: %s", payload)
+                return "bad enc algo"
+            elif payload["load"]["ret"] == "bad sig algo":
+                log.error("Sign-in attempt failed: %s", payload)
+                return "bad sig algo"
 
         clear_signed_data = payload["load"]
         clear_signature = payload["sig"]
