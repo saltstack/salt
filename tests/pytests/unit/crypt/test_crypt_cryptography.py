@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import os
 
-import cryptography.exceptions
 import pytest
 from cryptography.hazmat.backends.openssl import backend
 from cryptography.hazmat.primitives import serialization
@@ -344,7 +343,7 @@ def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
 def test_fips_bad_signing_algo(private_key, passphrase):
     key = salt.crypt.PrivateKey(private_key, passphrase)
-    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+    with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.sign("meh", salt.crypt.PKCS1v15_SHA1)
 
 
@@ -361,7 +360,7 @@ def test_fips_bad_signing_algo_verification(private_key, passphrase):
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
 def test_fips_bad_encryption_algo(private_key, passphrase):
     key = salt.crypt.PublicKey(private_key.replace(".pem", ".pub"))
-    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+    with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.encrypt("meh", salt.crypt.OAEP_SHA1)
 
 
@@ -370,5 +369,5 @@ def test_fips_bad_decryption_algo(private_key, passphrase):
     pubkey = LegacyPublicKey(private_key.replace(".pem", ".pub"))
     data = pubkey.encrypt("meh")
     key = salt.crypt.PrivateKey(private_key, passphrase)
-    with pytest.raises(cryptography.exceptions.UnsupportedAlgorithm):
+    with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.decrypt(data)
