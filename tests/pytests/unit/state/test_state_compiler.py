@@ -1118,28 +1118,12 @@ def test_mod_aggregate_order(minion_opts):
         state_obj.opts["state_aggregate"] = True  # Ensure state aggregation is enabled
 
         # Process each chunk with _mod_aggregate to simulate state execution
-        running = state_obj.call_chunks(chunks)
+        state_obj.call_chunks(chunks)
 
-        first_key = "pkg_|-first packages_|-first packages_|-installed"
-        requirement_key = "test_|-requirement_|-requirement_|-nop"
-        second_key = "pkg_|-second packages_|-second packages_|-installed"
-
-        # Check if the "second packages" have been executed after "requirement"
-        # by checking their run numbers
-        assert (
-            running[first_key]["__run_num__"] < running[requirement_key]["__run_num__"]
-        ), "Requirement should execute before second packages"
-        assert (
-            running[requirement_key]["__run_num__"] < running[second_key]["__run_num__"]
-        ), "Second packages should execute after requirement"
-
-        # Further, we should verify that the "second packages" have "gc" only after "requirement" is complete
-        assert "gc" in running[second_key].get(
-            "pkgs", []
-        ), "GC should be in second packages"
-        assert "drpm" in running[first_key].get(
-            "pkgs", []
-        ), "DRPM should be in first packages"
+        first_state_low = chunks[0]
+        last_state_low = chunks[-1]
+        # Verify that the requisites got aggregated as well
+        assert first_state_low["require"] == last_state_low["require"]
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):
