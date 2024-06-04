@@ -8,8 +8,9 @@ from pytestskipmarkers.utils import platform
 
 log = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")]
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
+
 @pytest.fixture
 def salt_systemd_setup(
     salt_call_cli,
@@ -148,7 +149,6 @@ def test_salt_upgrade(salt_call_cli, install_salt):
             assert "Authentication information could" in use_lib.stderr
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_wrk(
     salt_call_cli, install_salt, salt_systemd_setup
 ):  # pylint: disable=logging-fstring-interpolation
@@ -262,7 +262,6 @@ def test_salt_wrk(
                 assert test_group == "salt"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_systemd_disabled_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
 ):  # pylint: disable=logging-fstring-interpolation
@@ -308,7 +307,6 @@ def test_salt_systemd_disabled_preservation(
         assert test_enabled == "disabled"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_systemd_enabled_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
 ):  # pylint: disable=logging-fstring-interpolation
@@ -347,7 +345,6 @@ def test_salt_systemd_enabled_preservation(
         assert test_enabled == "enabled"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_systemd_inactive_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
 ):  # pylint: disable=logging-fstring-interpolation
@@ -393,7 +390,6 @@ def test_salt_systemd_inactive_preservation(
         assert test_active == "inactive"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_systemd_active_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
 ):  # pylint: disable=logging-fstring-interpolation
@@ -432,9 +428,8 @@ def test_salt_systemd_active_preservation(
         assert test_active == "active"
 
 
-@pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
 def test_salt_ownership_premission(
-    salt_call_cli, install_salt, salt_systemd_setup
+    salt_call_cli, install_salt, test_salt_ownership_premission
 ):  # pylint: disable=logging-fstring-interpolation
     """
     Test upgrade of Salt packages preserve existing ownership
@@ -447,7 +442,7 @@ def test_salt_ownership_premission(
 
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
-    salt_systemd_setup
+    test_salt_ownership_premission
 
     # restart and check ownership is correct
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -465,12 +460,12 @@ def test_salt_ownership_premission(
             test_cmd = f"ls -dl /run/{test_item}.pid"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
                 flush=True,
             )
             test_user = ret.stdout.strip().split()[4]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
                 flush=True,
             )
             assert ret.returncode == 0
@@ -479,12 +474,12 @@ def test_salt_ownership_premission(
             test_cmd = f"ls -dl /run/{test_item}.pid"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
                 flush=True,
             )
             test_group = ret.stdout.strip().split()[5]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
                 flush=True,
             )
             assert ret.returncode == 0
@@ -494,12 +489,12 @@ def test_salt_ownership_premission(
             test_cmd = f"ls -dl /run/salt/{test_name}"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
                 flush=True,
             )
             test_user = ret.stdout.strip().split()[4]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
                 flush=True,
             )
             assert ret.returncode == 0
@@ -510,12 +505,12 @@ def test_salt_ownership_premission(
 
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
                 flush=True,
             )
             test_group = ret.stdout.strip().split()[5]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
                 flush=True,
             )
             assert ret.returncode == 0
@@ -525,10 +520,130 @@ def test_salt_ownership_premission(
                 assert test_group == "salt"
 
     # TBD DGM need to create master user, and minion user, change conf, restart and test ownership
+    test_master_user = "horse"
+    test_minion_user = "donkey"
+    ret = salt_call_cli.run("--local", "user.add", f"{test_master_user}")
+    print(
+        f"DGM test_salt_ownership_premission, '{test_master_user}' user add,  ret '{ret}'",
+        flush=True,
+    )
+
+    ret = salt_call_cli.run("--local", "user.add", f"{test_minion_user}")
+    print(
+        f"DGM test_salt_ownership_premission, '{test_minion_user}' user add,  ret '{ret}'",
+        flush=True,
+    )
+
+    test_string = f"\nuser: {test_master_user}\n"
+    ret = salt_call_cli.run("--local", "file.append", "/etc/salt/master", test_string)
+    print(
+        f"DGM test_salt_ownership_premission, file append /etc/salt/master '{test_string}',  ret '{ret}'",
+        flush=True,
+    )
+
+    test_string = f"\nuser: {test_minion_user}\n"
+    ret = salt_call_cli.run("--local", "file.append", "/etc/salt/minion", test_string)
+    print(
+        f"DGM test_salt_ownership_premission, file append /etc/salt/minion '{test_string}',  ret '{ret}'",
+        flush=True,
+    )
+
+    ## DGM Check configuration files
+    ret = salt_call_cli.run("--local", "cmd.run", "cat", "/etc/salt/master")
+    print(
+        f"DGM test_salt_ownership_premission, cat /etc/salt/master,  ret '{ret}'",
+        flush=True,
+    )
+
+    ret = salt_call_cli.run("--local", "cmd.run", "cat", "/etc/salt/minion")
+    print(
+        f"DGM test_salt_ownership_premission, cat /etc/salt/minion,  ret '{ret}'",
+        flush=True,
+    )
+
+    # restart and check ownership is correct
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+    time.sleep(10)  # allow some time for restart
+
+    # test ownership for Minion, Master and Api - horse and donkey
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        if "salt-api" == test_item:
+            test_cmd = f"ls -dl /run/{test_item}.pid"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
+                flush=True,
+            )
+            test_user = ret.stdout.strip().split()[4]
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            assert test_user == f"{test_master_user}"
+
+            test_cmd = f"ls -dl /run/{test_item}.pid"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
+                flush=True,
+            )
+            test_group = ret.stdout.strip().split()[5]
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            assert test_group == f"{test_master_user}"
+        else:
+            test_name = test_item.strip().split("-")[1]
+            test_cmd = f"ls -dl /run/salt/{test_name}"
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
+                flush=True,
+            )
+            test_user = ret.stdout.strip().split()[4]
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            if test_item == "salt-minion":
+                assert test_user == f"{test_minion_user}"
+            else:
+                assert test_user == f"{test_master_user}"
+
+            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
+                flush=True,
+            )
+            test_group = ret.stdout.strip().split()[5]
+            print(
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            if test_item == "salt-minion":
+                assert test_group == f"{test_minion_user}"
+            else:
+                assert test_group == f"{test_master_user}"
 
     # perform Salt package upgrade test
     # pylint: disable=pointless-statement
     salt_test_upgrade
+
+    print(
+        "DGM test_salt_ownership_premission, post-upgrade",
+        flush=True,
+    )
 
     # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -537,65 +652,61 @@ def test_salt_ownership_premission(
             test_cmd = f"ls -dl /run/{test_item}.pid"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
                 flush=True,
             )
             test_user = ret.stdout.strip().split()[4]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
                 flush=True,
             )
             assert ret.returncode == 0
-            # TBD DGM NEED TO CHANGE ASSERT TO CORRECT USER
-            assert test_user == "salt"
+            assert test_user == f"{test_master_user}"
 
             test_cmd = f"ls -dl /run/{test_item}.pid"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
                 flush=True,
             )
             test_group = ret.stdout.strip().split()[5]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
                 flush=True,
             )
             assert ret.returncode == 0
-            # TBD DGM NEED TO CHANGE ASSERT TO CORRECT USER
-            assert test_group == "salt"
+            assert test_group == f"{test_master_user}"
         else:
             test_name = test_item.strip().split("-")[1]
             test_cmd = f"ls -dl /run/salt/{test_name}"
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test,  ret '{ret}'",
                 flush=True,
             )
             test_user = ret.stdout.strip().split()[4]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' user test, line '{ret.stdout.strip().split()}',  user '{test_user}'",
                 flush=True,
             )
             assert ret.returncode == 0
-            # TBD DGM NEED TO CHANGE ASSERT TO CORRECT USER
             if test_item == "salt-minion":
-                assert test_user == "root"
+                assert test_user == f"{test_minion_user}"
             else:
-                assert test_user == "salt"
+                assert test_user == f"{test_master_user}"
 
             ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test,  ret '{ret}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test,  ret '{ret}'",
                 flush=True,
             )
             test_group = ret.stdout.strip().split()[5]
             print(
-                f"DGM salt_systemd_setup, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
+                f"DGM test_salt_ownership_premission, '{test_item}' group test, line '{ret.stdout.strip().split()}',  group '{test_group}'",
                 flush=True,
             )
             assert ret.returncode == 0
-            # TBD DGM NEED TO CHANGE ASSERT TO CORRECT USER
             if test_item == "salt-minion":
-                assert test_group == "root"
+                assert test_group == f"{test_minion_user}"
             else:
-                assert test_group == "salt"
+                assert test_group == f"{test_master_user}"
