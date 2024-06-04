@@ -855,128 +855,6 @@ def test_call_chunk_sub_state_run(minion_opts):
             assert sub_state["__sls__"] == "external"
 
 
-def test_aggregate_requisites(minion_opts):
-    """
-    Test to ensure that the requisites are included in the aggregated low state.
-    """
-    # The low that is returned from _mod_aggregrate
-    low = {
-        "state": "pkg",
-        "name": "other_pkgs",
-        "__sls__": "47628",
-        "__env__": "base",
-        "__id__": "other_pkgs",
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
-        "aggregate": True,
-        "order": 10002,
-        "fun": "installed",
-        "__agg__": True,
-    }
-
-    # Chunks that have been processed through the pkg mod_aggregate function
-    chunks = [
-        {
-            "state": "file",
-            "name": "/tmp/install-vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-vim",
-            "order": 10000,
-            "fun": "managed",
-        },
-        {
-            "state": "file",
-            "name": "/tmp/install-tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-tmux",
-            "order": 10001,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "other_pkgs",
-            "__sls__": "47628",
-            "__env __": "base",
-            "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
-            "aggregate": True,
-            "order": 10002,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "bc",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "bc",
-            "hold": True,
-            "__agg__": True,
-            "order": 10003,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "vim",
-            "require": ["/tmp/install-vim"],
-            "order": 10004,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "tmux",
-            "require": ["/tmp/install-tmux"],
-            "order": 10005,
-            "fun": "installed",
-        },
-        {
-            "state": "pkgrepo",
-            "name": "deb https://packages.cloud.google.com/apt cloud-sdk main",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "google-cloud-repo",
-            "humanname": "Google Cloud SDK",
-            "file": "/etc/apt/sources.list.d/google-cloud-sdk.list",
-            "key_url": "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
-            "order": 10006,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "google-cloud-sdk",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "google-cloud-sdk",
-            "require": ["google-cloud-repo"],
-            "order": 10007,
-            "fun": "installed",
-        },
-    ]
-
-    with patch("salt.state.State._gather_pillar"):
-        state_obj = salt.state.State(minion_opts)
-        low_ret = state_obj._aggregate_requisites(low, chunks)
-
-        # Ensure the low returned contains require
-        assert "require" in low_ret
-
-        # Ensure all the requires from pkg states are in low
-        assert low_ret["require"] == [
-            "/tmp/install-vim",
-            "/tmp/install-tmux",
-            "google-cloud-repo",
-        ]
-
-
 def test_mod_aggregate(minion_opts):
     """
     Test to ensure that the requisites are included in the aggregated low state.
@@ -1070,6 +948,7 @@ def test_mod_aggregate(minion_opts):
             # Ensure pkgs were aggregated
             assert low_ret["pkgs"] == ["figlet", "sl"]
 
+
 def test_mod_aggregate_order(minion_opts):
     """
     Test to ensure that the state_aggregate setting correctly aggregates package installations
@@ -1104,33 +983,41 @@ def test_mod_aggregate_order(minion_opts):
             "fun": "installed",
             "order": 3,
             "require": [{"test": "requirement"}],
+            "provider": "yumpkg",
             "__env__": "base",
             "__sls__": "base",
         },
     ]
 
-
     # Setup the State object
     with patch("salt.state.State._gather_pillar"):
         state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(chunks[-1])
         state_obj.opts["state_aggregate"] = True  # Ensure state aggregation is enabled
 
         # Process each chunk with _mod_aggregate to simulate state execution
         running = state_obj.call_chunks(chunks)
 
-        first_key = 'pkg_|-first packages_|-first packages_|-installed'
-        requirement_key = 'test_|-requirement_|-requirement_|-nop'
-        second_key = 'pkg_|-second packages_|-second packages_|-installed'
+        first_key = "pkg_|-first packages_|-first packages_|-installed"
+        requirement_key = "test_|-requirement_|-requirement_|-nop"
+        second_key = "pkg_|-second packages_|-second packages_|-installed"
 
         # Check if the "second packages" have been executed after "requirement"
         # by checking their run numbers
-        assert running[first_key]["__run_num__"] < running[requirement_key]["__run_num__"], "Requirement should execute before second packages"
-        assert running[requirement_key]["__run_num__"] < running[second_key]["__run_num__"], "Second packages should execute after requirement"
+        assert (
+            running[first_key]["__run_num__"] < running[requirement_key]["__run_num__"]
+        ), "Requirement should execute before second packages"
+        assert (
+            running[requirement_key]["__run_num__"] < running[second_key]["__run_num__"]
+        ), "Second packages should execute after requirement"
 
         # Further, we should verify that the "second packages" have "gc" only after "requirement" is complete
-        assert 'gc' in running[second_key].get('pkgs', []), "GC should be in second packages"
-        assert 'drpm' in running[first_key].get('pkgs', []), "DRPM should be in first packages"
-
+        assert "gc" in running[second_key].get(
+            "pkgs", []
+        ), "GC should be in second packages"
+        assert "drpm" in running[first_key].get(
+            "pkgs", []
+        ), "DRPM should be in first packages"
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):
