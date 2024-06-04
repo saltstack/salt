@@ -122,7 +122,7 @@ if ( $install_build_tools ) {
         Start-Process -FilePath "certutil" `
                       -ArgumentList "-addstore", `
                                     "Root", `
-                                    "$($env:TEMP)\build_tools\certificates\manifestCounterSignRootCertificate.cer" `
+                                    "$env:TEMP\build_tools\certificates\manifestCounterSignRootCertificate.cer" `
                       -Wait -WindowStyle Hidden
         if ( Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5 ) {
             Write-Result "Success" -ForegroundColor Green
@@ -138,7 +138,7 @@ if ( $install_build_tools ) {
         Start-Process -FilePath "certutil" `
                   -ArgumentList "-addstore", `
                                 "Root", `
-                                "$($env:TEMP)\build_tools\certificates\manifestRootCertificate.cer" `
+                                "$env:TEMP\build_tools\certificates\manifestRootCertificate.cer" `
                   -Wait -WindowStyle Hidden
         if ( Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe ) {
             Write-Result "Success" -ForegroundColor Green
