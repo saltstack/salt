@@ -13,7 +13,7 @@ from collections.abc import Generator, Iterable, Sequence
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
 
-import networkx as nx  # pylint: disable=3rd-party-module-not-gated
+import networkx as nx
 
 log = logging.getLogger(__name__)
 

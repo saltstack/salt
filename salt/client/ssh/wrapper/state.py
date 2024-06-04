@@ -435,6 +435,7 @@ def high(data, **kwargs):
         st_.push_active()
         chunks, errors = st_.state.compile_high_data(data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,

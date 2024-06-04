@@ -94,7 +94,9 @@ multidict==6.0.4
     #   aiohttp
     #   yarl
 networkx==3.1
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
 packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
