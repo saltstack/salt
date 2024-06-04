@@ -605,20 +605,37 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disable=W0613
+def list_upgrades(
+    refresh=True, include_casks=False, options=None, **kwargs
+):  # pylint: disable=W0613
     """
     Check whether or not an upgrade is available for all packages
+
+    refresh
+        Update the Homebrew's package repository before listing upgrades.
+
+    include_casks
+        Whether to include casks in the list of upgrades.
+
+    options
+        Additional options to pass to brew.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
+        salt '*' pkg.list_upgrades include_casks=True
+        salt '*' pkg.list_upgrades include_casks=True options='["--greedy"]'
     """
     if refresh:
         refresh_db()
 
-    res = _call_brew("outdated", "--json=v2")
+    cmd = ["outdated", "--json=v2"]
+    if options:
+        cmd.extend(options)
+
+    res = _call_brew(*cmd)
     ret = {}
 
     try:
