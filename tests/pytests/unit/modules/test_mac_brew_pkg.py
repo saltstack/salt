@@ -1459,3 +1459,56 @@ def test_list_upgrades(HOMEBREW_BIN):
             assert (
                 mac_brew.list_upgrades(refresh=False, include_casks=True) == _expected
             )
+
+
+def test_list_upgrades_with_options():
+    """
+    Tests list_upgrades method using options
+    """
+    mock_call_brew = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+
+                  ],
+                  "casks": [
+                    {
+                      "name": "1password",
+                      "installed_versions": [
+                        "8.10.24"
+                      ],
+                      "current_version": "8.10.33"
+                    },
+                    {
+                      "name": "bbedit",
+                      "installed_versions": [
+                        "15.0.1"
+                      ],
+                      "current_version": "15.1"
+                    }
+                  ]
+                }
+                """
+            ),
+        }
+    )
+    _expected = {
+        "1password": "8.10.33",
+        "bbedit": "15.1",
+    }
+
+    with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
+        assert (
+            mac_brew.list_upgrades(
+                refresh=False, include_casks=True, options=["--greedy", "--fetch-HEAD"]
+            )
+            == _expected
+        )
+        mock_call_brew.assert_called_once_with(
+            "outdated", "--json=v2", "--greedy", "--fetch-HEAD"
+        )
