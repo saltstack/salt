@@ -972,8 +972,8 @@ class State:
                 self.state_con["loader_cache"][agg_fun] = True
                 try:
                     low["__agg__"] = True
-                    low = self.states[agg_fun](low, chunks, running)
                     low = self._aggregate_requisites(low, chunks)
+                    low = self.states[agg_fun](low, chunks, running)
                 except TypeError:
                     log.error("Failed to execute aggregate for state %s", low["state"])
             else:
