@@ -24,13 +24,18 @@ def provides_arch():
 
 
 @pytest.fixture
-def package(version, pkg_arch):
-    name = f"salt-{version}-0.{pkg_arch}.rpm"
+def artifact_version(install_salt):
+    return install_salt.artifact_version
+
+
+@pytest.fixture
+def package(artifact_version, pkg_arch):
+    name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
     return ARTIFACTS_DIR / name
 
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_provides(install_salt, package, version, provides_arch):
+def test_provides(install_salt, package, artifact_version, provides_arch):
     if install_salt.downgrade or install_salt.upgrade:
         pytest.skip("Only test on install pkg tests")
     if install_salt.distro_id not in (
@@ -46,10 +51,10 @@ def test_provides(install_salt, package, version, provides_arch):
 
     assert package.exists()
     valid_provides = [
-        f"config: config(salt) = {version}-0",
-        f"manual: salt = {version}",
-        f"manual: salt = {version}-0",
-        f"manual: salt({provides_arch}) = {version}-0",
+        f"config: config(salt) = {artifact_version}-0",
+        f"manual: salt = {artifact_version}",
+        f"manual: salt = {artifact_version}-0",
+        f"manual: salt({provides_arch}) = {artifact_version}-0",
     ]
     proc = subprocess.run(
         ["rpm", "-q", "-v", "-provides", package], capture_output=True, check=True
@@ -63,7 +68,7 @@ def test_provides(install_salt, package, version, provides_arch):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_requires(install_salt, package, version):
+def test_requires(install_salt, package, artifact_version):
     if install_salt.downgrade or install_salt.upgrade:
         pytest.skip("Only test on install pkg tests")
     if install_salt.distro_id not in (
@@ -85,7 +90,7 @@ def test_requires(install_salt, package, version):
         "manual: /usr/sbin/groupadd",
         "manual: /usr/sbin/useradd",
         "manual: /usr/sbin/usermod",
-        f"config: config(salt) = {version}-0",
+        f"config: config(salt) = {artifact_version}-0",
         "manual: dmidecode",
         "manual: openssl",
         "manual: pciutils",
