@@ -36,8 +36,6 @@ def package(artifact_version, pkg_arch):
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
 def test_provides(install_salt, package, artifact_version, provides_arch):
-    if install_salt.downgrade or install_salt.upgrade:
-        pytest.skip("Only test on install pkg tests")
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
@@ -69,8 +67,6 @@ def test_provides(install_salt, package, artifact_version, provides_arch):
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
 def test_requires(install_salt, package, artifact_version):
-    if install_salt.downgrade or install_salt.upgrade:
-        pytest.skip("Only test on install pkg tests")
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
