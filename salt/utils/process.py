@@ -28,6 +28,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from salt.ext.tornado import gen
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,9 @@ try:
     HAS_SETPROCTITLE = True
 except ImportError:
     HAS_SETPROCTITLE = False
+
+# Process finalization function list
+_INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST = []
 
 
 def appendproctitle(name):
@@ -207,7 +211,7 @@ def get_process_info(pid=None):
 
     # pid_exists can have false positives
     # for example Windows reserves PID 5 in a hack way
-    # another reasons is the the process requires kernel permissions
+    # another reasons is the process requires kernel permissions
     try:
         raw_process_info.status()
     except psutil.NoSuchProcess:
@@ -525,11 +529,14 @@ class ProcessManager:
                 target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
             )
 
+        process.register_finalize_method(cleanup_finalize_process, args, kwargs)
+
         if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process.start()
         else:
             process.start()
+
         log.debug("Started '%s' with pid %s", process.name, process.pid)
         self._process_map[process.pid] = {
             "tgt": tgt,
@@ -537,6 +544,7 @@ class ProcessManager:
             "kwargs": kwargs,
             "Process": process,
         }
+
         return process
 
     def restart_process(self, pid):
@@ -685,6 +693,7 @@ class ProcessManager:
                         pass
                 try:
                     p_map["Process"].terminate()
+
                 except OSError as exc:
                     if exc.errno not in (errno.ESRCH, errno.EACCES):
                         raise
@@ -1069,6 +1078,21 @@ class SignalHandlingProcess(Process):
             msg += "SIGTERM"
         msg += ". Exiting"
         log.debug(msg)
+
+        # Run any registered process finalization routines
+        for method, args, kwargs in self._finalize_methods:
+            try:
+                method(*args, **kwargs)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to run finalize callback on %s; method=%r; args=%r; and kwargs=%r",
+                    self,
+                    method,
+                    args,
+                    kwargs,
+                )
+                continue
+
         if HAS_PSUTIL:
             try:
                 process = psutil.Process(os.getpid())
@@ -1084,6 +1108,7 @@ class SignalHandlingProcess(Process):
                                 self.pid,
                                 os.getpid(),
                             )
+
             except psutil.NoSuchProcess:
                 log.warning(
                     "Unable to kill children of process %d, it does not exist."
@@ -1155,3 +1180,57 @@ class SubprocessList:
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)
+
+
+def cleanup_finalize_process(*args, **kwargs):
+    """
+    Generic process to allow for any registered process cleanup routines to execute.
+
+    While class Process has a register_finalize_method, when a process is looked up by pid
+    using psutil.Process, there is no method available to register a cleanup process.
+
+    Hence, this function is added as part of the add_process to allow usage of other cleanup processes
+    which cannot be added by the register_finalize_method.
+    """
+
+    # Run any registered process cleanup routines
+    for method, args, kwargs in _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST:
+        log.debug(
+            "cleanup_finalize_process, method=%r, args=%r, kwargs=%r",
+            method,
+            args,
+            kwargs,
+        )
+        try:
+            method(*args, **kwargs)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to run registered function finalize callback; method=%r; args=%r; and kwargs=%r",
+                method,
+                args,
+                kwargs,
+            )
+            continue
+
+
+def register_cleanup_finalize_function(function, *args, **kwargs):
+    """
+    Register a function to run as process terminates
+
+    While class Process has a register_finalize_method, when a process is looked up by pid
+    using psutil.Process, there is no method available to register a cleanup process.
+
+    Hence, this function can be used to register a function to allow cleanup processes
+    which cannot be added by class Process register_finalize_method.
+
+    Note: there is no deletion, since it is assummed that if something is registered, it will continue to be used
+    """
+    log.debug(
+        "register_cleanup_finalize_function entry, function=%r, args=%r, kwargs=%r",
+        function,
+        args,
+        kwargs,
+    )
+    finalize_function_tuple = (function, args, kwargs)
+    if finalize_function_tuple not in _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST:
+        _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST.append(finalize_function_tuple)
