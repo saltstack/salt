@@ -7,8 +7,30 @@ import salt.utils.path
 from tests.support.pkg import ARTIFACTS_DIR
 
 
+@pytest.fixture
+def pkg_arch():
+    if platform.is_aarch64():
+        return "aarch64"
+    else:
+        return "x86_64"
+
+
+@pytest.fixture
+def provides_arch():
+    if platform.is_aarch64():
+        return "aarch-64"
+    else:
+        return "x86-64"
+
+
+@pytest.fixture
+def package(version, pkg_arch):
+    name = f"salt-{version}-0.{pkg_arch}.rpm"
+    return ARTIFACTS_DIR / name
+
+
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_provides(install_salt, version):
+def test_provides(install_salt, package, version, provides_arch):
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
@@ -19,18 +41,13 @@ def test_provides(install_salt, version):
         "photon",
     ):
         pytest.skip("Only tests rpm packages")
-    if platform.is_aarch64():
-        arch = "aarch64"
-    else:
-        arch = "x86_64"
-    name = f"salt-{version}-0.{arch}.rpm"
-    package = ARTIFACTS_DIR / name
+
     assert package.exists()
     valid_provides = [
         f"config: config(salt) = {version}-0",
         f"manual: salt = {version}",
         f"manual: salt = {version}-0",
-        f"manual: salt({arch.replace('_', '-')}) = {version}-0",
+        f"manual: salt({provides_arch}) = {version}-0",
     ]
     proc = subprocess.run(
         ["rpm", "-q", "-v", "-provides", package], capture_output=True, check=True
@@ -44,7 +61,7 @@ def test_provides(install_salt, version):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_requires(install_salt, version):
+def test_requires(install_salt, package, version):
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
@@ -55,12 +72,6 @@ def test_requires(install_salt, version):
         "photon",
     ):
         pytest.skip("Only tests rpm packages")
-    if platform.is_aarch64():
-        arch = "arm64"
-    else:
-        arch = "x86_64"
-    name = f"salt-{version}-0.{arch}.rpm"
-    package = ARTIFACTS_DIR / name
     assert package.exists()
     valid_requires = [
         "manual: /bin/sh",
