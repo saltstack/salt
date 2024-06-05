@@ -20,7 +20,7 @@ def test_provides(install_salt, version):
     ):
         pytest.skip("Only tests rpm packages")
     if platform.is_aarch64():
-        arch = "arm64"
+        arch = "aarch64"
     else:
         arch = "x86_64"
     name = f"salt-{version}-0.{arch}.rpm"
