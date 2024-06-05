@@ -203,20 +203,26 @@ class BaseKey:
 
     @staticmethod
     def parse_padding_for_signing(algorithm):
+        if algorithm not in VALID_SIGNING_ALGORITHMS:
+            raise UnsupportedAlgorithm(f"Invalid signing algorithm: {algorithm}")
         _pad, _hash = algorithm.split("-", 1)
         if _pad not in VALID_PADDING_FOR_SIGNING:
-            raise Exception("Invalid padding algorithm")
+            raise UnsupportedAlgorithm(f"Invalid padding algorithm: {_pad}")
         return getattr(padding, _pad)
 
     @staticmethod
     def parse_padding_for_encryption(algorithm):
+        if algorithm not in VALID_ENCRYPTION_ALGORITHMS:
+            raise UnsupportedAlgorithm(f"Invalid encryption algorithm: {algorithm}")
         _pad, _hash = algorithm.split("-", 1)
         if _pad not in VALID_PADDING_FOR_ENCRYPTION:
-            raise Exception("Invalid padding algorithm")
+            raise UnsupportedAlgorithm(f"Invalid padding algorithm: {_pad}")
         return getattr(padding, _pad)
 
     @staticmethod
     def parse_hash(algorithm):
+        if "-" not in algorithm:
+            raise UnsupportedAlgorithm(f"Invalid encryption algorithm: {algorithm}")
         _pad, _hash = algorithm.split("-", 1)
         if _hash not in VALID_HASHES:
             raise Exception("Invalid hashing algorithm")
