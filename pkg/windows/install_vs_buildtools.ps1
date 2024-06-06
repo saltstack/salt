@@ -119,12 +119,12 @@ if ( $install_build_tools ) {
     # Hash: 3b1efd3a66ea28b16697394703a72ca340a05bd5
     if (! (Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5) ) {
         Write-Host "Installing Certificate Sign Root Certificate: " -NoNewLine
-        Start-Process -FilePath "certutil" `
+        $proc = Start-Process -FilePath "certutil" `
                       -ArgumentList "-addstore", `
                                     "Root", `
                                     "$($env:TEMP)\build_tools\certificates\manifestCounterSignRootCertificate.cer" `
-                      -Wait -WindowStyle Hidden
-        if ( Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5 ) {
+                      -PassThru -Wait -WindowStyle Hidden
+        if ( $proc.ExitCode -eq 0 ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
             Write-Result "Failed" -ForegroundColor Yellow
@@ -135,12 +135,12 @@ if ( $install_build_tools ) {
     # Hash: 8f43288ad272f3103b6fb1428485ea3014c0bcfe
     if (! (Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe) ) {
         Write-Host "Installing Certificate Root Certificate: " -NoNewLine
-        Start-Process -FilePath "certutil" `
+        $proc = Start-Process -FilePath "certutil" `
                   -ArgumentList "-addstore", `
                                 "Root", `
                                 "$($env:TEMP)\build_tools\certificates\manifestRootCertificate.cer" `
-                  -Wait -WindowStyle Hidden
-        if ( Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe ) {
+                  -PassThru -Wait -WindowStyle Hidden
+        if ( $proc.ExitCode -eq 0 ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
             Write-Result "Failed" -ForegroundColor Yellow
@@ -148,14 +148,13 @@ if ( $install_build_tools ) {
     }
 
     Write-Host "Installing Visual Studio 2017 build tools: " -NoNewline
-    Start-Process -FilePath "$env:TEMP\build_tools\vs_setup.exe" `
+    $proc = Start-Process -FilePath "$env:TEMP\build_tools\vs_setup.exe" `
                   -ArgumentList "--wait", "--noweb", "--quiet" `
-                  -Wait
-    @($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
-        if ( ! (Test-Path -Path $_) ) {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
-        }
+                  -Wait -PassThru
+    if ( $proc.ExitCode -eq 0 ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Yellow
     }
     Write-Result "Success" -ForegroundColor Green
 } else {
