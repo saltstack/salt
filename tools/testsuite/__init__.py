@@ -46,7 +46,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         },
         "arch": {
             "help": "The onedir artifact architecture",
-            "choices": ("x86_64", "aarch64", "amd64", "x86"),
+            "choices": ("x86_64", "arm64", "amd64", "x86"),
         },
         "slug": {
             "help": "The OS slug",
@@ -106,7 +106,7 @@ def setup_testsuite(
         ctx.exit(1)
 
     if "arm64" in slug:
-        arch = "aarch64"
+        arch = "arm64"
 
     ctx.warn(
         "Consider this in preliminary support. There are most likely things to iron out still."

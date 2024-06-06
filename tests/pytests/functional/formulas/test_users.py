@@ -2,38 +2,33 @@
 Tests using users formula
 """
 
+import types
+
 import pytest
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+    pytest.mark.destructive_test,
+    pytest.mark.timeout_unless_on_windows(240),
+]
+
 
 @pytest.fixture(scope="module")
-def _formula(saltstack_formula):
-    with saltstack_formula(name="users-formula", tag="0.48.8") as formula:
-        yield formula
+def formula():
+    return types.SimpleNamespace(name="users-formula", tag="0.48.8")
 
 
-@pytest.fixture(scope="module")
-def modules(loaders, _formula):
-    loaders.opts["file_roots"]["base"].append(
-        str(_formula.state_tree_path / f"{_formula.name}-{_formula.tag}")
-    )
-    return loaders.modules
-
-
-@pytest.mark.skip_on_windows
-@pytest.mark.destructive_test
-def test_users_formula(modules):
-    # sudo
+def test_users_sudo_formula(modules):
     ret = modules.state.sls("users.sudo")
     assert not ret.errors
-    assert not ret.failed
+    assert ret.failed is False
     for staterun in ret:
         assert staterun.result is True
 
-    # bashrc
+
+def test_users_bashrc_formula(modules):
     ret = modules.state.sls("users.bashrc")
-    for staterun in ret:
-        assert not staterun.result.failed
     assert not ret.errors
-    assert not ret.failed
+    assert ret.failed is False
     for staterun in ret:
         assert staterun.result is True

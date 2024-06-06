@@ -838,10 +838,52 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      fips: true
 
   photonos-4-arm64-pkg-tests:
     name: Photon OS 4 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-4-pkg-tests-fips:
+    name: Photon OS 4 Package Test (fips)
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
+
+  photonos-4-arm64-pkg-tests-fips:
+    name: Photon OS 4 Arm64 Package Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -882,10 +924,52 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-      fips: true
 
   photonos-5-arm64-pkg-tests:
     name: Photon OS 5 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  photonos-5-pkg-tests-fips:
+    name: Photon OS 5 Package Test (fips)
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      fips: true
+
+  photonos-5-arm64-pkg-tests-fips:
+    name: Photon OS 5 Arm64 Package Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -979,6 +1063,48 @@ jobs:
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  ubuntu-2404-pkg-tests:
+    name: Ubuntu 24.04 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: ubuntu-24.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  ubuntu-2404-arm64-pkg-tests:
+    name: Ubuntu 24.04 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: ubuntu-24.04-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -1605,15 +1731,15 @@ jobs:
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  fedora-39:
-    name: Fedora 39 Test
+  fedora-40:
+    name: Fedora 40 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: fedora-39
+      distro-slug: fedora-40
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -1667,10 +1793,52 @@ jobs:
       skip-code-coverage: true
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      fips: true
 
   photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: photonos-4-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
+  photonos-4-fips:
+    name: Photon OS 4 Test (fips)
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+      fips: true
+
+  photonos-4-arm64-fips:
+    name: Photon OS 4 Arm64 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1711,10 +1879,52 @@ jobs:
       skip-code-coverage: true
       workflow-slug: staging
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-      fips: true
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: photonos-5-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
+  photonos-5-fips:
+    name: Photon OS 5 Test (fips)
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: photonos-5
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+      fips: true
+
+  photonos-5-arm64-fips:
+    name: Photon OS 5 Arm64 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
@@ -1807,6 +2017,48 @@ jobs:
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
+  ubuntu-2404:
+    name: Ubuntu 24.04 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: ubuntu-24.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      skip-code-coverage: true
+      workflow-slug: staging
+      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
+
+  ubuntu-2404-arm64:
+    name: Ubuntu 24.04 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: ubuntu-24.04-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
@@ -1916,7 +2168,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-src
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -1972,11 +2224,11 @@ jobs:
             arch: arm64
           - pkg-type: deb
             distro: ubuntu
-            version: "23.04"
+            version: "24.04"
             arch: x86_64
           - pkg-type: deb
             distro: ubuntu
-            version: "23.04"
+            version: "24.04"
             arch: arm64
 
     steps:
@@ -2047,7 +2299,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2095,15 +2347,15 @@ jobs:
             arch: aarch64
           - pkg-type: rpm
             distro: fedora
-            version: "39"
+            version: "40"
             arch: x86_64
           - pkg-type: rpm
             distro: fedora
-            version: "39"
+            version: "40"
             arch: arm64
           - pkg-type: rpm
             distro: fedora
-            version: "39"
+            version: "40"
             arch: aarch64
           - pkg-type: rpm
             distro: photon
@@ -2239,7 +2491,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2343,7 +2595,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-windows
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2388,6 +2640,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS Arch64 Packages
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-arm64-macos
@@ -2435,7 +2688,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-macos
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2492,6 +2745,7 @@ jobs:
           path: artifacts/pkgs/incoming
 
       - name: Download macOS arm64 Onedir Archive
+        if: ${{ ! github.event.repository.fork }}
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-onedir-macos-arm64.tar.xz
@@ -2563,7 +2817,7 @@ jobs:
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-onedir
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
@@ -2603,11 +2857,10 @@ jobs:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Download Repository Artifact
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo
+          pattern: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-repo-*
+          merge-multiple: true
           path: repo/
 
       - name: Decompress Repository Artifacts
@@ -2740,16 +2993,22 @@ jobs:
       - debian-11-arm64
       - debian-12
       - debian-12-arm64
-      - fedora-39
+      - fedora-40
       - opensuse-15
       - photonos-4
       - photonos-4-arm64
+      - photonos-4-fips
+      - photonos-4-arm64-fips
       - photonos-5
       - photonos-5-arm64
+      - photonos-5-fips
+      - photonos-5-arm64-fips
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+      - ubuntu-2404
+      - ubuntu-2404-arm64
       - rockylinux-8-pkg-tests
       - rockylinux-8-arm64-pkg-tests
       - rockylinux-9-pkg-tests
@@ -2765,12 +3024,18 @@ jobs:
       - debian-12-arm64-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
+      - photonos-4-pkg-tests-fips
+      - photonos-4-arm64-pkg-tests-fips
       - photonos-5-pkg-tests
       - photonos-5-arm64-pkg-tests
+      - photonos-5-pkg-tests-fips
+      - photonos-5-arm64-pkg-tests-fips
       - ubuntu-2004-pkg-tests
       - ubuntu-2004-arm64-pkg-tests
       - ubuntu-2204-pkg-tests
       - ubuntu-2204-arm64-pkg-tests
+      - ubuntu-2404-pkg-tests
+      - ubuntu-2404-arm64-pkg-tests
       - macos-12-pkg-tests
       - macos-13-pkg-tests
       - macos-13-arm64-pkg-tests
@@ -2852,12 +3117,12 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: technote-space/workflow-conclusion-action@v3
+        uses: im-open/workflow-conclusion@v2
 
       - name: Set Pipeline Exit Status
         shell: bash
         run: |
-          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
             exit 1
           else
             exit 0

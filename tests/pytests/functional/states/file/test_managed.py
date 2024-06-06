@@ -1042,3 +1042,26 @@ def test_issue_60203(
     assert "Unable to manage file" in ret.comment
     assert "/files/test.tar.gz.sha256" in ret.comment
     assert "dontshowme" not in ret.comment
+
+
+def test_file_managed_remote_source_does_not_refetch_existing_file_with_correct_digest(
+    file, tmp_path, grail_scene33_file, grail_scene33_file_hash
+):
+    """
+    If an existing file is managed from a remote source and its source hash is
+    known beforehand, ensure that `file.managed` checks the local file's digest
+    and if it matches the expected one, does not download the file to the local
+    cache unnecessarily.
+    This is especially important when huge files are managed with `keep_source`
+    set to False.
+    Issue #64373
+    """
+    name = tmp_path / "scene33"
+    name.write_bytes(grail_scene33_file.read_bytes())
+    ret = file.managed(
+        str(name),
+        source="http://127.0.0.1:1337/does/not/exist",
+        source_hash=grail_scene33_file_hash,
+    )
+    assert ret.result is True
+    assert not ret.changes

@@ -47,8 +47,36 @@ env:
 
 jobs:
 
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci deps-matrix
+
+
   linux-dependencies:
     name: Linux
+    needs:
+      - generate-matrix
     runs-on:
       - self-hosted
       - linux
@@ -59,11 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: centos-7
-            arch: x86_64
-          - distro-slug: centos-7-arm64
-            arch: arm64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -163,16 +187,14 @@ jobs:
 
   macos-dependencies:
     name: MacOS
+    needs:
+      - generate-matrix
     runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: macos-12
-            arch: x86_64
-          - distro-slug: macos-13-arm64
-            arch: arm64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -250,6 +272,8 @@ jobs:
           path: nox.macos.${{ matrix.arch }}.tar.*
 
   windows-dependencies:
+    needs:
+      - generate-matrix
     name: Windows
     runs-on:
       - self-hosted
@@ -261,9 +285,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: windows-2022
-            arch: amd64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
     steps:
 
       - name: "Throttle Builds"
