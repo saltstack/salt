@@ -23,6 +23,7 @@ import distro
 import jinja2
 import looseversion
 import msgpack
+import networkx
 import packaging
 import tornado
 import yaml
@@ -280,6 +281,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "yaml",
         "tornado",
         "msgpack",
+        "networkx",
         "certifi",
         "singledispatch",
         "concurrent",
@@ -330,7 +332,7 @@ def get_ext_tops(config):
     """
     config = copy.deepcopy(config) or {}
     alternatives = {}
-    required = ["jinja2", "yaml", "tornado", "msgpack"]
+    required = ["jinja2", "yaml", "tornado", "msgpack", "networkx"]
     tops = []
     for ns, cfg in config.items():
         alternatives[ns] = cfg
@@ -429,6 +431,7 @@ def get_tops(extra_mods="", so_mods=""):
         yaml,
         tornado,
         msgpack,
+        networkx,
         certifi,
         singledispatch,
         concurrent,
@@ -1035,6 +1038,7 @@ def gen_min(
         "salt/utils/process.py",
         "salt/utils/jinja.py",
         "salt/utils/rsax931.py",
+        "salt/utils/requisite.py",
         "salt/utils/context.py",
         "salt/utils/minion.py",
         "salt/utils/error.py",

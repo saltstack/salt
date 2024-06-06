@@ -5,6 +5,8 @@ jmespath
 msgpack>=1.0.0
 PyYAML
 MarkupSafe
+# pin to a version available on all supported python versions so salt-ssh can run on older targets
+networkx
 requests>=2.25.1
 distro>=1.0.1
 psutil>=5.0.0
