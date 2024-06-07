@@ -1064,8 +1064,8 @@ def test_mod_aggregate(minion_opts):
             ]
 
             # Ensure that the require requisite from the
-            # figlet state doesn't find its way into this state
-            assert "require" not in low_ret
+            # figlet state finds its way into this state
+            assert "require" in low_ret
 
             # Ensure pkgs were aggregated
             assert low_ret["pkgs"] == ["figlet", "sl"]
