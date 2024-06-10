@@ -351,7 +351,7 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl restart {test_item}"
-        ret = salt_call_cli.run("--local", "-l", "TRACE", "cmd.run", test_cmd)
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
     time.sleep(10)  # allow some time for restart
