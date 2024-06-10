@@ -341,6 +341,16 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     if test_minion_user not in user_list:
         ret = salt_call_cli.run("--local", "user.add", f"{test_minion_user}")
 
+    ret = salt_call_cli.run(
+        "--local", "file.comment_line", "/etc/salt/master", "^user:"
+    )
+    assert ret.returncode == 0
+
+    ret = salt_call_cli.run(
+        "--local", "file.comment_line", "/etc/salt/minion", "^user:"
+    )
+    assert ret.returncode == 0
+
     test_string = f"\nuser: {test_master_user}\n"
     ret = salt_call_cli.run("--local", "file.append", "/etc/salt/master", test_string)
 
