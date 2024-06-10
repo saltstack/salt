@@ -682,8 +682,8 @@ def matrix(
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
             if distro_slug not in (
-                "centosstream-9",
-                "centosstream-9-arm64",
+                "rockylinux-9",
+                "rockylinux-9-arm64",
                 "photonos-5",
                 "photonos-5-arm64",
                 "ubuntu-22.04",
@@ -831,7 +831,7 @@ def pkg_matrix(
 
         if name == "amazonlinux":
             name = "amazon"
-        elif "centos" in name or name == "rockylinux":
+        elif name == "rockylinux":
             name = "redhat"
         elif "photon" in name:
             name = "photon"
@@ -967,8 +967,8 @@ def get_ci_deps_matrix(ctx: Context):
 
     _matrix = {
         "linux": [
-            {"distro-slug": "centos-7", "arch": "x86_64"},
-            {"distro-slug": "centos-7-arm64", "arch": "arm64"},
+            {"distro-slug": "rockylinux-9", "arch": "x86_64"},
+            {"distro-slug": "rockylinux-9-arm64", "arch": "arm64"},
         ],
         "macos": [
             {"distro-slug": "macos-12", "arch": "x86_64"},
@@ -1031,7 +1031,6 @@ def get_pkg_downloads_matrix(ctx: Context):
     rpm_slugs = (
         "rockylinux",
         "amazonlinux",
-        "centos",
         "fedora",
         "photon",
     )
