@@ -13,8 +13,9 @@ def test_salt_version(version, install_salt):
     """
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
+    stripped_version = version.split("+")[0]  # strip off any git version additions
     actual = ret.stdout.strip().split(" ")[:2]
-    expected = ["salt", version]
+    expected = ["salt", stripped_version]
     assert actual == expected
 
 
@@ -70,13 +71,14 @@ def test_compare_versions(version, binary, install_salt):
     Test compare versions
     """
     if binary in install_salt.binary_paths:
+        stripped_version = version.split("+")[0]  # strip off any git version additions
         ret = install_salt.proc.run(
             *install_salt.binary_paths[binary],
             "--version",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+        ret.stdout.matcher.fnmatch_lines([f"*{stripped_version}*"])
     else:
         if platform.is_windows():
             pytest.skip(f"Binary not available on windows: {binary}")
