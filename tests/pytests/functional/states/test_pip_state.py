@@ -106,6 +106,10 @@ def _skip_if_pep8_installed(modules, pkg_name):
 
 @pytest.mark.slow_test
 @pytest.mark.usefixtures("_skip_if_pep8_installed")
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_pip_installed_removed(states, pkg_name):
     """
     Tests installed and removed states

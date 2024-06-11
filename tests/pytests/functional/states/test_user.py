@@ -14,6 +14,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 
 try:
@@ -143,7 +144,7 @@ def test_user_present_nondefault(grains, modules, states, username, user_home):
     if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
         assert user_home.is_dir()
 
-    if grains["os_family"] in ("Suse",):
+    if grains["os_family"] in ("Suse",) and not grains.get("transactional", False):
         expected_group_name = "users"
     elif grains["os_family"] == "MacOS":
         expected_group_name = "staff"
@@ -386,6 +387,10 @@ def test_user_present_existing(states, username):
 
 
 @pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_user_present_change_groups(modules, states, username, group_1, group_2):
     ret = states.user.present(
         name=username,
@@ -410,6 +415,10 @@ def test_user_present_change_groups(modules, states, username, group_1, group_2)
 
 
 @pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_user_present_change_optional_groups(
     modules, states, username, group_1, group_2
 ):
