@@ -4,16 +4,20 @@ import pytest
 
 import salt.cache
 import salt.loader
+import salt.modules.mysql
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker", minversion="4.0.0")
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        not salt.modules.mysql.MySQLdb, reason="Missing python MySQLdb library"
+    ),
 ]
 
 
