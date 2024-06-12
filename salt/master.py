@@ -2554,3 +2554,6 @@ class ClearFuncs(TransportMethods):
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.channel.server.PubServerChannel.factory(opts)
             self.channels.append(chan)
+
+
+## DGM this change is here to enable a full build and test
