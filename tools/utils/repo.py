@@ -1,4 +1,3 @@
-# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
 import json
@@ -11,15 +10,19 @@ from ptscripts import Context
 
 import tools.utils
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 try:
     import boto3
-    from botocore.exceptions import ClientError
+    from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
+    logger.error(
+        "Please run 'python -m pip install -r requirements/static/ci/py{}.{}tools.txt'".format(
+            *sys.version_info
+        )
     )
     raise
 
@@ -39,6 +42,18 @@ def get_repo_json_file_contents(
     repo_path: pathlib.Path,
     repo_json_path: pathlib.Path,
 ) -> dict[str, Any]:
+    """
+    Retrieve the contents of a JSON file from an S3 bucket.
+
+    Parameters:
+        ctx (Context): The script context.
+        bucket_name (str): The name of the S3 bucket.
+        repo_path (pathlib.Path): The path to the repository.
+        repo_json_path (pathlib.Path): The path to the JSON file within the repository.
+
+    Returns:
+        dict[str, Any]: The contents of the JSON file as a dictionary.
+    """
     s3 = boto3.client("s3")
     repo_json: dict[str, Any] = {}
     try:
@@ -53,20 +68,28 @@ def get_repo_json_file_contents(
         with repo_json_path.open("wb") as wfh:
             with tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Downloading...", total=size)
-            s3.download_fileobj(
-                Bucket=bucket_name,
-                Key=str(repo_json_path.relative_to(repo_path)),
-                Fileobj=wfh,
-                Callback=UpdateProgress(progress, task),
-            )
+                s3.download_fileobj(
+                    Bucket=bucket_name,
+                    Key=str(repo_json_path.relative_to(repo_path)),
+                    Fileobj=wfh,
+                    Callback=UpdateProgress(progress, task),
+                )
         with repo_json_path.open() as rfh:
             repo_json = json.load(rfh)
     except ClientError as exc:
-        if "Error" not in exc.response:
+        error_code = exc.response.get("Error", {}).get("Code")
+        if error_code == "404":
+            ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
+        else:
+            logger.error(f"ClientError: {exc.response}")
             raise
-        if exc.response["Error"]["Code"] != "404":
-            raise
-        ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
+    except (NoCredentialsError, PartialCredentialsError) as exc:
+        logger.error(f"Credentials error: {exc}")
+        raise
+    except Exception as exc:
+        logger.error(f"An unexpected error occurred: {exc}")
+        raise
+
     if repo_json:
         ctx.print(repo_json, soft_wrap=True)
     return repo_json
@@ -80,7 +103,7 @@ def create_top_level_repo_path(
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
     nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
-):
+) -> pathlib.Path:
     create_repo_path = repo_path
     if nightly_build_from:
         create_repo_path = (
@@ -118,7 +141,7 @@ def create_full_repo_path(
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
     nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
-):
+) -> pathlib.Path:
     create_repo_path = create_top_level_repo_path(
         ctx,
         repo_path,
