@@ -2,8 +2,6 @@
 
 . /usr/share/debconf/confmodule
 
-echo "DGM salt-minion.postinst dollar $@"
-
 case "$1" in
   configure)
     db_get salt-minion/user

@@ -3,11 +3,12 @@ from pytestskipmarkers.utils import platform
 
 
 @pytest.mark.skip_on_windows(reason="Linux test only")
-def test_services(install_salt, salt_cli, salt_minion, salt_call_cli):
+def test_services(install_salt, salt_call_cli):
     """
     Check if Services are enabled/disabled
     """
-    install_salt.install()
+    if not install_salt.upgrade:
+        install_salt.install()
 
     services_disabled = []
     services_enabled = []

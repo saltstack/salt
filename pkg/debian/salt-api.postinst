@@ -2,8 +2,6 @@
 
 . /usr/share/debconf/confmodule
 
-echo "DGM salt-api.postinst dollar $@"
-
 case "$1" in
   configure)
     db_get salt-api/user

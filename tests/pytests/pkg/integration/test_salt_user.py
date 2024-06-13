@@ -9,15 +9,7 @@ import pytest
 from saltfactories.utils.tempfiles import temp_directory
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
-    pytest.mark.skip_on_darwin,
-    ## DGM     pytest.mark.skipif(
-    ## DGM         True,
-    ## DGM         reason=(
-    ## DGM             "Package permissions are getting reworked in "
-    ## DGM             "https://github.com/saltstack/salt/pull/66218"
-    ## DGM         ),
-    ## DGM     ),
+    pytest.mark.skip_unless_on_linux,
 ]
 
 

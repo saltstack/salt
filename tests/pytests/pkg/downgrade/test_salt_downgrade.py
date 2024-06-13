@@ -1,7 +1,5 @@
 import packaging.version
 import psutil
-
-## DGM import pytest
 from pytestskipmarkers.utils import platform
 
 
@@ -89,66 +87,3 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
             # test pip install after a downgrade
             use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
             assert "Authentication information could" in use_lib.stderr
-
-
-## DGM @pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")
-## DGM def test_salt_downgrade_master(install_salt):
-## DGM     """
-## DGM     Test an downgrade of Salt Master.
-## DGM     """
-## DGM     if not install_salt.downgrade:
-## DGM         pytest.skip("Not testing a downgrade, do not run")
-## DGM
-## DGM     is_downgrade_to_relenv = packaging.version.parse(
-## DGM         install_salt.prev_version
-## DGM     ) >= packaging.version.parse("3006.0")
-## DGM
-## DGM     if is_downgrade_to_relenv:
-## DGM         original_py_version = install_salt.package_python_version()
-## DGM
-## DGM     # Verify current install version is setup correctly and works
-## DGM     bin_file = "salt"
-## DGM     ret = install_salt.proc.run(bin_file, "--version")
-## DGM     assert ret.returncode == 0
-## DGM     assert packaging.version.parse(
-## DGM         ret.stdout.strip().split()[1]
-## DGM     ) == packaging.version.parse(install_salt.artifact_version)
-## DGM
-## DGM     # Verify there is a running master by getting its PID
-## DGM     salt_name = "salt"
-## DGM     process_name = "salt-master"
-## DGM
-## DGM     old_pid = []
-## DGM
-## DGM     # psutil process name only returning first part of the command '/opt/saltstack/'
-## DGM     # need to check all of command line for salt-minion
-## DGM     # ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-master EventPublisher']
-## DGM     # and psutil is only returning the salt-minion once
-## DGM     for proc in psutil.process_iter():
-## DGM         if salt_name in proc.name():
-## DGM             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-## DGM             if process_name in cmdl_strg:
-## DGM                 old_pid.append(proc.pid)
-## DGM
-## DGM     assert old_pid
-## DGM
-## DGM     # Downgrade Salt to the previous version and test
-## DGM     install_salt.install(downgrade=True)
-## DGM
-## DGM     # Verify there is a new running master by getting its PID and comparing it
-## DGM     # with the PID from before the upgrade
-## DGM     new_pid = []
-## DGM     for proc in psutil.process_iter():
-## DGM         if salt_name in proc.name():
-## DGM             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-## DGM             if process_name in cmdl_strg:
-## DGM                 new_pid.append(proc.pid)
-## DGM
-## DGM     assert new_pid
-## DGM     assert new_pid != old_pid
-## DGM
-## DGM     ret = install_salt.proc.run(bin_file, "--version")
-## DGM     assert ret.returncode == 0
-## DGM     assert packaging.version.parse(
-## DGM         ret.stdout.strip().split()[1]
-## DGM     ) < packaging.version.parse(install_salt.artifact_version)
