@@ -7,36 +7,12 @@ from pytestskipmarkers.utils import platform
 
 
 @pytest.mark.skip_on_windows
-def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
-    """
-    Test running test.versions_report on minion
-    """
-    # Make sure the minion is running
-    assert salt_minion.is_running()
-
-    # Make sure we can ping the minion ...
-    ret = salt_cli.run(
-        "--timeout=240", "test.ping", minion_tgt=salt_minion.id, _timeout=240
-    )
-    assert ret.returncode == 0
-    assert ret.data is True
-    ret = salt_cli.run(
-        "--hard-crash",
-        "--failhard",
-        "--timeout=240",
-        "test.versions_report",
-        minion_tgt=salt_minion.id,
-        _timeout=240,
-    )
-    ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
-
-
-@pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
     """
-    install_salt.install()
+    if install_salt.upgrade:
+        install_salt.install()
 
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
@@ -65,6 +41,31 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
+@pytest.mark.skip_on_windows
+def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
+    """
+    Test running test.versions_report on minion
+    """
+    # Make sure the minion is running
+    assert salt_minion.is_running()
+
+    # Make sure we can ping the minion ...
+    ret = salt_cli.run(
+        "--timeout=240", "test.ping", minion_tgt=salt_minion.id, _timeout=240
+    )
+    assert ret.returncode == 0
+    assert ret.data is True
+    ret = salt_cli.run(
+        "--hard-crash",
+        "--failhard",
+        "--timeout=240",
+        "test.versions_report",
+        minion_tgt=salt_minion.id,
+        _timeout=240,
+    )
+    ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
+
+
 @pytest.mark.parametrize(
     "binary", ["master", "cloud", "syndic", "minion", "call", "api"]
 )
@@ -73,7 +74,8 @@ def test_compare_versions(version, binary, install_salt):
     Test compare versions
     """
     if binary in install_salt.binary_paths:
-        install_salt.install()
+        if install_salt.upgrade:
+            install_salt.install()
 
         ret = install_salt.proc.run(
             *install_salt.binary_paths[binary],
