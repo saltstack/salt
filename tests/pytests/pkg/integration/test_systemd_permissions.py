@@ -34,6 +34,9 @@ def test_salt_systemd_disabled_preservation(
     """
     Test upgrade of Salt packages preserve disabled state of systemd
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
     salt_systemd_setup
@@ -66,6 +69,9 @@ def test_salt_systemd_enabled_preservation(
     """
     Test upgrade of Salt packages preserve enabled state of systemd
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
     salt_systemd_setup
@@ -91,6 +97,9 @@ def test_salt_systemd_inactive_preservation(
     """
     Test upgrade of Salt packages preserve inactive state of systemd
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
     salt_systemd_setup
@@ -123,6 +132,9 @@ def test_salt_systemd_active_preservation(
     """
     Test upgrade of Salt packages preserve active state of systemd
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
     salt_systemd_setup
@@ -146,6 +158,9 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     """
     Test upgrade of Salt packages preserve existing ownership
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     # setup systemd to enabled and active for Salt packages
     # pylint: disable=pointless-statement
     salt_systemd_setup
