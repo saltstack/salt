@@ -503,10 +503,15 @@ class CkMinions:
             log.error("Compound target that is neither string, list nor tuple")
             return {"minions": [], "missing": []}
 
-        if not minions:
-            minions = self._pki_minions()
+        # we wrap this in a dict so we can assign to it from within the eval at
+        # the end of this method
+        _deferred_minions_scope = {"minions": minions}
 
-        minions = set(minions)
+        def _deferred_minions():
+            if not _deferred_minions_scope["minions"]:
+                _deferred_minions_scope["minions"] = self._pki_minions()
+
+            return _deferred_minions_scope["minions"]
 
         log.debug("expr: %s, delimiter: %s, minions: %s", expr, delimiter, minions)
 
@@ -553,7 +558,7 @@ class CkMinions:
                             if not results[-1] in ("&", "|", "("):
                                 results.append("&")
                             results.append("(")
-                            results.append(str(set(minions)))
+                            results.append("set(all_minions())")
                             results.append("-")
                             unmatched.append("-")
                         elif word == "and":
@@ -583,7 +588,7 @@ class CkMinions:
                         # seq start with oper, fail
                         if word == "not":
                             results.append("(")
-                            results.append(str(set(minions)))
+                            results.append("set(all_minions())")
                             results.append("-")
                             unmatched.append("-")
                         elif word == "(":
@@ -631,7 +636,6 @@ class CkMinions:
                         unmatched.pop()
 
                 else:
-                    # The match is not explicitly defined, evaluate as a glob
                     _results = self._check_glob_minions(word, True, minions=minions)
                     results.append(str(set(_results["minions"])))
                     if unmatched and unmatched[-1] == "-":
@@ -644,7 +648,15 @@ class CkMinions:
             results = " ".join(results)
             log.debug("Evaluating final compound matching expr: %s", results)
             try:
-                minions = list(eval(results))  # pylint: disable=W0123
+                minions = list(
+                    eval(  # pylint: disable=eval-used
+                        results,
+                        {
+                            "all_minions": _deferred_minions,
+                            "_deferred_minions_scope": _deferred_minions_scope,
+                        },
+                    )
+                )  # pylint: disable=W0123
                 return {"minions": minions, "missing": missing}
             except Exception:  # pylint: disable=broad-except
                 log.error("Invalid compound target: %s", expr)
@@ -722,7 +734,6 @@ class CkMinions:
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         """
-
         try:
             if expr is None:
                 expr = ""
