@@ -2,11 +2,6 @@
 
 . /usr/share/debconf/confmodule
 
-## TBD DGM need to allow for salt-minion having been installed previously and need to allow for it's ownership
-
-echo "DGM salt-master.preinst dollar $@"
-
-
 case "$1" in
   install)
     [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
