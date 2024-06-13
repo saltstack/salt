@@ -20,9 +20,8 @@ try:
     from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 except ImportError:
     log.error(
-        "Please run 'python -m pip install -r requirements/static/ci/py{}.{}tools.txt'".format(
-            *sys.version_info
-        )
+        "Please run 'python -m pip install -r requirements/static/ci/py%s.%stools.txt'",
+        *sys.version_info
     )
     raise
 
