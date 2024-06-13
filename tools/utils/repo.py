@@ -13,13 +13,13 @@ import tools.utils
 import logging
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 try:
     import boto3
     from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 except ImportError:
-    logger.error(
+    log.error(
         "Please run 'python -m pip install -r requirements/static/ci/py{}.{}tools.txt'".format(
             *sys.version_info
         )
@@ -81,13 +81,13 @@ def get_repo_json_file_contents(
         if error_code == "404":
             ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
         else:
-            logger.error(f"ClientError: {exc.response}")
+            log.error(f"ClientError: {exc.response}")
             raise
     except (NoCredentialsError, PartialCredentialsError) as exc:
-        logger.error(f"Credentials error: {exc}")
+        log.error(f"Credentials error: {exc}")
         raise
     except Exception as exc:
-        logger.error(f"An unexpected error occurred: {exc}")
+        log.error(f"An unexpected error occurred: {exc}")
         raise
 
     if repo_json:
