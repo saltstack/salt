@@ -11,8 +11,8 @@ def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
     """
-    if install_salt.upgrade:
-        install_salt.install()
+    ## DGM if install_salt.upgrade:
+    ## DGM     install_salt.install()
 
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
@@ -74,8 +74,8 @@ def test_compare_versions(version, binary, install_salt):
     Test compare versions
     """
     if binary in install_salt.binary_paths:
-        if install_salt.upgrade:
-            install_salt.install()
+        ## DGM if install_salt.upgrade:
+        ## DGM     install_salt.install()
 
         ret = install_salt.proc.run(
             *install_salt.binary_paths[binary],
