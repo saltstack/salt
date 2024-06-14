@@ -1005,14 +1005,19 @@ class SaltPkgInstall:
         if platform.is_windows():
             self.update_process_path()
 
-        if not self.no_install:
-            if self.upgrade:
-                self.install_previous()
-            else:
-                # assume downgrade, since no_install only used in these two cases
-                self.install()
-        else:
-            self.install()
+        ## DGM if not self.no_install:
+        ## DGM     if self.upgrade:
+        ## DGM         self.install_previous()
+        ## DGM     else:
+        ## DGM         # assume downgrade, since no_install only used in these two cases
+        ## DGM         self.install()
+        ## DGM else:
+        ## DGM     self.install()
+
+        # DGM Hate the use of negative flags
+        # if flag set, use previous version of Salt.
+        if self.no_install:
+            self.install_previous()
         return self
 
     def __exit__(self, *_):

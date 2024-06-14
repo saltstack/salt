@@ -225,7 +225,6 @@ def install_salt(request, salt_factories_root_dir):
         downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
-        ## DGM classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
         use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
