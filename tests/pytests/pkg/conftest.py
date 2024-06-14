@@ -91,12 +91,6 @@ def pytest_addoption(parser):
         help="Do not uninstall salt packages after test run is complete",
     )
     test_selection_group.addoption(
-        "--classic",
-        default=False,
-        action="store_true",
-        help="Test an upgrade from the classic packages.",
-    )
-    test_selection_group.addoption(
         "--prev-version",
         action="store",
         help="Test an upgrade from the version specified.",
@@ -231,7 +225,7 @@ def install_salt(request, salt_factories_root_dir):
         downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
-        classic=request.config.getoption("--classic"),
+        ## DGM classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
         use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
