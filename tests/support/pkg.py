@@ -1009,7 +1009,10 @@ class SaltPkgInstall:
             if self.upgrade:
                 self.install_previous()
             else:
+                # assume downgrade, since no_install only used in these two cases
                 self.install()
+        else:
+            self.install()
         return self
 
     def __exit__(self, *_):
