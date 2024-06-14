@@ -967,8 +967,8 @@ def get_ci_deps_matrix(ctx: Context):
 
     _matrix = {
         "linux": [
-            {"distro-slug": "rockylinux-9", "arch": "x86_64"},
-            {"distro-slug": "rockylinux-9-arm64", "arch": "arm64"},
+            {"distro-slug": "amazonlinux-2", "arch": "x86_64"},
+            {"distro-slug": "amazonlinux-2-arm64", "arch": "arm64"},
         ],
         "macos": [
             {"distro-slug": "macos-12", "arch": "x86_64"},
