@@ -109,6 +109,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__id__",
         "__sls_included_from__",
         "__orchestration_jid__",
+        "__job_metadata__",
         "__pub_user",
         "__pub_arg",
         "__pub_jid",
@@ -1700,11 +1701,12 @@ class State:
         )
         return chunks
 
-    def compile_high_data(self, high, orchestration_jid=None):
+    def compile_high_data(self, high, orchestration_jid=None, metadata=None):
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
         """
+        log.warning("STATE.COMPH: %s %s", high, metadata)
         chunks = []
         for name, body in high.items():
             if name.startswith("__"):
@@ -1717,6 +1719,8 @@ class State:
                 chunk = {"state": state, "name": name}
                 if orchestration_jid is not None:
                     chunk["__orchestration_jid__"] = orchestration_jid
+                    if metadata is not None:
+                        chunk["__job_metadata__"] = metadata
                 if "__sls__" in body:
                     chunk["__sls__"] = body["__sls__"]
                 if "__env__" in body:
@@ -2293,6 +2297,7 @@ class State:
         Call a state directly with the low data structure, verify data
         before processing.
         """
+        log.warning("STATE.CALL: %s", low)
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (
             datetime.datetime.utcnow() - datetime.datetime.now()
@@ -2404,6 +2409,8 @@ class State:
 
             if "__orchestration_jid__" in low:
                 inject_globals["__orchestration_jid__"] = low["__orchestration_jid__"]
+                if "__job_metadata__" in low:
+                    inject_globals["__job_metadata__"] = low["__job_metadata__"]
 
             if "result" not in ret or ret["result"] is False:
                 self.states.inject_globals = inject_globals
@@ -3121,6 +3128,7 @@ class State:
         Check if a chunk has any requires, execute the requires and then
         the chunk
         """
+        log.warning("STATE.CHUNK: %s", low)
         low = self._mod_aggregate(low, running, chunks)
         self._mod_init(low)
         tag = _gen_tag(low)
@@ -3560,10 +3568,11 @@ class State:
         running.update(errors)
         return running
 
-    def call_high(self, high, orchestration_jid=None):
+    def call_high(self, high, orchestration_jid=None, metadata=None):
         """
         Process a high data call and ensure the defined states.
         """
+        log.warning("CALLHIGH: %s %s", high, metadata)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -3578,7 +3587,7 @@ class State:
         if errors:
             return errors
         # Compile and verify the raw chunks
-        chunks = self.compile_high_data(high, orchestration_jid)
+        chunks = self.compile_high_data(high, orchestration_jid, metadata=metadata)
 
         # If there are extensions in the highstate, process them and update
         # the low data chunks
@@ -4828,10 +4837,12 @@ class BaseHighState:
         force=False,
         whitelist=None,
         orchestration_jid=None,
+        metadata=None,  # TODO
     ):
         """
         Run the sequence to execute the salt highstate for this minion
         """
+        log.warning("CALLHIGHST")
         # Check that top file exists
         tag_name = "no_|-states_|-states_|-None"
         ret = {
@@ -4849,7 +4860,9 @@ class BaseHighState:
             if os.path.isfile(cfn):
                 with salt.utils.files.fopen(cfn, "rb") as fp_:
                     high = salt.payload.load(fp_)
-                    return self.state.call_high(high, orchestration_jid)
+                    return self.state.call_high(
+                        high, orchestration_jid, metadata=metadata
+                    )  # TODO
         # File exists so continue
         err = []
         try:
@@ -4908,7 +4921,7 @@ class BaseHighState:
             except OSError:
                 log.error('Unable to write to "state.highstate" cache file %s', cfn)
 
-        return self.state.call_high(high, orchestration_jid)
+        return self.state.call_high(high, orchestration_jid, metadata=metadata)  # TODO
 
     def compile_highstate(self, context=None):
         """
