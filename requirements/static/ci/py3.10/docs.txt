@@ -162,7 +162,7 @@ typing-extensions==4.8.0
     #   pydantic-core
 uc-micro-py==1.0.2
     # via linkify-it-py
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
