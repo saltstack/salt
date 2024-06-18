@@ -119,6 +119,9 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     """
     Test an upgrade of Salt, Minion and Master
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     if install_salt.relenv:
         original_py_version = install_salt.package_python_version()
 
