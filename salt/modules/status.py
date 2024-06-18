@@ -1058,7 +1058,7 @@ def diskusage(*args):
                 total = fsstats.f_blocks * blksz
                 ret[path] = {"available": available, "total": total}
             except OSError as exc:
-                log.warning(f"Cannot get stats from '%s': %s", path, exc)
+                log.warning("Cannot get stats from '%s': %s", path, exc)
     return ret
 
 
