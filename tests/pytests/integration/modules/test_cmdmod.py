@@ -74,7 +74,9 @@ def test_blacklist_glob(salt_call_cli):
     )
 
     assert (
-        ret.stderr.rstrip()
+        ret.stderr.rstrip().split("\n")[
+            -1
+        ]  # Taking only the last line in case of DeprecationWarnings
         == "Error running 'cmd.run': The shell command \"bad_command --foo\" is not permitted"
     )
 
