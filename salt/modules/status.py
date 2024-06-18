@@ -1059,6 +1059,7 @@ def diskusage(*args):
                 ret[path] = {"available": available, "total": total}
             except OSError as exc:
                 log.warning("Cannot get stats from '%s': %s", path, exc)
+                ret[path] = {"available": None, "total": None}
     return ret
 
 
