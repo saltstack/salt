@@ -11,12 +11,20 @@ def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
     """
-    if install_salt.upgrade:
-        install_salt.install()
-
+    actual = []
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
-    actual = ret.stdout.strip().split(" ")[:2]
+    actual_ver = ret.stdout.strip().split(" ")[:2]
+    actual_ver_salt = actual_ver[1]  # get salt version
+    if "+" in actual_ver_salt:
+        actual_ver_salt_stripped = actual_ver_salt.split("+")[
+            0
+        ]  # strip any git versioning
+        actual.append(actual_ver[0])
+        actual.append(actual_ver_salt_stripped)
+    else:
+        pytest.skip("Not testing a non-release build artifact, do not run")
+
     expected = ["salt", version]
     assert actual == expected
 
@@ -28,6 +36,7 @@ def test_salt_versions_report_master(install_salt):
     """
     if not install_salt.relenv and not install_salt.classic:
         pytest.skip("Unable to get the python version dynamically from tiamat builds")
+
     test_bin = os.path.join(*install_salt.binary_paths["master"])
     python_bin = os.path.join(*install_salt.binary_paths["python"])
     ret = install_salt.proc.run(test_bin, "--versions-report")

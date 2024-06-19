@@ -316,3 +316,28 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
                 assert test_group == f"{test_minion_user}"
             else:
                 assert test_group == f"{test_master_user}"
+
+    # restore to defaults to ensure further tests run fine
+    ret = salt_call_cli.run(
+        "--local", "file.comment_line", "/etc/salt/master", "^user:"
+    )
+    assert ret.returncode == 0
+
+    ret = salt_call_cli.run(
+        "--local", "file.comment_line", "/etc/salt/minion", "^user:"
+    )
+    assert ret.returncode == 0
+
+    test_string = "\nuser: salt\n"
+    ret = salt_call_cli.run("--local", "file.append", "/etc/salt/master", test_string)
+
+    test_string = "\nuser: root\n"
+    ret = salt_call_cli.run("--local", "file.append", "/etc/salt/minion", test_string)
+
+    # restart and check ownership is correct
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+
+    time.sleep(10)  # allow some time for restart
