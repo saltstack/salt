@@ -1,5 +1,6 @@
 import subprocess
 
+import packaging
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -24,6 +25,17 @@ def provides_arch():
 
 
 @pytest.fixture
+def rpm_version():
+    proc = subprocess.run(["rpm", "--version"], capture_output=True, check=True)
+    return packaging.version.Version(proc.stdout.decode().rsplit(" ", 1)[-1])
+
+
+@pytest.fixture
+def required_version():
+    return packaging.version.Version("4.12")
+
+
+@pytest.fixture
 def artifact_version(install_salt):
     return install_salt.artifact_version
 
@@ -35,7 +47,14 @@ def package(artifact_version, pkg_arch):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_provides(install_salt, package, artifact_version, provides_arch):
+def test_provides(
+    install_salt,
+    package,
+    artifact_version,
+    provides_arch,
+    rpm_version,
+    required_version,
+):
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
@@ -46,6 +65,8 @@ def test_provides(install_salt, package, artifact_version, provides_arch):
         "photon",
     ):
         pytest.skip("Only tests rpm packages")
+    if rpm_version < required_version:
+        pytest.skip(f"Test requires rpm version {required_version}")
 
     assert package.exists()
     valid_provides = [
@@ -66,7 +87,9 @@ def test_provides(install_salt, package, artifact_version, provides_arch):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
-def test_requires(install_salt, package, artifact_version):
+def test_requires(
+    install_salt, package, artifact_version, rpm_version, required_version
+):
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
@@ -77,6 +100,8 @@ def test_requires(install_salt, package, artifact_version):
         "photon",
     ):
         pytest.skip("Only tests rpm packages")
+    if rpm_version < required_version:
+        pytest.skip(f"Test requires rpm version {required_version}")
     assert package.exists()
     valid_requires = [
         "manual: /bin/sh",
