@@ -8,16 +8,7 @@ import psutil
 import pytest
 from saltfactories.utils.tempfiles import temp_directory
 
-pytestmark = [
-    pytest.mark.skip_unless_on_linux,
-    pytest.mark.skipif(
-        True,
-        reason=(
-            "Package permissions are getting reworked in "
-            "https://github.com/saltstack/salt/pull/66218"
-        ),
-    ),
-]
+pytestmark = [pytest.mark.skip_unless_on_linux]
 
 
 @pytest.fixture
