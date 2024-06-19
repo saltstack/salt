@@ -14,16 +14,21 @@ def test_salt_version(version, install_salt):
     actual = []
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
-    actual_ver = ret.stdout.strip().split(" ")[:2]
-    actual_ver_salt = actual_ver[1]  # get salt version
-    if "+" in actual_ver_salt:
-        actual_ver_salt_stripped = actual_ver_salt.split("+")[
-            0
-        ]  # strip any git versioning
-        actual.append(actual_ver[0])
-        actual.append(actual_ver_salt_stripped)
+    if "+" in version:
+        # testing a non-release build artifact version
+        actual = ret.stdout.strip().split(" ")[:2]
     else:
-        pytest.skip("Not testing a non-release build artifact, do not run")
+        # testing against release build version, for example: downgrade
+        actual_ver = ret.stdout.strip().split(" ")[:2]
+        actual_ver_salt = actual_ver[1]  # get salt version
+        if "+" in actual_ver_salt:
+            actual_ver_salt_stripped = actual_ver_salt.split("+")[
+                0
+            ]  # strip any git versioning
+            actual.append(actual_ver[0])
+            actual.append(actual_ver_salt_stripped)
+        else:
+            pytest.skip("Not testing a non-release build artifact, do not run")
 
     expected = ["salt", version]
     assert actual == expected
