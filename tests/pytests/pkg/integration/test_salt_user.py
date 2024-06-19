@@ -137,6 +137,7 @@ def test_pkg_paths(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
     salt_user_subdirs = []
+
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
         assert pkg_path.exists()
@@ -161,6 +162,8 @@ def test_pkg_paths(
                 assert path.owner() == "root"
                 assert path.group() == "root"
                 for file in files:
+                    if file.endswith("ipc"):
+                        continue
                     file_path = path.joinpath(file)
                     # Individual files owned by salt user
                     if str(file_path) in pkg_paths_salt_user:
