@@ -77,7 +77,9 @@ def setup_teardown_vars(file, service, system):
         _machine_info = False
 
     try:
-        _systemd_timesyncd_available_ = service.available("systemd-timesyncd")
+        _systemd_timesyncd_available_ = service.available(
+            "systemd-timesyncd"
+        ) and not service.masked("systemd-timesyncd")
         if _systemd_timesyncd_available_:
             res = service.stop("systemd-timesyncd")
             assert res
