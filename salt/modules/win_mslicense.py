@@ -17,13 +17,13 @@ def installed(product_key: str):
     """
     Check to see if the product key is already installed.
 
-    Note: This is not 100% accurate as we can only see the last 5 digits of the license.
+    Note: This is not 100% accurate as we can only see the last 5 digits of the mslicense.
 
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.installed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.installed ZZZZZ
+        salt '*' mslicense.installed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.installed ZZZZZ
     """
 
     cmd = "Get-CimInstance -Query 'SELECT PartialProductKey FROM SoftwareLicensingProduct WHERE PartialProductKey = \"{0}\"'".format(
@@ -52,7 +52,7 @@ def install(product_key: str):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+        salt '*' mslicense.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     """
 
     cmd = "Invoke-CimMethod -Query 'Select * From SoftwareLicensingService' -MethodName InstallProductKey -Arguments @{{ProductKey='{0}'}}".format(
@@ -82,9 +82,9 @@ def uninstall(key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.uninstall
-        salt '*' license.uninstall XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.uninstall ZZZZZ
+        salt '*' mslicense.uninstall
+        salt '*' mslicense.uninstall XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.uninstall ZZZZZ
     """
 
     cmd=""
@@ -129,9 +129,9 @@ def install_kms_host(host: str, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.install_kms_host kms.example.com
-        salt '*' license.install_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.install_kms_host kms.example.com ZZZZZ
+        salt '*' mslicense.install_kms_host kms.example.com
+        salt '*' mslicense.install_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.install_kms_host kms.example.com ZZZZZ
     """
 
     cmd = ""
@@ -176,9 +176,9 @@ def install_kms_port(port: int, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.install_kms_port 1688
-        salt '*' license.install_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.install_kms_port 1688 ZZZZZ
+        salt '*' mslicense.install_kms_port 1688
+        salt '*' mslicense.install_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.install_kms_port 1688 ZZZZZ
     """
 
     cmd = ""
@@ -215,9 +215,9 @@ def uninstall_kms_host(key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.uninstall_kms_host
-        salt '*' license.uninstall_kms_host XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.uninstall_kms_host ZZZZZ
+        salt '*' mslicense.uninstall_kms_host
+        salt '*' mslicense.uninstall_kms_host XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.uninstall_kms_host ZZZZZ
     """
 
     cmd = ""
@@ -252,9 +252,9 @@ def uninstall_kms_port(key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.uninstall_kms_port
-        salt '*' license.uninstall_kms_port XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.uninstall_kms_port ZZZZZ
+        salt '*' mslicense.uninstall_kms_port
+        salt '*' mslicense.uninstall_kms_port XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.uninstall_kms_port ZZZZZ
     """
 
     cmd = ""
@@ -286,9 +286,9 @@ def installed_kms_host(host: str, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.installed_kms_host kms.example.com
-        salt '*' license.installed_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.installed_kms_host kms.example.com ZZZZZ
+        salt '*' mslicense.installed_kms_host kms.example.com
+        salt '*' mslicense.installed_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.installed_kms_host kms.example.com ZZZZZ
     """
 
     cmd = ""
@@ -327,9 +327,9 @@ def installed_kms_port(port: int, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.installed_kms_port 1688
-        salt '*' license.installed_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.installed_kms_port 1688 ZZZZZ
+        salt '*' mslicense.installed_kms_port 1688
+        salt '*' mslicense.installed_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.installed_kms_port 1688 ZZZZZ
     """
 
     cmd = ""
@@ -366,8 +366,8 @@ def licensed(key: str):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.licensed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.licensed ZZZZZ
+        salt '*' mslicense.licensed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.licensed ZZZZZ
     """
 
     cmd = "Get-CimInstance -Query 'SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'".format(
@@ -398,8 +398,8 @@ def activate(key: str):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.activate XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.activate ZZZZZ
+        salt '*' mslicense.activate XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.activate ZZZZZ
     """
 
     cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' -MethodName Activate".format(
@@ -433,9 +433,9 @@ def info(key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' license.info
-        salt '*' license.info XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' license.info ZZZZZ
+        salt '*' mslicense.info
+        salt '*' mslicense.info XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.info ZZZZZ
     """
 
     cmd = ""
