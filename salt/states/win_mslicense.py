@@ -71,7 +71,13 @@ def present(name: str, kms_host="", kms_port=0, activate=False):
             "old": info[1][0]["PartialProductKey"],
             "new": "XXXXX-XXXXX-XXXXX-XXXXX-{0}".format(name[-5:]),
         }
+    if kms_host!="" or kms_port!=0 or activate:
+        info = __salt__["mslicense.info"](name)
+        if info[0] == False:
+            log.error("error occurred while collecting data", info[1])
+            return (False, info[1])
 
+    # recheck license info
     if kms_host != "" and kms_host != info[1][0]["KeyManagementServiceMachine"]:
 
         install = __salt__["mslicense.install_kms_host"](kms_host, name)
@@ -112,8 +118,7 @@ def present(name: str, kms_host="", kms_port=0, activate=False):
             "old": info[1][0]["KeyManagementServicePort"],
             "new": kms_port,
         }
-
-    if activate and info[0][1]["LicenseStatus"] != 1:
+    if activate and info[1][0]["LicenseStatus"] != 1:
         install = __salt__["mslicense.activate"](name)
         if install[0] != True:
             log.error("error when product activate", install[1])
