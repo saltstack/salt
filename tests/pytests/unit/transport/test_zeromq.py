@@ -9,6 +9,7 @@ import uuid
 
 import msgpack
 import pytest
+import tornado.gen
 import zmq.eventloop.future
 
 import salt.config
@@ -357,14 +358,14 @@ def run_loop_in_thread(loop, evt):
     """
     loop.make_current()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def stopper():
-        yield salt.ext.tornado.gen.sleep(0.1)
+        yield tornado.gen.sleep(0.1)
         while True:
             if not evt.is_set():
                 loop.stop()
                 break
-            yield salt.ext.tornado.gen.sleep(0.3)
+            yield tornado.gen.sleep(0.3)
 
     loop.add_callback(evt.set)
     loop.add_callback(stopper)
@@ -396,7 +397,7 @@ class MockSaltMinionMaster:
         self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
         self.server_channel.pre_fork(self.process_manager)
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         self.evt = threading.Event()
         self.server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.server_thread = threading.Thread(
@@ -439,13 +440,13 @@ class MockSaltMinionMaster:
 
     # pylint: enable=W1701
     @classmethod
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         """
         TODO: something besides echo
         """
         cls.mock._handle_payload_hook()
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
+        raise tornado.gen.Return((payload, {"fun": "send_clear"}))
 
 
 @pytest.mark.parametrize("message", ["", [], ()])
@@ -475,7 +476,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
-            _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            _mock.side_effect = tornado.gen.Return(({}, {"fun": "madeup-fun"}))
             ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Server-side exception handling payload"
 
@@ -498,7 +499,7 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     transport = salt.transport.zeromq.PublishClient(opts, ioloop)
     with transport:
         patch_socket = MagicMock(return_value=True)
@@ -540,7 +541,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
@@ -587,7 +588,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
@@ -602,7 +603,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
 def test_req_server_chan_encrypt_v2(
     pki_dir, encryption_algorithm, signing_algorithm, master_opts
 ):
-    loop = salt.ext.tornado.ioloop.IOLoop.current()
+    loop = tornado.ioloop.IOLoop.current()
     master_opts.update(
         {
             "worker_threads": 1,
@@ -651,7 +652,7 @@ def test_req_server_chan_encrypt_v2(
 
 
 def test_req_server_chan_encrypt_v1(pki_dir, encryption_algorithm, master_opts):
-    loop = salt.ext.tornado.ioloop.IOLoop.current()
+    loop = tornado.ioloop.IOLoop.current()
     master_opts.update(
         {
             "worker_threads": 1,
@@ -767,7 +768,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
 
     print(minion_opts["encryption_algorithm"])
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
@@ -780,7 +781,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
             encryption_algorithm=minion_opts["encryption_algorithm"],
             signing_algorithm=minion_opts["signing_algorithm"],
         )
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -853,10 +854,10 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
         signing_algorithm=minion_opts["signing_algorithm"],
     )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -920,7 +921,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
     client.auth.crypticle.loads = auth.crypticle.loads
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
@@ -944,7 +945,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
         data["pillar"] = {"pillar1": "bar"}
         signed_msg["data"] = salt.payload.dumps(data)
         ret[dictkey] = pcrypt.dumps(signed_msg)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -1008,7 +1009,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     client.auth.crypticle.loads = auth.crypticle.loads
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
@@ -1035,7 +1036,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         ret[dictkey] = pcrypt.dumps(signed_msg)
         key = salt.utils.stringutils.to_bytes(key)
         ret["key"] = pub.encrypt(key, minion_opts["encryption_algorithm"])
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
