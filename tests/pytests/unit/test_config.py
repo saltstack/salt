@@ -5,9 +5,10 @@ tests.pytests.unit.test_config
 Unit tests for salt's config modulet
 """
 
-import sys
+import pathlib
 
 import salt.config
+import salt.syspaths
 
 
 def test_call_id_function(tmp_path):
@@ -29,7 +30,8 @@ def test_prepend_root_dir(tmp_path):
     root = tmp_path / "root"
     opts = {
         "root_dir": root,
-        "foo": "c:\\var\\foo" if sys.platform == "win32" else "/var/foo",
+        "foo": str(pathlib.Path(salt.syspaths.ROOT_DIR) / "var" / "foo"),
     }
     salt.config.prepend_root_dir(opts, ["foo"])
+    print(f"after {opts['foo']}")
     assert opts["foo"] == str(root / "var" / "foo")

@@ -27,7 +27,7 @@ def test_minion_config_type_check(caplog):
         os.remove(path)
 
 
-def test_cloud_config_relative_logfile(tmp_path):
+def test_cloud_config_relative_log_file(tmp_path):
     root_path = tmp_path
     config_path = tmp_path / "conf"
     config_path.mkdir()
@@ -38,3 +38,16 @@ def test_cloud_config_relative_logfile(tmp_path):
     master_config.write_text(f"root_dir: {root_path}")
     opts = salt.config.cloud_config(cloud_config)
     assert opts["log_file"] == str(root_path / "var" / "log" / "salt" / "cloud")
+
+
+def test_cloud_config_relative_cachedir(tmp_path):
+    root_path = tmp_path
+    config_path = tmp_path / "conf"
+    config_path.mkdir()
+    cloud_config = config_path / "cloud"
+    cloud_config.write_text("")
+    master_config = config_path / "master"
+    master_config = config_path / "master"
+    master_config.write_text(f"root_dir: {root_path}")
+    opts = salt.config.cloud_config(cloud_config)
+    assert opts["cachedir"] == str(root_path / "var" / "cache" / "salt" / "cloud")
