@@ -79,6 +79,7 @@ def test_gen_keys_with_passphrase(tmp_path):
         chmod=MagicMock(),
         access=MagicMock(return_value=True),
     ):
+        salt.crypt.gen_keys(key_path, "keyname", 2048)
         with patch("salt.utils.files.fopen", mock_open()) as m_open, patch(
             "os.path.isfile", return_value=True
         ):
