@@ -155,7 +155,8 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
 
 def test_pwdata_decrypt():
     key_string = dedent(
-        """-----BEGIN RSA PRIVATE KEY-----
+        """
+        -----BEGIN RSA PRIVATE KEY-----
         MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
         Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
         ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
