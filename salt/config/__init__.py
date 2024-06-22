@@ -2765,7 +2765,7 @@ def cloud_config(
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
     if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
-        prepend_root_dirs.append(opts["log_file"])
+        prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
     salt.features.setup_features(opts)
