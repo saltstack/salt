@@ -2215,6 +2215,13 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     return configuration
 
 
+def should_prepend_root_dir(key, opts):
+    return (
+        key in opts
+        and urllib.parse.urlparse(os.path.splitdrive(opts[key])[1]).scheme == ""
+    )
+
+
 def prepend_root_dir(opts, path_options):
     """
     Prepends the options that represent filesystem paths with value of the
@@ -2764,7 +2771,7 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
+    if should_prepend_root_dir("log_file", opts):
         prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
