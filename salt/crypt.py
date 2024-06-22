@@ -426,18 +426,6 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     return True
 
 
-def private_encrypt(key, message):
-    """
-    Generate an M2Crypto-compatible signature
-
-    :param Crypto.PublicKey.RSA._RSAobj key: The RSA key object
-    :param str message: The message to sign
-    :rtype: str
-    :return: The signature, or an empty string if the signature operation failed
-    """
-    return key.encrypt(message)
-
-
 def pwdata_decrypt(rsa_key, pwdata):
     key = serialization.load_pem_private_key(rsa_key.encode(), password=None)
     password = key.decrypt(
@@ -1110,7 +1098,7 @@ class AsyncAuth:
         :return: Encrypted token
         :rtype: str
         """
-        return private_encrypt(self.get_keys(), clear_tok)
+        return self.get_keys().encrypt(clear_tok)
 
     def minion_sign_in_payload(self):
         """

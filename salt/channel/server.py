@@ -733,7 +733,7 @@ class ReqServerChannel:
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
-        ret["sig"] = salt.crypt.private_encrypt(self.master_key.key, digest)
+        ret["sig"] = self.master_key.key.encrypt(digest)
         eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
@@ -990,9 +990,7 @@ class MasterPubServerChannel:
                 )
                 data["peers"][peer] = {
                     "aes": pub.encrypt(aes),
-                    "sig": salt.crypt.private_encrypt(
-                        self.master_key.master_key, digest
-                    ),
+                    "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
                 log.warning("Peer key missing %r", peer_pub)
