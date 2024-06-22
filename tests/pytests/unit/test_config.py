@@ -33,5 +33,4 @@ def test_prepend_root_dir(tmp_path):
         "foo": str(pathlib.Path(salt.syspaths.ROOT_DIR) / "var" / "foo"),
     }
     salt.config.prepend_root_dir(opts, ["foo"])
-    print(f"after {opts['foo']}")
     assert opts["foo"] == str(root / "var" / "foo")
