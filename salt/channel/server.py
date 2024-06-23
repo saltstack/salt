@@ -1085,7 +1085,7 @@ class MasterPubServerChannel:
                 peer = data["peer_id"]
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
-                key_str = self.master_key.master_private_decrypt(aes)
+                key_str = self.master_key.master_key.decrypt(aes)
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )
