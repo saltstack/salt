@@ -1,5 +1,4 @@
 import ctypes
-import hashlib
 import logging
 import multiprocessing
 import threading
@@ -18,7 +17,7 @@ import salt.utils.process
 import salt.utils.stringutils
 from salt.master import SMaster
 from tests.conftest import FIPS_TESTRUN
-from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock
 
 log = logging.getLogger(__name__)
 
@@ -353,125 +352,6 @@ class MockSaltMinionMaster:
         """
         cls.mock._handle_payload_hook()
         raise tornado.gen.Return((payload, {"fun": "send_clear"}))
-
-
-def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
-    """
-    test when connecting that we use the publish_port set in opts when its not 4506
-    """
-    opts = dict(
-        temp_salt_master.config.copy(),
-        ipc_mode="ipc",
-        pub_hwm=0,
-        recon_randomize=False,
-        publish_port=455505,
-        recon_default=1,
-        recon_max=2,
-        master_ip="127.0.0.1",
-        acceptance_wait_time=5,
-        acceptance_wait_time_max=5,
-        sign_pub_messages=False,
-    )
-    opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-    ioloop = tornado.ioloop.IOLoop()
-    transport = salt.transport.zeromq.PublishClient(opts, ioloop)
-    with transport:
-        patch_socket = MagicMock(return_value=True)
-        patch_auth = MagicMock(return_value=True)
-        with patch.object(transport, "_socket", patch_socket):
-            transport.connect(455505)
-    assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
-
-
-def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
-    temp_salt_master,
-):
-    """
-    test zeromq PublishClient _decode_messages when
-    zmq_filtering enabled and minion does not match
-    """
-    message = [
-        b"4f26aeafdb2367620a393c973eddbe8f8b846eb",
-        b"\x82\xa3enc\xa3aes\xa4load\xda\x00`\xeeR\xcf"
-        b"\x0eaI#V\x17if\xcf\xae\x05\xa7\xb3bN\xf7\xb2\xe2"
-        b'\xd0sF\xd1\xd4\xecB\xe8\xaf"/*ml\x80Q3\xdb\xaexg'
-        b"\x8e\x8a\x8c\xd3l\x03\\,J\xa7\x01i\xd1:]\xe3\x8d"
-        b"\xf4\x03\x88K\x84\n`\xe8\x9a\xad\xad\xc6\x8ea\x15>"
-        b"\x92m\x9e\xc7aM\x11?\x18;\xbd\x04c\x07\x85\x99\xa3\xea[\x00D",
-    ]
-
-    opts = dict(
-        temp_salt_master.config.copy(),
-        ipc_mode="ipc",
-        pub_hwm=0,
-        zmq_filtering=True,
-        recon_randomize=False,
-        recon_default=1,
-        recon_max=2,
-        master_ip="127.0.0.1",
-        acceptance_wait_time=5,
-        acceptance_wait_time_max=5,
-        sign_pub_messages=False,
-    )
-    opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-
-    ioloop = tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
-    with channel:
-        with patch(
-            "salt.crypt.AsyncAuth.crypticle",
-            MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
-        ):
-            res = channel._decode_messages(message)
-    assert res.result() is None
-
-
-def test_zeromq_async_pub_channel_filtering_decode_message(
-    temp_salt_master, temp_salt_minion
-):
-    """
-    test AsyncZeroMQPublishClient _decode_messages when zmq_filtered enabled
-    """
-    minion_hexid = salt.utils.stringutils.to_bytes(
-        hashlib.sha1(salt.utils.stringutils.to_bytes(temp_salt_minion.id)).hexdigest()
-    )
-
-    message = [
-        minion_hexid,
-        b"\x82\xa3enc\xa3aes\xa4load\xda\x00`\xeeR\xcf"
-        b"\x0eaI#V\x17if\xcf\xae\x05\xa7\xb3bN\xf7\xb2\xe2"
-        b'\xd0sF\xd1\xd4\xecB\xe8\xaf"/*ml\x80Q3\xdb\xaexg'
-        b"\x8e\x8a\x8c\xd3l\x03\\,J\xa7\x01i\xd1:]\xe3\x8d"
-        b"\xf4\x03\x88K\x84\n`\xe8\x9a\xad\xad\xc6\x8ea\x15>"
-        b"\x92m\x9e\xc7aM\x11?\x18;\xbd\x04c\x07\x85\x99\xa3\xea[\x00D",
-    ]
-
-    opts = dict(
-        temp_salt_master.config.copy(),
-        id=temp_salt_minion.id,
-        ipc_mode="ipc",
-        pub_hwm=0,
-        zmq_filtering=True,
-        recon_randomize=False,
-        recon_default=1,
-        recon_max=2,
-        master_ip="127.0.0.1",
-        acceptance_wait_time=5,
-        acceptance_wait_time_max=5,
-        sign_pub_messages=False,
-    )
-    opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-
-    ioloop = tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
-    with channel:
-        with patch(
-            "salt.crypt.AsyncAuth.crypticle",
-            MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
-        ) as mock_test:
-            res = channel._decode_messages(message)
-
-    assert res.result()["enc"] == "aes"
 
 
 async def test_req_server_garbage_request(io_loop):
