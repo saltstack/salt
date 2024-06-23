@@ -5,6 +5,7 @@ import tempfile
 import pytest
 
 import salt.config
+import salt.utils.platform
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -47,7 +48,10 @@ def test_master_config_relative_to_root_dir(tmp_path):
     master_config = config_path / "master"
     master_config.write_text(f"root_dir: {root_path}")
     opts = salt.config.master_config(master_config)
-    assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "master")
+    if salt.utils.platform.is_windows():
+        assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "master")
+    else:
+        assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "master")
     assert opts["cachedir"] == str(root_path / "var" / "cache" / "salt" / "master")
     assert opts["pidfile"] == str(root_path / "var" / "run" / "salt-master.pid")
     assert opts["sock_dir"] == str(root_path / "var" / "run" / "salt" / "master")
@@ -80,7 +84,10 @@ def test_minion_config_relative_to_root_dir(tmp_path):
     minion_config = config_path / "minion"
     minion_config.write_text(f"root_dir: {root_path}")
     opts = salt.config.minion_config(minion_config)
-    assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "minion")
+    if salt.utils.platform.is_windows():
+        assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "minion")
+    else:
+        assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "minion")
     assert opts["cachedir"] == str(root_path / "var" / "cache" / "salt" / "minion")
     assert opts["pidfile"] == str(root_path / "var" / "run" / "salt-minion.pid")
     assert opts["sock_dir"] == str(root_path / "var" / "run" / "salt" / "minion")
@@ -128,7 +135,10 @@ def test_syndic_config_relative_to_root_dir(tmp_path):
     minion_config = config_path / "master"
     minion_config.write_text(f"root_dir: {root_path}")
     opts = salt.config.syndic_config(master_config, minion_config)
-    assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "minion")
+    if salt.utils.platform.is_windows():
+        assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "minion")
+    else:
+        assert opts["pki_dir"] == str(root_path / "etc" / "salt" / "pki" / "minion")
     assert opts["cachedir"] == str(root_path / "var" / "cache" / "salt" / "master")
     assert opts["pidfile"] == str(root_path / "var" / "run" / "salt-syndic.pid")
     assert opts["sock_dir"] == str(root_path / "var" / "run" / "salt" / "minion")
