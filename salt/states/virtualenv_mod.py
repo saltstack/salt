@@ -79,7 +79,7 @@ def managed(
     python: None
         Python executable used to build the virtualenv. When Salt is installed
         from a onedir package. You will likely want to specify which python
-        interpertet should be used.
+        interperter should be used.
 
     user: None
         The user under which to run virtualenv and pip.
@@ -138,7 +138,7 @@ def managed(
     interpreter by default. If you've installed Salt via out package
     repository. You will likely want to provide the path to the interpreter
     with wich you would like to be used to create the virtual envrionment. The
-    interperter can be sepcified by providing the `python` option.
+    interperter can be specified by providing the `python` option.
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
