@@ -82,9 +82,9 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
-            overrides={"user": "unknown-user"},
             defaults=config_defaults,
             overrides={
+                "user": "unknown-user",
                 "fips_mode": FIPS_TESTRUN,
                 "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
                 "signing_algorithm": (
