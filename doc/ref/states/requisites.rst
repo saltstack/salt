@@ -563,7 +563,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` and ``watch``
     notify-build_failure:
       hipchat.send_message:
         - room_id: 123456
-        - message: "Building website fail on {{ salt['grains.get']('id') }}"
+        - message: "Building website fail on {{ grains['id'] }}"
 
 
 The default behavior of the ``onfail`` when multiple requisites are listed is
