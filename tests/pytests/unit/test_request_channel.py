@@ -743,7 +743,13 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
     client.transport = MagicMock()
     real_transport.close()
     ret = server._encrypt_private(
-        pillar_data, dictkey, target, nonce=badnonce, sign_messages=True
+        pillar_data,
+        dictkey,
+        target,
+        nonce=badnonce,
+        sign_messages=True,
+        encryption_algorithm=minion_opts["encryption_algorithm"],
+        signing_algorithm=minion_opts["signing_algorithm"],
     )
 
     @tornado.gen.coroutine
@@ -1014,6 +1020,8 @@ async def test_req_serv_auth_v1(minion_opts, master_opts, pki_dir):
         "id": "minion",
         "token": token,
         "pub": pub_key,
+        "enc_algo": minion_opts["encryption_algorithm"],
+        "sig_algo": minion_opts["signing_algorithm"],
     }
     try:
         ret = server._auth(load, sign_messages=False)
@@ -1073,6 +1081,8 @@ async def test_req_serv_auth_v2(minion_opts, master_opts, pki_dir):
         "nonce": nonce,
         "token": token,
         "pub": pub_key,
+        "enc_algo": minion_opts["encryption_algorithm"],
+        "sig_algo": minion_opts["signing_algorithm"],
     }
     try:
         ret = server._auth(load, sign_messages=True)
