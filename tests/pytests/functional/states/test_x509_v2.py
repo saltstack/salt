@@ -1,5 +1,6 @@
 import base64
 import pathlib
+import shutil
 
 import pytest
 
@@ -31,7 +32,28 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def minion_config_overrides():
+def ca_dir(tmp_path_factory):
+    ca_dir = tmp_path_factory.mktemp("ca")
+    try:
+        yield ca_dir
+    finally:
+        shutil.rmtree(str(ca_dir), ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def ca_key_file(ca_dir, ca_key):
+    with pytest.helpers.temp_file("ca.key", ca_key, ca_dir) as key:
+        yield key
+
+
+@pytest.fixture(scope="module")
+def ca_cert_file(ca_dir, ca_cert):
+    with pytest.helpers.temp_file("ca.crt", ca_cert, ca_dir) as crt:
+        yield crt
+
+
+@pytest.fixture(scope="module")
+def minion_config_overrides(ca_key_file, ca_cert_file):
     return {
         "x509_signing_policies": {
             "testpolicy": {
@@ -47,6 +69,11 @@ def minion_config_overrides():
             "testnosubjectpolicy": {
                 "CN": "from_signing_policy",
             },
+            "test_fixed_signing_private_key": {
+                "subject": "CN=from_signing_policy",
+                "signing_cert": str(ca_cert_file),
+                "signing_private_key": str(ca_key_file),
+            },
         },
         "features": {
             "x509_v2": True,
@@ -59,7 +86,7 @@ def x509(loaders, states, tmp_path):
     yield states.x509
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ca_cert():
     return """\
 -----BEGIN CERTIFICATE-----
@@ -85,7 +112,7 @@ LN1w5sybsYwIw6QN
 """
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ca_key():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -385,11 +412,11 @@ O68=
 
 
 @pytest.fixture
-def cert_args(tmp_path, ca_cert, ca_key):
+def cert_args(tmp_path, ca_cert_file, ca_key_file):
     return {
         "name": f"{tmp_path}/cert",
-        "signing_private_key": ca_key,
-        "signing_cert": ca_cert,
+        "signing_private_key": str(ca_key_file),
+        "signing_cert": str(ca_cert_file),
         "CN": "success",
     }
 
@@ -416,11 +443,11 @@ def cert_args_exts():
 
 
 @pytest.fixture
-def crl_args(tmp_path, ca_cert, ca_key):
+def crl_args(tmp_path, ca_cert_file, ca_key_file):
     return {
         "name": f"{tmp_path}/crl",
-        "signing_private_key": ca_key,
-        "signing_cert": ca_cert,
+        "signing_private_key": str(ca_key_file),
+        "signing_cert": str(ca_cert_file),
         "revoked": [],
     }
 
@@ -838,6 +865,20 @@ def test_certificate_managed_with_signing_policy(x509, cert_args, rsa_privkey, c
     assert _signed_by(cert, ca_key)
 
 
+def test_certificate_managed_with_fixed_signing_key_in_signing_policy(
+    x509, rsa_privkey, ca_key, cert_args
+):
+    cert_args["signing_policy"] = "test_fixed_signing_private_key"
+    cert_args["private_key"] = rsa_privkey
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
+    assert ret.changes
+    assert ret.changes.get("created")
+    cert = _get_cert(cert_args["name"])
+    assert _belongs_to(cert, rsa_privkey)
+    assert _signed_by(cert, ca_key)
+
+
 def test_certificate_managed_with_distinguished_name_kwargs(
     x509, cert_args, rsa_privkey, ca_key
 ):
@@ -915,6 +956,25 @@ def test_certificate_managed_existing_from_csr(x509, cert_args):
 def test_certificate_managed_existing_with_signing_policy(x509, cert_args):
     """
     Ensure signing policies are taken into account when checking for changes
+    """
+    ret = x509.certificate_managed(**cert_args)
+    _assert_not_changed(ret)
+
+
+@pytest.mark.usefixtures("existing_cert")
+@pytest.mark.parametrize(
+    "existing_cert",
+    [{"signing_policy": "test_fixed_signing_private_key"}],
+    indirect=True,
+)
+def test_certificate_managed_existing_with_fixed_signing_key_in_signing_policy(
+    x509, rsa_privkey, ca_key, cert_args
+):
+    """
+    If the policy defines a fixed signing_private_key and a certificate
+    is managed locally (without ca_server), the state module should not crash
+    when checking for changes.
+    Issue #66414
     """
     ret = x509.certificate_managed(**cert_args)
     _assert_not_changed(ret)
