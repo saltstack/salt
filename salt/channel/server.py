@@ -989,7 +989,7 @@ class MasterPubServerChannel:
                     hashlib.sha256(aes).hexdigest()
                 )
                 data["peers"][peer] = {
-                    "aes": pub.encrypt(aes),
+                    "aes": pub.encrypt(aes, algorithm="OAEP-SHA224"),
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
@@ -1047,7 +1047,7 @@ class MasterPubServerChannel:
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
-            pusher = salt.transport.tcp.TCPPublishServer(
+            pusher = salt.transport.tcp.PublishServer(
                 self.opts,
                 pull_host=peer,
                 pull_port=tcp_master_pool_port,
@@ -1085,7 +1085,9 @@ class MasterPubServerChannel:
                 peer = data["peer_id"]
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
-                key_str = self.master_key.master_key.decrypt(aes)
+                key_str = self.master_key.master_key.decrypt(
+                    aes, algorithm="OAEP-SHA224"
+                )
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )
