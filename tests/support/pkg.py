@@ -1586,8 +1586,12 @@ class ApiRequest:
     def post(self, url, data):
         post_data = dict(**self.auth_data, **data)
         resp = self.session.post(f"{self.api_uri}/run", data=post_data).json()
-        minion = next(iter(resp["return"][0]))
-        return resp["return"][0][minion]
+        if resp["status"] != 500:
+            minion = next(iter(resp["return"][0]))
+            return resp["return"][0][minion]
+        else:
+            resp.update({"args": []})
+            return resp
 
     def __enter__(self):
         self.session.__enter__()
