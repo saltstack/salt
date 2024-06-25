@@ -12,6 +12,29 @@ pytestmark = [pytest.mark.skip_unless_on_linux]
 
 
 @pytest.fixture
+def salt_systemd_setup(
+    salt_call_cli,
+    install_salt,
+):
+    """
+    Fixture to set systemd for salt packages to enabled and active
+    Note: assumes Salt packages already installed
+    """
+    install_salt.install()
+
+    # ensure known state, enabled and active
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl enable {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+
+@pytest.fixture
 def pkg_paths():
     """
     Paths created by package installs
@@ -64,10 +87,14 @@ def _skip_on_non_relenv(install_salt):
         pytest.skip("The salt user only exists on relenv versions of salt")
 
 
-def test_salt_user_master(salt_master, install_salt):
+def test_salt_user_master(salt_systemd_setup, salt_master, install_salt):
     """
     Test the correct user is running the Salt Master
     """
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     match = False
     for proc in psutil.Process(salt_master.pid).children():
         assert proc.username() == "salt"
@@ -76,10 +103,14 @@ def test_salt_user_master(salt_master, install_salt):
     assert match
 
 
-def test_salt_user_home(install_salt):
+def test_salt_user_home(isalt_systemd_setup, nstall_salt):
     """
     Test the salt user's home is /opt/saltstack/salt
     """
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     proc = subprocess.run(
         ["getent", "passwd", "salt"], check=False, capture_output=True
     )
@@ -92,10 +123,14 @@ def test_salt_user_home(install_salt):
     assert home == "/opt/saltstack/salt"
 
 
-def test_salt_user_group(install_salt):
+def test_salt_user_group(salt_systemd_setup, install_salt):
     """
     Test the salt user is in the salt group
     """
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     proc = subprocess.run(["id", "salt"], check=False, capture_output=True)
     assert proc.returncode == 0
     in_group = False
@@ -108,10 +143,14 @@ def test_salt_user_group(install_salt):
     assert in_group is True
 
 
-def test_salt_user_shell(install_salt):
+def test_salt_user_shell(salt_systemd_setup, install_salt):
     """
     Test the salt user's login shell
     """
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     proc = subprocess.run(
         ["getent", "passwd", "salt"], check=False, capture_output=True
     )
@@ -127,7 +166,11 @@ def test_salt_user_shell(install_salt):
 
 
 def test_pkg_paths(
-    install_salt, pkg_paths, pkg_paths_salt_user, pkg_paths_salt_user_exclusions
+    salt_systemd_setup,
+    install_salt,
+    pkg_paths,
+    pkg_paths_salt_user,
+    pkg_paths_salt_user_exclusions,
 ):
     """
     Test package paths ownership
@@ -136,6 +179,11 @@ def test_pkg_paths(
         "3006.4"
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
+
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:
@@ -175,7 +223,12 @@ def test_pkg_paths(
 
 @pytest.mark.skip_if_binaries_missing("logrotate")
 def test_paths_log_rotation(
-    salt_master, salt_minion, salt_call_cli, install_salt, pkg_tests_account
+    salt_systemd_setup,
+    salt_master,
+    salt_minion,
+    salt_call_cli,
+    install_salt,
+    pkg_tests_account,
 ):
     """
     Test the correct ownership is assigned when log rotation occurs
@@ -200,8 +253,10 @@ def test_paths_log_rotation(
             "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
         )
 
-    # check that the salt_master is running
-    assert salt_master.is_running()
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
+
     match = False
     for proc in psutil.Process(salt_master.pid).children():
         assert proc.username() == "salt"
