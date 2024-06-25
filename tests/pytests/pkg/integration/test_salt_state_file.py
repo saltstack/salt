@@ -11,6 +11,29 @@ pytestmark = [
 
 
 @pytest.fixture
+def salt_systemd_setup(
+    salt_call_cli,
+    install_salt,
+):
+    """
+    Fixture to set systemd for salt packages to enabled and active
+    Note: assumes Salt packages already installed
+    """
+    install_salt.install()
+
+    # ensure known state, enabled and active
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl enable {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+
+@pytest.fixture
 def files(tmp_path):
     return types.SimpleNamespace(
         fpath_1=tmp_path / "fpath_1.txt",
@@ -52,13 +75,17 @@ def state_name(files, salt_master):
         yield name
 
 
-def test_salt_state_file(salt_cli, salt_minion, state_name, files):
+def test_salt_state_file(salt_systemd_setup, salt_cli, salt_minion, state_name, files):
     """
     Test state file
     """
     assert files.fpath_1.exists() is False
     assert files.fpath_2.exists() is False
     assert files.fpath_3.exists() is False
+
+    # setup systemd to enabled and active for Salt packages
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
 
     ret = salt_cli.run("state.apply", state_name, minion_tgt=salt_minion.id)
     assert ret.returncode == 0

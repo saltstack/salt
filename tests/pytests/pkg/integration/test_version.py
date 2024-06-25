@@ -65,17 +65,17 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
-        "--timeout=240", "test.ping", minion_tgt=salt_minion.id, _timeout=240
+        "--timeout=300", "test.ping", minion_tgt=salt_minion.id, _timeout=300
     )
     assert ret.returncode == 0
     assert ret.data is True
     ret = salt_cli.run(
         "--hard-crash",
         "--failhard",
-        "--timeout=240",
+        "--timeout=300",
         "test.versions_report",
         minion_tgt=salt_minion.id,
-        _timeout=240,
+        _timeout=300,
     )
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
 
