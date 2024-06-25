@@ -93,9 +93,8 @@ def match_salt_minion_alice(match_salt_master):
         defaults={"open_mode": True, "grains": {"role": "alice"}},
         overrides={
             "fips_mode": FIPS_TESTRUN,
-            "publish_signing_algorithm": (
-                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-            ),
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
     with factory.started():
@@ -114,9 +113,8 @@ def match_salt_minion_eve(match_salt_master):
         defaults={"open_mode": True, "grains": {"role": "eve"}},
         overrides={
             "fips_mode": FIPS_TESTRUN,
-            "publish_signing_algorithm": (
-                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-            ),
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
     with factory.started():
@@ -135,9 +133,8 @@ def match_salt_minion_bob(match_salt_master):
         defaults={"open_mode": True},
         overrides={
             "fips_mode": FIPS_TESTRUN,
-            "publish_signing_algorithm": (
-                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-            ),
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
     with factory.started():

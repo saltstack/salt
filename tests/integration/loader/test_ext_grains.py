@@ -16,6 +16,7 @@ from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.timeout(120)
 @pytest.mark.windows_whitelisted
 class LoaderGrainsTest(ModuleCase):
     """
