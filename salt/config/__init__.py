@@ -2216,6 +2216,10 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
 
 
 def should_prepend_root_dir(key, opts):
+    """
+    Prepend root dir only when the key exists, has a value, and that value is
+    not a URI.
+    """
     return (
         key in opts
         and opts[key] is not None
@@ -2519,7 +2523,6 @@ def syndic_config(
         "autosign_grains_dir",
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
-        # If this is not a URI and instead a local path
         if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
