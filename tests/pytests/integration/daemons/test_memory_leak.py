@@ -37,6 +37,9 @@ def file_add_delete_sls(tmp_path, salt_master):
         yield sls_name
 
 
+# This test is fundimentally flawed. Needs to be re-factored to test the memory
+# consuption of the minoin process not system wide memory.
+@pytest.mark.skip(reason="Flawed test")
 @pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.skip_on_windows(reason="Windows is a spawning platform, won't work")
 @pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work")
