@@ -5,8 +5,11 @@ import subprocess
 import pytest
 from pytestskipmarkers.utils import platform
 
+pytestmark = [
+    pytest.mark.unless_on_linux,
+]
 
-@pytest.mark.skip_on_windows
+
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
@@ -34,7 +37,6 @@ def test_salt_version(version, install_salt):
     assert actual == expected
 
 
-@pytest.mark.skip_on_windows
 def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
@@ -55,7 +57,6 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
-@pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
     """
     Test running test.versions_report on minion
@@ -106,7 +107,6 @@ def test_compare_versions(version, binary, install_salt):
         )
 
 
-@pytest.mark.skip_unless_on_darwin()
 @pytest.mark.parametrize(
     "symlink",
     [
@@ -138,7 +138,6 @@ def test_symlinks_created(version, symlink, install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
-@pytest.mark.skip_on_windows()
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included
