@@ -4,29 +4,6 @@ import pytest
 from pytestskipmarkers.utils import platform
 
 
-@pytest.fixture
-def salt_systemd_setup(
-    salt_call_cli,
-    install_salt,
-):
-    """
-    Fixture to set systemd for salt packages to enabled and active
-    Note: assumes Salt packages already installed
-    """
-    install_salt.install()
-
-    # ensure known state, enabled and active
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl enable {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-        test_cmd = f"systemctl restart {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-
 def test_salt_call_local(salt_call_cli):
     """
     Test salt-call --local test.ping
@@ -36,13 +13,11 @@ def test_salt_call_local(salt_call_cli):
     assert ret.data is True
 
 
-def test_salt_call(salt_systemd_setup, salt_call_cli):
+def test_salt_call(salt_call_cli, salt_master):
     """
     Test salt-call test.ping
     """
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
+    assert salt_master.is_running()
 
     ret = salt_call_cli.run("test.ping")
     assert ret.returncode == 0
@@ -71,13 +46,11 @@ def state_name(salt_master):
         yield name
 
 
-def test_sls(salt_systemd_setup, salt_call_cli, state_name):
+def test_sls(salt_call_cli, salt_master, state_name):
     """
     Test calling a sls file
     """
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
+    assert salt_master.is_running()
 
     ret = salt_call_cli.run("state.apply", state_name)
     assert ret.returncode == 0
