@@ -6,7 +6,7 @@ from pytestskipmarkers.utils import platform
 from saltfactories.utils.functional import MultiStateResult
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.unless_on_linux,
 ]
 
 
