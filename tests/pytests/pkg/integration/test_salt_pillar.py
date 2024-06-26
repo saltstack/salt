@@ -9,29 +9,6 @@ pytestmark = [
 
 
 @pytest.fixture
-def salt_systemd_setup(
-    salt_call_cli,
-    install_salt,
-):
-    """
-    Fixture to set systemd for salt packages to enabled and active
-    Note: assumes Salt packages already installed
-    """
-    install_salt.install()
-
-    # ensure known state, enabled and active
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl enable {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-        test_cmd = f"systemctl restart {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-
-@pytest.fixture
 def pillar_name(salt_master):
     name = "info"
     top_file_contents = """
@@ -58,13 +35,11 @@ def pillar_name(salt_master):
         yield name
 
 
-def test_salt_pillar(salt_systemd_setup, salt_cli, salt_minion, pillar_name):
+def test_salt_pillar(salt_cli, salt_minion, salt_master, pillar_name):
     """
     Test pillar.items
     """
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
+    assert salt_master.is_running()
 
     ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
     assert ret.returncode == 0
