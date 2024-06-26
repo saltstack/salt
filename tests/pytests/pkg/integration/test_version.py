@@ -107,6 +107,7 @@ def test_compare_versions(version, binary, install_salt):
         )
 
 
+@pytest.mark.skip_unless_on_darwin()
 @pytest.mark.parametrize(
     "symlink",
     [
