@@ -34,9 +34,16 @@ def test_write_default():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("DialogType", "com.apple.CrashReporter", "Server")
-        read_mock.assert_called_once_with("com.apple.CrashReporter", "DialogType", None)
+        read_mock.assert_called_once_with(
+            "com.apple.CrashReporter", "DialogType", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.CrashReporter", "DialogType", "Server", None, None
+            "com.apple.CrashReporter",
+            "DialogType",
+            "Server",
+            None,
+            None,
+            key_separator=None,
         )
         assert out == expected
 
@@ -45,10 +52,12 @@ def test_write_default_already_set():
     """
     Test writing a default setting that is already set
     """
+    key = "DialogType.Value"
+
     expected = {
         "changes": {},
-        "comment": "com.apple.CrashReporter DialogType is already set to Server",
-        "name": "DialogType",
+        "comment": f"com.apple.CrashReporter {key} is already set to Server",
+        "name": key,
         "result": True,
     }
 
@@ -58,8 +67,12 @@ def test_write_default_already_set():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("DialogType", "com.apple.CrashReporter", "Server")
-        read_mock.assert_called_once_with("com.apple.CrashReporter", "DialogType", None)
+        out = macdefaults.write(
+            key, "com.apple.CrashReporter", "Server", name_separator="."
+        )
+        read_mock.assert_called_once_with(
+            "com.apple.CrashReporter", key, None, key_separator="."
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -82,9 +95,11 @@ def test_write_default_boolean():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", "YES", vtype="boolean")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", True, "boolean", None
+            "com.apple.something", "Key", True, "boolean", None, key_separator=None
         )
         assert out == expected
 
@@ -107,7 +122,9 @@ def test_write_default_boolean_already_set():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", "YES", vtype="boolean")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -130,9 +147,11 @@ def test_write_default_integer():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", 1337)
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", 1337, None, None
+            "com.apple.something", "Key", 1337, None, None, key_separator=None
         )
         assert out == expected
 
@@ -141,10 +160,12 @@ def test_write_default_integer_already_set():
     """
     Test writing a default setting with an integer that is already set
     """
+    key = "Key.subKey"
+
     expected = {
         "changes": {},
-        "comment": "com.apple.something Key is already set to 1337",
-        "name": "Key",
+        "comment": f"com.apple.something {key} is already set to 1337",
+        "name": key,
         "result": True,
     }
 
@@ -154,8 +175,16 @@ def test_write_default_integer_already_set():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", 1337, vtype="integer")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        out = macdefaults.write(
+            key,
+            "com.apple.something",
+            1337,
+            vtype="integer",
+            name_separator=".",
+        )
+        read_mock.assert_called_once_with(
+            "com.apple.something", key, None, key_separator="."
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -178,9 +207,11 @@ def test_write_default_float():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", "0.8650", vtype="float")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", 0.865, "float", None
+            "com.apple.something", "Key", 0.865, "float", None, key_separator=None
         )
         assert out == expected
 
@@ -203,7 +234,9 @@ def test_write_default_float_already_set():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", 0.86500)
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -212,11 +245,13 @@ def test_write_default_array():
     """
     Test writing a default setting with an array
     """
+    key = "Key.subKey"
+
     value = ["a", 1, 0.5, True]
     expected = {
-        "changes": {"written": f"com.apple.something Key is set to {value}"},
+        "changes": {"written": f"com.apple.something {key} is set to {value}"},
         "comment": "",
-        "name": "Key",
+        "name": key,
         "result": True,
     }
 
@@ -226,10 +261,18 @@ def test_write_default_array():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", value, vtype="array")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        out = macdefaults.write(
+            key,
+            "com.apple.something",
+            value,
+            vtype="array",
+            name_separator=".",
+        )
+        read_mock.assert_called_once_with(
+            "com.apple.something", key, None, key_separator="."
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", value, "array", None
+            "com.apple.something", key, value, "array", None, key_separator="."
         )
         assert out == expected
 
@@ -253,7 +296,9 @@ def test_write_default_array_already_set():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", value)
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -280,9 +325,16 @@ def test_write_default_array_add():
         out = macdefaults.write(
             "Key", "com.apple.something", write_value, vtype="array-add"
         )
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", write_value, "array-add", None
+            "com.apple.something",
+            "Key",
+            write_value,
+            "array-add",
+            None,
+            key_separator=None,
         )
         assert out == expected
 
@@ -310,9 +362,16 @@ def test_write_default_array_add_already_set_distinct_order():
         out = macdefaults.write(
             "Key", "com.apple.something", write_value, vtype="array-add"
         )
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", write_value, "array-add", None
+            "com.apple.something",
+            "Key",
+            write_value,
+            "array-add",
+            None,
+            key_separator=None,
         )
         assert out == expected
 
@@ -340,7 +399,9 @@ def test_write_default_array_add_already_set_same_order():
         out = macdefaults.write(
             "Key", "com.apple.something", write_value, vtype="array-add"
         )
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -364,9 +425,11 @@ def test_write_default_dict():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", value, vtype="dict")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", value, "dict", None
+            "com.apple.something", "Key", value, "dict", None, key_separator=None
         )
         assert out == expected
 
@@ -390,7 +453,9 @@ def test_write_default_dict_already_set():
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
         out = macdefaults.write("Key", "com.apple.something", value, vtype="dict")
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -417,9 +482,16 @@ def test_write_default_dict_add():
         out = macdefaults.write(
             "Key", "com.apple.something", write_value, vtype="dict-add"
         )
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", write_value, "dict-add", None
+            "com.apple.something",
+            "Key",
+            write_value,
+            "dict-add",
+            None,
+            key_separator=None,
         )
         assert out == expected
 
@@ -446,7 +518,9 @@ def test_write_default_dict_add_already_set():
         out = macdefaults.write(
             "Key", "com.apple.something", write_value, vtype="dict-add"
         )
-        read_mock.assert_called_once_with("com.apple.something", "Key", None)
+        read_mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert not write_mock.called
         assert out == expected
 
@@ -465,7 +539,9 @@ def test_absent_default_already():
     mock = MagicMock(return_value=None)
     with patch.dict(macdefaults.__salt__, {"macdefaults.delete": mock}):
         out = macdefaults.absent("Key", "com.apple.something")
-        mock.assert_called_once_with("com.apple.something", "Key", None)
+        mock.assert_called_once_with(
+            "com.apple.something", "Key", None, key_separator=None
+        )
         assert out == expected
 
 
@@ -473,15 +549,19 @@ def test_absent_default_deleting_existing():
     """
     Test removing an existing default value
     """
+    key = "Key.subKey"
+
     expected = {
-        "changes": {"absent": "com.apple.something Key is now absent"},
+        "changes": {"absent": f"com.apple.something {key} is now absent"},
         "comment": "",
-        "name": "Key",
+        "name": key,
         "result": True,
     }
 
     mock = MagicMock(return_value={"retcode": 0})
     with patch.dict(macdefaults.__salt__, {"macdefaults.delete": mock}):
-        out = macdefaults.absent("Key", "com.apple.something")
-        mock.assert_called_once_with("com.apple.something", "Key", None)
+        out = macdefaults.absent(key, "com.apple.something", name_separator=".")
+        mock.assert_called_once_with(
+            "com.apple.something", key, None, key_separator="."
+        )
         assert out == expected
