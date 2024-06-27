@@ -11,8 +11,7 @@ on:
 
 
 env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 
@@ -23,7 +22,7 @@ jobs:
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.9
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
     steps:
       - name: Install System Deps
@@ -67,7 +66,7 @@ jobs:
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
     steps:
       - name: Install System Deps

@@ -311,6 +311,8 @@
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
     runs-on: ubuntu-latest
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
       <%- for need in test_salt_needs.iter(consume=False) %>

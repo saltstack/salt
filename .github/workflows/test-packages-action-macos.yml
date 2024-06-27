@@ -62,8 +62,9 @@ on:
 
 env:
   COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
@@ -162,6 +163,8 @@ jobs:
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
 
       - name: Download nox.macos.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
@@ -263,3 +266,5 @@ jobs:
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
