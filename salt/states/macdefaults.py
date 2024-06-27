@@ -18,13 +18,17 @@ def __virtual__():
     return (False, "Only supported on macOS")
 
 
-def write(name, domain, value, vtype=None, user=None):
+def write(name, domain, value, vtype=None, name_separator=None, user=None):
     """
     Write a default to the system
 
     name
         The key of the given domain to write to.
         It can be a nested key/index separated by dots.
+
+    name_separator
+        The separator to use when splitting the name into a list of keys.
+        If None, the name will not be split (Default).
 
     domain
         The name of the domain to write to
@@ -42,7 +46,9 @@ def write(name, domain, value, vtype=None, user=None):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    current_value = __salt__["macdefaults.read"](domain, name, user)
+    current_value = __salt__["macdefaults.read"](
+        domain, name, user, key_separator=name_separator
+    )
 
     if vtype is not None:
         try:
@@ -57,7 +63,9 @@ def write(name, domain, value, vtype=None, user=None):
         return ret
 
     try:
-        out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
+        out = __salt__["macdefaults.write"](
+            domain, name, value, vtype, user, key_separator=name_separator
+        )
         if out["retcode"] != 0:
             ret["result"] = False
             ret["comment"] = f"Failed to write default. {out['stderr']}"
@@ -71,13 +79,17 @@ def write(name, domain, value, vtype=None, user=None):
     return ret
 
 
-def absent(name, domain, user=None):
+def absent(name, domain, user=None, name_separator=None):
     """
     Make sure the defaults value is absent
 
     name
         The key of the given domain to remove.
         It can be a nested key/index separated by dots.
+
+    name_separator
+        The separator to use when splitting the name into a list of keys.
+        If None, the name will not be split (Default).
 
     domain
         The name of the domain to remove from
@@ -88,7 +100,9 @@ def absent(name, domain, user=None):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    out = __salt__["macdefaults.delete"](domain, name, user)
+    out = __salt__["macdefaults.delete"](
+        domain, name, user, key_separator=name_separator
+    )
 
     if out is None or out["retcode"] != 0:
         ret["comment"] += f"{domain} {name} is already absent"

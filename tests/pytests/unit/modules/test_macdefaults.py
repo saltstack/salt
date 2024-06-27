@@ -165,30 +165,39 @@ def test_save_plist():
 
     tempfile_mock = MagicMock()
     tempfile_mock.name = "/tmp/tmpfile"
+    tempfile_mock.write = MagicMock(
+        side_effect=lambda contents: calls.append("tempfile.write")
+    )
     tempfile_mock.flush = MagicMock(side_effect=lambda: calls.append("tempfile.flush"))
+    tempfile_mock.seek = MagicMock(
+        side_effect=lambda x: calls.append(f"tempfile.seek({x})")
+    )
 
     named_temporary_file_mock = MagicMock()
     named_temporary_file_mock.return_value.__enter__.return_value = tempfile_mock
 
-    plist_mock = MagicMock(
-        side_effect=lambda _dict, _file: calls.append("plistlib.dump")
-    )
+    def side_effect_plistlib_dumps(plist):
+        calls.append("plistlib.dumps")
+        return str(plist).encode()
+
+    plist_mock = MagicMock(side_effect=side_effect_plistlib_dumps)
 
     with patch(
         "salt.modules.macdefaults._run_defaults_cmd", run_defaults_cmd_mock
-    ), patch("tempfile.NamedTemporaryFile", named_temporary_file_mock), patch(
-        "plistlib.dump", plist_mock
+    ), patch("tempfile.TemporaryFile", named_temporary_file_mock), patch(
+        "plistlib.dumps", plist_mock
     ):
         result = macdefaults._save_plist("com.googlecode.iterm2", new_plist)
-        tempfile_mock.flush.assert_called()
-        plist_mock.assert_called_once_with(new_plist, tempfile_mock)
+        plist_mock.assert_called_once_with(new_plist)
         run_defaults_cmd_mock.assert_called_once_with(
             'import "com.googlecode.iterm2" "/tmp/tmpfile"', runas=None
         )
         assert result == expected_result
         assert calls == [
-            "plistlib.dump",
+            "plistlib.dumps",
+            "tempfile.write",
             "tempfile.flush",
+            "tempfile.seek(0)",
             "macdefaults._run_defaults_cmd",
         ]
 
@@ -703,7 +712,9 @@ def test_read_default_dictionary_nested_key(PLIST_OUTPUT):
     mock = MagicMock(side_effect=custom_run_defaults_cmd)
     with patch("salt.modules.macdefaults._run_defaults_cmd", mock):
         result = macdefaults.read(
-            "com.googlecode.iterm2", "PointerActions.Button,1,1,,.Action"
+            "com.googlecode.iterm2",
+            "PointerActions.Button,1,1,,.Action",
+            key_separator=".",
         )
         mock.assert_called_once_with('export "com.googlecode.iterm2" -', runas=None)
         assert result == "kContextMenuPointerAction"
@@ -723,6 +734,7 @@ def test_read_default_dictionary_nested_key_with_array_indexes(PLIST_OUTPUT):
         result = macdefaults.read(
             "com.googlecode.iterm2",
             "NSSplitView Subview Frames NSColorPanelSplitView.0",
+            key_separator=".",
         )
         mock.assert_called_once_with('export "com.googlecode.iterm2" -', runas=None)
         assert result == "0.000000, 0.000000, 224.000000, 222.000000, NO, NO"
@@ -731,6 +743,7 @@ def test_read_default_dictionary_nested_key_with_array_indexes(PLIST_OUTPUT):
         result = macdefaults.read(
             "com.googlecode.iterm2",
             "NSSplitView Subview Frames NSColorPanelSplitView.1",
+            key_separator=".",
         )
         assert result == "0.000000, 223.000000, 224.000000, 48.000000, NO, NO"
 
@@ -738,6 +751,7 @@ def test_read_default_dictionary_nested_key_with_array_indexes(PLIST_OUTPUT):
         result = macdefaults.read(
             "com.googlecode.iterm2",
             "NSSplitView Subview Frames NSColorPanelSplitView.2",
+            key_separator=".",
         )
         assert result is None
 
@@ -794,20 +808,37 @@ def test_delete_default_with_user():
     """
     Test delete a default setting as a specific user
     """
-    load_plist_mock = MagicMock(return_value={"Crash": "bar"})
-    export_plist_mock = MagicMock(return_value={"retcode": 0})
+    original_plist = {
+        "Crash": {
+            "foo": "bar",
+            "baz": 0,
+        },
+        "Crash.baz": 0,
+    }
+
+    updated_plist = {
+        "Crash": {
+            "foo": "bar",
+            "baz": 0,
+        },
+    }
+
+    result = {"retcode": 0, "stdout": "Removed key", "stderr": ""}
+
+    load_plist_mock = MagicMock(return_value=original_plist)
+    export_plist_mock = MagicMock(return_value=result)
 
     with patch("salt.modules.macdefaults._load_plist", load_plist_mock), patch(
         "salt.modules.macdefaults._save_plist", export_plist_mock
     ):
-        macdefaults.delete("com.apple.CrashReporter", "Crash", user="frank")
+        macdefaults.delete("com.apple.CrashReporter", "Crash.baz", user="frank")
         load_plist_mock.assert_called_once_with(
             "com.apple.CrashReporter",
             user="frank",
         )
         export_plist_mock.assert_called_once_with(
             "com.apple.CrashReporter",
-            {},
+            updated_plist,
             user="frank",
         )
 
@@ -837,7 +868,11 @@ def test_delete_default_with_nested_key():
     with patch("salt.modules.macdefaults._load_plist", load_plist_mock), patch(
         "salt.modules.macdefaults._save_plist", export_plist_mock
     ):
-        assert result == macdefaults.delete("com.apple.CrashReporter", "Crash.baz")
+        assert result == macdefaults.delete(
+            "com.apple.CrashReporter",
+            "Crash.baz",
+            key_separator=".",
+        )
         load_plist_mock.assert_called_once_with(
             "com.apple.CrashReporter",
             user=None,
@@ -884,7 +919,9 @@ def test_delete_default_dictionary_nested_key_with_array_indexes():
         "salt.modules.macdefaults._save_plist", export_plist_mock
     ):
         assert result == macdefaults.delete(
-            "com.apple.CrashReporter", "Crash.baz.1.internalKey1"
+            "com.apple.CrashReporter",
+            "Crash.baz.1.internalKey1",
+            key_separator=".",
         )
         load_plist_mock.assert_called_once_with(
             "com.apple.CrashReporter",
@@ -931,7 +968,11 @@ def test_delete_default_dictionary_nested_key_with_array_index_as_last_key():
     with patch("salt.modules.macdefaults._load_plist", load_plist_mock), patch(
         "salt.modules.macdefaults._save_plist", export_plist_mock
     ):
-        assert result == macdefaults.delete("com.apple.CrashReporter", "Crash.baz.1")
+        assert result == macdefaults.delete(
+            "com.apple.CrashReporter",
+            "Crash.baz.1",
+            key_separator=".",
+        )
         load_plist_mock.assert_called_once_with(
             "com.apple.CrashReporter",
             user=None,

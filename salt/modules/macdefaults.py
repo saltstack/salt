@@ -42,6 +42,7 @@ def write(
     value,
     vtype=None,
     user=None,
+    key_separator=None,
     dict_merge=False,
     array_add=False,
     type=None,
@@ -55,9 +56,11 @@ def write(
 
         salt '*' macdefaults.write com.apple.Finder DownloadsFolderListViewSettingsVersion 1
 
-        salt '*' macdefaults.write com.apple.Finder ComputerViewSettings.CustomViewStyle "icnv"
+        salt '*' macdefaults.write com.apple.Finder ComputerViewSettings.CustomViewStyle "icnv" key_separator='.'
 
         salt '*' macdefaults.write com.apple.Dock lastShowIndicatorTime 737720347.089987 vtype=date
+
+        salt '*' macdefaults.write NSGlobalDomain com.apple.sound.beep.sound "/System/Library/Sounds/Blow.aiff"
 
     domain
         The name of the domain to write to
@@ -65,6 +68,10 @@ def write(
     key
         The key of the given domain to write to.
         It can be a nested key/index separated by dots.
+
+    key_separator
+        The separator to use when splitting the key into a list of keys.
+        If None, the key will not be split (Default).
 
     value
         The value to write to the given key.
@@ -122,7 +129,7 @@ def write(
             )
 
     plist = _load_plist(domain, user=user) or {}
-    keys = key.split(".")
+    keys = [key] if key_separator is None else key.split(key_separator)
     last_key = keys[-1]
 
     # Traverse the plist
@@ -161,7 +168,7 @@ def write(
     return _save_plist(domain, plist, user=user)
 
 
-def read(domain, key, user=None):
+def read(domain, key, user=None, key_separator=None):
     """
     Read a default from the system
 
@@ -169,9 +176,11 @@ def read(domain, key, user=None):
 
     .. code-block:: bash
 
-        salt '*' macdefaults.read com.apple.Dock persistent-apps.1.title-data.file-label
-
         salt '*' macdefaults.read NSGlobalDomain ApplePersistence
+
+        salt '*' macdefaults.read NSGlobalDomain key.with.dots-subKey key_separator="-"
+
+        salt '*' macdefaults.read com.apple.Dock persistent-apps.1.title-data.file-label key_separator='.'
 
     domain
         The name of the domain to read from
@@ -179,6 +188,10 @@ def read(domain, key, user=None):
     key
         The key of the given domain to read from.
         It can be a nested key/index separated by dots.
+
+    key_separator
+        The separator to use when splitting the key into a list of keys.
+        If None, the key will not be split (Default).
 
     user
         The user to read the defaults from
@@ -191,10 +204,12 @@ def read(domain, key, user=None):
     if plist is None:
         return None
 
-    return _traverse_keys(plist, key.split("."))
+    keys = [key] if key_separator is None else key.split(key_separator)
+
+    return _traverse_keys(plist, keys)
 
 
-def delete(domain, key, user=None):
+def delete(domain, key, user=None, key_separator=None):
     """
     Delete a default from the system
 
@@ -206,12 +221,18 @@ def delete(domain, key, user=None):
 
         salt '*' macdefaults.delete NSGlobalDomain ApplePersistence
 
+        salt '*' macdefaults.delete NSGlobalDomain key.with.dots key_separator='.''
+
     domain
         The name of the domain to delete from
 
     key
         The key of the given domain to delete.
         It can be a nested key separated by dots.
+
+    key_separator
+        The separator to use when splitting the key into a list of keys.
+        If None, the key will not be split (Default).
 
     user
         The user to delete the defaults with
@@ -221,7 +242,7 @@ def delete(domain, key, user=None):
     if plist is None:
         return None
 
-    keys = key.split(".")
+    keys = [key] if key_separator is None else key.split(key_separator)
 
     # Traverse the plist til the penultimate key.
     # Last key must be handled separately since we
@@ -390,9 +411,11 @@ def _save_plist(domain, plist, user=None):
     Returns:
         A dictionary with the defaults command result
     """
-    with tempfile.NamedTemporaryFile() as tmpfile:
-        plistlib.dump(plist, tmpfile)
+    with tempfile.TemporaryFile(suffix=".plist") as tmpfile:
+        contents = plistlib.dumps(plist)
+        tmpfile.write(contents)
         tmpfile.flush()
+        tmpfile.seek(0)
         cmd = f'import "{domain}" "{tmpfile.name}"'
         return _run_defaults_cmd(cmd, runas=user)
 
