@@ -1,12 +1,19 @@
 import pytest
 
+import salt.modules.macdefaults as macdefaults_module
 import salt.states.macdefaults as macdefaults
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {macdefaults: {}}
+    return {
+        macdefaults: {
+            "__salt__": {
+                "macdefaults.cast_value_to_vtype": macdefaults_module.cast_value_to_vtype
+            }
+        }
+    }
 
 
 def test_write_default():
@@ -29,7 +36,7 @@ def test_write_default():
         out = macdefaults.write("DialogType", "com.apple.CrashReporter", "Server")
         read_mock.assert_called_once_with("com.apple.CrashReporter", "DialogType", None)
         write_mock.assert_called_once_with(
-            "com.apple.CrashReporter", "DialogType", "Server", "string", None
+            "com.apple.CrashReporter", "DialogType", "Server", None, None
         )
         assert out == expected
 
@@ -74,7 +81,7 @@ def test_write_default_boolean():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", True, vtype="boolean")
+        out = macdefaults.write("Key", "com.apple.something", "YES", vtype="boolean")
         read_mock.assert_called_once_with("com.apple.something", "Key", None)
         write_mock.assert_called_once_with(
             "com.apple.something", "Key", True, "boolean", None
@@ -122,10 +129,10 @@ def test_write_default_integer():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", 1337, vtype="integer")
+        out = macdefaults.write("Key", "com.apple.something", 1337)
         read_mock.assert_called_once_with("com.apple.something", "Key", None)
         write_mock.assert_called_once_with(
-            "com.apple.something", "Key", 1337, "integer", None
+            "com.apple.something", "Key", 1337, None, None
         )
         assert out == expected
 
@@ -170,7 +177,7 @@ def test_write_default_float():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", 0.865, vtype="float")
+        out = macdefaults.write("Key", "com.apple.something", "0.8650", vtype="float")
         read_mock.assert_called_once_with("com.apple.something", "Key", None)
         write_mock.assert_called_once_with(
             "com.apple.something", "Key", 0.865, "float", None
@@ -195,7 +202,7 @@ def test_write_default_float_already_set():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", 0.86500, vtype="float")
+        out = macdefaults.write("Key", "com.apple.something", 0.86500)
         read_mock.assert_called_once_with("com.apple.something", "Key", None)
         assert not write_mock.called
         assert out == expected
@@ -245,7 +252,7 @@ def test_write_default_array_already_set():
         macdefaults.__salt__,
         {"macdefaults.read": read_mock, "macdefaults.write": write_mock},
     ):
-        out = macdefaults.write("Key", "com.apple.something", value, vtype="array")
+        out = macdefaults.write("Key", "com.apple.something", value)
         read_mock.assert_called_once_with("com.apple.something", "Key", None)
         assert not write_mock.called
         assert out == expected
@@ -283,9 +290,9 @@ def test_write_default_array_add():
 def test_write_default_array_add_already_set_distinct_order():
     """
     Test writing a default setting adding an array to another that is already set
-    The new array is in a different order than the existing one
+    The new array is in a different order than the last elements of the existing one
     """
-    write_value = ["a", 1]
+    write_value = [2, "a"]
     read_value = ["b", 1, "a", 2]
     expected = {
         "changes": {"written": f"com.apple.something Key is set to {write_value}"},
@@ -315,7 +322,7 @@ def test_write_default_array_add_already_set_same_order():
     Test writing a default setting adding an array to another that is already set
     The new array is already in the same order as the existing one
     """
-    write_value = ["a", 1]
+    write_value = [1, 2]
     read_value = ["b", "a", 1, 2]
     expected = {
         "changes": {},
@@ -455,7 +462,7 @@ def test_absent_default_already():
         "result": True,
     }
 
-    mock = MagicMock(return_value={"retcode": 1})
+    mock = MagicMock(return_value=None)
     with patch.dict(macdefaults.__salt__, {"macdefaults.delete": mock}):
         out = macdefaults.absent("Key", "com.apple.something")
         mock.assert_called_once_with("com.apple.something", "Key", None)
