@@ -33,7 +33,7 @@ def write(name, domain, value, vtype=None, user=None):
         The value to write to the given key
 
     vtype
-        The type of value to be written, valid types are string, data, int[eger],
+        The type of value to be written. Valid types are string, data, int[eger],
         float, bool[ean], date, array, array-add, dict, dict-add
 
     user
@@ -45,17 +45,28 @@ def write(name, domain, value, vtype=None, user=None):
     current_value = __salt__["macdefaults.read"](domain, name, user)
 
     if vtype is not None:
-        value = __salt__["macdefaults.cast_value_to_vtype"](value, vtype)
+        try:
+            value = __salt__["macdefaults.cast_value_to_vtype"](value, vtype)
+        except ValueError as e:
+            ret["result"] = False
+            ret["comment"] = f"Failed to cast value {value} to {vtype}. {e}"
+            return ret
 
     if _compare_values(value, current_value, vtype):
-        ret["comment"] += f"{domain} {name} is already set to {value}"
-    else:
+        ret["comment"] = f"{domain} {name} is already set to {value}"
+        return ret
+
+    try:
         out = __salt__["macdefaults.write"](domain, name, value, vtype, user)
         if out["retcode"] != 0:
             ret["result"] = False
-            ret["comment"] = f"Failed to write default. {out['stdout']}"
+            ret["comment"] = f"Failed to write default. {out['stderr']}"
         else:
             ret["changes"]["written"] = f"{domain} {name} is set to {value}"
+    # pylint: disable-next=broad-exception-caught
+    except Exception as e:
+        ret["result"] = False
+        ret["comment"] = f"Failed to write default. {e}"
 
     return ret
 
