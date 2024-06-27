@@ -18,12 +18,13 @@ def __virtual__():
     return (False, "Only supported on macOS")
 
 
-def write(name, domain, value, vtype="string", user=None):
+def write(name, domain, value, vtype=None, user=None):
     """
     Write a default to the system
 
     name
-        The key of the given domain to write to
+        The key of the given domain to write to.
+        It can be a nested key/index separated by dots.
 
     domain
         The name of the domain to write to
@@ -42,7 +43,9 @@ def write(name, domain, value, vtype="string", user=None):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     current_value = __salt__["macdefaults.read"](domain, name, user)
-    value = _cast_value(value, vtype)
+
+    if vtype is not None:
+        value = __salt__["macdefaults.cast_value_to_vtype"](value, vtype)
 
     if _compare_values(value, current_value, vtype):
         ret["comment"] += f"{domain} {name} is already set to {value}"
@@ -62,7 +65,8 @@ def absent(name, domain, user=None):
     Make sure the defaults value is absent
 
     name
-        The key of the given domain to remove
+        The key of the given domain to remove.
+        It can be a nested key/index separated by dots.
 
     domain
         The name of the domain to remove from
@@ -75,7 +79,7 @@ def absent(name, domain, user=None):
 
     out = __salt__["macdefaults.delete"](domain, name, user)
 
-    if out["retcode"] != 0:
+    if out is None or out["retcode"] != 0:
         ret["comment"] += f"{domain} {name} is already absent"
     else:
         ret["changes"]["absent"] = f"{domain} {name} is now absent"
@@ -98,81 +102,11 @@ def _compare_values(new, current, vtype):
 
     """
     if vtype == "array-add":
-        return _is_subarray(new, current)
+        if isinstance(new, list):
+            return new == current[-len(new) :]
+        return new == current[-1]
+
     if vtype == "dict-add":
         return all(key in current and new[key] == current[key] for key in new.keys())
 
     return new == current
-
-
-def _is_subarray(new, current):
-    """
-    Check if new is a subarray of current array.
-
-    This method does not check only whether all elements in new array
-    are present in current array, but also whether the elements are in
-    the same order.
-
-    new
-        The new array to compare
-
-    current
-        The current array to compare
-
-    """
-    current_len = len(current)
-    new_len = len(new)
-
-    if new_len == 0:
-        return True
-    if new_len > current_len:
-        return False
-
-    for i in range(current_len - new_len + 1):
-        # Check if the new array is found at this position
-        if current[i : i + new_len] == new:
-            return True
-
-    return False
-
-
-def _cast_value(value, vtype):
-    """
-    Cast the given macOS default value to Python type
-
-    value
-        The value to cast from macOS default
-
-    vtype
-        The type to cast the value from
-
-    """
-
-    def safe_cast(val, to_type, default=None):
-        """
-        Auxiliary function to safely cast a value to a given type
-
-        """
-        try:
-            return to_type(val)
-        except ValueError:
-            return default
-
-    if vtype in ("bool", "boolean"):
-        if value not in [True, 1, "TRUE", "YES", False, 0, "FALSE", "NO"]:
-            raise ValueError(f"Invalid value for boolean: {value}")
-        return value in [True, "TRUE", "YES"]
-
-    if vtype in ("int", "integer"):
-        return safe_cast(value, int)
-
-    if vtype == "float":
-        return safe_cast(value, float)
-
-    if vtype in ("dict", "dict-add"):
-        return safe_cast(value, dict)
-
-    if vtype in ["array", "array-add"]:
-        return safe_cast(value, list)
-
-    return value
