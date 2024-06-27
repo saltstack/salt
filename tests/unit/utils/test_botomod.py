@@ -100,12 +100,36 @@ def _has_required_boto():
     Returns True/False boolean depending on if Boto is installed and correct
     version.
     """
+    branch_coverage = {i: False for i in range(1, 4)}
+    ctr = 1
+
     if not HAS_BOTO:
+        branch_coverage[ctr] = True
+        ctr += 1
+        coverage_info(branch_coverage)
         return False
     elif Version(boto.__version__) < Version(required_boto_version):
+        branch_coverage[ctr] = True
+        ctr += 1
+        coverage_info(branch_coverage)
         return False
     else:
+        branch_coverage[ctr] = True
+        ctr += 1
+        coverage_info(branch_coverage)
         return True
+    
+def coverage_info(branch_coverage):
+    file_path = os.path.join(os.getcwd(), "branch_coverage_utils.txt")
+    total_branches = len(branch_coverage)
+    branches_hit = sum(1 for hit in branch_coverage.values() if hit)
+
+    with open(file_path, "w") as f:
+        for branch_id in range(1, total_branches + 1):
+            hit_status = 'Hit' if branch_coverage[branch_id] else 'Missed'
+            f.write(f"Branch {branch_id}: {hit_status}\n")
+        percentage_hit = (branches_hit / total_branches) * 100
+        f.write(f"\nBranches Hit: {branches_hit}/{total_branches} ({percentage_hit:}%)\n")   
 
 
 def _has_required_boto3():
@@ -123,7 +147,7 @@ def _has_required_boto3():
     except AttributeError as exc:
         if "has no attribute '__version__'" not in str(exc):
             raise
-        return False
+        return False    
 
 
 def _has_required_moto():
@@ -131,6 +155,7 @@ def _has_required_moto():
     Returns True/False boolean depending on if Moto is installed and correct
     version.
     """
+
     if not HAS_MOTO:
         return False
     else:
@@ -139,7 +164,6 @@ def _has_required_moto():
         if Version(pkg_resources.get_distribution("moto").version) < Version("0.3.7"):
             return False
         return True
-
 
 class BotoUtilsTestCaseBase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
