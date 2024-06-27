@@ -82,8 +82,6 @@ def create(
     never_download=None,
     prompt=None,
     pip=False,
-    symlinks=None,
-    upgrade=None,
     user=None,
     use_vt=False,
     saltenv="base",
@@ -101,7 +99,7 @@ def create(
         Defaults to ``virtualenv``.
 
     system_site_packages : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv
 
     distribute : False
         Passthrough argument given to virtualenv
@@ -111,7 +109,7 @@ def create(
         ``distribute=True``
 
     clear : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv
 
     python : None (default)
         Passthrough argument given to virtualenv
@@ -124,12 +122,6 @@ def create(
 
     prompt : None (default)
         Passthrough argument given to virtualenv if not None
-
-    symlinks : None
-        Passthrough argument given to pyvenv if True
-
-    upgrade : None
-        Passthrough argument given to pyvenv if True
 
     user : None
         Set ownership for the virtualenv
@@ -173,98 +165,47 @@ def create(
          - env:
            - VIRTUALENV_ALWAYS_COPY: 1
     """
+    # TODO venv_bin can be "sys.executable -m venv"
     if venv_bin is None:
         venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
 
     cmd = [venv_bin]
 
-    if "pyvenv" not in venv_bin:
-        # ----- Stop the user if pyvenv only options are used --------------->
-        # If any of the following values are not None, it means that the user
-        # is actually passing a True or False value. Stop Him!
-        if upgrade is not None:
-            raise CommandExecutionError(
-                "The `upgrade`(`--upgrade`) option is not supported by '{}'".format(
-                    venv_bin
-                )
-            )
-        elif symlinks is not None:
-            raise CommandExecutionError(
-                "The `symlinks`(`--symlinks`) option is not supported by '{}'".format(
-                    venv_bin
-                )
-            )
-        # <---- Stop the user if pyvenv only options are used ----------------
+    virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)
 
-        virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)
-
-        if distribute:
-            if virtualenv_version_info >= (1, 10):
-                log.info(
-                    "The virtualenv '--distribute' option has been "
-                    "deprecated in virtualenv(>=1.10), as such, the "
-                    "'distribute' option to `virtualenv.create()` has "
-                    "also been deprecated and it's not necessary anymore."
-                )
-            else:
-                cmd.append("--distribute")
-
-        if python is not None and python.strip() != "":
-            if not salt.utils.path.which(python):
-                raise CommandExecutionError(f"Cannot find requested python ({python}).")
-            cmd.append(f"--python={python}")
-        if extra_search_dir is not None:
-            if isinstance(extra_search_dir, str) and extra_search_dir.strip() != "":
-                extra_search_dir = [e.strip() for e in extra_search_dir.split(",")]
-            for entry in extra_search_dir:
-                cmd.append(f"--extra-search-dir={entry}")
-        if never_download is True:
-            if (1, 10) <= virtualenv_version_info < (14, 0, 0):
-                log.info(
-                    "--never-download was deprecated in 1.10.0, but reimplemented in"
-                    " 14.0.0. If this feature is needed, please install a supported"
-                    " virtualenv version."
-                )
-            else:
-                cmd.append("--never-download")
-        if prompt is not None and prompt.strip() != "":
-            cmd.append(f"--prompt='{prompt}'")
-    else:
-        # venv module from the Python >= 3.3 standard library
-
-        # ----- Stop the user if virtualenv only options are being used ----->
-        # If any of the following values are not None, it means that the user
-        # is actually passing a True or False value. Stop Him!
-        if python is not None and python.strip() != "":
-            raise CommandExecutionError(
-                "The `python`(`--python`) option is not supported by '{}'".format(
-                    venv_bin
-                )
+    if distribute:
+        if virtualenv_version_info >= (1, 10):
+            log.info(
+                "The virtualenv '--distribute' option has been "
+                "deprecated in virtualenv(>=1.10), as such, the "
+                "'distribute' option to `virtualenv.create()` has "
+                "also been deprecated and it's not necessary anymore."
             )
-        elif extra_search_dir is not None and extra_search_dir.strip() != "":
-            raise CommandExecutionError(
-                "The `extra_search_dir`(`--extra-search-dir`) option is not "
-                "supported by '{}'".format(venv_bin)
-            )
-        elif never_download is not None:
-            raise CommandExecutionError(
-                "The `never_download`(`--never-download`) option is not "
-                "supported by '{}'".format(venv_bin)
-            )
-        elif prompt is not None and prompt.strip() != "":
-            raise CommandExecutionError(
-                "The `prompt`(`--prompt`) option is not supported by '{}'".format(
-                    venv_bin
-                )
-            )
-        # <---- Stop the user if virtualenv only options are being used ------
+        else:
+            cmd.append("--distribute")
 
-        if upgrade is True:
-            cmd.append("--upgrade")
-        if symlinks is True:
-            cmd.append("--symlinks")
+    if python is not None and python.strip() != "":
+        if not salt.utils.path.which(python):
+            raise CommandExecutionError(f"Cannot find requested python ({python}).")
+        cmd.append(f"--python={python}")
+    if extra_search_dir is not None:
+        if isinstance(extra_search_dir, str) and extra_search_dir.strip() != "":
+            extra_search_dir = [e.strip() for e in extra_search_dir.split(",")]
+        for entry in extra_search_dir:
+            cmd.append(f"--extra-search-dir={entry}")
+    if never_download is True:
+        if (1, 10) <= virtualenv_version_info < (14, 0, 0):
+            log.info(
+                "--never-download was deprecated in 1.10.0, but reimplemented in"
+                " 14.0.0. If this feature is needed, please install a supported"
+                " virtualenv version."
+            )
+        else:
+            cmd.append("--never-download")
+    if prompt is not None and prompt.strip() != "":
+        cmd.append(f"--prompt='{prompt}'")
 
-    # Common options to virtualenv and pyvenv
+    # Common options to virtualenv
     if clear is True:
         cmd.append("--clear")
     if system_site_packages is True:
