@@ -1,7 +1,7 @@
 import pytest
 
 pytestmark = [
-    pytest.mark.unless_on_linux,
+    pytest.mark.skip_unless_on_linux,
 ]
 
 
