@@ -254,17 +254,31 @@ def delete(domain, key, user=None):
 def cast_value_to_vtype(value, vtype):
     """
     Convert the value to the specified vtype.
-    If the value cannot be converted, it will be returned as is.
+    If the value cannot be converted, a ValueError is raised.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' macdefaults.cast_value_to_vtype "1.35" "float"
+
+        salt '*' macdefaults.cast_value_to_vtype "2024-06-23T09:33:44Z" "date"
+
+        salt '*' macdefaults.cast_value_to_vtype "737720347.089987" "date"
 
     value
         The value to be converted
 
     vtype
-        The type to convert the value to
+        The type to convert the value to.
+        Valid types are string, int[eger], float, bool[ean], date, data,
+        array, array-add, dict, dict-add
+
+    Raises:
+        ValueError: When the value cannot be converted to the specified type
 
     Returns:
         The converted value
-
 
     """
     # Boolean
@@ -301,11 +315,11 @@ def cast_value_to_vtype(value, vtype):
         if not isinstance(value, datetime):
             try:
                 value = datetime.fromtimestamp(float(value))
-            except ValueError:
+            except ValueError as e:
                 if re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value):
                     value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
                 else:
-                    raise ValueError(f"Invalid date format: '{value}'")
+                    raise ValueError(f"Invalid date format: '{value}'") from e
     # Data
     elif vtype == "data":
         if isinstance(value, str):
