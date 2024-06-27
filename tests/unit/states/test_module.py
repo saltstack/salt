@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 from inspect import FullArgSpec
 
 import salt.states.module as module
@@ -342,6 +343,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         Test handling of a broken function that returns any type.
         :return:
         """
+        branch_coverage = {i: False for i in range(1, 25)}
+        ctr = 1
+
         for val in [
             1,
             0,
@@ -365,10 +369,26 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 log.debug("test_run_typed_return: trying %s", val)
                 ret = module.run(**{CMD: [{"ret": val}]})
             if val is False:
+                branch_coverage[ctr] = True
+                ctr += 1
                 self.assertFalse(ret["result"])
                 self.assertEqual(ret["comment"], "'foo.bar': False")
             else:
+                branch_coverage[ctr] = True
+                ctr += 1
                 self.assertTrue(ret["result"])
+                
+        file_path = os.path.join(os.getcwd(), "branch_coverage_states.txt")
+        total_branches = len(branch_coverage)
+        branches_hit = sum(1 for hit in branch_coverage.values() if hit)
+
+        with open(file_path, "w") as f:
+            for branch_id in range(1, total_branches + 1):
+                hit_status = 'Hit' if branch_coverage[branch_id] else 'Missed'
+                f.write(f"Branch {branch_id}: {hit_status}\n")
+            percentage_hit = (branches_hit / total_branches) * 100
+            f.write(f"\nBranches Hit: {branches_hit}/{total_branches} ({percentage_hit:}%)\n")        
+        
 
     def test_run_batch_call(self):
         """
