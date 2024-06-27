@@ -27,6 +27,10 @@ pytestmark = [
 
 log = logging.getLogger(__name__)
 
+coverage = {i: False for i in range(1, 9)}
+
+def branch_hit(branch_id):
+    coverage[branch_id] = True
 
 @pytest.mark.skip_on_windows(reason="Windows does not support Posix IPC")
 class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
@@ -61,20 +65,37 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         return sub_channel
 
     def tearDown(self):
+        coverage_file_path = os.path.join(os.getcwd(), "coverage_test_ipc.txt")
+        total_branches = len(coverage)
+        branches_hit = sum(1 for hit in coverage.values() if hit)
+
+        with open(coverage_file_path, "w") as f:
+            for branch_id in range(1, total_branches + 1):
+                hit_status = 'Hit' if coverage[branch_id] else 'Missed'
+                f.write(f"Branch {branch_id}: {hit_status}\n")
+            percentage_hit = (branches_hit / total_branches) * 100
+            f.write(f"\nBranches Hit: {branches_hit}/{total_branches} ({percentage_hit:}%)\n")
+
         super().tearDown()
         try:
+            branch_hit(1)
             self.pub_channel.close()
         except RuntimeError as exc:
+            branch_hit(2)
             pass
         except OSError as exc:
+            branch_hit(3)
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
         try:
+            branch_hit(4)
             self.sub_channel.close()
         except RuntimeError as exc:
+            branch_hit(5)
             pass
         except OSError as exc:
+            branch_hit(6)
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
