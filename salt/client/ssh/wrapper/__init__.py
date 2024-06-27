@@ -5,8 +5,8 @@ to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 """
 
-import copy
 import logging
+from collections.abc import MutableMapping
 
 import salt.client.ssh
 import salt.loader
@@ -87,7 +87,6 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
         return super().to_ret()
 
     def __str__(self):
-        ret = self.to_ret()
         if self.retcode > 0:
             return f"{self._error}: {self.stderr or self.stdout}"
         return self._error
@@ -118,7 +117,62 @@ class SSHMalformedReturnError(SSHException):
     _error = "Return dict was malformed"
 
 
-class FunctionWrapper:
+class LoadedMod:
+    """
+    This class is used as a proxy to a loaded wrapper module
+    or the module part of a call to the target when
+    a non-recommended syntax is used for loader access
+    (like ``salt.grains.get`` or ``salt["grains"].get``).
+    """
+
+    __slots__ = ("mod", "wrapper")
+
+    def __init__(self, mod, wrapper):
+        self.mod = mod
+        self.wrapper = wrapper
+
+    def __getattr__(self, name):
+        """
+        Return the requested function.
+        """
+        try:
+            return self.wrapper[f"{self.mod}.{name}"]
+        except KeyError:
+            # This  shouldn't happen since we wrap unknown calls to the target
+            raise AttributeError(
+                f"No attribute by the name of {name} was found on {self.mod}"
+            )
+
+    def __setitem__(self, name, value):
+        """
+        Set aliases for functions
+        """
+        self.wrapper[f"{self.mod}.{name}"] = value
+
+    def __delitem__(self, name):
+        """
+        Remove aliases for functions
+        """
+        del self.wrapper[f"{self.mod}.{name}"]
+
+    def __repr__(self):
+        try:
+            # Determine if we're representing a wrapper module or
+            # an unknown execution module on the target.
+            # We need to use the attribute since __getitem__ does not
+            # allow module-level access.
+            getattr(
+                self.wrapper.wfuncs, self.mod
+            )  # pylint: disable=pointless-statement
+            prefix = self.wrapper.wfuncs.loaded_base_name + "."
+            name = self.__class__.__name__
+        except AttributeError:
+            prefix = ""
+            name = "SSHTargetMod"
+        return f"<{name} module='{prefix}{self.mod}'>"
+
+
+class FunctionWrapper(MutableMapping):
     """
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
@@ -132,14 +186,12 @@ class FunctionWrapper:
         wfuncs=None,
         mods=None,
         fsclient=None,
-        cmd_prefix=None,
         aliases=None,
         minion_opts=None,
         **kwargs,
     ):
         super().__init__()
-        self.cmd_prefix = cmd_prefix
-        self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
+        self.wfuncs = wfuncs if wfuncs is not None else {}
         self.opts = opts
         self.mods = mods if isinstance(mods, dict) else {}
         self.kwargs = {"id_": id_, "host": host}
@@ -157,7 +209,7 @@ class FunctionWrapper:
         __getitem__ keys 0 and up until IndexError
         """
         try:
-            self[key]  # pylint: disable=W0104
+            self[key]  # pylint: disable=pointless-statement
             return True
         except KeyError:
             return False
@@ -166,32 +218,12 @@ class FunctionWrapper:
         """
         Return the function call to simulate the salt local lookup system
         """
-        if "." not in cmd and not self.cmd_prefix:
+        if "." not in cmd:
             # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
-            # containing only 'cmd' module calls, in that case. Create a new
-            # FunctionWrapper which contains the prefix 'cmd' (again, for the
-            # salt.cmd.run example)
-            kwargs = copy.deepcopy(self.kwargs)
-            id_ = kwargs.pop("id_")
-            host = kwargs.pop("host")
-            return FunctionWrapper(
-                self.opts,
-                id_,
-                host,
-                wfuncs=self.wfuncs,
-                mods=self.mods,
-                fsclient=self.fsclient,
-                cmd_prefix=cmd,
-                aliases=self.aliases,
-                minion_opts=self.minion_opts,
-                **kwargs,
-            )
-
-        if self.cmd_prefix:
-            # We're in an inner FunctionWrapper as created by the code block
-            # above. Reconstruct the original cmd in the form 'cmd.run' and
-            # then evaluate as normal
-            cmd = f"{self.cmd_prefix}.{cmd}"
+            # containing only 'cmd' module calls
+            # We don't know which modules are available on the target, so just
+            # return the module namespace without any checks.
+            return LoadedMod(cmd, self)
 
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
@@ -231,17 +263,11 @@ class FunctionWrapper:
         """
         Set aliases for functions
         """
-        if "." not in cmd and not self.cmd_prefix:
+        if "." not in cmd:
             # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
             # containing only 'cmd' module calls, in that case. We don't
             # support assigning directly to prefixes in this way
             raise KeyError(f"Cannot assign to module key {cmd} in the FunctionWrapper")
-
-        if self.cmd_prefix:
-            # We're in an inner FunctionWrapper as created by the first code
-            # block in __getitem__. Reconstruct the original cmd in the form
-            # 'cmd.run' and then evaluate as normal
-            cmd = f"{self.cmd_prefix}.{cmd}"
 
         if cmd in self.wfuncs:
             self.wfuncs[cmd] = value
@@ -251,14 +277,46 @@ class FunctionWrapper:
         # later in __getitem__
         self.aliases[cmd] = value
 
-    def get(self, cmd, default):
+    def __delitem__(self, cmd):
         """
-        Mirrors behavior of dict.get
+        Remove aliases for functions
         """
-        if cmd in self:
-            return self[cmd]
-        else:
-            return default
+        if "." not in cmd:
+            # Form of salt.cmd.run in Jinja
+            raise KeyError(f"Cannot delete module key {cmd} in the FunctionWrapper")
+
+        if cmd in self.wfuncs:
+            del self.wfuncs[cmd]
+
+        del self.aliases[cmd]
+
+    def __len__(self):
+        """
+        Return the count of wrapper modules and aliases.
+        We don't know which modules will be available on the target.
+        """
+        return len(self.wfuncs) + len(self.aliases)
+
+    def __iter__(self):
+        """
+        Iterate through wrapper modules and aliases.
+        We don't know which modules will be available on the target.
+        """
+        yield from self.wfuncs
+        yield from self.aliases
+
+    def __getattr__(self, mod_or_func):
+        """
+        Ensure the behavior is similar to the usual LazyLoader regarding
+        attribute access.
+        """
+        if mod_or_func.startswith("__") and mod_or_func.endswith("__"):
+            # Don't pretend dunders are set.
+            raise AttributeError(mod_or_func)
+        try:
+            return self.__getitem__(mod_or_func)
+        except KeyError:
+            raise AttributeError(mod_or_func)
 
 
 def parse_ret(stdout, stderr, retcode, result_only=False):

@@ -126,18 +126,18 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     .. code-block:: jinja
 
         #!jinja|yaml
-        {% set apache = salt.grains.filter_by({
+        {% set apache = salt['grains.filter_by']({
             ...normal jinja map file here...
-        }, merge=salt.pillar.get('apache:lookup')) %}
+        }, merge=salt['pillar.get']('apache:lookup')) %}
         {{ apache | yaml() }}
 
     .. code-block:: python
 
         #!py
         def run():
-            apache = __salt__.grains.filter_by({
+            apache = __salt__['grains.filter_by']({
                 ...normal map here but as a python dict...
-            }, merge=__salt__.pillar.get('apache:lookup'))
+            }, merge=__salt__['pillar.get']('apache:lookup'))
             return apache
 
     Regardless of which of the above map files is used, it can be accessed from
@@ -146,7 +146,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
 
     .. code-block:: jinja
 
-        {% set apache = salt.slsutil.renderer('map.sls') %}
+        {% set apache = salt['slsutil.renderer']('map.sls') %}
 
     CLI Example:
 
@@ -219,7 +219,7 @@ def serialize(serializer, obj, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set json_string = salt.slsutil.serialize('json',
+        {% set json_string = salt['slsutil.serialize']('json',
             {'foo': 'Foo!'}) %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
@@ -243,7 +243,7 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set python_object = salt.slsutil.deserialize('json',
+        {% set python_object = salt['slsutil.deserialize']('json',
             '{"foo": "Foo!"}') %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
