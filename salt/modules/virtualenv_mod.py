@@ -27,10 +27,7 @@ KNOWN_BINARY_NAMES = frozenset(
 
 log = logging.getLogger(__name__)
 
-__opts__ = {
-    "venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES)
-    or f"{sys.executable} -m venv"
-}
+__opts__ = {"venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or "venv"}
 
 __pillar__ = {}
 
@@ -179,7 +176,10 @@ def create(
     if venv_bin is None:
         venv_bin = __pillar__.get("venv_bin") or __opts__.get("venv_bin")
 
-    cmd = [venv_bin]
+    if venv_bin == "venv":
+        cmd = [sys.executable, "-m", "venv"]
+    else:
+        cmd = [venv_bin]
 
     if "venv" not in venv_bin:
         # ----- Stop the user if venv only options are used ----------------->
