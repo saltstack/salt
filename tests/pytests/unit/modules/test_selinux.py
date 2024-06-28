@@ -6,6 +6,8 @@ import salt.modules.selinux as selinux
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, mock_open, patch
 
+pytestmark = [pytest.mark.skip_unless_on_linux]
+
 
 @pytest.fixture
 def configure_loader_modules():
