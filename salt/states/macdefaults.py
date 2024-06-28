@@ -24,7 +24,7 @@ def write(name, domain, value, vtype=None, name_separator=None, user=None):
 
     name
         The key of the given domain to write to.
-        It can be a nested key/index separated by dots.
+        It can be a nested key/index separated by `name_separator`.
 
     name_separator
         The separator to use when splitting the name into a list of keys.
@@ -85,7 +85,7 @@ def absent(name, domain, user=None, name_separator=None):
 
     name
         The key of the given domain to remove.
-        It can be a nested key/index separated by dots.
+        It can be a nested key/index separated by `name_separator`.
 
     name_separator
         The separator to use when splitting the name into a list of keys.

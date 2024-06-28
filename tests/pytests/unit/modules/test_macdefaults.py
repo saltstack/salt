@@ -150,7 +150,46 @@ def test_load_plist_no_domain():
         assert result is None
 
 
-def test_save_plist():
+def test_save_plist_no_user():
+    """
+    Test saving a plist
+    """
+    new_plist = {"Crash": "Server"}
+    expected_result = {"retcode": 0, "stdout": "", "stderr": ""}
+
+    chown_mock = MagicMock()
+
+    tempdir = tempfile.TemporaryDirectory()
+    tempdir_name = tempdir.name
+
+    tempfile_mock = MagicMock()
+    tempfile_mock.__enter__.return_value = tempdir_name
+
+    domain = "com.googlecode.iterm2"
+    tmp_file_name = salt.modules.file.join(tempdir_name, f"{domain}.plist")
+
+    with patch(
+        "salt.modules.macdefaults._run_defaults_cmd", return_value=expected_result
+    ) as run_defaults_cmd_mock, patch(
+        "tempfile.TemporaryDirectory", return_value=tempfile_mock
+    ), patch(
+        "plistlib.dump"
+    ) as plist_mock, patch.dict(
+        macdefaults.__salt__,
+        {"file.chown": chown_mock, "file.join": salt.modules.file.join},
+    ):
+        result = macdefaults._save_plist("com.googlecode.iterm2", new_plist)
+        assert result == expected_result
+
+        plist_mock.assert_called_once_with(new_plist, ANY)  # ANY for filehandler
+        run_defaults_cmd_mock.assert_called_once_with(
+            f'import "{domain}" "{tmp_file_name}"',
+            runas=None,
+        )
+        chown_mock.assert_not_called()
+
+
+def test_save_plist_with_user():
     """
     Test saving a plist
     """
@@ -187,7 +226,7 @@ def test_save_plist():
         result = macdefaults._save_plist("com.googlecode.iterm2", new_plist, user=user)
         assert result == expected_result
 
-        plist_mock.assert_called_once_with(new_plist, ANY)
+        plist_mock.assert_called_once_with(new_plist, ANY)  # ANY for filehandler
         run_defaults_cmd_mock.assert_called_once_with(
             f'import "{domain}" "{tmp_file_name}"',
             runas=user,

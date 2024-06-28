@@ -18,6 +18,7 @@ import re
 import tempfile
 from datetime import datetime
 
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
@@ -67,7 +68,7 @@ def write(
 
     key
         The key of the given domain to write to.
-        It can be a nested key/index separated by dots.
+        It can be a nested key/index separated by `key_separator`.
 
     key_separator
         The separator to use when splitting the key into a list of keys.
@@ -78,14 +79,15 @@ def write(
         Dates should be in the format 'YYYY-MM-DDTHH:MM:SSZ'
 
     vtype
-        The type of value to be written, valid types are string, int[eger],
-        float, bool[ean], date and data.
+        The type of value to be written.
+
+        Valid types are string, int[eger], float, bool[ean], date and data.
 
         dict and array are also valid types but are only used for validation.
 
-        dict-add and array-add are supported for backward compatibility.
-        However, their corresponding sibling options dict_merge and array_add
-        are recommended.
+        dict-add and array-add are supported too.
+        They will behave as their counterparts dict and array but will set
+        their corresponding sibling options dict_merge and array_add to True.
 
         This parameter is optional. It will be used to cast the values to the
         specified type before writing them to the system. If not provided, the
@@ -187,7 +189,7 @@ def read(domain, key, user=None, key_separator=None):
 
     key
         The key of the given domain to read from.
-        It can be a nested key/index separated by dots.
+        It can be a nested key/index separated by `key_separator`.
 
     key_separator
         The separator to use when splitting the key into a list of keys.
@@ -221,14 +223,14 @@ def delete(domain, key, user=None, key_separator=None):
 
         salt '*' macdefaults.delete NSGlobalDomain ApplePersistence
 
-        salt '*' macdefaults.delete NSGlobalDomain key.with.dots key_separator='.''
+        salt '*' macdefaults.delete NSGlobalDomain key.with.dots key_separator='.'
 
     domain
         The name of the domain to delete from
 
     key
         The key of the given domain to delete.
-        It can be a nested key separated by dots.
+        It can be a nested key separated by `key_separator`.
 
     key_separator
         The separator to use when splitting the key into a list of keys.
@@ -417,7 +419,7 @@ def _save_plist(domain, plist, user=None):
         # NOTE: Starting with Python 3.12 NamedTemporaryFile has the parameter
         # delete_on_close which can be set to False. It would simplify this method.
         file_name = __salt__["file.join"](tempdir, f"{domain}.plist")
-        with open(file_name, "wb") as fp:
+        with salt.utils.files.fopen(file_name, "wb") as fp:
             plistlib.dump(plist, fp)
         if user is not None:
             __salt__["file.chown"](tempdir, user, None)
@@ -427,6 +429,18 @@ def _save_plist(domain, plist, user=None):
 
 
 def _traverse_keys(plist, keys):
+    """
+    Returns the value of the given keys in the plist
+
+    plist
+        The plist dictionary to retrieve the value from
+
+    keys
+        An array with the sequence of keys to traverse
+
+    Returns:
+        The value of the given keys in the plist, or None if the keys do not exist.
+    """
     value = plist
     for k in keys:
         if isinstance(value, dict):
