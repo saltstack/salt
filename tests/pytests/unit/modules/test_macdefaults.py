@@ -1,9 +1,11 @@
+import tempfile
 from datetime import datetime
 
 import pytest
 
+import salt.modules.file
 import salt.modules.macdefaults as macdefaults
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, call, patch
 
 
 @pytest.fixture
@@ -155,51 +157,42 @@ def test_save_plist():
     new_plist = {"Crash": "Server"}
     expected_result = {"retcode": 0, "stdout": "", "stderr": ""}
 
-    calls = []
+    chown_mock = MagicMock()
 
-    def side_effect_run_defaults_command(*args, **kwargs):
-        calls.append("macdefaults._run_defaults_cmd")
-        return expected_result
-
-    run_defaults_cmd_mock = MagicMock(side_effect=side_effect_run_defaults_command)
+    tempdir = tempfile.TemporaryDirectory()
+    tempdir_name = tempdir.name
 
     tempfile_mock = MagicMock()
-    tempfile_mock.name = "/tmp/tmpfile"
-    tempfile_mock.write = MagicMock(
-        side_effect=lambda contents: calls.append("tempfile.write")
-    )
-    tempfile_mock.flush = MagicMock(side_effect=lambda: calls.append("tempfile.flush"))
-    tempfile_mock.seek = MagicMock(
-        side_effect=lambda x: calls.append(f"tempfile.seek({x})")
-    )
+    tempfile_mock.__enter__.return_value = tempdir_name
 
-    named_temporary_file_mock = MagicMock()
-    named_temporary_file_mock.return_value.__enter__.return_value = tempfile_mock
+    user = "cdalvaro"
+    domain = "com.googlecode.iterm2"
+    tmp_file_name = salt.modules.file.join(tempdir_name, f"{domain}.plist")
 
-    def side_effect_plistlib_dumps(plist):
-        calls.append("plistlib.dumps")
-        return str(plist).encode()
-
-    plist_mock = MagicMock(side_effect=side_effect_plistlib_dumps)
+    chown_expected_calls = [
+        call(tempdir_name, user, None),
+        call(tmp_file_name, user, None),
+    ]
 
     with patch(
-        "salt.modules.macdefaults._run_defaults_cmd", run_defaults_cmd_mock
-    ), patch("tempfile.TemporaryFile", named_temporary_file_mock), patch(
-        "plistlib.dumps", plist_mock
+        "salt.modules.macdefaults._run_defaults_cmd", return_value=expected_result
+    ) as run_defaults_cmd_mock, patch(
+        "tempfile.TemporaryDirectory", return_value=tempfile_mock
+    ), patch(
+        "plistlib.dump"
+    ) as plist_mock, patch.dict(
+        macdefaults.__salt__,
+        {"file.chown": chown_mock, "file.join": salt.modules.file.join},
     ):
-        result = macdefaults._save_plist("com.googlecode.iterm2", new_plist)
-        plist_mock.assert_called_once_with(new_plist)
-        run_defaults_cmd_mock.assert_called_once_with(
-            'import "com.googlecode.iterm2" "/tmp/tmpfile"', runas=None
-        )
+        result = macdefaults._save_plist("com.googlecode.iterm2", new_plist, user=user)
         assert result == expected_result
-        assert calls == [
-            "plistlib.dumps",
-            "tempfile.write",
-            "tempfile.flush",
-            "tempfile.seek(0)",
-            "macdefaults._run_defaults_cmd",
-        ]
+
+        plist_mock.assert_called_once_with(new_plist, ANY)
+        run_defaults_cmd_mock.assert_called_once_with(
+            f'import "{domain}" "{tmp_file_name}"',
+            runas=user,
+        )
+        chown_mock.assert_has_calls(chown_expected_calls)
 
 
 def test_cast_value_to_bool():

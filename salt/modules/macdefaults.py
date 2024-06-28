@@ -411,12 +411,18 @@ def _save_plist(domain, plist, user=None):
     Returns:
         A dictionary with the defaults command result
     """
-    with tempfile.TemporaryFile(suffix=".plist") as tmpfile:
-        contents = plistlib.dumps(plist)
-        tmpfile.write(contents)
-        tmpfile.flush()
-        tmpfile.seek(0)
-        cmd = f'import "{domain}" "{tmpfile.name}"'
+    with tempfile.TemporaryDirectory(prefix="salt_macdefaults") as tempdir:
+        # File must exist until the defaults command is run.
+        # That's why a temporary directory is used instead of a temporary file.
+        # NOTE: Starting with Python 3.12 NamedTemporaryFile has the parameter
+        # delete_on_close which can be set to False. It would simplify this method.
+        file_name = __salt__["file.join"](tempdir, f"{domain}.plist")
+        with open(file_name, "wb") as fp:
+            plistlib.dump(plist, fp)
+        if user is not None:
+            __salt__["file.chown"](tempdir, user, None)
+            __salt__["file.chown"](file_name, user, None)
+        cmd = f'import "{domain}" "{file_name}"'
         return _run_defaults_cmd(cmd, runas=user)
 
 
