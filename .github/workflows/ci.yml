@@ -437,7 +437,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.16.1"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
 
   build-salt-onedir:
@@ -453,7 +453,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.16.1"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
 
   build-pkgs-onedir:
@@ -466,7 +466,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.16.1"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
       source: "onedir"
 
@@ -480,7 +480,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.16.1"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
       source: "src"
   build-ci-deps:
