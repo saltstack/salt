@@ -96,6 +96,14 @@ The user to run the Salt processes
 
     user: root
 
+.. note::
+
+    Starting with version `3006.0`, Salt's offical packages ship with a default
+    configuration which runs the Master as a non-priviledged user. The Master's
+    configuration file has the `user` option set to `user: salt`. Unless you
+    are absolutly sure want to run salt as some other user, care should be
+    taken to preserve this setting in your Master configuration file..
+
 .. conf_master:: ret_port
 
 ``enable_ssh_minions``
