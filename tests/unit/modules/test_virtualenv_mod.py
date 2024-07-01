@@ -17,8 +17,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-VENV_BIN = f"{sys.executable} -m venv"
-
 
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
@@ -148,7 +146,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     def test_unapplicable_options(self):
-        # ----- Virtualenv using venv options ------------------------------->
+        # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
             self.assertRaises(
@@ -168,19 +166,19 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 venv_bin="virtualenv",
                 symlinks=True,
             )
-        # <---- Virtualenv using venv options --------------------------------
+        # <---- Virtualenv using pyvenv options ------------------------------
 
-        # ----- venv using virtualenv options ------------------------------->
+        # ----- pyvenv using virtualenv options ----------------------------->
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(
             virtualenv_mod.__salt__,
-            {"cmd.run_all": mock, "cmd.which_bin": lambda _: VENV_BIN},
+            {"cmd.run_all": mock, "cmd.which_bin": lambda _: "pyvenv"},
         ):
             self.assertRaises(
                 CommandExecutionError,
                 virtualenv_mod.create,
                 "/tmp/foo",
-                venv_bin=VENV_BIN,
+                venv_bin="pyvenv",
                 python="python2.7",
             )
 
@@ -189,7 +187,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError,
                 virtualenv_mod.create,
                 "/tmp/foo",
-                venv_bin=VENV_BIN,
+                venv_bin="pyvenv",
                 prompt="PY Prompt",
             )
 
@@ -198,7 +196,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError,
                 virtualenv_mod.create,
                 "/tmp/foo",
-                venv_bin=VENV_BIN,
+                venv_bin="pyvenv",
                 never_download=True,
             )
 
@@ -207,10 +205,10 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError,
                 virtualenv_mod.create,
                 "/tmp/foo",
-                venv_bin=VENV_BIN,
+                venv_bin="pyvenv",
                 extra_search_dir="/tmp/bar",
             )
-        # <---- venv using virtualenv options --------------------------------
+        # <---- pyvenv using virtualenv options ------------------------------
 
     def test_get_virtualenv_version_from_shell(self):
         with ForceImportErrorOn("virtualenv"):
@@ -323,30 +321,30 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     def test_upgrade_argument(self):
-        # We test for venv only because with virtualenv this is un
+        # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
-            virtualenv_mod.create("/tmp/foo", venv_bin=VENV_BIN, upgrade=True)
+            virtualenv_mod.create("/tmp/foo", venv_bin="pyvenv", upgrade=True)
             mock.assert_called_once_with(
-                [VENV_BIN, "--upgrade", "/tmp/foo"], runas=None, python_shell=False
+                ["pyvenv", "--upgrade", "/tmp/foo"], runas=None, python_shell=False
             )
 
     def test_symlinks_argument(self):
-        # We test for venv only because with virtualenv this is un
+        # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
-            virtualenv_mod.create("/tmp/foo", venv_bin=VENV_BIN, symlinks=True)
+            virtualenv_mod.create("/tmp/foo", venv_bin="pyvenv", symlinks=True)
             mock.assert_called_once_with(
-                [VENV_BIN, "--symlinks", "/tmp/foo"], runas=None, python_shell=False
+                ["pyvenv", "--symlinks", "/tmp/foo"], runas=None, python_shell=False
             )
 
     def test_virtualenv_ver(self):
         """
         test virtualenv_ver when there is no ImportError
         """
-        ret = virtualenv_mod.virtualenv_ver(venv_bin=VENV_BIN)
+        ret = virtualenv_mod.virtualenv_ver(venv_bin="pyvenv")
         assert ret == (1, 9, 1)
 
     def test_virtualenv_ver_importerror(self):
