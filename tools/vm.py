@@ -1373,10 +1373,11 @@ class VM:
             for drive in ("c:", "C:"):
                 rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
-        description = "Rsync local checkout to VM..."
         if download:
+            description = "Rsync VM to local checkout..."
             self.rsync(f"{destination}/*", source, description, rsync_flags)
         else:
+            description = "Rsync local checkout to VM..."
             self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
             # rsync sets very strict file permissions and disables inheritance
@@ -1468,7 +1469,7 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+        for key in ("CI", "PIP_INDEX_URL", "PIP_TRUSTED_HOST", "PIP_EXTRA_INDEX_URL"):
             if key in os.environ:
                 env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"

@@ -40,15 +40,15 @@ def download_onedir_artifact(
             )
             return ExitCode.FAIL
     else:
-        if arch == "arm64":
-            ctx.info(f"Turning passed arch {arch!r} into 'aarch64'")
-            arch = "aarch64"
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
         elif arch == "x64":
             ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
             arch = "x86_64"
-        if arch not in ("x86_64", "aarch64"):
+        if arch not in ("x86_64", "arm64"):
             ctx.error(
-                f"The allowed values for '--arch' on {platform.title()} are 'x86_64', 'aarch64' or 'arm64'"
+                f"The allowed values for '--arch' on {platform.title()} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
     artifacts_path = tools.utils.REPO_ROOT / "artifacts"
@@ -129,15 +129,15 @@ def download_nox_artifact(
             )
             return ExitCode.FAIL
     else:
-        if arch == "arm64":
-            ctx.info(f"Turning passed arch {arch!r} into 'aarch64'")
-            arch = "aarch64"
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
         elif arch == "x64":
             ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
             arch = "x86_64"
-        if arch not in ("x86_64", "aarch64"):
+        if arch not in ("x86_64", "arm64"):
             ctx.error(
-                f"The allowed values for '--arch' on {platform.title()} are 'x86_64', 'aarch64' or 'arm64'"
+                f"The allowed values for '--arch' on {platform.title()} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
 
@@ -204,22 +204,22 @@ def download_pkgs_artifact(
             return ExitCode.FAIL
         artifact_name += f"{arch}-MSI"
     else:
-        if arch == "arm64":
-            ctx.info(f"Turning passed arch {arch!r} into 'aarch64'")
-            arch = "aarch64"
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
         elif arch == "x64":
             ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
             arch = "x86_64"
-        if arch not in ("x86_64", "aarch64"):
+        if arch not in ("x86_64", "arm64"):
             ctx.error(
-                f"The allowed values for '--arch' for {slug} are 'x86_64', 'aarch64' or 'arm64'"
+                f"The allowed values for '--arch' for {slug} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
 
         if slug.startswith(("debian", "ubuntu")):
             artifact_name += f"{arch}-deb"
         elif slug.startswith(
-            ("rockylinux", "amazonlinux", "centos", "fedora", "opensuse", "photonos")
+            ("rockylinux", "amazonlinux", "fedora", "opensuse", "photonos")
         ):
             artifact_name += f"{arch}-rpm"
         else:

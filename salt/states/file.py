@@ -2480,8 +2480,12 @@ def managed(
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
-        the source file will result in the state needing to re-download the
-        source file if the state is run again.
+        the source file might result in the state needing to re-download the
+        source file if the state is run again. If the source is not a local or
+        ``salt://`` one, the source hash is known, ``skip_verify`` is not true
+        and the managed file exists with the correct hash and is not templated,
+        this is not the case (i.e. remote downloads are avoided if the local hash
+        matches the expected one).
 
         .. versionadded:: 2017.7.3
 
@@ -3122,6 +3126,54 @@ def managed(
         return _error(ret, "Context must be formed as a dict")
     if defaults and not isinstance(defaults, dict):
         return _error(ret, "Defaults must be formed as a dict")
+
+    # If we're pulling from a remote source untemplated and we have a source hash,
+    # check early if the local file exists with the correct hash and skip
+    # managing contents if so. This avoids a lot of overhead.
+    if (
+        contents is None
+        and not template
+        and source
+        and not skip_verify
+        and os.path.exists(name)
+        and replace
+    ):
+        try:
+            # If the source is a list, find the first existing file.
+            # We're doing this after basic checks to not slow down
+            # runs where it does not matter.
+            source, source_hash = __salt__["file.source_list"](
+                source, source_hash, __env__
+            )
+            source_sum = None
+            if (
+                source
+                and source_hash
+                and urllib.parse.urlparse(source).scheme
+                not in (
+                    "salt",
+                    "file",
+                )
+                and not os.path.isabs(source)
+            ):
+                source_sum = __salt__["file.get_source_sum"](
+                    name,
+                    source,
+                    source_hash,
+                    source_hash_name,
+                    __env__,
+                    verify_ssl=verify_ssl,
+                )
+                hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
+        except (CommandExecutionError, OSError) as err:
+            log.error(
+                "Failed checking existing file's hash against specified source_hash: %s",
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+        else:
+            if source_sum and source_sum["hsum"] == hsum:
+                replace = False
 
     if not replace and os.path.exists(name):
         ret_perms = {}

@@ -11,6 +11,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.x509 as x509util
+from tests.conftest import FIPS_TESTRUN
 
 try:
     import cryptography
@@ -123,8 +124,14 @@ def x509_data(
 
 @pytest.fixture(scope="module")
 def x509_salt_master(salt_factories, ca_minion_id, x509_master_config):
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
-        "x509-master", defaults=x509_master_config
+        "x509-master", defaults=x509_master_config, overrides=config_overrides
     )
     with factory.started():
         yield factory
@@ -184,9 +191,15 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key_enc, rsa_privkey, ca_new_ce
 @pytest.fixture(scope="module", autouse=True)
 def x509ca_salt_minion(x509_salt_master, ca_minion_id, ca_minion_config):
     assert x509_salt_master.is_running()
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = x509_salt_master.salt_minion_daemon(
         ca_minion_id,
         defaults=ca_minion_config,
+        overrides=config_overrides,
     )
     with factory.started():
         # Sync All
@@ -199,6 +212,11 @@ def x509ca_salt_minion(x509_salt_master, ca_minion_id, ca_minion_config):
 @pytest.fixture(scope="module")
 def x509_salt_minion(x509_salt_master, x509_minion_id):
     assert x509_salt_master.is_running()
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = x509_salt_master.salt_minion_daemon(
         x509_minion_id,
         defaults={
@@ -206,6 +224,7 @@ def x509_salt_minion(x509_salt_master, x509_minion_id):
             "features": {"x509_v2": True},
             "grains": {"testgrain": "foo"},
         },
+        overrides=config_overrides,
     )
     with factory.started():
         # Sync All

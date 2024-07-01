@@ -38,11 +38,6 @@ create = command_group(
 
 _deb_distro_info = {
     "debian": {
-        "10": {
-            "label": "deb10ary",
-            "codename": "buster",
-            "suitename": "oldoldstable",
-        },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
@@ -63,9 +58,9 @@ _deb_distro_info = {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
         },
-        "23.04": {
-            "label": "salt_ubuntu2304",
-            "codename": "lunar",
+        "24.04": {
+            "label": "salt_ubuntu2404",
+            "codename": "noble",
         },
     },
 }
@@ -316,8 +311,8 @@ def debian(
 _rpm_distro_info = {
     "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
-    "fedora": ["36", "37", "38", "39"],
-    "photon": ["3", "4", "5"],
+    "fedora": ["40"],
+    "photon": ["4", "5"],
 }
 
 
@@ -440,7 +435,7 @@ def rpm(
 
     createrepo = shutil.which("createrepo")
     if createrepo is None:
-        container = "ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9"
+        container = "ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9"
         ctx.info(f"Using docker container '{container}' to call 'createrepo'...")
         uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
         gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
@@ -498,7 +493,7 @@ def rpm(
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
-            distro_name = "RHEL/CentOS"
+            distro_name = "RHEL"
         else:
             distro_name = distro.capitalize()
 

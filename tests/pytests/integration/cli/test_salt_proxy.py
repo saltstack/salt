@@ -9,6 +9,7 @@ from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,15 @@ def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
-            proxy_minion_id, include_proxyid_cli_flag=False
+            proxy_minion_id,
+            include_proxyid_cli_flag=False,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
@@ -50,7 +59,15 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     """
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
-            proxy_minion_id, overrides={"user": "unknown-user"}
+            proxy_minion_id,
+            overrides={
+                "user": "unknown-user",
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
@@ -65,7 +82,16 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
     salt-proxy.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_master.salt_proxy_minion_daemon(proxy_minion_id)
+        factory = salt_master.salt_proxy_minion_daemon(
+            proxy_minion_id,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
+        )
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
 
     assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
@@ -86,6 +112,11 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
         proxy_minion_id,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     factory.start()
     assert factory.is_running()

@@ -7,31 +7,125 @@ from __future__ import annotations
 
 import logging
 import shutil
-import sys
 from typing import TYPE_CHECKING, cast
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
-from tools.utils import Linux, MacOS, Windows
-
-if sys.version_info < (3, 11):
-    from typing_extensions import TypedDict
-else:
-    from typing import TypedDict  # pylint: disable=no-name-in-module
+from tools.utils import Linux, MacOS, PlatformDefinitions, Windows
 
 log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
-
-class PlatformDefinitions(TypedDict):
-    linux: list[Linux]
-    macos: list[MacOS]
-    windows: list[Windows]
-
+TEST_SALT_LISTING = PlatformDefinitions(
+    {
+        "linux": [
+            Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
+            Linux(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
+            Linux(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"),
+            Linux(
+                slug="amazonlinux-2-arm64",
+                display_name="Amazon Linux 2 Arm64",
+                arch="arm64",
+            ),
+            Linux(
+                slug="amazonlinux-2023",
+                display_name="Amazon Linux 2023",
+                arch="x86_64",
+            ),
+            Linux(
+                slug="amazonlinux-2023-arm64",
+                display_name="Amazon Linux 2023 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="archlinux-lts", display_name="Arch Linux LTS", arch="x86_64"),
+            Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
+            Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
+            Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
+            Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
+            Linux(slug="fedora-40", display_name="Fedora 40", arch="x86_64"),
+            Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
+            Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
+            Linux(
+                slug="photonos-4-arm64", display_name="Photon OS 4 Arm64", arch="arm64"
+            ),
+            Linux(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                fips=True,
+            ),
+            Linux(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                fips=True,
+            ),
+            Linux(slug="photonos-5", display_name="Photon OS 5", arch="x86_64"),
+            Linux(
+                slug="photonos-5-arm64", display_name="Photon OS 5 Arm64", arch="arm64"
+            ),
+            Linux(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                fips=True,
+            ),
+            Linux(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                fips=True,
+            ),
+            Linux(slug="ubuntu-20.04", display_name="Ubuntu 20.04", arch="x86_64"),
+            Linux(
+                slug="ubuntu-20.04-arm64",
+                display_name="Ubuntu 20.04 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="ubuntu-22.04", display_name="Ubuntu 22.04", arch="x86_64"),
+            Linux(
+                slug="ubuntu-22.04-arm64",
+                display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+            ),
+            Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
+            Linux(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
+                arch="arm64",
+            ),
+        ],
+        "macos": [
+            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOS(
+                slug="macos-13-arm64",
+                display_name="macOS 13 Arm64",
+                arch="arm64",
+                runner="macos-13-xlarge",
+            ),
+        ],
+        "windows": [
+            Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
+            Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
+            Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
+        ],
+    }
+)
 
 # Define the command group
 cgroup = command_group(
@@ -97,114 +191,7 @@ def generate_workflows(ctx: Context):
                 "test-pkg-downloads": True,
             },
         },
-        "Test Package Downloads": {
-            "template": "test-package-downloads-action.yml",
-        },
-        "Build CI Deps": {
-            "template": "build-deps-ci-action.yml",
-        },
     }
-    test_salt_listing = PlatformDefinitions(
-        {
-            "linux": [
-                Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
-                Linux(
-                    slug="rockylinux-8-arm64",
-                    display_name="Rocky Linux 8 Arm64",
-                    arch="arm64",
-                ),
-                Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
-                Linux(
-                    slug="rockylinux-9-arm64",
-                    display_name="Rocky Linux 9 Arm64",
-                    arch="arm64",
-                ),
-                Linux(
-                    slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"
-                ),
-                Linux(
-                    slug="amazonlinux-2-arm64",
-                    display_name="Amazon Linux 2 Arm64",
-                    arch="arm64",
-                ),
-                Linux(
-                    slug="amazonlinux-2023",
-                    display_name="Amazon Linux 2023",
-                    arch="x86_64",
-                ),
-                Linux(
-                    slug="amazonlinux-2023-arm64",
-                    display_name="Amazon Linux 2023 Arm64",
-                    arch="arm64",
-                ),
-                Linux(
-                    slug="archlinux-lts", display_name="Arch Linux LTS", arch="x86_64"
-                ),
-                Linux(slug="centos-7", display_name="CentOS 7", arch="x86_64"),
-                Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
-                Linux(
-                    slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"
-                ),
-                Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
-                Linux(
-                    slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"
-                ),
-                Linux(slug="fedora-39", display_name="Fedora 39", arch="x86_64"),
-                Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
-                Linux(
-                    slug="photonos-4",
-                    display_name="Photon OS 4",
-                    arch="x86_64",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-4-arm64",
-                    display_name="Photon OS 4 Arm64",
-                    arch="arm64",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-5",
-                    display_name="Photon OS 5",
-                    arch="x86_64",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-5-arm64",
-                    display_name="Photon OS 5 Arm64",
-                    arch="arm64",
-                    fips=True,
-                ),
-                Linux(slug="ubuntu-20.04", display_name="Ubuntu 20.04", arch="x86_64"),
-                Linux(
-                    slug="ubuntu-20.04-arm64",
-                    display_name="Ubuntu 20.04 Arm64",
-                    arch="arm64",
-                ),
-                Linux(slug="ubuntu-22.04", display_name="Ubuntu 22.04", arch="x86_64"),
-                Linux(
-                    slug="ubuntu-22.04-arm64",
-                    display_name="Ubuntu 22.04 Arm64",
-                    arch="arm64",
-                ),
-            ],
-            "macos": [
-                MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-                MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-                MacOS(
-                    slug="macos-13-arm64",
-                    display_name="macOS 13 Arm64",
-                    arch="arm64",
-                    runner="macos-13-xlarge",
-                ),
-            ],
-            "windows": [
-                Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
-                Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
-                Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
-            ],
-        }
-    )
 
     test_salt_pkg_listing = PlatformDefinitions(
         {
@@ -258,12 +245,6 @@ def generate_workflows(ctx: Context):
                     pkg_type="rpm",
                 ),
                 Linux(
-                    slug="centos-7",
-                    display_name="CentOS 7",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
                     slug="debian-11",
                     display_name="Debian 11",
                     arch="x86_64",
@@ -292,6 +273,18 @@ def generate_workflows(ctx: Context):
                     display_name="Photon OS 4",
                     arch="x86_64",
                     pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-4-arm64",
+                    display_name="Photon OS 4 Arm64",
+                    arch="arm64",
+                    pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-4",
+                    display_name="Photon OS 4",
+                    arch="x86_64",
+                    pkg_type="rpm",
                     fips=True,
                 ),
                 Linux(
@@ -300,6 +293,18 @@ def generate_workflows(ctx: Context):
                     arch="arm64",
                     pkg_type="rpm",
                     fips=True,
+                ),
+                Linux(
+                    slug="photonos-5",
+                    display_name="Photon OS 5",
+                    arch="x86_64",
+                    pkg_type="rpm",
+                ),
+                Linux(
+                    slug="photonos-5-arm64",
+                    display_name="Photon OS 5 Arm64",
+                    arch="arm64",
+                    pkg_type="rpm",
                 ),
                 Linux(
                     slug="photonos-5",
@@ -336,6 +341,18 @@ def generate_workflows(ctx: Context):
                 Linux(
                     slug="ubuntu-22.04-arm64",
                     display_name="Ubuntu 22.04 Arm64",
+                    arch="arm64",
+                    pkg_type="deb",
+                ),
+                Linux(
+                    slug="ubuntu-24.04",
+                    display_name="Ubuntu 24.04",
+                    arch="x86_64",
+                    pkg_type="deb",
+                ),
+                Linux(
+                    slug="ubuntu-24.04-arm64",
+                    display_name="Ubuntu 24.04 Arm64",
                     arch="arm64",
                     pkg_type="deb",
                 ),
@@ -391,105 +408,6 @@ def generate_workflows(ctx: Context):
         }
     )
 
-    build_ci_deps_listing = {
-        "linux": [
-            ("x86_64", "centos-7"),
-            ("arm64", "centos-7-arm64"),
-        ],
-        "macos": [
-            ("x86_64", "macos-12"),
-            ("arm64", "macos-13-arm64"),
-        ],
-        "windows": [
-            ("amd64", "windows-2022"),
-        ],
-    }
-    test_salt_pkg_downloads_listing = PlatformDefinitions(
-        {
-            "linux": [],
-            "macos": [],
-            "windows": [],
-        }
-    )
-    rpm_slugs = (
-        "rockylinux",
-        "amazonlinux",
-        "centos",
-        "fedora",
-        "photon",
-    )
-    linux_skip_pkg_download_tests = (
-        "archlinux-lts",
-        "opensuse-15",
-        "windows",
-    )
-    for slug in sorted(tools.utils.get_golden_images()):
-        if slug.startswith(linux_skip_pkg_download_tests):
-            continue
-        if "arm64" in slug:
-            arch = "arm64"
-        else:
-            arch = "x86_64"
-        if slug.startswith(rpm_slugs) and arch == "arm64":
-            # While we maintain backwards compatible urls
-            test_salt_pkg_downloads_listing["linux"].append(
-                Linux(
-                    slug=slug,
-                    arch="aarch64",
-                    pkg_type="package",
-                )
-            )
-        test_salt_pkg_downloads_listing["linux"].append(
-            Linux(
-                slug=slug,
-                arch=arch,
-                pkg_type="package",
-            )
-        )
-        if slug.startswith("ubuntu-22"):
-            test_salt_pkg_downloads_listing["linux"].append(
-                Linux(
-                    slug=slug,
-                    arch=arch,
-                    pkg_type="onedir",
-                )
-            )
-    for mac in test_salt_listing["macos"]:
-        test_salt_pkg_downloads_listing["macos"].append(
-            MacOS(
-                slug=mac.slug,
-                arch=mac.arch,
-                display_name=mac.display_name,
-                pkg_type="package",
-                runner=mac.runner,
-            )
-        )
-    for mac in test_salt_listing["macos"][-1:]:
-        test_salt_pkg_downloads_listing["macos"].append(
-            MacOS(
-                slug=mac.slug,
-                arch=mac.arch,
-                display_name=mac.display_name,
-                pkg_type="onedir",
-                runner=mac.runner,
-            )
-        )
-    for win in test_salt_listing["windows"][-1:]:
-        for pkg_type in ("nsis", "msi", "onedir"):
-            test_salt_pkg_downloads_listing["windows"].append(
-                Windows(
-                    slug=win.slug,
-                    arch=win.arch,
-                    display_name=win.display_name,
-                    pkg_type=pkg_type,
-                )
-            )
-
-    test_salt_pkg_downloads_needs_slugs = {"build-ci-deps"}
-    # for platform in test_salt_pkg_downloads_listing:
-    #    for _, arch, _ in test_salt_pkg_downloads_listing[platform]:
-    #        test_salt_pkg_downloads_needs_slugs.add("build-ci-deps")
-
     build_rpms_listing = []
     rpm_os_versions: dict[str, list[str]] = {
         "amazon": [],
@@ -500,9 +418,7 @@ def generate_workflows(ctx: Context):
     for slug in sorted(tools.utils.get_golden_images()):
         if slug.endswith("-arm64"):
             continue
-        if not slug.startswith(
-            ("amazonlinux", "rockylinux", "centos", "fedora", "photonos")
-        ):
+        if not slug.startswith(("amazonlinux", "rockylinux", "fedora", "photonos")):
             continue
         os_name, os_version = slug.split("-")
         if os_name == "amazonlinux":
@@ -563,13 +479,8 @@ def generate_workflows(ctx: Context):
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
-            "test_salt_listing": test_salt_listing,
+            "test_salt_listing": TEST_SALT_LISTING,
             "test_salt_pkg_listing": test_salt_pkg_listing,
-            "build_ci_deps_listing": build_ci_deps_listing,
-            "test_salt_pkg_downloads_listing": test_salt_pkg_downloads_listing,
-            "test_salt_pkg_downloads_needs_slugs": sorted(
-                test_salt_pkg_downloads_needs_slugs
-            ),
             "build_rpms_listing": build_rpms_listing,
             "build_debs_listing": build_debs_listing,
         }

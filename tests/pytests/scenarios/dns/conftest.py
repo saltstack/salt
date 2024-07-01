@@ -4,6 +4,8 @@ import subprocess
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 log = logging.getLogger(__name__)
 
 
@@ -53,6 +55,10 @@ def master(request, salt_factories):
     }
     config_overrides = {
         "interface": "0.0.0.0",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "master",
@@ -84,6 +90,9 @@ def minion(master, master_alive_interval):
         "master": f"master.local:{port}",
         "publish_port": master.config["publish_port"],
         "master_alive_interval": master_alive_interval,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = master.salt_minion_daemon(
         "minion",

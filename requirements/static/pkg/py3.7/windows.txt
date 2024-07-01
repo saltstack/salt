@@ -88,8 +88,6 @@ pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
 pymssql==2.2.1
     # via -r requirements/windows.txt
-pymysql==1.0.2
-    # via -r requirements/windows.txt
 pyopenssl==24.0.0
     # via -r requirements/windows.txt
 python-dateutil==2.8.1
@@ -109,7 +107,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.31.0 ; python_version < "3.8"
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt

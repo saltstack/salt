@@ -31,6 +31,7 @@ pytestmark = [
 
 
 class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
+
     def __init__(self, config, req_channel_crypt):
         super().__init__()
         self._closing = False
