@@ -1,0 +1,17 @@
+Template: salt-minion/user
+Type: string
+Default: root
+Description: User for salt-minion
+  User to run the salt-minion process as
+
+Template: salt-minion/enabled
+Type: string
+Default: enabled
+Description: Systemd enable state for salt-minion
+ default enable state for salt-minion systemd state
+
+Template: salt-minion/active
+Type: string
+Default: active
+Description: Systemd active state for salt-minion
+ default active state for salt-minion systemd state
