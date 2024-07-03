@@ -74,6 +74,8 @@ def write(
         The separator to use when splitting the key into a list of keys.
         If None, the key will not be split (Default).
 
+        .. versionadded:: 3008.0
+
     value
         The value to write to the given key.
         Dates should be in the format 'YYYY-MM-DDTHH:MM:SSZ'
@@ -108,10 +110,14 @@ def write(
         If current value is not a dictionary this option will be ignored.
         This option will be set to True if vtype is dict-add.
 
+        .. versionadded:: 3008.0
+
     array_add
         Append the value to the array.
         If current value is not a list this option will be ignored.
         This option will be set to True if vtype is array-add.
+
+        .. versionadded:: 3008.0
 
     Raises:
         KeyError: When the key is not found in the domain
@@ -195,6 +201,8 @@ def read(domain, key, user=None, key_separator=None):
         The separator to use when splitting the key into a list of keys.
         If None, the key will not be split (Default).
 
+        .. versionadded:: 3008.0
+
     user
         The user to read the defaults from
 
@@ -235,6 +243,8 @@ def delete(domain, key, user=None, key_separator=None):
     key_separator
         The separator to use when splitting the key into a list of keys.
         If None, the key will not be split (Default).
+
+        .. versionadded:: 3008.0
 
     user
         The user to delete the defaults with
@@ -303,6 +313,7 @@ def cast_value_to_vtype(value, vtype):
     Returns:
         The converted value
 
+    .. versionadded:: 3008.0
     """
     # Boolean
     if vtype in ("bool", "boolean"):
