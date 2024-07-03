@@ -30,6 +30,8 @@ def write(name, domain, value, vtype=None, name_separator=None, user=None):
         The separator to use when splitting the name into a list of keys.
         If None, the name will not be split (Default).
 
+        .. versionadded:: 3008.0
+
     domain
         The name of the domain to write to
 
@@ -90,6 +92,8 @@ def absent(name, domain, user=None, name_separator=None):
     name_separator
         The separator to use when splitting the name into a list of keys.
         If None, the name will not be split (Default).
+
+        .. versionadded:: 3008.0
 
     domain
         The name of the domain to remove from
