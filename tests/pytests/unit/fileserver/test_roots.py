@@ -341,3 +341,13 @@ def test_serve_file_symlink_destination_not_in_root(tmp_state_tree):
     fnd = {"path": str(symlink / "testfile"), "rel": "bar/testfile"}
     ret = roots.serve_file(load, fnd)
     assert ret == {"data": b"testfile", "dest": "bar/testfile"}
+
+
+def test_relative_file_roots(tmp_state_tree):
+    parent = pathlib.Path(tmp_state_tree).parent
+    reldir = os.path.basename(tmp_state_tree)
+    opts = {"file_roots": copy.copy(roots.__opts__["file_roots"])}
+    opts["file_roots"]["base"] = [reldir]
+    with patch.dict(roots.__opts__, opts), pytest.helpers.change_cwd(str(parent)):
+        ret = roots.find_file("testfile")
+        assert "testfile" == ret["rel"]
