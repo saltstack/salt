@@ -13,7 +13,8 @@ ioloop>=0.1a0
 lxml>=4.6.3
 pyasn1>=0.4.8
 pycparser>=2.21
-pymssql>=2.2.1
+pymssql>=2.2.1 ; python_version < '3.12.0'
+pymssql>=2.3.0 ; python_version >= '3.12.0'
 pyopenssl>=23.2.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
