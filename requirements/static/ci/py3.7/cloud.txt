@@ -603,7 +603,7 @@ pyyaml==6.0.1
     #   napalm
     #   pytest-salt-factories
     #   yamlordereddictloader
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -722,7 +722,7 @@ textfsm==1.1.0
     #   napalm
     #   netmiko
     #   ntc-templates
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt

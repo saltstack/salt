@@ -145,7 +145,7 @@ pyyaml==6.0.1
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/zeromq.txt

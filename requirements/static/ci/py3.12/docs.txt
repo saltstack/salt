@@ -45,9 +45,10 @@ idna==3.7
     #   requests
 imagesize==1.4.1
     # via sphinx
-immutables==0.15
+immutables==0.20 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 jaraco.classes==3.2.1
     # via
@@ -145,7 +146,7 @@ pyyaml==6.0.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==23.2.0
+pyzmq==26.0.3 ; python_version >= "3.12.0"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/zeromq.txt

@@ -1,6 +1,7 @@
 -r base.txt
 -r crypto.txt
 
-pyzmq>=20.0.0
-pyzmq==25.0.2 ; sys_platform == "win32"
-pyzmq==25.1.2 ; sys_platform == "darwin"
+pyzmq>=20.0.0 ; python_version < "3.12.0"
+pyzmq>=26.0.3 ; python_version >= "3.12.0"
+pyzmq==25.0.2 ; python_version < "3.12.0" and sys_platform == "win32"
+pyzmq==25.1.2 ; python_version < "3.12.0" and sys_platform == "darwin"

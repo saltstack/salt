@@ -104,7 +104,7 @@ pywin32==305
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.0.2 ; sys_platform == "win32"
+pyzmq==25.0.2 ; python_version < "3.12.0" and sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.32.3 ; python_version >= "3.10"
     # via
@@ -120,7 +120,7 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/windows.txt
 urllib3==1.26.18
     # via
