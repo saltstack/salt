@@ -2,7 +2,8 @@
 
 -r zeromq.txt
 
-apache-libcloud>=2.4.0
+apache-libcloud>=2.4.0 ; python_version < '3.12.0'
+apache-libcloud>=3.8.0 ; python_version >= '3.12.0'
 cherrypy>=17.4.1
 cryptography>=41.0.3
 gitpython>=3.1.37

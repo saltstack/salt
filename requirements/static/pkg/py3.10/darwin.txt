@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.10/darwin.txt requirements/darwin.txt requirements/static/pkg/darwin.in
 #
-apache-libcloud==2.5.0
+apache-libcloud==2.5.0 ; python_version < "3.12.0"
     # via -r requirements/darwin.txt
 certifi==2024.7.4 ; python_version >= "3.10"
     # via
