@@ -1,3 +1,5 @@
+import tempfile
+
 import pytest
 
 import salt.auth.pam
@@ -45,3 +47,18 @@ def test_if_pam_acct_mgmt_returns_zero_authenticate_should_be_true(mock_pam):
             )
             is True
         )
+
+
+def test_if_sys_executable_is_used_to_call_pam_auth(mock_pam):
+    class Ret:
+        returncode = 0
+
+    with patch(
+        "salt.auth.pam.subprocess.run", return_value=Ret
+    ) as run_mock, tempfile.NamedTemporaryFile() as f, patch(
+        "salt.auth.pam.sys.executable", f.name
+    ):
+        assert salt.auth.pam.auth(
+            username="fnord", password="fnord", service="login", encoding="utf-8"
+        )
+        assert f.name in run_mock.call_args_list[0][0][0]
