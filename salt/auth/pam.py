@@ -228,7 +228,7 @@ def authenticate(username, password):
     env["SALT_PAM_PASSWORD"] = password
     env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
     env["SALT_PAM_ENCODING"] = __salt_system_encoding__
-    pyexe = pathlib.Path(__opts__.get("auth.pam.python", "/usr/bin/python3")).resolve()
+    pyexe = pathlib.Path(__opts__.get("auth.pam.python", sys.executable)).resolve()
     pyfile = pathlib.Path(__file__).resolve()
     if not pyexe.exists():
         log.error("Error 'auth.pam.python' config value does not exist: %s", pyexe)
