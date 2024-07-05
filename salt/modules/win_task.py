@@ -182,6 +182,15 @@ def __virtual__():
     return False, "Module win_task: module only works on Windows systems"
 
 
+def _signed_to_unsigned_int32(code):
+    """
+    Convert negative result and error codes from win32com
+    """
+    if code < 0:
+        code = code + 2**32
+    return code
+
+
 def _get_date_time_format(dt_string):
     """
     Copied from win_system.py (_get_date_time_format)
@@ -253,6 +262,8 @@ def _reverse_lookup(dictionary, value):
             value_index = idx
             break
 
+    if value_index < 0:
+        return "invalid value"
     return list(dictionary)[value_index]
 
 
@@ -311,19 +322,20 @@ def _save_task_definition(
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
+        error_code = _signed_to_unsigned_int32(exc[5])
         fc = {
-            -2147024773: (
+            0x8007007B: (
                 "The filename, directory name, or volume label syntax is incorrect"
             ),
-            -2147024894: "The system cannot find the file specified",
-            -2147216615: "Required element or attribute missing",
-            -2147216616: "Value incorrectly formatted or out of range",
-            -2147352571: "Access denied",
+            0x80070002: "The system cannot find the file specified",
+            0x80041319: "Required element or attribute missing",
+            0x80041318: "Value incorrectly formatted or out of range",
+            0x80020005: "Access denied",
         }
         try:
-            failure_code = fc[exc[5]]
+            failure_code = fc[error_code]
         except KeyError:
-            failure_code = f"Unknown Failure: {error}"
+            failure_code = f"Unknown Failure: {hex(error_code)}"
 
         log.debug("Failed to modify task: %s", failure_code)
 
@@ -683,7 +695,7 @@ def create_task_from_xml(
 
         except pythoncom.com_error as error:
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            error_code = hex(exc[5] + 2**32)
+            error_code = _signed_to_unsigned_int32(exc[5])
             fc = {
                 0x80041319: "Required element or attribute missing",
                 0x80041318: "Value incorrectly formatted or out of range",
@@ -731,7 +743,7 @@ def create_task_from_xml(
             try:
                 failure_code = fc[error_code]
             except KeyError:
-                failure_code = f"Unknown Failure: {error_code}"
+                failure_code = f"Unknown Failure: {hex(error_code)}"
             finally:
                 log.debug("Failed to create task: %s", failure_code)
             raise CommandExecutionError(failure_code)
@@ -1469,10 +1481,16 @@ def info(name, location="\\"):
         task_folder = task_service.GetFolder(location)
         task = task_folder.GetTask(name)
 
+        last_task_result_code = _signed_to_unsigned_int32(task.LastTaskResult)
+        try:
+            last_task_result = results[last_task_result_code]
+        except KeyError:
+            last_task_result = f"Unknown Task Result: {hex(last_task_result_code)}"
+
         properties = {
             "enabled": task.Enabled,
             "last_run": _get_date_value(task.LastRunTime),
-            "last_run_result": results[task.LastTaskResult],
+            "last_run_result": last_task_result,
             "missed_runs": task.NumberOfMissedRuns,
             "next_run": _get_date_value(task.NextRunTime),
             "status": states[task.State],
@@ -1494,7 +1512,7 @@ def info(name, location="\\"):
                 duration, def_set.DeleteExpiredTaskAfter
             )
 
-        if def_set.ExecutionTimeLimit == "":
+        if def_set.ExecutionTimeLimit == "" or def_set.ExecutionTimeLimit == "PT0S":
             settings["execution_time_limit"] = False
         else:
             settings["execution_time_limit"] = _reverse_lookup(
