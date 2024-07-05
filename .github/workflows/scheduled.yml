@@ -465,7 +465,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.17.0"
-      python-version: "3.10.14"
+      python-version: "3.12.4"
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -481,7 +481,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.17.0"
-      python-version: "3.10.14"
+      python-version: "3.12.4"
 
   build-pkgs-onedir:
     name: Build Packages
@@ -495,7 +495,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.17.0"
-      python-version: "3.10.14"
+      python-version: "3.12.4"
       source: "onedir"
 
   build-pkgs-src:
@@ -510,7 +510,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.17.0"
-      python-version: "3.10.14"
+      python-version: "3.12.4"
       source: "src"
   build-ci-deps:
     name: CI Deps
@@ -524,7 +524,7 @@ jobs:
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   rockylinux-8-pkg-tests:
@@ -544,7 +544,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -565,7 +565,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -586,7 +586,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -607,7 +607,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -628,7 +628,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -649,7 +649,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -670,7 +670,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -691,7 +691,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -712,7 +712,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -733,7 +733,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -754,7 +754,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -775,7 +775,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -796,7 +796,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -817,7 +817,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -838,7 +838,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       fips: true
@@ -860,7 +860,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       fips: true
@@ -882,7 +882,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -903,7 +903,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -924,7 +924,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       fips: true
@@ -946,7 +946,7 @@ jobs:
       pkg-type: rpm
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       fips: true
@@ -968,7 +968,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -989,7 +989,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1010,7 +1010,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1031,7 +1031,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1052,7 +1052,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1073,7 +1073,7 @@ jobs:
       pkg-type: deb
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1095,7 +1095,7 @@ jobs:
       pkg-type: macos
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1117,7 +1117,7 @@ jobs:
       pkg-type: macos
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1139,7 +1139,7 @@ jobs:
       pkg-type: macos
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1160,7 +1160,7 @@ jobs:
       pkg-type: NSIS
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1181,7 +1181,7 @@ jobs:
       pkg-type: MSI
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1202,7 +1202,7 @@ jobs:
       pkg-type: NSIS
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1223,7 +1223,7 @@ jobs:
       pkg-type: MSI
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1244,7 +1244,7 @@ jobs:
       pkg-type: NSIS
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1265,7 +1265,7 @@ jobs:
       pkg-type: MSI
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
@@ -1285,7 +1285,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1306,7 +1306,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1327,7 +1327,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1349,7 +1349,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1371,7 +1371,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1393,7 +1393,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1414,7 +1414,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1435,7 +1435,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1456,7 +1456,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1477,7 +1477,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1498,7 +1498,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1519,7 +1519,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1540,7 +1540,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1561,7 +1561,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1582,7 +1582,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1603,7 +1603,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1624,7 +1624,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1645,7 +1645,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1666,7 +1666,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1687,7 +1687,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1708,7 +1708,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1729,7 +1729,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1750,7 +1750,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1771,7 +1771,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1793,7 +1793,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1815,7 +1815,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1836,7 +1836,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1857,7 +1857,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1879,7 +1879,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1901,7 +1901,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1922,7 +1922,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1943,7 +1943,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1964,7 +1964,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -1985,7 +1985,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
@@ -2006,7 +2006,7 @@ jobs:
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.12.4
       skip-code-coverage: false
       workflow-slug: scheduled
       default-timeout: 360
