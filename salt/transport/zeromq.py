@@ -956,7 +956,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 await publish_payload(package)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception in publisher %s %s", self.pull_uri, exc, exc_info=True
+                    "Exception in publisher %s %s",
+                    self.pull_uri,
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
                 )
 
     async def publish_payload(self, payload, topic_list=None):

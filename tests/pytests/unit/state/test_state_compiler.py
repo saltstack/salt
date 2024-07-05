@@ -1064,11 +1064,66 @@ def test_mod_aggregate(minion_opts):
             ]
 
             # Ensure that the require requisite from the
-            # figlet state doesn't find its way into this state
-            assert "require" not in low_ret
+            # figlet state finds its way into this state
+            assert "require" in low_ret
 
             # Ensure pkgs were aggregated
             assert low_ret["pkgs"] == ["figlet", "sl"]
+
+
+def test_mod_aggregate_order(minion_opts):
+    """
+    Test to ensure that the state_aggregate setting correctly aggregates package installations
+    while respecting the 'require' requisite to enforce execution order.
+    """
+    # Setup the chunks based on the provided scenario
+    chunks = [
+        {
+            "state": "pkg",
+            "name": "first packages",
+            "__id__": "first packages",
+            "pkgs": ["drpm"],
+            "fun": "installed",
+            "order": 1,
+            "__env__": "base",
+            "__sls__": "base",
+        },
+        {
+            "state": "test",
+            "name": "requirement",
+            "__id__": "requirement",
+            "fun": "nop",
+            "order": 2,
+            "__env__": "base",
+            "__sls__": "base",
+        },
+        {
+            "state": "pkg",
+            "name": "second packages",
+            "__id__": "second packages",
+            "pkgs": ["gc"],
+            "fun": "installed",
+            "order": 3,
+            "require": [{"test": "requirement"}],
+            "provider": "yumpkg",
+            "__env__": "base",
+            "__sls__": "base",
+        },
+    ]
+
+    # Setup the State object
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(chunks[-1])
+        state_obj.opts["state_aggregate"] = True  # Ensure state aggregation is enabled
+
+        # Process each chunk with _mod_aggregate to simulate state execution
+        state_obj.call_chunks(chunks)
+
+        first_state_low = chunks[0]
+        last_state_low = chunks[-1]
+        # Verify that the requisites got aggregated as well
+        assert first_state_low["require"] == last_state_low["require"]
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):

@@ -3,6 +3,8 @@ import shutil
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @pytest.fixture(scope="module")
 def pillar_state_tree(tmp_path_factory):
@@ -34,6 +36,12 @@ def peer_salt_master(salt_factories, pillar_state_tree, peer_salt_master_config)
     factory = salt_factories.salt_master_daemon(
         random_string("peer-comm-master", uppercase=False),
         defaults=peer_salt_master_config,
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
     )
     with factory.started():
         yield factory
@@ -45,6 +53,11 @@ def peer_salt_minion_1(peer_salt_master):
     factory = peer_salt_master.salt_minion_daemon(
         random_string("peer-comm-minion-1", uppercase=False),
         defaults={"open_mode": True, "grains": {"hello_peer": "beer"}},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -60,6 +73,11 @@ def peer_salt_minion_2(peer_salt_master):
     factory = peer_salt_master.salt_minion_daemon(
         random_string("peer-comm-minion-2", uppercase=False),
         defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -75,6 +93,11 @@ def peer_salt_minion_3(peer_salt_master):
     factory = peer_salt_master.salt_minion_daemon(
         random_string("peer-comm-minion-3", uppercase=False),
         defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All

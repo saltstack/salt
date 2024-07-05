@@ -219,7 +219,7 @@ def download_pkgs_artifact(
         if slug.startswith(("debian", "ubuntu")):
             artifact_name += f"{arch}-deb"
         elif slug.startswith(
-            ("rockylinux", "amazonlinux", "centos", "fedora", "opensuse", "photonos")
+            ("rockylinux", "amazonlinux", "fedora", "opensuse", "photonos")
         ):
             artifact_name += f"{arch}-rpm"
         else:
