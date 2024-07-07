@@ -60,7 +60,7 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.0.2
     # via -r requirements/base.txt
-lxml==4.9.1
+lxml==5.2.2 ; python_version >= "3.12.0"
     # via -r requirements/windows.txt
 markupsafe==2.1.2
     # via
