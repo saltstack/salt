@@ -57,6 +57,8 @@ def test_if_sys_executable_is_used_to_call_pam_auth(mock_pam):
         "salt.auth.pam.subprocess.run", return_value=Ret
     ) as run_mock, tempfile.NamedTemporaryFile() as f, patch(
         "salt.auth.pam.sys.executable", f.name
+    ), patch(
+        "os.path.exists", return_value=False
     ):
         assert salt.auth.pam.auth(
             username="fnord", password="fnord", service="login", encoding="utf-8"
