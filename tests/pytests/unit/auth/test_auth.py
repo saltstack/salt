@@ -2,6 +2,7 @@ import time
 
 import salt.auth
 import salt.config
+from tests.support.mock import patch
 
 
 def test_cve_2021_3244(tmp_path):
