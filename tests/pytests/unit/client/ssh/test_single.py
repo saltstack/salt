@@ -86,7 +86,7 @@ def test_single_opts(opts, target, mock_bin_paths):
     assert single.shell._cmd_str("date +%s") == expected_cmd
 
 
-def test_single_opts_custom_keepalive_options(opts, target):
+def test_single_opts_custom_keepalive_options(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options with custom keepalive"""
 
     single = ssh.Single(
@@ -114,7 +114,7 @@ def test_single_opts_custom_keepalive_options(opts, target):
     assert single.shell._cmd_str("date +%s") == expected_cmd
 
 
-def test_single_opts_disable_keepalive(opts, target):
+def test_single_opts_disable_keepalive(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options with custom keepalive"""
 
     single = ssh.Single(
