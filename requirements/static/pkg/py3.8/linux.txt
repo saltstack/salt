@@ -29,9 +29,7 @@ distro==1.5.0
 idna==3.7
     # via requests
 immutables==0.20
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
+    # via contextvars
 importlib-metadata==4.6.4
     # via -r requirements/static/pkg/linux.in
 jaraco.classes==3.2.1
