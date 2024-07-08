@@ -404,10 +404,6 @@ pathspec==0.9.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   yamllint
-pathtools==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   watchdog
 platformdirs==2.2.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -728,7 +724,7 @@ virtualenv==20.7.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
-watchdog==0.10.3
+watchdog==4.0.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in

@@ -347,10 +347,6 @@ passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-pathtools==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   watchdog
 platformdirs==2.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -654,7 +650,7 @@ virtualenv==20.7.2
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-watchdog==0.10.3
+watchdog==4.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in

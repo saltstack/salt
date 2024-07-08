@@ -243,8 +243,6 @@ patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==0.10.2
     # via yamllint
-pathtools==0.1.2
-    # via watchdog
 platformdirs==2.5.4
     # via virtualenv
 pluggy==1.4.0
@@ -464,7 +462,7 @@ virtualenv==20.17.0
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-watchdog==0.10.3
+watchdog==4.0.1
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via kubernetes
