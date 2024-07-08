@@ -191,6 +191,9 @@ jobs:
           path:
             pkgs/checkout/
 
+      - name: Install CMake
+        run: sudo apt-get install -y cmake
+
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
         with:
@@ -280,6 +283,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: sudo dnf install -y cmake
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
