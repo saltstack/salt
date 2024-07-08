@@ -455,6 +455,35 @@ def _set_up_test_status_pid_linux():
     return m
 
 
+def test_status_diskusage_not_exist():
+    with patch("os.path.exists", return_value=False):
+        assert status.diskusage("/foo/bar/not-existing/") == {}
+
+
+def test_status_diskusage_valid_output():
+    class MockData:
+        f_bsize = 8
+        f_bavail = 10
+        f_blocks = 50
+
+    with patch("os.path.exists", return_value=True), patch(
+        "os.statvfs", return_value=MockData()
+    ):
+        assert status.diskusage("/foo/bar/existing/") == {
+            "/foo/bar/existing/": {"available": 80, "total": 400}
+        }
+
+
+def test_status_diskusage_exception_raised():
+    with patch("os.path.exists", return_value=True), patch(
+        "os.statvfs", side_effect=OSError()
+    ), patch("salt.modules.status.log") as log_mock:
+        assert status.diskusage("/foo/bar/exception/") == {
+            "/foo/bar/exception/": {"available": None, "total": None}
+        }
+        assert log_mock.warning.called
+
+
 def test_status_pid_linux():
     m = _set_up_test_status_pid_linux()
     ps = (
