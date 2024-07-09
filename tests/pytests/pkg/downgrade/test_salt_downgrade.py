@@ -2,7 +2,29 @@ import time
 
 import packaging.version
 import psutil
+import pytest
 from pytestskipmarkers.utils import platform
+
+
+@pytest.fixture
+def salt_systemd_setup(
+    salt_call_cli,
+    install_salt,
+):
+    """
+    Fixture to set systemd for salt packages to enabled and active
+    Note: assumes Salt packages already installed
+    """
+    # ensure known state, enabled and active
+    test_list = ["salt-minion"]
+    for test_item in test_list:
+        test_cmd = f"systemctl enable {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
 
 def _get_running_named_salt_pid(process_name):
@@ -24,7 +46,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_call_cli, install_salt):
+def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
     """
     Test an downgrade of Salt Minion.
     """
@@ -64,6 +86,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
+
+    time.sleep(60)  # give it some time
+
+    # earlier versions od Salt 3006.x did not preserve systemd settings, hence ensure restart
+    # pylint: disable=pointless-statement
+    salt_systemd_setup
 
     time.sleep(60)  # give it some time
 
