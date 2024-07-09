@@ -377,6 +377,21 @@ def service(name, ports=None, protocols=None):
 
 
 def _normalize_rich_rules(rich_rules):
+    """
+    Make sure rich rules are normalized and attributes
+    are quoted with double quotes so it matches the output
+    from firewall-cmd
+
+    Example:
+
+    rule family="ipv4" source address="192.168.0.0/16" port port=22 protocol=tcp accept
+    rule family="ipv4" source address="192.168.0.0/16" port port='22' protocol=tcp accept
+    rule family='ipv4' source address='192.168.0.0/16' port port='22' protocol=tcp accept
+
+    normalized to:
+
+    rule family="ipv4" source address="192.168.0.0/16" port port="22" protocol="tcp" accept
+    """
     normalized_rules = []
     for rich_rule in rich_rules:
         normalized_rule = ""
