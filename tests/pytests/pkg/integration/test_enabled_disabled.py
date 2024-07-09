@@ -10,8 +10,8 @@ def test_services(install_salt, salt_call_cli):
     """
     Check if Services are enabled/disabled
     """
-    if not install_salt.upgrade:
-        install_salt.install()
+    ## DGM if not install_salt.upgrade:
+    ## DGM     install_salt.install()
 
     services_disabled = []
     services_enabled = []

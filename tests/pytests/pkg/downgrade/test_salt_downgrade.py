@@ -50,10 +50,18 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
     """
     Test an downgrade of Salt Minion.
     """
+    print(
+        f"DGM test_salt_downgrade_minion, install_salt prev_version, '{install_salt.prev_version}'",
+        flush=True,
+    )
     is_downgrade_to_relenv = packaging.version.parse(
         install_salt.prev_version
     ) >= packaging.version.parse("3006.0")
 
+    print(
+        f"DGM test_salt_downgrade_minion, install_salt prev_version, '{install_salt.prev_version}', is_downgrade_to_relenv '{is_downgrade_to_relenv}'",
+        flush=True,
+    )
     if is_downgrade_to_relenv:
         original_py_version = install_salt.package_python_version()
 
@@ -94,6 +102,11 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
     salt_systemd_setup
 
     time.sleep(60)  # give it some time
+
+    dgm_ps = salt_call_cli.run("--local", "ps -ef")
+    print(
+        f"DGM test_salt_downgrade_minion, post downgrade, ps -ef '{dgm_ps}'", flush=True
+    )
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
