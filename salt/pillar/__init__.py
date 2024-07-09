@@ -375,12 +375,12 @@ class RemotePillar(RemotePillarMixin):
             raise SaltClientError("Exception getting pillar.")
 
         if not isinstance(ret_pillar, dict):
-            log.error(
-                "Got a bad pillar from master, type %s, expecting dict: %s",
-                type(ret_pillar).__name__,
-                ret_pillar,
+            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
+                type(ret_pillar).__name__, ret_pillar
             )
-            return {}
+            log.error(msg)
+            # raise an exception! Pillar isn't empty, we can't sync it!
+            raise SaltClientError(msg)
         return ret_pillar
 
     def destroy(self):
