@@ -1,6 +1,27 @@
+import time
+
 import packaging.version
 import psutil
 from pytestskipmarkers.utils import platform
+
+
+def _get_running_named_salt_pid(process_name):
+
+    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
+    #
+    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
+    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
+    #
+    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
+    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
+
+    pids = []
+    for proc in psutil.process_iter():
+        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        if process_name in cmdl_strg:
+            pids.append(proc.pid)
+
+    return pids
 
 
 def test_salt_downgrade_minion(salt_call_cli, install_salt):
@@ -38,23 +59,20 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     else:
         process_name = "salt-minion"
 
-    old_pid = []
-
-    # need to check all of command line for salt-minion
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-    # and psutil is only returning the salt-minion once
-    for proc in psutil.process_iter():
-        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        if process_name in cmdl_strg:
-            old_pid.append(proc.pid)
-
-    assert old_pid
+    old_minion_pids = _get_running_named_salt_pid(process_name)
+    assert old_minion_pids
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
+
+    time.sleep(60)  # give it some time
+
+    # Verify there is a new running minion by getting its PID and comparing it
+    # with the PID from before the upgrade
+    new_minion_pids = _get_running_named_salt_pid(process_name)
+    assert new_minion_pids
+    assert new_minion_pids != old_minion_pids
+
     bin_file = "salt"
     if platform.is_windows():
         if not is_downgrade_to_relenv:
@@ -63,17 +81,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
             bin_file = install_salt.install_dir / "salt-call.exe"
     elif platform.is_darwin() and install_salt.classic:
         bin_file = install_salt.bin_dir / "salt-call"
-
-    # Verify there is a new running minion by getting its PID and comparing it
-    # with the PID from before the upgrade
-    new_pid = []
-    for proc in psutil.process_iter():
-        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        if process_name in cmdl_strg:
-            new_pid.append(proc.pid)
-
-    assert new_pid
-    assert new_pid != old_pid
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
