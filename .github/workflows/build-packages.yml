@@ -285,7 +285,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install CMake
-        run: dnf install -y make cmake gcc ninja-build
+        run: |
+          dnf install -y 'dnf-command(config-manager)'
+          dnf config-manager --set-enabled crb
+          dnf install -y make cmake gcc ninja-build
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
