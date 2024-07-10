@@ -248,7 +248,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mercurial==6.0.1
+mercurial==6.8
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt

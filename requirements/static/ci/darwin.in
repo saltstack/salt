@@ -7,5 +7,5 @@ yamlordereddictloader
 pygit2<1.13.1; python_version < '3.12'
 pygit2>=1.13.1; python_version >= '3.12'
 yamllint
-mercurial
+mercurial>=6.7.4
 hglib
