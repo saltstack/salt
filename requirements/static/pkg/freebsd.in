@@ -1,7 +1,7 @@
 # This file only exists to trigger the right static compiled requirements destination
 # Any non hard dependencies of Salt for FreeBSD can go here
 cherrypy
-cryptography>=41.0.3
+cryptography>=42.0.8
 pycparser>=2.21; python_version >= '3.9'
 pyopenssl>=23.2.0
 python-dateutil>=2.8.0
