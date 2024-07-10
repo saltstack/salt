@@ -4,6 +4,16 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.7/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
+aiohttp==3.8.6 ; python_version < "3.12"
+    # via -r requirements/base.txt
+aiosignal==1.3.1
+    # via aiohttp
+async-timeout==4.0.3
+    # via aiohttp
+asynctest==0.13.0
+    # via aiohttp
+attrs==23.2.0
+    # via aiohttp
 certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
@@ -14,7 +24,9 @@ cffi==1.14.6
     #   clr-loader
     #   cryptography
 charset-normalizer==3.2.0
-    # via requests
+    # via
+    #   aiohttp
+    #   requests
 cheroot==8.5.2
     # via cherrypy
 cherrypy==18.6.1
@@ -29,16 +41,24 @@ cryptography==42.0.5
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
+frozenlist==1.3.3
+    # via
+    #   aiohttp
+    #   aiosignal
 gitdb==4.0.7
     # via gitpython
 gitpython==3.1.41
     # via -r requirements/windows.txt
 idna==3.7
-    # via requests
+    # via
+    #   requests
+    #   yarl
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4
-    # via -r requirements/windows.txt
+    # via
+    #   -r requirements/windows.txt
+    #   attrs
 ioloop==0.1a0
     # via -r requirements/windows.txt
 jaraco.classes==3.2.1
@@ -72,6 +92,10 @@ more-itertools==8.2.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
+multidict==6.0.5
+    # via
+    #   aiohttp
+    #   yarl
 packaging==22.0
     # via -r requirements/base.txt
 portend==2.6
@@ -125,8 +149,11 @@ timelib==0.3.0
     # via -r requirements/windows.txt
 typing-extensions==4.4.0
     # via
+    #   aiohttp
+    #   async-timeout
     #   gitpython
     #   importlib-metadata
+    #   yarl
 urllib3==1.26.18
     # via
     #   -r requirements/windows.txt
@@ -137,6 +164,8 @@ wmi==1.5.1
     # via -r requirements/windows.txt
 xmltodict==0.13.0
     # via -r requirements/windows.txt
+yarl==1.9.4
+    # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0
