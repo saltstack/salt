@@ -290,7 +290,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1 ; python_version < "3.12"
+pygit2==1.13.0 ; python_version < "3.12"
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
