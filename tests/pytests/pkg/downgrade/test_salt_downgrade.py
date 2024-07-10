@@ -2,38 +2,40 @@ import time
 
 import packaging.version
 import psutil
-import pytest
+
+## DGM import pytest
 from pytestskipmarkers.utils import platform
 
-
-@pytest.fixture
-def salt_systemd_setup(
-    salt_call_cli,
-    install_salt,
-):
-    """
-    Fixture to set systemd for salt packages to enabled and active
-    Note: assumes Salt packages already installed
-    """
-    # ensure known state, enabled and active
-    test_list = ["salt-minion"]
-    for test_item in test_list:
-        test_cmd = f"systemctl enable {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-        test_cmd = f"systemctl restart {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-        test_cmd = f"systemctl show -p UnitFileState {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
-        print(
-            f"DGM salt_systemd_setup UnitFileState '{test_item}', test_enabled '{test_enabled}', ret '{ret}'",
-            flush=True,
-        )
-        assert ret.returncode == 0
+## DGM @pytest.fixture
+## DGM def salt_systemd_setup(
+## DGM     salt_call_cli,
+## DGM     install_salt,
+## DGM ):
+## DGM     """
+## DGM     Fixture to set systemd for salt packages to enabled and active
+## DGM     Note: assumes Salt packages already installed
+## DGM     """
+## DGM     # ensure known state, enabled and active
+## DGM     test_list = ["salt-minion"]
+## DGM     for test_item in test_list:
+## DGM         test_cmd = f"systemctl enable {test_item}"
+## DGM         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+## DGM         assert ret.returncode == 0
+## DGM
+## DGM         test_cmd = f"systemctl restart {test_item}"
+## DGM         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+## DGM         assert ret.returncode == 0
+## DGM
+## DGM         time.sleep(10)
+## DGM
+## DGM         test_cmd = f"systemctl show -p UnitFileState {test_item}"
+## DGM         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+## DGM         test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
+## DGM         print(
+## DGM             f"DGM salt_systemd_setup UnitFileState '{test_item}', test_enabled '{test_enabled}', ret '{ret}'",
+## DGM             flush=True,
+## DGM         )
+## DGM         assert ret.returncode == 0
 
 
 def _get_running_named_salt_pid(process_name):
@@ -59,7 +61,8 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
+## DGM def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
+def test_salt_downgrade_minion(salt_call_cli, install_salt):
     """
     Test an downgrade of Salt Minion.
     """
@@ -116,16 +119,34 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
 
     # earlier versions od Salt 3006.x did not preserve systemd settings, hence ensure restart
     # pylint: disable=pointless-statement
-    salt_systemd_setup
+    print("DGM test_salt_downgrade_minion, post-downgraded", flush=True)
+    ## DGM salt_systemd_setup
+    # ensure known state, enabled and active
+    test_list = ["salt-minion"]
+    for test_item in test_list:
+        test_cmd = f"systemctl enable {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        time.sleep(10)
+
+        test_cmd = f"systemctl show -p UnitFileState {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
+        print(
+            f"DGM salt_systemd_setup UnitFileState '{test_item}', test_enabled '{test_enabled}', ret '{ret}'",
+            flush=True,
+        )
+        assert ret.returncode == 0
+    print("DGM test_salt_downgrade_minion, post-salt_systemd_setup", flush=True)
 
     time.sleep(60)  # give it some time
 
-    print("DGM test_salt_downgrade_minion, downgraded", flush=True)
-
-    ## DGM dgm_ps = salt_call_cli.run("--local", "ps -ef")
-    ## DGM print(
-    ## DGM     f"DGM test_salt_downgrade_minion, post downgrade, ps -ef '{dgm_ps}'", flush=True
-    ## DGM )
+    print("DGM test_salt_downgrade_minion, done-downgraded", flush=True)
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
