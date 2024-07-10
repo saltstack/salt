@@ -40,6 +40,10 @@ def _get_running_named_salt_pid(process_name):
     pids = []
     for proc in psutil.process_iter():
         cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        print(
+            f"DGM _get_running_named_salt_pid, process_name '{process_name}', command line string '{cmdl_strg}'",
+            flush=True,
+        )
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
@@ -103,10 +107,10 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_systemd_setup):
 
     time.sleep(60)  # give it some time
 
-    dgm_ps = salt_call_cli.run("--local", "ps -ef")
-    print(
-        f"DGM test_salt_downgrade_minion, post downgrade, ps -ef '{dgm_ps}'", flush=True
-    )
+    ## DGM dgm_ps = salt_call_cli.run("--local", "ps -ef")
+    ## DGM print(
+    ## DGM     f"DGM test_salt_downgrade_minion, post downgrade, ps -ef '{dgm_ps}'", flush=True
+    ## DGM )
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
