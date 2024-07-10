@@ -19,3 +19,5 @@ timelib>=0.3.0
 vultr>=1.0.1
 
 importlib-metadata>=3.3.0
+cffi>=1.14.6; python_version < '3.12'
+cffi>=1.16.0; python_version >= '3.12'

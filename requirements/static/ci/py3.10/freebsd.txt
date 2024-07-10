@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/freebsd.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/freebsd.in requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
-aiohttp==3.9.5 ; python_version < "3.12"
+aiohttp==3.9.5 ; python_version > "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
@@ -57,14 +57,16 @@ certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/freebsd.in
     #   cryptography
     #   pygit2
     #   pynacl
@@ -306,7 +308,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.13.0 ; python_version < "3.12"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in

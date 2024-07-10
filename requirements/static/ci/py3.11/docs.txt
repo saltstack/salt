@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/docs.txt requirements/base.txt requirements/static/ci/docs.in requirements/zeromq.txt
 #
-aiohttp==3.9.5 ; python_version < "3.12"
+aiohttp==3.9.5 ; python_version > "3.8"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt

@@ -4,13 +4,9 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.7/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.8.6 ; python_version < "3.12"
+aiohttp==3.6.3 ; python_version <= "3.8"
     # via -r requirements/base.txt
-aiosignal==1.3.1
-    # via aiohttp
-async-timeout==4.0.3
-    # via aiohttp
-asynctest==0.13.0
+async-timeout==3.0.1
     # via aiohttp
 attrs==23.2.0
     # via aiohttp
@@ -18,12 +14,14 @@ certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==1.14.6
-    # via cryptography
-charset-normalizer==3.2.0
+cffi==1.14.6 ; python_version < "3.12"
     # via
-    #   aiohttp
-    #   requests
+    #   -r requirements/static/pkg/linux.in
+    #   cryptography
+chardet==3.0.4
+    # via aiohttp
+charset-normalizer==3.2.0
+    # via requests
 cheroot==8.5.2
     # via cherrypy
 cherrypy==18.6.1
@@ -38,10 +36,6 @@ cryptography==42.0.8
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
-frozenlist==1.3.3
-    # via
-    #   aiohttp
-    #   aiosignal
 idna==3.7
     # via
     #   requests
@@ -81,7 +75,7 @@ more-itertools==5.0.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
-multidict==6.0.5
+multidict==4.7.6
     # via
     #   aiohttp
     #   yarl
@@ -128,13 +122,11 @@ timelib==0.3.0
     # via -r requirements/static/pkg/linux.in
 typing-extensions==3.10.0.0
     # via
-    #   aiohttp
-    #   async-timeout
     #   importlib-metadata
     #   yarl
 urllib3==1.26.18
     # via requests
-yarl==1.9.4
+yarl==1.5.1
     # via aiohttp
 zc.lockfile==1.4
     # via cherrypy

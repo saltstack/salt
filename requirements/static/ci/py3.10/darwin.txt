@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/darwin.txt requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-aiohttp==3.9.5 ; python_version < "3.12"
+aiohttp==3.9.5 ; python_version > "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
@@ -60,13 +60,15 @@ certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
+    #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   pygit2

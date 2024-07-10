@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/lint.txt requirements/base.txt requirements/static/ci/common.in requirements/static/ci/lint.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.5 ; python_version < "3.12"
+aiohttp==3.9.5 ; python_version > "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -82,6 +82,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
     #   python-telegram-bot
     #   requests
@@ -89,11 +90,12 @@ certvalidator==0.11.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
     #   cryptography
     #   pygit2
     #   pynacl
@@ -397,7 +399,7 @@ pycryptodomex==3.19.1
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/crypto.txt
-pygit2==1.13.1
+pygit2==1.13.1 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/linux.in

@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.9.5 ; python_version < "3.12"
+aiohttp==3.9.5 ; python_version > "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   -r requirements/base.txt
@@ -43,9 +43,11 @@ certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/windows.txt
     #   kubernetes
     #   requests
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   -r requirements/static/ci/common.in
@@ -282,7 +284,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.13.0 ; python_version < "3.12"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.7 ; python_version < "3.12.0"
     # via
