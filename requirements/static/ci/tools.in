@@ -4,3 +4,4 @@ boto3
 pyyaml
 jinja2
 packaging
+pip>=24.0.0
