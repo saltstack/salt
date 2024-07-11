@@ -27,7 +27,7 @@ KNOWN_BINARY_NAMES = frozenset(
 
 log = logging.getLogger(__name__)
 
-__opts__ = {"venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or "virtualenv"}
+__opts__ = {"venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or "venv"}
 
 __pillar__ = {}
 
@@ -101,7 +101,7 @@ def create(
         Defaults to ``virtualenv``.
 
     system_site_packages : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv or venv
 
     distribute : False
         Passthrough argument given to virtualenv
@@ -111,7 +111,7 @@ def create(
         ``distribute=True``
 
     clear : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv or venv
 
     python : None (default)
         Passthrough argument given to virtualenv
@@ -126,10 +126,10 @@ def create(
         Passthrough argument given to virtualenv if not None
 
     symlinks : None
-        Passthrough argument given to pyvenv if True
+        Passthrough argument given to venv if True
 
     upgrade : None
-        Passthrough argument given to pyvenv if True
+        Passthrough argument given to venv if True
 
     user : None
         Set ownership for the virtualenv
@@ -174,12 +174,15 @@ def create(
            - VIRTUALENV_ALWAYS_COPY: 1
     """
     if venv_bin is None:
-        venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
+        venv_bin = __pillar__.get("venv_bin") or __opts__.get("venv_bin")
 
-    cmd = [venv_bin]
+    if venv_bin == "venv":
+        cmd = [sys.executable, "-m", "venv"]
+    else:
+        cmd = [venv_bin]
 
-    if "pyvenv" not in venv_bin:
-        # ----- Stop the user if pyvenv only options are used --------------->
+    if "venv" not in venv_bin:
+        # ----- Stop the user if venv only options are used ----------------->
         # If any of the following values are not None, it means that the user
         # is actually passing a True or False value. Stop Him!
         if upgrade is not None:
@@ -194,7 +197,7 @@ def create(
                     venv_bin
                 )
             )
-        # <---- Stop the user if pyvenv only options are used ----------------
+        # <---- Stop the user if venv only options are used ------------------
 
         virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)
 
@@ -264,7 +267,7 @@ def create(
         if symlinks is True:
             cmd.append("--symlinks")
 
-    # Common options to virtualenv and pyvenv
+    # Common options to virtualenv and venv
     if clear is True:
         cmd.append("--clear")
     if system_site_packages is True:

@@ -48,6 +48,7 @@ def configure_loader_modules():
             "__grains__": grains,
             "__utils__": {
                 "files.is_binary": MagicMock(return_value=False),
+                "files.is_text": salt.utils.files.is_text,
                 "files.get_encoding": MagicMock(return_value="utf-8"),
                 "stringutils.get_diff": salt.utils.stringutils.get_diff,
             },
@@ -546,3 +547,17 @@ def test_unfinished_block_exception(multiline_file):
             content="foobar",
             backup=False,
         )
+
+
+def test_search_proc_file():
+    """
+    Test that searching content in a /proc file does not raise a TypeError
+    and handles bytes correctly.
+    """
+    proc_file_path = "/proc/cpuinfo"
+
+    if not os.path.exists(proc_file_path):
+        pytest.skip(f"{proc_file_path} not available")
+
+    match_found = filemod.search(proc_file_path, "processor")
+    assert match_found, "Failed to find 'processor' in /proc/cpuinfo"
