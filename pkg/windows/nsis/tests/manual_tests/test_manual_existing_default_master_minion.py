@@ -6,19 +6,11 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create an existing config
     pytest.helpers.existing_config()
-
-    pytest.helpers.run_command(
-        [
-            pytest.INST_BIN,
-            "/default-config",
-            "/master=cli_master",
-            "/minion-name=cli_minion",
-        ]
-    )
-    yield
+    args = ["/default-config", "/master=cli_master", "/minion-name=cli_minion"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
