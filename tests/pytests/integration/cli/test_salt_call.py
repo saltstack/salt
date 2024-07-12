@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import pathlib
 import pprint
 import re
 import sys
@@ -12,7 +13,8 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
+import tests.conftest
+import tests.support.helpers
 
 pytestmark = [
     pytest.mark.core_test,
@@ -95,7 +97,7 @@ def test_local_salt_call(salt_call_cli):
         assert contents.count("foo") == 1, contents
 
 
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.skip_on_windows(reason=tests.support.helpers.PRE_PYTEST_SKIP_REASON)
 def test_user_delete_kw_output(salt_call_cli):
     ret = salt_call_cli.run("-d", "user.delete", _timeout=120)
     assert ret.returncode == 0
@@ -126,7 +128,7 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     assert expected_comment in ret.stdout
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 def test_issue_15074_output_file_append(salt_call_cli):
 
     with pytest.helpers.temp_file(name="issue-15074") as output_file_append:
@@ -154,7 +156,7 @@ def test_issue_15074_output_file_append(salt_call_cli):
         assert second_run_output == first_run_output + first_run_output
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 def test_issue_14979_output_file_permissions(salt_call_cli):
     with pytest.helpers.temp_file(name="issue-14979") as output_file:
         with salt.utils.files.set_umask(0o077):
@@ -307,7 +309,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
             assert "Failed to setup the Syslog logging handler" in ret.stderr
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows
 def test_return(salt_call_cli, salt_run_cli):
     command = "echo returnTOmaster"
@@ -429,3 +431,72 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
     assert "test" in ret.data
     assert ret.data["test"] == "'test' is not available."
     assert "test.echo" in ret.data
+
+
+@pytest.fixture
+def salt_master_alt(salt_master_factory):
+    """
+    A running salt-master fixture
+    """
+    extmods = pathlib.Path(salt_master_factory.config["extension_modules"])
+    cache = extmods / "cache"
+    cache.mkdir()
+    localfs = cache / "localfs.py"
+    localfs.write_text(
+        tests.support.helpers.dedent(
+            """
+    from salt.exceptions import SaltClientError
+    def store(bank, key, data): # , cachedir):
+        raise SaltClientError("TEST")
+    """
+        )
+    )
+    with salt_master_factory.started():
+        yield salt_master_factory
+
+
+@pytest.fixture
+def salt_call_alt(salt_master_alt, salt_minion_id):
+    minion_factory = salt_master_alt.salt_minion_daemon(
+        salt_minion_id,
+        overrides={
+            "file_roots": salt_master_alt.config["file_roots"].copy(),
+            "pillar_roots": salt_master_alt.config["pillar_roots"].copy(),
+            "fips_mode": tests.conftest.FIPS_TESTRUN,
+            "encryption_algorithm": (
+                "OAEP-SHA224" if tests.conftest.FIPS_TESTRUN else "OAEP-SHA1"
+            ),
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if tests.conftest.FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    return minion_factory.salt_call_cli()
+
+
+def test_cve_2024_37088(salt_master_alt, salt_call_alt, tmp_path, caplog):
+    with salt_master_alt.pillar_tree.base.temp_file(
+        "cve_2024_37088.sls", "foobar: bang"
+    ):
+        with salt_master_alt.state_tree.base.temp_file(
+            "cve_2024_37088.sls",
+            """
+            # cvs_2024_37088.sls
+            {{%- set var = salt ['pillar.get']('foobar', 'state default') %}}
+
+            test:
+              file.managed:
+                - name: {0}
+                - contents: {{{{ var }}}}
+            """.format(
+                tmp_path / "cve_2024_37088.txt"
+            ),
+        ):
+            with caplog.at_level(logging.ERROR):
+                ret = salt_call_alt.run("state.sls", "cve_2024_37088")
+                assert ret.returncode == 1
+                assert ret.data is None
+                assert (
+                    "Got a bad pillar from master, type str, expecting dict"
+                    in caplog.text
+                )
