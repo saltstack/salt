@@ -1,3 +1,5 @@
 --constraint=../ci/py{py_version}/tools.txt
 
 virustotal3
+# Prevent pip from upgrading
+pip>=24.0.0

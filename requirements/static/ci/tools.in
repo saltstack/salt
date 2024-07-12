@@ -4,4 +4,5 @@ boto3
 pyyaml
 jinja2
 packaging
+# Prevent pip from upgrading
 pip>=24.0.0
