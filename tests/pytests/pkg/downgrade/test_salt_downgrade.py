@@ -33,9 +33,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
 
-    if is_restart_fixed and install_salt.distro_id in ("ubuntu", "debian"):
+    if is_restart_fixed:
         pytest.skip(
-            "Skip package test for Debian and Ubuntu, since downgrade version is less than "
+            "Skip package test, since downgrade version is less than "
             "3006.9 which had fixes for salt-minion restarting, see PR 66218"
         )
 
