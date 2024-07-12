@@ -1,0 +1,38 @@
+---
+name: Test Windows Installer
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  Test-Windows-Installer:
+    runs-on:
+      - windows-latest
+
+    steps:
+
+    - name: Checkout Salt
+      uses: actions/checkout@v4
+
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install NSIS
+      run: .\pkg\windows\install_nsis.cmd -CICD
+      shell: cmd
+
+    - name: Build Test Installer
+      run: .\pkg\windows\nsis\tests\setup.cmd -CICD
+      shell: cmd
+
+    - name: Run Stress Test
+      run: .\pkg\windows\nsis\tests\test.cmd -CICD .\stress_tests
+      shell: cmd
+
+    - name: Run Config Tests
+      run: .\pkg\windows\nsis\tests\test.cmd -CICD .\config_tests
+      shell: cmd
