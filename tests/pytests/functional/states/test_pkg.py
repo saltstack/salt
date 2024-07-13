@@ -4,6 +4,7 @@ tests for pkg state
 
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -36,6 +37,16 @@ def refresh_db(grains, modules):
                 time.sleep(5)
         else:
             pytest.fail("Package database locked after 60 seconds, bailing out")
+
+
+@pytest.fixture(scope="module", autouse=True)
+def refresh_keys(grains, modules):
+    if grains["os_family"] == "Arch":
+        # We should be running this periodically when building new test runner
+        # images, otherwise this could take several minuets to complete.
+        proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
+        if proc.returncode != 0:
+            pytest.fail("pacman-key --refresh-keys command failed.")
 
 
 @pytest.fixture
