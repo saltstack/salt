@@ -2689,11 +2689,15 @@ def script(
 
     :param str args: String of command line args to pass to the script. Only
         used if no args are specified as part of the `name` argument. To pass a
-        string containing spaces in YAML, you will need to doubly-quote it:
+        string containing spaces in YAML, you will need to doubly-quote it.
+        Additionally, if you need to pass falsey values (e.g., "0", "", "False"),
+        you should doubly-quote them to ensure they are correctly interpreted:
 
         .. code-block:: bash
 
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
+            salt myminion cmd.script salt://foo.sh "''0''"
+            salt myminion cmd.script salt://foo.sh "''False''"
 
     :param str cwd: The directory from which to execute the command. Defaults
         to the directory returned from Python's tempfile.mkstemp.
@@ -2834,6 +2838,10 @@ def script(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :return: The return value of the script execution, including stdout, stderr,
+        and the exit code. If the script returns a falsey string value, it should be
+        doubly-quoted to ensure it is correctly interpreted by Salt.
 
     CLI Example:
 
