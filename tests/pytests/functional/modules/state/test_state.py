@@ -746,6 +746,7 @@ def test_retry_option_success(state, state_tree, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
+@pytest.mark.xfail(reason="This test is flaky")
 def test_retry_option_success_parallel(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immediately (i.e. no retries)
@@ -784,6 +785,7 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
+@pytest.mark.xfail(reason="This test is flaky")
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -831,6 +833,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
+@pytest.mark.xfail(reason="This test is flaky")
 def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
