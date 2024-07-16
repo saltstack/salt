@@ -1,13 +1,11 @@
 ---
-name: Test Windows Installer
+name: Windows Installer Check
 
-on: pull_request
-
-permissions:
-  contents: read
+on: workflow_call
 
 jobs:
-  Test-Windows-Installer:
+  windows-installer-check:
+    name: Windows Installer Check
     runs-on:
       - windows-latest
 
