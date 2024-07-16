@@ -23,6 +23,18 @@
 
   <%- endif %>
 
+  <%- set job_name = "windows-installer-check" %>
+  <%- if includes.get(job_name, True) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Windows Installer Check
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && fromJSON(needs.prepare-workflow.outputs.changed-files)['windows-installer'] }}
+    uses: ./.github/workflows/windows-installer-action.yml
+    needs:
+      - prepare-workflow
+
+  <%- endif %>
+
 
   <%- set job_name = "lint" %>
   <%- if includes.get(job_name, True) %>
