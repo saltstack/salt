@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 import pytest
 
 
@@ -25,29 +22,3 @@ def test_long_stdout(salt_cli, salt_minion):
     )
     assert ret.returncode == 0
     assert len(ret.data.strip()) == len(echo_str)
-
-
-@pytest.fixture()
-def test_script_path():
-    """
-    Create a temporary shell script that echoes its arguments.
-
-    This fixture sets up a temporary shell script, makes it executable,
-    and yields the path to the script for use in tests. After the test
-    completes, the temporary file is automatically removed.
-
-    Yields:
-        str: The path to the temporary shell script.
-    """
-    script_content = "#!/bin/bash\necho $*"
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix="-salt_echo_num.sh"
-    ) as temp_script:
-        temp_script.write(script_content)
-        temp_script_path = temp_script.name
-
-        # Make the script executable
-        os.chmod(temp_script_path, 0o755)
-
-        yield temp_script_path
