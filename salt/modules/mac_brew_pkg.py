@@ -308,8 +308,10 @@ def latest_version(*names, options=None, **kwargs):
     exist.
 
     options
-        Additional options to pass to brew. Useful to remove ambiguous packages
-        that can conflict between formulae and casks.
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -371,8 +373,10 @@ def remove(name=None, pkgs=None, options=None, **kwargs):
         ``name`` parameter will be ignored if this option is passed.
 
     options
-        Additional options to pass to brew. Useful to remove ambiguous packages
-        that can conflict between formulae and casks.
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     .. versionadded:: 0.16.0
 
@@ -454,8 +458,10 @@ def _info(*pkgs, options=None):
     object in the output of 'brew info'.
 
     options
-        Additional options to pass to brew. Useful to remove ambiguous packages
-        that can conflict between formulae and casks.
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
@@ -618,7 +624,10 @@ def list_upgrades(
         Whether to include casks in the list of upgrades.
 
     options
-        Additional options to pass to brew.
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -723,6 +732,12 @@ def info_installed(*names, **kwargs):
 
     names
         The names of the packages for which to return information.
+
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
