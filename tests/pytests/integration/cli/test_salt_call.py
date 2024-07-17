@@ -4,9 +4,11 @@ import os
 import pathlib
 import pprint
 import re
+import shutil
 import sys
 
 import pytest
+from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
 import salt.utils.files
@@ -15,6 +17,8 @@ import salt.utils.platform
 import salt.utils.yaml
 import tests.conftest
 import tests.support.helpers
+from tests.conftest import FIPS_TESTRUN
+from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.core_test,
@@ -434,51 +438,59 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
 
 
 @pytest.fixture
-def salt_master_alt(salt_master_factory):
+def master_id_alt():
+    master_id = random_string("master-")
+    yield master_id
+
+
+@pytest.fixture
+def minion_id_alt():
+    master_id = random_string("minion-")
+    yield master_id
+
+
+@pytest.fixture
+def salt_master_alt(salt_factories, tmp_path, master_id_alt):
     """
     A running salt-master fixture
     """
-    extmods = pathlib.Path(salt_master_factory.config["extension_modules"])
-    cache = extmods / "cache"
+    root_dir = salt_factories.get_root_dir_for_daemon(master_id_alt)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
+    extension_modules_path = str(root_dir / "extension_modules")
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+    cache = pathlib.Path(extension_modules_path) / "cache"
     cache.mkdir()
     localfs = cache / "localfs.py"
     localfs.write_text(
         tests.support.helpers.dedent(
             """
-    from salt.exceptions import SaltClientError
-    def store(bank, key, data): # , cachedir):
-        raise SaltClientError("TEST")
-    """
+        from salt.exceptions import SaltClientError
+        def store(bank, key, data): # , cachedir):
+            raise SaltClientError("TEST")
+        """
         )
     )
-    with salt_master_factory.started():
-        yield salt_master_factory
-
-
-@pytest.fixture
-def salt_call_alt(salt_master_alt, salt_minion_id):
-    minion_factory = salt_master_alt.salt_minion_daemon(
-        salt_minion_id,
+    factory = salt_factories.salt_master_daemon(
+        master_id_alt,
+        defaults={
+            "root_dir": str(root_dir),
+            "extension_modules": extension_modules_path,
+            "auto_accept": True,
+        },
         overrides={
-            "file_roots": salt_master_alt.config["file_roots"].copy(),
-            "pillar_roots": salt_master_alt.config["pillar_roots"].copy(),
-            "fips_mode": tests.conftest.FIPS_TESTRUN,
-            "encryption_algorithm": (
-                "OAEP-SHA224" if tests.conftest.FIPS_TESTRUN else "OAEP-SHA1"
-            ),
-            "signing_algorithm": (
-                "PKCS1v15-SHA224" if tests.conftest.FIPS_TESTRUN else "PKCS1v15-SHA1"
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
             ),
         },
     )
-    return minion_factory.salt_call_cli()
-
-
-def test_cve_2024_37088(salt_master_alt, salt_call_alt, tmp_path, caplog):
-    with salt_master_alt.pillar_tree.base.temp_file(
-        "cve_2024_37088.sls", "foobar: bang"
-    ):
-        with salt_master_alt.state_tree.base.temp_file(
+    with factory.pillar_tree.base.temp_file("cve_2024_37088.sls", "foobar: bang"):
+        with factory.state_tree.base.temp_file(
             "cve_2024_37088.sls",
             """
             # cvs_2024_37088.sls
@@ -492,11 +504,30 @@ def test_cve_2024_37088(salt_master_alt, salt_call_alt, tmp_path, caplog):
                 tmp_path / "cve_2024_37088.txt"
             ),
         ):
-            with caplog.at_level(logging.ERROR):
-                ret = salt_call_alt.run("state.sls", "cve_2024_37088")
-                assert ret.returncode == 1
-                assert ret.data is None
-                assert (
-                    "Got a bad pillar from master, type str, expecting dict"
-                    in caplog.text
-                )
+            with factory.started():
+                yield factory
+
+
+@pytest.fixture
+def salt_call_alt(salt_master_alt, minion_id_alt):
+    minion_factory = salt_master_alt.salt_minion_daemon(
+        minion_id_alt,
+        overrides={
+            "fips_mode": tests.conftest.FIPS_TESTRUN,
+            "encryption_algorithm": (
+                "OAEP-SHA224" if tests.conftest.FIPS_TESTRUN else "OAEP-SHA1"
+            ),
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if tests.conftest.FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    return minion_factory.salt_call_cli()
+
+
+def test_cve_2024_37088(salt_master_alt, salt_call_alt, caplog):
+    with caplog.at_level(logging.ERROR):
+        ret = salt_call_alt.run("state.sls", "cve_2024_37088")
+        assert ret.returncode == 1
+        assert ret.data is None
+        assert "Got a bad pillar from master, type str, expecting dict" in caplog.text
