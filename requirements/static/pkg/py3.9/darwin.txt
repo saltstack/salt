@@ -6,8 +6,10 @@
 #
 apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
-certifi==2023.07.22
-    # via requests
+certifi==2023.07.22 ; python_version < "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==1.14.6
     # via cryptography
 charset-normalizer==3.2.0
@@ -99,7 +101,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2 ; sys_platform == "darwin"
     # via -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
