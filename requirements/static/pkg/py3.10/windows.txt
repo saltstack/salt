@@ -4,9 +4,9 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.10/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   requests
 cffi==1.14.6
     # via
@@ -106,7 +106,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
