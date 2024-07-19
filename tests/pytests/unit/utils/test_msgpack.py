@@ -3,7 +3,7 @@ import pytest
 import salt.utils.msgpack
 from tests.support.mock import MagicMock, patch
 
-
+@pytest.mark.skipif(salt.utils.msgpack.version < (1, 0, 0), reason="Test requires msgpack version >= 1.0.0")
 def test_load_encoding(tmp_path):
     """
     test when using msgpack version >= 1.0.0 we
