@@ -11,8 +11,8 @@ from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 TARGET = []
-if os.environ.get('VENV_PIP_TARGET'):
-    TARGET = ["--target", os.environ.get('VENV_PIP_TARGET')]
+if os.environ.get("VENV_PIP_TARGET"):
+    TARGET = ["--target", os.environ.get("VENV_PIP_TARGET")]
 
 
 class FakeFopen:
