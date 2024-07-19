@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 import salt.loader.context
@@ -12,7 +13,7 @@ pytestmark = [
 ]
 
 SALT_CALL_BINARY = "salt-call"
-if os.environ.get('VIRTUAL_ENV'):
+if os.environ.get("VIRTUAL_ENV"):
     SALT_CALL_BINARY = f"{os.environ.get('VIRTUAL_ENV')}/bin/salt-call"
 
 
