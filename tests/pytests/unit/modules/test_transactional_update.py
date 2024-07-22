@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 
@@ -13,7 +14,7 @@ pytestmark = [
 ]
 
 SALT_CALL_BINARY = "salt-call"
-if os.environ.get("VIRTUAL_ENV"):
+if os.environ.get("VIRTUAL_ENV") and os.environ.get("VIRTUAL_ENV") in sys.executable:
     SALT_CALL_BINARY = f"{os.environ.get('VIRTUAL_ENV')}/bin/salt-call"
 
 
