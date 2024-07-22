@@ -291,8 +291,14 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         if isinstance(cmd, list):
             cmd = " ".join(cmd)
 
-        if cmd.startswith("$"):
-            new_cmd.extend(["-Command", f"{cmd.strip()}"])
+        # Commands that are a specific keyword behave differently. They fail if
+        # you add a "&" to the front. Add those here as we find them:
+        keywords = ["$", "&", ".", "Configuration"]
+
+        for keyword in keywords:
+            if cmd.startswith(keyword):
+                new_cmd.extend(["-Command", f"{cmd.strip()}"])
+                break
         else:
             new_cmd.extend(["-Command", f"& {cmd.strip()}"])
 
