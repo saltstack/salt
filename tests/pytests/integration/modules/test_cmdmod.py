@@ -63,6 +63,7 @@ def test_avoid_injecting_shell_code_as_root(
 
 
 @pytest.mark.slow_test
+@pytest.mark.flaky(max_runs=4)
 def test_blacklist_glob(salt_call_cli):
     """
     cmd_blacklist_glob

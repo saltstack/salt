@@ -6,7 +6,7 @@ import pytest
 
 from tests.conftest import CODE_DIR
 
-docker = pytest.importorskip("docker")
+docker = pytest.importorskip("docker", minversion="4.0.0")
 
 log = logging.getLogger(__name__)
 
