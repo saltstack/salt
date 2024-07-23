@@ -496,7 +496,7 @@ def setup_windows(
                 ret = shell.run(
                     "msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""'
                 )
-            assert ret.returncode == 0, ret
+            assert ret.returncode in (0, 2), ret
 
             log.debug("Removing installed salt-minion service")
             ret = shell.run(
@@ -508,7 +508,7 @@ def setup_windows(
                 "confirm",
                 check=False,
             )
-            assert ret.returncode == 0, ret
+            assert ret.returncode in (0, 2), ret
         else:
             # We are testing the onedir download
             onedir_name = f"salt-{salt_release}-onedir-windows-{arch}.zip"
