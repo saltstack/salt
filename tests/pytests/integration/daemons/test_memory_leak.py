@@ -48,6 +48,7 @@ def file_add_delete_sls(tmp_path, salt_master):
         yield sls_name
 
 
+@pytest.mark.skip_on_env("GITHUB_ACTIONS", present=True)
 @pytest.mark.flaky(max_runs=4)
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
     max_usg = None

@@ -78,6 +78,7 @@ from salt.utils.gitfs import (
     PYGIT2_VERSION,
     FileserverConfigError,
 )
+from salt.utils.versions import Version
 from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
     USERNAME,
@@ -100,9 +101,15 @@ try:
 except Exception:  # pylint: disable=broad-except
     HAS_PYGIT2 = False
 
+docker = pytest.importorskip("docker")
+
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
     pytest.mark.skip_on_platforms(windows=True, darwin=True),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 

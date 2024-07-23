@@ -987,9 +987,9 @@ def _filter_id(value):
         ),
         Filter(
             name="which",
-            expected={"ret": salt.utils.path.which("which")},
+            expected={"ret": salt.utils.path.which("ls")},
             sls="""
-            {% set result = 'which' | which() %}
+            {% set result = 'ls' | which() %}
             test:
               module.run:
                 - name: test.echo
