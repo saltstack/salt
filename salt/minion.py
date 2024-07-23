@@ -114,6 +114,24 @@ log = logging.getLogger(__name__)
 # 6. Handle publications
 
 
+def _sync_grains(opts):
+    # if local client (masterless minion), need sync of custom grains
+    # as they may be used in pillar compilation
+    # in addition, with masterless minion some opts may not be filled
+    # at this point of syncing,for example sometimes does not contain
+    # extmod_whitelist and extmod_blacklist hence set those to defaults,
+    # empty dict, if not part of opts, as ref'd in
+    # salt.utils.extmod sync function
+    if "local" == opts.get("file_client", "remote"):
+        if opts.get("extmod_whitelist", None) is None:
+            opts["extmod_whitelist"] = {}
+
+        if opts.get("extmod_blacklist", None) is None:
+            opts["extmod_blacklist"] = {}
+
+        salt.utils.extmods.sync(opts, "grains", force_local=True)
+
+
 def resolve_dns(opts, fallback=True):
     """
     Resolves the master_ip and master_uri options
@@ -926,6 +944,7 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
+        _sync_grains(opts)
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
