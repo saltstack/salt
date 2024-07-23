@@ -460,6 +460,7 @@ def test_status_diskusage_not_exist():
         assert status.diskusage("/foo/bar/not-existing/") == {}
 
 
+@pytest.mark.skip_on_windows(reason="This module is not available on Windows")
 def test_status_diskusage_valid_output():
     class MockData:
         f_bsize = 8
@@ -474,6 +475,7 @@ def test_status_diskusage_valid_output():
         }
 
 
+@pytest.mark.skip_on_windows(reason="This module is not available on Windows")
 def test_status_diskusage_exception_raised():
     with patch("os.path.exists", return_value=True), patch(
         "os.statvfs", side_effect=OSError()
