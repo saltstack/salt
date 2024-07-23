@@ -173,9 +173,6 @@ jobs:
                 - *salt_added_modified
                 - *tests_added_modified
                 - *pkg_tests_added_modified
-            windows-installer:
-              - added|modified:
-                - pkg/windows/**
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -287,12 +284,6 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "3.0.4"
-  windows-installer-check:
-    name: Windows Installer Check
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && fromJSON(needs.prepare-workflow.outputs.changed-files)['windows-installer'] }}
-    uses: ./.github/workflows/windows-installer-action.yml
-    needs:
-      - prepare-workflow
 
   lint:
     name: Lint
@@ -489,7 +480,6 @@ jobs:
     needs:
       - prepare-workflow
       - build-salt-onedir
-      - windows-installer-check
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -504,7 +494,6 @@ jobs:
     needs:
       - prepare-workflow
       - build-salt-onedir
-      - windows-installer-check
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -2182,7 +2171,6 @@ jobs:
       - trigger-branch-scheduled-builds
       - prepare-workflow
       - pre-commit
-      - windows-installer-check
       - lint
       - build-docs
       - build-deps-onedir

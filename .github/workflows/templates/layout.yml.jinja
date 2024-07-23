@@ -182,9 +182,6 @@ jobs:
                 - *salt_added_modified
                 - *tests_added_modified
                 - *pkg_tests_added_modified
-            windows-installer:
-              - added|modified:
-                - pkg/windows/**
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5

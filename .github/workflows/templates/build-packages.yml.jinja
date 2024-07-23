@@ -10,7 +10,6 @@
     needs:
       - prepare-workflow
       - build-salt-onedir
-      - windows-installer-check
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
