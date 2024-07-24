@@ -146,10 +146,6 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     package of the same version. For example, v3004~rc1 should be less than
     v3004.
     """
-    if install_salt.downgrade:
-        version = install_salt.prev_version
-    else:
-        version = install_salt.version
     if install_salt.distro_id not in (
         "almalinux",
         "rocky",
