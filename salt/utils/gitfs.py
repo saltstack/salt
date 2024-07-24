@@ -1867,7 +1867,8 @@ class Pygit2(GitProvider):
                     # cachedir).
                     head_ref = local_head.target
                     # If head_ref is not a string, it will point to a
-                    # pygit2.id object and we are in detached HEAD mode.
+                    # pygit2.id object (oid is deprecated and removed) and
+                    # we are in detached HEAD mode.
                     # Therefore, there is no need to add a local reference. If
                     # head_ref == local_ref, then the local reference for HEAD
                     # in refs/heads/ already exists and again, no need to add.
