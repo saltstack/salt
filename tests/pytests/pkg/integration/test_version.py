@@ -84,10 +84,11 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
 @pytest.mark.parametrize(
     "binary", ["master", "cloud", "syndic", "minion", "call", "api"]
 )
-def test_compare_versions(version, binary, install_salt):
+def test_compare_versions(binary, install_salt):
     """
     Test compare versions
     """
+    version = install_salt.artifact_version
     if binary in install_salt.binary_paths:
         if install_salt.upgrade:
             install_salt.install()
