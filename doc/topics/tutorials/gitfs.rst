@@ -348,6 +348,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
 * :conf_master:`gitfs_ref_types` (new in 2018.3.0)
 * :conf_master:`gitfs_update_interval` (new in 2018.3.0)
+* :conf_master:`gitfs_proxy` (new in 3008.0)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
