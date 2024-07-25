@@ -3311,6 +3311,23 @@ be a better option.
 .. versionchanged:: 2016.11.0
     The default config value changed from ``False`` to ``True``.
 
+.. conf_master:: gitfs_proxy
+
+``gitfs_proxy``
+***************
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+repositories configured in :conf_master:`gitfs_remotes`. By default, no proxy
+server will be used.
+
+.. code-block:: yaml
+
+    gitfs_proxy: http://foo.com:8080/
+
 .. conf_master:: gitfs_mountpoint
 
 ``gitfs_mountpoint``
@@ -4779,6 +4796,22 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
     newer.
 
+.. conf_master:: git_pillar_proxy
+
+``git_pillar_proxy``
+********************
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+remote repository. By default, no proxy server will be used.
+
+.. code-block:: yaml
+
+    git_pillar_proxy: http://foo.com:8080/
+
 .. conf_master:: git_pillar_global_lock
 
 ``git_pillar_global_lock``
@@ -6177,6 +6210,22 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 .. code-block:: yaml
 
     winrepo_ssl_verify: True
+
+.. conf_master:: winrepo_proxy
+
+``winrepo_proxy``
+-----------------
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+remote repository. By default, no proxy server will be used.
+
+.. code-block:: yaml
+
+    winrepo_proxy: http://foo.com:8080/
 
 Winrepo Authentication Options
 ------------------------------
