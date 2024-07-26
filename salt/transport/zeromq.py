@@ -893,7 +893,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         run in a thread or process as it creates and runs its own ioloop.
         """
         ioloop = tornado.ioloop.IOLoop()
-        ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)
+        ioloop.add_callback(self.publisher, publish_payload, io_loop=ioloop)
         try:
             ioloop.start()
         finally:
@@ -945,15 +945,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 )
         return pull_sock, pub_sock, monitor
 
-    async def publisher(self, publish_payload, ioloop=None):
-        if ioloop is None:
-            ioloop = tornado.ioloop.IOLoop.current()
+    async def publisher(self, publish_payload, io_loop=None):
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
             self.daemon_pub_sock,
             self.daemon_monitor,
-        ) = self._get_sockets(self.daemon_context, ioloop)
+        ) = self._get_sockets(self.daemon_context, io_loop)
         while True:
             try:
                 package = await self.daemon_pull_sock.recv()
