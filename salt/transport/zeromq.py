@@ -930,7 +930,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             if self.pub_path:
                 os.chmod(  # nosec
                     self.pub_path,
-                    0o600,
+                    0o660,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)

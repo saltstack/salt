@@ -340,6 +340,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
             log.info("Publisher binding to socket %s", self.pub_path)
+            with salt.utils.files.set_umask(0o117):
+                await site.start()
         else:
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -352,7 +354,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-        await site.start()
+            await site.start()
 
         self._pub_payload = publish_payload
         if self.pull_path:
