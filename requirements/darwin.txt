@@ -2,9 +2,10 @@
 
 -r zeromq.txt
 
-apache-libcloud>=2.4.0
+apache-libcloud>=2.4.0 ; python_version < '3.12.0'
+apache-libcloud>=3.8.0 ; python_version >= '3.12.0'
 cherrypy>=17.4.1
-cryptography>=41.0.3
+cryptography>=42.0.8
 gitpython>=3.1.37
 idna>=2.8
 linode-python>=1.1.1
@@ -14,7 +15,9 @@ pyopenssl>=23.2.0
 python-dateutil>=2.8.0
 python-gnupg>=0.4.4
 setproctitle>=1.2.3
-timelib>=0.2.5
+timelib>=0.3.0
 vultr>=1.0.1
 
 importlib-metadata>=3.3.0
+cffi>=1.14.6; python_version < '3.12'
+cffi>=1.16.0; python_version >= '3.12'

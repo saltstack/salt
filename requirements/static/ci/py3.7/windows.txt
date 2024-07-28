@@ -4,16 +4,18 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.7/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.8.6
-    # via etcd3-py
-aiosignal==1.2.0
-    # via aiohttp
-async-timeout==4.0.2
-    # via aiohttp
-asynctest==0.13.0
-    # via aiohttp
-attrs==23.1.0
+aiohttp==3.6.3 ; python_version <= "3.8"
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
+    #   -r requirements/base.txt
+    #   etcd3-py
+async-timeout==3.0.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
+    #   aiohttp
+attrs==23.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -45,9 +47,11 @@ certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/windows.txt
     #   kubernetes
     #   requests
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/static/ci/common.in
@@ -56,10 +60,13 @@ cffi==1.14.6
     #   cryptography
     #   pygit2
     #   pynacl
-charset-normalizer==3.2.0
+chardet==3.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   aiohttp
+charset-normalizer==3.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
@@ -86,7 +93,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.8
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/windows.txt
@@ -118,10 +125,6 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
-    # via
-    #   aiohttp
-    #   aiosignal
 future==1.0.0
     # via textfsm
 genshi==0.7.5
@@ -210,7 +213,7 @@ looseversion==1.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/base.txt
-lxml==4.9.1
+lxml==4.9.1 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/windows.txt
@@ -241,8 +244,9 @@ msgpack==1.0.2
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==4.7.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   aiohttp
     #   yarl
 ntlm-auth==1.5.0
@@ -259,8 +263,6 @@ patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==0.9.0
     # via yamllint
-pathtools==0.1.2
-    # via watchdog
 platformdirs==2.2.0
     # via virtualenv
 pluggy==0.13.0
@@ -295,9 +297,9 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.10.1
+pygit2==1.10.1 ; python_version < "3.12"
     # via -r requirements/static/ci/windows.in
-pymssql==2.2.1
+pymssql==2.2.1 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/windows.txt
@@ -387,7 +389,7 @@ pyyaml==6.0.1
     #   kubernetes
     #   pytest-salt-factories
     #   yamllint
-pyzmq==25.0.2 ; sys_platform == "win32"
+pyzmq==25.0.2 ; python_version < "3.12.0" and sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/zeromq.txt
@@ -454,7 +456,7 @@ tempora==4.1.1
     #   portend
 textfsm==1.1.3
     # via -r requirements/static/ci/common.in
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -r requirements/windows.txt
@@ -467,8 +469,6 @@ trustme==1.0.0
 typing-extensions==4.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
-    #   aiohttp
-    #   async-timeout
     #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
@@ -487,7 +487,7 @@ virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-watchdog==0.10.3
+watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via
@@ -515,8 +515,10 @@ xmltodict==0.13.0
     #   pywinrm
 yamllint==1.26.3
     # via -r requirements/static/ci/windows.in
-yarl==1.7.2
-    # via aiohttp
+yarl==1.5.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/windows.txt
+    #   aiohttp
 zc.lockfile==2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt

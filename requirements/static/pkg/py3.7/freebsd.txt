@@ -4,12 +4,22 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.7/freebsd.txt requirements/base.txt requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
+aiohttp==3.6.3 ; python_version <= "3.8"
+    # via -r requirements/base.txt
+async-timeout==3.0.1
+    # via aiohttp
+attrs==23.2.0
+    # via aiohttp
 certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==1.14.6
-    # via cryptography
+cffi==1.14.6 ; python_version < "3.12"
+    # via
+    #   -r requirements/static/pkg/freebsd.in
+    #   cryptography
+chardet==3.0.4
+    # via aiohttp
 charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
@@ -20,7 +30,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.8
     # via
     #   -r requirements/static/pkg/freebsd.in
     #   pyopenssl
@@ -29,11 +39,15 @@ distro==1.5.0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
 idna==3.7
-    # via requests
+    # via
+    #   requests
+    #   yarl
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4
-    # via -r requirements/static/pkg/freebsd.in
+    # via
+    #   -r requirements/static/pkg/freebsd.in
+    #   attrs
 jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
@@ -63,6 +77,10 @@ more-itertools==5.0.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
+multidict==4.7.6
+    # via
+    #   aiohttp
+    #   yarl
 packaging==22.0
     # via -r requirements/base.txt
 portend==2.4
@@ -87,7 +105,7 @@ pytz==2022.1
     #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.12.0"
     # via -r requirements/zeromq.txt
 requests==2.31.0 ; python_version < "3.10"
     # via -r requirements/base.txt
@@ -100,12 +118,16 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/static/pkg/freebsd.in
 typing-extensions==3.10.0.0
-    # via importlib-metadata
+    # via
+    #   importlib-metadata
+    #   yarl
 urllib3==1.26.18
     # via requests
+yarl==1.5.1
+    # via aiohttp
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0

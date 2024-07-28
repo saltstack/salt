@@ -4,15 +4,24 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.8/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
+aiohttp==3.6.3 ; python_version <= "3.8"
+    # via -r requirements/base.txt
+async-timeout==3.0.1
+    # via aiohttp
+attrs==23.2.0
+    # via aiohttp
 certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
+    #   -r requirements/windows.txt
     #   requests
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
+chardet==3.0.4
+    # via aiohttp
 charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
@@ -23,7 +32,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.8
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -34,7 +43,9 @@ gitdb==4.0.7
 gitpython==3.1.41
     # via -r requirements/windows.txt
 idna==3.7
-    # via requests
+    # via
+    #   requests
+    #   yarl
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4
@@ -58,7 +69,7 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.0.2
     # via -r requirements/base.txt
-lxml==4.9.1
+lxml==4.9.1 ; python_version < "3.12.0"
     # via -r requirements/windows.txt
 markupsafe==2.1.2
     # via
@@ -72,6 +83,10 @@ more-itertools==8.2.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
+multidict==4.7.6
+    # via
+    #   aiohttp
+    #   yarl
 packaging==22.0
     # via -r requirements/base.txt
 portend==2.6
@@ -86,7 +101,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pymssql==2.2.1
+pymssql==2.2.1 ; python_version < "3.12.0"
     # via -r requirements/windows.txt
 pyopenssl==24.0.0
     # via -r requirements/windows.txt
@@ -105,7 +120,7 @@ pywin32==305
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.0.2 ; sys_platform == "win32"
+pyzmq==25.0.2 ; python_version < "3.12.0" and sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.31.0 ; python_version < "3.10"
     # via
@@ -121,7 +136,7 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/windows.txt
 urllib3==1.26.18
     # via
@@ -133,6 +148,8 @@ wmi==1.5.1
     # via -r requirements/windows.txt
 xmltodict==0.13.0
     # via -r requirements/windows.txt
+yarl==1.5.1
+    # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0

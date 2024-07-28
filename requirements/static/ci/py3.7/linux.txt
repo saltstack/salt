@@ -4,10 +4,11 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.7/linux.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.8.6
-    # via etcd3-py
-aiosignal==1.2.0
-    # via aiohttp
+aiohttp==3.6.3 ; python_version <= "3.8"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
+    #   -r requirements/base.txt
+    #   etcd3-py
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 apscheduler==3.6.3
@@ -16,12 +17,13 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
-async-timeout==4.0.2
-    # via aiohttp
-asynctest==0.13.0
-    # via aiohttp
-attrs==23.1.0
+async-timeout==3.0.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
+    #   aiohttp
+attrs==23.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -59,23 +61,28 @@ certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
     #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
     #   cryptography
     #   napalm
     #   pygit2
     #   pynacl
-charset-normalizer==3.2.0
+chardet==3.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   aiohttp
+charset-normalizer==3.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
@@ -104,7 +111,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.8
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/static/pkg/linux.in
@@ -136,10 +143,6 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
-    # via
-    #   aiohttp
-    #   aiosignal
 future==0.18.3
     # via
     #   napalm
@@ -250,7 +253,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mercurial==6.0.1
+mercurial==6.8
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -269,8 +272,9 @@ msgpack==1.0.2
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==4.7.6
     # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   aiohttp
     #   yarl
 napalm==3.1.0 ; sys_platform != "win32" and python_version < "3.10"
@@ -308,8 +312,6 @@ passlib==1.7.4
     #   ciscoconfparse
 pathspec==0.9.0
     # via yamllint
-pathtools==0.1.2
-    # via watchdog
 platformdirs==2.2.0
     # via virtualenv
 pluggy==0.13.0
@@ -343,7 +345,7 @@ pyeapi==0.8.3
     # via napalm
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.10.1
+pygit2==1.10.1 ; python_version < "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
@@ -446,7 +448,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   yamllint
     #   yamlordereddictloader
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/zeromq.txt
@@ -539,7 +541,7 @@ textfsm==1.1.0
     #   napalm
     #   netmiko
     #   ntc-templates
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -r requirements/static/pkg/linux.in
@@ -558,8 +560,6 @@ twilio==7.9.2
 typing-extensions==3.10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
-    #   aiohttp
-    #   async-timeout
     #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
@@ -581,7 +581,7 @@ virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-watchdog==0.10.3
+watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via
@@ -599,8 +599,10 @@ yamllint==1.26.3
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.7.2
-    # via aiohttp
+yarl==1.5.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
+    #   aiohttp
 zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt

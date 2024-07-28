@@ -4,11 +4,16 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/darwin.txt requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-aiohttp==3.9.4
-    # via etcd3-py
-aiosignal==1.2.0
-    # via aiohttp
-apache-libcloud==2.5.0 ; sys_platform != "win32"
+aiohttp==3.9.5 ; python_version > "3.8"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   -r requirements/base.txt
+    #   etcd3-py
+aiosignal==1.3.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   aiohttp
+apache-libcloud==2.5.0 ; python_version < "3.12.0"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/darwin.txt
@@ -17,8 +22,9 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
-attrs==23.1.0
+attrs==23.2.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -48,13 +54,15 @@ certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   pygit2
@@ -86,7 +94,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.8
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/darwin.txt
@@ -114,8 +122,9 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
+frozenlist==1.4.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   aiohttp
     #   aiosignal
 future==1.0.0
@@ -213,7 +222,7 @@ markupsafe==2.1.2
     #   mako
     #   moto
     #   werkzeug
-mercurial==6.0.1
+mercurial==6.8
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -232,8 +241,9 @@ msgpack==1.0.2
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.2
+multidict==6.0.5
     # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   aiohttp
     #   yarl
 oscrypto==1.2.0
@@ -247,8 +257,6 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.9.0
     # via yamllint
-pathtools==0.1.2
-    # via watchdog
 platformdirs==2.2.0
     # via virtualenv
 pluggy==1.4.0
@@ -284,7 +292,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.13.0 ; python_version < "3.12"
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
@@ -362,7 +370,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.1.2 ; sys_platform == "darwin"
+pyzmq==25.1.2 ; python_version < "3.12.0" and sys_platform == "darwin"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/zeromq.txt
@@ -425,7 +433,7 @@ tempora==4.1.1
     #   portend
 textfsm==1.1.3
     # via -r requirements/static/ci/common.in
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/darwin.txt
@@ -455,7 +463,7 @@ vultr==1.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/darwin.txt
-watchdog==0.10.3
+watchdog==4.0.1
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via kubernetes
@@ -471,8 +479,10 @@ yamllint==1.26.3
     # via -r requirements/static/ci/darwin.in
 yamlordereddictloader==0.4.0
     # via -r requirements/static/ci/darwin.in
-yarl==1.7.2
-    # via aiohttp
+yarl==1.9.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
+    #   aiohttp
 zc.lockfile==2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
