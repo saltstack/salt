@@ -32,7 +32,6 @@ jobs:
           - linkcheck
           - spellcheck
           - html
-          - epub
           # - pdf
 
     steps:
