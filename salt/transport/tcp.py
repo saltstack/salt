@@ -1186,7 +1186,7 @@ class TCPPuller:
         # Start up the ioloop
         if self.path:
             log.trace("IPCServer: binding to socket: %s", self.path)
-            self.sock = tornado.netutil.bind_unix_socket(self.path, mode=0o660)
+            self.sock = tornado.netutil.bind_unix_socket(self.path)
         else:
             log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1406,7 +1406,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug(
                 "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
             )
-            sock = tornado.netutil.bind_unix_socket(self.pub_path)
+            sock = tornado.netutil.bind_unix_socket(self.pub_path, mode=0o660)
         else:
             log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
