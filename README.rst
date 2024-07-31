@@ -103,7 +103,8 @@ Report bugs or problems using Salt by opening an issue: `<https://github.com/sal
 
 To join our community forum where you can exchange ideas, best practices,
 discuss technical support questions, and talk to project maintainers, join our
-Discord workspace: `Salt Project Community Discord`_
+Discord server: `Salt Project Community Discord`_
+
 
 
 Salt Project documentation
