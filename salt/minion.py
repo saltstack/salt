@@ -2,6 +2,8 @@
 Routines to set up a minion
 """
 
+# DGM changes to force full build
+
 import binascii
 import contextlib
 import copy
