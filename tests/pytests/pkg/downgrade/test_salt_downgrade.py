@@ -19,6 +19,10 @@ def _get_running_named_salt_pid(process_name):
     pids = []
     for proc in psutil.process_iter():
         cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        print(
+            f"DGM _get_running_named_salt_pid, process_name '{process_name}', cmdl_strg '{cmdl_strg}'",
+            flush=True,
+        )
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
@@ -29,6 +33,11 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     """
     Test an downgrade of Salt Minion.
     """
+    print(
+        f"DGM test_salt_downgrade_minion entry, install_salt '{install_salt}'",
+        flush=True,
+    )
+
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
@@ -70,16 +79,24 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     else:
         process_name = "salt-minion"
 
+    print(
+        f"DGM test_salt_downgrade_minion, getting old pids for process_name '{process_name}'",
+        flush=True,
+    )
     old_minion_pids = _get_running_named_salt_pid(process_name)
     assert old_minion_pids
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
-    time.sleep(120)  # give it some time
+    time.sleep(60)  # give it some time
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
+    print(
+        f"DGM test_salt_downgrade_minion, getting new pids for process_name '{process_name}'",
+        flush=True,
+    )
     new_minion_pids = _get_running_named_salt_pid(process_name)
     assert new_minion_pids
     assert new_minion_pids != old_minion_pids
