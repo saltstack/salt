@@ -2,7 +2,7 @@
 Routines to set up a minion
 """
 
-# DGM changes to force full build
+# DGM changes to force full build with all tests
 
 import binascii
 import contextlib
