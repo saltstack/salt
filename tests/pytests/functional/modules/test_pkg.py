@@ -123,7 +123,7 @@ def test_mod_del_repo(grains, modules):
 
     try:
         # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
-        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] < 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")
@@ -213,22 +213,29 @@ def test_mod_del_repo_multiline_values(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.owner("/bin/ls")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+
+    ret = modules.pkg.owner(binary)
     assert len(ret) != 0
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
-def test_which(modules):
+def test_which(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.which("/usr/local/bin/salt-call")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+    ret = modules.pkg.which(binary)
     assert len(ret) != 0
 
 
@@ -395,7 +402,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     Test running a system upgrade when there are packages that need upgrading
     """
     if grains["os"] == "Arch":
-        pytest.skipTest("Arch moved to Python 3.8 and we're not ready for it yet")
+        pytest.skip("Arch moved to Python 3.8 and we're not ready for it yet")
 
     modules.pkg.upgrade()
 
@@ -433,7 +440,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
         ret = modules.pkg.install(target, version=old)
         if not isinstance(ret, dict):
             if ret.startswith("ERROR"):
-                pytest.skipTest(f"Could not install older {target} to complete test.")
+                pytest.skip(f"Could not install older {target} to complete test.")
 
         # Run a system upgrade, which should catch the fact that the
         # targeted package needs upgrading, and upgrade it.
@@ -447,7 +454,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     else:
         ret = modules.pkg.list_upgrades()
         if ret == "" or ret == {}:
-            pytest.skipTest(
+            pytest.skip(
                 "No updates available for this machine.  Skipping pkg.upgrade test."
             )
         else:

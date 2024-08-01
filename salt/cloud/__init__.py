@@ -35,14 +35,6 @@ from salt.exceptions import (
 )
 from salt.template import compile_template
 
-try:
-    import Cryptodome.Random
-except ImportError:
-    try:
-        import Crypto.Random  # nosec
-    except ImportError:
-        pass  # pycrypto < 2.1
-
 log = logging.getLogger(__name__)
 
 
@@ -2288,8 +2280,6 @@ def create_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     """
-    salt.utils.crypt.reinit_crypto()
-
     parallel_data["opts"]["output"] = "json"
     cloud = Cloud(parallel_data["opts"])
     try:
@@ -2318,8 +2308,6 @@ def destroy_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the destroy is always a json object.
     """
-    salt.utils.crypt.reinit_crypto()
-
     parallel_data["opts"]["output"] = "json"
     clouds = salt.loader.clouds(parallel_data["opts"])
 
@@ -2350,8 +2338,6 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     """
-    salt.utils.crypt.reinit_crypto()
-
     cloud = Cloud(data["opts"])
     try:
         with salt.utils.context.func_globals_inject(

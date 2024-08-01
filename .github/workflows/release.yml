@@ -21,7 +21,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -184,7 +184,7 @@ jobs:
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
 
   backup:
@@ -266,7 +266,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action.yml
     with:
       nox-session: ci-test-onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       nox-version: 2022.8.7
@@ -363,7 +363,7 @@ jobs:
           branch: ${{ github.ref }}
 
       - name: Create Github Release
-        uses: ncipollo/release-action@v1.12.0
+        uses: ncipollo/release-action@v1
         with:
           artifactErrorsFailBuild: true
           artifacts: ${{ steps.prepare-release.outputs.release-artifacts }}
@@ -461,7 +461,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: technote-space/workflow-conclusion-action@v3
+        uses: im-open/workflow-conclusion@v2
 
       - run: |
           # shellcheck disable=SC2129
@@ -475,7 +475,7 @@ jobs:
       - name: Set Pipeline Exit Status
         shell: bash
         run: |
-          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
             exit 1
           else
             exit 0

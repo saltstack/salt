@@ -4,6 +4,7 @@ tests for pkg state
 
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -38,6 +39,16 @@ def refresh_db(grains, modules):
             pytest.fail("Package database locked after 60 seconds, bailing out")
 
 
+@pytest.fixture(scope="module", autouse=True)
+def refresh_keys(grains, modules):
+    if grains["os_family"] == "Arch":
+        # We should be running this periodically when building new test runner
+        # images, otherwise this could take several minuets to complete.
+        proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
+        if proc.returncode != 0:
+            pytest.fail("pacman-key --refresh-keys command failed.")
+
+
 @pytest.fixture
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
@@ -55,7 +66,7 @@ def PKG_TARGETS(grains):
             else:
                 _PKG_TARGETS = ["wget", "zsh-html"]
         elif (
-            grains["os"] in ("CentOS Stream", "AlmaLinux")
+            grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
             and grains["osmajorrelease"] == 9
         ):
             _PKG_TARGETS = ["units", "zsh"]
@@ -238,7 +249,7 @@ def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
+def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes two packages
     """
@@ -254,6 +265,7 @@ def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
     try:
         ret = states.pkg.installed(name=None, pkgs=PKG_TARGETS, refresh=False)
         assert ret.result is True
+        assert "WARNING" not in caplog.text
     finally:
         ret = states.pkg.removed(name=None, pkgs=PKG_TARGETS)
         assert ret.result is True

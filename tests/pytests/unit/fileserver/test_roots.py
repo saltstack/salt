@@ -3,6 +3,7 @@
 """
 
 import copy
+import os
 import pathlib
 import shutil
 import sys
@@ -315,3 +316,38 @@ def test_serve_file_not_in_root(tmp_state_tree):
         assert ret == {"data": "", "dest": "..\\bar"}
     else:
         assert ret == {"data": "", "dest": "../bar"}
+
+
+def test_find_file_symlink_destination_not_in_root(tmp_state_tree):
+    dirname = pathlib.Path(tmp_state_tree).parent / "foo"
+    dirname.mkdir(parents=True, exist_ok=True)
+    testfile = dirname / "testfile"
+    testfile.write_text("testfile")
+    symlink = tmp_state_tree / "bar"
+    symlink.symlink_to(str(dirname))
+    ret = roots.find_file("bar/testfile")
+    assert ret["path"] == str(symlink / "testfile")
+    assert ret["rel"] == f"bar{os.sep}testfile"
+
+
+def test_serve_file_symlink_destination_not_in_root(tmp_state_tree):
+    dirname = pathlib.Path(tmp_state_tree).parent / "foo"
+    dirname.mkdir(parents=True, exist_ok=True)
+    testfile = dirname / "testfile"
+    testfile.write_text("testfile")
+    symlink = tmp_state_tree / "bar"
+    symlink.symlink_to(str(dirname))
+    load = {"path": "bar/testfile", "saltenv": "base", "loc": 0}
+    fnd = {"path": str(symlink / "testfile"), "rel": "bar/testfile"}
+    ret = roots.serve_file(load, fnd)
+    assert ret == {"data": b"testfile", "dest": "bar/testfile"}
+
+
+def test_relative_file_roots(tmp_state_tree):
+    parent = pathlib.Path(tmp_state_tree).parent
+    reldir = os.path.basename(tmp_state_tree)
+    opts = {"file_roots": copy.copy(roots.__opts__["file_roots"])}
+    opts["file_roots"]["base"] = [reldir]
+    with patch.dict(roots.__opts__, opts), pytest.helpers.change_cwd(str(parent)):
+        ret = roots.find_file("testfile")
+        assert "testfile" == ret["rel"]

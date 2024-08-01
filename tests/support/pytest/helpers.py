@@ -8,6 +8,7 @@
 import logging
 import os
 import pathlib
+import pprint
 import shutil
 import subprocess
 import tempfile
@@ -18,6 +19,7 @@ import warnings
 from contextlib import contextmanager
 
 import attr
+import psutil
 import pytest
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
@@ -63,7 +65,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -109,7 +111,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -236,7 +238,7 @@ class TestGroup:
             self._delete_group = True
             log.debug("Created system group: %s", self)
         else:
-            log.debug("Reusing exising system group: %s", self)
+            log.debug("Reusing existing system group: %s", self)
         if self.members:
             ret = self.sminion.functions.group.members(
                 self.name, members_list=self.members
@@ -325,14 +327,19 @@ class TestAccount:
         if not self.sminion.functions.user.info(self.username):
             log.debug("Creating system account: %s", self)
             ret = self.sminion.functions.user.add(self.username)
-            assert ret
+            assert ret is True
             self._delete_account = True
+        if salt.utils.platform.is_windows():
+            log.debug("Configuring system account: %s", self)
+            ret = self.sminion.functions.user.update(
+                self.username, password_never_expires=True
+            )
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
         else:
             password = self.hashed_password
         ret = self.sminion.functions.shadow.set_password(self.username, password)
-        assert ret
+        assert ret is True
         assert self.username in self.sminion.functions.user.list_users()
         if self._group:
             self.group.__enter__()
@@ -344,7 +351,7 @@ class TestAccount:
         if self._delete_account:
             log.debug("Created system account: %s", self)
         else:
-            log.debug("Reusing exisintg system account: %s", self)
+            log.debug("Reusing existing system account: %s", self)
         # Run tests
         return self
 
@@ -700,7 +707,7 @@ class EntropyGenerator:
         kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
         kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
         if not kernel_entropy_file.exists():
-            log.info("The '%s' file is not avilable", kernel_entropy_file)
+            log.info("The '%s' file is not available", kernel_entropy_file)
             return
 
         self.current_entropy = int(
@@ -709,7 +716,7 @@ class EntropyGenerator:
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
-            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+            log.info("The '%s' file is not available", kernel_poolsize_file)
         else:
             self.current_poolsize = int(
                 kernel_poolsize_file.read_text(encoding="utf-8").strip()
@@ -816,6 +823,61 @@ def change_cwd(path):
     finally:
         # Restore Old CWD
         os.chdir(old_cwd)
+
+
+@contextmanager
+def reap_stray_processes(pid: int = os.getpid()):
+
+    try:
+        pre_children = psutil.Process(pid).children(recursive=True)
+        # Do stuff
+        yield
+    finally:
+        post_children = psutil.Process(pid).children(recursive=True)
+
+    children = []
+    for process in post_children:
+        if process in pre_children:
+            # Process existed before entering the context
+            continue
+        if not psutil.pid_exists(process.pid):
+            # Process just died
+            continue
+        # This process is alive and was not running before entering the context
+        children.append(process)
+
+    if not children:
+        log.info("No astray processes found")
+        return
+
+    def on_terminate(proc):
+        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            "Test suite left %d astray processes running. Killing those processes:\n%s",
+            len(children),
+            pprint.pformat(children),
+        )
+
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                continue
+
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                log.warning(
+                    "Process %s survived SIGKILL, giving up:\n%s",
+                    child,
+                    pprint.pformat(child.as_dict()),
+                )
 
 
 # Only allow star importing the functions defined in this module

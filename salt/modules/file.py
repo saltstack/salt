@@ -2539,7 +2539,7 @@ def replace(
                 r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
             except (ValueError, OSError):
                 # size of file in /proc is 0, but contains data
-                r_data = salt.utils.stringutils.to_bytes("".join(r_file))
+                r_data = b"".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
@@ -5147,7 +5147,7 @@ def check_perms(
                 if err:
                     ret["result"] = False
                     ret["comment"].append(err)
-                else:
+                elif not is_link:
                     # Python os.chown() resets the suid and sgid, hence we
                     # setting the previous mode again. Pending mode changes
                     # will be applied later.
@@ -5198,7 +5198,6 @@ def check_perms(
                 ret["comment"].append(f"Failed to change group to {group}")
         elif "cgroup" in perms:
             ret["changes"]["group"] = group
-
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False

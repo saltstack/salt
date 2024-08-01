@@ -5,7 +5,6 @@ These commands are related to the test suite.
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -14,11 +13,6 @@ from ptscripts import Context, command_group
 import tools.utils
 import tools.utils.gh
 from tools.utils import ExitCode
-
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-    "r", encoding="utf-8"
-) as rfh:
-    OS_SLUGS = sorted(json.load(rfh))
 
 log = logging.getLogger(__name__)
 
@@ -52,12 +46,12 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         },
         "arch": {
             "help": "The onedir artifact architecture",
-            "choices": ("x86_64", "aarch64", "amd64", "x86"),
+            "choices": ("x86_64", "arm64", "amd64", "x86"),
         },
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": OS_SLUGS,
+            "choices": sorted(tools.utils.get_golden_images()),
         },
         "pkg": {
             "help": "Also download package test artifacts",
@@ -112,7 +106,7 @@ def setup_testsuite(
         ctx.exit(1)
 
     if "arm64" in slug:
-        arch = "aarch64"
+        arch = "arm64"
 
     ctx.warn(
         "Consider this in preliminary support. There are most likely things to iron out still."

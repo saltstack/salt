@@ -17,7 +17,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       source: "<{ backend }>"
-    <%- if gh_environment %>
+    <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
       sign-macos-packages: true
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>

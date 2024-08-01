@@ -47,10 +47,6 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-    "r", encoding="utf-8"
-) as rfh:
-    AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
 ).hexdigest()
@@ -67,7 +63,7 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "name": {
             "help": "The VM Name",
             "metavar": "VM_NAME",
-            "choices": list(AMIS),
+            "choices": sorted(tools.utils.get_golden_images()),
         },
         "key_name": {
             "help": "The SSH key name. Will default to TOOLS_KEY_NAME in environment",
@@ -791,10 +787,11 @@ class VM:
 
     @config.default
     def _config_default(self):
+        golden_images = tools.utils.get_golden_images()
         config = AMIConfig(
             **{
                 key: value
-                for (key, value) in AMIS[self.name].items()
+                for (key, value) in golden_images[self.name].items()
                 if key in AMIConfig.__annotations__
             }
         )
@@ -1376,10 +1373,11 @@ class VM:
             for drive in ("c:", "C:"):
                 rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{rsync_remote_path}"
-        description = "Rsync local checkout to VM..."
         if download:
+            description = "Rsync VM to local checkout..."
             self.rsync(f"{destination}/*", source, description, rsync_flags)
         else:
+            description = "Rsync local checkout to VM..."
             self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
             # rsync sets very strict file permissions and disables inheritance
@@ -1471,7 +1469,7 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+        for key in ("CI", "PIP_INDEX_URL", "PIP_TRUSTED_HOST", "PIP_EXTRA_INDEX_URL"):
             if key in os.environ:
                 env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"

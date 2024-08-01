@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -42,7 +43,12 @@ def virt_minion_0(
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
-    config_overrides = {"user": "root"}
+    config_overrides = {
+        "user": "root",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master.salt_minion_daemon(
         virt_minion_0_id,
         name=virt_minion_0_id,
@@ -79,7 +85,12 @@ def virt_minion_1(
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
-    config_overrides = {"user": "root"}
+    config_overrides = {
+        "user": "root",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master.salt_minion_daemon(
         virt_minion_1_id,
         name=virt_minion_1_id,

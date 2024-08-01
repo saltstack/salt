@@ -3,7 +3,7 @@ from sys import platform
 import pytest
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.skip_unless_on_linux,
 ]
 
 

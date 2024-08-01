@@ -310,7 +310,7 @@ def test_powershell_empty():
     mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": ""}
     with patch("salt.modules.cmdmod._run", return_value=mock_run):
         ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
-        assert ret == {}
+        assert ret == ""
 
 
 def test_is_valid_shell_windows():
@@ -1052,57 +1052,104 @@ def test_runas_env_sudo_group(bundled):
                                         )
 
 
-def test_prep_powershell_cmd():
+def test_prep_powershell_cmd_no_powershell():
+    with pytest.raises(CommandExecutionError):
+        cmdmod._prep_powershell_cmd(
+            win_shell="unk_bin", cmd="Some-Command", encoded_cmd=False
+        )
+
+
+@pytest.mark.parametrize(
+    "cmd, parsed",
+    [
+        ("Write-Host foo", "& Write-Host foo"),
+        ("$PSVersionTable", "$PSVersionTable"),
+    ],
+)
+def test_prep_powershell_cmd(cmd, parsed):
     """
     Tests _prep_powershell_cmd returns correct cmd
     """
-    with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
-        stack = [["", "", ""], ["", "", ""], ["", "", ""]]
+    stack = [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
+    with patch("traceback.extract_stack", return_value=stack), patch(
+        "salt.utils.path.which", return_value="C:\\powershell.exe"
+    ):
         ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+            win_shell="powershell", cmd=cmd, encoded_cmd=False
         )
-        assert ret == 'powershell -NonInteractive -NoProfile -Command "$PSVersionTable"'
+        expected = [
+            "C:\\powershell.exe",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            parsed,
+        ]
+        assert ret == expected
 
+
+def test_prep_powershell_cmd_encoded():
+    """
+    Tests _prep_powershell_cmd returns correct cmd when encoded_cmd=True
+    """
+    stack = [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
+    # This is the encoded command for 'Write-Host "Encoded HOLO"'
+    e_cmd = "VwByAGkAdABlAC0ASABvAHMAdAAgACIARQBuAGMAbwBkAGUAZAAgAEgATwBMAE8AIgA="
+    with patch("traceback.extract_stack", return_value=stack), patch(
+        "salt.utils.path.which", return_value="C:\\powershell.exe"
+    ):
         ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=True
+            win_shell="powershell", cmd=e_cmd, encoded_cmd=True
         )
-        assert (
-            ret
-            == "powershell -NonInteractive -NoProfile -EncodedCommand $PSVersionTable"
-        )
+        expected = [
+            "C:\\powershell.exe",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-EncodedCommand",
+            f"{e_cmd}",
+        ]
+        assert ret == expected
 
-        stack = [["", "", ""], ["", "", "script"], ["", "", ""]]
+
+def test_prep_powershell_cmd_script():
+    """
+    Tests _prep_powershell_cmd returns correct cmd when called from cmd.script
+    """
+    stack = [["", "", ""], ["", "", "script"], ["", "", ""], ["", "", ""]]
+    script = r"C:\some\script.ps1"
+    with patch("traceback.extract_stack", return_value=stack), patch(
+        "salt.utils.path.which", return_value="C:\\powershell.exe"
+    ):
         ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+            win_shell="powershell", cmd=script, encoded_cmd=False
         )
-        assert (
-            ret
-            == "powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable"
-        )
+        expected = [
+            "C:\\powershell.exe",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            f"& {script}",
+        ]
+        assert ret == expected
 
-    with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
-        stack = [["", "", ""], ["", "", ""], ["", "", ""]]
 
-        ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
-        )
-        assert (
-            ret == '"powershell" -NonInteractive -NoProfile -Command "$PSVersionTable"'
-        )
-
-        ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=True
-        )
-        assert (
-            ret
-            == '"powershell" -NonInteractive -NoProfile -EncodedCommand $PSVersionTable'
-        )
-
-        stack = [["", "", ""], ["", "", "script"], ["", "", ""]]
-        ret = cmdmod._prep_powershell_cmd(
-            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
-        )
-        assert (
-            ret
-            == '"powershell" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable'
-        )
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("", '""'),  # Should quote an empty string
+        ("Foo", '"Foo"'),  # Should quote a string
+        ('["foo", "bar"]', '["foo", "bar"]'),  # Should leave unchanged
+        ('{"foo": "bar"}', '{"foo": "bar"}'),  # Should leave unchanged
+    ],
+)
+def test_prep_powershell_json(text, expected):
+    """
+    Make sure the output is valid json
+    """
+    result = cmdmod._prep_powershell_json(text)
+    assert result == expected

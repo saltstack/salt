@@ -48,15 +48,45 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci pkg-downloads-matrix
+
   linux:
     name: Linux
+    needs:
+      - generate-matrix
     runs-on:
       - self-hosted
       - linux
@@ -68,121 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: almalinux-8
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-8-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-8-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: almalinux-9
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: almalinux-9-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: almalinux-9-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: amazonlinux-2
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: amazonlinux-2-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: amazonlinux-2-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: amazonlinux-2023-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: centos-7
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: centos-7-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: centos-7-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: debian-10
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-10-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: debian-11
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-11-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: debian-12
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: debian-12-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: fedora-39
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: fedora-39-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: fedora-39-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: photonos-4
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-4-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-4-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: photonos-5
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: photonos-5-arm64
-            arch: aarch64
-            pkg-type: package
-          - distro-slug: photonos-5-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-20.04-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04
-            arch: x86_64
-            pkg-type: onedir
-          - distro-slug: ubuntu-22.04-arm64
-            arch: arm64
-            pkg-type: package
-          - distro-slug: ubuntu-22.04-arm64
-            arch: arm64
-            pkg-type: onedir
-          - distro-slug: ubuntu-23.04
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: ubuntu-23.04-arm64
-            arch: arm64
-            pkg-type: package
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
 
     steps:
 
@@ -367,11 +283,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*
@@ -380,27 +294,18 @@ jobs:
 
   macos:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     env:
       USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: macos-12
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: macos-13
-            arch: x86_64
-            pkg-type: package
-          - distro-slug: macos-13-xlarge
-            arch: arm64
-            pkg-type: package
-          - distro-slug: macos-13-xlarge
-            arch: arm64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
 
     steps:
 
@@ -576,11 +481,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*
@@ -589,6 +492,8 @@ jobs:
 
   windows:
     name: Windows
+    needs:
+      - generate-matrix
     env:
       USE_S3_CACHE: 'true'
     runs-on:
@@ -600,16 +505,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: nsis
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: msi
-          - distro-slug: windows-2022
-            arch: amd64
-            pkg-type: onedir
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
 
     steps:
       - name: Checkout Source Code
@@ -788,11 +684,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
             artifacts
             !artifacts/salt/*

@@ -329,7 +329,7 @@ class daclConstants:
         return path
 
 
-def _getUserSid(user):
+def _get_user_sid(user):
     """
     return a state error dictionary, with 'sid' as a field if it could be returned
     if user is None, sid will also be None
@@ -413,7 +413,7 @@ def get(path, objectType, user=None):
     """
     ret = {"Path": path, "ACLs": []}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     if path and objectType:
         dc = daclConstants()
@@ -458,7 +458,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
         acetype = acetype.strip().upper()
         propagation = propagation.strip().upper()
 
-        sidRet = _getUserSid(user)
+        sidRet = _get_user_sid(user)
         if not sidRet["result"]:
             return sidRet
         permissionbit = dc.getPermissionBit(objectTypeBit, permission)
@@ -555,7 +555,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
         if check_ace(path, objectType, user, permission, acetype, propagation, True)[
             "Exists"
         ]:
-            sidRet = _getUserSid(user)
+            sidRet = _get_user_sid(user)
             if not sidRet["result"]:
                 return sidRet
             permissionbit = (
@@ -804,7 +804,7 @@ def check_inheritance(path, objectType, user=None):
 
     ret = {"result": False, "Inheritance": False, "comment": ""}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -880,7 +880,7 @@ def check_ace(
         dc.getPropagationBit(objectTypeBit, propagation) if propagation else None
     )
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
     if not sidRet["result"]:
         return sidRet
 

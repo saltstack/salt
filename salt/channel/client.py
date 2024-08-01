@@ -22,21 +22,6 @@ import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        try:
-            from Crypto.Cipher import PKCS1_OAEP  # nosec
-        except ImportError:
-            pass
-
-
 log = logging.getLogger(__name__)
 
 REQUEST_CHANNEL_TIMEOUT = 60
@@ -166,11 +151,15 @@ class AsyncReqChannel:
         return self.transport.ttype
 
     def _package_load(self, load):
-        return {
+        ret = {
             "enc": self.crypt,
             "load": load,
             "version": 2,
         }
+        if self.crypt == "aes":
+            ret["enc_algo"] = self.opts["encryption_algorithm"]
+            ret["sig_algo"] = self.opts["signing_algorithm"]
+        return ret
 
     @salt.ext.tornado.gen.coroutine
     def _send_with_retry(self, load, tries, timeout):
@@ -221,11 +210,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)  # pylint: disable=used-before-assignment
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -248,7 +233,9 @@ class AsyncReqChannel:
         raise salt.ext.tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.verify_signature(self.master_pubkey_path, data, sig)
+        return salt.crypt.PublicKey(self.master_pubkey_path).verify(
+            data, sig, self.opts["signing_algorithm"]
+        )
 
     @salt.ext.tornado.gen.coroutine
     def _crypted_transfer(self, load, timeout, raw=False):
@@ -583,7 +570,10 @@ class AsyncPubChannel:
 
             # Verify that the signature is valid
             if not salt.crypt.verify_signature(
-                self.master_pubkey_path, payload["load"], payload.get("sig")
+                self.master_pubkey_path,
+                payload["load"],
+                payload.get("sig"),
+                algorithm=payload["sig_algo"],
             ):
                 raise salt.crypt.AuthenticationError(
                     "Message signature failed to validate."

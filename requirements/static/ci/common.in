@@ -7,11 +7,9 @@ apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.17.67
 boto>=2.46.0
 cassandra-driver>=2.0
-certifi>=2022.12.07
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
-croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 etcd3-py==0.1.6
 gitpython>=3.1.37
@@ -36,7 +34,6 @@ pycparser>=2.21; python_version >= '3.9'
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi
-requests
 rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7

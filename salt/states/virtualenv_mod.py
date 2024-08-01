@@ -77,7 +77,9 @@ def managed(
         Prefer wheel archives (requires pip >= 1.4).
 
     python: None
-        Python executable used to build the virtualenv
+        Python executable used to build the virtualenv. When Salt is installed
+        from a onedir package. You will likely want to specify which python
+        interperter should be used.
 
     user: None
         The user under which to run virtualenv and pip.
@@ -131,6 +133,12 @@ def managed(
             - requirements: salt://REQUIREMENTS.txt
             - env_vars:
                 PATH_VAR: '/usr/local/bin/'
+
+    Current versions of Salt use onedir packages and will use onedir python
+    interpreter by default. If you've installed Salt via out package
+    repository. You will likely want to provide the path to the interpreter
+    with which you would like to be used to create the virtual environment. The
+    interpreter can be specified by providing the `python` option.
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 

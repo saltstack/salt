@@ -183,9 +183,9 @@ according to the www policy.
 
 import base64
 import copy
-import datetime
 import logging
 import os.path
+from datetime import datetime, timedelta, timezone
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -487,11 +487,16 @@ def certificate_managed(
                     else None
                 ):
                     changes["pkcs12_friendlyname"] = pkcs12_friendlyname
+                try:
+                    curr_not_after = current.not_valid_after_utc
+                except AttributeError:
+                    # naive datetime object, release <42 (it's always UTC)
+                    curr_not_after = current.not_valid_after.replace(
+                        tzinfo=timezone.utc
+                    )
 
-                if (
-                    current.not_valid_after
-                    < datetime.datetime.utcnow()
-                    + datetime.timedelta(days=days_remaining)
+                if curr_not_after < datetime.now(tz=timezone.utc) + timedelta(
+                    days=days_remaining
                 ):
                     changes["expiration"] = True
 
@@ -896,10 +901,14 @@ def crl_managed(
 
                 if encoding != current_encoding:
                     changes["encoding"] = encoding
+                try:
+                    curr_next_update = current.next_update_utc
+                except AttributeError:
+                    # naive datetime object, release <42 (it's always UTC)
+                    curr_next_update = current.next_update.replace(tzinfo=timezone.utc)
                 if days_remaining and (
-                    current.next_update
-                    < datetime.datetime.utcnow()
-                    + datetime.timedelta(days=days_remaining)
+                    curr_next_update
+                    < datetime.now(tz=timezone.utc) + timedelta(days=days_remaining)
                 ):
                     changes["expiration"] = True
 
@@ -1597,10 +1606,12 @@ def _build_cert(
     ca_server=None, signing_policy=None, signing_private_key=None, **kwargs
 ):
     final_kwargs = copy.deepcopy(kwargs)
+    final_kwargs["signing_private_key"] = signing_private_key
     x509util.merge_signing_policy(
         __salt__["x509.get_signing_policy"](signing_policy, ca_server=ca_server),
         final_kwargs,
     )
+    signing_private_key = final_kwargs.pop("signing_private_key")
 
     builder, _, private_key_loaded, signing_cert = x509util.build_crt(
         signing_private_key,

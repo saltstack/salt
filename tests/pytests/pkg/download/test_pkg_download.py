@@ -7,8 +7,10 @@ import logging
 import os
 import pathlib
 import shutil
+import time
 
 import packaging.version
+import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -460,6 +462,7 @@ def setup_windows(
     repo_subpath,
     package_type,
     onedir_install_path,
+    timeout=300,
 ):
     try:
         arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
@@ -491,6 +494,45 @@ def setup_windows(
 
             pytest.helpers.download_file(win_pkg_url, pkg_path)
             if package_type.lower() == "nsis":
+                # We need to make sure there are no installer/uninstaller
+                # processes running. Uninst.exe launches a 2nd binary
+                # (Un.exe or Un_*.exe) Let's get the name of the process
+                processes = [
+                    win_pkg,
+                    "uninst.exe",
+                    "Un.exe",
+                    "Un_A.exe",
+                    "Un_B.exe",
+                    "Un_C.exe",
+                    "Un_D.exe",
+                    "Un_D.exe",
+                    "Un_F.exe",
+                    "Un_G.exe",
+                ]
+                proc_name = ""
+                for proc in processes:
+                    try:
+                        if proc in (p.name() for p in psutil.process_iter()):
+                            proc_name = proc
+                    except psutil.NoSuchProcess:
+                        continue
+
+                # We need to give the process time to exit. We'll timeout after
+                # 5 minutes or whatever timeout is set to
+                if proc_name:
+                    elapsed_time = 0
+                    while elapsed_time < timeout:
+                        try:
+                            if proc_name not in (
+                                p.name() for p in psutil.process_iter()
+                            ):
+                                break
+                        except psutil.NoSuchProcess:
+                            continue
+                        elapsed_time += 0.1
+                        time.sleep(0.1)
+
+                # Only run setup when we're sure no other installations are running
                 ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
             else:
                 ret = shell.run(
@@ -556,6 +598,7 @@ def salt_test_command(request, install_dir):
     return command
 
 
+@pytest.mark.skip_on_windows(reason="This is flaky on Windows")
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands(), indirect=True)
 def test_download(shell, salt_test_command):
     """

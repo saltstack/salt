@@ -5,7 +5,6 @@
 import logging
 import os
 import pathlib
-import pprint
 import re
 import shutil
 import stat
@@ -16,7 +15,6 @@ from unittest import TestCase  # pylint: disable=blacklisted-module
 import _pytest.logging
 import _pytest.skipping
 import more_itertools
-import psutil
 import pytest
 
 import salt
@@ -998,6 +996,9 @@ def salt_syndic_master_factory(
     config_overrides = {
         "log_level_logfile": "quiet",
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -1114,6 +1115,9 @@ def salt_master_factory(
     config_overrides = {
         "log_level_logfile": "quiet",
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -1223,6 +1227,8 @@ def salt_minion_factory(salt_master_factory):
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1255,6 +1261,8 @@ def salt_sub_minion_factory(salt_master_factory):
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1299,7 +1307,6 @@ def salt_call_cli(salt_minion_factory):
 
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
-    reap_stray_processes,
     salt_factories,
     salt_syndic_master_factory,
     salt_syndic_factory,
@@ -1336,6 +1343,8 @@ def bridge_pytest_and_runtests(
         salt_syndic_factory.config["conf_file"]
     )
     RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+    with reap_stray_processes():
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -1403,7 +1412,21 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(sshd_server, salt_master):
+def known_hosts_file(sshd_server, salt_master, salt_factories):
+    with pytest.helpers.temp_file(
+        "ssh-known-hosts",
+        "\n".join(sshd_server.get_host_keys()),
+        salt_factories.tmp_root_dir,
+    ) as known_hosts_file, pytest.helpers.temp_file(
+        "master.d/ssh-known-hosts.conf",
+        f"known_hosts_file: {known_hosts_file}",
+        salt_master.config_dir,
+    ):
+        yield known_hosts_file
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master, known_hosts_file):
     roster_contents = """
     localhost:
       host: 127.0.0.1
@@ -1416,6 +1439,7 @@ def salt_ssh_roster_file(sshd_server, salt_master):
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
+
     with pytest.helpers.temp_file(
         "roster", roster_contents, salt_master.config_dir
     ) as roster_file:
@@ -1635,46 +1659,6 @@ def from_filenames_collection_modifyitems(config, items):
 
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
-@pytest.fixture(scope="session")
-def reap_stray_processes():
-    # Run tests
-    yield
-
-    children = psutil.Process(os.getpid()).children(recursive=True)
-    if not children:
-        log.info("No astray processes found")
-        return
-
-    def on_terminate(proc):
-        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
-
-    if children:
-        # Reverse the order, sublings first, parents after
-        children.reverse()
-        log.warning(
-            "Test suite left %d astray processes running. Killing those processes:\n%s",
-            len(children),
-            pprint.pformat(children),
-        )
-
-        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
-        for child in alive:
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                continue
-
-        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
-        if alive:
-            # Give up
-            for child in alive:
-                log.warning(
-                    "Process %s survived SIGKILL, giving up:\n%s",
-                    child,
-                    pprint.pformat(child.as_dict()),
-                )
-
-
 @pytest.fixture(scope="session")
 def sminion():
     return create_sminion()

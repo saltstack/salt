@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 import attr
 import distro
-import packaging
+import packaging.version
 import psutil
 import pytest
 import requests
@@ -22,6 +22,7 @@ from pytestshellutils.utils.processes import (
     ProcessResult,
     _get_cmdline,
     terminate_process,
+    terminate_process_list,
 )
 from pytestskipmarkers.utils import platform
 from saltfactories.bases import SystemdSaltDaemonImpl
@@ -85,7 +86,7 @@ class SaltPkgInstall:
 
     @proc.default
     def _default_proc(self):
-        return Subprocess()
+        return Subprocess(timeout=240)
 
     @distro_id.default
     def _default_distro_id(self):
@@ -105,7 +106,7 @@ class SaltPkgInstall:
 
     @distro_version.default
     def _default_distro_version(self):
-        if self.distro_name == "photon":
+        if self.distro_name in ("photon", "rocky"):
             return distro.version().split(".")[0]
         return distro.version().lower()
 
@@ -113,6 +114,7 @@ class SaltPkgInstall:
     def _default_pkg_mngr(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -129,6 +131,7 @@ class SaltPkgInstall:
     def _default_rm_pkg(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -144,6 +147,7 @@ class SaltPkgInstall:
         dbg_pkg = None
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -167,6 +171,7 @@ class SaltPkgInstall:
         ]
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -478,9 +483,11 @@ class SaltPkgInstall:
             log.debug("Installing: %s", str(pkg))
             ret = self.proc.run("installer", "-pkg", str(pkg), "-target", "/")
             self._check_retcode(ret)
+
             # Stop the service installed by the installer
             self.proc.run("launchctl", "disable", f"system/{service_name}")
             self.proc.run("launchctl", "bootout", "system", str(plist_file))
+
         elif upgrade:
             env = os.environ.copy()
             extra_args = []
@@ -504,7 +511,6 @@ class SaltPkgInstall:
                 upgrade_cmd,
                 "-y",
                 *args,
-                _timeout=120,
                 env=env,
             )
         else:
@@ -607,7 +613,7 @@ class SaltPkgInstall:
             "3006.0"
         )
         distro_name = self.distro_name
-        if distro_name in ("almalinux", "centos", "fedora"):
+        if distro_name in ("almalinux", "rocky", "centos", "fedora"):
             distro_name = "redhat"
         root_url = "salt/py3/"
         if self.classic:
@@ -615,6 +621,7 @@ class SaltPkgInstall:
 
         if self.distro_name in [
             "almalinux",
+            "rocky",
             "redhat",
             "centos",
             "amazon",
@@ -1001,12 +1008,27 @@ class SaltPkgInstall:
             if self.upgrade:
                 self.install_previous()
             else:
+                # assume downgrade, since no_install only used in these two cases
                 self.install()
+        else:
+            self.install()
+
         return self
 
     def __exit__(self, *_):
         if not self.no_uninstall:
             self.uninstall()
+
+        # Did we left anything running?!
+        procs = []
+        for proc in psutil.process_iter():
+            if "salt" in proc.name():
+                cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
+                if "/opt/saltstack" in cmdl_strg:
+                    procs.append(proc)
+
+        if procs:
+            terminate_process_list(procs, kill=True, slow_stop=True)
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):

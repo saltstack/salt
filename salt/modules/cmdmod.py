@@ -256,32 +256,54 @@ def _check_avail(cmd):
     return bret and wret
 
 
-def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
+def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     """
-    Prep cmd when shell is powershell
+    Prep cmd when shell is powershell. If we were called by script(), then fake
+    out the Windows shell to run a Powershell script. Otherwise, just run a
+    Powershell command.
     """
+    # Find the full path to the shell
+    win_shell = salt.utils.path.which(win_shell)
 
-    # If this is running on Windows wrap
-    # the shell in quotes in case there are
-    # spaces in the paths.
-    if salt.utils.platform.is_windows():
-        shell = f'"{shell}"'
+    if not win_shell:
+        raise CommandExecutionError("PowerShell binary not found")
+
+    new_cmd = [win_shell, "-NonInteractive", "-NoProfile", "-ExecutionPolicy", "Bypass"]
 
     # extract_stack() returns a list of tuples.
     # The last item in the list [-1] is the current method.
     # The third item[2] in each tuple is the name of that method.
-    if stack[-2][2] == "script":
-        cmd = (
-            "{} -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}".format(
-                shell, cmd
-            )
-        )
+    stack = traceback.extract_stack(limit=3)
+    if stack[-3][2] == "script":
+        # If this is cmd.script, then we're running a file
+        # You might be tempted to use -File here instead of -Command
+        # The problem with using -File is that any arguments that contain
+        # powershell commands themselves will not be evaluated
+        # See GitHub issue #56195
+        new_cmd.append("-Command")
+        if isinstance(cmd, list):
+            cmd = " ".join(cmd)
+        new_cmd.append(f"& {cmd.strip()}")
     elif encoded_cmd:
-        cmd = f"{shell} -NonInteractive -NoProfile -EncodedCommand {cmd}"
+        new_cmd.extend(["-EncodedCommand", f"{cmd}"])
     else:
-        cmd = f'{shell} -NonInteractive -NoProfile -Command "{cmd}"'
+        # Strip whitespace
+        if isinstance(cmd, list):
+            cmd = " ".join(cmd)
 
-    return cmd
+        # Commands that are a specific keyword behave differently. They fail if
+        # you add a "&" to the front. Add those here as we find them:
+        keywords = ["$", "&", ".", "Configuration"]
+
+        for keyword in keywords:
+            if cmd.startswith(keyword):
+                new_cmd.extend(["-Command", f"{cmd.strip()}"])
+                break
+        else:
+            new_cmd.extend(["-Command", f"& {cmd.strip()}"])
+
+    log.debug(new_cmd)
+    return new_cmd
 
 
 def _run(
@@ -384,19 +406,7 @@ def _run(
     # The powershell core binary is "pwsh"
     # you can also pass a path here as long as the binary name is one of the two
     if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
-        # Strip whitespace
-        if isinstance(cmd, str):
-            cmd = cmd.strip()
-        elif isinstance(cmd, list):
-            cmd = " ".join(cmd).strip()
-        cmd = cmd.replace('"', '\\"')
-
-        # If we were called by script(), then fakeout the Windows
-        # shell to run a Powershell script.
-        # Else just run a Powershell command.
-        stack = traceback.extract_stack(limit=2)
-
-        cmd = _prep_powershell_cmd(shell, cmd, stack, encoded_cmd)
+        cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -809,6 +819,9 @@ def _run(
                     _log_cmd(cmd),
                 )
 
+        # Encoded commands dump CLIXML data in stderr. It's not an actual error
+        if encoded_cmd and "CLIXML" in err:
+            err = ""
         if rstrip:
             if out is not None:
                 out = out.rstrip()
@@ -1055,6 +1068,7 @@ def run(
     ignore_retcode=False,
     saltenv=None,
     use_vt=False,
+    redirect_stderr=True,
     bg=False,
     password=None,
     encoded_cmd=False,
@@ -1190,6 +1204,12 @@ def run(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
+    :param bool redirect_stderr: If set to ``True``, then stderr will be
+        redirected to stdout. This is helpful for cases where obtaining both
+        the retcode and output is desired. Default is ``True``
+
+        .. versionadded:: 3006.9
+
     :param bool encoded_cmd: Specify if the supplied command is encoded.
         Only applies to shell 'powershell' and 'pwsh'.
 
@@ -1301,6 +1321,7 @@ def run(
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     """
     python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
         runas=runas,
@@ -1309,7 +1330,7 @@ def run(
         python_shell=python_shell,
         cwd=cwd,
         stdin=stdin,
-        stderr=subprocess.STDOUT,
+        stderr=stderr,
         env=env,
         clean_env=clean_env,
         prepend_path=prepend_path,
@@ -2678,11 +2699,15 @@ def script(
 
     :param str args: String of command line args to pass to the script. Only
         used if no args are specified as part of the `name` argument. To pass a
-        string containing spaces in YAML, you will need to doubly-quote it:
+        string containing spaces in YAML, you will need to doubly-quote it.
+        Additionally, if you need to pass falsey values (e.g., "0", "", "False"),
+        you should doubly-quote them to ensure they are correctly interpreted:
 
         .. code-block:: bash
 
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
+            salt myminion cmd.script salt://foo.sh "''0''"
+            salt myminion cmd.script salt://foo.sh "''False''"
 
     :param str cwd: The directory from which to execute the command. Defaults
         to the directory returned from Python's tempfile.mkstemp.
@@ -2823,6 +2848,10 @@ def script(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :return: The return value of the script execution, including stdout, stderr,
+        and the exit code. If the script returns a falsey string value, it should be
+        doubly-quoted to ensure it is correctly interpreted by Salt.
 
     CLI Example:
 
@@ -4057,6 +4086,9 @@ def powershell(
     else:
         python_shell = True
 
+    if isinstance(cmd, list):
+        cmd = " ".join(cmd)
+
     # Append PowerShell Object formatting
     # ConvertTo-JSON is only available on PowerShell 3.0 and later
     psversion = shell_info("powershell")["psversion"]
@@ -4082,10 +4114,11 @@ def powershell(
         cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
+        cmd = f"{{{cmd}}}"
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
-    response = run(
+    response = run_stdout(
         cmd,
         cwd=cwd,
         stdin=stdin,
@@ -4113,9 +4146,8 @@ def powershell(
         **kwargs,
     )
 
-    # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if response == "":
-        response = "{}"
+    response = _prep_powershell_json(response)
+
     try:
         return salt.utils.json.loads(response)
     except Exception:  # pylint: disable=broad-except
@@ -4419,10 +4451,16 @@ def powershell_all(
     else:
         python_shell = True
 
+    if isinstance(cmd, list):
+        cmd = " ".join(cmd)
+
     # Append PowerShell Object formatting
-    cmd += " | ConvertTo-JSON"
-    if depth is not None:
-        cmd += f" -Depth {depth}"
+    # ConvertTo-JSON is only available on PowerShell 3.0 and later
+    psversion = shell_info("powershell")["psversion"]
+    if salt.utils.versions.version_cmp(psversion, "2.0") == 1:
+        cmd += " | ConvertTo-JSON"
+        if depth is not None:
+            cmd += f" -Depth {depth}"
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -4474,6 +4512,8 @@ def powershell_all(
             response["result"] = []
         return response
 
+    stdoutput = _prep_powershell_json(stdoutput)
+
     # If we fail to parse stdoutput we will raise an exception
     try:
         result = salt.utils.json.loads(stdoutput)
@@ -4492,7 +4532,28 @@ def powershell_all(
     else:
         # result type is list so the force_list param has no effect
         response["result"] = result
+
+    # Encoded commands dump CLIXML data in stderr. It's not an actual error
+    if "CLIXML" in response["stderr"]:
+        response["stderr"] = ""
+
     return response
+
+
+def _prep_powershell_json(text):
+    """
+    Try to fix the output from OutputTo-JSON in powershell commands to make it
+    valid JSON
+    """
+    # An empty string just needs to be an empty quote
+    if text == "":
+        text = '""'
+    else:
+        # Raw text needs to be quoted
+        starts_with = ['"', "{", "["]
+        if not any(text.startswith(x) for x in starts_with):
+            text = f'"{text}"'
+    return text
 
 
 def run_bg(

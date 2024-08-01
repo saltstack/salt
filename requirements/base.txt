@@ -5,10 +5,14 @@ jmespath
 msgpack>=1.0.0
 PyYAML
 MarkupSafe
-requests>=1.0.0
+requests<2.32.0 ; python_version < '3.10'
+requests>=2.32.3 ; python_version >= '3.10'
+certifi==2023.07.22; python_version < '3.10'
+certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
 looseversion
+croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 # We need contextvars for salt-ssh
 contextvars
