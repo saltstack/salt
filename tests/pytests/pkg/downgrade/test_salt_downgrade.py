@@ -76,7 +76,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
-    time.sleep(60)  # give it some time
+    time.sleep(120)  # give it some time
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
