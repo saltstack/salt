@@ -221,6 +221,10 @@ class SaltPkgInstall:
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
         if self.distro_id in ("ubuntu", "debian"):
+            print(
+                f"DGM install_salt, _default_version, about to stop services, but do not for distro '{self.distro_id}' , ",
+                flush=True,
+            )
             self.stop_services()
         return version
 
@@ -429,6 +433,10 @@ class SaltPkgInstall:
         If not raise AssertionError
         """
         if ret.returncode != 0:
+            print(
+                f"DGM install_salt  _check_retcode bad returncode, ret '{ret}'",
+                flush=True,
+            )
             log.error(ret)
         assert ret.returncode == 0
         return True
@@ -581,7 +589,11 @@ class SaltPkgInstall:
     def install(self, upgrade=False, downgrade=False):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian"):
-            self.stop_services()
+            print(
+                f"DGM install_salt  install ubuntu or debian, stop services distro id '{self.distro_id}' but don't ",
+                flush=True,
+            )
+            ## DGM self.stop_services()
 
     def stop_services(self):
         """
@@ -590,15 +602,24 @@ class SaltPkgInstall:
         settings we have set. This will also verify the expected
         services are up and running.
         """
+        print("DGM install_salt  stop_services, entry", flush=True)
         retval = True
         for service in ["salt-syndic", "salt-master", "salt-minion"]:
             check_run = self.proc.run("systemctl", "status", service)
             if check_run.returncode != 0:
                 # The system was not started automatically and we
                 # are expecting it to be on install
+                print(
+                    f"DGM install_salt  stop_services systemctl status, The service '{service}' was not started on install.",
+                    flush=True,
+                )
                 log.debug("The service %s was not started on install.", service)
                 retval = False
             else:
+                print(
+                    f"DGM install_salt  stop_services systemctl stop, service '{service}'",
+                    flush=True,
+                )
                 stop_service = self.proc.run("systemctl", "stop", service)
                 self._check_retcode(stop_service)
         return retval
@@ -707,6 +728,13 @@ class SaltPkgInstall:
             if relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
 
+            dgm_file1 = f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}"
+            dgm_file2 = f"/etc/apt/keyrings/{gpg_dest}"
+            print(
+                f"DGM install_salt  install_previous download files , src '{dgm_file1}' and dest '{dgm_file2}'",
+                flush=True,
+            )
+
             download_file(
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
                 f"/etc/apt/keyrings/{gpg_dest}",
@@ -714,6 +742,12 @@ class SaltPkgInstall:
             with salt.utils.files.fopen(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
+                dgm_file3 = f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
+                dgm_file4 = f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
+                print(
+                    f"DGM install_salt  install_previous , write /etc/apt/sources.list.d/salt.list, '{dgm_file3}' and '{dgm_file4}'",
+                    flush=True,
+                )
                 fp.write(
                     f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
                     f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
@@ -727,6 +761,9 @@ class SaltPkgInstall:
                 "-y",
             ]
 
+            print(
+                f"DGM install_salt  install_previous , install cmd '{cmd}'", flush=True
+            )
             if downgrade:
                 pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
                 pref_file.parent.mkdir(exist_ok=True)
@@ -753,6 +790,10 @@ class SaltPkgInstall:
 
             cmd.extend(extra_args)
 
+            print(
+                f"DGM install_salt  install_previous about to proc run cmd '{cmd}', env '{env}'",
+                flush=True,
+            )
             ret = self.proc.run(*cmd, env=env)
             # Pre-relenv packages down get downgraded to cleanly programmatically
             # They work manually, and the install tests after downgrades will catch problems with the install
@@ -765,7 +806,10 @@ class SaltPkgInstall:
                 self._check_retcode(ret)
             if downgrade:
                 pref_file.unlink()
-            self.stop_services()
+            print(
+                "DGM install_previous , about to stop services, but do not", flush=True
+            )
+            ## DGM self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
