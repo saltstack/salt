@@ -220,9 +220,10 @@ class SaltPkgInstall:
             version = self.prev_version
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
+        ## DGM why is this called out specically ???
         if self.distro_id in ("ubuntu", "debian"):
             print(
-                f"DGM install_salt, _default_version, about to stop services, but do not for distro '{self.distro_id}' , ",
+                f"DGM install_salt, _default_version, about to stop services, for distro '{self.distro_id}'",
                 flush=True,
             )
             self.stop_services()
@@ -590,7 +591,7 @@ class SaltPkgInstall:
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian"):
             print(
-                f"DGM install_salt  install ubuntu or debian, stop services distro id '{self.distro_id}' but don't ",
+                f"DGM install_salt  install, ubuntu or debian, stop services distro id '{self.distro_id}' but don't ",
                 flush=True,
             )
             ## DGM self.stop_services()
@@ -601,6 +602,8 @@ class SaltPkgInstall:
         We want to ensure our tests start with the config
         settings we have set. This will also verify the expected
         services are up and running.
+
+        ## DGM Why this comment, surely when Debian/Ubuntu restart automatically, they pick up the configuration already defined - unless there is some env override on configuration file to pick up.
         """
         print("DGM install_salt  stop_services, entry", flush=True)
         retval = True
@@ -610,17 +613,17 @@ class SaltPkgInstall:
                 # The system was not started automatically and we
                 # are expecting it to be on install
                 print(
-                    f"DGM install_salt  stop_services systemctl status, The service '{service}' was not started on install.",
+                    f"DGM install_salt  stop_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
                     flush=True,
                 )
                 log.debug("The service %s was not started on install.", service)
                 retval = False
             else:
+                stop_service = self.proc.run("systemctl", "stop", service)
                 print(
-                    f"DGM install_salt  stop_services systemctl stop, service '{service}'",
+                    f"DGM install_salt  stop_services systemctl stop, service '{service}', ret '{stop_service}'",
                     flush=True,
                 )
-                stop_service = self.proc.run("systemctl", "stop", service)
                 self._check_retcode(stop_service)
         return retval
 
@@ -762,7 +765,7 @@ class SaltPkgInstall:
             ]
 
             print(
-                f"DGM install_salt  install_previous , install cmd '{cmd}'", flush=True
+                f"DGM install_salt  install_previous, install cmd '{cmd}'", flush=True
             )
             if downgrade:
                 pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
@@ -791,7 +794,7 @@ class SaltPkgInstall:
             cmd.extend(extra_args)
 
             print(
-                f"DGM install_salt  install_previous about to proc run cmd '{cmd}', env '{env}'",
+                f"DGM install_salt  install_previous, about to proc run cmd '{cmd}', env '{env}'",
                 flush=True,
             )
             ret = self.proc.run(*cmd, env=env)
@@ -807,7 +810,8 @@ class SaltPkgInstall:
             if downgrade:
                 pref_file.unlink()
             print(
-                "DGM install_previous , about to stop services, but do not", flush=True
+                "DGM install, install_previous , about to stop services, but do not",
+                flush=True,
             )
             ## DGM self.stop_services()
         elif platform.is_windows():
