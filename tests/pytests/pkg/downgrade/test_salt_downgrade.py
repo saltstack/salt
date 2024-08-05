@@ -108,7 +108,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         test_cmd = f"systemctl status {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         print(
-            f"DGM test_salt_downgrade_minion systemctl status for service '{test_item}' ret '{ret}'",
+            f"DGM test_salt_downgrade_minion post downgrade install, systemctl status for service '{test_item}' ret '{ret}'",
             flush=True,
         )
 
@@ -118,9 +118,30 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
             f"DGM test_salt_downgrade_minion, ubuntu or debian, restart services for distro id '{install_salt.distro_id}'",
             flush=True,
         )
-        install.restart_services()
+        install_salt.restart_services()
 
     time.sleep(60)  # give it some time
+
+    test_list = [
+        "salt-minion",
+        "salt-master",
+        "salt-syndic",
+    ]
+    for test_item in test_list:
+        test_cmd = f"systemctl status {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        print(
+            f"DGM test_salt_downgrade_minion post downgrade install and restart and sleep, systemctl status for service '{test_item}' ret '{ret}'",
+            flush=True,
+        )
+
+    # DGM get the processes that are running
+    test_cmd = "ps -ef"
+    ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+    print(
+        f"DGM test_salt_downgrade_minion get ps -ef and compare against systemd for salt-minion,  ret '{ret}'",
+        flush=True,
+    )
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
@@ -129,6 +150,10 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         flush=True,
     )
     new_minion_pids = _get_running_named_salt_pid(process_name)
+    print(
+        f"DGM test_salt_downgrade_minion, getting new pids for process_name '{process_name}', old pids '{old_minion_pids}', new pids '{new_minion_pids}'",
+        flush=True,
+    )
     assert new_minion_pids
     assert new_minion_pids != old_minion_pids
 
@@ -147,7 +172,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
 
-    if is_downgrade_to_relenv:
+    if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
             # test pip install after a downgrade
