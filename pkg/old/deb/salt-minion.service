@@ -8,6 +8,7 @@ KillMode=process
 NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion
+SELinuxContext=system_u:system_r:unconfined_t:s0
 
 [Install]
 WantedBy=multi-user.target
