@@ -1173,6 +1173,9 @@ class SubprocessList:
                 if proc.is_alive():
                     continue
                 proc.join()
+                # Only processes have a close method, threads do not.
+                if hasattr(proc, "close"):
+                    proc.close()
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)
