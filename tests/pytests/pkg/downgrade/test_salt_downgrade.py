@@ -99,7 +99,11 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     # since they were not explicitly stopped, but the Debian/Ubuntu are, but in testing Ubuntu 24.04 amd64 passed but arm64 did not ?
     # Also MacOS 13 also failed ????
 
-    test_list = ["salt-syndic", "salt-minion", "salt-master"]
+    test_list = [
+        "salt-minion",
+        "salt-master",
+        "salt-syndic",
+    ]
     for test_item in test_list:
         test_cmd = f"systemctl status {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
@@ -109,9 +113,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         )
 
     # trying restart for Debian/Ubuntu to see the outcome
-    if install.distro_id in ("ubuntu", "debian"):
+    if install_salt.distro_id in ("ubuntu", "debian"):
         print(
-            f"DGM test_salt_downgrade_minion, ubuntu or debian, restart services for distro id '{install.distro_id}'",
+            f"DGM test_salt_downgrade_minion, ubuntu or debian, restart services for distro id '{install_salt.distro_id}'",
             flush=True,
         )
         install.restart_services()
