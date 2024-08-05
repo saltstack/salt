@@ -638,26 +638,20 @@ class SaltPkgInstall:
         ## DGM for example: stopping service on Debian/Ubuntu when getting the _default_version ????????
         """
         print("DGM install_salt  restart_services, entry", flush=True)
-        retval = True
         for service in ["salt-syndic", "salt-master", "salt-minion"]:
             check_run = self.proc.run("systemctl", "status", service)
-            if check_run.returncode != 0:
-                # The system was not started automatically and we
-                # are expecting it to be on install
-                print(
-                    f"DGM install_salt  restart_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
-                    flush=True,
-                )
-                log.debug("The service %s was not started on install.", service)
-                retval = False
-            else:
-                restart_service = self.proc.run("systemctl", "restart", service)
-                print(
-                    f"DGM install_salt  restart_services systemctl restart, service '{service}', ret '{restart_service}'",
-                    flush=True,
-                )
-                self._check_retcode(restart_service)
-        return retval
+            print(
+                f"DGM install_salt  restart_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
+                flush=True,
+            )
+            log.debug("The restart_services status for %s is %s.", service, check_run)
+
+            restart_service = self.proc.run("systemctl", "restart", service)
+            print(
+                f"DGM install_salt  restart_services systemctl restart, service '{service}', ret '{restart_service}'",
+                flush=True,
+            )
+            self._check_retcode(restart_service)
 
     def install_previous(self, downgrade=False):
         """
