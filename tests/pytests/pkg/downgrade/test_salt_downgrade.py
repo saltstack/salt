@@ -56,7 +56,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         original_py_version = install_salt.package_python_version()
 
     # Verify current install version is setup correctly and works
-    ret = salt_call_cli.run("test.version")
+    ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     assert packaging.version.parse(ret.data) == packaging.version.parse(
         install_salt.artifact_version
@@ -88,6 +88,33 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
+
+    ## DGM test code
+    time.sleep(10)  # give it some time
+    # a downgrade install will stop services on Debian/Ubuntu (why they didn't worry about Redhat family)
+    # This is probably due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
+    # this leads to issues depending on what the sequence of tests are run , leaving the systems systemd active or not
+
+    # Q. why are RedHat systems passing these tests, perhaps there is a case being missed where the RedHat systems are active
+    # since they were not explicitly stopped, but the Debian/Ubuntu are, but in testing Ubuntu 24.04 amd64 passed but arm64 did not ?
+    # Also MacOS 13 also failed ????
+
+    test_list = ["salt-syndic", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl status {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        print(
+            f"DGM test_salt_downgrade_minion systemctl status for service '{test_item}' ret '{ret}'",
+            flush=True,
+        )
+
+    # trying restart for Debian/Ubuntu to see the outcome
+    if install.distro_id in ("ubuntu", "debian"):
+        print(
+            f"DGM test_salt_downgrade_minion, ubuntu or debian, restart services for distro id '{install.distro_id}'",
+            flush=True,
+        )
+        install.restart_services()
 
     time.sleep(60)  # give it some time
 

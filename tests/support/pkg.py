@@ -591,10 +591,10 @@ class SaltPkgInstall:
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian"):
             print(
-                f"DGM install_salt  install, ubuntu or debian, stop services distro id '{self.distro_id}' but don't ",
+                f"DGM install_salt  install, ubuntu or debian, stop services distro id '{self.distro_id}'",
                 flush=True,
             )
-            ## DGM self.stop_services()
+            self.stop_services()
 
     def stop_services(self):
         """
@@ -625,6 +625,38 @@ class SaltPkgInstall:
                     flush=True,
                 )
                 self._check_retcode(stop_service)
+        return retval
+
+    def restart_services(self):
+        """
+        Debian distros automatically start the services
+        We want to ensure our tests start with the config settings we have set.
+        This will also verify the expected services are up and running.
+
+        ## DGM Why this comment stop_services, surely when Debian/Ubuntu restart automatically, they pick up the configuration already defined - unless there is some env override on configuration file to pick up.
+        ## DGM Created this to restart services after an install which will stop.  Need to find out the underlying reason Caleb added code to stop_services, what problem was he trying to fix,
+        ## DGM for example: stopping service on Debian/Ubuntu when getting the _default_version ????????
+        """
+        print("DGM install_salt  restart_services, entry", flush=True)
+        retval = True
+        for service in ["salt-syndic", "salt-master", "salt-minion"]:
+            check_run = self.proc.run("systemctl", "status", service)
+            if check_run.returncode != 0:
+                # The system was not started automatically and we
+                # are expecting it to be on install
+                print(
+                    f"DGM install_salt  restart_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
+                    flush=True,
+                )
+                log.debug("The service %s was not started on install.", service)
+                retval = False
+            else:
+                restart_service = self.proc.run("systemctl", "restart", service)
+                print(
+                    f"DGM install_salt  restart_services systemctl restart, service '{service}', ret '{restart_service}'",
+                    flush=True,
+                )
+                self._check_retcode(restart_service)
         return retval
 
     def install_previous(self, downgrade=False):
@@ -810,10 +842,10 @@ class SaltPkgInstall:
             if downgrade:
                 pref_file.unlink()
             print(
-                "DGM install, install_previous , about to stop services, but do not",
+                "DGM install, install_previous , about to stop services",
                 flush=True,
             )
-            ## DGM self.stop_services()
+            self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
