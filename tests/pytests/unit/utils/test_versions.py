@@ -126,7 +126,7 @@ def test_warn_until_bad_version_name_raises_runtime_error():
     # Ensure proper behavior
     with warnings.catch_warnings(record=True) as recorded_warnings:
         salt.utils.versions.warn_until(
-            3001, "Deprecation Message!", _version_info_=(3000, 0)
+            "Sodium", "Deprecation Message!", _version_info_=(3000, 0)
         )
         assert "Deprecation Message!" == str(recorded_warnings[0].message)
 
@@ -134,7 +134,7 @@ def test_warn_until_bad_version_name_raises_runtime_error():
         RuntimeError, match="Incorrect spelling for the release name in .*"
     ):
         salt.utils.versions.warn_until(
-            3001, "Deprecation Message!", _version_info_=(3000, 0)
+            "Sudium", "Deprecation Message!", _version_info_=(3000, 0)
         )
 
 
@@ -154,7 +154,7 @@ def test_warn_until_warning_raised(subtests):
 
     def raise_named_version_warning(_version_info_=(0, 16, 0)):
         salt.utils.versions.warn_until(
-            2014, "Deprecation Message!", _version_info_=_version_info_
+            "hydrogen", "Deprecation Message!", _version_info_=_version_info_
         )
 
     with subtests.test(
@@ -233,7 +233,7 @@ def test_warn_until_warning_raised(subtests):
             ),
         ):
             salt.utils.versions.warn_until(
-                2014,
+                "Hydrogen",
                 "Foo",
                 _dont_call_warnings=True,
                 _version_info_=(sys.maxsize, 16, 0),
@@ -243,7 +243,7 @@ def test_warn_until_warning_raised(subtests):
         with warnings.catch_warnings(record=True) as recorded_warnings:
             vrs = salt.version.SaltStackVersion.from_name("Helium")
             salt.utils.versions.warn_until(
-                2014,
+                "Helium",
                 "Deprecation Message until {version}!",
                 _version_info_=(vrs.major - 1, 0),
             )
