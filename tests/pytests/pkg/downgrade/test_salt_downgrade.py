@@ -19,10 +19,6 @@ def _get_running_named_salt_pid(process_name):
     pids = []
     for proc in psutil.process_iter():
         cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        print(
-            f"DGM _get_running_named_salt_pid, process_name '{process_name}', cmdl_strg '{cmdl_strg}'",
-            flush=True,
-        )
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
@@ -33,11 +29,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     """
     Test an downgrade of Salt Minion.
     """
-    print(
-        f"DGM test_salt_downgrade_minion entry, install_salt '{install_salt}'",
-        flush=True,
-    )
-
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
@@ -79,81 +70,25 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     else:
         process_name = "salt-minion"
 
-    print(
-        f"DGM test_salt_downgrade_minion, getting old pids for process_name '{process_name}'",
-        flush=True,
-    )
     old_minion_pids = _get_running_named_salt_pid(process_name)
     assert old_minion_pids
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
-    ## DGM test code
     time.sleep(10)  # give it some time
-    # a downgrade install will stop services on Debian/Ubuntu (why they didn't worry about Redhat family)
-    # This is probably due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
-    # this leads to issues depending on what the sequence of tests are run , leaving the systems systemd active or not
-
-    # Q. why are RedHat systems passing these tests, perhaps there is a case being missed where the RedHat systems are active
-    # since they were not explicitly stopped, but the Debian/Ubuntu are, but in testing Ubuntu 24.04 amd64 passed but arm64 did not ?
-    # Also MacOS 13 also failed ????
-
-    test_list = [
-        "salt-minion",
-        "salt-master",
-        "salt-syndic",
-    ]
-    for test_item in test_list:
-        test_cmd = f"systemctl status {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        print(
-            f"DGM test_salt_downgrade_minion post downgrade install, systemctl status for service '{test_item}' ret '{ret}'",
-            flush=True,
-        )
-
+    # downgrade install will stop services on Debian/Ubuntu
+    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
+    # want to ensure our tests start with the config settings we have set,
     # trying restart for Debian/Ubuntu to see the outcome
     if install_salt.distro_id in ("ubuntu", "debian"):
-        print(
-            f"DGM test_salt_downgrade_minion, ubuntu or debian, restart services for distro id '{install_salt.distro_id}'",
-            flush=True,
-        )
         install_salt.restart_services()
 
     time.sleep(60)  # give it some time
 
-    test_list = [
-        "salt-minion",
-        "salt-master",
-        "salt-syndic",
-    ]
-    for test_item in test_list:
-        test_cmd = f"systemctl status {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        print(
-            f"DGM test_salt_downgrade_minion post downgrade install and restart and sleep, systemctl status for service '{test_item}' ret '{ret}'",
-            flush=True,
-        )
-
-    # DGM get the processes that are running
-    test_cmd = "ps -ef"
-    ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-    print(
-        f"DGM test_salt_downgrade_minion get ps -ef and compare against systemd for salt-minion,  ret '{ret}'",
-        flush=True,
-    )
-
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
-    print(
-        f"DGM test_salt_downgrade_minion, getting new pids for process_name '{process_name}'",
-        flush=True,
-    )
     new_minion_pids = _get_running_named_salt_pid(process_name)
-    print(
-        f"DGM test_salt_downgrade_minion, getting new pids for process_name '{process_name}', old pids '{old_minion_pids}', new pids '{new_minion_pids}'",
-        flush=True,
-    )
     assert new_minion_pids
     assert new_minion_pids != old_minion_pids
 

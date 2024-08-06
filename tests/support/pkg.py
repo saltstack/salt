@@ -220,12 +220,8 @@ class SaltPkgInstall:
             version = self.prev_version
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
-        ## DGM why is this called out specically ???
+        # ensure services stopped on Debian/Ubuntu (minic install for RedHat - non-starting)
         if self.distro_id in ("ubuntu", "debian"):
-            ## DGM print(
-            ## DGM     f"DGM install_salt, _default_version, about to stop services, for distro '{self.distro_id}'",
-            ## DGM     flush=True,
-            ## DGM )
             self.stop_services()
         return version
 
@@ -434,10 +430,6 @@ class SaltPkgInstall:
         If not raise AssertionError
         """
         if ret.returncode != 0:
-            ## DGM print(
-            ## DGM     f"DGM install_salt  _check_retcode bad returncode, ret '{ret}'",
-            ## DGM     flush=True,
-            ## DGM )
             log.error(ret)
         assert ret.returncode == 0
         return True
@@ -590,67 +582,42 @@ class SaltPkgInstall:
     def install(self, upgrade=False, downgrade=False):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian"):
-            ## DGM print(
-            ## DGM     f"DGM install_salt  install, ubuntu or debian, stop services distro id '{self.distro_id}'",
-            ## DGM     flush=True,
-            ## DGM )
             self.stop_services()
 
     def stop_services(self):
         """
-        Debian distros automatically start the services
-        We want to ensure our tests start with the config
-        settings we have set. This will also verify the expected
-        services are up and running.
-
-        ## DGM Why this comment, surely when Debian/Ubuntu restart automatically, they pick up the configuration already defined - unless there is some env override on configuration file to pick up.
+        Debian/Ubuntu distros automatically start the services on install
+        We want to ensure our tests start with the config settings we have set.
+        This will also verify the expected services are up and running.
         """
-        ## DGM print("DGM install_salt  stop_services, entry", flush=True)
         retval = True
         for service in ["salt-syndic", "salt-master", "salt-minion"]:
             check_run = self.proc.run("systemctl", "status", service)
             if check_run.returncode != 0:
-                # The system was not started automatically and we
-                # are expecting it to be on install
-                ## DGM print(
-                ## DGM     f"DGM install_salt  stop_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
-                ## DGM     flush=True,
-                ## DGM )
+                # The system was not started automatically and
+                # we are expecting it to be on install on Debian/Ubuntu systems
                 log.debug("The service %s was not started on install.", service)
                 retval = False
             else:
                 stop_service = self.proc.run("systemctl", "stop", service)
-                ## DGM print(
-                ## DGM     f"DGM install_salt  stop_services systemctl stop, service '{service}', ret '{stop_service}'",
-                ## DGM     flush=True,
-                ## DGM )
                 self._check_retcode(stop_service)
         return retval
 
     def restart_services(self):
         """
-        Debian distros automatically start the services
-        We want to ensure our tests start with the config settings we have set.
+        Debian/Ubuntu distros automatically start the services
+        We want to ensure our tests start with the config settings we have set,
+        for example: after install the services are stopped (similar to RedHat not starting services on install)
         This will also verify the expected services are up and running.
-
-        ## DGM Why this comment stop_services, surely when Debian/Ubuntu restart automatically, they pick up the configuration already defined - unless there is some env override on configuration file to pick up.
-        ## DGM Created this to restart services after an install which will stop.  Need to find out the underlying reason Caleb added code to stop_services, what problem was he trying to fix,
-        ## DGM for example: stopping service on Debian/Ubuntu when getting the _default_version ????????
         """
-        ## DGM print("DGM install_salt  restart_services, entry", flush=True)
-        for service in ["salt-syndic", "salt-master", "salt-minion"]:
+        for service in ["salt-minion", "salt-master", "salt-syndic"]:
             check_run = self.proc.run("systemctl", "status", service)
-            ## DGM print(
-            ## DGM     f"DGM install_salt  restart_services systemctl status, The service '{service}' was not started on install, ret '{check_run}'",
-            ## DGM     flush=True,
-            ## DGM )
-            log.debug("The restart_services status for %s is %s.", service, check_run)
-
+            log.debug(
+                "The restart_services status, before restart, for service %s is %s.",
+                service,
+                check_run,
+            )
             restart_service = self.proc.run("systemctl", "restart", service)
-            ## DGM print(
-            ## DGM     f"DGM install_salt  restart_services systemctl restart, service '{service}', ret '{restart_service}'",
-            ## DGM     flush=True,
-            ## DGM )
             self._check_retcode(restart_service)
 
     def install_previous(self, downgrade=False):
@@ -756,14 +723,6 @@ class SaltPkgInstall:
             gpg_key = gpg_dest
             if relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
-
-            ## DGM dgm_file1 = f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}"
-            ## DGM dgm_file2 = f"/etc/apt/keyrings/{gpg_dest}"
-            ## DGM print(
-            ## DGM     f"DGM install_salt  install_previous download files , src '{dgm_file1}' and dest '{dgm_file2}'",
-            ## DGM     flush=True,
-            ## DGM )
-
             download_file(
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
                 f"/etc/apt/keyrings/{gpg_dest}",
@@ -771,12 +730,6 @@ class SaltPkgInstall:
             with salt.utils.files.fopen(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
-                ## DGM dgm_file3 = f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
-                ## DGM dgm_file4 = f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
-                ## DGM print(
-                ## DGM     f"DGM install_salt  install_previous , write /etc/apt/sources.list.d/salt.list, '{dgm_file3}' and '{dgm_file4}'",
-                ## DGM     flush=True,
-                ## DGM )
                 fp.write(
                     f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
                     f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
@@ -790,9 +743,6 @@ class SaltPkgInstall:
                 "-y",
             ]
 
-            ## DGM print(
-            ## DGM     f"DGM install_salt  install_previous, install cmd '{cmd}'", flush=True
-            ## DGM )
             if downgrade:
                 pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
                 pref_file.parent.mkdir(exist_ok=True)
@@ -819,10 +769,6 @@ class SaltPkgInstall:
 
             cmd.extend(extra_args)
 
-            ## DGM print(
-            ## DGM     f"DGM install_salt  install_previous, about to proc run cmd '{cmd}', env '{env}'",
-            ## DGM     flush=True,
-            ## DGM )
             ret = self.proc.run(*cmd, env=env)
             # Pre-relenv packages down get downgraded to cleanly programmatically
             # They work manually, and the install tests after downgrades will catch problems with the install
@@ -835,10 +781,6 @@ class SaltPkgInstall:
                 self._check_retcode(ret)
             if downgrade:
                 pref_file.unlink()
-            ## DGM print(
-            ## DGM     "DGM install, install_previous , about to stop services",
-            ## DGM     flush=True,
-            ## DGM )
             self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
