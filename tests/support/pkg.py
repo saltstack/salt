@@ -856,6 +856,16 @@ class SaltPkgInstall:
                     f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
                 )
 
+            if relenv:
+                dgm_relenv = True
+            else:
+                dgm_relenv = False
+
+            print(
+                f"DGM test/support/pkg for darwin, relenv '{dgm_relenv}', is_aarchc64 '{platform.is_aarch64()}', classic '{self.classic}', arch '{arch}', mac_pkg '{mac_pkg}', mac_pkg_url '{mac_pkg_url}'",
+                flush=True,
+            )
+
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
                 download_file(
