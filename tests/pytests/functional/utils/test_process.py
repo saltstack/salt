@@ -58,7 +58,10 @@ def test_subprocess_list_fds():
 
     process = salt.utils.process.SignalHandlingProcess(target=target)
     process.start()
+
     process_list.add(process)
+    time.sleep(0.3)
+
     num = _get_num_fds(pid)
     assert num == before_num + 2
     start = time.time()
