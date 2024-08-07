@@ -231,6 +231,23 @@ def is_aarch64():
     return platform.machine().startswith("aarch64")
 
 
+@real_memoize
+def is_arm64():
+    """
+    Simple function to return if host is Arm64 or not
+    """
+    return platform.machine().startswith("arm64")
+
+
+## DGM Debugging
+@real_memoize
+def dgm_machine():
+    """
+    Simple function to return what machine string, debug purpose only
+    """
+    return platform.machine()
+
+
 def spawning_platform():
     """
     Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
