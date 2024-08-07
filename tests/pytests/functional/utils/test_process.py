@@ -6,7 +6,7 @@ Test salt's process utility module
 """
 
 import os
-import subprocess
+import pathlib
 import time
 
 import pytest
@@ -43,10 +43,7 @@ def test_process_manager_60749(process_manager):
 
 def _get_num_fds(pid):
     "Determine the number of open fds for a process, linux only."
-    proc = subprocess.run(
-        ["ls", "-l", f"/proc/{pid}/fd"], capture_output=True, check=True
-    )
-    return len(proc.stdout.decode().split("\n")) - 1
+    return len(list(pathlib.Path(f"/proc/{pid}/fd").iterdir()))
 
 
 @pytest.mark.skip_unless_on_linux
@@ -62,13 +59,12 @@ def test_subprocess_list_fds():
     process = salt.utils.process.SignalHandlingProcess(target=target)
     process.start()
     process_list.add(process)
-    time.sleep(0.3)
-
     num = _get_num_fds(pid)
     assert num == before_num + 2
-
-    process_list.cleanup()
-
+    start = time.time()
+    while time.time() - start < 1:
+        process_list.cleanup()
+        if not process_list.processes:
+            break
     assert len(process_list.processes) == 0
-
     assert _get_num_fds(pid) == num - 2
