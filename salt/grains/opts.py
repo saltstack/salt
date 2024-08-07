@@ -11,5 +11,5 @@ def opts():
     if __opts__.get("grain_opts", False) or (
         isinstance(__pillar__, dict) and __pillar__.get("grain_opts", False)
     ):
-        return __opts__
+        return {"opts": __opts__}
     return {}
