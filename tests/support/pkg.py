@@ -837,14 +837,21 @@ class SaltPkgInstall:
                 self._install_ssm_service()
 
         elif platform.is_darwin():
+            if relenv and platform.is_aarch64():
+                arch = "arm64"
+            elif platform.is_aarch64() and self.classic:
+                arch = "arm64"
+            else:
+                arch = "x86_64"
+
             if self.classic:
-                mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
+                mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
                 if not relenv:
-                    mac_pkg = f"salt-{self.prev_version}-1-macos-x86_64.pkg"
+                    mac_pkg = f"salt-{self.prev_version}-1-macos-{arch}.pkg"
                 else:
-                    mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
+                    mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
                 mac_pkg_url = (
                     f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
                 )
