@@ -31,6 +31,7 @@ from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
 
 import salt.utils.files
+import salt.utils.platform as dgm_platform
 from tests.conftest import CODE_DIR
 from tests.support.pytest.helpers import TestAccount
 
@@ -837,9 +838,9 @@ class SaltPkgInstall:
                 self._install_ssm_service()
 
         elif platform.is_darwin():
-            if relenv and platform.is_arm64():
+            if relenv and dgm_platform.is_arm64():
                 arch = "arm64"
-            elif platform.is_arm64() and self.classic:
+            elif dgm_platform.is_arm64() and self.classic:
                 arch = "arm64"
             else:
                 arch = "x86_64"
@@ -862,7 +863,7 @@ class SaltPkgInstall:
                 dgm_relenv = False
 
             print(
-                f"DGM test/support/pkg for darwin, machine string '{platform.dgm_machine()}'",
+                f"DGM test/support/pkg for darwin, machine string '{dgm_platform.dgm_machine()}'",
                 flush=True,
             )
             print(
