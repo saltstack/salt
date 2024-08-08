@@ -838,6 +838,10 @@ class SaltPkgInstall:
                 self._install_ssm_service()
 
         elif platform.is_darwin():
+            print(
+                f"DGM test/support/pkg for darwin, machine string '{dgm_platform.dgm_machine()}'",
+                flush=True,
+            )
             if relenv and dgm_platform.is_arm64():
                 arch = "arm64"
             elif dgm_platform.is_arm64() and self.classic:
@@ -863,11 +867,7 @@ class SaltPkgInstall:
                 dgm_relenv = False
 
             print(
-                f"DGM test/support/pkg for darwin, machine string '{dgm_platform.dgm_machine()}'",
-                flush=True,
-            )
-            print(
-                f"DGM test/support/pkg for darwin, relenv '{dgm_relenv}', is_aarch64 '{platform.is_aarch64()}', is_arm64 '{platform.is_arm64()}', classic '{self.classic}', arch '{arch}', mac_pkg '{mac_pkg}', mac_pkg_url '{mac_pkg_url}'",
+                f"DGM test/support/pkg for darwin, relenv '{dgm_relenv}', is_aarch64 '{platform.is_aarch64()}', dgm is_arm64 '{dgm_platform.is_arm64()}', classic '{self.classic}', arch '{arch}', mac_pkg '{mac_pkg}', mac_pkg_url '{mac_pkg_url}'",
                 flush=True,
             )
 
