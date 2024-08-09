@@ -59,7 +59,6 @@ def test_raw_mod_functions():
     "Ensure functions loaded by raw_mod are LoaderFunc instances"
     opts = {
         "extension_modules": "",
-        "optimization_order": [0, 1, 2],
     }
     ret = salt.loader.raw_mod(opts, "grains", "get")
     for k, v in ret.items():
@@ -67,9 +66,7 @@ def test_raw_mod_functions():
 
 
 def test_named_loader_context_name_not_packed(tmp_path):
-    opts = {
-        "optimization_order": [0],
-    }
+    opts = {}
     contents = """
     from salt.loader.dunder import loader_context
     __not_packed__ = loader_context.named_context("__not_packed__")
