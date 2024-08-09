@@ -303,6 +303,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 opts[i], salt.loader.context.NamedLoaderContext
             ):
                 opts[i] = opts[i].value()
+        if "optimization_order" not in opts:
+            opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
         self.opts = self.__prep_mod_opts(opts)
         self.pack_self = pack_self
