@@ -366,8 +366,9 @@ pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
     # via
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
