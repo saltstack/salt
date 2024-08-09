@@ -228,24 +228,11 @@ def is_aarch64():
     """
     Simple function to return if host is AArch64 or not
     """
-    return platform.machine().startswith("aarch64")
-
-
-@real_memoize
-def is_arm64():
-    """
-    Simple function to return if host is Arm64 or not
-    """
-    return platform.machine().startswith("arm64")
-
-
-## DGM Debugging
-@real_memoize
-def dgm_machine():
-    """
-    Simple function to return what machine string, debug purpose only
-    """
-    return platform.machine()
+    if is_darwin():
+        # Allow for MacOS Arm64 platform returning differently from Linux
+        return platform.machine().startswith("arm64")
+    else:
+        return platform.machine().startswith("aarch64")
 
 
 def spawning_platform():

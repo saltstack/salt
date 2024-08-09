@@ -31,7 +31,6 @@ from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
 
 import salt.utils.files
-import salt.utils.platform as dgm_platform
 from tests.conftest import CODE_DIR
 from tests.support.pytest.helpers import TestAccount
 
@@ -838,13 +837,9 @@ class SaltPkgInstall:
                 self._install_ssm_service()
 
         elif platform.is_darwin():
-            print(
-                f"DGM test/support/pkg for darwin, machine string '{dgm_platform.dgm_machine()}'",
-                flush=True,
-            )
-            if relenv and dgm_platform.is_arm64():
+            if relenv and platform.is_aarch64():
                 arch = "arm64"
-            elif dgm_platform.is_arm64() and self.classic:
+            elif platform.is_aarch64() and self.classic:
                 arch = "arm64"
             else:
                 arch = "x86_64"
@@ -860,16 +855,6 @@ class SaltPkgInstall:
                 mac_pkg_url = (
                     f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
                 )
-
-            if relenv:
-                dgm_relenv = True
-            else:
-                dgm_relenv = False
-
-            print(
-                f"DGM test/support/pkg for darwin, relenv '{dgm_relenv}', is_aarch64 '{platform.is_aarch64()}', dgm is_arm64 '{dgm_platform.is_arm64()}', classic '{self.classic}', arch '{arch}', mac_pkg '{mac_pkg}', mac_pkg_url '{mac_pkg_url}'",
-                flush=True,
-            )
 
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):

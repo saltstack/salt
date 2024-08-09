@@ -516,9 +516,10 @@ pytest-shell-utilities==1.8.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
