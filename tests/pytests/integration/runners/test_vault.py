@@ -11,6 +11,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 # pylint: disable=unused-import
 from tests.support.pytest.vault import (
@@ -79,8 +80,16 @@ def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
         },
         "minion_data_cache": False,
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
-        "vault-policy-int-master-uncached", defaults=config_defaults
+        "vault-policy-int-master-uncached",
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -119,8 +128,16 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree, vault_port):
         },
         "minion_data_cache": True,
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
-        "vault-policy-int-master-cached", defaults=config_defaults
+        "vault-policy-int-master-cached",
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -132,6 +149,11 @@ def pillar_salt_minion(pillar_salt_master):
     factory = pillar_salt_master.salt_minion_daemon(
         "vault-policy-int-minion-uncached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -147,6 +169,11 @@ def pillar_caching_salt_minion(pillar_caching_salt_master):
     factory = pillar_caching_salt_master.salt_minion_daemon(
         "vault-policy-int-minion-cached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -293,6 +320,9 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         )
         assert ret.data == ["salt_minion", f"salt_minion_{pillar_salt_minion.id}"]
 
+    @pytest.mark.skipif(
+        FIPS_TESTRUN, reason="Signing with SHA1 not supported in FIPS mode."
+    )
     @pytest.mark.usefixtures("pillar_exe_loop")
     def test_policy_compilation_prevents_loop_for_execution_module(
         self,
@@ -315,6 +345,9 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
         assert "RecursionError" not in ret.stderr
 
+    @pytest.mark.skipif(
+        FIPS_TESTRUN, reason="Signing with SHA1 not supported in FIPS mode."
+    )
     @pytest.mark.usefixtures("pillar_sdb_loop")
     def test_policy_compilation_prevents_loop_for_sdb_module(
         self,

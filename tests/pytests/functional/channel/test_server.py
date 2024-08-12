@@ -20,6 +20,7 @@ import salt.master
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -68,14 +69,20 @@ def transport(request):
 @pytest.fixture
 def master_config(root_dir, transport):
     master_conf = salt.config.master_config("")
-    master_conf["transport"] = transport
-    master_conf["id"] = "master"
-    master_conf["root_dir"] = str(root_dir)
-    master_conf["sock_dir"] = str(root_dir)
-    master_conf["interface"] = "127.0.0.1"
-    master_conf["publish_port"] = ports.get_unused_localhost_port()
-    master_conf["ret_port"] = ports.get_unused_localhost_port()
-    master_conf["pki_dir"] = str(root_dir / "pki")
+    master_conf.update(
+        transport=transport,
+        id="master",
+        root_dir=str(root_dir),
+        sock_dir=str(root_dir),
+        interface="127.0.0.1",
+        publish_port=ports.get_unused_localhost_port(),
+        ret_port=ports.get_unused_localhost_port(),
+        pki_dir=str(root_dir / "pki"),
+        fips_mode=FIPS_TESTRUN,
+        publish_signing_algorithm=(
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    )
     os.makedirs(master_conf["pki_dir"])
     salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)
     minions_keys = os.path.join(master_conf["pki_dir"], "minions")
@@ -88,17 +95,22 @@ def minion_config(master_config, channel_minion_id):
     minion_conf = salt.config.minion_config(
         "", minion_id=channel_minion_id, cache_minion_id=False
     )
-    minion_conf["transport"] = master_config["transport"]
-    minion_conf["root_dir"] = master_config["root_dir"]
-    minion_conf["id"] = channel_minion_id
-    minion_conf["sock_dir"] = master_config["sock_dir"]
-    minion_conf["ret_port"] = master_config["ret_port"]
-    minion_conf["interface"] = "127.0.0.1"
-    minion_conf["pki_dir"] = os.path.join(master_config["root_dir"], "pki_minion")
+    minion_conf.update(
+        transport=master_config["transport"],
+        root_dir=master_config["root_dir"],
+        id=channel_minion_id,
+        sock_dir=master_config["sock_dir"],
+        ret_port=master_config["ret_port"],
+        interface="127.0.0.1",
+        pki_dir=os.path.join(master_config["root_dir"], "pki_minion"),
+        master_port=master_config["ret_port"],
+        master_ip="127.0.0.1",
+        master_uri="tcp://127.0.0.1:{}".format(master_config["ret_port"]),
+        fips_mode=FIPS_TESTRUN,
+        encryption_algorithm="OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        signing_algorithm="PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    )
     os.makedirs(minion_conf["pki_dir"])
-    minion_conf["master_port"] = master_config["ret_port"]
-    minion_conf["master_ip"] = "127.0.0.1"
-    minion_conf["master_uri"] = "tcp://127.0.0.1:{}".format(master_config["ret_port"])
     salt.crypt.gen_keys(minion_conf["pki_dir"], "minion", 4096)
     minion_pub = os.path.join(minion_conf["pki_dir"], "minion.pub")
     pub_on_master = os.path.join(master_config["pki_dir"], "minions", channel_minion_id)

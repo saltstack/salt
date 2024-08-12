@@ -706,6 +706,7 @@ def dependency_information(include_salt_cloud=False):
         ("msgpack-pure", "msgpack_pure", "version"),
         ("pycrypto", "Crypto", "__version__"),
         ("pycryptodome", "Cryptodome", "version_info"),
+        ("cryptography", "cryptography", "__version__"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
         ("ZMQ", "zmq", "zmq_version"),
