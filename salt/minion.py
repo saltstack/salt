@@ -279,6 +279,12 @@ def get_proc_dir(cachedir, **kwargs):
          made. Same applies if the directory is already owned by this
          gid. Must be int. Works only on unix/unix like systems.
     """
+    # pylint: disable=logging-fstring-interpolation
+    log.warning(f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'")
+    print(
+        f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'", flush=True
+    )
+
     fn_ = os.path.join(cachedir, "proc")
     mode = kwargs.pop("mode", None)
 
@@ -305,11 +311,29 @@ def get_proc_dir(cachedir, **kwargs):
         uid = kwargs.pop("uid", -1)
         gid = kwargs.pop("gid", -1)
 
+        # pylint: disable=logging-fstring-interpolation
+        log.warning(
+            f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'"
+        )
+        print(
+            f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'",
+            flush=True,
+        )
+
         # if uid and gid are both -1 then go ahead with
         # no changes at all
         if (d_stat.st_uid != uid or d_stat.st_gid != gid) and [
             i for i in (uid, gid) if i != -1
         ]:
+            # pylint: disable=logging-fstring-interpolation
+            log.warning(
+                f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'"
+            )
+            print(
+                f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'",
+                flush=True,
+            )
+
             os.chown(fn_, uid, gid)
 
     return fn_
