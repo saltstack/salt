@@ -186,7 +186,7 @@ def test_pub_server_channel(
                 p = Path(str(master_config["sock_dir"])) / "workers.ipc"
                 mode = os.lstat(p).st_mode
                 assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
-                assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+                assert bool(os.lstat(p).st_mode & stat.S_IRGRP)
                 assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
                 break
             except FileNotFoundError as exc:

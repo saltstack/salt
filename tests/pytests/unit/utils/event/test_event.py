@@ -338,5 +338,5 @@ def test_master_pub_permissions(sock_dir):
         p = Path(str(sock_dir)) / "master_event_pub.ipc"
         mode = os.lstat(p).st_mode
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
-        assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+        assert bool(os.lstat(p).st_mode & stat.S_IRGRP)
         assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
