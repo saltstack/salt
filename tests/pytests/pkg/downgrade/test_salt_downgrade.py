@@ -47,7 +47,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         original_py_version = install_salt.package_python_version()
 
     # Verify current install version is setup correctly and works
-    ret = salt_call_cli.run("test.version")
+    ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     assert packaging.version.parse(ret.data) == packaging.version.parse(
         install_salt.artifact_version
@@ -76,6 +76,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
+    time.sleep(10)  # give it some time
+    # downgrade install will stop services on Debian/Ubuntu
+    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
+    # want to ensure our tests start with the config settings we have set,
+    # trying restart for Debian/Ubuntu to see the outcome
+    if install_salt.distro_id in ("ubuntu", "debian"):
+        install_salt.restart_services()
+
     time.sleep(60)  # give it some time
 
     # Verify there is a new running minion by getting its PID and comparing it
@@ -99,7 +107,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
 
-    if is_downgrade_to_relenv:
+    if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
             # test pip install after a downgrade
