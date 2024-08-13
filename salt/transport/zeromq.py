@@ -341,7 +341,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.info("ReqServer workers %s", self.w_uri)
         self.workers.bind(self.w_uri)
         if self.opts.get("ipc_mode", "") != "tcp":
-            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o660)
+            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
 
         while True:
             if self.clients.closed or self.workers.closed:
@@ -431,7 +431,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if self.opts.get("ipc_mode", "") != "tcp" and os.path.isfile(
             os.path.join(self.opts["sock_dir"], "workers.ipc")
         ):
-            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o660)
+            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
         self.message_handler = message_handler
         self.stream.on_recv_stream(self.handle_message)

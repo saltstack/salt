@@ -659,11 +659,11 @@ class ConnectedCache(Process):
         """
         log.debug("ConCache securing sockets")
         if os.path.exists(self.cache_sock):
-            os.chmod(self.cache_sock, 0o660)
+            os.chmod(self.cache_sock, 0o600)
         if os.path.exists(self.update_sock):
-            os.chmod(self.update_sock, 0o660)
+            os.chmod(self.update_sock, 0o600)
         if os.path.exists(self.upd_t_sock):
-            os.chmod(self.upd_t_sock, 0o660)
+            os.chmod(self.upd_t_sock, 0o600)
 
     def stop(self):
         """
