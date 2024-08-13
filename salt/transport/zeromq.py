@@ -852,6 +852,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -864,6 +866,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pub_path_perms = pub_path_perms
+        self.pull_path_perms = pull_path_perms
         if pull_path:
             self.pull_uri = f"ipc://{pull_path}"
         else:
@@ -930,14 +934,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             if self.pub_path:
                 os.chmod(  # nosec
                     self.pub_path,
-                    0o600,
+                    self.pub_path_perms,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
             if self.pull_path:
                 os.chmod(  # nosec
                     self.pull_path,
-                    0o600,
+                    self.pull_path_perms,
                 )
         return pull_sock, pub_sock, monitor
 
