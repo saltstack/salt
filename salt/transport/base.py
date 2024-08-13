@@ -233,6 +233,7 @@ def ipc_publish_server(node, opts):
             kwargs.update(
                 pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
                 pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+                pub_path_perms=0o660,
             )
         else:
             id_hash = _minion_hash(
