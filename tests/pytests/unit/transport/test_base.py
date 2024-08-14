@@ -2,6 +2,8 @@
 Unit tests for salt.transport.base.
 """
 
+import importlib
+import inspect
 import ssl
 
 import pytest
@@ -12,6 +14,19 @@ from tests.support.mock import patch
 pytestmark = [
     pytest.mark.core_test,
 ]
+
+
+@pytest.mark.parametrize("kind", salt.transport.base.TRANSPORTS)
+def test_transport_publisher_has_required_args(kind):
+    # The publisher method on a transport PublishServer requires the following arguments
+    required_args = [
+        'publish_payload',
+        'io_loop',
+    ]
+    transport_mod = importlib.import_module('salt.transport.{0}'.format(kind))
+    method_sig = inspect.signature(transport_mod.PublishServer.publisher)
+    for rarg in required_args:
+        assert rarg in method_sig.parameters
 
 
 def test_unclosed_warning():
