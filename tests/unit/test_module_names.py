@@ -44,6 +44,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
     os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
+    os.path.join("tests", "pytests", "functional", "transport", "base.py"),
     os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
