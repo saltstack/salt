@@ -67,8 +67,12 @@ def pkg_paths_salt_user():
         "/var/log/salt/master",
         "/var/log/salt/api",
         "/var/log/salt/key",
+        "/var/log/salt/syndic",
         "/var/cache/salt/master",
         "/var/run/salt/master",
+        "/run/salt-master.pid",
+        "/run/salt-syndic.pid",
+        "/run/salt-api.pid",
     ]
 
 
