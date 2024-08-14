@@ -280,10 +280,10 @@ def get_proc_dir(cachedir, **kwargs):
          gid. Must be int. Works only on unix/unix like systems.
     """
     # pylint: disable=logging-fstring-interpolation
-    log.warning(f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'")
-    print(
-        f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'", flush=True
-    )
+    ## DGM log.warning(f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'")
+    ## DGM print(
+    ## DGM     f"DGM get_proc_dir entry, cachedir '{cachedir}', kwargs '{kwargs}'", flush=True
+    ## DGM )
 
     fn_ = os.path.join(cachedir, "proc")
     mode = kwargs.pop("mode", None)
@@ -312,13 +312,13 @@ def get_proc_dir(cachedir, **kwargs):
         gid = kwargs.pop("gid", -1)
 
         # pylint: disable=logging-fstring-interpolation
-        log.warning(
-            f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'"
-        )
-        print(
-            f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'",
-            flush=True,
-        )
+        ## DGM log.warning(
+        ## DGM     f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'"
+        ## DGM )
+        ## DGM print(
+        ## DGM     f"DGM get_proc_dir chown, d_stat '{d_stat}', uid '{uid}', gid '{gid}'",
+        ## DGM     flush=True,
+        ## DGM )
 
         # if uid and gid are both -1 then go ahead with
         # no changes at all
@@ -326,13 +326,13 @@ def get_proc_dir(cachedir, **kwargs):
             i for i in (uid, gid) if i != -1
         ]:
             # pylint: disable=logging-fstring-interpolation
-            log.warning(
-                f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'"
-            )
-            print(
-                f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'",
-                flush=True,
-            )
+            ## DGM log.warning(
+            ## DGM     f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'"
+            ## DGM )
+            ## DGM print(
+            ## DGM     f"DGM get_proc_dir chown file, file '{fn_}' , uid '{uid}', gid '{gid}'",
+            ## DGM     flush=True,
+            ## DGM )
 
             os.chown(fn_, uid, gid)
 
