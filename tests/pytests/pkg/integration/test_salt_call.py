@@ -3,10 +3,6 @@ import subprocess
 import pytest
 from pytestskipmarkers.utils import platform
 
-pytestmark = [
-    pytest.mark.skip_unless_on_linux,
-]
-
 
 def test_salt_call_local(salt_call_cli):
     """

@@ -8,7 +8,10 @@ import psutil
 import pytest
 from saltfactories.utils.tempfiles import temp_directory
 
-pytestmark = [pytest.mark.skip_unless_on_linux]
+pytestmark = [
+    pytest.mark.skip_on_windows,
+    pytest.mark.skip_on_darwin,
+]
 
 
 @pytest.fixture
