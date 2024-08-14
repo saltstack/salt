@@ -2,7 +2,7 @@ import pytest
 from pytestskipmarkers.utils import platform
 
 
-@pytest.mark.skip_on_windows(reason="Linux test only")
+@pytest.mark.skip_unless_on_linux(reason="Linux test only")
 def test_services(install_salt, salt_call_cli):
     """
     Check if Services are enabled/disabled
