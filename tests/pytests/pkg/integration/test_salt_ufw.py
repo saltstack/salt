@@ -2,6 +2,10 @@ import pathlib
 
 import pytest
 
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+]
+
 
 @pytest.fixture
 def salt_systemd_setup(
@@ -26,7 +30,6 @@ def salt_systemd_setup(
         assert ret.returncode == 0
 
 
-@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("ufw")
 def test_salt_ufw(salt_systemd_setup, salt_call_cli, install_salt):
     """
