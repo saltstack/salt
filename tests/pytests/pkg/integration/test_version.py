@@ -39,9 +39,6 @@ def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
     """
-    if not install_salt.relenv and not install_salt.classic:
-        pytest.skip("Unable to get the python version dynamically from tiamat builds")
-
     test_bin = os.path.join(*install_salt.binary_paths["master"])
     python_bin = os.path.join(*install_salt.binary_paths["python"])
     ret = install_salt.proc.run(test_bin, "--versions-report")
@@ -131,10 +128,6 @@ def test_symlinks_created(version, symlink, install_salt):
     """
     Test symlinks created
     """
-    if install_salt.classic:
-        pytest.skip("Symlinks not created for classic macos builds, we adjust the path")
-    if not install_salt.relenv and symlink == "spm":
-        symlink = "salt-spm"
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 

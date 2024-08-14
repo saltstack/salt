@@ -122,8 +122,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    if install_salt.relenv:
-        original_py_version = install_salt.package_python_version()
+    original_py_version = install_salt.package_python_version()
 
     # Test pip install before an upgrade
     dep = "PyGithub==1.56.0"
@@ -139,9 +138,8 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     # pylint: disable=pointless-statement
     salt_test_upgrade
 
-    if install_salt.relenv:
-        new_py_version = install_salt.package_python_version()
-        if new_py_version == original_py_version:
-            # test pip install after an upgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
+    new_py_version = install_salt.package_python_version()
+    if new_py_version == original_py_version:
+        # test pip install after an upgrade
+        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
+        assert "Authentication information could" in use_lib.stderr
