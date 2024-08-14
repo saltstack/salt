@@ -350,18 +350,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
 
     master_script = False
     if platform.is_windows():
-        if install_salt.classic:
-            master_script = True
-        if install_salt.relenv:
-            master_script = True
-        elif not install_salt.upgrade:
-            master_script = True
-        if (
-            not install_salt.relenv
-            and install_salt.use_prev_version
-            and not install_salt.classic
-        ):
-            master_script = False
+        master_script = True
 
     if master_script:
         salt_factories.system_service = False
@@ -370,10 +359,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
-        if install_salt.classic:
-            python_executable = install_salt.bin_dir / "python.exe"
-        if install_salt.relenv:
-            python_executable = install_salt.install_dir / "Scripts" / "python.exe"
+        python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
@@ -384,10 +370,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         )
         salt_factories.system_service = True
     else:
-
-        if install_salt.classic and platform.is_darwin():
-            os.environ["PATH"] += ":/opt/salt/bin"
-
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
@@ -457,12 +439,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
             rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
         )
         config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
-
-    if install_salt.classic and platform.is_windows():
-        salt_factories.python_executable = None
-
-    if install_salt.classic and platform.is_darwin():
-        os.environ["PATH"] += ":/opt/salt/bin"
 
     factory = salt_master.salt_minion_daemon(
         minion_id,
