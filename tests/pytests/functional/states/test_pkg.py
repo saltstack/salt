@@ -20,12 +20,17 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
+    pytest.mark.windows_whitelisted,
     pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
 @pytest.fixture(scope="module", autouse=True)
 def refresh_db(grains, modules):
+
+    if salt.utils.platform.is_windows():
+        modules.winrepo.update_git_repos()
+
     modules.pkg.refresh_db()
 
     # If this is Arch Linux, check if pacman is in use by another process
@@ -43,7 +48,7 @@ def refresh_db(grains, modules):
 def refresh_keys(grains, modules):
     if grains["os_family"] == "Arch":
         # We should be running this periodically when building new test runner
-        # images, otherwise this could take several minuets to complete.
+        # images, otherwise this could take several minutes to complete.
         proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
         if proc.returncode != 0:
             pytest.fail("pacman-key --refresh-keys command failed.")
@@ -53,7 +58,7 @@ def refresh_keys(grains, modules):
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
-        _PKG_TARGETS = ["vlc", "putty"]
+        _PKG_TARGETS = ["7zip", "putty"]
     elif grains["os"] == "Amazon":
         if grains["osfinger"] == "Amazon Linux-2023":
             _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
@@ -106,7 +111,9 @@ def PKG_CAP_TARGETS(grains):
 @pytest.fixture
 def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
-    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
+    if grains["os"] == "Windows":
+        _PKG_32_TARGETS = ["npp", "nsis"]
+    elif grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["os"] == "CentOS":
             if grains["osmajorrelease"] == 5:
                 _PKG_32_TARGETS = ["xz-devel.i386"]
@@ -205,6 +212,19 @@ def latest_version(ctx, modules):
     return run_command
 
 
+@pytest.fixture(scope="function")
+def install_7zip(modules):
+    try:
+        modules.pkg.install(name="7zip", version="22.01.00.0")
+        modules.pkg.install(name="7zip", version="19.00.00.0")
+        assert modules.pkg.version("7zip") == "19.00.00.0,22.01.00.0"
+        yield
+    finally:
+        modules.pkg.remove(name="7zip", version="19.00.00.0")
+        modules.pkg.remove(name="7zip", version="22.01.00.0")
+        assert modules.pkg.version("7zip") == ""
+
+
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
@@ -268,7 +288,8 @@ def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states, grains
     try:
         ret = states.pkg.installed(name=None, pkgs=PKG_TARGETS, refresh=False)
         assert ret.result is True
-        assert "WARNING" not in caplog.text
+        if not salt.utils.platform.is_windows():
+            assert "WARNING" not in caplog.text
     finally:
         ret = states.pkg.removed(name=None, pkgs=PKG_TARGETS)
         assert ret.result is True
@@ -1091,3 +1112,17 @@ def test_pkg_purged_with_removed_pkg(grains, PKG_TARGETS, states, modules):
         "installed": {},
         "removed": {target: {"new": "", "old": version}},
     }
+
+
+@pytest.mark.skip_unless_on_windows()
+def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
+    """
+    This tests removing a specific version of a package when multiple versions
+    are installed. This is specific to Windows. The only version I could find
+    that allowed multiple installs of differing versions was 7zip, so we'll use
+    that.
+    """
+    ret = states.pkg.removed(name="7zip", version="19.00.00.0")
+    assert ret.result is True
+    current = modules.pkg.version("7zip")
+    assert current == "22.01.00.0"
