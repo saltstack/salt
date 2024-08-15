@@ -586,9 +586,16 @@ def test_state_highstate_custom_grains_masterless_mode(
             "_grains/custom_grain.py", salt_custom_grains_py
         ):
             ## need to try masterless mode
+            opts = salt_minion.config.copy()
+            opts["file_client"] = "local"
+
             ret = salt_call_cli.run("--local", "state.highstate")
             assert ret.returncode == 0
             ret = salt_call_cli.run("pillar.items")
+            print(
+                f"DGM test_state_highstate_custom_grains_masterless_mode, ret '{ret}'",
+                flush=True,
+            )
             assert ret.returncode == 0
             assert ret.data
             pillar_items = ret.data

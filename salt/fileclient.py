@@ -51,6 +51,10 @@ def get_file_client(opts, pillar=False, force_local=False):
     Read in the ``file_client`` option and return the correct type of file
     server
     """
+    print(
+        f"DGM get_file_client entry, opts '{opts}', pillar '{pillar}', force_local '{force_local}'",
+        flush=True,
+    )
     if force_local:
         client = "local"
     else:
@@ -58,9 +62,14 @@ def get_file_client(opts, pillar=False, force_local=False):
 
     if pillar and client == "local":
         client = "pillar"
-    return {"remote": RemoteClient, "local": FSClient, "pillar": PillarClient}.get(
+    # DGM return {"remote": RemoteClient, "local": FSClient, "pillar": PillarClient}.get(
+    # DGM     client, RemoteClient
+    # DGM )(opts)
+    dgm_ret = {"remote": RemoteClient, "local": FSClient, "pillar": PillarClient}.get(
         client, RemoteClient
     )(opts)
+    print(f"DGM get_file_client exit, ret '{dgm_ret}'", flush=True)
+    return dgm_ret
 
 
 def decode_dict_keys_to_str(src):
