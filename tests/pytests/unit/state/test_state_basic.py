@@ -2,6 +2,8 @@
 Test functions in state.py that are not a part of a class
 """
 
+import warnings
+
 import pytest
 
 import salt.state
@@ -139,8 +141,11 @@ def test_state_args_id_not_high():
             ),
         ]
     )
-    ret = salt.state.state_args(id_, state, high)
-    assert ret == set()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        salt.utils.jid.gen_jid({})
+        ret = salt.state.state_args(id_, state, high)
+        assert ret == set()
 
 
 def test_state_args_state_not_high():
