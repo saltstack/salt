@@ -44,6 +44,11 @@ def sync(
     """
     Sync custom modules into the extension_modules directory
     """
+    print(
+        f"DGM syc entry, opts '{opts}', form '{form}', saltenv '{saltenv}', extmod_whitelist '{extmod_whitelist}', extmod_blacklist '{extmod_blacklist}', force_local '{force_local}'",
+        flush=True,
+    )
+
     if saltenv is None:
         saltenv = ["base"]
 
@@ -156,4 +161,6 @@ def sync(
                         shutil.rmtree(emptydir, ignore_errors=True)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Failed to sync %s module: %s", form, exc)
+
+    print(f"DGM syc exit, ret '{ret}', touched '{touched}',  opts '{opts}'", flush=True)
     return ret, touched

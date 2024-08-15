@@ -122,6 +122,8 @@ def _sync_grains(opts):
     # extmod_whitelist and extmod_blacklist hence set those to defaults,
     # empty dict, if not part of opts, as ref'd in
     # salt.utils.extmod sync function
+    dgm_fc_opts = opts.get("file_client", "remote")
+    print(f"DGM _sync_grains entry file_client settings '{dgm_fc_opts}'", flush=True)
     if "local" == opts.get("file_client", "remote"):
         if opts.get("extmod_whitelist", None) is None:
             opts["extmod_whitelist"] = {}
