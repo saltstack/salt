@@ -358,7 +358,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
-        python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
