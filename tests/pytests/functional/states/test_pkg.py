@@ -270,7 +270,9 @@ def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states, grains
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_004_installed_multipkg_with_version(PKG_TARGETS, latest_version, states, grains):
+def test_pkg_004_installed_multipkg_with_version(
+    PKG_TARGETS, latest_version, states, grains
+):
     """
     This is a destructive test as it installs and then removes two packages
     """

@@ -1,5 +1,7 @@
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 
 def test_grains_overwrite(salt_cli, salt_master, salt_minion):
     assert not salt_minion.config.get("grains_deep_merge", False)
@@ -18,6 +20,9 @@ def test_grains_merge(salt_cli, salt_master):
             "grains_deep_merge": True,
             # Grains in the minon config won't get merged.
             # "grains": {"a_custom": {"k1": "v1"}},
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
     minion.after_terminate(
