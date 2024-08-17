@@ -240,8 +240,25 @@ cookie. The latter is far more convenient for clients that support cookies.
       {u'return': [{
           ...snip...
       }]}
-
+      
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
+
+
+### Session start and check via custom header
+   If one or more custom headers are present ``X-Forwarded-User``,
+   ``X-Forwarded-User`` or ``X-Forwarded-Eauth`` the value will **override** the
+   corresponding key in the request body.
+
+   This allows the use of a reverse proxy that is now able to force certain values,
+   without modifications to the request body.
+   For example `oauth2 proxy <https://oauth2-proxy.github.io/oauth2-proxy/>` can
+   be used to authenticate against diffent IdPs in conjunction with password driven
+   eauth backends.
+
+   Furthermore the session token will be checked against ``username`` and ``eauth``
+   if the headers are present and session handling is used,
+   which limits the use of session tokens to those matching the original
+   login identity.
 
 Usage
 -----
@@ -571,6 +588,9 @@ rest_cherrypy will remain the officially recommended REST API.
 .. __: https://github.com/saltstack/salt/issues/26505
 
 .. |req_token| replace:: a session token from :py:class:`~Login`.
+.. |req_forwarded_user| replace:: user to be used in :py:class:`~Login`, :py:class:`~Run` or checked against in session handling.
+.. |req_forwarded_password| replace:: password to be used in :py:class:`~Login`  or :py:class:`~Run`.
+.. |req_forwarded_eauth| replace:: eauth to be used in :py:class:`~Login`, :py:class:`~Run` or checked against in session handling.
 .. |req_accept| replace:: the desired response format.
 .. |req_ct| replace:: the format of the request body.
 
@@ -776,6 +796,15 @@ def salt_auth_tool():
     """
     Redirect all unauthenticated requests to the login page
     """
+    # Redirect to the login page if the header username and eauth of the session differ.
+    # A reverse proxy can force a session via to adhere to given credentials,
+    # to limit misuse of a token gathered from another user. 
+    x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User", None)
+    x_forwarded_eauth = cherrypy.request.headers.get("X-Forwarded-Eauth", None)
+    if x_forwarded_user and x_forwarded_user != cherrypy.session.get("name", None):
+        raise cherrypy.HTTPError(401)
+    if x_forwarded_eauth and x_forwarded_eauth != cherrypy.session.get("eauth", None):
+        raise cherrypy.HTTPError(401)
     # Redirect to the login page if the session hasn't been authed
     if "token" not in cherrypy.session:
         raise cherrypy.HTTPError(401)
@@ -808,6 +837,9 @@ def cors_tool():
         allowed_headers = [
             "Content-Type",
             "X-Auth-Token",
+            "X-Forwarded-User",
+            "X-Forwarded-Password",
+            "X-Forwarded-Eauth",
             "X-Requested-With",
         ]
 
@@ -1097,6 +1129,24 @@ def hypermedia_in():
     )
     cherrypy.request.body.processors = ct_in_map
 
+def force_header_creds(data):
+    """
+    Force credentials served by HTTP data into lowdata
+
+    This trumps credentials in the POST body, to allow a reverse proxy to handle
+    authentication and/or force certain parameters.
+    """
+    # Force credentials if served in HTTP header
+    x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User",None)
+    x_forwarded_password = cherrypy.request.headers.get("X-Forwarded-Password", None)
+    x_forwarded_eauth = cherrypy.request.headers.get("X-Forwarded-Eauth", None)
+    if x_forwarded_user:
+        data["username"] = x_forwarded_user
+    if x_forwarded_password:
+        data["password"] = x_forwarded_password
+    if x_forwarded_eauth:
+        data["eauth"] = x_forwarded_eauth
+
 
 def lowdata_fmt():
     """
@@ -1120,9 +1170,12 @@ def lowdata_fmt():
         ):  # pylint: disable=unsupported-membership-test
             data["arg"] = [data["arg"]]
 
+        force_header_creds(data)
+
         # Finally, make a Low State and put it in request
         cherrypy.request.lowstate = [data]
     else:
+        force_header_creds(data)
         cherrypy.serving.request.lowstate = data
 
 
@@ -1271,6 +1324,8 @@ class LowDataAdapter:
         .. http:post:: /
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
             :reqheader Content-Type: |req_ct|
 
@@ -1338,6 +1393,8 @@ class Minions(LowDataAdapter):
         .. http:get:: /minions/(mid)
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
 
             :status 200: |200|
@@ -1383,6 +1440,8 @@ class Minions(LowDataAdapter):
         .. http:post:: /minions
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
             :reqheader Content-Type: |req_ct|
 
@@ -1458,6 +1517,8 @@ class Jobs(LowDataAdapter):
             List jobs or show a single job from the job cache.
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
 
             :status 200: |200|
@@ -1579,6 +1640,8 @@ class Keys(LowDataAdapter):
             List all keys or show a specific key
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
 
             :status 200: |200|
@@ -1810,6 +1873,9 @@ class Login(LowDataAdapter):
         .. http:post:: /login
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Password: |req_forwarded_password|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
             :reqheader Content-Type: |req_ct|
 
@@ -1894,6 +1960,8 @@ class Login(LowDataAdapter):
         cherrypy.response.headers["X-Auth-Token"] = cherrypy.session.id
         cherrypy.session["token"] = token["token"]
         cherrypy.session["timeout"] = (token["expire"] - token["start"]) / 60
+        cherrypy.session["name"] = token["name"] # Save for security checks
+        cherrypy.session["eauth"] = token["eauth"] # Save for security checks
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -2087,6 +2155,22 @@ class Run(LowDataAdapter):
                     "token": "<salt eauth token here>"
                 }]'
 
+        **Or** using a custom headers:
+
+        .. code-block:: bash
+
+            curl -sS localhost:8000/run \\
+                -H 'X-Forwarded-User: saltdev' \\
+                -H 'X-Forwarded-Password: saltdev' \\
+                -H 'X-Forwarded-Eauth: auto' \\
+                -H 'Accept: application/x-yaml' \\
+                -H 'Content-type: application/json' \\
+                -d '[{
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "test.ping"
+                }]'
+
         .. code-block:: text
 
             POST /run HTTP/1.1
@@ -2215,11 +2299,24 @@ class Events:
         # stream, so we're just checking if the token exists not if the token
         # allows access.
         if salt_token:
-            # We want to at least make sure that the token isn't expired yet.
             resolved_tkn = self.resolver.get_token(salt_token)
-            if resolved_tkn and resolved_tkn.get("expire", 0) > time.time():
-                return True
+            x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User", None)
+            x_forwarded_eauth = cherrypy.request.headers.get("X-Forwarded-Eauth", None)
 
+            if resolved_tkn:
+                # We want to make sure that the username has not changed within a session,
+                # if a username is forced via X-Forwarded-User Header.
+                if x_forwarded_user and x_forwarded_user != resolved_tkn.get("name", None):
+                  return False
+                # We want to make sure that the eauth has not changed within a session,
+                # if a eauth is forced via X-Forwarded-Eauth Header.
+                if x_forwarded_eauth and x_forwarded_eauth != resolved_tkn.get("eauth", None):
+                  return False
+                # We want to make sure that the token isn't expired yet.
+                if resolved_tkn.get("expire", 0) > time.time():
+                  return True
+
+        # Redirect to the login page if the session hasn't been authed
         return False
 
     def GET(self, token=None, salt_token=None):
@@ -2775,6 +2872,8 @@ class Stats:
         .. http:get:: /stats
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
             :reqheader Accept: |req_accept|
 
             :resheader Content-Type: |res_ct|
@@ -2806,6 +2905,8 @@ class App:
         .. http:get:: /app
 
             :reqheader X-Auth-Token: |req_token|
+            :reqheader X-Forwarded-User: |req_forwarded_user|
+            :reqheader X-Forwarded-Eauth: |req_forwarded_eauth|
 
             :status 200: |200|
             :status 401: |401|
