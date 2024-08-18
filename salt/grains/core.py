@@ -1275,6 +1275,7 @@ def _virtual(osdata):
             "cannot execute it. Grains output might not be "
             "accurate.",
             command,
+            once=True,
         )
     return grains
 
