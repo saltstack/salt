@@ -11,15 +11,21 @@ from salt.exceptions import CommandExecutionError
 
 try:
     import psutil
-    import pywintypes
     import win32api
     import win32net
     import win32security
     from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
 
+    import pywintypes  # isort:skip
+
     HAS_WIN32 = True
 except ImportError:
-    HAS_WIN32 = False
+    try:
+        import psutil
+        from win32 import pywintypes, win32api, win32net, win32security
+        from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
+    except ImportError:
+        HAS_WIN32 = False
 
 
 # Although utils are often directly imported, it is also possible to use the

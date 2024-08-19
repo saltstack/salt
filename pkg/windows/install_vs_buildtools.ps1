@@ -25,6 +25,8 @@ param(
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
+# https://stackoverflow.com/a/67201331/4581998
+$env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
 
 #-------------------------------------------------------------------------------
 # Script Functions
@@ -36,6 +38,43 @@ function Write-Result($result, $ForegroundColor="Green") {
     } else {
         $position = 80 - $result.Length - [System.Console]::CursorLeft
         Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
+}
+
+function Add-Certificate {
+    [CmdletBinding()]
+    param(
+
+        [Parameter(Mandatory=$true)]
+        # The path in the certstore (CERT:/LocalMachine/Root/<hash>)
+        [String] $Path,
+
+        [Parameter(Mandatory=$true)]
+        # The path to the cert file for importing
+        [String] $File,
+
+        [Parameter(Mandatory=$true)]
+        # The name of the cert file for importing
+        [String] $Name
+
+    )
+
+    # Validation
+    if ( ! (Test-Path -Path $File)) {
+        Write-Host "Invalid path to certificate file"
+        exit 1
+    }
+
+    if (! (Test-Path -Path $Path) ) {
+
+        Write-Host "Installing Certificate $Name`: " -NoNewLine
+        $output = Import-Certificate -FilePath $File -CertStoreLocation "Cert:\LocalMachine\Root"
+        if ( Test-Path -Path $Path ) {
+            Write-Result "Success"
+        } else {
+            Write-Result "Failed" -ForegroundColor Yellow
+            Write-Host $output
+        }
     }
 }
 
@@ -53,24 +92,31 @@ Write-Host $("-" * 80)
 
 # Dependency Variables
 $VS_BLD_TOOLS   = "https://aka.ms/vs/15/release/vs_buildtools.exe"
-$VS_CL_BIN      = "${env:ProgramFiles(x86)}\Microsoft Visual Studio 14.0\VC\bin\cl.exe"
-$MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
-$WIN10_SDK_RC   = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.17763.0\x64\rc.exe"
+try {
+    # If VS is installed, you will be able to get the WMI Object MSFT_VSInstance
+    $VS_INST_LOC    = $(Get-CimInstance MSFT_VSInstance -Namespace root/cimv2/vs).InstallLocation
+    $MSBUILD_BIN = $(Get-ChildItem "$VS_INST_LOC\MSBuild\*\Bin\msbuild.exe").FullName
+} catch {
+    # If VS is not installed, this is the fallback for this installation
+    $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
+}
 
 #-------------------------------------------------------------------------------
 # Visual Studio
 #-------------------------------------------------------------------------------
 
-$install_build_tools = $false
 Write-Host "Confirming Presence of Visual Studio Build Tools: " -NoNewline
-@($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
-    if ( ! (Test-Path -Path $_) ) {
-        $install_build_tools = $true
-    }
-}
-
-if ( $install_build_tools ) {
+# We're only gonna look for msbuild.exe
+if ( Test-Path -Path $MSBUILD_BIN ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
     Write-Result "Missing" -ForegroundColor Yellow
+
+    try {
+        # If VS is installed, you will be able to get the WMI Object MSFT_VSInstance
+        Write-Host "Get VS Instance Information"
+        Get-CimInstance MSFT_VSInstance -Namespace root/cimv2/vs
+    } catch {}
 
     Write-Host "Checking available disk space: " -NoNewLine
     $available = (Get-PSDrive $env:SystemDrive.Trim(":")).Free
@@ -101,7 +147,6 @@ if ( $install_build_tools ) {
                                 "--add Microsoft.VisualStudio.Workload.MSBuildTools", `
                                 "--add Microsoft.VisualStudio.Workload.VCTools", `
                                 "--add Microsoft.VisualStudio.Component.Windows81SDK", `
-                                "--add Microsoft.VisualStudio.Component.Windows10SDK.17763", `
                                 "--add Microsoft.VisualStudio.Component.VC.140", `
                                 "--lang en-US", `
                                 "--includeRecommended", `
@@ -115,50 +160,34 @@ if ( $install_build_tools ) {
         exit 1
     }
 
-    # Serial: 28cc3a25bfba44ac449a9b586b4339a
+    # Serial: 28cc3a25bfba44ac449a9b586b4339aa
     # Hash: 3b1efd3a66ea28b16697394703a72ca340a05bd5
-    if (! (Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5) ) {
-        Write-Host "Installing Certificate Sign Root Certificate: " -NoNewLine
-        Start-Process -FilePath "certutil" `
-                      -ArgumentList "-addstore", `
-                                    "Root", `
-                                    "$($env:TEMP)\build_tools\certificates\manifestCounterSignRootCertificate.cer" `
-                      -Wait -WindowStyle Hidden
-        if ( Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5 ) {
-            Write-Result "Success" -ForegroundColor Green
-        } else {
-            Write-Result "Failed" -ForegroundColor Yellow
-        }
-    }
+    $cert_name = "Sign Root Certificate"
+    $cert_path = "Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5"
+    $cert_file = "$env:TEMP\build_tools\certificates\manifestCounterSignRootCertificate.cer"
+    Add-Certificate -Name $cert_name -Path $cert_path -File $cert_file
 
     # Serial: 3f8bc8b5fc9fb29643b569d66c42e144
     # Hash: 8f43288ad272f3103b6fb1428485ea3014c0bcfe
-    if (! (Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe) ) {
-        Write-Host "Installing Certificate Root Certificate: " -NoNewLine
-        Start-Process -FilePath "certutil" `
-                  -ArgumentList "-addstore", `
-                                "Root", `
-                                "$($env:TEMP)\build_tools\certificates\manifestRootCertificate.cer" `
-                  -Wait -WindowStyle Hidden
-        if ( Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe ) {
-            Write-Result "Success" -ForegroundColor Green
-        } else {
-            Write-Result "Failed" -ForegroundColor Yellow
-        }
-    }
+    $cert_name = "Root Certificate"
+    $cert_path = "Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe"
+    $cert_file = "$env:TEMP\build_tools\certificates\manifestRootCertificate.cer"
+    Add-Certificate -Name $cert_name -Path $cert_path -File $cert_file
 
     Write-Host "Installing Visual Studio 2017 build tools: " -NoNewline
-    Start-Process -FilePath "$env:TEMP\build_tools\vs_setup.exe" `
-                  -ArgumentList "--wait", "--noweb", "--quiet" `
-                  -Wait
-    @($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
-        if ( ! (Test-Path -Path $_) ) {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
-        }
+    $proc = Start-Process `
+        -FilePath "$env:TEMP\build_tools\vs_setup.exe" `
+        -ArgumentList "--wait", "--noweb", "--quiet" `
+        -PassThru -Wait `
+        -RedirectStandardOutput "$env:TEMP\stdout.txt"
+    if ( Test-Path -Path $MSBUILD_BIN ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Missing: $_"
+        Write-Host "ExitCode: $($proc.ExitCode)"
+        Write-Host "STDOUT:"
+        Get-Content "$env:TEMP\stdout.txt"
+        exit 1
     }
-    Write-Result "Success" -ForegroundColor Green
-} else {
     Write-Result "Success" -ForegroundColor Green
 }
 

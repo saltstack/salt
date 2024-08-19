@@ -25,7 +25,7 @@ import zlib
 import tornado.httpclient
 import tornado.httputil
 import tornado.simple_httpclient
-from tornado.httpclient import HTTPClient
+from tornado.httpclient import AsyncHTTPClient
 
 import salt.config
 import salt.loader
@@ -43,6 +43,7 @@ import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
 from salt.template import compile_template
+from salt.utils.asynchronous import SyncWrapper
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -598,7 +599,7 @@ def query(
             salt.config.DEFAULT_MINION_OPTS["http_request_timeout"],
         )
 
-        tornado.httpclient.AsyncHTTPClient.configure(None)
+        AsyncHTTPClient.configure(None)
         client_argspec = salt.utils.args.get_function_argspec(
             tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
         )
@@ -629,10 +630,10 @@ def query(
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
         try:
-            download_client = (
-                HTTPClient(max_body_size=max_body)
-                if supports_max_body_size
-                else HTTPClient()
+            download_client = SyncWrapper(
+                AsyncHTTPClient,
+                kwargs={"max_body_size": max_body} if supports_max_body_size else {},
+                async_methods=["fetch"],
             )
             result = download_client.fetch(url_full, **req_kwargs)
         except tornado.httpclient.HTTPError as exc:
