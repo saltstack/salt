@@ -2502,7 +2502,11 @@ def syndic_config(
                 ),
             )
         ),
-        "user": opts.get("syndic_user", opts["user"]),
+        # DGM conf/suse/master has syndic_user for running syndic as a different user
+        # DGM use urrently set it to 'salt'
+        # DGM testing getting the master_opts user, and run syndic as that
+        # DGM "user": opts.get("syndic_user", opts["user"]),
+        "user": opts.get("syndic_user", master_opts["user"]),
         "sock_dir": os.path.join(
             opts["cachedir"], opts.get("syndic_sock_dir", opts["sock_dir"])
         ),
@@ -2510,6 +2514,10 @@ def syndic_config(
         "cachedir": master_opts["cachedir"],
     }
     opts.update(syndic_opts)
+    log.warning("DGM syndic_config, user is set to '%s'", opts["user"])
+    dgm_user = opts["user"]
+    print(f"DGM syndic_config, user is set to '{dgm_user}'", flush=True)
+
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         "pki_dir",
