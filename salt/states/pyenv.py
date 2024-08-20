@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Managing python installations with pyenv
 ========================================
@@ -48,9 +47,7 @@ This is how a state configuration could look like:
     Git needs to be installed and available via PATH if pyenv is to be
     installed automatically by the module.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import re
 
 
@@ -125,7 +122,7 @@ def installed(name, default=False, user=None):
         name = re.sub(r"^python-", "", name)
 
     if __opts__["test"]:
-        ret["comment"] = "python {0} is set to be installed".format(name)
+        ret["comment"] = f"python {name} is set to be installed"
         return ret
 
     ret = _check_pyenv(ret, user)
@@ -159,7 +156,7 @@ def _check_and_uninstall_python(ret, python, user=None):
             return ret
     else:
         ret["result"] = True
-        ret["comment"] = "python {0} is already absent".format(python)
+        ret["comment"] = f"python {python} is already absent"
 
     return ret
 
@@ -185,13 +182,13 @@ def absent(name, user=None):
         name = re.sub(r"^python-", "", name)
 
     if __opts__["test"]:
-        ret["comment"] = "python {0} is set to be uninstalled".format(name)
+        ret["comment"] = f"python {name} is set to be uninstalled"
         return ret
 
     ret = _check_pyenv(ret, user)
     if ret["result"] is False:
         ret["result"] = True
-        ret["comment"] = "pyenv not installed, {0} not either".format(name)
+        ret["comment"] = f"pyenv not installed, {name} not either"
         return ret
     else:
         return _check_and_uninstall_python(ret, name, user=user)

@@ -29,27 +29,25 @@ log = logging.getLogger(__name__)
 
 try:
     # noinspection PyUnresolvedReferences
-    from impacket.smbconnection import SessionError as smbSessionError
-    from impacket.smb3 import SessionError as smb3SessionError
+    from smbprotocol.exceptions import InternalError as smbSessionError
 
-    HAS_IMPACKET = True
+    HAS_SMB = True
 except ImportError:
-    HAS_IMPACKET = False
+    HAS_SMB = False
 
 try:
     # noinspection PyUnresolvedReferences
-    from winrm.exceptions import WinRMTransportError
-
     # noinspection PyUnresolvedReferences
     from requests.exceptions import (
         ConnectionError,
         ConnectTimeout,
-        ReadTimeout,
-        SSLError,
-        ProxyError,
-        RetryError,
         InvalidSchema,
+        ProxyError,
+        ReadTimeout,
+        RetryError,
+        SSLError,
     )
+    from winrm.exceptions import WinRMTransportError
 
     HAS_WINRM = True
 except ImportError:
@@ -216,7 +214,9 @@ def list_nodes_select(call=None):
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -289,7 +289,7 @@ def create(vm_):
                 if ssh_host:
                     log.info("trying to ping %s", ssh_host)
                     count = "n" if salt.utils.platform.is_windows() else "c"
-                    cmd = "ping -{} 1 {}".format(count, ssh_host)
+                    cmd = f"ping -{count} 1 {ssh_host}"
                     good_ping = local.cmd(wol_host, "cmd.retcode", [cmd]) == 0
                 if good_ping:
                     log.info("successful ping.")
@@ -338,8 +338,8 @@ def _verify(vm_):
 
         log.debug("Testing Windows authentication method for %s", vm_["name"])
 
-        if not HAS_IMPACKET:
-            log.error("Impacket library not found")
+        if not HAS_SMB:
+            log.error("smbprotocol library not found")
             return False
 
         # Test Windows connection
@@ -358,7 +358,7 @@ def _verify(vm_):
             log.debug("Testing SMB protocol for %s", vm_["name"])
             if __utils__["smb.get_conn"](**kwargs) is False:
                 return False
-        except (smbSessionError, smb3SessionError) as exc:
+        except smbSessionError as exc:
             log.error("Exception: %s", exc)
             return False
 
@@ -434,7 +434,7 @@ def _verify(vm_):
 
 
 def destroy(name, call=None):
-    """ Destroy a node.
+    """Destroy a node.
 
     .. versionadded:: 2018.3.0
 
@@ -456,7 +456,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a, or --action."
+            "The destroy action must be called with -d, --destroy, -a, or --action."
         )
 
     opts = __opts__
@@ -464,7 +464,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
@@ -510,13 +510,13 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
     )
 
-    return {"Destroyed": "{} was destroyed.".format(name)}
+    return {"Destroyed": f"{name} was destroyed."}
 
 
 def reboot(name, call=None):

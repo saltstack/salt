@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Apache Sites
 
@@ -16,10 +15,12 @@ Enable and disable apache sites.
       apache_site.disabled:
         - name: default
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
-from salt.ext import six
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
 
 
 def __virtual__():
@@ -43,25 +44,25 @@ def enabled(name):
     is_enabled = __salt__["apache.check_site_enabled"](name)
     if not is_enabled:
         if __opts__["test"]:
-            msg = "Apache site {0} is set to be enabled.".format(name)
+            msg = f"Apache site {name} is set to be enabled."
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = name
             ret["result"] = None
             return ret
         status = __salt__["apache.a2ensite"](name)["Status"]
-        if isinstance(status, six.string_types) and "enabled" in status:
+        if isinstance(status, str) and "enabled" in status:
             ret["result"] = True
             ret["changes"]["old"] = None
             ret["changes"]["new"] = name
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to enable {0} Apache site".format(name)
-            if isinstance(status, six.string_types):
-                ret["comment"] = ret["comment"] + " ({0})".format(status)
+            ret["comment"] = f"Failed to enable {name} Apache site"
+            if isinstance(status, str):
+                ret["comment"] = ret["comment"] + f" ({status})"
             return ret
     else:
-        ret["comment"] = "{0} already enabled.".format(name)
+        ret["comment"] = f"{name} already enabled."
     return ret
 
 
@@ -77,23 +78,23 @@ def disabled(name):
     is_enabled = __salt__["apache.check_site_enabled"](name)
     if is_enabled:
         if __opts__["test"]:
-            msg = "Apache site {0} is set to be disabled.".format(name)
+            msg = f"Apache site {name} is set to be disabled."
             ret["comment"] = msg
             ret["changes"]["old"] = name
             ret["changes"]["new"] = None
             ret["result"] = None
             return ret
         status = __salt__["apache.a2dissite"](name)["Status"]
-        if isinstance(status, six.string_types) and "disabled" in status:
+        if isinstance(status, str) and "disabled" in status:
             ret["result"] = True
             ret["changes"]["old"] = name
             ret["changes"]["new"] = None
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to disable {0} Apache site".format(name)
-            if isinstance(status, six.string_types):
-                ret["comment"] = ret["comment"] + " ({0})".format(status)
+            ret["comment"] = f"Failed to disable {name} Apache site"
+            if isinstance(status, str):
+                ret["comment"] = ret["comment"] + f" ({status})"
             return ret
     else:
-        ret["comment"] = "{0} already disabled.".format(name)
+        ret["comment"] = f"{name} already disabled."
     return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via email
 
@@ -27,16 +26,11 @@ There are a few things to keep in mind:
   gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import smtplib
 from email.utils import formatdate
-
-from salt.ext import six
 
 try:
     import gnupg
@@ -80,22 +74,22 @@ def send(kwargs, opts):
 
     if HAS_GNUPG and config["smtp.gpgowner"]:
         gpg = gnupg.GPG(
-            gnupghome=os.path.expanduser("~{0}/.gnupg".format(config["smtp.gpgowner"])),
+            gnupghome=os.path.expanduser("~{}/.gnupg".format(config["smtp.gpgowner"])),
             options=["--trust-model always"],
         )
         encrypted_data = gpg.encrypt(config["smtp.content"], config["smtp.to"])
         if encrypted_data.ok:
             log.debug("smtp_return: Encryption successful")
-            config["smtp.content"] = six.text_type(encrypted_data)
+            config["smtp.content"] = str(encrypted_data)
         else:
             log.error("SMTP: Encryption failed, only an error message will be sent")
             config["smtp.content"] = (
-                "Encryption failed, the return data was not sent." "\r\n\r\n{0}\r\n{1}"
-            ).format(encrypted_data.status, encrypted_data.stderr)
+                "Encryption failed, the return data was not sent.\r\n\r\n{}\r\n{}".format(
+                    encrypted_data.status, encrypted_data.stderr
+                )
+            )
 
-    message = (
-        "From: {0}\r\n" "To: {1}\r\n" "Date: {2}\r\n" "Subject: {3}\r\n" "\r\n" "{4}"
-    ).format(
+    message = "From: {}\r\nTo: {}\r\nDate: {}\r\nSubject: {}\r\n\r\n{}".format(
         config["smtp.from"],
         config["smtp.to"],
         formatdate(localtime=True),

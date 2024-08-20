@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 External pillar module for testing the contents of __opts__ as seen
 by external pillar modules.
@@ -6,9 +5,6 @@ by external pillar modules.
 Returns a hash of the name of the pillar module as defined in
 _virtual__ with the value __opts__
 """
-
-# Import python libs
-from __future__ import absolute_import
 
 import logging
 

@@ -2,13 +2,10 @@
 Utility functions for minions
 """
 
-# Import Python Libs
-
 import logging
 import os
 import threading
 
-# Import Salt Libs
 import salt.payload
 import salt.utils.files
 import salt.utils.platform
@@ -44,28 +41,25 @@ def cache_jobs(opts, jid, ret):
     """
     Write job information to cache
     """
-    serial = salt.payload.Serial(opts=opts)
-
     fn_ = os.path.join(opts["cachedir"], "minion_jobs", jid, "return.p")
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(serial.dumps(ret))
+        fp_.write(salt.payload.dumps(ret))
 
 
 def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
     """
-    serial = salt.payload.Serial(opts)
-    current_thread = threading.currentThread().name
+    current_thread = threading.current_thread().name
     pid = os.getpid()
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         else:
             # Proc file is empty, remove
             try:
@@ -137,12 +131,11 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{}/cmdline".format(pid))
+    path = os.path.join(f"/proc/{pid}/cmdline")
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
-            if b"salt" in fp_.read():
-                return True
+            return b"salt" in fp_.read()
     except OSError:
         return False

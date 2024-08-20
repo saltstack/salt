@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.yamlencoding
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.utils.yaml
 import salt.utils.yamlencoding
 from tests.support.unit import TestCase

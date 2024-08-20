@@ -4,15 +4,16 @@ Execution of Salt modules from within states
 
 .. note::
 
-    There are two styles of calling ``module.run``. **The legacy style will no
-    longer be available starting in the 3005 release.** To opt-in early to the
-    new style you must add the following to your ``/etc/salt/minion`` config
-    file:
+    As of the 3005 release, you no longer need to opt-in to the new style of
+    calling ``module.run``. The following config can be removed from ``/etc/salt/minion``:
 
     .. code-block:: yaml
 
         use_superseded:
           - module.run
+
+    Both 'new' and 'legacy' styles of calling ``module.run`` are supported.
+
 
 With `module.run` these states allow individual execution module calls to be
 made via states. Here's a contrived example, to show you how it's done:
@@ -297,16 +298,18 @@ Windows system:
               start_time: '11:59PM'
         }
 
-.. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
+.. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
+
+import logging
 
 import salt.loader
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
-from salt.utils.decorators import with_deprecated
+
+log = logging.getLogger(__name__)
 
 
 def wait(name, **kwargs):
@@ -338,7 +341,6 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.
@@ -371,6 +373,31 @@ def run(**kwargs):
 
     :return:
     """
+    # Detect if this call is using legacy or new style syntax.
+    legacy_run = False
+
+    keys = list(kwargs)
+    ignored_kwargs = ["name", "__reqs__", "sfun"]
+    for item in ignored_kwargs:
+        if item in keys:
+            keys.remove(item)
+
+    # The rest of the keys should be function names for new-style syntax
+    for name in keys:
+        if name.find(".") == -1:
+            legacy_run = True
+    if not keys and kwargs:
+        legacy_run = True
+
+    if legacy_run:
+        log.debug("Detected legacy module.run syntax: %s", __low__["__id__"])
+        return _legacy_run(**kwargs)
+    else:
+        log.debug("Using new style module.run syntax: %s", __low__["__id__"])
+        return _run(**kwargs)
+
+
+def _run(**kwargs):
 
     if "name" in kwargs:
         kwargs.pop("name")
@@ -400,15 +427,13 @@ def run(**kwargs):
         ret["comment"] = " ".join(
             [
                 missing
-                and "Unavailable function{plr}: "
-                "{func}.".format(
+                and "Unavailable function{plr}: {func}.".format(
                     plr=(len(missing) > 1 or ""), func=(", ".join(missing) or "")
                 )
                 or "",
                 tests
-                and "Function{plr} {func} to be "
-                "executed.".format(
-                    plr=(len(tests) > 1 or ""), func=(", ".join(tests)) or ""
+                and "Function{plr} {func} to be executed.".format(
+                    plr=(len(tests) > 1 or ""), func=", ".join(tests) or ""
                 )
                 or "",
             ]
@@ -435,19 +460,21 @@ def run(**kwargs):
                         )
                     )
                 if func_ret is False:
-                    failures.append("'{}': {}".format(func, func_ret))
+                    failures.append(f"'{func}': {func_ret}")
             else:
                 success.append(
                     "{}: {}".format(
                         func,
-                        func_ret.get("comment", "Success")
-                        if isinstance(func_ret, dict)
-                        else func_ret,
+                        (
+                            func_ret.get("comment", "Success")
+                            if isinstance(func_ret, dict)
+                            else func_ret
+                        ),
                     )
                 )
                 ret["changes"][func] = func_ret
         except (SaltInvocationError, TypeError) as ex:
-            failures.append("'{}' failed: {}".format(func, ex))
+            failures.append(f"'{func}' failed: {ex}")
     ret["comment"] = ", ".join(failures + success)
     ret["result"] = not bool(failures)
 
@@ -485,7 +512,7 @@ def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     return mret
 
 
-def _run(name, **kwargs):
+def _legacy_run(name, **kwargs):
     """
     .. deprecated:: 2017.7.0
        Function name stays the same, behaviour will change.
@@ -503,12 +530,12 @@ def _run(name, **kwargs):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
     if name not in __salt__:
-        ret["comment"] = "Module function {} is not available".format(name)
+        ret["comment"] = f"Module function {name} is not available"
         ret["result"] = False
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Module function {} is set to execute".format(name)
+        ret["comment"] = f"Module function {name} is set to execute"
         return ret
 
     aspec = salt.utils.args.get_function_argspec(__salt__[name])
@@ -566,7 +593,7 @@ def _run(name, **kwargs):
     if missing:
         comment = "The following arguments are missing:"
         for arg in missing:
-            comment += " {}".format(arg)
+            comment += f" {arg}"
         ret["comment"] = comment
         ret["result"] = False
         return ret
@@ -630,7 +657,7 @@ def _run(name, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs["returner"] in returners:
             returners[kwargs["returner"]](ret_ret)
-    ret["comment"] = "Module function {} executed".format(name)
+    ret["comment"] = f"Module function {name} executed"
     ret["result"] = _get_result(mret, ret["changes"])
 
     return ret

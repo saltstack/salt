@@ -591,15 +591,18 @@ import logging
 import os
 import signal
 import tarfile
+import time
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
 
 import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
+
 import salt
 import salt.auth
 import salt.exceptions
 import salt.netapi
+import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -615,19 +618,18 @@ try:
     )
 except AttributeError:
     cpstats = None
-    logger.warn(
-        "Import of cherrypy.cpstats failed. "
-        "Possible upstream bug: "
+    logger.warning(
+        "Import of cherrypy.cpstats failed. Possible upstream bug: "
         "https://github.com/cherrypy/cherrypy/issues/1444"
     )
 except ImportError:
     cpstats = None
-    logger.warn("Import of cherrypy.cpstats failed.")
+    logger.warning("Import of cherrypy.cpstats failed.")
 
 try:
     # Imports related to websocket
-    from .tools import websockets
     from . import event_processor
+    from .tools import websockets
 
     HAS_WEBSOCKETS = True
 except ImportError:
@@ -709,9 +711,9 @@ def salt_api_acl_tool(username, request):
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
     """
-    failure_str = "[api_acl] Authentication failed for " "user {0} from IP {1}"
-    success_str = "[api_acl] Authentication successful for user {0} from IP {1}"
-    pass_str = "[api_acl] Authentication not checked for " "user {0} from IP {1}"
+    failure_str = "[api_acl] Authentication failed for user %s from IP %s"
+    success_str = "[api_acl] Authentication successful for user %s from IP %s"
+    pass_str = "[api_acl] Authentication not checked for user %s from IP %s"
 
     acl = None
     # Salt Configuration
@@ -729,23 +731,23 @@ def salt_api_acl_tool(username, request):
         if users:
             if username in users:
                 if ip in users[username] or "*" in users[username]:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             elif username not in users and "*" in users:
                 if ip in users["*"] or "*" in users["*"]:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             else:
-                logger.info(failure_str.format(username, ip))
+                logger.info(failure_str, username, ip)
                 return False
     else:
-        logger.info(pass_str.format(username, ip))
+        logger.info(pass_str, username, ip)
         return True
 
 
@@ -762,11 +764,11 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get("authorized_ips", None)
             if auth_ip_list:
-                logger.debug("Found IP list: {}".format(auth_ip_list))
+                logger.debug("Found IP list: %s", auth_ip_list)
                 rem_ip = cherrypy.request.headers.get("Remote-Addr", None)
-                logger.debug("Request from IP: {}".format(rem_ip))
+                logger.debug("Request from IP: %s", rem_ip)
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {}".format(rem_ip))
+                    logger.error("Blocked IP: %s", rem_ip)
                     raise cherrypy.HTTPError(403, "Bad IP")
 
 
@@ -775,7 +777,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     """
     # Redirect to the login page if the session hasn't been authed
-    if "token" not in cherrypy.session:  # pylint: disable=W8601
+    if "token" not in cherrypy.session:
         raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
@@ -861,10 +863,12 @@ def hypermedia_handler(*args, **kwargs):
         salt.exceptions.AuthorizationError,
         salt.exceptions.EauthAuthenticationError,
         salt.exceptions.TokenAuthenticationError,
-    ):
-        raise cherrypy.HTTPError(401)
-    except salt.exceptions.SaltInvocationError:
-        raise cherrypy.HTTPError(400)
+    ) as e:
+        logger.error(e.message)
+        raise cherrypy.HTTPError(401, e.message)
+    except salt.exceptions.SaltInvocationError as e:
+        logger.error(e.message)
+        raise cherrypy.HTTPError(400, e.message)
     except (
         salt.exceptions.SaltDaemonNotRunning,
         salt.exceptions.SaltReqTimeoutError,
@@ -894,9 +898,11 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{}".format(traceback.format_exc(exc))
-            if cherrypy.config["debug"]
-            else "An unexpected error occurred",
+            "return": (
+                f"{traceback.format_exc()}"
+                if cherrypy.config["debug"]
+                else "An unexpected error occurred"
+            ),
         }
 
     # Raises 406 if requested content-type is not supported
@@ -968,7 +974,29 @@ def urlencoded_processor(entity):
     except (UnicodeDecodeError, AttributeError):
         pass
     cherrypy.serving.request.raw_body = urlencoded
-    cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
+    unserialized_data = {}
+    for key, val in parse_qsl(urlencoded):
+        unserialized_data.setdefault(key, []).append(val)
+    for key, val in unserialized_data.items():
+        if len(val) == 1:
+            unserialized_data[key] = val[0]
+        if len(val) == 0:
+            unserialized_data[key] = ""
+
+    # Parse `arg` and `kwarg` just like we do it on the CLI
+    if "kwarg" in unserialized_data:
+        unserialized_data["kwarg"] = salt.utils.args.yamlify_arg(
+            unserialized_data["kwarg"]
+        )
+    if "arg" in unserialized_data:
+        if isinstance(unserialized_data["arg"], list):
+            for idx, value in enumerate(unserialized_data["arg"]):
+                unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
+        else:
+            unserialized_data["arg"] = [
+                salt.utils.args.yamlify_arg(unserialized_data["arg"])
+            ]
+    cherrypy.serving.request.unserialized_data = unserialized_data
 
 
 @process_request_body
@@ -1119,7 +1147,7 @@ for hook, tool_list in tools_config.items():
     for idx, tool_config in enumerate(tool_list):
         tool_name, tool_fn = tool_config
         setattr(
-            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=(50 + idx))
+            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=50 + idx)
         )
 
 
@@ -1173,13 +1201,6 @@ class LowDataAdapter:
         for chunk in lowstate:
             if token:
                 chunk["token"] = token
-
-            if "token" in chunk:
-                # Make sure that auth token is hex
-                try:
-                    int(chunk["token"], 16)
-                except (TypeError, ValueError):
-                    raise cherrypy.HTTPError(401, "Invalid token")
 
             if "token" in chunk:
                 # Make sure that auth token is hex
@@ -1390,7 +1411,7 @@ class Minions(LowDataAdapter):
             POST /minions HTTP/1.1
             Host: localhost:8000
             Accept: application/x-yaml
-            Content-Type: application/json
+            Content-Type: application/x-www-form-urlencoded
 
             tgt=*&fun=status.diskusage
 
@@ -1721,9 +1742,9 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers[
-            "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        headers["Content-Disposition"] = (
+            'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        )
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"
@@ -1880,28 +1901,19 @@ class Login(LowDataAdapter):
 
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
+            elif token["eauth"] == "rest" and "auth_list" in token:
+                perms = token["auth_list"]
             else:
-                # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], [])
-                perms.extend(eauth.get("*", []))
-
-                if "groups" in token and token["groups"]:
-                    user_groups = set(token["groups"])
-                    eauth_groups = {
-                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
-                    }
-
-                    for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{}%".format(group)])
+                perms = salt.netapi.sum_permissions(token, eauth)
+                perms = salt.netapi.sorted_permissions(perms)
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
         except Exception:  # pylint: disable=broad-except
             logger.debug(
-                "Configuration for external_auth malformed for "
-                "eauth '{}', and user '{}'.".format(
-                    token.get("eauth"), token.get("name")
-                ),
+                "Configuration for external_auth malformed for eauth %r, and user %r.",
+                token.get("eauth"),
+                token.get("name"),
                 exc_info=True,
             )
             perms = None
@@ -1927,7 +1939,7 @@ class Logout(LowDataAdapter):
 
     _cp_config = dict(
         LowDataAdapter._cp_config,
-        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False}
+        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False},
     )
 
     def POST(self):  # pylint: disable=arguments-differ
@@ -2170,7 +2182,7 @@ class Events:
             "tools.salt_auth.on": False,
             "tools.hypermedia_in.on": False,
             "tools.hypermedia_out.on": False,
-        }
+        },
     )
 
     def __init__(self):
@@ -2202,8 +2214,11 @@ class Events:
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
         # allows access.
-        if salt_token and self.resolver.get_token(salt_token):
-            return True
+        if salt_token:
+            # We want to at least make sure that the token isn't expired yet.
+            resolved_tkn = self.resolver.get_token(salt_token)
+            if resolved_tkn and resolved_tkn.get("expire", 0) > time.time():
+                return True
 
         return False
 
@@ -2357,22 +2372,22 @@ class Events:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
                 stream = event.iter_events(full=True, auto_reconnect=True)
 
-                yield "retry: 400\n"  # future lint: disable=blacklisted-function
+                yield "retry: 400\n"
 
                 while True:
+                    # make sure the token is still valid
+                    if not self._is_valid_token(auth_token):
+                        logger.debug("Token is no longer valid")
+                        break
+
                     data = next(stream)
-                    yield "tag: {}\n".format(
-                        data.get("tag", "")
-                    )  # future lint: disable=blacklisted-function
-                    yield "data: {}\n\n".format(
-                        salt.utils.json.dumps(data)
-                    )  # future lint: disable=blacklisted-function
+                    yield "tag: {}\n".format(data.get("tag", ""))
+                    yield f"data: {salt.utils.json.dumps(data)}\n\n"
 
         return listen()
 
@@ -2402,7 +2417,7 @@ class WebsocketEndpoint:
             "tools.hypermedia_out.on": False,
             "tools.websocket.on": True,
             "tools.websocket.handler_cls": websockets.SynchronizingWebsocket,
-        }
+        },
     )
 
     def __init__(self):
@@ -2537,7 +2552,6 @@ class WebsocketEndpoint:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2557,14 +2571,12 @@ class WebsocketEndpoint:
                                 SaltInfo.process(data, salt_token, self.opts)
                             else:
                                 handler.send(
-                                    "data: {}\n\n".format(
-                                        salt.utils.json.dumps(data)
-                                    ),  # future lint: disable=blacklisted-function
+                                    f"data: {salt.utils.json.dumps(data)}\n\n",
                                     False,
                                 )
                         except UnicodeDecodeError:
                             logger.error(
-                                "Error: Salt event has non UTF-8 data:\n{}".format(data)
+                                "Error: Salt event has non UTF-8 data:\n%s", data
                             )
 
         parent_pipe, child_pipe = Pipe()
@@ -2631,7 +2643,7 @@ class Webhook:
             "tools.lowdata_fmt.on": True,
             # Auth can be overridden in __init__().
             "tools.salt_auth.on": True,
-        }
+        },
     )
 
     def __init__(self):
@@ -2639,7 +2651,6 @@ class Webhook:
         self.event = salt.utils.event.get_event(
             "master",
             sock_dir=self.opts["sock_dir"],
-            transport=self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

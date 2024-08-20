@@ -4,12 +4,12 @@ import shutil
 import sys
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 # Posix only
 try:
@@ -69,7 +69,7 @@ class FileModuleTest(ModuleCase):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super().tearDown()
 
-    @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
+    @pytest.mark.skip_on_windows(reason="No security context on Windows")
     @requires_system_grains
     def test_get_selinux_context(self, grains):
         if grains.get("selinux", {}).get("enabled", False):
@@ -97,7 +97,7 @@ class FileModuleTest(ModuleCase):
             ret_file = self.run_function("file.get_selinux_context", arg=[self.myfile])
             self.assertIn("No selinux context information is available", ret_file)
 
-    @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
+    @pytest.mark.skip_on_windows(reason="No security context on Windows")
     @requires_system_grains
     def test_set_selinux_context(self, grains):
         if not grains.get("selinux", {}).get("enabled", False):
@@ -115,7 +115,7 @@ class FileModuleTest(ModuleCase):
         )
         self.assertEqual(ret_dir, DIR_CONTEXT)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chown(self):
         user = getpass.getuser()
         if sys.platform == "darwin":
@@ -128,14 +128,14 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chown_no_user(self):
         user = "notanyuseriknow"
         group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function("file.chown", arg=[self.myfile, user, group])
         self.assertIn("not exist", ret)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chown_no_user_no_group(self):
         user = "notanyuseriknow"
         group = "notanygroupyoushoulduse"
@@ -143,7 +143,7 @@ class FileModuleTest(ModuleCase):
         self.assertIn("Group does not exist", ret)
         self.assertIn("User does not exist", ret)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chown_no_path(self):
         user = getpass.getuser()
         if sys.platform == "darwin":
@@ -153,7 +153,7 @@ class FileModuleTest(ModuleCase):
         ret = self.run_function("file.chown", arg=["/tmp/nosuchfile", user, group])
         self.assertIn("File not found", ret)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chown_noop(self):
         user = ""
         group = ""
@@ -163,7 +163,7 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, os.getgid())
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chgrp(self):
         if sys.platform == "darwin":
             group = "everyone"
@@ -174,7 +174,7 @@ class FileModuleTest(ModuleCase):
         fstat = os.stat(self.myfile)
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
-    @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.skip_on_windows(reason="No chgrp on Windows")
     def test_chgrp_failure(self):
         group = "thisgroupdoesntexist"
         ret = self.run_function("file.chgrp", arg=[self.myfile, group])

@@ -1,14 +1,21 @@
-# -*- coding: utf-8 -*-
-"""
+r"""
 Redis
 =====
 
 Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: 2017.7.0
+.. versionchanged:: 3005
+
+To enable this cache plugin, the master will need the python client for redis installed.
+This can be easily installed with pip:
+
+.. code-block:: bash
+
+    salt \* pip.install redis
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
-privde the necessary features for the Salt caching subsystem, the following
+provide the necessary features for the Salt caching subsystem, the following
 conventions are used:
 
 - A Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
@@ -37,11 +44,13 @@ the following hierarchy will be built:
     127.0.0.1:6379> GET $KEY_root-bank/sub-bank/leaf-bank/my-key
     "my-value"
 
-There are three types of keys stored:
 
-- ``$BANK_*`` is a Redis SET containing the list of banks under the current bank
-- ``$BANKEYS_*`` is a Redis SET containing the list of keys under the current bank
-- ``$KEY_*`` keeps the value of the key
+There are four types of keys stored:
+
+- ``$BANK_*`` is a Redis SET containing the list of banks under the current bank.
+- ``$BANKEYS_*`` is a Redis SET containing the list of keys under the current bank.
+- ``$KEY_*`` keeps the value of the key.
+- ``$TSTAMP_*`` stores the last updated timestamp of the key.
 
 These prefixes and the separator can be adjusted using the configuration options:
 
@@ -49,11 +58,16 @@ bank_prefix: ``$BANK``
     The prefix used for the name of the Redis key storing the list of sub-banks.
 
 bank_keys_prefix: ``$BANKEYS``
-    The prefix used for the name of the Redis keyt storing the list of keys under a certain bank.
+    The prefix used for the name of the Redis key storing the list of keys under a certain bank.
 
 key_prefix: ``$KEY``
     The prefix of the Redis keys having the value of the keys to be cached under
     a certain bank.
+
+timestamp_prefix: ``$TSTAMP``
+    The prefix for the last modified timestamp for keys.
+
+    .. versionadded:: 3005
 
 separator: ``_``
     The separator between the prefix and the key body.
@@ -115,6 +129,7 @@ Configuration Example:
     cache.redis.bank_prefix: #BANK
     cache.redis.bank_keys_prefix: #BANKEYS
     cache.redis.key_prefix: #KEY
+    cache.redis.timestamp_prefix: #TICKS
     cache.redis.separator: '@'
 
 Cluster Configuration Example:
@@ -136,17 +151,16 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import stdlib
+import itertools
 import logging
+import time
 
+import salt.payload
+import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 
 # Import salt
-from salt.ext.six.moves import range
 
-# Import third party libs
 try:
     import redis
     from redis.exceptions import ConnectionError as RedisConnectionError
@@ -157,10 +171,7 @@ except ImportError:
     HAS_REDIS = False
 
 try:
-    # pylint: disable=no-name-in-module
-    from rediscluster import StrictRedisCluster
-
-    # pylint: enable=no-name-in-module
+    from rediscluster import RedisCluster  # pylint: disable=no-name-in-module
 
     HAS_REDIS_CLUSTER = True
 except ImportError:
@@ -178,6 +189,7 @@ log = logging.getLogger(__file__)
 
 _BANK_PREFIX = "$BANK"
 _KEY_PREFIX = "$KEY"
+_TIMESTAMP_PREFIX = "$TSTAMP"
 _BANK_KEYS_PREFIX = "$BANKEYS"
 _SEPARATOR = "_"
 
@@ -207,6 +219,9 @@ def __virtual__():
 
 
 def init_kwargs(kwargs):
+    """
+    Effectively a noop. Return an empty dictionary.
+    """
     return {}
 
 
@@ -240,7 +255,7 @@ def _get_redis_server(opts=None):
         opts = _get_redis_cache_opts()
 
     if opts["cluster_mode"]:
-        REDIS_SERVER = StrictRedisCluster(
+        REDIS_SERVER = RedisCluster(
             startup_nodes=opts["startup_nodes"],
             skip_full_coverage_check=opts["skip_full_coverage_check"],
         )
@@ -266,6 +281,9 @@ def _get_redis_keys_opts():
         ),
         "key_prefix": __opts__.get("cache.redis.key_prefix", _KEY_PREFIX),
         "separator": __opts__.get("cache.redis.separator", _SEPARATOR),
+        "timestamp_prefix": __opts__.get(
+            "cache.redis.timestamp_prefix", _TIMESTAMP_PREFIX
+        ),
     }
 
 
@@ -279,13 +297,25 @@ def _get_bank_redis_key(bank):
     )
 
 
+def _get_timestamp_key(bank, key):
+    opts = _get_redis_keys_opts()
+    return "{}{}{}/{}".format(
+        opts["timestamp_prefix"], opts["separator"], {bank}, {key}
+    )
+    # Use this line when we can use modern python
+    # return f"{opts['timestamp_prefix']}{opts['separator']}{bank}/{key}"
+
+
 def _get_key_redis_key(bank, key):
     """
     Return the Redis key given the bank name and the key name.
     """
     opts = _get_redis_keys_opts()
     return "{prefix}{separator}{bank}/{key}".format(
-        prefix=opts["key_prefix"], separator=opts["separator"], bank=bank, key=key
+        prefix=opts["key_prefix"],
+        separator=opts["separator"],
+        bank=bank,
+        key=salt.utils.stringutils.to_str(key),
     )
 
 
@@ -306,24 +336,22 @@ def _build_bank_hier(bank, redis_pipe):
     It's using the Redis pipeline,
     so there will be only one interaction with the remote server.
     """
-    bank_list = bank.split("/")
-    parent_bank_path = bank_list[0]
-    for bank_name in bank_list[1:]:
-        prev_bank_redis_key = _get_bank_redis_key(parent_bank_path)
-        redis_pipe.sadd(prev_bank_redis_key, bank_name)
-        log.debug("Adding %s to %s", bank_name, prev_bank_redis_key)
-        parent_bank_path = "{curr_path}/{bank_name}".format(
-            curr_path=parent_bank_path, bank_name=bank_name
-        )  # this becomes the parent of the next
-    return True
+
+    def joinbanks(*banks):
+        return "/".join(banks)
+
+    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
+        bank_set = _get_bank_redis_key(bank_path)
+        log.debug("Adding %s to %s", bank, bank_set)
+        redis_pipe.sadd(bank_set, ".")
 
 
 def _get_banks_to_remove(redis_server, bank, path=""):
     """
-    A simple tree tarversal algorithm that builds the list of banks to remove,
+    A simple tree traversal algorithm that builds the list of banks to remove,
     starting from an arbitrary node in the tree.
     """
-    current_path = bank if not path else "{path}/{bank}".format(path=path, bank=bank)
+    current_path = bank if not path else f"{path}/{bank}"
     bank_paths_to_remove = [current_path]
     # as you got here, you'll be removed
 
@@ -355,10 +383,15 @@ def store(bank, key, data):
     redis_bank_keys = _get_bank_keys_redis_key(bank)
     try:
         _build_bank_hier(bank, redis_pipe)
-        value = __context__["serial"].dumps(data)
+        value = salt.payload.dumps(data)
         redis_pipe.set(redis_key, value)
         log.debug("Setting the value for %s under %s (%s)", key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
+        # localfs cache truncates the timestamp to int only. We'll do the same.
+        redis_pipe.set(
+            _get_timestamp_key(bank=bank, key=key),
+            salt.payload.dumps(int(time.time())),
+        )
         log.debug("Adding %s to %s", key, redis_bank_keys)
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
@@ -386,7 +419,7 @@ def fetch(bank, key):
         raise SaltCacheError(mesg)
     if redis_value is None:
         return {}
-    return __context__["serial"].loads(redis_value)
+    return salt.payload.loads(redis_value)
 
 
 def flush(bank, key=None):
@@ -446,6 +479,8 @@ def flush(bank, key=None):
             for key in bank_keys:
                 redis_key = _get_key_redis_key(bank_path, key)
                 redis_pipe.delete(redis_key)  # kill 'em all!
+                timestamp_key = _get_timestamp_key(bank=bank_path, key=key.decode())
+                redis_pipe.delete(timestamp_key)
                 log.debug(
                     "Removing the key %s under the %s bank (%s)",
                     key,
@@ -468,6 +503,8 @@ def flush(bank, key=None):
     else:
         redis_key = _get_key_redis_key(bank, key)
         redis_pipe.delete(redis_key)  # delete the key cached
+        timestamp_key = _get_timestamp_key(bank=bank, key=key)
+        redis_pipe.delete(timestamp_key)
         log.debug("Removing the key %s under the %s bank (%s)", key, bank, redis_key)
         bank_keys_redis_key = _get_bank_keys_redis_key(bank)
         redis_pipe.srem(bank_keys_redis_key, key)
@@ -494,7 +531,7 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_redis_key(bank)
+    bank_redis_key = _get_bank_keys_redis_key(bank)
     try:
         banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
@@ -505,7 +542,7 @@ def list_(bank):
         raise SaltCacheError(mesg)
     if not banks:
         return []
-    return list(banks)
+    return [bank.decode() for bank in banks if bank != b"."]
 
 
 def contains(bank, key):
@@ -513,12 +550,31 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_redis_key(bank)
+    bank_redis_key = _get_bank_keys_redis_key(bank)
     try:
-        return redis_server.sismember(bank_redis_key, key)
+        if key is None:
+            return (
+                salt.utils.stringutils.to_str(redis_server.type(bank_redis_key))
+                != "none"
+            )
+        else:
+            return redis_server.sismember(bank_redis_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot retrieve the Redis cache key {rkey}: {rerr}".format(
             rkey=bank_redis_key, rerr=rerr
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
+
+
+def updated(bank, key):
+    """
+    Return the Unix Epoch timestamp of when the key was last updated. Return
+    None if key is not found.
+    """
+    redis_server = _get_redis_server()
+    timestamp_key = _get_timestamp_key(bank=bank, key=key)
+    value = redis_server.get(timestamp_key)
+    if value is not None:
+        value = salt.payload.loads(value)
+    return value

@@ -72,9 +72,12 @@ import salt.output
 import salt.utils.network
 
 try:
+    # pylint: disable=no-name-in-module
+    from napalm.base import helpers as napalm_helpers
     from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
-    from napalm.base import helpers as napalm_helpers
+
+    # pylint: enable=no-name-in-module
 
     HAS_NAPALM = True
 except ImportError:
@@ -336,19 +339,21 @@ def interfaces(
     net_runner_opts = _get_net_runner_opts()
 
     if pattern:
-        title = 'Pattern "{}" found in the description of the following interfaces'.format(
-            pattern
+        title = (
+            'Pattern "{}" found in the description of the following interfaces'.format(
+                pattern
+            )
         )
     if not title:
         title = "Details"
         if interface:
-            title += " for interface {}".format(interface)
+            title += f" for interface {interface}"
         else:
             title += " for all interfaces"
         if device:
-            title += " on device {}".format(device)
+            title += f" on device {device}"
         if ipnet:
-            title += " that include network {net}".format(net=str(ipnet))
+            title += f" that include network {str(ipnet)}"
             if best:
                 title += " - only best match returned"
 
@@ -506,13 +511,13 @@ def findarp(
 
     title = "ARP Entries"
     if device:
-        title += " on device {device}".format(device=device)
+        title += f" on device {device}"
     if interface:
-        title += " on interface {interf}".format(interf=interface)
+        title += f" on interface {interface}"
     if ip:
-        title += " for IP {ip}".format(ip=ip)
+        title += f" for IP {ip}"
     if mac:
-        title += " for MAC {mac}".format(mac=mac)
+        title += f" for MAC {mac}"
 
     if device:
         all_arp = {device: all_arp.get(device)}
@@ -610,11 +615,11 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
 
     title = "MAC Address(es)"
     if device:
-        title += " on device {device}".format(device=device)
+        title += f" on device {device}"
     if interface:
-        title += " on interface {interf}".format(interf=interface)
+        title += f" on interface {interface}"
     if vlan:
-        title += " on VLAN {vlan}".format(vlan=vlan)
+        title += f" on VLAN {vlan}"
 
     if device:
         all_mac = {device: all_mac.get(device)}
@@ -747,13 +752,13 @@ def lldp(
     if not title:
         title = "LLDP Neighbors"
         if interface:
-            title += " for interface {}".format(interface)
+            title += f" for interface {interface}"
         else:
             title += " for all interfaces"
         if device:
-            title += " on device {}".format(device)
+            title += f" on device {device}"
         if chassis:
-            title += " having Chassis ID {}".format(chassis)
+            title += f" having Chassis ID {chassis}"
 
     if device:
         all_lldp = {device: all_lldp.get(device)}
@@ -953,8 +958,10 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     elif ip:
         device, interface, mac = _find_interfaces_mac(ip)
         if device and interface:
-            title = "IP Address {ip} is set for interface {interface}, on {device}".format(
-                interface=interface, device=device, ip=ip
+            title = (
+                "IP Address {ip} is set for interface {interface}, on {device}".format(
+                    interface=interface, device=device, ip=ip
+                )
             )
             results["int_ip"] = interfaces(
                 device=device, interface=interface, title=title, display=display

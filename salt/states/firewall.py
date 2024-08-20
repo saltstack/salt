@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 State to check firewall configurations
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Microsoft Update files management via wusa.exe
 
@@ -9,20 +8,18 @@ Microsoft Update files management via wusa.exe
 .. versionadded:: 2018.3.4
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 
-# Import salt libs
 import salt.utils.platform
+import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "wusa"
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
@@ -37,41 +34,6 @@ def __virtual__():
         return False, "PowerShell not available"
 
     return __virtualname__
-
-
-def _pshell_json(cmd, cwd=None):
-    """
-    Execute the desired powershell command and ensure that it returns data
-    in JSON format and load that into python
-    """
-    if "convertto-json" not in cmd.lower():
-        cmd = "{0} | ConvertTo-Json".format(cmd)
-    log.debug("PowerShell: %s", cmd)
-    ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
-
-    if "pid" in ret:
-        del ret["pid"]
-
-    if ret.get("stderr", ""):
-        error = ret["stderr"].splitlines()[0]
-        raise CommandExecutionError(error, info=ret)
-
-    if "retcode" not in ret or ret["retcode"] != 0:
-        # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing PowerShell {0}".format(cmd), info=ret
-        )
-
-    # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if ret["stdout"] == "":
-        ret["stdout"] = "{}"
-
-    try:
-        ret = salt.utils.json.loads(ret["stdout"], strict=False)
-    except ValueError:
-        raise CommandExecutionError("No JSON results from PowerShell", info=ret)
-
-    return ret
 
 
 def is_installed(name):
@@ -94,7 +56,7 @@ def is_installed(name):
     """
     return (
         __salt__["cmd.retcode"](
-            cmd="Get-HotFix -Id {0}".format(name),
+            cmd=f"Get-HotFix -Id {name}",
             shell="powershell",
             ignore_retcode=True,
         )
@@ -142,16 +104,17 @@ def install(path, restart=False):
     # Check the ret_code
     file_name = os.path.basename(path)
     errors = {
-        2359302: "{0} is already installed".format(file_name),
-        3010: "{0} correctly installed but server reboot is needed to complete installation".format(
-            file_name
+        2359302: f"{file_name} is already installed",
+        3010: (
+            f"{file_name} correctly installed but server reboot is needed to "
+            f"complete installation"
         ),
         87: "Unknown error",
     }
     if ret_code in errors:
         raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
-        raise CommandExecutionError("Unknown error: {0}".format(ret_code))
+        raise CommandExecutionError(f"Unknown error: {ret_code}")
 
     return True
 
@@ -193,7 +156,7 @@ def uninstall(path, restart=False):
     if os.path.exists(path):
         cmd.append(path)
     else:
-        cmd.append("/kb:{0}".format(kb[2:] if kb.lower().startswith("kb") else kb))
+        cmd.append("/kb:{}".format(kb[2:] if kb.lower().startswith("kb") else kb))
     if restart:
         cmd.append("/forcerestart")
     else:
@@ -206,19 +169,19 @@ def uninstall(path, restart=False):
     # If you pass /quiet and specify /kb, you'll always get retcode 87 if there
     # is an error. Use the actual file to get a more descriptive error
     errors = {
-        -2145116156: "{0} does not support uninstall".format(kb),
-        2359303: "{0} not installed".format(kb),
+        -2145116156: f"{kb} does not support uninstall",
+        2359303: f"{kb} not installed",
         87: "Unknown error. Try specifying an .msu file",
     }
     if ret_code in errors:
         raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
-        raise CommandExecutionError("Unknown error: {0}".format(ret_code))
+        raise CommandExecutionError(f"Unknown error: {ret_code}")
 
     return True
 
 
-def list():
+def list_():
     """
     Get a list of updates installed on the machine
 
@@ -232,7 +195,7 @@ def list():
         salt '*' wusa.list
     """
     kbs = []
-    ret = _pshell_json("Get-HotFix | Select HotFixID")
+    ret = salt.utils.win_pwsh.run_dict("Get-HotFix | Select HotFixID")
     for item in ret:
         kbs.append(item["HotFixID"])
     return kbs

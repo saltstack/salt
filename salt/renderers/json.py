@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 JSON Renderer for Salt
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python libs
 import salt.utils.json
-
-# Import salt libs
-from salt.ext import six
 
 json = salt.utils.json.import_json()
 
@@ -21,7 +14,7 @@ def render(json_data, saltenv="base", sls="", **kws):
 
     :rtype: A Python data structure
     """
-    if not isinstance(json_data, six.string_types):
+    if not isinstance(json_data, str):
         json_data = json_data.read()
 
     if json_data.startswith("#!"):

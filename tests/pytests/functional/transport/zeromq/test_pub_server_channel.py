@@ -1,271 +1,199 @@
-import ctypes
+import asyncio
+import copy
 import logging
-import multiprocessing
-import signal
+import os
+import random
 import time
-from concurrent.futures.thread import ThreadPoolExecutor
+from contextlib import contextmanager
 
 import pytest
-import salt.config
-import salt.exceptions
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
-import salt.log.setup
-import salt.transport.client
-import salt.transport.server
+import tornado.ioloop
+from saltfactories.utils import random_string
+
 import salt.transport.zeromq
-import salt.utils.platform
 import salt.utils.process
-import salt.utils.stringutils
-import zmq.eventloop.ioloop
-from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
+from tests.support.pytest.transport import PubServerChannelProcess
 
 log = logging.getLogger(__name__)
 
 
-class Collector(salt.utils.process.SignalHandlingProcess):
-    def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30, zmq_filtering=False
-    ):
-        super().__init__()
-        self.minion_config = minion_config
-        self.pub_uri = pub_uri
-        self.aes_key = aes_key
-        self.timeout = timeout
-        self.hard_timeout = time.time() + timeout + 30
-        self.manager = multiprocessing.Manager()
-        self.results = self.manager.list()
-        self.zmq_filtering = zmq_filtering
-        self.stopped = multiprocessing.Event()
-        self.started = multiprocessing.Event()
-        self.running = multiprocessing.Event()
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.skip_on_freebsd(reason="Temporarily skipped on FreeBSD."),
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    ),
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Rocky Linux-8' and grains['osarch'] == 'aarch64'",
+        reason="Temporarily skip on Rocky Linux 8 Arm64",
+    ),
+]
+
+
+class PubServerChannelSender:
+    def __init__(self, pub_server_channel, payload_list):
+        self.pub_server_channel = pub_server_channel
+        self.payload_list = payload_list
 
     def run(self):
-        """
-        Gather results until then number of seconds specified by timeout passes
-        without receiving a message
-        """
-        ctx = zmq.Context()
-        sock = ctx.socket(zmq.SUB)
-        sock.setsockopt(zmq.LINGER, -1)
-        sock.setsockopt(zmq.SUBSCRIBE, b"")
-        sock.connect(self.pub_uri)
-        last_msg = time.time()
-        serial = salt.payload.Serial(self.minion_config)
-        crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
-        self.started.set()
-        while True:
-            curr_time = time.time()
-            if time.time() > self.hard_timeout:
-                break
-            if curr_time - last_msg >= self.timeout:
-                break
-            try:
-                payload = sock.recv(zmq.NOBLOCK)
-            except zmq.ZMQError:
-                time.sleep(0.01)
+        loop = tornado.ioloop.IOLoop()
+        loop.add_callback(self._run, loop)
+        loop.start()
+
+    async def _run(self, loop):
+        for payload in self.payload_list:
+            await self.pub_server_channel.publish(payload)
+        await asyncio.sleep(2)
+        loop.stop()
+
+
+def generate_msg_list(msg_cnt, minions_list, broadcast):
+    msg_list = []
+    for i in range(msg_cnt):
+        for idx, minion_id in enumerate(minions_list):
+            if broadcast:
+                msg_list.append(
+                    {"tgt_type": "grain", "tgt": "id:*", "jid": msg_cnt * idx + i}
+                )
             else:
-                try:
-                    serial_payload = serial.loads(payload)
-                    payload = crypticle.loads(serial_payload["load"])
-                    if "start" in payload:
-                        self.running.set()
-                        continue
-                    if "stop" in payload:
-                        break
-                    last_msg = time.time()
-                    self.results.append(payload["jid"])
-                except salt.exceptions.SaltDeserializationError:
-                    if not self.zmq_filtering:
-                        log.exception("Failed to deserialize...")
-                        break
-
-    def __enter__(self):
-        self.manager.__enter__()
-        self.start()
-        # Wait until we can start receiving events
-        self.started.wait()
-        self.started.clear()
-        return self
-
-    def __exit__(self, *args):
-        # Wait until we either processed all expected messages or we reach the hard timeout
-        join_secs = self.hard_timeout - time.time()
-        log.info("Waiting at most %s seconds before exiting the collector", join_secs)
-        self.join(join_secs)
-        self.terminate()
-        # Cast our manager.list into a plain list
-        self.results = list(self.results)
-        # Terminate our multiprocessing manager
-        self.manager.__exit__(*args)
-        log.debug("The collector has exited")
-        self.stopped.set()
+                msg_list.append(
+                    {"tgt_type": "list", "tgt": [minion_id], "jid": msg_cnt * idx + i}
+                )
+    return msg_list
 
 
-class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
-    def __init__(self, master_config, minion_config, **collector_kwargs):
-        super().__init__()
-        self._closing = False
-        self.master_config = master_config
-        self.minion_config = minion_config
-        self.collector_kwargs = collector_kwargs
-        self.aes_key = multiprocessing.Array(
-            ctypes.c_char,
-            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
-        )
-        self.process_manager = salt.utils.process.ProcessManager(
-            name="ZMQ-PubServer-ProcessManager"
-        )
-        self.pub_server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(
-            self.master_config
-        )
-        self.pub_server_channel.pre_fork(
-            self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
-        )
-        self.pub_uri = "tcp://{interface}:{publish_port}".format(**self.master_config)
-        self.queue = multiprocessing.Queue()
-        self.stopped = multiprocessing.Event()
-        self.collector = Collector(
-            self.minion_config,
-            self.pub_uri,
-            self.aes_key.value,
-            **self.collector_kwargs
-        )
-
-    def run(self):
-        salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
-        try:
-            while True:
-                payload = self.queue.get()
-                if payload is None:
-                    log.debug("We received the stop sentinal")
-                    break
-                self.pub_server_channel.publish(payload)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            self.stopped.set()
-
-    def _handle_signals(self, signum, sigframe):
-        self.close()
-        super()._handle_signals(signum, sigframe)
-
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if self.process_manager is None:
-            return
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signal.SIGTERM)
-        self.pub_server_channel.pub_close()
-        self.process_manager.kill_children()
-        # Really terminate any process still left behind
-        for pid in self.process_manager._process_map:
-            terminate_process(pid=pid, kill_children=True, slow_stop=False)
-        self.process_manager = None
-
-    def publish(self, payload):
-        self.queue.put(payload)
-
-    def __enter__(self):
-        self.start()
-        self.collector.__enter__()
-        attempts = 30
-        while attempts > 0:
-            self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
-            if self.collector.running.wait(1) is True:
-                break
-            attempts -= 1
-        else:
-            pytest.fail("Failed to confirm the collector has started")
-        return self
-
-    def __exit__(self, *args):
-        # Publish a payload to tell the collection it's done processing
-        self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "stop": True})
-        # Now trigger the collector to also exit
-        self.collector.__exit__(*args)
-        # We can safely wait here without a timeout because the Collector instance has a
-        # hard timeout set, so eventually Collector.stopped will be set
-        self.collector.stopped.wait()
-        # Stop our own processing
-        self.queue.put(None)
-        # Wait at most 10 secs for the above `None` in the queue to be processed
-        self.stopped.wait(10)
-        self.close()
-        self.terminate()
-        log.info("The PubServerChannelProcess has terminated")
+@contextmanager
+def channel_publisher_manager(msg_list, p_cnt, pub_server_channel):
+    process_list = []
+    msg_list = copy.deepcopy(msg_list)
+    random.shuffle(msg_list)
+    batch_size = len(msg_list) // p_cnt
+    list_batch = [
+        [x * batch_size, x * batch_size + batch_size] for x in range(0, p_cnt)
+    ]
+    list_batch[-1][1] = list_batch[-1][1] + 1
+    try:
+        for i, j in list_batch:
+            c = PubServerChannelSender(pub_server_channel, msg_list[i:j])
+            p = salt.utils.process.Process(target=c.run)
+            process_list.append(p)
+        for p in process_list:
+            p.start()
+        yield
+    finally:
+        for p in process_list:
+            p.join()
 
 
 @pytest.mark.skip_on_windows
 @pytest.mark.slow_test
-def test_publish_to_pubserv_ipc(salt_master, salt_minion):
-    """
-    Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
-
-    ZMQ's ipc transport not supported on Windows
-    """
-    opts = dict(salt_master.config.copy(), ipc_mode="ipc", pub_hwm=0)
-    with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
-        send_num = 10000
-        expect = []
-        for idx in range(send_num):
-            expect.append(idx)
-            load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
-            server_channel.publish(load)
-    results = server_channel.collector.results
-    assert len(results) == send_num, "{} != {}, difference: {}".format(
-        len(results), send_num, set(expect).difference(results)
+def test_zeromq_filtering_minion(salt_master, salt_minion):
+    opts = dict(
+        salt_master.config.copy(),
+        ipc_mode="ipc",
+        pub_hwm=0,
+        zmq_filtering=True,
+        acceptance_wait_time=5,
     )
-
-
-@pytest.mark.skip_on_freebsd
-@pytest.mark.slow_test
-def test_issue_36469_tcp(salt_master, salt_minion):
-    """
-    Test sending both large and small messags to publisher using TCP
-
-    https://github.com/saltstack/salt/issues/36469
-    """
-
-    def _send_small(server_channel, sid, num=10):
-        for idx in range(num):
-            load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
-            server_channel.publish(load)
-
-    def _send_large(server_channel, sid, num=10, size=250000 * 3):
-        for idx in range(num):
-            load = {
-                "tgt_type": "glob",
-                "tgt": "*",
-                "jid": "{}-l{}".format(sid, idx),
-                "xdata": "0" * size,
+    minion_opts = dict(
+        salt_minion.config.copy(),
+        zmq_filtering=True,
+    )
+    messages = 200
+    workers = 5
+    minions = 3
+    expect = set(range(messages))
+    target_minion_id = salt_minion.id
+    minions_list = [target_minion_id]
+    for _ in range(minions - 1):
+        minions_list.append(random_string("zeromq-minion-"))
+    msg_list = generate_msg_list(messages, minions_list, False)
+    with patch(
+        "salt.utils.minions.CkMinions.check_minions",
+        MagicMock(
+            return_value={
+                "minions": minions_list,
+                "missing": [],
+                "ssh_minions": False,
             }
-            server_channel.publish(load)
-
-    opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
-    send_num = 10 * 4
-    expect = []
-    with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(_send_small, server_channel, 1)
-            executor.submit(_send_large, server_channel, 2)
-            executor.submit(_send_small, server_channel, 3)
-            executor.submit(_send_large, server_channel, 4)
-        expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 3)])
-        expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (2, 4)])
-    results = server_channel.collector.results
-    assert len(results) == send_num, "{} != {}, difference: {}".format(
-        len(results), send_num, set(expect).difference(results)
-    )
+        ),
+    ):
+        with PubServerChannelProcess(opts, minion_opts) as server_channel:
+            with channel_publisher_manager(
+                msg_list, workers, server_channel.pub_server_channel
+            ):
+                cnt = 0
+                last_results_len = 0
+                while cnt < 20:
+                    time.sleep(2)
+                    results_len = len(server_channel.collector.results)
+                    if last_results_len == results_len:
+                        break
+                    last_results_len = results_len
+                    cnt += 1
+        results = set(server_channel.collector.results)
+        assert (
+            results == expect
+        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
 
 
 @pytest.mark.skip_on_windows
 @pytest.mark.slow_test
-def test_zeromq_filtering(salt_master, salt_minion):
+def test_zeromq_filtering_syndic(salt_master, salt_minion):
+    opts = dict(
+        salt_master.config.copy(),
+        ipc_mode="ipc",
+        pub_hwm=0,
+        zmq_filtering=True,
+        acceptance_wait_time=5,
+        order_masters=True,
+    )
+    minion_opts = dict(
+        salt_minion.config.copy(),
+        zmq_filtering=True,
+        __role="syndic",
+    )
+    messages = 200
+    workers = 5
+    minions = 3
+    expect = set(range(messages * minions))
+    minions_list = []
+    for _ in range(minions):
+        minions_list.append(random_string("zeromq-minion-"))
+    msg_list = generate_msg_list(messages, minions_list, False)
+    with patch(
+        "salt.utils.minions.CkMinions.check_minions",
+        MagicMock(
+            return_value={
+                "minions": minions_list,
+                "missing": [],
+                "ssh_minions": False,
+            }
+        ),
+    ):
+        with PubServerChannelProcess(opts, minion_opts) as server_channel:
+            with channel_publisher_manager(
+                msg_list, workers, server_channel.pub_server_channel
+            ):
+                cnt = 0
+                last_results_len = 0
+                while cnt < 20:
+                    time.sleep(2)
+                    results_len = len(server_channel.collector.results)
+                    if last_results_len == results_len:
+                        break
+                    last_results_len = results_len
+                    cnt += 1
+        results = set(server_channel.collector.results)
+        assert (
+            results == expect
+        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.slow_test
+def test_zeromq_filtering_broadcast(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled
     """
@@ -276,25 +204,152 @@ def test_zeromq_filtering(salt_master, salt_minion):
         zmq_filtering=True,
         acceptance_wait_time=5,
     )
-    send_num = 1
-    expect = []
+    minion_opts = dict(
+        salt_minion.config.copy(),
+        zmq_filtering=True,
+    )
+    messages = 200
+    workers = 5
+    minions = 3
+    expect = set(range(messages * minions))
+    target_minion_id = salt_minion.id
+    minions_list = [target_minion_id]
+    for _ in range(minions - 1):
+        minions_list.append(random_string("zeromq-minion-"))
+    msg_list = generate_msg_list(messages, minions_list, True)
     with patch(
         "salt.utils.minions.CkMinions.check_minions",
         MagicMock(
             return_value={
-                "minions": [salt_minion.id],
+                "minions": minions_list,
                 "missing": [],
                 "ssh_minions": False,
             }
         ),
     ):
-        with PubServerChannelProcess(
-            opts, salt_minion.config.copy(), zmq_filtering=True
-        ) as server_channel:
-            expect.append(send_num)
-            load = {"tgt_type": "glob", "tgt": "*", "jid": send_num}
-            server_channel.publish(load)
-        results = server_channel.collector.results
-        assert len(results) == send_num, "{} != {}, difference: {}".format(
-            len(results), send_num, set(expect).difference(results)
-        )
+        with PubServerChannelProcess(opts, minion_opts) as server_channel:
+            with channel_publisher_manager(
+                msg_list, workers, server_channel.pub_server_channel
+            ):
+                cnt = 0
+                last_results_len = 0
+                while cnt < 20:
+                    time.sleep(2)
+                    results_len = len(server_channel.collector.results)
+                    if last_results_len == results_len:
+                        break
+                    last_results_len = results_len
+                    cnt += 1
+        results = set(server_channel.collector.results)
+        assert (
+            results == expect
+        ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
+
+
+async def test_pub_channel(master_opts, io_loop):
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+        assert payloads
+    finally:
+        server.close()
+
+
+async def test_pub_channel_filtering(master_opts, io_loop):
+    master_opts["zmq_filtering"] = True
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+    finally:
+        server.close()
+
+
+async def test_pub_channel_filtering_topic(master_opts, io_loop):
+    master_opts["zmq_filtering"] = True
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
+
+    payloads = []
+
+    async def publish_payload(payload):
+        await server.publish_payload(payload, topic_list=["meh"])
+        payloads.append(payload)
+
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
+
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
+
+    start = time.monotonic()
+    try:
+        while not payloads:
+            await asyncio.sleep(0.3)
+            if time.monotonic() - start > 30:
+                assert False, "No message received after 30 seconds"
+    finally:
+        server.close()

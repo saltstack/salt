@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Configuration disposable regularly scheduled tasks for at.
 ==========================================================
 
 The at state can be add disposable regularly scheduled tasks for your system.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
-
-# Import salt libs
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +61,10 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     # quick return on test=True
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
+        ret["comment"] = "job {} added and will run on {}".format(
+            job,
+            timespec,
+        )
         return ret
 
     # quick return if unique_tag and job exists
@@ -77,7 +74,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             ret["comment"] = "no tag provided and unique_tag is set to True"
             return ret
         elif len(__salt__["at.jobcheck"](tag=tag)["jobs"]) > 0:
-            ret["comment"] = "atleast one job with tag {tag} exists.".format(tag=tag)
+            ret["comment"] = f"atleast one job with tag {tag} exists."
             return ret
 
     # create job
@@ -85,15 +82,29 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
         luser = __salt__["user.info"](user)
         if not luser:
             ret["result"] = False
-            ret["comment"] = "user {0} does not exists".format(user)
+            ret["comment"] = f"user {user} does not exists"
             return ret
-        ret["comment"] = "job {0} added and will run as {1} on {2}".format(
-            job, user, timespec,
+        ret["comment"] = "job {} added and will run as {} on {}".format(
+            job,
+            user,
+            timespec,
         )
-        res = __salt__["at.at"](timespec, job, tag=tag, runas=user,)
+        res = __salt__["at.at"](
+            timespec,
+            job,
+            tag=tag,
+            runas=user,
+        )
     else:
-        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
-        res = __salt__["at.at"](timespec, job, tag=tag,)
+        ret["comment"] = "job {} added and will run on {}".format(
+            job,
+            timespec,
+        )
+        res = __salt__["at.at"](
+            timespec,
+            job,
+            tag=tag,
+        )
 
     # set ret['changes']
     if "jobs" in res and len(res["jobs"]) > 0:
@@ -165,7 +176,7 @@ def absent(name, jobid=None, **kwargs):
 
     # limit was never support
     if "limit" in kwargs:
-        ret["comment"] = "limit parameter not supported {0}".format(name)
+        ret["comment"] = f"limit parameter not supported {name}"
         ret["result"] = False
         return ret
 
@@ -180,7 +191,7 @@ def absent(name, jobid=None, **kwargs):
         jobs = __salt__["at.atq"](jobid)
         if "jobs" in jobs and len(jobs["jobs"]) == 0:
             ret["result"] = True
-            ret["comment"] = "job with id {jobid} not present".format(jobid=jobid)
+            ret["comment"] = f"job with id {jobid} not present"
             return ret
         elif "jobs" in jobs and len(jobs["jobs"]) == 1:
             if "job" in jobs["jobs"][0] and jobs["jobs"][0]["job"]:
@@ -198,10 +209,10 @@ def absent(name, jobid=None, **kwargs):
                 return ret
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "more than one job was return for job with id {jobid}".format(
-                jobid=jobid
+            ret["comment"] = (
+                "more than one job was return for job with id {jobid}".format(
+                    jobid=jobid
+                )
             )
             return ret
 
@@ -285,6 +296,3 @@ def mod_watch(name, **kwargs):
         ret = present(**kwargs)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

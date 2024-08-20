@@ -1,0 +1,378 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '<{ template }>'
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default(False) %>
+<%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
+<%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
+<%- set gpg_key_id = "64CBBC8173D76B3F" %>
+<%- set prepare_actual_release = prepare_actual_release | default(False) %>
+<%- set gh_actions_workflows_python_version = "3.10" %>
+<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
+---
+<%- block name %>
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
+<%- endblock name %>
+
+<%- block on %>
+
+on:
+  push: {}
+  pull_request:
+    types:
+      - labeled
+      - unlabeled
+      - opened
+      - reopened
+      - synchronize
+
+<%- endblock on %>
+
+<%- block env %>
+
+env:
+  COLUMNS: 190
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+
+<%- endblock env %>
+
+<%- block permissions %>
+
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+<%- if workflow_slug not in ("nightly", "scheduled") %>
+  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
+<%- endif %>
+
+<%- endblock permissions %>
+
+<%- block concurrency %>
+
+concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+<%- endblock concurrency %>
+
+<%- block jobs %>
+
+jobs:
+
+  <%- block pre_jobs %>
+  <%- endblock pre_jobs %>
+
+  <%- if includes.get("prepare-workflow", True) %>
+  <%- block prepare_workflow_job %>
+  <%- do conclusion_needs.append("prepare-workflow") %>
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on: ubuntu-latest
+    <%- if prepare_workflow_if_check %>
+    if: <{ prepare_workflow_if_check }>
+    <%- endif %>
+    <%- if prepare_workflow_needs %>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    <%- endif %>
+    outputs:
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
+      runners: ${{ steps.runner-types.outputs.runners }}
+      changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
+      testrun: ${{ steps.define-testrun.outputs.testrun }}
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
+      testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Get Changed Files
+        if: ${{ github.event_name == 'pull_request'}}
+        id: changed-files
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ github.token }}
+          list-files: json
+          filters: |
+            repo:
+              - added|modified:
+                - '**'
+            doc-requirements:
+              - added|modified: &doc_requirements
+                - requirements/static/ci/py3.*/docs.txt
+            lint-requirements:
+              - added|modified: &lint_requirements
+                - requirements/static/ci/py3.*/lint.txt
+            pkg_requirements:
+              - added|modified: &pkg_requirements
+                - requirements/static/pkg/py3.*/darwin.txt
+                - requirements/static/pkg/py3.*/linux.txt
+                - requirements/static/pkg/py3.*/freebsd.txt
+                - requirements/static/pkg/py3.*/windows.txt
+            test_requirements:
+              - added|modified: &test_requirements
+                - requirements/static/ci/py3.*/darwin.txt
+                - requirements/static/ci/py3.*/linux.txt
+                - requirements/static/ci/py3.*/freebsd.txt
+                - requirements/static/ci/py3.*/windows.txt
+                - requirements/static/ci/py3.*/darwin-crypto.txt
+                - requirements/static/ci/py3.*/linux-crypto.txt
+                - requirements/static/ci/py3.*/freebsd-crypto.txt
+                - requirements/static/ci/py3.*/windows-crypto.txt
+            deleted:
+              - deleted:
+                - '**'
+            docs:
+              - added|modified:
+                - doc/**
+                - .github/workflows/build-docs.yml
+                - *doc_requirements
+            workflows:
+              - added|modified:
+                - cicd/shared-gh-workflows-context.yml
+                - .github/actions/**/action.yml
+                - .github/workflows/*.yml
+                - .github/workflows/templates/*.yml.jinja2
+                - tools/precommit/workflows.py
+            salt:
+              - added|modified: &salt_added_modified
+                - setup.py
+                - noxfile.py
+                - salt/**/*.py
+                - tasks/**/*.py
+                - tools/**/*.py
+            tests:
+              - added|modified: &tests_added_modified
+                - tests/**/*.py
+            lint:
+              - added|modified:
+                - .pylintrc
+                - *lint_requirements
+            golden_images:
+              - added|modified:
+                - cicd/golden-images.json
+            pkg_tests:
+              - added|modified: &pkg_tests_added_modified
+                - pkg/**
+                - *pkg_requirements
+                - *salt_added_modified
+            testrun:
+              - added|modified:
+                - *pkg_requirements
+                - *test_requirements
+                - *salt_added_modified
+                - *tests_added_modified
+                - *pkg_tests_added_modified
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
+
+      - name: Get Pull Request Test Labels
+        id: get-pull-labels
+        if: ${{ github.event_name == 'pull_request'}}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-pr-test-labels --repository ${{ github.repository }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
+
+      <%- if prepare_actual_release %>
+
+      - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
+
+
+      <%- endif %>
+
+      - name: Write Changed Files To A Local File
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        if: ${{ github.event_name == 'pull_request' }}
+        run:
+          cat changed-files.json
+
+      - name: Process Changed Files
+        id: process-changed-files
+        run: |
+          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+
+      - name: Check Collected Changed Files
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Define Runner Types
+        id: runner-types
+        run: |
+          tools ci runner-types ${{ github.event_name }}
+
+      - name: Define Jobs To Run
+        id: define-jobs
+        run: |
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ github.event_name }} changed-files.json
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Get Latest Salt Releases for Testing
+        id: get-testing-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Define Testrun
+        id: define-testrun
+        run: |
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Contents of generated testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        run: |
+          cat testrun-changed-files.txt || true
+
+      - name: Upload testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: testrun-changed-files.txt
+          path: testrun-changed-files.txt
+
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
+        run: |
+          tools ci get-release-changelog-target ${{ github.event_name }}
+
+{#  We can't yet use tokenless uploads with the codecov CLI
+
+      - name: Install Codecov CLI
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Save Commit Metadata In Codecov
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-commit --git-service github --sha ${{ github.sha }}
+
+      - name: Create Codecov Coverage Report
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            create-report --git-service github --sha ${{ github.sha }}
+
+#}
+
+  <%- endblock prepare_workflow_job %>
+  <%- endif %>
+
+<%- endblock jobs %>
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    <%- if workflow_slug == "nightly" %>
+    environment: <{ workflow_slug }>
+    <%- endif %>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in conclusion_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_pkg_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: im-open/workflow-conclusion@v2
+
+      <%- block set_pipeline_exit_status_extra_steps %>
+      <%- endblock set_pipeline_exit_status_extra_steps %>
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"

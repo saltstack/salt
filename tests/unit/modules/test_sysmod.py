@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.sysmod as sysmod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 
-class MockDocstringable(object):
+class MockDocstringable:
     def __init__(self, docstr):
         self.__doc__ = docstr
 
@@ -23,12 +16,12 @@ class MockDocstringable(object):
         self.__globals__ = {"__doc__": docstr}
 
 
-class Mockstate(object):
+class Mockstate:
     """
     Mock of State
     """
 
-    class State(object):
+    class State:
         """
         Mock state functions
         """
@@ -39,12 +32,12 @@ class Mockstate(object):
             pass
 
 
-class Mockrunner(object):
+class Mockrunner:
     """
     Mock of runner
     """
 
-    class Runner(object):
+    class Runner:
         """
         Mock runner functions
         """
@@ -57,7 +50,7 @@ class Mockrunner(object):
             return sysmod.__salt__
 
 
-class Mockloader(object):
+class Mockloader:
     """
     Mock of loader
     """
@@ -114,20 +107,22 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
         cls.salt_dunder = {}
 
         for func in cls._functions:
-            docstring = "docstring for {0}".format(func)
+            docstring = f"docstring for {func}"
 
             cls.salt_dunder[func] = MockDocstringable(docstring)
             cls._docstrings[func] = docstring
 
-            module = func.split(".")[0]
+            module = func.split(".", maxsplit=1)[0]
             cls._statedocstrings[func] = docstring
-            cls._statedocstrings[module] = "docstring for {0}".format(module)
+            cls._statedocstrings[module] = f"docstring for {module}"
 
-            cls._modules.add(func.split(".")[0])
+            cls._modules.add(func.split(".", maxsplit=1)[0])
 
-            docstring = "docstring for {0}".format(func)
+            docstring = f"docstring for {func}"
             mock = MockDocstringable(docstring)
-            mock.set_module_docstring("docstring for {0}".format(func.split(".")[0]))
+            mock.set_module_docstring(
+                "docstring for {}".format(func.split(".", maxsplit=1)[0])
+            )
             Mockstate.State.states[func] = mock
 
         cls._modules = sorted(list(cls._modules))

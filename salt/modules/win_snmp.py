@@ -1,28 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing SNMP service settings on Windows servers.
 The Windows feature 'SNMP-Service' must be installed.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd party libs
-from salt.ext import six
 
 _HKEY = "HKLM"
 
 _SNMP_KEY = r"SYSTEM\CurrentControlSet\Services\SNMP\Parameters"
-_AGENT_KEY = r"{0}\RFC1156Agent".format(_SNMP_KEY)
-_COMMUNITIES_KEY = r"{0}\ValidCommunities".format(_SNMP_KEY)
+_AGENT_KEY = rf"{_SNMP_KEY}\RFC1156Agent"
+_COMMUNITIES_KEY = rf"{_SNMP_KEY}\ValidCommunities"
 
 _SNMP_GPO_KEY = r"SOFTWARE\Policies\SNMP\Parameters"
-_COMMUNITIES_GPO_KEY = r"{0}\ValidCommunities".format(_SNMP_GPO_KEY)
+_COMMUNITIES_GPO_KEY = rf"{_SNMP_GPO_KEY}\ValidCommunities"
 
 _PERMISSION_TYPES = {
     "None": 1,
@@ -57,18 +50,6 @@ def __virtual__():
         return False, "Module win_snmp: SNMP not installed"
 
     return __virtualname__
-
-
-def _to_unicode(instr):
-    """
-    Converts from current users character encoding to unicode.
-    When instr has a value of None, the return value of the function
-    will also be None.
-    """
-    if instr is None or isinstance(instr, six.text_type):
-        return instr
-    else:
-        return six.text_type(instr, "utf8")
 
 
 def get_agent_service_types():
@@ -181,14 +162,10 @@ def set_agent_settings(contact=None, location=None, services=None):
         # Validate the services.
         for service in services:
             if service not in _SERVICE_TYPES:
-                message = (
-                    "Invalid service '{0}' specified. Valid services:" " {1}"
-                ).format(service, get_agent_service_types())
+                message = "Invalid service '{}' specified. Valid services: {}".format(
+                    service, get_agent_service_types()
+                )
                 raise SaltInvocationError(message)
-
-    if six.PY2:
-        contact = _to_unicode(contact)
-        location = _to_unicode(location)
 
     settings = {"contact": contact, "location": location, "services": services}
 
@@ -378,7 +355,7 @@ def get_community_names():
                 if not isinstance(current_value, dict):
                     continue
 
-                permissions = six.text_type()
+                permissions = ""
                 for permission_name in _PERMISSION_TYPES:
                     if current_value["vdata"] == _PERMISSION_TYPES[permission_name]:
                         permissions = permission_name
@@ -437,10 +414,11 @@ def set_community_names(communities):
         try:
             vdata = _PERMISSION_TYPES[communities[vname]]
         except KeyError:
-            message = (
-                "Invalid permission '{0}' specified. Valid permissions: " "{1}"
-            ).format(communities[vname], _PERMISSION_TYPES.keys())
-            raise SaltInvocationError(message)
+            raise SaltInvocationError(
+                "Invalid permission '{}' specified. Valid permissions: {}".format(
+                    communities[vname], _PERMISSION_TYPES.keys()
+                )
+            )
         values[vname] = vdata
 
     # Check current communities.

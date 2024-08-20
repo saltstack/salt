@@ -1,8 +1,8 @@
 # Copyright 2007 Google Inc.
 #  Licensed to PSF under a Contributor Agreement.
 
-# This is ipaddress.py from Python 3.9.1, verbatim, with minor compatility changes
-#    https://github.com/python/cpython/blob/v3.9.1/Lib/ipaddress.py
+# This is ipaddress.py from Python 3.9.5, verbatim, with minor compatility changes
+#    https://github.com/python/cpython/blob/v3.9.5/Lib/ipaddress.py
 #
 # Modifications:
 #  - add `_cache` dictionary attribute because cached_property does not exist
@@ -1277,6 +1277,11 @@ class _BaseV4:
         if len(octet_str) > 3:
             msg = "At most 3 characters permitted in %r"
             raise ValueError(msg % octet_str)
+        # Handle leading zeros as strict as glibc's inet_pton()
+        # See security bug bpo-36384
+        if octet_str != '0' and octet_str[0] == '0':
+            msg = "Leading zeros are not permitted in %r"
+            raise ValueError(msg % octet_str)
         # Convert to integer (we know digits are legal)
         octet_int = int(octet_str, 10)
         if octet_int > 255:
@@ -2157,8 +2162,7 @@ class IPv6Interface(IPv6Address):
         return x
 
     def __str__(self):
-        return '%s/%d' % (super().__str__(),
-                          self._prefixlen)
+        return '%s/%d' % (super(), self._prefixlen)
 
     def __eq__(self, other):
         address_equal = IPv6Address.__eq__(self, other)

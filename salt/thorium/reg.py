@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Used to manage the thorium register. The thorium register is where compound
 values are stored and computed, such as averages etc.
 """
-
-# import python libs
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import salt.utils.stringutils
 

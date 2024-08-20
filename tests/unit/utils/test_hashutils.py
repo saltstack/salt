@@ -1,12 +1,6 @@
-# -*- coding: utf-8 -*-
+import pytest
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.utils.hashutils
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -95,6 +89,7 @@ class HashutilsTestCase(TestCase):
             self.bytes,
         )
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_md5_digest(self):
         """
         Ensure that this function converts the value passed to bytes before

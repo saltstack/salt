@@ -1,0 +1,449 @@
+<%- set gh_environment = gh_environment|default("ci") %>
+
+<%- extends 'layout.yml.jinja' %>
+<%- set pre_commit_version = "3.0.4" %>
+
+
+<%- block jobs %>
+  <{- super() }>
+
+  <%- set job_name = "pre-commit" %>
+  <%- if includes.get(job_name, True) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Pre-Commit
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/pre-commit-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      pre-commit-version: "<{ pre_commit_version }>"
+
+  <%- endif %>
+
+
+  <%- set job_name = "lint" %>
+  <%- if includes.get(job_name, True) %>
+
+  lint:
+    <%- do conclusion_needs.append('lint') %>
+    name: Lint
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/lint-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+
+  <%- endif %>
+
+
+  <%- set job_name = "prepare-release" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
+    <%- if prepare_actual_release %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    runs-on:
+      - self-hosted
+      - linux
+      - medium
+      - x86_64
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    runs-on: ubuntu-latest
+    <%- endif %>
+    needs:
+      - prepare-workflow
+    steps:
+      - uses: actions/checkout@v4
+
+    <%- if not prepare_actual_release %>
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+    <%- endif %>
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-changelog
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          <%- if prepare_actual_release %>
+          release: true
+          <%- endif %>
+
+      - name: Update Debian changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-deb --draft
+          tools changelog update-deb
+
+      - name: Update RPM changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-rpm --draft
+          tools changelog update-rpm
+
+      - name: Create Release Notes Template
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
+            tools changelog update-release-notes --next-release --template-only
+          else
+            tools changelog update-release-notes --template-only
+          fi
+
+      - name: Update Release Notes
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
+              tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
+              tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
+          else
+              tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
+              tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
+          fi
+
+      - name: Generate MAN Pages
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        env:
+          LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
+        run: |
+          tools docs man
+
+      - name: Update Changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-changelog-md --draft
+          tools changelog update-changelog-md
+
+      - name: Show Changes Diff
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git diff --color
+
+      - name: Configure Git
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Setup Pre-Commit
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: ./.github/actions/setup-pre-commit
+        with:
+          version: "<{ pre_commit_version }>"
+          cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Commit Changes
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        env:
+          SKIP: lint-salt,lint-tests
+          PRE_COMMIT_COLOR: always
+        run: |
+          # Run it twice so that pre-commit can fix anything that can be automatically fixed.
+          git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
+            git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Create release changes patch
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Upload Changes Diff Artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          retention-days: 7
+          if-no-files-found: error
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-docs" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Documentation
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-source-tarball
+    uses: ./.github/workflows/build-docs.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-source-tarball" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    name: Build Source Tarball
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-build
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Build Source Tarball
+        uses: ./.github/actions/build-source-tarball
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-deps-onedir" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Build Dependencies Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+    uses: ./.github/workflows/build-deps-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "<{ relenv_version }>"
+      python-version: "<{ python_version }>"
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-salt-onedir" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    needs:
+      - prepare-workflow
+      - build-deps-onedir
+      - build-source-tarball
+    uses: ./.github/workflows/build-salt-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "<{ relenv_version }>"
+      python-version: "<{ python_version }>"
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-pkgs" %>
+  <%- if includes.get(job_name, True) %>
+  <%- include "build-packages.yml.jinja" %>
+  <%- endif %>
+
+  <%- set pkg_tests_job_name = "pkg-tests" %>
+  <%- set salt_tests_job_name = "salt-tests" %>
+  <%- if includes.get(pkg_tests_job_name, True) or includes.get(salt_tests_job_name, True) %>
+  <%- include "build-ci-deps.yml.jinja" %>
+  <%- endif %>
+
+  <%- if includes.get(pkg_tests_job_name, True) %>
+  <%- include "test-salt-pkg.yml.jinja" %>
+  <%- endif %>
+
+
+  <%- if includes.get(salt_tests_job_name, True) %>
+  <%- include "test-salt.yml.jinja" %>
+  <%- endif %>
+
+  <%- if skip_test_coverage_check == "false" or "skip_code_coverage" in skip_test_coverage_check %>
+
+  combine-all-code-coverage:
+    <%- do conclusion_needs.append("combine-all-code-coverage") %>
+    name: Combine Code Coverage
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
+    runs-on: ubuntu-latest
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+    needs:
+      - prepare-workflow
+      <%- for need in test_salt_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-coverage
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==<{ nox_version }>'
+
+{#  We can't yet use tokenless uploads with the codecov CLI
+
+      - name: Install Codecov CLI
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Tell Codecov To Process Reports
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            send-notifications --git-service github --sha ${{ github.sha }}
+
+#}
+
+      - name: Merge All Code Coverage Test Run Artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: all-testrun-coverage-artifacts
+          pattern: all-testrun-coverage-artifacts-*
+          separate-directories: false
+          delete-merged: true
+
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v4
+        with:
+          name: all-testrun-coverage-artifacts
+          path: artifacts/coverage/
+
+      - name: Display structure of downloaded files
+        run: tree -a artifacts/
+
+      - name: Install Codecov CLI
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          mv ./codecov /usr/local/bin/
+
+      - name: Create XML Coverage Reports
+        run: |
+          nox --force-color -e create-xml-coverage-reports
+
+      - name: Upload Code Coverage To Codecov
+        if: ${{ ! github.event.repository.private && ! github.event.repository.fork }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Upload Salt Code Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-salt-html-report
+          path: artifacts/coverage/html/salt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e coverage-report
+
+      - name: Create Combined Code Coverage JSON Report
+        run: |
+          nox --force-color -e create-json-coverage-reports
+
+      - name: Upload Combined Code Coverage JSON Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-full-json-report
+          path: artifacts/coverage/coverage.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create Combined Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
+      - name: Upload Combined Code Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-full-html-report
+          path: artifacts/coverage/html/full
+          retention-days: 7
+          if-no-files-found: error
+  <%- endif %>
+
+<%- endblock jobs %>

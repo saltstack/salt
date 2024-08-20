@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -17,7 +11,7 @@ def key_is_encrypted(key):
     try:
         with salt.utils.files.fopen(key, "r") as fp_:
             key_data = salt.utils.stringutils.to_unicode(fp_.read())
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         # Raise a CommandExecutionError
         salt.utils.files.process_read_exception(exc, key)
 
@@ -26,6 +20,6 @@ def key_is_encrypted(key):
     del key_data
 
     if not is_private_key:
-        raise CommandExecutionError("{0} is not a private key".format(key))
+        raise CommandExecutionError(f"{key} is not a private key")
 
     return is_encrypted

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL schemas
 ================================
@@ -10,9 +9,7 @@ The postgres_schemas module is used to create and manage Postgres schemas.
     public:
       postgres_schema.present 'dbname' 'name'
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)
@@ -69,8 +66,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Schema {0} is already present in "
-        "database {1}".format(name, dbname),
+        "comment": f"Schema {name} is already present in database {dbname}",
     }
 
     db_args = {
@@ -90,9 +86,8 @@ def present(
     if schema_attr is None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "Schema {0} is set to be created"
-                " in database {1}.".format(name, dbname)
+            ret["comment"] = "Schema {} is set to be created in database {}.".format(
+                name, dbname
             )
             return ret
         cret = __salt__["postgres.schema_create"](dbname, name, owner=owner, **db_args)
@@ -156,25 +151,25 @@ def absent(
     if __salt__["postgres.schema_exists"](dbname, name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "Schema {0} is set to be removed"
-                " from database {1}".format(name, dbname)
+            ret["comment"] = "Schema {} is set to be removed from database {}".format(
+                name, dbname
             )
             return ret
         elif __salt__["postgres.schema_remove"](dbname, name, **db_args):
-            ret["comment"] = "Schema {0} has been removed" " from database {1}".format(
+            ret["comment"] = "Schema {} has been removed from database {}".format(
                 name, dbname
             )
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Schema {0} failed to be removed".format(name)
+            ret["comment"] = f"Schema {name} failed to be removed"
             return ret
     else:
         ret["comment"] = (
-            "Schema {0} is not present in database {1},"
-            " so it cannot be removed".format(name, dbname)
+            "Schema {} is not present in database {}, so it cannot be removed".format(
+                name, dbname
+            )
         )
 
     return ret

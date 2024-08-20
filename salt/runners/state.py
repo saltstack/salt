@@ -86,7 +86,7 @@ def orchestrate(
 
         Runner uses the pillar variable
 
-    .. versionchanged:: 2017.5
+    .. versionchanged:: 2017.5.0
 
         Runner uses the pillar_enc variable that allows renderers to render the pillar.
         This is usable when supplying the contents of a file as pillar, and the file contains
@@ -101,6 +101,18 @@ def orchestrate(
        salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
 
     """
+
+    try:
+        orig_user = __opts__["user"]
+        __opts__["user"] = __user__
+        log.debug(
+            "changed opts user from original '%s' to global user '%s'",
+            orig_user,
+            __user__,
+        )
+    except NameError:
+        log.debug("unable to find global user __user__")
+
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError("Pillar data must be formatted as a dictionary")
     __opts__["file_client"] = "local"
@@ -150,12 +162,16 @@ def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs)
 
         salt-run state.orchestrate_single fun=salt.wheel name=key.list_all
     """
-    if pillar is not None and not isinstance(pillar, dict):
-        raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+    if pillar is not None:
+        if isinstance(pillar, dict):
+            kwargs["pillar"] = pillar
+        else:
+            raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+
     __opts__["file_client"] = "local"
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions["state.single"](
-        fun, name, test=None, queue=False, pillar=pillar, **kwargs
+        fun, name, test=None, queue=False, **kwargs
     )
     ret = {minion.opts["id"]: running}
     __jid_event__.fire_event({"data": ret, "outputter": "highstate"}, "progress")

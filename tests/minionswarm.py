@@ -1,16 +1,13 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 The minionswarm script will start a group of salt minions with different ids
 on a single system to test scale capabilities
 """
 # pylint: disable=resource-leakage
-# Import Python Libs
-from __future__ import absolute_import, print_function
 
 import hashlib
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import random
 import shutil
@@ -21,15 +18,10 @@ import tempfile
 import time
 import uuid
 
-# Import salt libs
 import salt
 import salt.utils.files
 import salt.utils.yaml
 import tests.support.runtests
-
-# Import third party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 OSES = [
     "Arch",
@@ -127,9 +119,7 @@ def parse():
         dest="foreground",
         default=False,
         action="store_true",
-        help=(
-            "Run the minions with debug output of the swarm going to " "the terminal"
-        ),
+        help="Run the minions with debug output of the swarm going to the terminal",
     )
     parser.add_option(
         "--temp-dir",
@@ -166,7 +156,7 @@ def parse():
         "-c",
         "--config-dir",
         default="",
-        help=("Pass in a configuration directory containing base configuration."),
+        help="Pass in a configuration directory containing base configuration.",
     )
     parser.add_option("-u", "--user", default=tests.support.runtests.this_user())
 
@@ -174,13 +164,13 @@ def parse():
 
     opts = {}
 
-    for key, val in six.iteritems(options.__dict__):
+    for key, val in options.__dict__.items():
         opts[key] = val
 
     return opts
 
 
-class Swarm(object):
+class Swarm:
     """
     Create a swarm of minions
     """
@@ -217,11 +207,13 @@ class Swarm(object):
         if not os.path.exists(path):
             os.makedirs(path)
 
-            print("Creating shared pki keys for the swarm on: {0}".format(path))
+            print(f"Creating shared pki keys for the swarm on: {path}")
             subprocess.call(
                 "salt-key -c {0} --gen-keys minion --gen-keys-dir {0} "
                 "--log-file {1} --user {2}".format(
-                    path, os.path.join(path, "keys.log"), self.opts["user"],
+                    path,
+                    os.path.join(path, "keys.log"),
+                    self.opts["user"],
                 ),
                 shell=True,
             )
@@ -239,7 +231,7 @@ class Swarm(object):
         minions.start_minions()
         print("Starting minions...")
         # self.start_minions()
-        print("All {0} minions have started.".format(self.opts["minions"]))
+        print("All {} minions have started.".format(self.opts["minions"]))
         print("Waiting for CTRL-C to properly shutdown minions...")
         while True:
             try:
@@ -268,7 +260,7 @@ class Swarm(object):
         Clean up the config files
         """
         for path in self.confs:
-            pidfile = "{0}.pid".format(path)
+            pidfile = f"{path}.pid"
             try:
                 try:
                     with salt.utils.files.fopen(pidfile) as fp_:
@@ -280,7 +272,7 @@ class Swarm(object):
                     os.remove(pidfile)
                 if not self.opts["no_clean"]:
                     shutil.rmtree(path)
-            except (OSError, IOError):
+            except OSError:
                 pass
 
 
@@ -295,9 +287,7 @@ class MinionSwarm(Swarm):
         """
         self.prep_configs()
         for path in self.confs:
-            cmd = "salt-minion -c {0} --pid-file {1}".format(
-                path, "{0}.pid".format(path)
-            )
+            cmd = "salt-minion -c {} --pid-file {}".format(path, f"{path}.pid")
             if self.opts["foreground"]:
                 cmd += " -l debug &"
             else:
@@ -314,7 +304,7 @@ class MinionSwarm(Swarm):
             spath = os.path.join(self.opts["config_dir"], "minion")
             with salt.utils.files.fopen(spath) as conf:
                 data = salt.utils.yaml.safe_load(conf) or {}
-        minion_id = "{0}-{1}".format(self.opts["name"], str(idx).zfill(self.zfill))
+        minion_id = "{}-{}".format(self.opts["name"], str(idx).zfill(self.zfill))
 
         dpath = os.path.join(self.swarm_root, minion_id)
         if not os.path.exists(dpath):
@@ -382,7 +372,7 @@ class MasterSwarm(Swarm):
     """
 
     def __init__(self, opts):
-        super(MasterSwarm, self).__init__(opts)
+        super().__init__(opts)
         self.conf = os.path.join(self.swarm_root, "master")
 
     def start(self):
@@ -402,9 +392,7 @@ class MasterSwarm(Swarm):
         """
         Do the master start
         """
-        cmd = "salt-master -c {0} --pid-file {1}".format(
-            self.conf, "{0}.pid".format(self.conf)
-        )
+        cmd = "salt-master -c {} --pid-file {}".format(self.conf, f"{self.conf}.pid")
         if self.opts["foreground"]:
             cmd += " -l debug &"
         else:

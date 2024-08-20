@@ -93,18 +93,18 @@ def write(data, path, saltenv="base", index=0):
     index of the file can be specified to write to a lower priority file root
     """
     if saltenv not in __opts__["pillar_roots"]:
-        return "Named environment {} is not present".format(saltenv)
+        return f"Named environment {saltenv} is not present"
     if len(__opts__["pillar_roots"][saltenv]) <= index:
         return "Specified index {} in environment {} is not present".format(
             index, saltenv
         )
     if os.path.isabs(path):
-        return "The path passed in {} is not relative to the environment " "{}".format(
+        return "The path passed in {} is not relative to the environment {}".format(
             path, saltenv
         )
     roots_dir = __opts__["pillar_roots"][saltenv][index]
     dest = os.path.join(roots_dir, path)
-    if not salt.utils.verify.clean_path(roots_dir, dest):
+    if not salt.utils.verify.clean_path(roots_dir, dest, subdir=True):
         return "Invalid path"
     dest = os.path.join(__opts__["pillar_roots"][saltenv][index], path)
     dest_dir = os.path.dirname(dest)
@@ -112,4 +112,4 @@ def write(data, path, saltenv="base", index=0):
         os.makedirs(dest_dir)
     with salt.utils.files.fopen(dest, "w+") as fp_:
         fp_.write(salt.utils.stringutils.to_str(data))
-    return "Wrote data to file {}".format(dest)
+    return f"Wrote data to file {dest}"

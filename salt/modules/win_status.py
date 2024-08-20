@@ -8,31 +8,24 @@ or for problem solving if your minion is having problems.
 :depends:  - wmi
 """
 
-
 import ctypes
 import datetime
 import logging
-import subprocess
 
 import salt.utils.event
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_pdh
-
-# These imports needed for namespaced functions
-# pylint: disable=W0611
 from salt.modules.status import ping_master, time_
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.utils.network import host_to_ips as _host_to_ips
 
 log = logging.getLogger(__name__)
 
-
-# pylint: enable=W0611
-
 try:
     if salt.utils.platform.is_windows():
         import wmi
+
         import salt.utils.winapi
 
         HAS_WMI = True
@@ -41,13 +34,17 @@ try:
 except ImportError:
     HAS_WMI = False
 
-HAS_PSUTIL = False
-if salt.utils.platform.is_windows():
+try:
     import psutil
 
     HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
-__opts__ = {}
+if salt.utils.platform.is_windows():
+    ping_master = namespaced_function(ping_master, globals())
+    time_ = namespaced_function(time_, globals())
+
 __virtualname__ = "status"
 
 
@@ -149,11 +146,6 @@ def __virtual__():
 
     if not HAS_PSUTIL:
         return False, "win_status.py: Requires psutil"
-
-    # Namespace modules from `status.py`
-    global ping_master, time_
-    ping_master = _namespaced_function(ping_master, globals())
-    time_ = _namespaced_function(time_, globals())
 
     return __virtualname__
 
@@ -493,6 +485,24 @@ def _byte_calc(val):
     return tstr
 
 
+def _get_connected_ips(port):
+    """
+    List all connections on the system that have an established connection on
+    the passed port. This uses psutil.net_connections instead of netstat to be
+    locale agnostic.
+    """
+    connected_ips = set()
+    # Let's use psutil to be non-locale specific
+    conns = psutil.net_connections()
+
+    for conn in conns:
+        if conn.status == psutil.CONN_ESTABLISHED:
+            if conn.laddr.port == port:
+                connected_ips.add(conn.laddr.ip)
+
+    return connected_ips
+
+
 def master(master=None, connected=True):
     """
     .. versionadded:: 2015.5.0
@@ -508,46 +518,6 @@ def master(master=None, connected=True):
 
         salt '*' status.master
     """
-
-    def _win_remotes_on(port):
-        """
-        Windows specific helper function.
-        Returns set of ipv4 host addresses of remote established connections
-        on local or remote tcp port.
-
-        Parses output of shell 'netstat' to get connections
-
-        PS C:> netstat -n -p TCP
-
-        Active Connections
-
-          Proto  Local Address          Foreign Address        State
-          TCP    10.1.1.26:3389         10.1.1.1:4505          ESTABLISHED
-          TCP    10.1.1.26:56862        10.1.1.10:49155        TIME_WAIT
-          TCP    10.1.1.26:56868        169.254.169.254:80     CLOSE_WAIT
-          TCP    127.0.0.1:49197        127.0.0.1:49198        ESTABLISHED
-          TCP    127.0.0.1:49198        127.0.0.1:49197        ESTABLISHED
-        """
-        remotes = set()
-        try:
-            data = subprocess.check_output(
-                ["netstat", "-n", "-p", "TCP"]
-            )  # pylint: disable=minimum-python-version
-        except subprocess.CalledProcessError:
-            log.error("Failed netstat")
-            raise
-
-        lines = salt.utils.stringutils.to_unicode(data).split("\n")
-        for line in lines:
-            if "ESTABLISHED" not in line:
-                continue
-            chunks = line.split()
-            remote_host, remote_port = chunks[2].rsplit(":", 1)
-            if int(remote_port) != port:
-                continue
-            remotes.add(remote_host)
-        return remotes
-
     # the default publishing port
     port = 4505
     master_ips = None
@@ -562,7 +532,7 @@ def master(master=None, connected=True):
         port = int(__salt__["config.get"]("publish_port"))
 
     master_connection_status = False
-    connected_ips = _win_remotes_on(port)
+    connected_ips = _get_connected_ips(port)
 
     # Get connection status for master
     for master_ip in master_ips:

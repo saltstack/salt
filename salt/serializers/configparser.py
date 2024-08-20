@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.serializers.configparser
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -8,13 +7,9 @@
     Implements a configparser serializer.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import configparser
+import io
 
-import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
-
-# Import Salt Libs
-from salt.ext import six
 from salt.serializers import DeserializationError, SerializationError
 
 __all__ = ["deserialize", "serialize", "available"]
@@ -30,23 +25,13 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower configparser module.
     """
 
-    if six.PY3:
-        cp = configparser.ConfigParser(**options)
-    else:
-        cp = configparser.SafeConfigParser(**options)
+    cp = configparser.ConfigParser(**options)
 
     try:
-        if not isinstance(stream_or_string, (bytes, six.string_types)):
-            if six.PY3:
-                cp.read_file(stream_or_string)
-            else:
-                cp.readfp(stream_or_string)
+        if not isinstance(stream_or_string, (bytes, str)):
+            cp.read_file(stream_or_string)
         else:
-            if six.PY3:
-                cp.read_file(six.moves.StringIO(stream_or_string))
-            else:
-                # python2's ConfigParser cannot parse a config from a string
-                cp.readfp(six.moves.StringIO(stream_or_string))
+            cp.read_file(io.StringIO(stream_or_string))
         data = {}
         for section_name in cp.sections():
             section = {}
@@ -69,21 +54,16 @@ def serialize(obj, **options):
     try:
         if not isinstance(obj, dict):
             raise TypeError(
-                "configparser can only serialize dictionaries, not {0}".format(
-                    type(obj)
-                )
+                f"configparser can only serialize dictionaries, not {type(obj)}"
             )
         fp = options.pop("fp", None)
-        if six.PY3:
-            cp = configparser.ConfigParser(**options)
-        else:
-            cp = configparser.SafeConfigParser(**options)
+        cp = configparser.ConfigParser(**options)
         _read_dict(cp, obj)
 
         if fp:
             return cp.write(fp)
         else:
-            s = six.moves.StringIO()
+            s = io.StringIO()
             cp.write(s)
             return s.getvalue()
     except Exception as error:  # pylint: disable=broad-except
@@ -91,10 +71,7 @@ def serialize(obj, **options):
 
 
 def _is_defaultsect(section_name):
-    if six.PY3:
-        return section_name == configparser.DEFAULTSECT
-    else:  # in py2 the check is done against lowercased section name
-        return section_name.upper() == configparser.DEFAULTSECT
+    return section_name == configparser.DEFAULTSECT
 
 
 def _read_dict(cp, dictionary):
@@ -102,16 +79,12 @@ def _read_dict(cp, dictionary):
     Cribbed from python3's ConfigParser.read_dict function.
     """
     for section, keys in dictionary.items():
-        section = six.text_type(section)
-
-        if _is_defaultsect(section):
-            if six.PY2:
-                section = configparser.DEFAULTSECT
-        else:
+        section = str(section)
+        if not _is_defaultsect(section):
             cp.add_section(section)
 
         for key, value in keys.items():
-            key = cp.optionxform(six.text_type(key))
+            key = cp.optionxform(str(key))
             if value is not None:
-                value = six.text_type(value)
+                value = str(value)
             cp.set(section, key, value)

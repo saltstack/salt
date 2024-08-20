@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
@@ -319,19 +318,11 @@
             "additionalProperties": false
         }
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import functools
 import inspect
-import sys
 import textwrap
 
-# Import salt libs
 import salt.utils.args
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # import salt.utils.yaml
 from salt.utils.odict import OrderedDict
@@ -340,56 +331,7 @@ BASE_SCHEMA_URL = "https://non-existing.saltstack.com/schemas"
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80
 
 
-class Prepareable(type):
-    """
-    Preserve attributes order for python 2.x
-    """
-
-    # This code was taken from
-    # https://github.com/aromanovich/jsl/blob/master/jsl/_compat/prepareable.py
-    # which in turn was taken from https://gist.github.com/DasIch/5562625 with minor fixes
-    if not six.PY3:
-
-        def __new__(mcs, name, bases, attributes):
-            try:
-                constructor = attributes["__new__"]
-            except KeyError:
-                return type.__new__(mcs, name, bases, attributes)
-
-            def preparing_constructor(mcs, name, bases, attributes):
-                try:
-                    mcs.__prepare__
-                except AttributeError:
-                    return constructor(mcs, name, bases, attributes)
-                namespace = mcs.__prepare__(name, bases)
-                defining_frame = sys._getframe(1)
-                for constant in reversed(defining_frame.f_code.co_consts):
-                    if inspect.iscode(constant) and constant.co_name == name:
-
-                        def get_index(
-                            attribute_name, _names=constant.co_names
-                        ):  # pylint: disable=cell-var-from-loop
-                            try:
-                                return _names.index(attribute_name)
-                            except ValueError:
-                                return 0
-
-                        break
-                else:
-                    return constructor(mcs, name, bases, attributes)
-
-                by_appearance = sorted(
-                    attributes.items(), key=lambda item: get_index(item[0])
-                )
-                for key, value in by_appearance:
-                    namespace[key] = value
-                return constructor(mcs, name, bases, namespace)
-
-            attributes["__new__"] = functools.wraps(constructor)(preparing_constructor)
-            return type.__new__(mcs, name, bases, attributes)
-
-
-class NullSentinel(object):
+class NullSentinel:
     """
     A class which instance represents a null value.
     Allows specifying fields with a default value of null.
@@ -417,7 +359,7 @@ NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
 
 
-class SchemaMeta(six.with_metaclass(Prepareable, type)):
+class SchemaMeta(type):
     @classmethod
     def __prepare__(mcs, name, bases):
         return OrderedDict()
@@ -442,7 +384,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
                 order.extend(base._order)
 
         # Iterate through attrs to discover items/config sections
-        for key, value in six.iteritems(attrs):
+        for key, value in attrs.items():
             entry_name = None
             if not hasattr(value, "__item__") and not hasattr(value, "__config__"):
                 continue
@@ -481,7 +423,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
         return instance
 
 
-class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
+class BaseSchemaItemMeta(type):
     """
     Config item metaclass to "tag" the class as a configuration item
     """
@@ -552,7 +494,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
         return instance
 
 
-class Schema(six.with_metaclass(SchemaMeta, object)):
+class Schema(metaclass=SchemaMeta):
     """
     Configuration definition class
     """
@@ -570,7 +512,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         serialized = OrderedDict()
         if id_ is not None:
             # This is meant as a configuration section, sub json schema
-            serialized["id"] = "{0}/{1}.json#".format(BASE_SCHEMA_URL, id_)
+            serialized["id"] = f"{BASE_SCHEMA_URL}/{id_}.json#"
         else:
             # Main configuration block, json schema
             serialized["$schema"] = "http://json-schema.org/draft-04/schema#"
@@ -642,7 +584,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         if cls.after_items_update:
             after_items_update = {}
             for entry in cls.after_items_update:
-                for name, data in six.iteritems(entry):
+                for name, data in entry.items():
                     if name in after_items_update:
                         if isinstance(after_items_update[name], list):
                             after_items_update[name].extend(data)
@@ -702,7 +644,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
     #    raise NotImplementedError
 
 
-class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
+class SchemaItem(metaclass=BaseSchemaItemMeta):
     """
     Base configuration items class.
 
@@ -745,7 +687,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         Return the argname value looking up on all possible attributes
         """
         # Let's see if there's a private function to get the value
-        argvalue = getattr(self, "__get_{0}__".format(argname), None)
+        argvalue = getattr(self, f"__get_{argname}__", None)
         if argvalue is not None and callable(argvalue):
             argvalue = argvalue()  # pylint: disable=not-callable
         if argvalue is None:
@@ -753,7 +695,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
             argvalue = getattr(self, argname, None)
         if argvalue is None:
             # Let's see if it's defined as a private class variable
-            argvalue = getattr(self, "__{0}__".format(argname), None)
+            argvalue = getattr(self, f"__{argname}__", None)
         if argvalue is None:
             # Let's look for it in the extra dictionary
             argvalue = self.extra.get(argname, None)
@@ -795,7 +737,7 @@ class BaseSchemaItem(SchemaItem):
         default=None,
         enum=None,
         enumNames=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -820,7 +762,7 @@ class BaseSchemaItem(SchemaItem):
             self.enum = enum
         if enumNames is not None:
             self.enumNames = enumNames
-        super(BaseSchemaItem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __validate_attributes__(self):
         if self.enum is not None:
@@ -934,7 +876,7 @@ class StringItem(BaseSchemaItem):
         pattern=None,
         min_length=None,
         max_length=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -965,7 +907,7 @@ class StringItem(BaseSchemaItem):
             self.min_length = min_length
         if max_length is not None:
             self.max_length = max_length
-        super(StringItem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __validate_attributes__(self):
         if self.format is None and self.__format__ is not None:
@@ -1064,7 +1006,7 @@ class NumberItem(BaseSchemaItem):
         exclusive_minimum=None,
         maximum=None,
         exclusive_maximum=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1099,7 +1041,7 @@ class NumberItem(BaseSchemaItem):
             self.maximum = maximum
         if exclusive_maximum is not None:
             self.exclusive_maximum = exclusive_maximum
-        super(NumberItem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class IntegerItem(NumberItem):
@@ -1129,7 +1071,7 @@ class ArrayItem(BaseSchemaItem):
         max_items=None,
         unique_items=None,
         additional_items=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1170,7 +1112,7 @@ class ArrayItem(BaseSchemaItem):
             self.unique_items = unique_items
         if additional_items is not None:
             self.additional_items = additional_items
-        super(ArrayItem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __validate_attributes__(self):
         if not self.items and not self.additional_items:
@@ -1182,13 +1124,13 @@ class ArrayItem(BaseSchemaItem):
                         raise RuntimeError(
                             "All items passed in the item argument tuple/list must be "
                             "a subclass of Schema, SchemaItem or BaseSchemaItem, "
-                            "not {0}".format(type(item))
+                            "not {}".format(type(item))
                         )
             elif not isinstance(self.items, (Schema, SchemaItem)):
                 raise RuntimeError(
                     "The items argument passed must be a subclass of "
                     "Schema, SchemaItem or BaseSchemaItem, not "
-                    "{0}".format(type(self.items))
+                    "{}".format(type(self.items))
                 )
 
     def __get_items__(self):
@@ -1227,7 +1169,7 @@ class DictItem(BaseSchemaItem):
         additional_properties=None,
         min_properties=None,
         max_properties=None,
-        **kwargs
+        **kwargs,
     ):
         """
         :param required:
@@ -1274,7 +1216,7 @@ class DictItem(BaseSchemaItem):
             self.min_properties = min_properties
         if max_properties is not None:
             self.max_properties = max_properties
-        super(DictItem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __validate_attributes__(self):
         if (
@@ -1283,40 +1225,41 @@ class DictItem(BaseSchemaItem):
             and not self.additional_properties
         ):
             raise RuntimeError(
-                "One of properties, pattern_properties or additional_properties must be passed"
+                "One of properties, pattern_properties or additional_properties must be"
+                " passed"
             )
         if self.properties is not None:
             if not isinstance(self.properties, (Schema, dict)):
                 raise RuntimeError(
                     "The passed properties must be passed as a dict or "
-                    " a Schema not '{0}'".format(type(self.properties))
+                    " a Schema not '{}'".format(type(self.properties))
                 )
             if not isinstance(self.properties, Schema):
                 for key, prop in self.properties.items():
                     if not isinstance(prop, (Schema, SchemaItem)):
                         raise RuntimeError(
-                            "The passed property who's key is '{0}' must be of type "
+                            "The passed property who's key is '{}' must be of type "
                             "Schema, SchemaItem or BaseSchemaItem, not "
-                            "'{1}'".format(key, type(prop))
+                            "'{}'".format(key, type(prop))
                         )
         if self.pattern_properties is not None:
             if not isinstance(self.pattern_properties, dict):
                 raise RuntimeError(
                     "The passed pattern_properties must be passed as a dict "
-                    "not '{0}'".format(type(self.pattern_properties))
+                    "not '{}'".format(type(self.pattern_properties))
                 )
             for key, prop in self.pattern_properties.items():
                 if not isinstance(prop, (Schema, SchemaItem)):
                     raise RuntimeError(
-                        "The passed pattern_property who's key is '{0}' must "
+                        "The passed pattern_property who's key is '{}' must "
                         "be of type Schema, SchemaItem or BaseSchemaItem, "
-                        "not '{1}'".format(key, type(prop))
+                        "not '{}'".format(key, type(prop))
                     )
         if self.additional_properties is not None:
             if not isinstance(self.additional_properties, (bool, Schema, SchemaItem)):
                 raise RuntimeError(
                     "The passed additional_properties must be of type bool, "
-                    "Schema, SchemaItem or BaseSchemaItem, not '{0}'".format(
+                    "Schema, SchemaItem or BaseSchemaItem, not '{}'".format(
                         type(self.pattern_properties)
                     )
                 )
@@ -1351,7 +1294,7 @@ class DictItem(BaseSchemaItem):
         return self
 
     def serialize(self):
-        result = super(DictItem, self).serialize()
+        result = super().serialize()
         required = []
         if self.properties is not None:
             if isinstance(self.properties, Schema):
@@ -1375,7 +1318,7 @@ class RequirementsItem(SchemaItem):
     def __init__(self, requirements=None):
         if requirements is not None:
             self.requirements = requirements
-        super(RequirementsItem, self).__init__()
+        super().__init__()
 
     def __validate_attributes__(self):
         if self.requirements is None:
@@ -1383,7 +1326,7 @@ class RequirementsItem(SchemaItem):
         if not isinstance(self.requirements, (SchemaItem, list, tuple, set)):
             raise RuntimeError(
                 "The passed requirements must be passed as a list, tuple, "
-                "set SchemaItem or BaseSchemaItem, not '{0}'".format(self.requirements)
+                "set SchemaItem or BaseSchemaItem, not '{}'".format(self.requirements)
             )
 
         if not isinstance(self.requirements, SchemaItem):
@@ -1391,10 +1334,10 @@ class RequirementsItem(SchemaItem):
                 self.requirements = list(self.requirements)
 
             for idx, item in enumerate(self.requirements):
-                if not isinstance(item, (six.string_types, SchemaItem)):
+                if not isinstance(item, ((str,), SchemaItem)):
                     raise RuntimeError(
-                        "The passed requirement at the {0} index must be of type "
-                        "str or SchemaItem, not '{1}'".format(idx, type(item))
+                        "The passed requirement at the {} index must be of type "
+                        "str or SchemaItem, not '{}'".format(idx, type(item))
                     )
 
     def serialize(self):
@@ -1419,22 +1362,23 @@ class OneOfItem(SchemaItem):
     def __init__(self, items=None, required=None):
         if items is not None:
             self.items = items
-        super(OneOfItem, self).__init__(required=required)
+        super().__init__(required=required)
 
     def __validate_attributes__(self):
         if not self.items:
             raise RuntimeError("The passed items must not be empty")
         if not isinstance(self.items, (list, tuple)):
             raise RuntimeError(
-                "The passed items must be passed as a list/tuple not "
-                "'{0}'".format(type(self.items))
+                "The passed items must be passed as a list/tuple not '{}'".format(
+                    type(self.items)
+                )
             )
         for idx, item in enumerate(self.items):
             if not isinstance(item, (Schema, SchemaItem)):
                 raise RuntimeError(
-                    "The passed item at the {0} index must be of type "
+                    "The passed item at the {} index must be of type "
                     "Schema, SchemaItem or BaseSchemaItem, not "
-                    "'{1}'".format(idx, type(item))
+                    "'{}'".format(idx, type(item))
                 )
         if not isinstance(self.items, list):
             self.items = list(self.items)
@@ -1466,7 +1410,7 @@ class NotItem(SchemaItem):
     def __init__(self, item=None):
         if item is not None:
             self.item = item
-        super(NotItem, self).__init__()
+        super().__init__()
 
     def __validate_attributes__(self):
         if not self.item:
@@ -1474,7 +1418,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 "The passed item be of type Schema, SchemaItem or "
-                "BaseSchemaItem, not '{0}'".format(type(self.item))
+                "BaseSchemaItem, not '{}'".format(type(self.item))
             )
 
     def serialize(self):
@@ -1503,7 +1447,7 @@ class ComplexSchemaItem(BaseSchemaItem):
     _definition_name = None
 
     def __init__(self, definition_name=None, required=None):
-        super(ComplexSchemaItem, self).__init__(required=required)
+        super().__init__(required=required)
         self.__type__ = "object"
         self._definition_name = (
             definition_name if definition_name else self.__class__.__name__
@@ -1537,12 +1481,12 @@ class ComplexSchemaItem(BaseSchemaItem):
         The serialization of the complex item is a pointer to the item
         definition
         """
-        return {"$ref": "#/definitions/{0}".format(self.definition_name)}
+        return {"$ref": f"#/definitions/{self.definition_name}"}
 
     def get_definition(self):
         """Returns the definition of the complex item"""
 
-        serialized = super(ComplexSchemaItem, self).serialize()
+        serialized = super().serialize()
         # Adjust entries in the serialization
         del serialized["definition_name"]
         serialized["title"] = self.definition_name
@@ -1591,14 +1535,13 @@ class DefinitionsSchema(Schema):
     @classmethod
     def serialize(cls, id_=None):
         # Get the initial serialization
-        serialized = super(DefinitionsSchema, cls).serialize(id_)
+        serialized = super().serialize(id_)
         complex_items = []
         # Augment the serializations with the definitions of all complex items
         aux_items = cls._items.values()
 
         # Convert dict_view object to a list on Python 3
-        if six.PY3:
-            aux_items = list(aux_items)
+        aux_items = list(aux_items)
 
         while aux_items:
             item = aux_items.pop(0)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read tops data from a mongodb collection
 
@@ -41,13 +40,10 @@ Configuring the Mongo Tops Subsystem
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import third party libs
 try:
     import pymongo
 
@@ -99,6 +95,7 @@ def top(**kwargs):
     """
     host = __opts__["mongo.host"]
     port = __opts__["mongo.port"]
+    ssl = __opts__.get("mongo.ssl") or False
     collection = __opts__["master_tops"]["mongo"].get("collection", "tops")
     id_field = __opts__["master_tops"]["mongo"].get("id_field", "_id")
     re_pattern = __opts__["master_tops"]["mongo"].get("re_pattern", "")
@@ -109,7 +106,7 @@ def top(**kwargs):
     )
 
     log.info("connecting to %s:%s for mongo ext_tops", host, port)
-    conn = pymongo.MongoClient(host, port)
+    conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
 
     log.debug("using database '%s'", __opts__["mongo.db"])
     mdb = conn[__opts__["mongo.db"]]

@@ -9,21 +9,22 @@ import threading
 import time
 import traceback
 
+import pytest
+
 import salt.utils.files
 import salt.utils.win_runas
-import yaml
+import salt.utils.yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mock import Mock
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
-    import win32service
-    import win32serviceutil
-    import win32event
     import servicemanager
     import win32api
+    import win32event
+    import win32service
+    import win32serviceutil
 
     CODE_DIR = win32api.GetLongPathName(RUNTIME_VARS.CODE_DIR)
     HAS_WIN32 = True
@@ -91,7 +92,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
             logger.exception(msg)
         exc_info = sys.exc_info()
         tb = traceback.format_tb(exc_info[2])
-        servicemanager.LogErrorMsg("{} {} {}".format(msg, exc_info[1], tb))
+        servicemanager.LogErrorMsg(f"{msg} {exc_info[1]} {tb}")
 
     @property
     def timeout_ms(self):
@@ -117,7 +118,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
             servicemanager.PYS_SERVICE_STARTED,
             (self._svc_name_, ""),
         )
-        self.log_info("Starting Service {}".format(self._svc_name_))
+        self.log_info(f"Starting Service {self._svc_name_}")
         monitor_thread = threading.Thread(target=self.target_thread)
         monitor_thread.start()
         while self.active:
@@ -270,7 +271,7 @@ def wait_for_service(name, timeout=200):
         time.sleep(0.3)
 
 
-@skipIf(not HAS_WIN32, "This test runs only on windows.")
+@pytest.mark.skipif(not HAS_WIN32, reason="This test runs only on windows.")
 class RunAsTest(ModuleCase):
     @classmethod
     def setUpClass(cls):
@@ -361,7 +362,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -389,7 +390,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -422,7 +423,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -454,7 +455,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -476,7 +477,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -498,7 +499,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -520,7 +521,7 @@ class RunAsTest(ModuleCase):
                 "cmd.exe",
                 "/C",
                 "winrs",
-                "/r:{}".format(self.hostname),
+                f"/r:{self.hostname}",
                 "python",
                 RUNAS_PATH,
             ]
@@ -551,7 +552,7 @@ class RunAsTest(ModuleCase):
                 "-ComputerName",
                 self.hostname,
                 "-ScriptBlock",
-                "{{ python.exe {} }}".format(RUNAS_PATH),
+                f"{{ python.exe {RUNAS_PATH} }}",
             ]
         )
         self.assertEqual(ret, 1)
@@ -579,7 +580,7 @@ class RunAsTest(ModuleCase):
                 "-ComputerName",
                 self.hostname,
                 "-ScriptBlock",
-                "{{ python.exe {} }}".format(RUNAS_PATH),
+                f"{{ python.exe {RUNAS_PATH} }}",
             ]
         )
         self.assertEqual(ret, 1)
@@ -592,7 +593,10 @@ class RunAsTest(ModuleCase):
         groups=["Administrators"],
     )
     def test_runas_powershell_remoting_admin(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE"
+        psrp_wrap = (
+            "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit"
+            " $LASTEXITCODE"
+        )
         runaspy = textwrap.dedent(
             """
         import sys
@@ -607,7 +611,7 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
+        cmd = f"python.exe {RUNAS_PATH}; exit $LASTEXITCODE"
         ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 
@@ -619,7 +623,10 @@ class RunAsTest(ModuleCase):
         groups=["Administrators"],
     )
     def test_runas_powershell_remoting_admin_no_pass(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE"
+        psrp_wrap = (
+            "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit"
+            " $LASTEXITCODE"
+        )
         runaspy = textwrap.dedent(
             """
         import sys
@@ -632,7 +639,7 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
+        cmd = f"python.exe {RUNAS_PATH}; exit $LASTEXITCODE"
         ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 
@@ -651,7 +658,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 1, ret
 
     @with_system_user(
@@ -669,7 +676,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 1, ret
 
     @with_system_user(
@@ -691,7 +698,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret
 
     @with_system_user(
@@ -713,7 +720,7 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret
 
     def test_runas_service_system_user(self):
@@ -728,5 +735,5 @@ class RunAsTest(ModuleCase):
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
         with salt.utils.files.fopen(RUNAS_OUT, "r") as fp:
-            ret = yaml.load(fp)
+            ret = salt.utils.yaml.safe_load(fp)
         assert ret["retcode"] == 0, ret

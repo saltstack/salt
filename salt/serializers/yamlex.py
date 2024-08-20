@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.serializers.yamlex
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,27 +98,23 @@
 
     Document is defacto an aggregate mapping.
 """
+
 # pylint: disable=invalid-name,no-member,missing-docstring,no-self-use
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
 import logging
 
-# Import 3rd-party libs
 import yaml
-from salt.ext import six
-
-# Import Salt Libs
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.aggregation import Map, Sequence, aggregate
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
+from salt.utils.aggregation import Map, Sequence, aggregate
+from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 
@@ -129,20 +124,17 @@ available = True
 
 # prefer C bindings over python when available
 BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-if six.PY3:
-    # CSafeDumper causes repr errors in python3, so use the pure Python one
-    try:
-        # Depending on how PyYAML was built, yaml.SafeDumper may actually be
-        # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
-        BaseDumper = yaml.dumper.SafeDumper
-    except AttributeError:
-        # Here just in case, but yaml.dumper.SafeDumper should always exist
-        BaseDumper = yaml.SafeDumper
-else:
-    BaseDumper = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
+# CSafeDumper causes repr errors in python3, so use the pure Python one
+try:
+    # Depending on how PyYAML was built, yaml.SafeDumper may actually be
+    # yaml.dumper.SafeDumper.
+    BaseDumper = yaml.dumper.SafeDumper
+except AttributeError:
+    # Here just in case, but yaml.dumper.SafeDumper should always exist
+    BaseDumper = yaml.SafeDumper
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 
@@ -217,7 +209,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             raise ConstructorError(
                 None,
                 None,
-                "expected a mapping node, but found {0}".format(node.id),
+                f"expected a mapping node, but found {node.id}",
                 node.start_mark,
             )
 
@@ -240,10 +232,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             try:
                 hash(key)
             except TypeError:
-                err = (
-                    "While constructing a mapping {0} found unacceptable " "key {1}"
-                ).format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    "While constructing a mapping {} found unacceptable key {}".format(
+                        node.start_mark, key_node.start_mark
+                    )
+                )
             value = self.construct_object(value_node, deep=False)
             if key in sls_map and not reset:
                 value = merge_recursive(sls_map[key], value)
@@ -257,8 +250,6 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
         # Ensure obj is str, not py2 unicode or py3 bytes
         obj = self.construct_scalar(node)
-        if six.PY2:
-            obj = obj.encode("utf-8")
         return SLSString(obj)
 
     def construct_sls_int(self, node):
@@ -408,15 +399,8 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
 
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
-if six.PY2:
-    Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
-    Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    # pylint: disable=incompatible-py3-code,undefined-variable
-    Dumper.add_multi_representer(long, Dumper.represent_long)
-    # pylint: enable=incompatible-py3-code,undefined-variable
-else:
-    Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
-    Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
+Dumper.add_multi_representer(bytes, Dumper.represent_binary)
+Dumper.add_multi_representer(str, Dumper.represent_str)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
 Dumper.add_multi_representer(float, Dumper.represent_float)

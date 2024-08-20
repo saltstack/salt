@@ -4,7 +4,6 @@ Base classes for napalm unit tests
 :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-
 from functools import wraps
 
 from salt.utils.immutabletypes import freeze
@@ -364,12 +363,13 @@ TEST_USERS = freeze(
             "level": 15,
             "password": "$1$0P70xKPa$4jt5/10cBTckk6I/w/",
             "sshkeys": [
-                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4pFn+shPwTb2yELO4L7NtQrKOJXNeCl1je\
-            l9STXVaGnRAnuc2PXl35vnWmcUq6YbUEcgUTRzzXfmelJKuVJTJIlMXii7h2xkbQp0YZIEs4P\
-            8ipwnRBAxFfk/ZcDsdfsdfsdfsdN56ejk345jhk345jk345jk341p3A/9LIL7l6YewLBCwJj6\
-            D+fWSJ0/YW+7oH17Fk2HH+tw0L5PcWLHkwA4t60iXn16qDbIk/ze6jv2hDGdCdz7oYQeCE55C\
-            CHOHMJWYfN3jcL4s0qv8/u6Ka1FVkV7iMmro7ChThoV/5snI4Ljf2wKqgHH7TfNaCfpU0WvHA\
-            nTs8zhOrGScSrtb mircea@master-roshi"
+                "ssh-rsa "
+                "AAAAB3NzaC1yc2EAAAADAQABAAABAQC4pFn+shPwTb2yELO4L7NtQrKOJXNeCl1je"
+                "l9STXVaGnRAnuc2PXl35vnWmcUq6YbUEcgUTRzzXfmelJKuVJTJIlMXii7h2xkbQp0YZIEs4P"
+                "8ipwnRBAxFfk/ZcDsdfsdfsdfsdN56ejk345jhk345jk345jk341p3A/9LIL7l6YewLBCwJj6"
+                "D+fWSJ0/YW+7oH17Fk2HH+tw0L5PcWLHkwA4t60iXn16qDbIk/ze6jv2hDGdCdz7oYQeCE55C"
+                "CHOHMJWYfN3jcL4s0qv8/u6Ka1FVkV7iMmro7ChThoV/5snI4Ljf2wKqgHH7TfNaCfpU0WvHA"
+                "nTs8zhOrGScSrtb mircea@master-roshi"
             ],
         }
     }

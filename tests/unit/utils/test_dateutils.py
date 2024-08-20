@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.dateutils
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 
-# Import Salt libs
+import pytest
+
 import salt.utils.dateutils
 from tests.support.mock import patch
+from tests.support.unit import TestCase
 
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-
-# Import 3rd-party libs
 try:
     import timelib  # pylint: disable=import-error,unused-import
 
@@ -42,7 +36,7 @@ class DateutilsTestCase(TestCase):
             else:
                 raise
 
-    @skipIf(not HAS_TIMELIB, "'timelib' is not installed")
+    @pytest.mark.skipif(not HAS_TIMELIB, reason="'timelib' is not installed")
     def test_strftime(self):
 
         # Taken from doctests

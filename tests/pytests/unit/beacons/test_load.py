@@ -4,7 +4,9 @@
 
     Load beacon test cases
 """
+
 import pytest
+
 import salt.beacons.load as load
 from tests.support.mock import MagicMock, patch
 

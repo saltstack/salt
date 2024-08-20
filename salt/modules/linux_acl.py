@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Support for Linux File Access Control Lists
 
 The Linux ACL module requires the `getfacl` and `setfacl` binaries.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
@@ -23,7 +20,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The linux_acl execution module cannot be loaded: the getfacl binary is not in the path.",
+        "The linux_acl execution module cannot be loaded: the getfacl binary is not in"
+        " the path.",
     )
 
 
@@ -71,7 +69,7 @@ def getfacl(*args, **kwargs):
     if recursive:
         cmd += " -R"
     for dentry in args:
-        cmd += ' "{0}"'.format(dentry)
+        cmd += f' "{dentry}"'
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     dentry = ""
     for line in out:
@@ -188,7 +186,7 @@ def wipefacls(*args, **kwargs):
     if recursive:
         cmd += " -R"
     for dentry in args:
-        cmd += ' "{0}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False)
     return True
 
@@ -230,16 +228,15 @@ def modfacl(acl_type, acl_name="", perms="", *args, **kwargs):
 
     cmd = "setfacl"
     if recursive:
-        cmd += (
-            " -R"  # -R must come first as -m needs the acl_* arguments that come later
-        )
+        # -R must come first as -m needs the acl_* arguments that come later
+        cmd += " -R"
 
     cmd += " -m"
 
-    cmd = "{0} {1}:{2}:{3}".format(cmd, _acl_prefix(acl_type), acl_name, perms)
+    cmd = f"{cmd} {_acl_prefix(acl_type)}:{acl_name}:{perms}"
 
     for dentry in args:
-        cmd += ' "{0}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False, raise_err=raise_err)
     return True
 
@@ -268,9 +265,9 @@ def delfacl(acl_type, acl_name="", *args, **kwargs):
 
     cmd += " -x"
 
-    cmd = "{0} {1}:{2}".format(cmd, _acl_prefix(acl_type), acl_name)
+    cmd = f"{cmd} {_acl_prefix(acl_type)}:{acl_name}"
 
     for dentry in args:
-        cmd += ' "{0}"'.format(dentry)
+        cmd += f' "{dentry}"'
     __salt__["cmd.run"](cmd, python_shell=False)
     return True

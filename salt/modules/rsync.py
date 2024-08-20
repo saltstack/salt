@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wrapper for rsync
 
@@ -7,15 +6,12 @@ Wrapper for rsync
 This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import errno
 import logging
 import re
 import tempfile
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -51,7 +47,7 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rs
     if update:
         options.append("--update")
     if rsh:
-        options.append("--rsh={0}".format(rsh))
+        options.append(f"--rsh={rsh}")
     if passwordfile:
         options.extend(["--password-file", passwordfile])
     if excludefrom:
@@ -135,8 +131,8 @@ def rsync(
     additional_opts
         Any additional rsync options, should be specified as a list.
 
-   saltenv
-           Specify a salt fileserver environment to be used.
+    saltenv
+        Specify a salt fileserver environment to be used.
 
     CLI Example:
 
@@ -186,16 +182,16 @@ def rsync(
                 # get the contents not the tmpdir
                 # itself.
                 if not src.endswith("/"):
-                    src = "{0}/".format(src)
+                    src = f"{src}/"
             else:
-                raise CommandExecutionError("{0} does not exist".format(src))
+                raise CommandExecutionError(f"{src} does not exist")
         else:
             tmp_src = salt.utils.files.mkstemp()
             file_src = __salt__["cp.get_file"](_src, tmp_src, saltenv)
             if file_src:
                 src = tmp_src
             else:
-                raise CommandExecutionError("{0} does not exist".format(src))
+                raise CommandExecutionError(f"{src} does not exist")
 
     option = _check(
         delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh
@@ -208,7 +204,7 @@ def rsync(
     log.debug("Running rsync command: %s", cmd)
     try:
         return __salt__["cmd.run_all"](cmd, python_shell=False)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         raise CommandExecutionError(exc.strerror)
     finally:
         if tmp_src:
@@ -232,7 +228,7 @@ def version():
     """
     try:
         out = __salt__["cmd.run_stdout"](["rsync", "--version"], python_shell=False)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         raise CommandExecutionError(exc.strerror)
     try:
         return out.split("\n")[0].split()[2]
@@ -263,20 +259,16 @@ def config(conf_path="/etc/rsyncd.conf"):
         with salt.utils.files.fopen(conf_path, "r") as fp_:
             for line in fp_:
                 ret += salt.utils.stringutils.to_unicode(line)
-    except IOError as exc:
+    except OSError as exc:
         if exc.errno == errno.ENOENT:
-            raise CommandExecutionError("{0} does not exist".format(conf_path))
+            raise CommandExecutionError(f"{conf_path} does not exist")
         elif exc.errno == errno.EACCES:
-            raise CommandExecutionError(
-                "Unable to read {0}, access denied".format(conf_path)
-            )
+            raise CommandExecutionError(f"Unable to read {conf_path}, access denied")
         elif exc.errno == errno.EISDIR:
             raise CommandExecutionError(
-                "Unable to read {0}, path is a directory".format(conf_path)
+                f"Unable to read {conf_path}, path is a directory"
             )
         else:
-            raise CommandExecutionError(
-                "Error {0}: {1}".format(exc.errno, exc.strerror)
-            )
+            raise CommandExecutionError(f"Error {exc.errno}: {exc.strerror}")
     else:
         return ret

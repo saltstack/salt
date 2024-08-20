@@ -3,8 +3,6 @@ Module for Manipulating Data via the Salt DB API
 ================================================
 """
 
-
-# Import salt libs
 import salt.utils.sdb
 
 __func_alias__ = {
@@ -74,13 +72,13 @@ def get_or_set_hash(
           mysql_user:
             - present
             - host: localhost
-            - password: '{{ salt['sdb.get_or_set_hash']('some_mysql_user_pass') }}'
+            - password: '{{ salt["sdb.get_or_set_hash"]("sdb://mymemcached/some_user_pass") }}'
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' sdb.get_or_set_hash 'SECRET_KEY' 50
+        salt '*' sdb.get_or_set_hash 'sdb://mymemcached/SECRET_KEY' 50
 
     .. warning::
 

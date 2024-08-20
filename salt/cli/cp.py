@@ -36,11 +36,6 @@ class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
         Execute salt-cp
         """
         self.parse_args()
-
-        # Setup file logging!
-        self.setup_logfile_logger()
-        salt.utils.verify.verify_log(self.config)
-
         cp_ = SaltCP(self.config)
         cp_.run()
 
@@ -73,7 +68,7 @@ class SaltCP:
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # Path does not exist
-                sys.stderr.write("{} does not exist\n".format(path))
+                sys.stderr.write(f"{path} does not exist\n")
                 sys.exit(42)
             elif exc.errno in (errno.EINVAL, errno.ENOTDIR):
                 # Path is a file (EINVAL on Windows, ENOTDIR otherwise)
@@ -102,7 +97,7 @@ class SaltCP:
         Take a path and return the contents of the file as a string
         """
         if not os.path.isfile(fn_):
-            err = "The referenced file, {} is not available.".format(fn_)
+            err = f"The referenced file, {fn_} is not available."
             sys.stderr.write(err + "\n")
             sys.exit(42)
         with salt.utils.files.fopen(fn_, "r") as fp_:
@@ -120,9 +115,9 @@ class SaltCP:
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
                 salt.utils.stringutils.print_cli(
-                    fn_ + " is a directory, only files are supported "
+                    "{} is a directory, only files are supported "
                     'in non-chunked mode. Use "--chunked" command '
-                    "line argument."
+                    "line argument.".format(fn_)
                 )
                 sys.exit(1)
         return files
@@ -216,12 +211,10 @@ class SaltCP:
                     log.debug(
                         "Copying %s to %starget '%s' as %s%s",
                         fn_,
-                        "{} ".format(selected_target_option)
-                        if selected_target_option
-                        else "",
+                        f"{selected_target_option} " if selected_target_option else "",
                         tgt,
                         remote_path,
-                        " (chunk #{})".format(index) if append else "",
+                        f" (chunk #{index})" if append else "",
                     )
                     args = [
                         tgt,
@@ -266,11 +259,7 @@ class SaltCP:
                 log.debug(
                     "Creating empty dir %s on %starget '%s'",
                     dirname,
-                    "{} ".format(
-                        selected_target_option
-                    )  # pylint: disable=str-format-in-logging
-                    if selected_target_option
-                    else "",
+                    f"{selected_target_option} " if selected_target_option else "",
                     tgt,
                 )
                 args = [tgt, "cp.recv_chunked", [remote_path, None], timeout]

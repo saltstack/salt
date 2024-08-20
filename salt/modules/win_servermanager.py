@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Windows features via the ServerManager powershell module. Can list
 available and installed roles/features. Can install and remove roles/features.
@@ -8,23 +7,15 @@ available and installed roles/features. Can install and remove roles/features.
 :depends:       PowerShell module ``ServerManager``
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+import shlex
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
+import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 log = logging.getLogger(__name__)
 
@@ -58,41 +49,6 @@ def __virtual__():
         )
 
     return __virtualname__
-
-
-def _pshell_json(cmd, cwd=None):
-    """
-    Execute the desired powershell command and ensure that it returns data
-    in JSON format and load that into python
-    """
-    cmd = "Import-Module ServerManager; {0}".format(cmd)
-    if "convertto-json" not in cmd.lower():
-        cmd = "{0} | ConvertTo-Json".format(cmd)
-    log.debug("PowerShell: %s", cmd)
-    ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
-
-    if "pid" in ret:
-        del ret["pid"]
-
-    if ret.get("stderr", ""):
-        error = ret["stderr"].splitlines()[0]
-        raise CommandExecutionError(error, info=ret)
-
-    if "retcode" not in ret or ret["retcode"] != 0:
-        # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing PowerShell {0}".format(cmd), info=ret
-        )
-
-    # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if ret["stdout"] == "":
-        ret["stdout"] = "{}"
-
-    try:
-        ret = salt.utils.json.loads(ret["stdout"], strict=False)
-    except ValueError:
-        raise CommandExecutionError("No JSON results from PowerShell", info=ret)
-    return ret
 
 
 def list_available():
@@ -138,7 +94,7 @@ def list_installed():
         "-WarningAction SilentlyContinue "
         "| Select DisplayName,Name,Installed"
     )
-    features = _pshell_json(cmd)
+    features = salt.utils.win_pwsh.run_dict(cmd)
 
     ret = {}
     for entry in features:
@@ -232,14 +188,14 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         command = "Install-WindowsFeature"
         management_tools = "-IncludeManagementTools"
 
-    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
-        _cmd_quote(feature),
+        shlex.quote(feature),
         management_tools,
         "-IncludeAllSubFeature" if recurse else "",
-        "" if source is None else "-Source {0}".format(source),
+        "" if source is None else f"-Source {source}",
     )
-    out = _pshell_json(cmd)
+    out = salt.utils.win_pwsh.run_dict(cmd)
 
     # Uninstall items in the exclude list
     # The Install-WindowsFeature command doesn't have the concept of an exclude
@@ -297,7 +253,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         # Restart here if needed
         if restart:
             if ret["RestartNeeded"]:
-                if __salt__["system.restart"](in_seconds=True):
+                if __salt__["system.reboot"](in_seconds=True):
                     ret["Restarted"] = True
 
         return ret
@@ -376,15 +332,15 @@ def remove(feature, remove_payload=False, restart=False):
         if remove_payload:
             _remove_payload = "-Remove"
 
-    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
-        _cmd_quote(feature),
+        shlex.quote(feature),
         management_tools,
         _remove_payload,
         "-Restart" if restart else "",
     )
     try:
-        out = _pshell_json(cmd)
+        out = salt.utils.win_pwsh.run_dict(cmd)
     except CommandExecutionError as exc:
         if "ArgumentNotValid" in exc.message:
             raise CommandExecutionError("Invalid Feature Name", info=exc.info)

@@ -1,34 +1,22 @@
-# -*- coding: utf-8 -*-
 """
 Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import errno
 import logging
 import os
 import posixpath
 import re
-import string
-import struct
 from collections.abc import Iterable
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
     import win32file
-    from pywintypes import error as pywinerror
 
     HAS_WIN32FILE = True
 except ImportError:
@@ -41,108 +29,21 @@ def islink(path):
     """
     Equivalent to os.path.islink()
     """
-    if six.PY3 or not salt.utils.platform.is_windows():
-        return os.path.islink(path)
-
-    if not HAS_WIN32FILE:
-        log.error("Cannot check if %s is a link, missing required modules", path)
-
-    if not _is_reparse_point(path):
-        return False
-
-    # check that it is a symlink reparse point (in case it is something else,
-    # like a mount point)
-    reparse_data = _get_reparse_data(path)
-
-    # sanity check - this should not happen
-    if not reparse_data:
-        # not a reparse point
-        return False
-
-    # REPARSE_DATA_BUFFER structure - see
-    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
-
-    # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct("L")
-    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        return False
-    else:
-        return True
+    return os.path.islink(path)
 
 
 def readlink(path):
     """
     Equivalent to os.readlink()
     """
-    if six.PY3 or not salt.utils.platform.is_windows():
-        return os.readlink(path)
-
-    if not HAS_WIN32FILE:
-        log.error("Cannot read %s, missing required modules", path)
-
-    reparse_data = _get_reparse_data(path)
-
-    if not reparse_data:
-        # Reproduce *NIX behavior when os.readlink is performed on a path that
-        # is not a symbolic link.
-        raise OSError(errno.EINVAL, "Invalid argument: '{0}'".format(path))
-
-    # REPARSE_DATA_BUFFER structure - see
-    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
-
-    # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct("L")
-    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        raise OSError(
-            errno.EINVAL,
-            "{0} is not a symlink, but another type of reparse point "
-            "(0x{0:X}).".format(ReparseTag),
-        )
-
-    # parse as a symlink reparse point structure (the structure for other
-    # reparse points is different)
-    data_parser = struct.Struct("LHHHHHHL")
-    (
-        ReparseTag,
-        ReparseDataLength,
-        Reserved,
-        SubstituteNameOffset,
-        SubstituteNameLength,
-        PrintNameOffset,
-        PrintNameLength,
-        Flags,
-    ) = data_parser.unpack(reparse_data[: data_parser.size])
-
-    path_buffer_offset = data_parser.size
-    absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
-    target_bytes = reparse_data[
-        absolute_substitute_name_offset : absolute_substitute_name_offset
-        + SubstituteNameLength
-    ]
-    target = target_bytes.decode("UTF-16")
-
-    if target.startswith("\\??\\"):
-        target = target[4:]
-
-    try:
-        # comes out in 8.3 form; convert it to LFN to make it look nicer
-        target = win32file.GetLongPathName(target)
-    except pywinerror as exc:
-        # If target is on a UNC share, the decoded target will be in the format
-        # "UNC\hostanme\sharename\additional\subdirs\under\share". So, in
-        # these cases, return the target path in the proper UNC path format.
-        if target.startswith("UNC\\"):
-            return re.sub(r"^UNC\\+", r"\\\\", target)
-        # if file is not found (i.e. bad symlink), return it anyway like on *nix
-        if exc.winerror == 2:
-            return target
-        raise
-
-    return target
+    base = os.readlink(path)
+    if salt.utils.platform.is_windows():
+        # Python 3.8 added support for directory junctions which prefixes the
+        # return with `\\?\`. We need to strip that off.
+        # https://docs.python.org/3/library/os.html#os.readlink
+        if base.startswith("\\\\?\\"):
+            base = base[4:]
+    return base
 
 
 def _is_reparse_point(path):
@@ -222,7 +123,7 @@ def which(exe=None):
         real file.
         """
         while os.path.islink(path):
-            res = os.readlink(path)
+            res = readlink(path)
 
             # if the link points to a relative target, then convert it to an
             # absolute path relative to the original path
@@ -261,7 +162,7 @@ def which(exe=None):
     ## now to define the semantics of what's considered executable on a given platform
     if salt.utils.platform.is_windows():
         # executable semantics on windows requires us to search PATHEXT
-        res = salt.utils.stringutils.to_str(os.environ.get("PATHEXT", str(".EXE")))
+        res = salt.utils.stringutils.to_str(os.environ.get("PATHEXT", ".EXE"))
 
         # generate two variables, one of them for O(n) searches (but ordered)
         # and another for O(1) searches. the previous guy was trying to use
@@ -280,9 +181,11 @@ def which(exe=None):
         # The specified extension isn't valid, so we just assume it's part of the
         # filename and proceed to walk the pathext list
         else:
-            is_executable = lambda path, membership=res: is_executable_common(
-                path
-            ) and has_executable_ext(path, membership)
+
+            def is_executable(path, membership=res):
+                return is_executable_common(path) and has_executable_ext(
+                    path, membership
+                )
 
     else:
         # in posix, there's no such thing as file extensions..only zuul
@@ -305,7 +208,10 @@ def which(exe=None):
         # iterate through all extensions to see which one is executable
         for ext in pathext:
             pext = p + ext
-            rp = resolve(pext)
+            try:
+                rp = resolve(pext)
+            except OSError as exc:
+                continue
             if is_executable(rp):
                 return p + ext
             continue
@@ -322,6 +228,8 @@ def which_bin(exes):
     """
     Scan over some possible executables and return the first one that is found
     """
+    if isinstance(exes, str):
+        exes = [exes]
     if not isinstance(exes, Iterable):
         return None
     for exe in exes:
@@ -344,11 +252,7 @@ def join(*parts, **kwargs):
     The "use_posixpath" kwarg can be be used to force joining using poxixpath,
     which is useful for Salt fileserver paths on Windows masters.
     """
-    if six.PY3:
-        new_parts = []
-        for part in parts:
-            new_parts.append(salt.utils.stringutils.to_str(part))
-        parts = new_parts
+    parts = [salt.utils.stringutils.to_str(part) for part in parts]
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     use_posixpath = kwargs.pop("use_posixpath", False)
@@ -387,7 +291,7 @@ def check_or_die(command):
         raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError("'{0}' is not in the path".format(command))
+        raise CommandNotFoundError(f"'{command}' is not in the path")
 
 
 def sanitize_win_path(winpath):
@@ -395,13 +299,11 @@ def sanitize_win_path(winpath):
     Remove illegal path characters for windows
     """
     intab = "<>:|?*"
-    if isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), "_") for c in intab))
-    elif isinstance(winpath, six.string_types):
+    if isinstance(winpath, str):
+        winpath = winpath.translate({ord(c): "_" for c in intab})
+    elif isinstance(winpath, str):
         outtab = "_" * len(intab)
-        trantab = (
-            "".maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
-        )  # pylint: disable=no-member
+        trantab = "".maketrans(intab, outtab)
         winpath = winpath.translate(trantab)
     return winpath
 
@@ -468,9 +370,23 @@ def os_walk(top, *args, **kwargs):
     This is a helper than ensures that all paths returned from os.walk are
     unicode.
     """
-    if six.PY2 and salt.utils.platform.is_windows():
-        top_query = top
-    else:
-        top_query = salt.utils.stringutils.to_str(top)
+    top_query = salt.utils.stringutils.to_str(top)
     for item in os.walk(top_query, *args, **kwargs):
         yield salt.utils.data.decode(item, preserve_tuples=True)
+
+
+def expand(path):
+    """
+    Expands all user and environment variables
+    .. versionadded:: 3005
+
+    Args:
+
+        path (str): A path to a file or directory
+
+    Returns:
+        str: A fully expanded, real path
+    """
+    path = os.path.expanduser(path)  # expand ~ to home directory
+    path = os.path.expandvars(path)  # expand any other environment vars
+    return os.path.realpath(path)  # fix path format

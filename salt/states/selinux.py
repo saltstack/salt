@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of SELinux rules
 ===========================
@@ -24,11 +23,6 @@ booleans can be set.
     Use of these states require that the :mod:`selinux <salt.modules.selinux>`
     execution module is available.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -44,7 +38,7 @@ def _refine_mode(mode):
     """
     Return a mode value that is predictable
     """
-    mode = six.text_type(mode).lower()
+    mode = str(mode).lower()
     if any([mode.startswith("e"), mode == "1", mode == "on"]):
         return "Enforcing"
     if any([mode.startswith("p"), mode == "0", mode == "off"]):
@@ -58,7 +52,7 @@ def _refine_value(value):
     """
     Return a yes/no value, or None if the input is invalid
     """
-    value = six.text_type(value).lower()
+    value = str(value).lower()
     if value in ("1", "on", "yes", "true"):
         return "on"
     if value in ("0", "off", "no", "false"):
@@ -71,7 +65,7 @@ def _refine_module_state(module_state):
     Return a predictable value, or allow us to error out
     .. versionadded:: 2016.3.0
     """
-    module_state = six.text_type(module_state).lower()
+    module_state = str(module_state).lower()
     if module_state in ("1", "on", "yes", "true", "enabled"):
         return "enabled"
     if module_state in ("0", "off", "no", "false", "disabled"):
@@ -94,7 +88,7 @@ def mode(name):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
     tmode = _refine_mode(name)
     if tmode == "unknown":
-        ret["comment"] = "{0} is not an accepted mode".format(name)
+        ret["comment"] = f"{name} is not an accepted mode"
         return ret
     # Either the current mode in memory or a non-matching config value
     # will trigger setenforce
@@ -106,11 +100,11 @@ def mode(name):
 
     if mode == tmode:
         ret["result"] = True
-        ret["comment"] = "SELinux is already in {0} mode".format(tmode)
+        ret["comment"] = f"SELinux is already in {tmode} mode"
         return ret
     # The mode needs to change...
     if __opts__["test"]:
-        ret["comment"] = "SELinux mode is set to be changed to {0}".format(tmode)
+        ret["comment"] = f"SELinux mode is set to be changed to {tmode}"
         ret["result"] = None
         ret["changes"] = {"old": mode, "new": tmode}
         return ret
@@ -120,10 +114,10 @@ def mode(name):
         tmode == "Disabled" and __salt__["selinux.getconfig"]() == tmode
     ):
         ret["result"] = True
-        ret["comment"] = "SELinux has been set to {0} mode".format(tmode)
+        ret["comment"] = f"SELinux has been set to {tmode} mode"
         ret["changes"] = {"old": oldmode, "new": mode}
         return ret
-    ret["comment"] = "Failed to set SELinux to {0} mode".format(tmode)
+    ret["comment"] = f"Failed to set SELinux to {tmode} mode"
     return ret
 
 
@@ -144,12 +138,12 @@ def boolean(name, value, persist=False):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     bools = __salt__["selinux.list_sebool"]()
     if name not in bools:
-        ret["comment"] = "Boolean {0} is not available".format(name)
+        ret["comment"] = f"Boolean {name} is not available"
         ret["result"] = False
         return ret
     rvalue = _refine_value(value)
     if rvalue is None:
-        ret["comment"] = "{0} is not a valid value for the " "boolean".format(value)
+        ret["comment"] = f"{value} is not a valid value for the boolean"
         ret["result"] = False
         return ret
     state = bools[name]["State"] == rvalue
@@ -164,19 +158,19 @@ def boolean(name, value, persist=False):
             return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Boolean {0} is set to be changed to {1}".format(name, rvalue)
+        ret["comment"] = f"Boolean {name} is set to be changed to {rvalue}"
         return ret
 
     ret["result"] = __salt__["selinux.setsebool"](name, rvalue, persist)
     if ret["result"]:
-        ret["comment"] = "Boolean {0} has been set to {1}".format(name, rvalue)
+        ret["comment"] = f"Boolean {name} has been set to {rvalue}"
         ret["changes"].update({"State": {"old": bools[name]["State"], "new": rvalue}})
         if persist and not default:
             ret["changes"].update(
                 {"Default": {"old": bools[name]["Default"], "new": rvalue}}
             )
         return ret
-    ret["comment"] = "Failed to set the boolean {0} to {1}".format(name, rvalue)
+    ret["comment"] = f"Failed to set the boolean {name} to {rvalue}"
     return ret
 
 
@@ -219,12 +213,12 @@ def module(name, module_state="Enabled", version="any", **opts):
         return module_remove(name)
     modules = __salt__["selinux.list_semod"]()
     if name not in modules:
-        ret["comment"] = "Module {0} is not available".format(name)
+        ret["comment"] = f"Module {name} is not available"
         ret["result"] = False
         return ret
     rmodule_state = _refine_module_state(module_state)
     if rmodule_state == "unknown":
-        ret["comment"] = "{0} is not a valid state for the " "{1} module.".format(
+        ret["comment"] = "{} is not a valid state for the {} module.".format(
             module_state, module
         )
         ret["result"] = False
@@ -233,28 +227,28 @@ def module(name, module_state="Enabled", version="any", **opts):
         installed_version = modules[name]["Version"]
         if not installed_version == version:
             ret["comment"] = (
-                "Module version is {0} and does not match "
-                "the desired version of {1} or you are "
+                "Module version is {} and does not match "
+                "the desired version of {} or you are "
                 "using semodule >= 2.4".format(installed_version, version)
             )
             ret["result"] = False
             return ret
     current_module_state = _refine_module_state(modules[name]["Enabled"])
     if rmodule_state == current_module_state:
-        ret["comment"] = "Module {0} is in the desired state".format(name)
+        ret["comment"] = f"Module {name} is in the desired state"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Module {0} is set to be toggled to {1}".format(
+        ret["comment"] = "Module {} is set to be toggled to {}".format(
             name, module_state
         )
         return ret
 
     if __salt__["selinux.setsemod"](name, rmodule_state):
-        ret["comment"] = "Module {0} has been set to {1}".format(name, module_state)
+        ret["comment"] = f"Module {name} has been set to {module_state}"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to set the Module {0} to {1}".format(name, module_state)
+    ret["comment"] = f"Failed to set the Module {name} to {module_state}"
     return ret
 
 
@@ -269,10 +263,10 @@ def module_install(name):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if __salt__["selinux.install_semod"](name):
-        ret["comment"] = "Module {0} has been installed".format(name)
+        ret["comment"] = f"Module {name} has been installed"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to install module {0}".format(name)
+    ret["comment"] = f"Failed to install module {name}"
     return ret
 
 
@@ -288,14 +282,14 @@ def module_remove(name):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     modules = __salt__["selinux.list_semod"]()
     if name not in modules:
-        ret["comment"] = "Module {0} is not available".format(name)
+        ret["comment"] = f"Module {name} is not available"
         ret["result"] = False
         return ret
     if __salt__["selinux.remove_semod"](name):
-        ret["comment"] = "Module {0} has been removed".format(name)
+        ret["comment"] = f"Module {name} has been removed"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to remove module {0}".format(name)
+    ret["comment"] = f"Failed to remove module {name}"
     return ret
 
 
@@ -349,7 +343,7 @@ def fcontext_policy_present(
                 sel_level=sel_level,
             )
             if add_ret["retcode"] != 0:
-                ret.update({"comment": "Error adding new rule: {0}".format(add_ret)})
+                ret.update({"comment": f"Error adding new rule: {add_ret}"})
             else:
                 ret.update({"result": True})
     else:
@@ -360,8 +354,8 @@ def fcontext_policy_present(
             ret.update(
                 {
                     "result": True,
-                    "comment": 'SELinux policy for "{0}" already present '.format(name)
-                    + 'with specified filetype "{0}" and sel_type "{1}".'.format(
+                    "comment": f'SELinux policy for "{name}" already present '
+                    + 'with specified filetype "{}" and sel_type "{}".'.format(
                         filetype_str, sel_type
                     ),
                 }
@@ -381,7 +375,7 @@ def fcontext_policy_present(
                 sel_level=sel_level,
             )
             if change_ret["retcode"] != 0:
-                ret.update({"comment": "Error adding new rule: {0}".format(change_ret)})
+                ret.update({"comment": f"Error adding new rule: {change_ret}"})
             else:
                 ret.update({"result": True})
     if ret["result"] and (new_state or old_state):
@@ -429,8 +423,8 @@ def fcontext_policy_absent(
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{0}" already absent '.format(name)
-                + 'with specified filetype "{0}" and sel_type "{1}".'.format(
+                "comment": f'SELinux policy for "{name}" already absent '
+                + 'with specified filetype "{}" and sel_type "{}".'.format(
                     filetype, sel_type
                 ),
             }
@@ -450,7 +444,7 @@ def fcontext_policy_absent(
             sel_level=sel_level,
         )
         if remove_ret["retcode"] != 0:
-            ret.update({"comment": "Error removing policy: {0}".format(remove_ret)})
+            ret.update({"comment": f"Error removing policy: {remove_ret}"})
         else:
             ret.update({"result": True})
     return ret
@@ -470,7 +464,7 @@ def fcontext_policy_applied(name, recursive=False):
         ret.update(
             {
                 "result": True,
-                "comment": 'SElinux policies are already applied for filespec "{0}"'.format(
+                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
                     name
                 ),
             }
@@ -511,35 +505,48 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if old_state:
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{0}" already present '.format(name)
-                + 'with specified sel_type "{0}", protocol "{1}" and port "{2}".'.format(
-                    sel_type, protocol, port
-                ),
+                "comment": f'SELinux policy for "{name}" already present '
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret
     if __opts__["test"]:
         ret.update({"result": None})
     else:
-        add_ret = __salt__["selinux.port_add_policy"](
+        old_state = __salt__["selinux.port_get_policy"](
+            name=name,
+            protocol=protocol,
+            port=port,
+        )
+        if old_state:
+            module_method = "selinux.port_modify_policy"
+        else:
+            module_method = "selinux.port_add_policy"
+        add_modify_ret = __salt__[module_method](
             name=name,
             sel_type=sel_type,
             protocol=protocol,
             port=port,
             sel_range=sel_range,
         )
-        if add_ret["retcode"] != 0:
-            ret.update({"comment": "Error adding new policy: {0}".format(add_ret)})
+        if add_modify_ret["retcode"] != 0:
+            ret.update({"comment": f"Error adding new policy: {add_modify_ret}"})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret
@@ -566,16 +573,17 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if not old_state:
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{0}" already absent '.format(name)
-                + 'with specified sel_type "{0}", protocol "{1}" and port "{2}".'.format(
-                    sel_type, protocol, port
-                ),
+                "comment": f'SELinux policy for "{name}" already absent '
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret
@@ -583,14 +591,19 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
         ret.update({"result": None})
     else:
         delete_ret = __salt__["selinux.port_delete_policy"](
-            name=name, protocol=protocol, port=port,
+            name=name,
+            protocol=protocol,
+            port=port,
         )
         if delete_ret["retcode"] != 0:
-            ret.update({"comment": "Error deleting policy: {0}".format(delete_ret)})
+            ret.update({"comment": f"Error deleting policy: {delete_ret}"})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret

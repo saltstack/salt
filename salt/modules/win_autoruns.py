@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Module for listing programs that automatically run on startup
 (very alpha...not tested on anything but my Win 7x64)
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import Salt libs
 import salt.utils.platform
 
 # Define a function alias in order not to shadow built-in's
@@ -35,7 +30,7 @@ def _get_dirs(user_dir, startup_dir):
     """
     try:
         users = os.listdir(user_dir)
-    except WindowsError:  # pylint: disable=E0602
+    except OSError:  # pylint: disable=E0602
         users = []
 
     full_dirs = []

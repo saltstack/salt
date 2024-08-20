@@ -1,16 +1,20 @@
 """
 Tests for the idem state
 """
+
 import tempfile
 from contextlib import contextmanager
 
 import pytest
+
 import salt.state
 import salt.utils.idem as idem
 import salt.utils.path
 import tests.support.sminion
 
-pytestmark = pytest.mark.skipif(not idem.HAS_POP[0], reason=idem.HAS_POP[1])
+pytestmark = [
+    pytest.mark.skipif(not idem.HAS_POP[0], reason=idem.HAS_POP[1]),
+]
 
 
 @contextmanager
@@ -29,7 +33,7 @@ def test_state(salt_call_cli):
         )
 
     state_id = "idem_|-idem_test_|-idem_test_|-state"
-    parent = ret.json[state_id]
+    parent = ret.data[state_id]
     assert parent["result"] is True, parent["comment"]
     sub_state_ret = parent["sub_state_run"][0]
     assert sub_state_ret["result"] is True
@@ -42,7 +46,7 @@ def test_state(salt_call_cli):
 
     chunk_ret = state_obj.call_chunk(
         {"state": "state", "name": "name", "fun": "fun", "__id__": "__id__"},
-        ret.json,
+        ret.data,
         {},
     )
     # Verify that the sub_state_run looks like a normal salt state
@@ -56,8 +60,8 @@ def test_bad_state(salt_call_cli):
     ret = salt_call_cli.run(
         "--local", "state.single", "idem.state", sls=bad_sls, name="idem_bad_test"
     )
-    parent = ret.json["idem_|-idem_bad_test_|-idem_bad_test_|-state"]
+    parent = ret.data["idem_|-idem_bad_test_|-idem_bad_test_|-state"]
 
     assert parent["result"] is False
-    assert "SLS ref {} did not resolve to a file".format(bad_sls) == parent["comment"]
+    assert f"SLS ref {bad_sls} did not resolve to a file" == parent["comment"]
     assert not parent["sub_state_run"]

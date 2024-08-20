@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Microsoft certificate management via the Pki PowerShell module.
 
@@ -6,12 +5,6 @@ Microsoft certificate management via the Pki PowerShell module.
 
 .. versionadded:: 2016.11.0
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# import 3rd party libs
-from salt.ext import six
 
 _DEFAULT_CONTEXT = "LocalMachine"
 _DEFAULT_FORMAT = "cer"
@@ -69,9 +62,9 @@ def import_cert(
                 - password: TestPassword
                 - saltenv: base
     """
-    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
-    store_path = r"Cert:\{0}\{1}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
 
     cached_source_path = __salt__["cp.cache_file"](name, saltenv)
     current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
@@ -85,14 +78,14 @@ def import_cert(
         )
 
     if cert_props["thumbprint"] in current_certs:
-        ret["comment"] = (
-            "Certificate '{0}' already contained in store:" " {1}"
-        ).format(cert_props["thumbprint"], store_path)
+        ret["comment"] = "Certificate '{}' already contained in store: {}".format(
+            cert_props["thumbprint"], store_path
+        )
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = (
-            "Certificate '{0}' will be imported into store:" " {1}"
-        ).format(cert_props["thumbprint"], store_path)
+        ret["comment"] = "Certificate '{}' will be imported into store: {}".format(
+            cert_props["thumbprint"], store_path
+        )
         ret["changes"] = {"old": None, "new": cert_props["thumbprint"]}
     else:
         ret["changes"] = {"old": None, "new": cert_props["thumbprint"]}
@@ -106,13 +99,15 @@ def import_cert(
             saltenv=saltenv,
         )
         if ret["result"]:
-            ret["comment"] = ("Certificate '{0}' imported into store:" " {1}").format(
+            ret["comment"] = "Certificate '{}' imported into store: {}".format(
                 cert_props["thumbprint"], store_path
             )
         else:
             ret["comment"] = (
-                "Certificate '{0}' unable to be imported into store:" " {1}"
-            ).format(cert_props["thumbprint"], store_path)
+                "Certificate '{}' unable to be imported into store: {}".format(
+                    cert_props["thumbprint"], store_path
+                )
+            )
     return ret
 
 
@@ -142,18 +137,18 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
                 - context: LocalMachine
                 - store: My
     """
-    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
-    store_path = r"Cert:\{0}\{1}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
     current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
 
     if thumbprint not in current_certs:
-        ret["comment"] = "Certificate '{0}' already removed from store: {1}".format(
+        ret["comment"] = "Certificate '{}' already removed from store: {}".format(
             thumbprint, store_path
         )
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Certificate '{0}' will be removed from store: {1}".format(
+        ret["comment"] = "Certificate '{}' will be removed from store: {}".format(
             thumbprint, store_path
         )
         ret["changes"] = {"old": thumbprint, "new": None}
@@ -163,13 +158,13 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
             thumbprint=thumbprint, context=context, store=store
         )
         if ret["result"]:
-            ret["comment"] = "Certificate '{0}' removed from store: {1}".format(
+            ret["comment"] = "Certificate '{}' removed from store: {}".format(
                 thumbprint, store_path
             )
         else:
-            ret[
-                "comment"
-            ] = "Certificate '{0}' unable to be removed from store: {1}".format(
-                thumbprint, store_path
+            ret["comment"] = (
+                "Certificate '{}' unable to be removed from store: {}".format(
+                    thumbprint, store_path
+                )
             )
     return ret

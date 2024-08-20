@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,16 +15,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N5KPlatform(NXOSPlatform):
-
-    """ Cisco Systems N5K Platform Unit Test Object """
+    """Cisco Systems N5K Platform Unit Test Object"""
 
     chassis = "cisco Nexus 5672UP 16G-FC Chassis"
 
@@ -68,7 +62,7 @@ Images will be upgraded according to following table:
 Module             Image         Running-Version             New-Version  Upg-Required
 ------  ----------------  ----------------------  ----------------------  ------------
      0            system            $CVER             $NVER           $REQ
-     0         kickstart            $CVER             $NVER           $REQ 
+     0         kickstart            $CVER             $NVER           $REQ
      0              bios      v0.1.9(03/09/2016)      v0.1.6(12/03/2015)            no
      0         power-seq    SF-uC:37, SF-FPGA:35    SF-uC:37, SF-FPGA:35            no
      0            iofpga               v0.0.0.39               v0.0.0.39            no

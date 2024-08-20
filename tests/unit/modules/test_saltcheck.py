@@ -3,6 +3,7 @@
 import os.path
 
 import pytest
+
 import salt.config
 import salt.modules.saltcheck as saltcheck
 import salt.syspaths as syspaths
@@ -61,6 +62,24 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                 fun="test.echo", args=["hello"], kwargs=None
             )
             self.assertNotEqual(returned, "not-hello")
+
+    def test_call_saltcheck_with_proxy(self):
+        """test fail to load saltcheck module if proxy"""
+        with patch.dict(
+            saltcheck.__salt__,
+            {
+                "config.get": MagicMock(return_value=True),
+                "sys.list_modules": MagicMock(return_value=["module1"]),
+                "cp.cache_master": MagicMock(return_value=[True]),
+            },
+        ), patch("salt.utils.platform.is_proxy", MagicMock(return_value=[True])):
+            ret, message = saltcheck.__virtual__()
+            self.assertFalse(ret)
+            self.assertEqual(
+                message,
+                "The saltcheck execution module failed to load: only available on"
+                " minions.",
+            )
 
     def test__assert_equal1(self):
         """test"""

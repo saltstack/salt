@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing ext2/3/4 file systems
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -27,9 +22,14 @@ def __virtual__():
     return True
 
 
-def mkfs(device, fs_type, **kwargs):
+def mkfs(device, fs_type, full_return=False, **kwargs):
     """
     Create a file system on the specified device
+
+    full_return : False
+        If ``True``, the full ``cmd.run_all`` dictionary will be returned
+        instead of just stdout/stderr text. Useful for setting the result of
+        the ``module.run`` state.
 
     CLI Example:
 
@@ -65,6 +65,9 @@ def mkfs(device, fs_type, **kwargs):
     * **fs_type**: set the filesystem type (REQUIRED)
     * **usage_type**: how the filesystem is going to be used
     * **uuid**: set the UUID for the file system
+    * **cluster_size**: specify the size of cluster in bytes for file systems using the bigalloc feature
+    * **root_directory**: copy the contents of the given directory into the root directory of the file system
+    * **errors_behavior**: change the behavior of the kernel code when errors are detected
 
     See the ``mke2fs(8)`` manpage for a more complete description of these
     options.
@@ -94,18 +97,22 @@ def mkfs(device, fs_type, **kwargs):
         "super": "S",
         "usage_type": "T",
         "uuid": "U",
+        "cluster_size": "C",
+        "root_directory": "d",
+        "errors_behavior": "e",
     }
 
     opts = ""
     for key in kwargs:
         if key in kwarg_map:
             opt = kwarg_map[key]
-            if kwargs[key] == "True":
-                opts += "-{0} ".format(opt)
+            if str(kwargs[key]).lower() == "true":
+                opts += f"-{opt} "
             else:
-                opts += "-{0} {1} ".format(opt, kwargs[key])
-    cmd = "mke2fs -F -t {0} {1}{2}".format(fs_type, opts, device)
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+                opts += f"-{opt} {kwargs[key]} "
+    cmd = f"mke2fs -F -t {fs_type} {opts}{device}"
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    out = "\n".join([cmd_ret["stdout"] or "", cmd_ret["stderr"] or ""]).splitlines()
     ret = []
     for line in out:
         if not line:
@@ -123,12 +130,20 @@ def mkfs(device, fs_type, **kwargs):
         elif line.startswith("Writing superblocks"):
             continue
         ret.append(line)
+    if full_return:
+        cmd_ret["comment"] = ret
+        return cmd_ret
     return ret
 
 
-def tune(device, **kwargs):
+def tune(device, full_return=False, **kwargs):
     """
     Set attributes for the specified device (using tune2fs)
+
+    full_return : False
+        If ``True``, the full ``cmd.run_all`` dictionary will be returned
+        instead of just stdout/stderr text. Useful for setting the result of
+        the ``module.run`` state.
 
     CLI Example:
 
@@ -148,7 +163,7 @@ def tune(device, **kwargs):
     * **journal**: set to True to create a journal (default on ext3/4)
     * **journal_opts**: options for the fs journal (comma separated)
     * **label**: label to apply to the file system
-    * **reserved**: percentage of blocks reserved for super-user
+    * **reserved_percentage**: percentage of blocks reserved for super-user
     * **last_dir**: last mounted directory
     * **opts**: mount options (comma separated)
     * **feature**: set or clear a feature (comma separated)
@@ -178,6 +193,7 @@ def tune(device, **kwargs):
         "feature": "O",
         "mmp_check": "p",
         "reserved": "r",
+        "reserved_percentage": "m",
         "quota_opts": "Q",
         "time": "T",
         "user": "u",
@@ -187,12 +203,16 @@ def tune(device, **kwargs):
     for key in kwargs:
         if key in kwarg_map:
             opt = kwarg_map[key]
-            if kwargs[key] == "True":
-                opts += "-{0} ".format(opt)
+            if str(kwargs[key]).lower() == "true":
+                opts += f"-{opt} "
             else:
-                opts += "-{0} {1} ".format(opt, kwargs[key])
-    cmd = "tune2fs {0}{1}".format(opts, device)
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+                opts += f"-{opt} {kwargs[key]} "
+    cmd = f"tune2fs {opts}{device}"
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    out = "\n".join([cmd_ret["stdout"] or "", cmd_ret["stderr"] or ""]).splitlines()
+    if full_return:
+        cmd_ret["comment"] = out
+        return cmd_ret
     return out
 
 
@@ -234,7 +254,7 @@ def dump(device, args=None):
 
         salt '*' extfs.dump /dev/sda1
     """
-    cmd = "dumpe2fs {0}".format(device)
+    cmd = f"dumpe2fs {device}"
     if args:
         cmd = cmd + " -" + args
     ret = {"attributes": {}, "blocks": {}}
@@ -269,7 +289,7 @@ def dump(device, args=None):
                 line = line.replace("]", "")
                 comps = line.split()
                 blkgrp = comps[1]
-                group = "Group {0}".format(blkgrp)
+                group = f"Group {blkgrp}"
                 ret["blocks"][group] = {}
                 ret["blocks"][group]["group"] = blkgrp
                 ret["blocks"][group]["range"] = comps[3]

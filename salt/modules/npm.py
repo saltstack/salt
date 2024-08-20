@@ -4,13 +4,14 @@ Manage and query NPM packages.
 
 import logging
 import shlex
+import tempfile
 
 import salt.modules.cmdmod
 import salt.utils.json
 import salt.utils.path
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -46,10 +47,9 @@ def _check_valid_version():
     npm_path = salt.utils.path.which("npm")
 
     # pylint: disable=no-member
-    res = salt.modules.cmdmod.run(
-        "{npm} --version".format(npm=npm_path), output_loglevel="quiet"
-    )
-    npm_version, valid_version = _LooseVersion(res), _LooseVersion("1.2")
+    res = salt.modules.cmdmod.run(f"{npm_path} --version", output_loglevel="quiet")
+    npm_version = Version(res)
+    valid_version = Version("1.2")
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
@@ -143,10 +143,13 @@ def install(
         cmd.append("--silent")
 
     if not dir:
+        cwd = tempfile.gettempdir()
         cmd.append("--global")
+    else:
+        cwd = dir
 
     if registry:
-        cmd.append('--registry="{}"'.format(registry))
+        cmd.append(f'--registry="{registry}"')
 
     if dry_run:
         cmd.append("--dry-run")
@@ -162,7 +165,7 @@ def install(
 
     cmd = " ".join(cmd)
     result = __salt__["cmd.run_all"](
-        cmd, python_shell=True, cwd=dir, runas=runas, env=env
+        cmd, python_shell=True, cwd=cwd, runas=runas, env=env
     )
 
     if result["retcode"] != 0:
@@ -217,7 +220,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
         if uid:
             env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ["npm", "uninstall", '"{}"'.format(pkg)]
+    cmd = ["npm", "uninstall", f'"{pkg}"']
     if not dir:
         cmd.append("--global")
 
@@ -286,14 +289,14 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if depth is not None:
         if not isinstance(depth, (int, float)):
             raise salt.exceptions.SaltInvocationError(
-                "Error: depth {} must be a number".format(depth)
+                f"Error: depth {depth} must be a number"
             )
-        cmd.append("--depth={}".format(int(depth)))
+        cmd.append(f"--depth={int(depth)}")
 
     if pkg:
         # Protect against injection
         pkg = shlex.quote(pkg)
-        cmd.append('"{}"'.format(pkg))
+        cmd.append(f'"{pkg}"')
     cmd = " ".join(cmd)
 
     result = __salt__["cmd.run_all"](

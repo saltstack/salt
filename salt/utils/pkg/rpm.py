@@ -1,6 +1,7 @@
 """
 Common functions for working with RPM packages
 """
+
 import collections
 import datetime
 import logging
@@ -30,7 +31,16 @@ ARCHES_ALPHA = (
     "alphaev68",
     "alphaev7",
 )
-ARCHES_ARM = ("armv5tel", "armv5tejl", "armv6l", "armv7l")
+ARCHES_ARM_32 = (
+    "armv5tel",
+    "armv5tejl",
+    "armv6l",
+    "armv6hl",
+    "armv7l",
+    "armv7hl",
+    "armv7hnl",
+)
+ARCHES_ARM_64 = ("aarch64",)
 ARCHES_SH = ("sh3", "sh4", "sh4a")
 
 ARCHES = (
@@ -39,7 +49,8 @@ ARCHES = (
     + ARCHES_PPC
     + ARCHES_S390
     + ARCHES_ALPHA
-    + ARCHES_ARM
+    + ARCHES_ARM_32
+    + ARCHES_ARM_64
     + ARCHES_SH
 )
 
@@ -66,11 +77,13 @@ def get_osarch():
 
 def check_32(arch, osarch=None):
     """
-    Returns True if both the OS arch and the passed arch are 32-bit
+    Returns True if both the OS arch and the passed arch are x86 or ARM 32-bit
     """
     if osarch is None:
         osarch = get_osarch()
-    return all(x in ARCHES_32 for x in (osarch, arch))
+    return all(x in ARCHES_32 for x in (osarch, arch)) or all(
+        x in ARCHES_ARM_32 for x in (osarch, arch)
+    )
 
 
 def pkginfo(name, version, arch, repoid, install_date=None, install_date_time_t=None):
@@ -93,7 +106,7 @@ def resolve_name(name, arch, osarch=None):
         osarch = get_osarch()
 
     if not check_32(arch, osarch) and arch not in (osarch, "noarch"):
-        name += ".{}".format(arch)
+        name += f".{arch}"
     return name
 
 
@@ -111,7 +124,7 @@ def parse_pkginfo(line, osarch=None):
 
     name = resolve_name(name, arch, osarch)
     if release:
-        version += "-{}".format(release)
+        version += f"-{release}"
     if epoch not in ("(none)", "0"):
         version = ":".join((epoch, version))
 

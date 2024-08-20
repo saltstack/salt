@@ -3,15 +3,17 @@ Beacon to monitor statistics from ethernet adapters
 
 .. versionadded:: 2015.5.0
 """
+
 import logging
 
+import salt.utils.beacons
+
 try:
-    import salt.utils.psutil_compat as psutil
+    import psutil
 
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +45,10 @@ def _to_list(obj):
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, "cannot load network_info beacon: psutil not available")
+        return (
+            False,
+            f"Unable to load {__virtualname__} beacon: psutil library not installed",
+        )
     return __virtualname__
 
 
@@ -66,26 +71,23 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for network_info beacon must be a list.")
+        return False, "Configuration for network_info beacon must be a list."
     else:
 
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        for item in _config.get("interfaces", {}):
-            if not isinstance(_config["interfaces"][item], dict):
+        for item in config.get("interfaces", {}):
+            if not isinstance(config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Configuration for network_info beacon must "
-                        "be a list of dictionaries."
-                    ),
+                    "Configuration for network_info beacon must "
+                    "be a list of dictionaries.",
                 )
             else:
-                if not any(j in VALID_ITEMS for j in _config["interfaces"][item]):
+                if not any(j in VALID_ITEMS for j in config["interfaces"][item]):
                     return (
                         False,
-                        ("Invalid configuration item in Beacon configuration."),
+                        "Invalid configuration item in Beacon configuration.",
                     )
     return True, "Valid beacon configuration"
 
@@ -140,17 +142,16 @@ def beacon(config):
     """
     ret = []
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     log.debug("psutil.net_io_counters %s", psutil.net_io_counters)
 
     _stats = psutil.net_io_counters(pernic=True)
 
     log.debug("_stats %s", _stats)
-    for interface in _config.get("interfaces", {}):
+    for interface in config.get("interfaces", {}):
         if interface in _stats:
-            interface_config = _config["interfaces"][interface]
+            interface_config = config["interfaces"][interface]
             _if_stats = _stats[interface]
             _diff = False
             for attr in __attrs:

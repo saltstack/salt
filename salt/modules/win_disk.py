@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering disk information on Windows
 
 :depends:   - win32api Python module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import ctypes
 import string
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import win32api
@@ -25,10 +18,7 @@ except ImportError:
 __virtualname__ = "disk"
 
 
-if six.PY3:
-    UPPERCASE = string.ascii_uppercase
-else:
-    UPPERCASE = string.uppercase
+UPPERCASE = string.ascii_uppercase
 
 
 def __virtual__():
@@ -63,19 +53,19 @@ def usage():
                 available_bytes,
                 total_bytes,
                 total_free_bytes,
-            ) = win32api.GetDiskFreeSpaceEx("{0}:\\".format(drive))
+            ) = win32api.GetDiskFreeSpaceEx(f"{drive}:\\")
             used = total_bytes - total_free_bytes
             capacity = used / float(total_bytes) * 100
-            ret["{0}:\\".format(drive)] = {
-                "filesystem": "{0}:\\".format(drive),
+            ret[f"{drive}:\\"] = {
+                "filesystem": f"{drive}:\\",
                 "1K-blocks": total_bytes / 1024,
                 "used": used / 1024,
                 "available": total_free_bytes / 1024,
-                "capacity": "{0:.0f}%".format(capacity),
+                "capacity": f"{capacity:.0f}%",
             }
         except Exception:  # pylint: disable=broad-except
-            ret["{0}:\\".format(drive)] = {
-                "filesystem": "{0}:\\".format(drive),
+            ret[f"{drive}:\\"] = {
+                "filesystem": f"{drive}:\\",
                 "1K-blocks": None,
                 "used": None,
                 "available": None,

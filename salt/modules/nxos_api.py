@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module to manage Cisco Nexus Switches (NX-OS) over the NX-API
 
@@ -122,17 +121,11 @@ outside a ``nxos_api`` Proxy, e.g.:
     Minion. If you want to use the :mod:`nxos_api Proxy<salt.proxy.nxos_api>`,
     please follow the documentation notes for a proper setup.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
-
-# Import python stdlib
 import logging
 
 from salt.exceptions import CommandExecutionError, SaltException
-
-# Import Salt libs
-from salt.ext import six
 
 # -----------------------------------------------------------------------------
 # execution module properties
@@ -188,7 +181,7 @@ def _cli_command(commands, method="cli", **kwargs):
                 )
                 raise SaltException(msg)
             else:
-                msg = 'Invalid command: "{cmd}".'.format(cmd=cmd)
+                msg = f'Invalid command: "{cmd}".'
                 raise SaltException(msg)
         txt_responses.append(rpc_reponse["result"])
     return txt_responses
@@ -240,7 +233,7 @@ def rpc(commands, method="cli", **kwargs):
 
     .. code-block:: bash
 
-        salt-call --local nxps_api.rpc 'show version'
+        salt-call --local nxos_api.rpc 'show version'
     """
     nxos_api_kwargs = __salt__["config.get"]("nxos_api", {})
     nxos_api_kwargs.update(**kwargs)
@@ -261,7 +254,8 @@ def show(commands, raw_text=True, **kwargs):
     Execute one or more show (non-configuration) commands.
 
     commands
-        The commands to be executed.
+        The commands to be executed.  Multiple commands should
+        be specified as a list.
 
     raw_text: ``True``
         Whether to return raw text or structured data.
@@ -297,7 +291,7 @@ def show(commands, raw_text=True, **kwargs):
     .. code-block:: bash
 
         salt-call --local nxos_api.show 'show version'
-        salt '*' nxos_api.show 'show bgp sessions' 'show processes' raw_text=False
+        salt '*' nxos_api.show "['show bgp sessions','show processes']" raw_text=False
         salt 'regular-minion' nxos_api.show 'show interfaces' host=sw01.example.com username=test password=test
     """
     ret = []
@@ -319,7 +313,7 @@ def config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Configures the Nexus switch with the specified commands.
@@ -407,9 +401,9 @@ def config(
     if config_file:
         file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError("Source file {} not found".format(config_file))
+            raise CommandExecutionError(f"Source file {config_file} not found")
     elif commands:
-        if isinstance(commands, (six.string_types, six.text_type)):
+        if isinstance(commands, str):
             commands = [commands]
         file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go

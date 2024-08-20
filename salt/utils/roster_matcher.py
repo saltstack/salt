@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Roster matching by various criteria (glob, pcre, etc)
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import fnmatch
 import functools
 import logging
 import re
-
-# Import Salt libs
-from salt.ext import six
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -45,7 +39,7 @@ def _tgt_set(tgt):
         return set(tgt)
 
 
-class RosterMatcher(object):
+class RosterMatcher:
     """
     Matcher for the roster data structure
     """
@@ -61,7 +55,7 @@ class RosterMatcher(object):
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{0}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 
@@ -123,7 +117,7 @@ class RosterMatcher(object):
         Return the configured ip
         """
         ret = copy.deepcopy(__opts__.get("roster_defaults", {}))
-        if isinstance(self.raw[minion], six.string_types):
+        if isinstance(self.raw[minion], str):
             ret.update({"host": self.raw[minion]})
             return ret
         elif isinstance(self.raw[minion], dict):

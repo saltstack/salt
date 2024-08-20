@@ -4,8 +4,9 @@
     Tests functions in salt.utils.vsan
 """
 
-
 import logging
+
+import pytest
 
 from salt.exceptions import (
     VMwareApiError,
@@ -15,7 +16,7 @@ from salt.exceptions import (
 from salt.utils import vsan
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
@@ -29,8 +30,8 @@ HAS_PYVSAN = vsan.HAS_PYVSAN
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class VsanSupportedTestCase(TestCase):
     """Tests for salt.utils.vsan.vsan_supported"""
 
@@ -53,7 +54,7 @@ class VsanSupportedTestCase(TestCase):
             vsan.vsan_supported(mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_api_version_raises_vim_fault(self):
@@ -75,8 +76,8 @@ class VsanSupportedTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_cluster_config_system"""
 
@@ -135,8 +136,8 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_ret)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'pyvsan' bindings are missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'pyvsan' bindings are missing")
 class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_disk_management_system"""
 
@@ -195,8 +196,8 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_ret)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class GetHostVsanSystemTestCase(TestCase):
     """Tests for salt.utils.vsan.get_host_vsan_system"""
 
@@ -279,7 +280,7 @@ class GetHostVsanSystemTestCase(TestCase):
                 vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Host's 'fake_hostname' VSAN system was " "not retrieved",
+            "Host's 'fake_hostname' VSAN system was not retrieved",
         )
 
     def test_valid_mors_result(self):
@@ -287,8 +288,8 @@ class GetHostVsanSystemTestCase(TestCase):
         self.assertEqual(res, self.mock_vsan_system)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class CreateDiskgroupTestCase(TestCase):
     """Tests for salt.utils.vsan.create_diskgroup"""
 
@@ -388,7 +389,7 @@ class CreateDiskgroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -462,8 +463,8 @@ class CreateDiskgroupTestCase(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class AddCapacityToDiskGroupTestCase(TestCase):
     """Tests for salt.utils.vsan.add_capacity_to_diskgroup"""
 
@@ -564,7 +565,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -638,8 +639,8 @@ class AddCapacityToDiskGroupTestCase(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class RemoveCapacityFromDiskGroup(TestCase):
     """Tests for salt.utils.vsan.remove_capacity_from_diskgroup"""
 
@@ -738,7 +739,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_raise_vim_fault(self):
@@ -790,8 +791,8 @@ class RemoveCapacityFromDiskGroup(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class RemoveDiskgroup(TestCase):
     """Tests for salt.utils.vsan.remove_diskgroup"""
 
@@ -885,7 +886,7 @@ class RemoveDiskgroup(TestCase):
             vsan.remove_diskgroup(self.mock_si, self.mock_host_ref, self.mock_diskgroup)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_mapping_raise_vim_fault(self):
@@ -919,8 +920,8 @@ class RemoveDiskgroup(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_cluster_vsan_info"""
 
@@ -985,7 +986,7 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_VsanClusterGetConfig_raises_vim_fault(self):
@@ -1015,8 +1016,8 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class ReconfigureClusterVsanTestCase(TestCase):
     """Tests for salt.utils.vsan.reconfigure_cluster_vsan"""
 
@@ -1101,7 +1102,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref, self.mock_cl_vsan_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_cluster_reconfig_raises_vim_fault(self):
@@ -1137,8 +1138,8 @@ class ReconfigureClusterVsanTestCase(TestCase):
         mock_wait_for_tasks.assert_called_once_with([self.mock_task], self.mock_si)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_PYVSAN, "The 'vsan' ext library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVSAN, reason="The 'vsan' ext library is missing")
 class _WaitForTasks(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan._wait_for_tasks"""
 
@@ -1174,7 +1175,7 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_wait_for_tasks_raises_vim_fault(self):

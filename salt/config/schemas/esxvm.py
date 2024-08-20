@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Agnes Tevesz (agnes.tevesz@morganstanley.com)`
 
@@ -7,9 +6,6 @@
 
     ESX Virtual Machine configuration schemas
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.utils.schema import (
     AnyOfItem,
@@ -71,11 +67,16 @@ class ESXVirtualMachinePlacementSchemaItem(ComplexSchemaItem):
     )
     resourcepool = StringItem(
         title="Virtual Machine Resource Pool",
-        description="Resource pool of the virtual machine if it is placed to a resource pool",
+        description=(
+            "Resource pool of the virtual machine if it is placed to a resource pool"
+        ),
     )
     folder = StringItem(
         title="Virtual Machine Folder",
-        description="Folder of the virtual machine where it should be deployed, default is the datacenter vmFolder",
+        description=(
+            "Folder of the virtual machine where it should be deployed, default is the"
+            " datacenter vmFolder"
+        ),
     )
 
 
@@ -142,8 +143,10 @@ class ESXVirtualMachineSerialSchemaItem(ComplexSchemaItem):
     )
     adapter = StringItem(
         title="Virtual Machine Serial Port Name",
-        description="Unique adapter name for virtual machine serial port"
-        "for creation an arbitrary value should be specified",
+        description=(
+            "Unique adapter name for virtual machine serial port "
+            "for creation an arbitrary value should be specified"
+        ),
         required=True,
     )
     backing = ESXVirtualMachineSerialBackingItem()
@@ -164,8 +167,10 @@ class ESXVirtualMachineScsiSchemaItem(ComplexSchemaItem):
 
     adapter = StringItem(
         title="Virtual Machine SCSI Controller Name",
-        description="Unique SCSI controller name"
-        "for creation an arbitrary value should be specified",
+        description=(
+            "Unique SCSI controller name "
+            "for creation an arbitrary value should be specified"
+        ),
         required=True,
     )
     type = StringItem(
@@ -197,8 +202,10 @@ class ESXVirtualMachineSataSchemaItem(ComplexSchemaItem):
     required = False
     adapter = StringItem(
         title="Virtual Machine SATA Controller Name",
-        description="Unique SATA controller name"
-        "for creation an arbitrary value should be specified",
+        description=(
+            "Unique SATA controller name "
+            "for creation an arbitrary value should be specified"
+        ),
         required=True,
     )
     bus_number = NumberItem(
@@ -222,16 +229,19 @@ class ESXVirtualMachineDiskSchemaItem(ComplexSchemaItem):
     )
     unit = StringItem(
         title="Disk size unit",
-        description="Unit of the disk size, to VMware a "
-        "GB is the same as GiB = 1024MiB",
+        description=(
+            "Unit of the disk size, to VMware a GB is the same as GiB = 1024MiB"
+        ),
         required=False,
         default="GB",
         enum=("KB", "MB", "GB"),
     )
     adapter = StringItem(
         title="Virtual Machine Adapter Name",
-        description="Unique adapter name for virtual machine"
-        "for creation an arbitrary value should be specified",
+        description=(
+            "Unique adapter name for virtual machine "
+            "for creation an arbitrary value should be specified"
+        ),
         required=True,
     )
     filename = StringItem(
@@ -293,8 +303,10 @@ class ESXVirtualMachineInterfaceSchemaItem(ComplexSchemaItem):
     )
     adapter = StringItem(
         title="Virtual Machine Network Adapter",
-        description="Unique name of the network adapter, "
-        "for creation an arbitrary value should be specified",
+        description=(
+            "Unique name of the network adapter, "
+            "for creation an arbitrary value should be specified"
+        ),
         required=True,
     )
     adapter_type = StringItem(
@@ -306,7 +318,10 @@ class ESXVirtualMachineInterfaceSchemaItem(ComplexSchemaItem):
     )
     switch_type = StringItem(
         title="Virtual Machine Switch Type",
-        description="Specifies the type of the virtual switch for the virtual machine connection",
+        description=(
+            "Specifies the type of the virtual switch for the virtual machine"
+            " connection"
+        ),
         required=True,
         default="standard",
         enum=("standard", "distributed"),
@@ -336,8 +351,7 @@ class ESXVirtualMachineMemorySchemaItem(ComplexSchemaItem):
 
     unit = StringItem(
         title="Memory unit",
-        description="Unit of the memory, to VMware a "
-        "GB is the same as GiB = 1024MiB",
+        description="Unit of the memory, to VMware a GB is the same as GiB = 1024MiB",
         required=False,
         default="MB",
         enum=("MB", "GB"),

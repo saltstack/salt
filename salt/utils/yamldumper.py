@@ -1,26 +1,25 @@
-# -*- coding: utf-8 -*-
 """
     salt.utils.yamldumper
     ~~~~~~~~~~~~~~~~~~~~~
 
 """
+
 # pylint: disable=W0232
 #         class has no __init__ method
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 
-import salt.utils.context
 import yaml  # pylint: disable=blacklisted-import
+
+import salt.utils.context
 from salt.utils.odict import OrderedDict
 
 try:
     from yaml import CDumper as Dumper
     from yaml import CSafeDumper as SafeDumper
 except ImportError:
-    from yaml import Dumper
-    from yaml import SafeDumper
+    from yaml import Dumper, SafeDumper
 
 
 __all__ = [
@@ -41,7 +40,7 @@ class IndentMixin(Dumper):
     """
 
     def increase_indent(self, flow=False, indentless=False):
-        return super(IndentMixin, self).increase_indent(flow, False)
+        return super().increase_indent(flow, False)
 
 
 class OrderedDumper(Dumper):

@@ -2,7 +2,6 @@
 Functions which implement running reactor jobs
 """
 
-
 import fnmatch
 import glob
 import logging
@@ -48,26 +47,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
         self.is_leader = True
-
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # 'self.rend' (from salt.state.Compiler) contains a function reference
-    # which is not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        Reactor.__init__(
-            self,
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def render_reaction(self, glob_ref, tag, data):
         """
@@ -227,8 +206,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         Enter into the server loop
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if self.opts["reactor_niceness"] and not salt.utils.platform.is_windows():
             log.info("Reactor setting niceness to %i", self.opts["reactor_niceness"])
             os.nice(self.opts["reactor_niceness"])
@@ -237,7 +214,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         with salt.utils.event.get_event(
             self.opts["__role"],
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=True,
         ) as event:
@@ -254,7 +230,8 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                     master_key = salt.utils.master.get_master_key("root", self.opts)
                     if data["data"].get("key") != master_key:
                         log.error(
-                            "received salt/reactors/manage event without matching master_key. discarding"
+                            "received salt/reactors/manage event without matching"
+                            " master_key. discarding"
                         )
                         continue
                 if data["tag"].endswith("salt/reactors/manage/is_leader"):
@@ -336,6 +313,7 @@ class ReactWrap:
         Populate the client cache with an instance of the specified type
         """
         reaction_type = low["state"]
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
         if reaction_type not in self.client_cache:
             log.debug("Reactor is populating %s client cache", reaction_type)
             if reaction_type in ("runner", "wheel"):
@@ -357,6 +335,7 @@ class ReactWrap:
                 self.client_cache[reaction_type] = self.reaction_class[reaction_type](
                     self.opts["conf_file"]
                 )
+        # pylint: enable=unsupported-membership-test,unsupported-assignment-operation
 
     def run(self, low):
         """

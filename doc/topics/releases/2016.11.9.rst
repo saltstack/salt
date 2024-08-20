@@ -12,7 +12,15 @@ Statistics
 - Total Issue References: **60**
 - Total PR References: **167**
 
-- Contributors: **54** (`Ch3LL`_, `UtahDave`_, `VertigoRay`_, `akissa`_, `aogier`_, `arthtux`_, `austinpapp`_, `basepi`_, `benediktwerner`_, `bobrik`_, `brejoc`_, `cachedout`_, `cetanu`_, `corywright`_, `creideiki`_, `cro`_, `cruscio`_, `damon-atkins`_, `dayid`_, `defanator`_, `dereckson`_, `dijit`_, `doesitblend`_, `garethgreenaway`_, `gtmanfred`_, `gurubert`_, `gvengel`_, `jfindlay`_, `johnj`_, `jubrad`_, `junovitch`_, `lomeroe`_, `lordcirth`_, `lorengordon`_, `mattLLVW`_, `meaksh`_, `moio`_, `msummers42`_, `mtkennerly`_, `nicholasmhughes`_, `oeuftete`_, `rallytime`_, `rasathus`_, `roaldnefs`_, `rossengeorgiev`_, `seanjnkns`_, `senthilkumar-e`_, `techhat`_, `terminalmage`_, `twangboy`_, `vernondcole`_, `vutny`_, `whiteinge`_, `whytewolf`_)
+- Contributors: **54** (`Ch3LL`_, `UtahDave`_, `VertigoRay`_, `akissa`_, `aogier`_, `arthtux`_,
+  `austinpapp`_, `basepi`_, `benediktwerner`_, `bobrik`_, `brejoc`_, `cachedout`_, `cetanu`_,
+  `corywright`_, `creideiki`_, `cro`_, `cruscio`_, `damon-atkins`_, `dayid`_, `defanator`_,
+  `dereckson`_, `dijit`_, `doesitblend`_, `garethgreenaway`_, `gtmanfred`_, `gurubert`_,
+  `gvengel`_, `jfindlay`_, `johnj`_, `jubrad`_, `junovitch`_, `lomeroe`_, `lordcirth`_,
+  `lorengordon`_, `mattLLVW`_, `meaksh`_, `moio`_, `msummers42`_, `mtkennerly`_,
+  `nicholasmhughes`_, `oeuftete`_, `rallytime`_, `rasathus`_, `roaldnefs`_, `rossengeorgiev`_,
+  `seanjnkns`_, `senthilkumar-e`_, `techhat`_, `terminalmage`_, `twangboy`_, `vernondcole`_,
+  `vutny`_, `whiteinge`_, `whytewolf`_)
 
 
 Windows Changes
@@ -477,7 +485,7 @@ Changelog for v2016.11.8..v2016.11.9
 
   * 998d714ee7 Merge pull request `#44517`_ from whytewolf/publish_port_doc_missing
 
-  * 4b5855283a missed one place where i didnt chanbge master_port from my copy to publish_port
+  * 4b5855283a missed one place where i didn't chanbge master_port from my copy to publish_port
 
   * e4610baea5 update doc to have publish port
 
@@ -682,7 +690,7 @@ Changelog for v2016.11.8..v2016.11.9
 
   * cab54e34b5 Merge pull request `#44173`_ from twangboy/win_system_docs
 
-  * 8e111b413d Fix some of the wording and grammer errors
+  * 8e111b413d Fix some of the wording and grammar errors
 
   * a12bc5ae41 Use google style docstrings
 
@@ -1127,12 +1135,12 @@ Changelog for v2016.11.8..v2016.11.9
 
 * **ISSUE** `#40311`_: (`cralston0`_) --hide-timeout used with --output json --static produces unparseable JSON (refs: `#43772`_)
 
-* **PR** `#43772`_: (`gtmanfred`_) dont print Minion not responding with quiet
+* **PR** `#43772`_: (`gtmanfred`_) don't print Minion not responding with quiet
   @ *2017-09-27 15:39:18 UTC*
 
   * 1a8cc60bb4 Merge pull request `#43772`_ from gtmanfred/2016.11
 
-  * 0194c60960 dont print Minion not responding with quiet
+  * 0194c60960 don't print Minion not responding with quiet
 
 * **PR** `#43747`_: (`rallytime`_) Add GPG Verification section to Contributing Docs
   @ *2017-09-26 21:25:37 UTC*

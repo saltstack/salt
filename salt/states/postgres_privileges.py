@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL Privileges
 ===================================
@@ -64,7 +63,6 @@ Setting the grant option is supported as well.
         - object_type: group
         - maintenance_db: testdb
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -190,20 +188,20 @@ def present(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "The privilege(s): {0} are" " set to be granted to {1}"
-            ).format(_privs, name)
+            ret["comment"] = "The privilege(s): {} are set to be granted to {}".format(
+                _privs, name
+            )
             return ret
 
         if __salt__["postgres.privileges_grant"](
             name, object_name, object_type, **kwargs
         ):
-            ret["comment"] = (
-                "The privilege(s): {0} have " "been granted to {1}"
-            ).format(_privs, name)
+            ret["comment"] = "The privilege(s): {} have been granted to {}".format(
+                _privs, name
+            )
             ret["changes"][name] = "Present"
         else:
-            ret["comment"] = ("Failed to grant privilege(s):" " {0} to {1}").format(
+            ret["comment"] = "Failed to grant privilege(s): {} to {}".format(
                 _privs, name
             )
             ret["result"] = False
@@ -292,7 +290,7 @@ def absent(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": ("The requested privilege(s) are " "not set so cannot be revoked"),
+        "comment": "The requested privilege(s) are not set so cannot be revoked",
     }
 
     privileges = ",".join(privileges) if privileges else None
@@ -314,19 +312,21 @@ def absent(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The privilege(s): {0} are" " set to be revoked from {1}"
-            ).format(_privs, name)
+                "The privilege(s): {} are set to be revoked from {}".format(
+                    _privs, name
+                )
+            )
             return ret
 
         if __salt__["postgres.privileges_revoke"](
             name, object_name, object_type, **kwargs
         ):
-            ret["comment"] = (
-                "The privilege(s): {0} have " "been revoked from {1}"
-            ).format(_privs, name)
+            ret["comment"] = "The privilege(s): {} have been revoked from {}".format(
+                _privs, name
+            )
             ret["changes"][name] = "Absent"
         else:
-            ret["comment"] = ("Failed to revoke privilege(s):" " {0} from {1}").format(
+            ret["comment"] = "Failed to revoke privilege(s): {} from {}".format(
                 _privs, name
             )
             ret["result"] = False

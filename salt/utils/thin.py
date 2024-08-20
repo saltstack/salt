@@ -2,30 +2,40 @@
 Generate the salt thin tarball from the installed python files
 """
 
-import contextvars
+import contextlib
+import contextvars as py_contextvars
 import copy
+import importlib.util
+import inspect
+import io
 import logging
 import os
 import shutil
+import site
 import subprocess
 import sys
 import tarfile
 import tempfile
+import types
 import zipfile
 
+import distro
 import jinja2
+import looseversion
 import msgpack
+import packaging
+import tornado
+import yaml
+
 import salt
 import salt.exceptions
-import salt.ext.six as _six
-import salt.ext.tornado as tornado
+import salt.utils.entrypoints
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.version
-import yaml
 
 # This is needed until we drop support for python 3.6
 has_immutables = False
@@ -79,18 +89,79 @@ except ImportError:
         from salt.ext import ssl_match_hostname
     except ImportError:
         ssl_match_hostname = None
-# pylint: enable=import-error,no-name-in-module
-if _six.PY2:
-    import concurrent
 
-    distro = None
-else:
-    import distro
-
-    concurrent = None
+concurrent = None
 
 
 log = logging.getLogger(__name__)
+
+
+def import_module(name, path):
+    """
+    Import a module from a specific path. Path can be a full or relative path
+    to a .py file.
+
+    :name: The name of the module to import
+    :path: The path of the module to import
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(name, path)
+    except ValueError:
+        spec = None
+    if spec is not None:
+        lib = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(lib)
+        except OSError:
+            pass
+        else:
+            return lib
+
+
+def getsitepackages():
+    """
+    Some versions of Virtualenv ship a site.py without getsitepackages. This
+    method will first try and return sitepackages from the default site module
+    if no method exists we will try importing the site module from every other
+    path in sys.paths until we find a getsitepackages method to return the
+    results from. If for some reason no gesitepackages method can be found a
+    RuntimeError will be raised
+
+    :return: A list containing all global site-packages directories.
+    """
+    if hasattr(site, "getsitepackages"):
+        return site.getsitepackages()
+    for path in sys.path:
+        lib = import_module("site", os.path.join(path, "site.py"))
+        if hasattr(lib, "getsitepackages"):
+            return lib.getsitepackages()
+    raise RuntimeError("Unable to locate a getsitepackages method")
+
+
+def find_site_modules(name):
+    """
+    Finds and imports a module from site packages directories.
+
+    :name: The name of the module to import
+    :return: A list of imported modules, if no modules are imported an empty
+             list is returned.
+    """
+    libs = []
+    site_paths = []
+    try:
+        site_paths = getsitepackages()
+    except RuntimeError:
+        log.debug("No site package directories found")
+    for site_path in site_paths:
+        path = os.path.join(site_path, f"{name}.py")
+        lib = import_module(name, path)
+        if lib:
+            libs.append(lib)
+        path = os.path.join(site_path, name, "__init__.py")
+        lib = import_module(name, path)
+        if lib:
+            libs.append(lib)
+    return libs
 
 
 def _get_salt_call(*dirs, **namespaces):
@@ -158,18 +229,19 @@ def _is_shareable(mod):
     return os.path.basename(mod) in shareable
 
 
-def _add_dependency(container, obj):
+def _add_dependency(container, obj, namespace=None):
     """
     Add a dependency to the top list.
 
     :param obj:
     :param is_file:
+    :param namespace: Optional tuple of parent namespaces for namespace packages
     :return:
     """
     if os.path.basename(obj.__file__).split(".")[0] == "__init__":
-        container.append(os.path.dirname(obj.__file__))
+        container.append((os.path.dirname(obj.__file__), namespace))
     else:
-        container.append(obj.__file__.replace(".pyc", ".py"))
+        container.append((obj.__file__.replace(".pyc", ".py"), None))
 
 
 def gte():
@@ -215,6 +287,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "ssl_match_hostname",
         "markupsafe",
         "backports_abc",
+        "looseversion",
+        "packaging",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -224,9 +298,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
             continue
 
         if not salt.utils.path.which(py_ver):
-            log.error(
-                "{} does not exist. Could not auto detect dependencies".format(py_ver)
-            )
+            log.error("%s does not exist. Could not auto detect dependencies", py_ver)
             return {}
         py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
@@ -235,9 +307,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
 
         if not stdout or not os.path.exists(mod_file):
             log.error(
-                "Could not auto detect file location for module {} for python version {}".format(
-                    mod, py_ver
-                )
+                "Could not auto detect file location for module %s for python version %s",
+                mod,
+                py_ver,
             )
             continue
 
@@ -256,11 +328,11 @@ def get_ext_tops(config):
 
     :return:
     """
-    config = copy.deepcopy(config)
+    config = copy.deepcopy(config) or {}
     alternatives = {}
     required = ["jinja2", "yaml", "tornado", "msgpack"]
     tops = []
-    for ns, cfg in salt.ext.six.iteritems(config or {}):
+    for ns, cfg in config.items():
         alternatives[ns] = cfg
         locked_py_version = cfg.get("py-version")
         err_msg = None
@@ -364,8 +436,16 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
-        contextvars,
+        looseversion,
+        packaging,
     ]
+    modules = find_site_modules("contextvars")
+    if modules:
+        contextvars = modules[0]
+    else:
+        contextvars = py_contextvars
+    log.debug("Using contextvars %r", contextvars)
+    mods.append(contextvars)
     if has_immutables:
         mods.append(immutables)
     for mod in mods:
@@ -380,20 +460,20 @@ def get_tops(extra_mods="", so_mods=""):
                 moddir, modname = os.path.split(locals()[mod].__file__)
                 base, _ = os.path.splitext(modname)
                 if base == "__init__":
-                    tops.append(moddir)
+                    tops.append((moddir, None))
                 else:
-                    tops.append(os.path.join(moddir, base + ".py"))
+                    tops.append((os.path.join(moddir, base + ".py"), None))
             except ImportError as err:
-                log.exception(err)
-                log.error('Unable to import extra-module "%s"', mod)
+                log.error(
+                    'Unable to import extra-module "%s": %s', mod, err, exc_info=True
+                )
 
     for mod in [m for m in so_mods.split(",") if m]:
         try:
             locals()[mod] = __import__(mod)
-            tops.append(locals()[mod].__file__)
-        except ImportError as err:
-            log.exception(err)
-            log.error('Unable to import so-module "%s"', mod)
+            tops.append((locals()[mod].__file__, None))
+        except ImportError:
+            log.error('Unable to import so-module "%s"', mod, exc_info=True)
 
     return tops
 
@@ -410,14 +490,14 @@ def _get_supported_py_config(tops, extended_cfg):
     :return:
     """
     pymap = []
-    for py_ver, tops in _six.iteritems(copy.deepcopy(tops)):
+    for py_ver, tops in copy.deepcopy(tops).items():
         py_ver = int(py_ver)
         if py_ver == 2:
             pymap.append("py2:2:7")
         elif py_ver == 3:
             pymap.append("py3:3:0")
-
-    for ns, cfg in _six.iteritems(copy.deepcopy(extended_cfg) or {}):
+    cfg_copy = copy.deepcopy(extended_cfg) or {}
+    for ns, cfg in cfg_copy.items():
         pymap.append("{}:{}:{}".format(ns, *cfg.get("py-version")))
     pymap.append("")
 
@@ -445,7 +525,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
     # Pack alternative data
     config = copy.deepcopy(extended_cfg)
     # Check if auto_detect is enabled and update dependencies
-    for ns, cfg in _six.iteritems(config):
+    for ns, cfg in config.items():
         if cfg.get("auto_detect"):
             py_ver = "python" + str(cfg.get("py-version", [""])[0])
             if cfg.get("py_bin"):
@@ -467,7 +547,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             for dep in auto_deps:
                 config[ns]["dependencies"][dep] = auto_deps[dep]
 
-    for ns, cfg in _six.iteritems(get_ext_tops(config)):
+    for ns, cfg in get_ext_tops(config).items():
         tops = [cfg.get("path")] + cfg.get("dependencies")
         py_ver_major, py_ver_minor = cfg.get("py-version")
 
@@ -475,9 +555,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             top = os.path.normpath(top)
             base, top_dirname = os.path.basename(top), os.path.dirname(top)
             os.chdir(top_dirname)
-            site_pkg_dir = (
-                _is_shareable(base) and "pyall" or "py{}".format(py_ver_major)
-            )
+            site_pkg_dir = _is_shareable(base) and "pyall" or f"py{py_ver_major}"
             log.debug(
                 'Packing alternative "%s" to "%s/%s" destination',
                 base,
@@ -511,16 +589,149 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
                             tfp.add(os.path.join(root, name), arcname=arcname)
 
 
+@contextlib.contextmanager
+def _catch_entry_points_exception(entry_point):
+    context = types.SimpleNamespace(exception_caught=False)
+    try:
+        yield context
+    except Exception as exc:  # pylint: disable=broad-except
+        context.exception_caught = True
+        entry_point_details = salt.utils.entrypoints.name_and_version_from_entry_point(
+            entry_point
+        )
+        log.error(
+            "Error processing Salt Extension %s(version: %s): %s",
+            entry_point_details.name,
+            entry_point_details.version,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
+
+
+def _get_package_root_mod(mod):
+    """
+    Given an imported module, find the topmost module
+    that is not a namespace package.
+    Returns a tuple of (root_mod, tuple), where the
+    second value is a tuple of parent namespaces.
+    Needed for saltext discovery if the entrypoint is not
+    part of the root module.
+    """
+    parts = mod.__name__.split(".")
+    level = 0
+    while level < len(parts):
+        root_mod_name = ".".join(parts[: level + 1])
+        root_mod = sys.modules[root_mod_name]
+        # importlib.machinery.NamespaceLoader requires Python 3.11+
+        if type(root_mod.__path__) is list:
+            return root_mod, tuple(parts[:level])
+        level += 1
+    raise RuntimeError(f"Unable to determine package root mod for {mod}")
+
+
+def _discover_saltexts(allowlist=None, blocklist=None):
+    mods = []
+    loaded_saltexts = {}
+    blocklist = blocklist or []
+
+    for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
+        if allowlist is not None and entry_point.dist.name not in allowlist:
+            log.debug(
+                "Skipping entry point '%s' of '%s': not in allowlist",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
+        if entry_point.dist.name in blocklist:
+            log.debug(
+                "Skipping entry point '%s' of '%s': in blocklist",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
+        with _catch_entry_points_exception(entry_point) as ctx:
+            loaded_entry_point = entry_point.load()
+        if ctx.exception_caught:
+            continue
+        if not isinstance(loaded_entry_point, (types.FunctionType, types.ModuleType)):
+            log.debug(
+                "Skipping entry point '%s' of '%s': Not a function/module",
+                entry_point.name,
+                entry_point.dist.name,
+            )
+            continue
+        if entry_point.dist.name not in loaded_saltexts:
+            try:
+                # We could get this via entry_point.dist._path.name, but that is hacky
+                dist_name = next(
+                    iter(
+                        file.parent.name
+                        for file in entry_point.dist.files
+                        if file.parent.suffix == ".dist-info"
+                    )
+                )
+            except StopIteration:
+                # This should never happen since we have the data to arrive here
+                log.debug(
+                    "Skipping entry point '%s' of '%s': Failed discovering dist-info",
+                    entry_point.name,
+                    entry_point.dist.name,
+                )
+                continue
+            loaded_saltexts[entry_point.dist.name] = {
+                "name": dist_name,
+                "entrypoints": {},
+            }
+
+        mod = inspect.getmodule(loaded_entry_point)
+        with _catch_entry_points_exception(entry_point) as ctx:
+            root_mod, namespace = _get_package_root_mod(mod)
+        if ctx.exception_caught:
+            continue
+
+        loaded_saltexts[entry_point.dist.name]["entrypoints"][
+            entry_point.name
+        ] = entry_point.value
+        _add_dependency(mods, root_mod, namespace=namespace)
+
+    # We need the mods to be in a deterministic order for the hash digest later
+    return list(sorted(set(mods))), loaded_saltexts
+
+
+def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
+    """
+    Take the output of discover_saltexts and add appropriate entry point definitions
+    for the loader to be able to discover the extensions.
+    """
+    # Again, we need this to execute in a deterministic order for the hash digest
+    for dist in sorted(saltext_dists):
+        data = saltext_dists[dist]
+        if not data["entrypoints"]:
+            log.debug("No entrypoints for distribution '%s'", dist)
+            continue
+        log.debug("Packing entrypoints for distribution '%s'", dist)
+        defs = (
+            "[salt.loader]\n"
+            + "\n".join(f"{name} = {val}" for name, val in data["entrypoints"].items())
+            + "\n"
+        ).encode("utf-8")
+        info = tarfile.TarInfo(name="py3/" + data["name"] + "/entry_points.txt")
+        info.size = len(defs)
+        tfp.addfile(tarinfo=info, fileobj=io.BytesIO(defs))
+        digest_collector.add_data(defs)
+
+
 def gen_thin(
     cachedir,
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
     extended_cfg=None,
+    exclude_saltexts=False,
+    saltext_allowlist=None,
+    saltext_blocklist=None,
 ):
     """
     Generate the salt-thin tarball and print the location of the tarball
@@ -536,11 +747,6 @@ def gen_thin(
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_thin",
-        )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
             'The minimum required python version to run salt-ssh is "3".'
@@ -573,9 +779,7 @@ def gen_thin(
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pythinver):
                     with salt.utils.files.fopen(pythinver) as fh_:
-                        overwrite = fh_.read() != str(
-                            sys.version_info[0]
-                        )  # future lint: disable=blacklisted-function
+                        overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
 
@@ -594,9 +798,24 @@ def gen_thin(
         else:
             return thintar
 
-    tops_failure_msg = "Failed %s tops for Python binary %s."
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
+    if not exclude_saltexts:
+        if compress != "gzip":
+            # The reason being that we're generating the filtered entrypoints
+            # and adding them from memory - if this is deemed as unnecessary,
+            # we would need the absolute path to the entry_points.txt file for
+            # the distribution, which is only available as a protected attribute.
+            # Salt-SSH never overrides `compress` from gzip though.
+            log.warning("Cannot include saltexts in thin when compression is not gzip")
+            exclude_saltexts = True
+        else:
+            mods, saltext_dists = _discover_saltexts(
+                allowlist=saltext_allowlist, blocklist=saltext_blocklist
+            )
+            # Deduplicate in case some saltexts were passed in thin_extra_modules
+            tops.extend(mod for mod in mods if mod not in tops)
+
     tops_py_version_mapping[sys.version_info.major] = tops
 
     with salt.utils.files.fopen(pymap_cfg, "wb") as fp_:
@@ -624,8 +843,8 @@ def gen_thin(
 
     # Pack default data
     log.debug("Packing default libraries based on current Salt version")
-    for py_ver, tops in _six.iteritems(tops_py_version_mapping):
-        for top in tops:
+    for py_ver, tops in tops_py_version_mapping.items():
+        for top, namespace in tops:
             if absonly and not os.path.isabs(top):
                 continue
             base = os.path.basename(top)
@@ -636,11 +855,11 @@ def gen_thin(
                 # This is likely a compressed python .egg
                 tempdir = tempfile.mkdtemp()
                 egg = zipfile.ZipFile(top_dirname)
-                egg.extractall(tempdir)
+                egg.extractall(tempdir)  # nosec
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
 
-            site_pkg_dir = _is_shareable(base) and "pyall" or "py{}".format(py_ver)
+            site_pkg_dir = _is_shareable(base) and "pyall" or f"py{py_ver}"
 
             log.debug('Packing "%s" to "%s" destination', base, site_pkg_dir)
             if not os.path.isdir(top):
@@ -652,7 +871,9 @@ def gen_thin(
                 for name in files:
                     if not name.endswith((".pyc", ".pyo")):
                         digest_collector.add(os.path.join(root, name))
-                        arcname = os.path.join(site_pkg_dir, root, name)
+                        arcname = os.path.join(
+                            site_pkg_dir, *(namespace or ()), root, name
+                        )
                         if hasattr(tfp, "getinfo"):
                             try:
                                 # This is a little slow but there's no clear way to detect duplicates
@@ -669,6 +890,9 @@ def gen_thin(
                 shutil.rmtree(tempdir)
                 tempdir = None
 
+    if not exclude_saltexts:
+        log.debug("Packing saltext distribution entrypoints")
+        _pack_saltext_dists(saltext_dists, digest_collector, tfp)
     if extended_cfg:
         log.debug("Packing libraries based on alternative Salt versions")
         _pack_alternative(extended_cfg, digest_collector, tfp)
@@ -677,9 +901,7 @@ def gen_thin(
     with salt.utils.files.fopen(thinver, "w+") as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, "w+") as fp_:
-        fp_.write(
-            str(sys.version_info.major)
-        )  # future lint: disable=blacklisted-function
+        fp_.write(str(sys.version_info.major))
     with salt.utils.files.fopen(code_checksum, "w+") as fp_:
         fp_.write(digest_collector.digest())
     os.chdir(os.path.dirname(thinver))
@@ -710,7 +932,7 @@ def thin_sum(cachedir, form="sha1"):
     code_checksum_path = os.path.join(cachedir, "thin", "code-checksum")
     if os.path.isfile(code_checksum_path):
         with salt.utils.files.fopen(code_checksum_path, "r") as fh:
-            code_checksum = "'{}'".format(fh.read().strip())
+            code_checksum = f"'{fh.read().strip()}'"
     else:
         code_checksum = "'0'"
 
@@ -722,8 +944,6 @@ def gen_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-min tarball and print the location of the tarball
@@ -739,11 +959,6 @@ def gen_min(
         salt-run min.generate mako,wempy 1
         salt-run min.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_min",
-        )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):
         os.makedirs(mindir)
@@ -760,9 +975,7 @@ def gen_min(
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pyminver):
                     with salt.utils.files.fopen(pyminver) as fh_:
-                        overwrite = fh_.read() != str(
-                            sys.version_info[0]
-                        )  # future lint: disable=blacklisted-function
+                        overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
 
@@ -852,7 +1065,6 @@ def gen_min(
         "salt/client/__init__.py",
         "salt/ext",
         "salt/ext/__init__.py",
-        "salt/ext/six.py",
         "salt/ext/ipaddress.py",
         "salt/version.py",
         "salt/syspaths.py",
@@ -873,12 +1085,12 @@ def gen_min(
         "salt/pillar",
         "salt/pillar/__init__.py",
         "salt/utils/textformat.py",
-        "salt/log",
-        "salt/log/__init__.py",
-        "salt/log/handlers",
-        "salt/log/handlers/__init__.py",
-        "salt/log/mixins.py",
-        "salt/log/setup.py",
+        "salt/log_handlers",
+        "salt/log_handlers/__init__.py",
+        "salt/_logging/__init__.py",
+        "salt/_logging/handlers.py",
+        "salt/_logging/impl.py",
+        "salt/_logging/mixins.py",
         "salt/cli",
         "salt/cli/__init__.py",
         "salt/cli/caller.py",
@@ -887,7 +1099,10 @@ def gen_min(
         "salt/cli/call.py",
         "salt/fileserver",
         "salt/fileserver/__init__.py",
-        "salt/transport",
+        "salt/channel",
+        "salt/channel/__init__.py",
+        "salt/channel/client.py",
+        "salt/transport",  # XXX Are the transport imports still needed?
         "salt/transport/__init__.py",
         "salt/transport/client.py",
         "salt/exceptions.py",
@@ -907,7 +1122,7 @@ def gen_min(
         "salt/output/nested.py",
     )
 
-    for py_ver, tops in _six.iteritems(tops_py_version_mapping):
+    for py_ver, tops in tops_py_version_mapping.items():
         for top in tops:
             base = os.path.basename(top)
             top_dirname = os.path.dirname(top)
@@ -917,12 +1132,12 @@ def gen_min(
                 # This is likely a compressed python .egg
                 tempdir = tempfile.mkdtemp()
                 egg = zipfile.ZipFile(top_dirname)
-                egg.extractall(tempdir)
+                egg.extractall(tempdir)  # nosec
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
             if not os.path.isdir(top):
                 # top is a single file module
-                tfp.add(base, arcname=os.path.join("py{}".format(py_ver), base))
+                tfp.add(base, arcname=os.path.join(f"py{py_ver}", base))
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
@@ -935,7 +1150,7 @@ def gen_min(
                         continue
                     tfp.add(
                         os.path.join(root, name),
-                        arcname=os.path.join("py{}".format(py_ver), root, name),
+                        arcname=os.path.join(f"py{py_ver}", root, name),
                     )
             if tempdir is not None:
                 shutil.rmtree(tempdir)
@@ -946,7 +1161,7 @@ def gen_min(
     with salt.utils.files.fopen(minver, "w+") as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pyminver, "w+") as fp_:
-        fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
+        fp_.write(str(sys.version_info[0]))
     os.chdir(os.path.dirname(minver))
     tfp.add("version")
     tfp.add(".min-gen-py-version")

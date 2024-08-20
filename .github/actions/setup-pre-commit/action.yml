@@ -1,0 +1,42 @@
+---
+name: setup-pre-commit
+description: Setup 'pre-commit'
+
+inputs:
+  version:
+    description: Pre-commit version to install
+    required: true
+    default: 3.0.3
+  cache-seed:
+    required: true
+    description: Seed used to invalidate caches
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - uses: ./.github/actions/cached-virtualenv
+      id: pre-commit-virtualenv
+      with:
+        name: pre-commit
+        cache-seed: ${{ inputs.cache-seed }}
+
+    - name: Install Pre-Commit
+      if: ${{ steps.pre-commit-virtualenv.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        ${{ steps.pre-commit-virtualenv.outputs.python-executable }} -m pip install pre-commit==${{ inputs.version }}
+
+    - name: Cache Pre-Commit Hooks
+      uses: ./.github/actions/cache
+      id: pre-commit-hooks-cache
+      with:
+        key: ${{ steps.pre-commit-virtualenv.outputs.cache-key }}|${{ inputs.version }}|${{ hashFiles('.pre-commit-config.yaml') }}
+        path: ~/.cache/pre-commit
+
+    - name: Install Pre-Commit Hooks
+      shell: bash
+      run: |
+        pre-commit install --install-hooks

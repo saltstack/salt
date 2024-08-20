@@ -16,10 +16,10 @@ from datetime import datetime
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import ArgumentValueError, CommandExecutionError
-from salt.ext.six.moves import range
 
 try:
     import pythoncom
+    import pywintypes
     import win32com.client
 
     HAS_DEPENDENCIES = True
@@ -165,7 +165,7 @@ results = {
     0x8004130F: "Credentials became corrupted",
     0x8004131F: "An instance of this task is already running",
     0x800710E0: "The operator or administrator has refused the request",
-    0x800704DD: "The service is not available (Run only when logged " "in?)",
+    0x800704DD: "The service is not available (Run only when logged in?)",
     0xC000013A: "The application terminated as a result of CTRL+C",
     0xC06D007E: "Unknown software exception",
 }
@@ -180,6 +180,15 @@ def __virtual__():
             log.warning("Could not load dependencies for %s", __virtualname__)
         return __virtualname__
     return False, "Module win_task: module only works on Windows systems"
+
+
+def _signed_to_unsigned_int32(code):
+    """
+    Convert negative result and error codes from win32com
+    """
+    if code < 0:
+        code = code + 2**32
+    return code
 
 
 def _get_date_time_format(dt_string):
@@ -227,7 +236,7 @@ def _get_date_value(date):
     :rtype: str
     """
     try:
-        return "{}".format(date)
+        return f"{date}"
     except ValueError:
         return "Never"
 
@@ -245,7 +254,7 @@ def _reverse_lookup(dictionary, value):
     """
     value_index = -1
     for idx, dict_value in enumerate(dictionary.values()):
-        if type(dict_value) == list:
+        if isinstance(dict_value, list):
             if value in dict_value:
                 value_index = idx
                 break
@@ -253,6 +262,8 @@ def _reverse_lookup(dictionary, value):
             value_index = idx
             break
 
+    if value_index < 0:
+        return "invalid value"
     return list(dictionary)[value_index]
 
 
@@ -269,7 +280,7 @@ def _lookup_first(dictionary, key):
     :rtype: str
     """
     value = dictionary[key]
-    if type(value) == list:
+    if isinstance(value, list):
         return value[0]
     else:
         return value
@@ -311,22 +322,24 @@ def _save_task_definition(
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
+        error_code = _signed_to_unsigned_int32(exc[5])
         fc = {
-            -2147024773: "The filename, directory name, or volume label "
-            "syntax is incorrect",
-            -2147024894: "The system cannot find the file specified",
-            -2147216615: "Required element or attribute missing",
-            -2147216616: "Value incorrectly formatted or out of range",
-            -2147352571: "Access denied",
+            0x8007007B: (
+                "The filename, directory name, or volume label syntax is incorrect"
+            ),
+            0x80070002: "The system cannot find the file specified",
+            0x80041319: "Required element or attribute missing",
+            0x80041318: "Value incorrectly formatted or out of range",
+            0x80020005: "Access denied",
         }
         try:
-            failure_code = fc[exc[5]]
+            failure_code = fc[error_code]
         except KeyError:
-            failure_code = "Unknown Failure: {}".format(error)
+            failure_code = f"Unknown Failure: {hex(error_code)}"
 
         log.debug("Failed to modify task: %s", failure_code)
 
-        return "Failed to modify task: {}".format(failure_code)
+        return f"Failed to modify task: {failure_code}"
 
 
 def list_tasks(location="\\"):
@@ -359,7 +372,13 @@ def list_tasks(location="\\"):
         task_service.Connect()
 
         # Get the folder to list tasks from
-        task_folder = task_service.GetFolder(location)
+        try:
+            task_folder = task_service.GetFolder(location)
+        except pywintypes.com_error:
+            msg = f"Unable to load location: {location}"
+            log.error(msg)
+            raise CommandExecutionError(msg)
+
         tasks = task_folder.GetTasks(0)
 
         ret = []
@@ -539,12 +558,12 @@ def create_task(
 
     .. code-block:: bash
 
-        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time=01:00
+        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time='"01:00"'
     """
     # Check for existing task
     if name in list_tasks(location) and not force:
         # Connect to an existing task definition
-        return "{} already exists".format(name)
+        return f"{name} already exists"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -559,7 +578,7 @@ def create_task(
             task_definition=task_definition,
             user_name=user_name,
             password=password,
-            **kwargs
+            **kwargs,
         )
 
         # Add Action
@@ -635,7 +654,7 @@ def create_task_from_xml(
     # Check for existing task
     if name in list_tasks(location):
         # Connect to an existing task definition
-        return "{} already exists".format(name)
+        return f"{name} already exists"
 
     if not xml_text and not xml_path:
         raise ArgumentValueError("Must specify either xml_text or xml_path")
@@ -676,40 +695,55 @@ def create_task_from_xml(
 
         except pythoncom.com_error as error:
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            error_code = hex(exc[5] + 2 ** 32)
+            error_code = _signed_to_unsigned_int32(exc[5])
             fc = {
                 0x80041319: "Required element or attribute missing",
                 0x80041318: "Value incorrectly formatted or out of range",
                 0x80020005: "Access denied",
                 0x80041309: "A task's trigger is not found",
-                0x8004130A: "One or more of the properties required to run this "
-                "task have not been set",
-                0x8004130C: "The Task Scheduler service is not installed on this "
-                "computer",
+                0x8004130A: (
+                    "One or more of the properties required to run this "
+                    "task have not been set"
+                ),
+                0x8004130C: (
+                    "The Task Scheduler service is not installed on this computer"
+                ),
                 0x8004130D: "The task object could not be opened",
-                0x8004130E: "The object is either an invalid task object or is not "
-                "a task object",
-                0x8004130F: "No account information could be found in the Task "
-                "Scheduler security database for the task indicated",
+                0x8004130E: (
+                    "The object is either an invalid task object or is not "
+                    "a task object"
+                ),
+                0x8004130F: (
+                    "No account information could be found in the Task "
+                    "Scheduler security database for the task indicated"
+                ),
                 0x80041310: "Unable to establish existence of the account specified",
-                0x80041311: "Corruption was detected in the Task Scheduler "
-                "security database; the database has been reset",
+                0x80041311: (
+                    "Corruption was detected in the Task Scheduler "
+                    "security database; the database has been reset"
+                ),
                 0x80041313: "The task object version is either unsupported or invalid",
-                0x80041314: "The task has been configured with an unsupported "
-                "combination of account settings and run time options",
+                0x80041314: (
+                    "The task has been configured with an unsupported "
+                    "combination of account settings and run time options"
+                ),
                 0x80041315: "The Task Scheduler Service is not running",
                 0x80041316: "The task XML contains an unexpected node",
-                0x80041317: "The task XML contains an element or attribute from an "
-                "unexpected namespace",
+                0x80041317: (
+                    "The task XML contains an element or attribute from an "
+                    "unexpected namespace"
+                ),
                 0x8004131A: "The task XML is malformed",
-                0x0004131C: "The task is registered, but may fail to start. Batch "
-                "logon privilege needs to be enabled for the task principal",
+                0x0004131C: (
+                    "The task is registered, but may fail to start. Batch "
+                    "logon privilege needs to be enabled for the task principal"
+                ),
                 0x8004131D: "The task XML contains too many nodes of the same type",
             }
             try:
                 failure_code = fc[error_code]
             except KeyError:
-                failure_code = "Unknown Failure: {}".format(error_code)
+                failure_code = f"Unknown Failure: {hex(error_code)}"
             finally:
                 log.debug("Failed to create task: %s", failure_code)
             raise CommandExecutionError(failure_code)
@@ -745,7 +779,7 @@ def create_folder(name, location="\\"):
     # Check for existing folder
     if name in list_folders(location):
         # Connect to an existing task definition
-        return "{} already exists".format(name)
+        return f"{name} already exists"
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -790,7 +824,7 @@ def edit_task(
     force_stop=None,
     delete_after=None,
     multiple_instances=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Edit the parameters of a task. Triggers and Actions cannot be edited yet.
@@ -994,7 +1028,7 @@ def edit_task(
 
             else:
                 # Not found and create_new not set, return not found
-                return "{} not found".format(name)
+                return f"{name} not found"
 
         # General Information
         if save_definition:
@@ -1114,12 +1148,13 @@ def edit_task(
             # TODO: Check triggers for end_boundary
             if delete_after is False:
                 task_definition.Settings.DeleteExpiredTaskAfter = ""
-            if delete_after in duration:
-                task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
-                    duration, delete_after
-                )
             else:
-                return 'Invalid value for "delete_after"'
+                if delete_after in duration:
+                    task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
+                        duration, delete_after
+                    )
+                else:
+                    return 'Invalid value for "delete_after"'
         if multiple_instances is not None:
             task_definition.Settings.MultipleInstances = instances[multiple_instances]
 
@@ -1160,7 +1195,7 @@ def delete_task(name, location="\\"):
     """
     # Check for existing task
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1201,7 +1236,7 @@ def delete_folder(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_folders(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1243,7 +1278,7 @@ def run(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1286,7 +1321,7 @@ def run_wait(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1347,7 +1382,7 @@ def stop(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1396,7 +1431,7 @@ def status(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1435,7 +1470,7 @@ def info(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1446,10 +1481,16 @@ def info(name, location="\\"):
         task_folder = task_service.GetFolder(location)
         task = task_folder.GetTask(name)
 
+        last_task_result_code = _signed_to_unsigned_int32(task.LastTaskResult)
+        try:
+            last_task_result = results[last_task_result_code]
+        except KeyError:
+            last_task_result = f"Unknown Task Result: {hex(last_task_result_code)}"
+
         properties = {
             "enabled": task.Enabled,
             "last_run": _get_date_value(task.LastRunTime),
-            "last_run_result": results[task.LastTaskResult],
+            "last_run_result": last_task_result,
             "missed_runs": task.NumberOfMissedRuns,
             "next_run": _get_date_value(task.NextRunTime),
             "status": states[task.State],
@@ -1471,7 +1512,7 @@ def info(name, location="\\"):
                 duration, def_set.DeleteExpiredTaskAfter
             )
 
-        if def_set.ExecutionTimeLimit == "":
+        if def_set.ExecutionTimeLimit == "" or def_set.ExecutionTimeLimit == "PT0S":
             settings["execution_time_limit"] = False
         else:
             settings["execution_time_limit"] = _reverse_lookup(
@@ -1552,6 +1593,16 @@ def info(name, location="\\"):
                     trigger["delay"] = _reverse_lookup(duration, triggerObj.Delay)
                 else:
                     trigger["delay"] = False
+            if hasattr(triggerObj, "Repetition"):
+                trigger["repeat_duration"] = _reverse_lookup(
+                    duration, triggerObj.Repetition.Duration
+                )
+                trigger["repeat_interval"] = _reverse_lookup(
+                    duration, triggerObj.Repetition.Interval
+                )
+                trigger["repeat_stop_at_duration_end"] = (
+                    triggerObj.Repetition.StopAtDurationEnd
+                )
             triggers.append(trigger)
 
         properties["settings"] = settings
@@ -1681,7 +1732,7 @@ def add_action(name=None, location="\\", action_type="Execute", **kwargs):
 
             else:
                 # Not found and create_new not set, return not found
-                return "{} not found".format(name)
+                return f"{name} not found"
 
         # Action Settings
         task_action = task_definition.Actions.Create(action_types[action_type])
@@ -1775,7 +1826,7 @@ def _clear_actions(name, location="\\"):
     # TODO: action.
     # Check for existing task
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -1815,7 +1866,7 @@ def add_trigger(
     repeat_stop_at_duration_end=False,
     execution_time_limit=None,
     delay=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Add a trigger to a Windows Scheduled task
@@ -1827,7 +1878,7 @@ def add_trigger(
         formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
         See `YAML IDIOSYNCRASIES`_ for more details.
 
-    .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+    .. _`YAML IDIOSYNCRASIES`: https://docs.saltproject.io/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
 
     Args:
 
@@ -2270,7 +2321,7 @@ def add_trigger(
 
             else:
                 # Not found and create_new not set, return not found
-                return "{} not found".format(name)
+                return f"{name} not found"
 
         # Create a New Trigger
         trigger = task_definition.Triggers.Create(trigger_types[trigger_type])
@@ -2448,7 +2499,7 @@ def clear_triggers(name, location="\\"):
     """
     # Check for existing task
     if name not in list_tasks(location):
-        return "{} not found in {}".format(name, location)
+        return f"{name} not found in {location}"
 
     # Create the task service object
     with salt.utils.winapi.Com():

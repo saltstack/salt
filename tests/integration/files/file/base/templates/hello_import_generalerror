@@ -1,2 +1,0 @@
-{% from 'macrogeneral' import mymacro -%}
-{{ mymacro() }}

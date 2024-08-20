@@ -15,7 +15,6 @@ from tests.support.unit import TestCase
 EXCLUDED_DIRS = [
     os.path.join("tests", "integration", "cloud", "helpers"),
     os.path.join("tests", "integration", "files"),
-    os.path.join("tests", "kitchen", "tests"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
     os.path.join("tests", "support"),
@@ -26,15 +25,12 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
 ]
-INCLUDED_DIRS = [
-    os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
-]
+INCLUDED_DIRS = []
 EXCLUDED_FILES = [
     os.path.join("tests", "buildpackage.py"),
     os.path.join("tests", "committer_parser.py"),
     os.path.join("tests", "consist.py"),
     os.path.join("tests", "eventlisten.py"),
-    os.path.join("tests", "jenkins.py"),
     os.path.join("tests", "minionswarm.py"),
     os.path.join("tests", "modparser.py"),
     os.path.join("tests", "packdump.py"),
@@ -47,6 +43,8 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
+    os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
 
@@ -91,9 +89,11 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
     def test_module_name_source_match(self):
@@ -130,11 +130,8 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
             "integration.modules.test_service",
-            "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
-            "integration.netapi.rest_cherrypy.test_app_pam",
             "integration.netapi.rest_tornado.test_app",
-            "integration.netapi.test_client",
             "integration.output.test_output",
             "integration.pillar.test_pillar_include",
             "integration.proxy.test_shell",
@@ -165,7 +162,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.spm.test_repo",
             "integration.ssh.test_deploy",
             "integration.ssh.test_grains",
-            "integration.ssh.test_jinja_filters",
             "integration.ssh.test_master",
             "integration.ssh.test_mine",
             "integration.ssh.test_pillar",
@@ -180,6 +176,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_renderers",
             "integration.wheel.test_client",
             "unit.cache.test_cache",
+            "unit.logging.test_deferred_stream_handler",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
             "unit.setup.test_man",
@@ -243,6 +240,6 @@ class BadTestModuleNamesTestCase(TestCase):
                     # Yep, it is. Carry on!
                     continue
 
-                errors.append("{} (expected: {})\n".format(mod_name, relpath))
+                errors.append(f"{mod_name} (expected: {relpath})\n")
 
         assert not errors, _format_errors(errors)

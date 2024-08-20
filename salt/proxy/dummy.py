@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 import salt.utils.files
 import salt.utils.msgpack
+from salt.exceptions import CommandExecutionError, MinionError
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ["dummy"]
@@ -28,14 +29,16 @@ def __virtual__():
 
 
 def _save_state(opts, details):
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy.cache")
+    _id = __context__["dummy_proxy"]["id"]
+    cachefile = os.path.join(opts["cachedir"], f"dummy-proxy-{_id}.cache")
     with salt.utils.files.fopen(cachefile, "wb") as pck:
         pck.write(salt.utils.msgpack.packb(details, use_bin_type=True))
     log.warning("Dummy Proxy Saved State(%s):\n%s", cachefile, pprint.pformat(details))
 
 
 def _load_state(opts):
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy.cache")
+    _id = __context__["dummy_proxy"]["id"]
+    cachefile = os.path.join(opts["cachedir"], f"dummy-proxy-{_id}.cache")
     try:
         with salt.utils.files.fopen(cachefile, "rb") as pck:
             state = salt.utils.msgpack.unpackb(pck.read(), raw=False)
@@ -83,9 +86,16 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     """
+    # Added to test situation when a proxy minion throws
+    # an exception during init.
+    if opts["proxy"].get("raise_minion_error"):
+        raise MinionError(message="Raising A MinionError.")
+    if opts["proxy"].get("raise_commandexec_error"):
+        raise CommandExecutionError(message="Raising A CommandExecutionError.")
+    __context__["dummy_proxy"] = {"id": opts["id"]}
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:
-        state["initialized"] = True
+        state["initialized"] = True  # pylint: disable=unsupported-assignment-operation
 
 
 def initialized():
@@ -103,12 +113,12 @@ def grains():
     Make up some grains
     """
     with _loaded_state(__opts__) as state:
-        if "grains_cache" not in state:
-            state["grains_cache"] = {
-                "dummy_grain_1": "one",
-                "dummy_grain_2": "two",
-                "dummy_grain_3": "three",
-            }
+        # pylint: disable=unsupported-assignment-operation,unsupported-membership-test
+        state["grains_cache"] = {
+            "dummy_grain_1": "one",
+            "dummy_grain_2": "two",
+            "dummy_grain_3": "three",
+        }
         return state["grains_cache"]
 
 
@@ -117,7 +127,7 @@ def grains_refresh():
     Refresh the grains
     """
     with _loaded_state(__opts__) as state:
-        if "grains_cache" in state:
+        if "grains_cache" in state:  # pylint: disable=unsupported-membership-test
             state.pop("grains_cache")
     return grains()
 
@@ -127,8 +137,10 @@ def fns():
     Method called by grains module.
     """
     return {
-        "details": "This key is here because a function in "
-        "grains/rest_sample.py called fns() here in the proxymodule."
+        "details": (
+            "This key is here because a function in "
+            "grains/rest_sample.py called fns() here in the proxymodule."
+        )
     }
 
 
@@ -221,6 +233,7 @@ def package_remove(name):
     """
     Remove a "package" on the REST server
     """
+    __context__["dummy_proxy"]["foo"] = "bar"
     with _loaded_state(__opts__) as state:
         state["packages"].pop(name)
         return state["packages"]
@@ -249,7 +262,7 @@ def shutdown(opts):
     """
     log.debug("dummy proxy shutdown() called...")
     with _loaded_state(__opts__) as state:
-        if "filename" in state:
+        if "filename" in state:  # pylint: disable=unsupported-membership-test
             os.unlink(state["filename"])
 
 

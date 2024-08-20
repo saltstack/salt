@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Set grains describing the minion process.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.utils.platform
-
-# Import salt libs
 import salt.utils.user
 
 

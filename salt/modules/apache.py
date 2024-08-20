@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Apache
 
@@ -9,42 +8,17 @@ Support for Apache
     Debian-based system is detected.
 """
 
-# Import python libs
-from __future__ import (
-    absolute_import,
-    generators,
-    print_function,
-    unicode_literals,
-    with_statement,
-)
-
+import io
 import logging
 import re
+import urllib.error
+import urllib.request
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltException
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module
-from salt.ext import six
-from salt.ext.six.moves import cStringIO
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.request import (
-    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import (
-    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-from salt.ext.six.moves.urllib.request import install_opener as _install_opener
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
-
-# pylint: enable=import-error,no-name-in-module
-
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +60,7 @@ def version():
 
         salt '*' apache.version
     """
-    cmd = "{0} -v".format(_detect_os())
+    cmd = f"{_detect_os()} -v"
     out = __salt__["cmd.run"](cmd).splitlines()
     ret = out[0].split(": ")
     return ret[1]
@@ -102,7 +76,7 @@ def fullversion():
 
         salt '*' apache.fullversion
     """
-    cmd = "{0} -V".format(_detect_os())
+    cmd = f"{_detect_os()} -V"
     ret = {}
     ret["compiled_with"] = []
     out = __salt__["cmd.run"](cmd).splitlines()
@@ -131,7 +105,7 @@ def modules():
 
         salt '*' apache.modules
     """
-    cmd = "{0} -M".format(_detect_os())
+    cmd = f"{_detect_os()} -M"
     ret = {}
     ret["static"] = []
     ret["shared"] = []
@@ -157,7 +131,7 @@ def servermods():
 
         salt '*' apache.servermods
     """
-    cmd = "{0} -l".format(_detect_os())
+    cmd = f"{_detect_os()} -l"
     ret = []
     out = __salt__["cmd.run"](cmd).splitlines()
     for line in out:
@@ -179,7 +153,7 @@ def directives():
 
         salt '*' apache.directives
     """
-    cmd = "{0} -L".format(_detect_os())
+    cmd = f"{_detect_os()} -L"
     ret = {}
     out = __salt__["cmd.run"](cmd)
     out = out.replace("\n\t", "\t")
@@ -206,7 +180,7 @@ def vhosts():
 
         salt -t 10 '*' apache.vhosts
     """
-    cmd = "{0} -S".format(_detect_os())
+    cmd = f"{_detect_os()} -S"
     ret = {}
     namevhost = ""
     out = __salt__["cmd.run"](cmd)
@@ -247,9 +221,9 @@ def signal(signal=None):
         return
     # Make sure you use the right arguments
     if signal in valid_signals:
-        arguments = " -k {0}".format(signal)
+        arguments = f" -k {signal}"
     else:
-        arguments = " {0}".format(signal)
+        arguments = f" {signal}"
     cmd = _detect_os() + arguments
     out = __salt__["cmd.run_all"](cmd)
 
@@ -263,7 +237,7 @@ def signal(signal=None):
         ret = out["stdout"].strip()
     # No output for something like: apachectl graceful
     else:
-        ret = 'Command: "{0}" completed successfully!'.format(cmd)
+        ret = f'Command: "{cmd}" completed successfully!'
     return ret
 
 
@@ -352,28 +326,26 @@ def server_status(profile="default"):
 
     # Get configuration from pillar
     url = __salt__["config.get"](
-        "apache.server-status:{0}:url".format(profile), "http://localhost/server-status"
+        f"apache.server-status:{profile}:url", "http://localhost/server-status"
     )
-    user = __salt__["config.get"]("apache.server-status:{0}:user".format(profile), "")
-    passwd = __salt__["config.get"]("apache.server-status:{0}:pass".format(profile), "")
-    realm = __salt__["config.get"]("apache.server-status:{0}:realm".format(profile), "")
-    timeout = __salt__["config.get"](
-        "apache.server-status:{0}:timeout".format(profile), 5
-    )
+    user = __salt__["config.get"](f"apache.server-status:{profile}:user", "")
+    passwd = __salt__["config.get"](f"apache.server-status:{profile}:pass", "")
+    realm = __salt__["config.get"](f"apache.server-status:{profile}:realm", "")
+    timeout = __salt__["config.get"](f"apache.server-status:{profile}:timeout", 5)
 
     # create authentication handler if configuration exists
     if user and passwd:
-        basic = _HTTPBasicAuthHandler()
+        basic = urllib.request.HTTPBasicAuthHandler()
         basic.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-        digest = _HTTPDigestAuthHandler()
+        digest = urllib.request.HTTPDigestAuthHandler()
         digest.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-        _install_opener(_build_opener(basic, digest))
+        urllib.request.install_opener(urllib.request.build_opener(basic, digest))
 
     # get http data
     url += "?auto"
     try:
-        response = _urlopen(url, timeout=timeout).read().splitlines()
-    except URLError:
+        response = urllib.request.urlopen(url, timeout=timeout).read().splitlines()
+    except urllib.error.URLError:
         return "error"
 
     # parse the data
@@ -402,45 +374,45 @@ def _parse_config(conf, slot=None):
     :param conf: defined config structure
     :param slot: name of section container if needed
     """
-    ret = cStringIO()
-    if isinstance(conf, six.string_types):
+    ret = io.StringIO()
+    if isinstance(conf, str):
         if slot:
-            print("{0} {1}".format(slot, conf), file=ret, end="")
+            print(f"{slot} {conf}", file=ret, end="")
         else:
-            print("{0}".format(conf), file=ret, end="")
+            print(f"{conf}", file=ret, end="")
     elif isinstance(conf, list):
         is_section = False
         for item in conf:
             if "this" in item:
                 is_section = True
-                slot_this = six.text_type(item["this"])
+                slot_this = str(item["this"])
         if is_section:
-            print("<{0} {1}>".format(slot, slot_this), file=ret)
+            print(f"<{slot} {slot_this}>", file=ret)
             for item in conf:
                 for key, val in item.items():
                     if key != "this":
-                        print(_parse_config(val, six.text_type(key)), file=ret)
-            print("</{0}>".format(slot), file=ret)
+                        print(_parse_config(val, str(key)), file=ret)
+            print(f"</{slot}>", file=ret)
         else:
             for value in conf:
-                print(_parse_config(value, six.text_type(slot)), file=ret)
+                print(_parse_config(value, str(slot)), file=ret)
     elif isinstance(conf, dict):
         try:
-            print("<{0} {1}>".format(slot, conf["this"]), file=ret)
+            print("<{} {}>".format(slot, conf["this"]), file=ret)
         except KeyError:
             raise SaltException(
-                'Apache section container "<{0}>" expects attribute. '
+                'Apache section container "<{}>" expects attribute. '
                 'Specify it using key "this".'.format(slot)
             )
-        for key, value in six.iteritems(conf):
+        for key, value in conf.items():
             if key != "this":
-                if isinstance(value, six.string_types):
-                    print("{0} {1}".format(key, value), file=ret)
+                if isinstance(value, str):
+                    print(f"{key} {value}", file=ret)
                 elif isinstance(value, list):
                     print(_parse_config(value, key), file=ret)
                 elif isinstance(value, dict):
                     print(_parse_config(value, key), file=ret)
-        print("</{0}>".format(slot), file=ret)
+        print(f"</{slot}>", file=ret)
 
     ret.seek(0)
     return ret.read()
@@ -469,7 +441,7 @@ def config(name, config, edit=True):
 
     configs = []
     for entry in config:
-        key = next(six.iterkeys(entry))
+        key = next(iter(entry.keys()))
         configs.append(_parse_config(entry[key], key))
 
     # Python auto-correct line endings

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Manage Windows Package Repository
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import itertools
 
@@ -62,18 +60,18 @@ def genrepo(name, force=False, allow_empty=False):
     if not force:
         if not os.path.exists(winrepo_dir):
             ret["result"] = False
-            ret["comment"] = "{0} is missing".format(winrepo_dir)
+            ret["comment"] = f"{winrepo_dir} is missing"
             return ret
         elif not os.path.exists(winrepo_cachefile):
             execute = True
-            ret["comment"] = "{0} is missing".format(winrepo_cachefile)
+            ret["comment"] = f"{winrepo_cachefile} is missing"
         else:
             winrepo_cachefile_mtime = os.stat(winrepo_cachefile)[stat.ST_MTIME]
             for root, dirs, files in salt.utils.path.os_walk(winrepo_dir):
                 for name in itertools.chain(files, dirs):
                     full_path = os.path.join(root, name)
                     if os.stat(full_path)[stat.ST_MTIME] > winrepo_cachefile_mtime:
-                        ret["comment"] = "mtime({0}) < mtime({1})".format(
+                        ret["comment"] = "mtime({}) < mtime({})".format(
                             winrepo_cachefile, full_path
                         )
                         execute = True

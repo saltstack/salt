@@ -1,8 +1,13 @@
 import pytest
+
 import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture

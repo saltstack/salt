@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
 
@@ -9,10 +8,6 @@
     ESX Cluster configuration schemas
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 from salt.utils.schema import (
     AnyOfItem,
     ArrayItem,
@@ -107,8 +102,10 @@ class vSANClusterConfigItem(ComplexSchemaItem):
     )
     auto_claim_storage = BooleanItem(
         title="Auto Claim Storage",
-        description="Specifies whether the storage of member ESXi hosts should "
-        "be automatically claimed for vSAN",
+        description=(
+            "Specifies whether the storage of member ESXi hosts should "
+            "be automatically claimed for vSAN"
+        ),
     )
     dedup_enabled = BooleanItem(
         title="Enabled", description="Specifies dedup should be enabled"
@@ -131,8 +128,10 @@ class DRSConfigItem(ComplexSchemaItem):
     )
     vmotion_rate = IntegerItem(
         title="vMotion rate",
-        description="Aggressiveness to do automatic vMotions: "
-        "1 (least aggressive) - 5 (most aggressive)",
+        description=(
+            "Aggressiveness to do automatic vMotions: "
+            "1 (least aggressive) - 5 (most aggressive)"
+        ),
         minimum=1,
         maximum=5,
     )

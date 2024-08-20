@@ -35,7 +35,7 @@ but these are things we consider when reviewing a pull request.
   be immediately evident to the next person who comes along why this change was
   made?
 
-.. _`style guide`: https://docs.saltstack.com/en/latest/topics/development/conventions/style.html
+.. _`style guide`: https://docs.saltproject.io/en/latest/topics/development/conventions/style.html
 
 * If appropriate, has the person who wrote the code which is being modified
   been notified and included in the process?
@@ -185,3 +185,47 @@ PR's that do not require tests include:
   * fixing tests
   * pylint
   * changes outside of the salt directory
+
+Pull Request CI/CD test suite
+=============================
+
+By default, PRs run a limited subset of the test suite against the following
+operating systems:
+
+* Linux:
+    - Latest ``Rocky Linux x86_64``
+    - Latest ``Amazon Linux aarch64``
+    - Latest ``Ubuntu LTS arm64``
+    - Latest ``Arch Linux x86_64``
+* Latest ``Windows Server x86_64``
+* Latest ``MacOS arm64``
+
+Optional OS additions
+---------------------
+
+There are times where a PR is specifically addressing a target OS, or a core component of
+Salt is being updated that needs to be tested against all support operating systems. This
+is often required to fix ``nightly`` builds, or introduce a new operating system into CI/CD.
+
+Labels can be applied to a PR, via those who have the appropriate permissions, using the
+``test:os:<os-name><os-arch>`` format.
+
+* Example: ``test:os:debian-11-arm64`` would also ensure the Debian 11 arm64 OS is included.
+
+Optionally, ``test:os:all`` can be used as a way to target all operating systems
+that nightlies, staging, release target without having to add them all individually.
+
+Optional test additions
+-----------------------
+
+If wanting to also increase the scope of tests themselves, not just the scope of operating
+systems, then additional labels can be used such as:
+
+* ``test:pkg``: Run all package-related tests that are otherwise not included by default
+  on the currently selected operating systems.
+* ``test:full``: Run all tests in the Salt test suite that can be ran on the currently
+  selected operating systems.
+* ``test:coverage``: Run all tests in the Salt test suite on all operating systems while
+  collecting code coverage.
+* ``test:random-cache-seed``: Randomize the GH Actions cache seed to make sure no caches
+  are used during the build.

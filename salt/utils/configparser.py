@@ -1,28 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Custom configparser classes
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
+from collections import OrderedDict
+from configparser import *  # pylint: disable=no-name-in-module,wildcard-import,unused-wildcard-import
 
-# Import Salt libs
 import salt.utils.stringutils
 
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves.configparser import *  # pylint: disable=no-name-in-module,wildcard-import
 
-try:
-    from collections import OrderedDict as _default_dict
-except ImportError:
-    # fallback for setup.py which hasn't yet built _collections
-    _default_dict = dict
-
-
-# pylint: disable=string-substitution-usage-error
-class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-variable
+class GitConfigParser(RawConfigParser):
     """
     Custom ConfigParser which reads and writes git config files.
 
@@ -52,12 +39,15 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
 
     # pylint: disable=useless-super-delegation
     def __init__(
-        self, defaults=None, dict_type=_default_dict, allow_no_value=True,
+        self,
+        defaults=None,
+        dict_type=OrderedDict,
+        allow_no_value=True,
     ):
         """
         Changes default value for allow_no_value from False to True
         """
-        super(GitConfigParser, self).__init__(defaults, dict_type, allow_no_value)
+        super().__init__(defaults, dict_type, allow_no_value)
 
     # pylint: enable=useless-super-delegation
 
@@ -157,16 +147,16 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 )
             elif not is_list:
                 value = [value]
-            if not all(isinstance(x, six.string_types) for x in value):
+            if not all(isinstance(x, str) for x in value):
                 raise TypeError("option values must be strings")
 
-    def get(self, section, option, as_list=False):
+    def get(self, section, option, as_list=False):  # pylint: disable=arguments-differ
         """
         Adds an optional "as_list" argument to ensure a list is returned. This
         is helpful when iterating over an option which may or may not be a
         multivar.
         """
-        ret = super(GitConfigParser, self).get(section, option)
+        ret = super().get(section, option)
         if as_list and not isinstance(ret, list):
             ret = [ret]
         return ret
@@ -177,12 +167,12 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         default value for the 'value' argument.
         """
         self._string_check(value)
-        super(GitConfigParser, self).set(section, option, value)
+        super().set(section, option, value)
 
     def _add_option(self, sectdict, key, value):
         if isinstance(value, list):
             sectdict[key] = value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             try:
                 sectdict[key].append(value)
             except KeyError:
@@ -254,7 +244,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 del sectdict[option]
         return existed
 
-    def write(self, fp_):
+    def write(self, fp_):  # pylint: disable=arguments-differ
         """
         Makes the following changes from the RawConfigParser:
 
@@ -271,12 +261,12 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         )
         if self._defaults:
             fp_.write(convert("[%s]\n" % self.DEFAULTSECT))
-            for (key, value) in six.iteritems(self._defaults):
+            for key, value in self._defaults.items():
                 value = salt.utils.stringutils.to_unicode(value).replace("\n", "\n\t")
-                fp_.write(convert("%s = %s\n" % (key, value)))
+                fp_.write(convert(f"{key} = {value}\n"))
         for section in self._sections:
             fp_.write(convert("[%s]\n" % section))
-            for (key, value) in six.iteritems(self._sections[section]):
+            for key, value in self._sections[section].items():
                 if (value is not None) or (self._optcre == self.OPTCRE):
                     if not isinstance(value, list):
                         value = [value]

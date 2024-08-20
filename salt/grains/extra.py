@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import third party libs
+import glob
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
+import yaml
+
+import salt.utils
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
-import salt.utils.yaml
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -61,8 +57,54 @@ def config():
         log.debug("Loading static grains from %s", gfn)
         with salt.utils.files.fopen(gfn, "rb") as fp_:
             try:
-                return salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
+                return salt.utils.data.decode(yaml.safe_load(fp_))
             except Exception:  # pylint: disable=broad-except
                 log.warning("Bad syntax in grains file! Skipping.")
                 return {}
     return {}
+
+
+def __secure_boot(efivars_dir):
+    """Detect if secure-boot is enabled."""
+    enabled = False
+    sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*/data"))
+    if len(sboot) == 1:
+        # The minion is usually running as a privileged user, but is
+        # not the case for the master.  Seems that the master can also
+        # pick the grains, and this file can only be readed by "root"
+        try:
+            with salt.utils.files.fopen(sboot[0], "rb") as fd:
+                enabled = fd.read()[-1:] == b"\x01"
+        except PermissionError:
+            pass
+    return enabled
+
+
+def uefi():
+    """Populate UEFI grains."""
+    if salt.utils.platform.is_freebsd():
+        grains = {
+            "efi": os.path.exists("/dev/efi"),
+            # Needs a contributor with a secure boot system to implement this
+            # part.
+            "efi-secure-boot": False,
+        }
+    else:
+        # Works on Linux and Apple ?
+        efivars_dir = next(
+            filter(
+                os.path.exists, ["/sys/firmware/efi/efivars", "/sys/firmware/efi/vars"]
+            ),
+            None,
+        )
+        grains = {
+            "efi": bool(efivars_dir),
+            "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
+        }
+
+    return grains
+
+
+def transactional():
+    """Determine if the system is transactional."""
+    return {"transactional": bool(salt.utils.path.which("transactional-update"))}

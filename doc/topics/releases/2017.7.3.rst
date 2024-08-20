@@ -12,7 +12,19 @@ Statistics
 - Total Issue References: **94**
 - Total PR References: **423**
 
-- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_, `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_, `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_, `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_, `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_, `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_, `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_, `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_, `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_, `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_, `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
+- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_,
+  `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_,
+  `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_,
+  `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_,
+  `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_,
+  `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_,
+  `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_,
+  `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_,
+  `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_,
+  `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_,
+  `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_,
+  `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_,
+  `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
 
 
 Windows Changes
@@ -119,7 +131,7 @@ Changelog for v2017.7.2..v2017.7.3
 * **PR** `#45664`_: (`rallytime`_) Back-port `#45452`_ to 2017.7.3
   @ *2018-01-24 15:33:13 UTC*
 
-  * **PR** `#45452`_: (`adelcast`_) opkg.py: make owner fuction return value, instead of iterator (refs: `#45664`_)
+  * **PR** `#45452`_: (`adelcast`_) opkg.py: make owner function return value, instead of iterator (refs: `#45664`_)
 
   * 0717f7a578 Merge pull request `#45664`_ from rallytime/bp-45452
 
@@ -435,7 +447,7 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 9a15ec3430 Updating versionadded string.  Fixing typo.
 
-  * edfc3dc078 Adding in documention for `auth_events` configuration option
+  * edfc3dc078 Adding in documentation for `auth_events` configuration option
 
   * 3ee4eabffd Fixing small typo
 
@@ -450,7 +462,8 @@ Changelog for v2017.7.2..v2017.7.3
 
   * aeb5f4e248 Add state.running ssh integration test
 
-* **ISSUE** `saltstack/salt-jenkins#675`_: (`rallytime`_) [2017.7] unit.states.test_file.TestFileState.test_directory is failing on Fedora 27 and CentOS 6 (refs: `#45295`_)
+* **ISSUE** `saltstack/salt-jenkins#675`_: (`rallytime`_) [2017.7] unit.states.test_file.TestFileState.test_directory
+  is failing on Fedora 27 and CentOS 6 (refs: `#45295`_)
 
 * **PR** `#45295`_: (`gtmanfred`_) test directory that doesn't exist
   @ *2018-01-08 20:59:53 UTC*
@@ -1063,11 +1076,18 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 4b60b1ec84 Merge remote branch 'refs/remotes/upstream/2017.7' into 2017.7_replace_with_newer_2016.11_win_pkg
 
-  * b46f818a57 Raise a PR to fix 2016 issues commited here, fixed issues with merge.
+  * b46f818a57 Raise a PR to fix 2016 issues committed here, fixed issues with merge.
 
   * 32ef1e12ae Merge branch '2017.7' into 2017.7_replace_with_newer_2016.11_win_pkg
 
-  * 494835c3f2 I backported develop and applied a long list of fixes to 2016.11 this brings these fixes into 2017.7 - Software was not always being removed, general if & was in the string or msi was downloaded to uninstall the software - pkg.list_upgrades failed. Added support for 'latest' and 'Not Found' for version_cmp() to fix this. - output fixes - pkg.list_available no longer forces a pkg.refresh_db this is no longer required, as by default it will update if older than 6 hours - cmd /s /c is prefixed for all commands i.e. installs and removes. - cmd are now strings, instead of a list when using cmd.run. As windows only supports strings. And the " were being broken
+  * 494835c3f2 I backported develop and applied a long list of fixes to 2016.11 this brings these
+    fixes into 2017.7 - Software was not always being removed, general if & was in the string or
+    msi was downloaded to uninstall the software - pkg.list_upgrades failed. Added support for
+    'latest' and 'Not Found' for version_cmp() to fix this. - output fixes - pkg.list_available no
+    longer forces a pkg.refresh_db this is no longer required, as by default it will update if
+    older than 6 hours - cmd /s /c is prefixed for all commands i.e. installs and removes. - cmd
+    are now strings, instead of a list when using cmd.run. As windows only supports strings. And
+    the " were being broken
 
 * **PR** `#44754`_: (`twangboy`_) Fix inet_pton for Windows on Py3
   @ *2017-12-12 14:04:20 UTC*
@@ -1389,7 +1409,7 @@ Changelog for v2017.7.2..v2017.7.3
 
     * 998d714ee7 Merge pull request `#44517`_ from whytewolf/publish_port_doc_missing
 
-      * 4b5855283a missed one place where i didnt chanbge master_port from my copy to publish_port
+      * 4b5855283a missed one place where i didn't chanbge master_port from my copy to publish_port
 
       * e4610baea5 update doc to have publish port
 
@@ -1549,7 +1569,8 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 9d43221422 Correct indentation
 
-  * d6e28ebed1 Add handling for FreeBSD in method zone_compare to avoid exception when /etc/localtime file does is absent.  This is valid configuration on FreeBSD and represents UTC.
+  * d6e28ebed1 Add handling for FreeBSD in method zone_compare to avoid exception when
+    /etc/localtime file does is absent.  This is valid configuration on FreeBSD and represents UTC.
 
 * **ISSUE** `#41869`_: (`mirceaulinic`_) Thorium: unable to execute runners (refs: `#44781`_)
 
@@ -1606,9 +1627,9 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 3bb385b44e removing debugging logging
 
-  * 7f0ff5a8b0 When passing IDs on the command line convert them all the strings for later comparision.
+  * 7f0ff5a8b0 When passing IDs on the command line convert them all the strings for later comparison.
 
-  * 99e436add4 When looking for job ids to remove based on the tag_name the comparision was comparing an INT to a STR, so the correct job id was not being returned.
+  * 99e436add4 When looking for job ids to remove based on the tag_name the comparison was comparing an INT to a STR, so the correct job id was not being returned.
 
 * **ISSUE** `#44136`_: (`dupsatou`_) KeyError: 'runas' after updating to latest salt in yum repo. (refs: `#44695`_)
 
@@ -1747,7 +1768,7 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 04b97bcfad Merge pull request `#44663`_ from whytewolf/ZD1777_ensure_understanding_of_minion_config_over_grains_file
 
-  * c9122e4b85 fixed pylint error, and updated description on at the top the the module and state.
+  * c9122e4b85 fixed pylint error, and updated description on at the top the module and state.
 
   * 7fb208b5ad Update note in topics/grains to reflect that not all grains are ignored. only those set in the minion config
 
@@ -1764,7 +1785,7 @@ Changelog for v2017.7.2..v2017.7.3
 
     * 88ef9f18fc ignore lint error on import
 
-    * 25427d845e convert key iterator to list as python 3 wont index an iterator
+    * 25427d845e convert key iterator to list as python 3 won't index an iterator
 
   * bce50154e5 Merge branch '2017.7' into improve-net-load
 
@@ -1825,14 +1846,14 @@ Changelog for v2017.7.2..v2017.7.3
 
                   * c6733ac1ee pop None
 
-* **PR** `#44616`_: (`Ch3LL`_) Add Non Base Environement salt:// source integration test
+* **PR** `#44616`_: (`Ch3LL`_) Add Non Base Environment salt:// source integration test
   @ *2017-11-22 16:13:54 UTC*
 
   * d6ccf4bb30 Merge pull request `#44616`_ from Ch3LL/nonbase_test
 
   * 80b71652e3 Merge branch '2017.7' into nonbase_test
 
-  * c9ba33432e Add Non Base Environement salt:// source integration test
+  * c9ba33432e Add Non Base Environment salt:// source integration test
 
 * **PR** `#44617`_: (`Ch3LL`_) Add ssh thin_dir integration test
   @ *2017-11-22 16:12:51 UTC*
@@ -1961,7 +1982,7 @@ Changelog for v2017.7.2..v2017.7.3
 
   * ce1882943d Use salt.utils.files.mkstemp() instead
 
-  * 6689bd3b2d Dont use dangerous os.tmpnam
+  * 6689bd3b2d Don't use dangerous os.tmpnam
 
   * 2d6176b0bc Fx2 proxy minion: clean return, like all the other modules
 
@@ -2228,7 +2249,7 @@ Changelog for v2017.7.2..v2017.7.3
 
   * cab54e34b5 Merge pull request `#44173`_ from twangboy/win_system_docs
 
-    * 8e111b413d Fix some of the wording and grammer errors
+    * 8e111b413d Fix some of the wording and grammar errors
 
     * a12bc5ae41 Use google style docstrings
 
@@ -2797,9 +2818,9 @@ Changelog for v2017.7.2..v2017.7.3
 * **PR** `#44133`_: (`cachedout`_) Fix typos in parallel states docs
   @ *2017-10-17 15:24:19 UTC*
 
-  * 6252f82f58 Merge pull request `#44133`_ from cachedout/fix_paralell_docs
+  * 6252f82f58 Merge pull request `#44133`_ from cachedout/fix_parallel_docs
 
-  * 8d1c1e21f0 Fix typos in paralell states docs
+  * 8d1c1e21f0 Fix typos in parallel states docs
 
 * **PR** `#44135`_: (`timfreund`_) Insert missing verb in gitfs walkthrough
   @ *2017-10-17 14:32:13 UTC*
@@ -3366,7 +3387,7 @@ Changelog for v2017.7.2..v2017.7.3
 
     * 1a8cc60bb4 Merge pull request `#43772`_ from gtmanfred/2016.11
 
-      * 0194c60960 dont print Minion not responding with quiet
+      * 0194c60960 don't print Minion not responding with quiet
 
     * 9dee896fb9 Merge pull request `#43747`_ from rallytime/gpg-verification
 
@@ -3434,7 +3455,9 @@ Changelog for v2017.7.2..v2017.7.3
 
       * babad12d83 Revise "Contributing" docs: merge-forwards/release branches explained!
 
-* **ISSUE** `#43737`_: (`syedaali`_) salt.loaded.int.module.boto_kinesis.__virtual__() is wrongly returning `None`. It should either return `True`, `False` or a new name. If you're the developer of the module 'boto_kinesis', please fix this. (refs: `#43748`_)
+* **ISSUE** `#43737`_: (`syedaali`_) salt.loaded.int.module.boto_kinesis.__virtual__() is wrongly
+  returning `None`. It should either return `True`, `False` or a new name. If you're the developer
+  of the module 'boto_kinesis', please fix this. (refs: `#43748`_)
 
 * **PR** `#43748`_: (`rallytime`_) Add message to boto_kinesis modules if boto libs are missing
   @ *2017-09-27 13:19:33 UTC*
@@ -4389,7 +4412,11 @@ Changelog for v2017.7.2..v2017.7.3
 
     * c15bcbe1cc Merge remote-tracking branch 'upstream/2016.11' into fix-apache-config-multi-entity
 
-    * 4164047951 Fix apache.config with multiple statement At this moment when you post more than one statement in config only last is used. Also file is rewrited multiple times until last statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with    Proxy Something and ignore Listen 8080, This patch fix this issue.
+    * 4164047951 Fix apache.config with multiple statement At this moment when you post more than
+      one statement in config only last is used. Also file is rewritten multiple times until last
+      statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf
+      config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with Proxy Something and
+      ignore Listen 8080, This patch fix this issue.
 
   * b90e59ede9 Merge pull request `#43154`_ from lomeroe/bp-43116-2016.11
 

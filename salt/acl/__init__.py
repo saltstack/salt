@@ -1,24 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 The acl module handles publisher_acl operations
 
 Additional information on publisher_acl can be
 found by reading the salt documentation:
 
-    http://docs.saltstack.com/en/latest/ref/publisheracl.html
+    https://docs.saltproject.io/en/latest/ref/publisheracl.html
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.stringutils
 
-# Import 3rd-party libs
-from salt.ext import six
 
-
-class PublisherACL(object):
+class PublisherACL:
     """
     Represents the publisher ACL and provides methods
     to query the ACL for given operations
@@ -38,7 +32,7 @@ class PublisherACL(object):
 
     def cmd_is_blacklisted(self, cmd):
         # If this is a regular command, it is a single function
-        if isinstance(cmd, six.string_types):
+        if isinstance(cmd, str):
             cmd = [cmd]
         for fun in cmd:
             if not salt.utils.stringutils.check_whitelist_blacklist(

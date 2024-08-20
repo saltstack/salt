@@ -9,7 +9,6 @@ import inspect
 import logging
 
 from salt.utils.odict import OrderedDict
-from salt.utils.schema import Prepareable
 
 REQUISITES = (
     "listen",
@@ -180,8 +179,9 @@ class StateFactory:
     def __getattr__(self, func):
         if self.valid_funcs and func not in self.valid_funcs:
             raise InvalidFunction(
-                "The function '{}' does not exist in the "
-                "StateFactory for '{}'".format(func, self.module)
+                "The function '{}' does not exist in the StateFactory for '{}'".format(
+                    func, self.module
+                )
             )
 
         def make_state(id_, **kwargs):
@@ -250,10 +250,10 @@ class State:
 
     @property
     def full_func(self):
-        return "{!s}.{!s}".format(self.module, self.func)
+        return f"{self.module!s}.{self.func!s}"
 
     def __str__(self):
-        return "{!s} = {!s}:{!s}".format(self.id_, self.full_func, self.attrs)
+        return f"{self.id_!s} = {self.full_func!s}:{self.attrs!s}"
 
     def __call__(self):
         return {self.full_func: self.attrs}
@@ -283,14 +283,14 @@ class SaltObject:
         class __wrapper__:
             def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
-                    return self._salt["{}.{}".format(mod, func)]
+                    return self._salt[f"{mod}.{func}"]
                 except KeyError:
                     raise AttributeError
 
         return __wrapper__()
 
 
-class MapMeta(type, metaclass=Prepareable):
+class MapMeta(type):
     """
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.

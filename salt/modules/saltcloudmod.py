@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Control a salt cloud system
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.json
 
@@ -29,7 +25,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The saltcloudmod execution module failed to load: requires the saltcloud library.",
+        "The saltcloudmod execution module failed to load: requires the saltcloud"
+        " library.",
     )
 
 
@@ -43,7 +40,7 @@ def create(name, profile):
 
         salt <minion-id> saltcloud.create webserver rackspace_centos_512
     """
-    cmd = "salt-cloud --out json -p {0} {1}".format(profile, name)
+    cmd = f"salt-cloud --out json -p {profile} {name}"
     out = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     try:
         ret = salt.utils.json.loads(out)

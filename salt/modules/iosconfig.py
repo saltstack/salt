@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cisco IOS configuration manipulation helpers
 
@@ -8,10 +7,7 @@ This module provides a collection of helper functions for Cisco IOS style
 configuration manipulation. This module does not have external dependencies
 and can be used from any Proxy or regular Minion.
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import difflib
 
 import salt.utils.dictdiffer
@@ -19,7 +15,6 @@ import salt.utils.dictupdate
 from salt.exceptions import SaltException
 
 # Import Salt modules
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 # ------------------------------------------------------------------------------
@@ -126,7 +121,7 @@ def _print_config_text(tree, indentation=0):
     Return the config as text from a config tree.
     """
     config = ""
-    for key, value in six.iteritems(tree):
+    for key, value in tree.items():
         config += "{indent}{line}\n".format(indent=" " * indentation, line=key)
         if value:
             config += _print_config_text(value, indentation=indentation + 1)
@@ -171,7 +166,7 @@ def tree(config=None, path=None, with_tags=False, saltenv="base"):
     if path:
         config = __salt__["cp.get_file_str"](path, saltenv=saltenv)
         if config is False:
-            raise SaltException("{} is not available".format(path))
+            raise SaltException(f"{path} is not available")
     config_lines = config.splitlines()
     return _parse_text_config(config_lines, with_tags=with_tags)
 

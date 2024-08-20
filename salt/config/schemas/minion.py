@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,12 +7,7 @@
     Minion configuration schema
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 from salt.config.schemas.common import IncludeConfig, MinionDefaultInclude
-
-# Import salt libs
 from salt.utils.schema import IPv4Item, Schema
 
 # XXX: THIS IS WAY TOO MINIMAL, BUT EXISTS TO IMPLEMENT salt-ssh

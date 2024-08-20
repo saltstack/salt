@@ -1,8 +1,10 @@
 import pytest
+
 from tests.support.case import ModuleCase
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.timeout_unless_on_windows(120)
 class DecoratorTest(ModuleCase):
     @pytest.mark.slow_test
     def test_module(self):
@@ -20,7 +22,9 @@ class DecoratorTest(ModuleCase):
         self.assertEqual(
             {
                 "runtests_decorators.missing_depends_will_fallback": None,
-                "runtests_decorators.missing_depends": "'runtests_decorators.missing_depends' is not available.",
+                "runtests_decorators.missing_depends": (
+                    "'runtests_decorators.missing_depends' is not available."
+                ),
             },
             self.run_function("runtests_decorators.missing_depends"),
         )
@@ -76,7 +80,8 @@ class DecoratorTest(ModuleCase):
         )
         self.assertEqual(
             ret,
-            "'runtests_decorators.command_failure_nonzero_retcode_true' is not available.",
+            "'runtests_decorators.command_failure_nonzero_retcode_true' is not"
+            " available.",
         )
 
     @pytest.mark.slow_test
@@ -93,7 +98,8 @@ class DecoratorTest(ModuleCase):
         )
         self.assertEqual(
             ret,
-            "'runtests_decorators.command_failure_nonzero_retcode_false' is not available.",
+            "'runtests_decorators.command_failure_nonzero_retcode_false' is not"
+            " available.",
         )
 
     @pytest.mark.slow_test

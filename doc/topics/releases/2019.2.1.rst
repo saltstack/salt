@@ -60,7 +60,14 @@ Statistics
 - Total Issue References: **70**
 - Total PR References: **355**
 
-- Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_, `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_, `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_, `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_, `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_, `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_, `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_, `waynew`_, `weswhet`_, `xuhcc`_)
+- Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_,
+  `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_,
+  `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_,
+  `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_,
+  `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_,
+  `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_,
+  `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_,
+  `waynew`_, `weswhet`_, `xuhcc`_)
 
 Changelog for v2019.2.0..v2019.2.1
 ==================================
@@ -194,7 +201,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 94c03e5 Merge pull request `#54338`_ from dwoz/logging_fixup
 
-  * a3e227e Log server closes completely durring shutdown
+  * a3e227e Log server closes completely during shutdown
 
 * **PR** `#54327`_: (`garethgreenaway`_) [2019.2.1] Catch the AccessDenied exception and continue when running under Py3.
   @ *2019-08-29 16:59:34 UTC*
@@ -258,7 +265,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 659c805 Change noise log to debug
 
-  * 0660b1a Clean up typoes
+  * 0660b1a Clean up typos
 
   * 9f1fe42 Call os.fork less to avoid race conditions
 
@@ -288,7 +295,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 993c341 Merge pull request `#54235`_ from ogd-software/fix_46034-2019.2.1
 
-  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail), what yaml.safe_load returns depends not on the version of salt, but on some other external dependency. Because of this, fix both possible return values.
+  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail),
+    what yaml.safe_load returns depends not on the version of salt, but on some other external
+    dependency. Because of this, fix both possible return values.
 
   * c95dd4d Add test for this specific bugfix
 
@@ -395,7 +404,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * b3c70c3 Merge pull request `#54264`_ from dwoz/jinja_units
 
-  * 10a6d53 Fix unit utils jinja when run on thier own
+  * 10a6d53 Fix unit utils jinja when run on their own
 
 * **PR** `#54266`_: (`Akm0d`_) Fix incorrect types on failing cloud tests
   @ *2019-08-21 17:14:40 UTC*
@@ -1010,12 +1019,12 @@ Changelog for v2019.2.0..v2019.2.1
 
   * ceaba05 Skip get time test
 
-* **PR** `#54038`_: (`Ch3LL`_) Pyton3 digitial ocean test fix: to_str on key
+* **PR** `#54038`_: (`Ch3LL`_) Pyton3 digital ocean test fix: to_str on key
   @ *2019-07-29 16:54:19 UTC*
 
   * 4aed833 Merge pull request `#54038`_ from Ch3LL/do_py3_fix
 
-  * f7346db Pyton3 digitial ocean test fix: to_str on key
+  * f7346db Pyton3 digital ocean test fix: to_str on key
 
       * 05cd93f fixs integration terminate error
 
@@ -1041,7 +1050,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * cc1cda1 Merge pull request `#53953`_ from Ch3LL/improve_git_test
 
-  * 347ea1e Use Sigkill and add time.sleep befor check
+  * 347ea1e Use Sigkill and add time.sleep before check
 
   * 637bf95 Merge branch '2019.2.1' into improve_git_test
 
@@ -1602,11 +1611,11 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 353f9d4 Fixing the beacons.reset function.  Once the reset has taken place in beacons/__init__.py we need to fire an event back to complete the loop and ensure that everything worked as expected.
 
-  * ee3cbc7 fix to how the depends decorator works.  Only run the dependancy commands for the module we're checking.
+  * ee3cbc7 fix to how the depends decorator works.  Only run the dependency commands for the module we're checking.
 
   * 8440176 Fixing a log issue that pops up after test_gen_thin_compression_fallback_py3 on "OS X, need to ensure that salt.utils.thin.os.close is mocked.
 
-  * 9767ddd Format for the sqlite3 databse used for the assistive information changed in Mojave, additional columns added.
+  * 9767ddd Format for the sqlite3 database used for the assistive information changed in Mojave, additional columns added.
 
   * 9c8a7e6 Fixing a bug when the roots fileserver and the location is a symlink to another location.  This fix ensures that when fsroot is referenced we are using the real path and not the symlink path.
 
@@ -2152,7 +2161,7 @@ Changelog for v2019.2.0..v2019.2.1
 
             * 78aeb61 Dropping the version check for InstallationError down to anything 1.0 or greater.  Removing the test that simulates versions of pip below 1.0.
 
-            * 4ec90c2 Adding an jinja if statement to only the python parameter if the result from get_python_executable is a valid value.  Maintaining backwards compatibilty to run tests without Nox.
+            * 4ec90c2 Adding an jinja if statement to only the python parameter if the result from get_python_executable is a valid value.  Maintaining backwards compatibility to run tests without Nox.
 
 * **PR** `#53192`_: (`twangboy`_) Skip `test_gen_hash` test on Windows
   @ *2019-05-23 05:33:13 UTC*
@@ -2398,7 +2407,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 6375944 Add ubuntu1804 to pr tests
 
-  * 8fdb04d SIGKILL is not alwasy available use a local variable
+  * 8fdb04d SIGKILL is not always available use a local variable
 
   * 4d6b8da Fix linter
 
@@ -2432,9 +2441,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 52ca668 Skip tests when no libcloud
 
-  * 2cf4b98 Add centos-6-py2 and debain 8,9 py2 and 3 to PR tests
+  * 2cf4b98 Add centos-6-py2 and Debian 8,9 py2 and 3 to PR tests
 
-  * 522599d Dont fail just because some random process died
+  * 522599d Don't fail just because some random process died
 
   * 34cef86 Ignore super not called
 
@@ -2460,7 +2469,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * f4ae97f Upgrade etcd to > 0.4.2
 
-  * 381f5fe Limit and reduce the ammount of log records sent over the wire
+  * 381f5fe Limit and reduce the amount of log records sent over the wire
 
   * 0c94b5d More entries to ignore
 
@@ -2542,7 +2551,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * f86a44e Use the real python executable path when running within a virtualenv
 
-  * 3d407e8 Add a helper to return the path to the real pytohn executable
+  * 3d407e8 Add a helper to return the path to the real python executable
 
   * ea9d246 We must also provide `venv_bin` when running within a virtualenv
 
@@ -2558,7 +2567,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 870b899 Remove unused argument
 
-  * 1656cb4 Disable re-runing failed tests for now
+  * 1656cb4 Disable re-running failed tests for now
 
   * 6db4141 Also ignore multiprocessing coverage files
 
@@ -2700,7 +2709,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * dfff09b Merge branch '2019.2.1' into bp-52780
 
-* **PR** `#52851`_: (`Ch3LL`_)  Reload matcher loader when ext_pillar_first set 
+* **PR** `#52851`_: (`Ch3LL`_)  Reload matcher loader when ext_pillar_first set
   @ *2019-05-07 13:12:07 UTC*
 
   * 2e4f296 Merge pull request `#52851`_ from Ch3LL/matcher_ext_pillar
@@ -3219,7 +3228,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * 1bdaf29 Ensure exceptions in service future are handled
 
-    * c7ad732 Use six.reraise for py3 compatability
+    * c7ad732 Use six.reraise for py3 compatibility
 
     * 29999b0 Close message service on subscriber close
 
@@ -3426,7 +3435,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 9d1b2a0 Only return None on host.present changes when test
 
-* **PR** `#52477`_: (`mattp-`_) 2019.2 backport `#52472`_ modules.cmdmod: handle windows environ better 
+* **PR** `#52477`_: (`mattp-`_) 2019.2 backport `#52472`_ modules.cmdmod: handle windows environ better
   @ *2019-04-11 23:13:34 UTC*
 
   * **PR** `#52472`_: (`mattp-`_) modules.cmdmod: handle windows environ better (refs: `#52476`_, `#52477`_)
@@ -3490,7 +3499,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * c9ec8b1 Ensure exceptions in service future are handled
 
-  * 25f5a90 Use six.reraise for py3 compatability
+  * 25f5a90 Use six.reraise for py3 compatibility
 
   * 6d80789 Fix ipc unit tests
 
@@ -3701,7 +3710,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * ae0e18f Merge branch '2018.3' into zone-clarification
 
-    * e8c8dba Added in an explaination of the --zone flag approved in `#52251`_
+    * e8c8dba Added in an explanation of the --zone flag approved in `#52251`_
 
       * 4908ed3 Merge branch '2017.7' into merge-2018.3
 
@@ -4512,7 +4521,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * e75fc1c Merge pull request `#51747`_ from ymasson/fix_mysql_grants
 
-    * f614dd7 Fix escaping for special charaters
+    * f614dd7 Fix escaping for special characters
 
   * b1f7e85 Merge pull request `#51387`_ from chrillux/make-binarydata-output-possible
 
@@ -4632,7 +4641,7 @@ Changelog for v2019.2.0..v2019.2.1
 
         * 40cb4db Merge branch '2017.7' into multi_master
 
-        * 2dc5171 Hanlde multi_master failover when daemonized
+        * 2dc5171 Handle multi_master failover when daemonized
 
       * 8df083c Merge pull request `#51608`_ from dwoz/wait_minions_2017.7
 
@@ -4775,9 +4784,9 @@ Changelog for v2019.2.0..v2019.2.1
 
       * d879d18 fix broken network.py
 
-      * 76770f3 ss commmand replace to netstat command
+      * 76770f3 ss command replace to netstat command
 
-      * 241707e ss commmand replace to netstat command
+      * 241707e ss command replace to netstat command
 
             * deeefc7 Merge branch '2018.3' into 51266_schedule_enable_disable_break_save
 
@@ -4939,7 +4948,7 @@ Changelog for v2019.2.0..v2019.2.1
 
           * 5eec144 Add `.coveragerc`
 
-          * aa108d5 Run tests from tox, wether runtests or pytest
+          * aa108d5 Run tests from tox, whether runtests or pytest
 
           * 80a3826 Update TODO
 
@@ -5235,7 +5244,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * 3f17776 Actually, remove python-ldap. It needs system deps. Have salt-jenkins do it.
 
-    * afcb6bd Fix the `ldap` pacakge name in requirements/tests.txt
+    * afcb6bd Fix the `ldap` package name in requirements/tests.txt
 
     * 588cb87 Merge pull request `#51454`_ from terminalmage/fix-deprecation-warning
 
@@ -5339,7 +5348,7 @@ Changelog for v2019.2.0..v2019.2.1
 
       * 1d4b9f5 Add `.coveragerc`
 
-      * 78c6d68 Run tests from tox, wether runtests or pytest
+      * 78c6d68 Run tests from tox, whether runtests or pytest
 
       * c02757d gitfs: Fix use of deprecated pygit2 function
 
@@ -5355,7 +5364,7 @@ Changelog for v2019.2.0..v2019.2.1
 
               * ad17ac5 Fix mocks to reflect changes to git.latest state
 
-              * c817213 Don't try to run git.config_get_regexp from nonexistant cwd
+              * c817213 Don't try to run git.config_get_regexp from nonexistent cwd
 
               * f8c3e44 git.latest: add auth to merge/reset calls when LFS used with SSH auth
 
@@ -5615,7 +5624,7 @@ Changelog for v2019.2.0..v2019.2.1
 
       * 6a9daa7 Merge branch '2018.3' into 51208_file_manage_escaped_double_quotes
 
-      * 0bf468c Fixing lint.  Using a constant intead of looking for the condition in the string.
+      * 0bf468c Fixing lint.  Using a constant instead of looking for the condition in the string.
 
       * a233dbc Ensuring we can handle a string that contains single quote + an escaped double quote.
 
@@ -5671,7 +5680,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * 41ae390 Merge pull request `#51231`_ from terminalmage/issue51056
 
-      * 4a61477 Clarify documentation for the the gitfs "all_saltenvs" config param
+      * 4a61477 Clarify documentation for the gitfs "all_saltenvs" config param
 
                       * 0574476 Merge branch '2018.3' into fix_test_pkg
 
@@ -5700,7 +5709,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 6d62156 Add `.coveragerc`
 
-  * 6bb56ce Run tests from tox, wether runtests or pytest
+  * 6bb56ce Run tests from tox, whether runtests or pytest
 
 * **PR** `#51307`_: (`s0undt3ch`_) Add 2019.2 codecov config
   @ *2019-01-24 13:34:25 UTC*

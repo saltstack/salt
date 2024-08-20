@@ -7,7 +7,8 @@ import os
 import re
 import subprocess
 
-import salt.loader_context
+import salt.loader.context
+import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
@@ -28,7 +29,7 @@ def booted(context=None):
     keep the logic below from needing to be run again during the same salt run.
     """
     contextkey = "salt.utils.systemd.booted"
-    if isinstance(context, (dict, salt.loader_context.NamedLoaderContext)):
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
         # Can't put this if block on the same line as the above if block,
         # because it willl break the elif below.
         if contextkey in context:
@@ -51,13 +52,37 @@ def booted(context=None):
     return ret
 
 
+def offline(context=None):
+    """Return True if systemd is in offline mode
+
+    .. versionadded:: 3004
+    """
+    contextkey = "salt.utils.systemd.offline"
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
+        if contextkey in context:
+            return context[contextkey]
+    elif context is not None:
+        raise SaltInvocationError("context must be a dictionary if passed")
+
+    # Note that there is a difference from SYSTEMD_OFFLINE=1.  Here we
+    # assume that there is no PID 1 to talk with.
+    ret = not booted(context) and salt.utils.path.which("systemctl")
+
+    try:
+        context[contextkey] = ret
+    except TypeError:
+        pass
+
+    return ret
+
+
 def version(context=None):
     """
     Attempts to run systemctl --version. Returns None if unable to determine
     version.
     """
     contextkey = "salt.utils.systemd.version"
-    if isinstance(context, (dict, salt.loader_context.NamedLoaderContext)):
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
         # Can't put this if block on the same line as the above if block,
         # because it will break the elif below.
         if contextkey in context:

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     Unit tests for salt.utils.proxy
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.proxy
 from tests.support.mock import patch

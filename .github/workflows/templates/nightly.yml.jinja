@@ -1,0 +1,267 @@
+<%- set gh_environment = gh_environment|default("nightly") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("false") %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
+<%- extends 'ci.yml.jinja' %>
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
+
+<%- endblock name %>
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 0 * * *'  # Every day at 0AM
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block permissions %>
+<{- super() }>
+<%- if workflow_slug == "nightly" %>
+  actions: write  # to trigger branch nightly builds
+<%- endif %>
+<%- endblock permissions %>
+
+<%- block pre_jobs %>
+
+  <%- include "workflow-requirements-check.yml.jinja" %>
+  <%- include "trigger-branch-workflows.yml.jinja" %>
+
+  {#- When we start using a slack app, we can update messages, not while using incoming webhooks
+  <%- if workflow_slug == "nightly" %>
+
+  <%- do conclusion_needs.append('notify-slack') %>
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    environment: <{ gh_environment }>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    outputs:
+      update-ts: ${{ steps.slack.outputs.update-ts }}
+    steps:
+      - name: Notify Slack
+        id: slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "ffca28",
+                  "fields": [
+                    {
+                      "title": "Workflow",
+                      "short": true,
+                      "value": "${{ github.workflow }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Workflow Run",
+                      "short": true,
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Branch",
+                      "short": true,
+                      "value": "${{ github.ref_name }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Commit",
+                      "short": true,
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Attempt",
+                      "short": true,
+                      "value": "${{ github.run_attempt }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "running",
+                      "type": "mrkdwn"
+                    }
+                  ],
+                  "author_name": "${{ github.event.sender.login }}",
+                  "author_link": "${{ github.event.sender.html_url }}",
+                  "author_icon": "${{ github.event.sender.avatar_url }}"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  <%- endif %>
+  #}
+
+<%- endblock pre_jobs %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  <%- if includes.get("build-repos", True) %>
+  <%- include "build-repos.yml.jinja" %>
+  <%- endif %>
+
+  publish-repositories:
+    <%- do conclusion_needs.append('publish-repositories') %>
+    name: Publish Repositories
+    if: ${{ always() && ! failure() && ! cancelled() }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+      - build-docs
+      <%- for need in build_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- if workflow_slug == "nightly" %>
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- endif %>
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Download Repository Artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-*
+          merge-multiple: true
+          path: repo/
+
+      - name: Decompress Repository Artifacts
+        run: |
+          find repo/ -type f -name '*.tar.gz' -print -exec tar xvf {} \;
+          find repo/ -type f -name '*.tar.gz' -print -exec rm -f {} \;
+
+      - name: Show Repository
+        run: |
+          tree -a artifacts/pkgs/repo/
+
+      - name: Upload Repository Contents (<{ gh_environment }>)
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+        run: |
+          tools pkg repo publish <{ gh_environment }> --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
+
+<%- endblock jobs %>
+
+<%- block set_pipeline_exit_status_extra_steps %>
+
+    <%- if workflow_slug == "nightly" %>
+
+      - name: Notify Slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          {#- When we start using a slack app, we can update messages, not while using incoming webhooks
+          update-ts: ${{ needs.notify-slack.outputs.update-ts }}
+          #}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "fallback": "${{ github.workflow }} Workflow build result for the `${{ github.ref_name }}` branch(attempt: ${{ github.run_attempt }}): `${{ steps.get-workflow-info.outputs.conclusion }}`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "color": "${{ steps.get-workflow-info.outputs.conclusion != 'success' && 'ff3d00' || '00e676' }}",
+                  "fields": [
+                    {
+                      "title": "Workflow",
+                      "short": true,
+                      "value": "${{ github.workflow }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Workflow Run",
+                      "short": true,
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Branch",
+                      "short": true,
+                      "value": "${{ github.ref_name }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Commit",
+                      "short": true,
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Attempt",
+                      "short": true,
+                      "value": "${{ github.run_attempt }}",
+                      "type": "mrkdwn"
+                    },
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "${{ steps.get-workflow-info.outputs.conclusion }}",
+                      "type": "mrkdwn"
+                    }
+                  ],
+                  "author_name": "${{ github.event.sender.login }}",
+                  "author_link": "${{ github.event.sender.html_url }}",
+                  "author_icon": "${{ github.event.sender.avatar_url }}"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+    <%- endif %>
+
+<%- endblock set_pipeline_exit_status_extra_steps %>

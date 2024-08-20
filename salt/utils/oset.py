@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Available at repository https://github.com/LuminosoInsight/ordered-set
@@ -21,7 +20,6 @@ Rob Speer's changes are as follows:
     - added a __getstate__ and __setstate__ so it can be pickled
     - added __getitem__
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from collections.abc import MutableSet
 
@@ -87,9 +85,7 @@ class OrderedSet(MutableSet):
         elif is_iterable(index):
             return OrderedSet([self.items[i] for i in index])
         else:
-            raise TypeError(
-                "Don't know how to index an OrderedSet by {}".format(repr(index))
-            )
+            raise TypeError(f"Don't know how to index an OrderedSet by {repr(index)}")
 
     def copy(self):
         return OrderedSet(self)
@@ -115,7 +111,7 @@ class OrderedSet(MutableSet):
     def __contains__(self, key):
         return key in self.map
 
-    def add(self, key):  # pylint: disable=arguments-differ
+    def add(self, key):  # pylint: disable=arguments-differ,arguments-renamed
         """
         Add `key` as an item to this OrderedSet, then return its index.
 
@@ -139,9 +135,7 @@ class OrderedSet(MutableSet):
             for item in sequence:
                 item_index = self.add(item)
         except TypeError:
-            raise ValueError(
-                "Argument needs to be an iterable, got {}".format(type(sequence))
-            )
+            raise ValueError(f"Argument needs to be an iterable, got {type(sequence)}")
         return item_index
 
     def index(self, key):
@@ -170,7 +164,7 @@ class OrderedSet(MutableSet):
         del self.map[elem]
         return elem
 
-    def discard(self, key):  # pylint: disable=arguments-differ
+    def discard(self, key):  # pylint: disable=arguments-differ,arguments-renamed
         """
         Remove an element.  Do not raise an exception if absent.
 
@@ -200,8 +194,8 @@ class OrderedSet(MutableSet):
 
     def __repr__(self):
         if not self:
-            return "{}()".format(self.__class__.__name__)
-        return "{}({})".format(self.__class__.__name__, repr(list(self)))
+            return f"{self.__class__.__name__}()"
+        return f"{self.__class__.__name__}({repr(list(self))})"
 
     def __eq__(self, other):
         if isinstance(other, OrderedSet):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTTP monitoring states
 
@@ -7,11 +6,9 @@ Perform an HTTP query and statefully return the result
 .. versionadded:: 2015.5.0
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
+import sys
 import time
 
 __monitor__ = [
@@ -28,7 +25,7 @@ def query(
     status=None,
     status_type="string",
     wait_for=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Perform an HTTP query and statefully return the result
@@ -132,48 +129,48 @@ def query(
         if match_type == "string":
             if str(match) in data.get("text", ""):
                 ret["result"] = True
-                ret["comment"] += ' Match text "{0}" was found.'.format(match)
+                ret["comment"] += f' Match text "{match}" was found.'
             else:
                 ret["result"] = False
-                ret["comment"] += ' Match text "{0}" was not found.'.format(match)
+                ret["comment"] += f' Match text "{match}" was not found.'
         elif match_type == "pcre":
             if re.search(str(match), str(data.get("text", ""))):
                 ret["result"] = True
-                ret["comment"] += ' Match pattern "{0}" was found.'.format(match)
+                ret["comment"] += f' Match pattern "{match}" was found.'
             else:
                 ret["result"] = False
-                ret["comment"] += ' Match pattern "{0}" was not found.'.format(match)
+                ret["comment"] += f' Match pattern "{match}" was not found.'
 
     if status is not None:
         # Deals with case of status_type as a list of strings representing statuses
         if status_type == "list":
             for stat in status:
                 if str(data.get("status", "")) == str(stat):
-                    ret["comment"] += " Status {0} was found.".format(stat)
+                    ret["comment"] += f" Status {stat} was found."
                     if ret["result"] is None:
                         ret["result"] = True
             if ret["result"] is not True:
-                ret["comment"] += " Statuses {0} were not found.".format(status)
+                ret["comment"] += f" Statuses {status} were not found."
                 ret["result"] = False
 
         # Deals with the case of status_type representing a regex
         elif status_type == "pcre":
             if re.search(str(status), str(data.get("status", ""))):
-                ret["comment"] += ' Status pattern "{0}" was found.'.format(status)
+                ret["comment"] += f' Status pattern "{status}" was found.'
                 if ret["result"] is None:
                     ret["result"] = True
             else:
-                ret["comment"] += ' Status pattern "{0}" was not found.'.format(status)
+                ret["comment"] += f' Status pattern "{status}" was not found.'
                 ret["result"] = False
 
         # Deals with the case of status_type as a single string representing a status
         elif status_type == "string":
             if str(data.get("status", "")) == str(status):
-                ret["comment"] += " Status {0} was found.".format(status)
+                ret["comment"] += f" Status {status} was found."
                 if ret["result"] is None:
                     ret["result"] = True
             else:
-                ret["comment"] += " Status {0} was not found.".format(status)
+                ret["comment"] += f" Status {status} was not found."
                 ret["result"] = False
 
     # cleanup spaces in comment
@@ -183,7 +180,7 @@ def query(
         ret["result"] = None
         ret["comment"] += " (TEST MODE"
         if "test_url" in kwargs:
-            ret["comment"] += ", TEST URL WAS: {0}".format(kwargs["test_url"])
+            ret["comment"] += ", TEST URL WAS: {}".format(kwargs["test_url"])
         ret["comment"] += ")"
 
     ret["data"] = data
@@ -212,18 +209,19 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
 
     while True:
         caught_exception = None
+        exception_type = None
+        stacktrace = None
         ret = None
         try:
             ret = query(name, **kwargs)
             if ret["result"]:
                 return ret
         except Exception as exc:  # pylint: disable=broad-except
-            caught_exception = exc
+            exception_type, caught_exception, stacktrace = sys.exc_info()
 
         if time.time() > starttime + wait_for:
             if not ret and caught_exception:
-                # workaround pylint bug https://www.logilab.org/ticket/3207
-                raise caught_exception  # pylint: disable=E0702
+                raise caught_exception.with_traceback(stacktrace)
             return ret
         elif "request_interval" in kwargs:
             # Space requests out by delaying for an interval

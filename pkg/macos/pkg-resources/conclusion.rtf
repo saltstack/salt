@@ -1,0 +1,44 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue233;}
+{\*\expandedcolortbl;;\csgenericrgb\c0\c0\c91373;}
+\vieww12000\viewh14900\viewkind0
+\deftab720
+\pard\pardeftab720\sa321\partightenfactor0
+{\field{\*\fldinst{HYPERLINK "http://saltstack.com/"}}{\fldrslt 
+\f0\fs24 \cf2 \ul \ulc2 Salt}}
+\f0\fs24  has been installed into 
+\f1 /opt/salt.
+\f0 \
+Sample configuration files (
+\f1 master.dist
+\f0  and 
+\f1 minion.dist
+\f0 ) have been installed to 
+\f1 /etc/salt
+\f0 . Create copies of them without the '
+\f1 .dist
+\f0 ' file extension and edit as you see fit.\
+You can also use the 
+\f1 salt-config.sh
+\f0  script to configure Salt. The script is located in the 
+\f1 /opt/salt/bin
+\f0  directory. A symlink to that file is created in 
+\f1 /usr/local/sbin
+\f0 . If 
+\f1 /usr/local/sbin
+\f0  is part of the path you can type 
+\f1 salt-config --help
+\f0  in a bash shell to get config options.\
+This Salt package uses its own compiled Python that is not linked to the system Python. To install additional Python modules to Salt's Python environment, use Salt's '
+\f1 pip
+\f0 ' binary. For example, if you need LDAP support in Salt you will need the '
+\f1 python-ldap
+\f0 ' module. Install it with the following command:\
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1 \cf0 /opt/salt/bin/pip install python-ldap
+\f0 \
+Note: Some Python modules need to be compiled. Installing Apple's Xcode Command Line Tools should provide the necessary utilities. Alternatively, {\field{\*\fldinst{HYPERLINK "http://macports.org/"}}{\fldrslt \cf2 \ul \ulc2 MacPorts}}, {\field{\*\fldinst{HYPERLINK "http://finkproject.org/"}}{\fldrslt \cf2 \ul \ulc2 Fink}}, or {\field{\*\fldinst{HYPERLINK "http://brew.sh/"}}{\fldrslt \cf2 \ul \ulc2 Homebrew}} may provide what you need.\
+More documentation for Salt is available at {\field{\*\fldinst{HYPERLINK "https://docs.saltproject.io"}}{\fldrslt https://docs.saltproject.io}}\
+}

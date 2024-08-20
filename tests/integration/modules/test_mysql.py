@@ -1,11 +1,11 @@
 import logging
 
 import pytest
+
 import salt.utils.path
 from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -19,9 +19,9 @@ if not salt.utils.path.which("mysqladmin"):
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -72,14 +72,14 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_function("mysql.db_create", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while creating db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while creating db for db name: '{db_name}'"
         )
         # test db exists
         ret = self.run_function("mysql.db_exists", name=db_name, **kwargs)
         self.assertEqual(
             True,
             ret,
-            "Problem while testing db exists for db name: '{}'".format(db_name),
+            f"Problem while testing db exists for db name: '{db_name}'",
         )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function("mysql.db_list", **kwargs)
@@ -115,7 +115,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         # Now remove database
         ret = self.run_function("mysql.db_remove", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while removing db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while removing db for db name: '{db_name}'"
         )
 
     @pytest.mark.destructive_test
@@ -373,7 +373,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                 "CREATE TABLE {tblname} ("
                 " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
                 " data VARCHAR(100)) ENGINE={engine};".format(
-                    tblname=mysqlmod.quote_identifier(tablename), engine=engine,
+                    tblname=mysqlmod.quote_identifier(tablename),
+                    engine=engine,
                 )
             )
             insert_query = "INSERT INTO {tblname} (data) VALUES ".format(
@@ -401,7 +402,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while populating test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 0)
@@ -419,7 +421,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while populating test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 101)
@@ -437,7 +440,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while removing rows on test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 50)
@@ -516,8 +520,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         {
                             "Table": dbname + "." + tablename,
                             "Msg_text": (
-                                "The storage engine for the table doesn't"
-                                " support check"
+                                "The storage engine for the table doesn't support check"
                             ),
                             "Msg_type": "note",
                             "Op": "check",
@@ -637,9 +640,9 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(True, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -691,7 +694,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         password=None,
         new_password=None,
         new_password_hash=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Perform some tests around creation of the given user
@@ -757,7 +760,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if not isinstance(ret, dict):
             raise AssertionError(
-                "Unexpected result while retrieving user_info for '{}'".format(user)
+                f"Unexpected result while retrieving user_info for '{user}'"
             )
         self.assertEqual(ret["Host"], host)
         self.assertEqual(ret["Password"], check_hash)
@@ -1308,9 +1311,9 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn({"Host": "10.0.0.1", "User": user6_utf8}, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -1389,7 +1392,8 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table1), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table1),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table1)
@@ -1404,7 +1408,8 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table2), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table2),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table2)
@@ -1484,14 +1489,13 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,
             ret,
             (
-                "Calling grant_add on"
-                " user '{}' and grants '{}' did not return True: {}"
+                "Calling grant_add on user '{}' and grants '{}' did not return True: {}"
             ).format(user, grant, repr(ret)),
         )
         ret = self.run_function(
@@ -1501,7 +1505,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,
@@ -1605,14 +1609,10 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'foo'@'localhost'",
-                (
-                    "GRANT SELECT, INSERT, UPDATE, CREATE ON "
-                    "`tes.t'\"saltdb`.* TO 'foo'@'localhost' WITH GRANT OPTION"
-                ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
-                    " TO 'foo'@'localhost' WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, INSERT, UPDATE, CREATE ON "
+                "`tes.t'\"saltdb`.* TO 'foo'@'localhost' WITH GRANT OPTION",
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
+                " TO 'foo'@'localhost' WITH GRANT OPTION",
             ],
         )
 
@@ -1627,11 +1627,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'",
-                (
-                    "GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t'"
-                    "\"saltdb`.* TO 'user \";--,?:&/\\'@'localhost'"
-                    " WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t'"
+                "\"saltdb`.* TO 'user \";--,?:&/\\'@'localhost'"
+                " WITH GRANT OPTION",
             ],
         )
 
@@ -1646,11 +1644,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'user( @ )=foobar'@'localhost'",
-                (
-                    "GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON "
-                    "`tes.t'\"saltdb`.* TO 'user( @ )=foobar'@'localhost' "
-                    "WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON "
+                "`tes.t'\"saltdb`.* TO 'user( @ )=foobar'@'localhost' "
+                "WITH GRANT OPTION",
             ],
         )
 
@@ -1670,14 +1666,10 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
                     r"GRANT CREATE ON `t\_st ``(:=salt\%b)`.* TO "
                     "'user \xe6\xa8\x99'@'localhost'"
                 ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo ``'%_bar` TO "
-                    "'user \xe6\xa8\x99'@'localhost'"
-                ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
-                    "'user \xe6\xa8\x99'@'localhost'"
-                ),
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo ``'%_bar` TO "
+                "'user \xe6\xa8\x99'@'localhost'",
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
+                "'user \xe6\xa8\x99'@'localhost'",
             ],
         )
 
@@ -1697,9 +1689,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted

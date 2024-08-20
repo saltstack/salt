@@ -2,6 +2,7 @@ import io
 from textwrap import dedent
 
 import pytest
+
 import salt.modules.solaris_shadow as solaris_shadow
 from tests.support.mock import MagicMock, patch
 
@@ -28,7 +29,7 @@ skip_on_missing_pwd = pytest.mark.skipif(
     missing_pwd, reason="Has no pwd module for accessing /etc/password passwords"
 )
 
-# pylint: disable=singleton-comparison,comparison-to-True-should-be-if-cond-is-True-or-if-cond
+# pylint: disable=singleton-comparison
 
 # TODO: A lot of the shadow functionality is common across solaris and Linux.
 # It would be possible to combine some of this into salt/utils -W. Werner, 2021-01-26
@@ -79,13 +80,19 @@ def has_not_spwd():
 
 @pytest.fixture
 def fake_spnam():
-    with patch("spwd.getspnam", autospec=True,) as fake_spnam:
+    with patch(
+        "spwd.getspnam",
+        autospec=True,
+    ) as fake_spnam:
         yield fake_spnam
 
 
 @pytest.fixture
 def fake_pwnam():
-    with patch("pwd.getpwnam", autospec=True,) as fake_pwnam:
+    with patch(
+        "pwd.getpwnam",
+        autospec=True,
+    ) as fake_pwnam:
         yield fake_pwnam
 
 

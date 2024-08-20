@@ -1,0 +1,6 @@
+attrs
+python-tools-scripts >= 0.20.0
+boto3
+pyyaml
+jinja2
+packaging

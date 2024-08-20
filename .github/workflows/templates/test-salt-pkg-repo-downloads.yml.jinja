@@ -1,0 +1,32 @@
+
+  <%- set job_name = "pkg-download-tests" %>
+
+  <{ job_name }>:
+    <%- do test_repo_needs.append(job_name) %>
+    <%- do conclusion_needs.append(job_name) %>
+    name: Package Downloads
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - build-ci-deps
+    <%- if gh_environment == "release" %>
+      - download-onedir-artifact
+    <%- else %>
+      - build-salt-onedir
+    <%- endif %>
+    uses: ./.github/workflows/test-package-downloads-action.yml
+    with:
+      nox-session: ci-test-onedir
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: <{ gh_environment }>
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit

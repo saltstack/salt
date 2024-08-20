@@ -54,6 +54,7 @@ Group Policy using the ``lgpo`` module.
 
 :depends: salt.utils.win_update
 """
+
 import logging
 
 import salt.utils.platform
@@ -108,11 +109,10 @@ def __virtual__():
             "be disabled",
         )
 
-    if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
+    if salt.utils.win_service.info("CryptSvc")["StartType"] == "Disabled":
         return (
             False,
-            "WUA: The Cryptographic Services service (CryptSvc) must not be "
-            "disabled",
+            "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
         )
 
     if salt.utils.win_service.info("TrustedInstaller")["StartType"] == "Disabled":
@@ -987,10 +987,15 @@ def set_wu_settings(
                     ret["msupdate"] = msupdate
                 except Exception as error:  # pylint: disable=broad-except
                     # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                    (hr, msg, exc, arg,) = error.args
+                    (
+                        hr,
+                        msg,
+                        exc,
+                        arg,
+                    ) = error.args
                     # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     # Consider checking for -2147024891 (0x80070005) Access Denied
-                    ret["Comment"] = "Failed with failure code: {}".format(exc[5])
+                    ret["Comment"] = f"Failed with failure code: {exc[5]}"
                     ret["Success"] = False
             else:
                 # msupdate is false, so remove it from the services
@@ -1003,13 +1008,18 @@ def set_wu_settings(
                         ret["msupdate"] = msupdate
                     except Exception as error:  # pylint: disable=broad-except
                         # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                        (hr, msg, exc, arg,) = error.args
+                        (
+                            hr,
+                            msg,
+                            exc,
+                            arg,
+                        ) = error.args
                         # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                         # Consider checking for the following
                         # -2147024891 (0x80070005) Access Denied
                         # -2145091564 (0x80248014) Service Not Found (shouldn't get
                         # this with the check for _get_msupdate_status above
-                        ret["Comment"] = "Failed with failure code: {}".format(exc[5])
+                        ret["Comment"] = f"Failed with failure code: {exc[5]}"
                         ret["Success"] = False
                 else:
                     ret["msupdate"] = msupdate

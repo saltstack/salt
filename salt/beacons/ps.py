@@ -1,24 +1,29 @@
 """
 Send events covering process status
 """
+
 import logging
 
+import salt.utils.beacons
+
 try:
-    import salt.utils.psutil_compat as psutil
+    import psutil
 
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
 
-
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 __virtualname__ = "ps"
 
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, "cannot load ps beacon: psutil not available")
+        return (
+            False,
+            f"Unable to load {__virtualname__} beacon: psutil library not installed",
+        )
     return __virtualname__
 
 
@@ -28,16 +33,15 @@ def validate(config):
     """
     # Configuration for ps beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for ps beacon must be a list.")
+        return False, "Configuration for ps beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "processes" not in _config:
-            return False, ("Configuration for ps beacon requires processes.")
+        if "processes" not in config:
+            return False, "Configuration for ps beacon requires processes."
         else:
-            if not isinstance(_config["processes"], dict):
-                return False, ("Processes for ps beacon must be a dictionary.")
+            if not isinstance(config["processes"], dict):
+                return False, "Processes for ps beacon must be a dictionary."
 
     return True, "Valid beacon configuration"
 
@@ -70,16 +74,15 @@ def beacon(config):
         if _name not in procs:
             procs.append(_name)
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    for process in _config.get("processes", {}):
+    for process in config.get("processes", {}):
         ret_dict = {}
-        if _config["processes"][process] == "running":
+        if config["processes"][process] == "running":
             if process in procs:
                 ret_dict[process] = "Running"
                 ret.append(ret_dict)
-        elif _config["processes"][process] == "stopped":
+        elif config["processes"][process] == "stopped":
             if process not in procs:
                 ret_dict[process] = "Stopped"
                 ret.append(ret_dict)

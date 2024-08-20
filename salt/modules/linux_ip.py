@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for Non-RH/Deb Linux distros
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import zip
 
 __virtualname__ = "ip"
 
@@ -23,6 +18,8 @@ def __virtual__():
         return (False, "Module linux_ip: Windows systems are not supported.")
     if __grains__["os_family"] == "RedHat":
         return (False, "Module linux_ip: RedHat systems are not supported.")
+    if __grains__["os_family"] == "Suse":
+        return (False, "Module linux_ip: SUSE systems are not supported.")
     if __grains__["os_family"] == "Debian":
         return (False, "Module linux_ip: Debian systems are not supported.")
     if __grains__["os_family"] == "NILinuxRT":
@@ -48,7 +45,7 @@ def down(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} down".format(iface))
+        return __salt__["cmd.run"](f"ip link set {iface} down")
     return None
 
 
@@ -95,7 +92,7 @@ def _ip_ifaces():
                 at_ = comps[0]
                 if len(comps) % 2 != 0:
                     last = comps.pop()
-                    comps[-1] += " {0}".format(last)
+                    comps[-1] += f" {last}"
                 ifi = iter(comps)
                 ret[if_][at_] = dict(list(zip(ifi, ifi)))
             else:
@@ -117,7 +114,7 @@ def up(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} up".format(iface))
+        return __salt__["cmd.run"](f"ip link set {iface} up")
     return None
 
 
@@ -174,8 +171,11 @@ def _hex_to_octets(addr):
     """
     Convert hex fields from /proc/net/route to octects
     """
-    return "{0}:{1}:{2}:{3}".format(
-        int(addr[6:8], 16), int(addr[4:6], 16), int(addr[2:4], 16), int(addr[0:2], 16),
+    return "{}:{}:{}:{}".format(
+        int(addr[6:8], 16),
+        int(addr[4:6], 16),
+        int(addr[2:4], 16),
+        int(addr[0:2], 16),
     )
 
 

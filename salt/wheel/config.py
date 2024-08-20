@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Manage the master configuration file
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 
-# Import salt libs
 import salt.config
 import salt.utils.files
 import salt.utils.verify
 import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -72,12 +65,15 @@ def update_config(file_name, yaml_contents):
             'eauth': 'pam',
         }
     """
-    file_name = "{0}{1}".format(file_name, ".conf")
+    file_name = "{}{}".format(file_name, ".conf")
     dir_path = os.path.join(
         __opts__["config_dir"], os.path.dirname(__opts__["default_include"])
     )
     try:
-        yaml_out = salt.utils.yaml.safe_dump(yaml_contents, default_flow_style=False,)
+        yaml_out = salt.utils.yaml.safe_dump(
+            yaml_contents,
+            default_flow_style=False,
+        )
 
         if not os.path.exists(dir_path):
             log.debug("Creating directory %s", dir_path)
@@ -90,6 +86,6 @@ def update_config(file_name, yaml_contents):
         with salt.utils.files.fopen(file_path, "w") as fp_:
             fp_.write(yaml_out)
 
-        return "Wrote {0}".format(file_name)
-    except (IOError, OSError, salt.utils.yaml.YAMLError, ValueError) as err:
-        return six.text_type(err)
+        return f"Wrote {file_name}"
+    except (OSError, salt.utils.yaml.YAMLError, ValueError) as err:
+        return str(err)

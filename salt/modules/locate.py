@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for using the locate utilities
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -115,13 +111,13 @@ def locate(pattern, database="", limit=0, **kwargs):
         if bool(kwargs[option]) is True and option in toggles:
             options += toggles[option]
     if options:
-        options = "-{0}".format(options)
+        options = f"-{options}"
     if database:
-        options += " -d {0}".format(database)
+        options += f" -d {database}"
     if limit > 0:
-        options += " -l {0}".format(limit)
+        options += f" -l {limit}"
     if "regex" in kwargs and bool(kwargs["regex"]) is True:
         options += " --regex"
-    cmd = "locate {0} {1}".format(options, pattern)
+    cmd = f"locate {options} {pattern}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return out

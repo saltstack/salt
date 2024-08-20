@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the Snapper module
 
@@ -6,21 +5,16 @@ Unit tests for the Snapper module
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import sys
+import pytest
 
 import salt.modules.snapper as snapper
+import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
-
-# Import Salt Testing libs
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 DBUS_RET = {
     "ListSnapshots": [
@@ -151,36 +145,46 @@ MODULE_RET = {
     "DIFF": {
         "/tmp/foo": {
             "comment": "text file changed",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo\n"
-            "+++ /tmp/foo\n"
-            "@@ -1 +1 @@\n"
-            "-dummy text"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo\n"
+                "+++ /tmp/foo\n"
+                "@@ -1 +1 @@\n"
+                "-dummy text"
+                "+another foobar"
+            ),
         },
         "/tmp/foo2": {
             "comment": "text file created",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo2\n"
-            "+++ /tmp/foo2\n"
-            "@@ -0,0 +1 @@\n"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo2\n"
+                "+++ /tmp/foo2\n"
+                "@@ -0,0 +1 @@\n"
+                "+another foobar"
+            ),
         },
         "/tmp/foo26": {
             "comment": "text file created",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo2 \n"
-            "+++ /tmp/foo2 \n"
-            "@@ -1,0 +1,1 @@\n"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo2 \n"
+                "+++ /tmp/foo2 \n"
+                "@@ -1,0 +1,1 @@\n"
+                "+another foobar"
+            ),
         },
         "/tmp/foo3": {
             "comment": "binary file changed",
-            "old_sha256_digest": "e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b",
-            "new_sha256_digest": "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
+            "old_sha256_digest": (
+                "e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b"
+            ),
+            "new_sha256_digest": (
+                "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa"
+            ),
         },
     },
 }
 
 
-@skipIf(sys.platform.startswith("win"), "Snapper not available on Windows")
+@pytest.mark.skip_on_windows(reason="Snapper not available on Windows")
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         class DBusException(BaseException):
@@ -398,28 +402,12 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.snapper.snapper.ListConfigs",
             MagicMock(return_value=DBUS_RET["ListConfigs"]),
         ):
-            if six.PY3:
-                self.assertCountEqual(snapper.status(), MODULE_RET["GETFILES"])
-                self.assertCountEqual(
-                    snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
-                )
-                self.assertCountEqual(
-                    snapper.status(num_pre=42), MODULE_RET["GETFILES"]
-                )
-                self.assertCountEqual(
-                    snapper.status(num_post=43), MODULE_RET["GETFILES"]
-                )
-            else:
-                self.assertItemsEqual(snapper.status(), MODULE_RET["GETFILES"])
-                self.assertItemsEqual(
-                    snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
-                )
-                self.assertItemsEqual(
-                    snapper.status(num_pre=42), MODULE_RET["GETFILES"]
-                )
-                self.assertItemsEqual(
-                    snapper.status(num_post=43), MODULE_RET["GETFILES"]
-                )
+            self.assertCountEqual(snapper.status(), MODULE_RET["GETFILES"])
+            self.assertCountEqual(
+                snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
+            )
+            self.assertCountEqual(snapper.status(num_pre=42), MODULE_RET["GETFILES"])
+            self.assertCountEqual(snapper.status(num_post=43), MODULE_RET["GETFILES"])
 
     def test_changed_files(self):
         with patch(
@@ -507,16 +495,10 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.snapper.snapper.ListConfigs",
             MagicMock(return_value=DBUS_RET["ListConfigs"]),
         ):
-            if sys.version_info < (2, 7):
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo26"]}
-                )
-            else:
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
-                )
+            self.assertEqual(
+                snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
+            )
 
-    @skipIf(sys.version_info < (2, 7), "Python 2.7 required to compare diff properly")
     def test_diff_text_files(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(55, 0))
@@ -601,3 +583,21 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                     "/tmp/foo3": MODULE_RET["DIFF"]["/tmp/foo3"],
                 }
                 self.assertEqual(snapper.diff(), module_ret)
+
+    @pytest.mark.skip_unless_on_linux(reason="This is a linux only test")
+    @with_tempfile()
+    def test__is_text_file(self, tempfile):
+        with salt.utils.files.fopen(tempfile, "w") as wfh:
+            wfh.write(
+                "Once upon a time there was an old Sow with three little Pigs, and "
+                "as she had not enough to keep them, she sent them out to seek their "
+                "fortune.\n"
+            )
+        assert snapper._is_text_file(tempfile) is True
+
+        with salt.utils.files.fopen(tempfile, "wb") as wfh:
+            wfh.write(
+                b"C\x07\xd6\x13\xe5_\x99D\xeb\xd7v\xc1\x96p\x84\xd2{a\x03++\r\xcd/"
+                b"\xdb\x98\xda\xf7H\xf8\xfb-\x95\xa9}|^\t\xddx\x1c\x18s\x1bZ\x86\x8a(S\xe4"
+            )
+        assert snapper._is_text_file(tempfile) is False

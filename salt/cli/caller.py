@@ -3,33 +3,31 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
-
 import logging
 import os
 import sys
 import traceback
 
 import salt
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
-import salt.transport
-import salt.transport.client
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
+from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltClientError,
     SaltInvocationError,
 )
-from salt.log import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
@@ -41,21 +39,7 @@ class Caller:
 
     @staticmethod
     def factory(opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
-        # switch on available ttypes
-        if ttype in ("zeromq", "tcp", "detect"):
-            return ZeroMQCaller(opts, **kwargs)
-        else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
-            # return NewKindOfCaller(opts, **kwargs)
+        return ZeroMQCaller(opts, **kwargs)
 
 
 class BaseCaller:
@@ -69,7 +53,6 @@ class BaseCaller:
         """
         self.opts = opts
         self.opts["caller"] = True
-        self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
@@ -92,7 +75,7 @@ class BaseCaller:
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get("fun", "")):
-                salt.utils.stringutils.print_cli("{}:\n{}\n".format(name, docs[name]))
+                salt.utils.stringutils.print_cli(f"{name}:\n{docs[name]}\n")
 
     def print_grains(self):
         """
@@ -131,7 +114,7 @@ class BaseCaller:
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get("retcode_passthrough", False):
                 sys.exit(ret["retcode"])
-            elif ret["retcode"] != salt.defaults.exitcodes.EX_OK:
+            elif ret.get("retcode") != salt.defaults.exitcodes.EX_OK:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)
@@ -147,7 +130,7 @@ class BaseCaller:
             salt.minion.get_proc_dir(self.opts["cachedir"]), ret["jid"]
         )
         if fun not in self.minion.functions:
-            docs = self.minion.functions["sys.doc"]("{}*".format(fun))
+            docs = self.minion.functions["sys.doc"](f"{fun}*")
             if docs:
                 docs[fun] = self.minion.functions.missing_fun_string(fun)
                 ret["out"] = "nested"
@@ -185,7 +168,7 @@ class BaseCaller:
             )
             try:
                 with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                    fp_.write(self.serial.dumps(sdata))
+                    fp_.write(salt.payload.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
                 pass
@@ -211,20 +194,16 @@ class BaseCaller:
                 executors = [executors]
             try:
                 for name in executors:
-                    fname = "{}.execute".format(name)
+                    fname = f"{name}.execute"
                     if fname not in self.minion.executors:
-                        raise SaltInvocationError(
-                            "Executor '{}' is not available".format(name)
-                        )
+                        raise SaltInvocationError(f"Executor '{name}' is not available")
                     ret["return"] = self.minion.executors[fname](
                         self.opts, data, func, args, kwargs
                     )
                     if ret["return"] is not None:
                         break
             except TypeError as exc:
-                sys.stderr.write(
-                    "\nPassed invalid arguments: {}.\n\nUsage:\n".format(exc)
-                )
+                sys.stderr.write(f"\nPassed invalid arguments: {exc}.\n\nUsage:\n")
                 salt.utils.stringutils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts["log_level"].lower(), logging.ERROR
@@ -252,7 +231,7 @@ class BaseCaller:
                     retcode = salt.defaults.exitcodes.EX_GENERIC
 
             ret["retcode"] = retcode
-        except (CommandExecutionError) as exc:
+        except CommandExecutionError as exc:
             msg = "Error running '{0}': {1}\n"
             active_level = LOG_LEVELS.get(self.opts["log_level"].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
@@ -289,12 +268,12 @@ class BaseCaller:
                 continue
             try:
                 ret["success"] = True
-                self.minion.returners["{}.returner".format(returner)](ret)
+                self.minion.returners[f"{returner}.returner"](ret)
             except Exception:  # pylint: disable=broad-except
                 pass
 
         # return the job infos back up to the respective minion's master
-        if not is_local:
+        if not is_local and not self.opts.get("no_return_event", False):
             try:
                 mret = ret.copy()
                 mret["jid"] = "req"
@@ -323,7 +302,7 @@ class ZeroMQCaller(BaseCaller):
         """
         Return the data up to the master
         """
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, usage="salt_call"
         ) as channel:
             load = {"cmd": "_return", "id": self.opts["id"]}

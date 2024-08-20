@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the Salt beacons
 ==============================
@@ -68,12 +67,8 @@ Management of the Salt beacons
         - beacon_module: inotify
         - disable_during_state_run: True
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,12 +99,12 @@ def present(name, save=False, **kwargs):
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
-    beacon_data = [{k: v} for k, v in six.iteritems(kwargs)]
+    beacon_data = [{k: v} for k, v in kwargs.items()]
 
     if name in current_beacons:
 
         if beacon_data == current_beacons[name]:
-            ret["comment"].append("Job {0} in correct state".format(name))
+            ret["comment"].append(f"Job {name} in correct state")
         else:
             if __opts__.get("test"):
                 kwargs["test"] = True
@@ -124,7 +119,7 @@ def present(name, save=False, **kwargs):
                     return ret
                 else:
                     if "changes" in result:
-                        ret["comment"].append("Modifying {0} in beacons".format(name))
+                        ret["comment"].append(f"Modifying {name} in beacons")
                         ret["changes"] = result["changes"]
                     else:
                         ret["comment"].append(result["comment"])
@@ -141,14 +136,14 @@ def present(name, save=False, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Adding {0} to beacons".format(name))
+                ret["comment"].append(f"Adding {name} to beacons")
 
     if save:
         if __opts__.get("test"):
-            ret["comment"].append("Beacon {0} would be saved".format(name))
+            ret["comment"].append(f"Beacon {name} would be saved")
         else:
             __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {0} saved".format(name))
+            ret["comment"].append(f"Beacon {name} saved")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -189,16 +184,16 @@ def absent(name, save=False, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Removed {0} from beacons".format(name))
+                ret["comment"].append(f"Removed {name} from beacons")
     else:
-        ret["comment"].append("{0} not configured in beacons".format(name))
+        ret["comment"].append(f"{name} not configured in beacons")
 
     if save:
         if __opts__.get("test"):
-            ret["comment"].append("Beacon {0} would be saved".format(name))
+            ret["comment"].append(f"Beacon {name} would be saved")
         else:
             __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {0} saved".format(name))
+            ret["comment"].append(f"Beacon {name} saved")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -236,9 +231,9 @@ def enabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Enabled {0} from beacons".format(name))
+                ret["comment"].append(f"Enabled {name} from beacons")
     else:
-        ret["comment"].append("{0} not a configured beacon".format(name))
+        ret["comment"].append(f"{name} not a configured beacon")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -276,9 +271,9 @@ def disabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Disabled beacon {0}.".format(name))
+                ret["comment"].append(f"Disabled beacon {name}.")
     else:
-        ret["comment"].append("Job {0} is not configured.".format(name))
+        ret["comment"].append(f"Job {name} is not configured.")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret

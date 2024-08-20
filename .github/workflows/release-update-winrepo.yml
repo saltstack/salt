@@ -1,0 +1,74 @@
+---
+name: Update Winrepo
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to set prior to building packages and staging the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+
+permissions:
+  contents: read
+
+jobs:
+  update-winrepo:
+    name: Update Winrepo
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout Salt
+      uses: actions/checkout@v4
+      with:
+        path: salt
+
+    - name: Checkout WinRepo
+      uses: actions/checkout@v4
+      with:
+        path: winrepo
+        repository: saltstack/salt-winrepo-ng
+
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Add Version to Minion Definition File
+      working-directory: salt
+      run: |
+        pwd
+        ls -al ../winrepo/salt-minion.sls
+        python .github/workflows/scripts/update_winrepo.py \
+          --file ../winrepo/salt-minion.sls \
+          --version ${{ inputs.salt-version || github.ref_name }}
+        grep ${{ inputs.salt-version || github.ref_name }} ../winrepo/salt-minion.sls
+
+    - name: Commit Changes
+      working-directory: winrepo
+      run: |
+        git status
+        git add .
+        git config user.name 'saltbot-open'
+        git config user.email 'saltbot-open@users.noreply.github.com'
+        git commit -m "Adding salt minion ${{ inputs.salt-version && format('v{0}', inputs.salt-version) || github.ref_name }}"
+
+    - name: Create Pull Request
+      id: cpr
+      uses: peter-evans/create-pull-request@v5
+      with:
+        path: winrepo
+        push-to-fork: saltbot-open/salt-winrepo-ng
+        token: ${{ secrets.SALTBOT_OPEN_SALT_WINREPO_NG }}
+
+#    - name: Enable Pull Request Automerge
+#      if: steps.cpr.outputs.pull-request-operation == 'created'
+#      uses: peter-evans/enable-pull-request-automerge@v2
+#      with:
+#        token: ${{ secrets.SALTBOT_OPEN_SALT_WINREPO_NG }}
+#        pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+#        merge-method: squash

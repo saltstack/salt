@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to manage proxy settings
 
@@ -7,13 +6,9 @@ This module allows you to manage proxy settings
     salt '*' network.get_http_proxy
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -32,9 +27,7 @@ def __virtual__():
 def _get_proxy_osx(cmd_function, network_service):
     ret = {}
 
-    out = __salt__["cmd.run"](
-        "networksetup -{0} {1}".format(cmd_function, network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -{cmd_function} {network_service}")
     match = re.match("Enabled: (.*)\nServer: (.*)\nPort: (.*)\n", out)
     if match is not None:
         g = match.groups()
@@ -45,12 +38,12 @@ def _get_proxy_osx(cmd_function, network_service):
 
 
 def _set_proxy_osx(cmd_function, server, port, user, password, network_service):
-    cmd = "networksetup -{0} {1} {2} {3}".format(
+    cmd = "networksetup -{} {} {} {}".format(
         cmd_function, network_service, server, port
     )
 
     if user is not None and password is not None:
-        cmd = cmd + " On {0} {1}".format(user, password)
+        cmd = cmd + f" On {user} {password}"
 
     out = __salt__["cmd.run"](cmd)
 
@@ -72,7 +65,7 @@ def _get_proxy_windows(types=None):
     if servers and "=" in servers:
         split = servers.split(";")
         for s in split:
-            if len(s) == 0:
+            if not s:
                 continue
 
             if ":" in s:
@@ -115,7 +108,7 @@ def _set_proxy_windows(
 
     server_str = ""
     for t in types:
-        server_str += "{0}={1}:{2};".format(t, server, port)
+        server_str += f"{t}={server}:{port};"
 
     __utils__["reg.set_value"](
         hive="HKEY_CURRENT_USER",
@@ -133,7 +126,7 @@ def _set_proxy_windows(
     )
 
     if bypass_hosts is not None:
-        bypass_hosts_str = "<local>;{0}".format(";".join(bypass_hosts))
+        bypass_hosts_str = "<local>;{}".format(";".join(bypass_hosts))
 
         __utils__["reg.set_value"](
             hive="HKEY_CURRENT_USER",
@@ -399,9 +392,7 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         return reg_val.replace("<local>", "").split(";")
 
-    out = __salt__["cmd.run"](
-        "networksetup -getproxybypassdomains {0}".format(network_service)
-    )
+    out = __salt__["cmd.run"](f"networksetup -getproxybypassdomains {network_service}")
 
     return out.split("\n")
 
@@ -425,8 +416,9 @@ def set_proxy_bypass(domains, network_service="Ethernet"):
 
     """
     servers_str = " ".join(domains)
-    cmd = "networksetup -setproxybypassdomains {0} {1}".format(
-        network_service, servers_str,
+    cmd = "networksetup -setproxybypassdomains {} {}".format(
+        network_service,
+        servers_str,
     )
     out = __salt__["cmd.run"](cmd)
 

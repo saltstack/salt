@@ -1,33 +1,30 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for 'module.yumkernelpkg'
     :platform: Linux
     :maturity: develop
     .. versionadded:: 2018.3.0
 """
+
 # pylint: disable=invalid-name,no-member
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
+
+from salt.exceptions import CommandExecutionError
+from tests.support.kernelpkg import KernelPkgTestCase
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 try:
-    # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
-
-    # Import Salt Libs
-    from tests.support.kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_yum as kernelpkg
     import salt.modules.yumpkg as pkg
-    from salt.exceptions import CommandExecutionError
 
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_yum
@@ -46,9 +43,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 "__grains__": {
                     "os": self.OS_NAME,
                     "osmajorrelease": self.OS_MAJORRELEASE,
-                    "kernelrelease": "{0}.{1}".format(
-                        self.KERNEL_LIST[0], self.OS_ARCH
-                    ),
+                    "kernelrelease": f"{self.KERNEL_LIST[0]}.{self.OS_ARCH}",
                 },
                 "__salt__": {
                     "pkg.normalize_name": pkg.normalize_name,
@@ -92,7 +87,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 ):
                     result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
                     self.assertIn("removed", result)
-                    target = "{0}-{1}".format(
+                    target = "{}-{}".format(
                         self._kernelpkg._package_name(), self.KERNEL_LIST[0]
                     )  # pylint: disable=protected-access
                     self.assertListEqual(result["removed"], [target])

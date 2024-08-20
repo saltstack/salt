@@ -4,8 +4,12 @@ Integration tests for the ini_manage state
 
 import pytest
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
-def test_options_present(salt_call_cli):
+
+def test_options_present(salt_master, salt_call_cli):
     """
     test ini.options_present when the file
     does not exist and then run it again
@@ -25,9 +29,9 @@ def test_options_present(salt_call_cli):
             tpath
         )
 
-        with pytest.helpers.temp_state_file("manage_ini.sls", content) as sfpath:
+        with salt_master.state_tree.base.temp_file("manage_ini.sls", content):
             ret = salt_call_cli.run("--local", "state.apply", "manage_ini")
-            assert ret.json[next(iter(ret.json))]["changes"] == {
+            assert ret.data[next(iter(ret.data))]["changes"] == {
                 "general": {
                     "before": None,
                     "after": {"server_hostname": "foo.com", "server_port": "1234"},
@@ -47,13 +51,13 @@ def test_options_present(salt_call_cli):
             tpath
         )
 
-        with pytest.helpers.temp_state_file("manage_ini.sls", content) as sfpath:
+        with salt_master.state_tree.base.temp_file("manage_ini.sls", content):
             # check to see adding a new section works
             ret = salt_call_cli.run("--local", "state.apply", "manage_ini")
-            assert ret.json[next(iter(ret.json))]["changes"] == {
+            assert ret.data[next(iter(ret.data))]["changes"] == {
                 "general": {"server_user": {"before": None, "after": "saltfoo"}}
             }
 
             # check when no changes are expected
             ret = salt_call_cli.run("--local", "state.apply", "manage_ini")
-            assert ret.json[next(iter(ret.json))]["changes"] == {}
+            assert ret.data[next(iter(ret.data))]["changes"] == {}

@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Manage and query udev info
 
 .. versionadded:: 2015.8.0
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.modules.cmdmod
-
-# Import Salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
@@ -102,7 +97,7 @@ def info(dev):
     else:
         qtype = "name"
 
-    cmd = "udevadm info --export --query=all --{0}={1}".format(qtype, dev)
+    cmd = f"udevadm info --export --query=all --{qtype}={dev}"
     udev_result = __salt__["cmd.run_all"](cmd, output_loglevel="quiet")
 
     if udev_result["retcode"] != 0:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,12 +8,7 @@
     Salt SSH related configuration schemas
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 from salt.config.schemas.minion import MinionConfiguration
-
-# Import Salt libs
 from salt.utils.schema import (
     AnyOfItem,
     BooleanItem,
@@ -81,8 +75,7 @@ class RosterEntryConfig(Schema):
     timeout = IntegerItem(
         title="Timeout",
         description=(
-            "Number of seconds to wait for response "
-            "when establishing an SSH connection"
+            "Number of seconds to wait for response when establishing an SSH connection"
         ),
     )
     thin_dir = StringItem(

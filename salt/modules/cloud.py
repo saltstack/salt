@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Salt-specific interface for calling Salt Cloud directly
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -13,10 +9,6 @@ import os
 import salt.utils.data
 from salt.exceptions import SaltCloudConfigError
 
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import salt libs
 try:
     import salt.cloud
 
@@ -38,7 +30,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The cloud execution module cannot be loaded: only available on non-Windows systems.",
+        "The cloud execution module cannot be loaded: only available on non-Windows"
+        " systems.",
     )
 
 
@@ -181,7 +174,7 @@ def get_instance(name, provider=None):
     info = salt.utils.data.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
-        info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))
+        info = next(iter(next(iter(next(iter(info.values())).values())).values()))
     except AttributeError:
         return None
     return info

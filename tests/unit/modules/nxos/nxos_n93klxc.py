@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,23 +15,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N93KLXCPlatform(NXOSPlatform):
-
-    """ Cisco Systems N93K (boot mode lxc) Platform Unit Test Object """
+    """Cisco Systems N93K (boot mode lxc) Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9396PX (LXC) Chassis"
 
     # Captured output from: show install all nxos <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -77,7 +71,7 @@ Disruptive ISSU will be performed "
     # Captured output from: show install all nxos <image> non-disruptive
 
     show_install_all_impact_non_disruptive = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -99,8 +93,8 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive       rolling  
-    27       yes  non-disruptive         reset  
+     1       yes  non-disruptive       rolling
+    27       yes  non-disruptive         reset
 
 
 
@@ -113,7 +107,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 """
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 Installer is forced disruptive
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
@@ -175,7 +169,7 @@ Finishing the upgrade, switch will reboot in 10 seconds.
     # Captured output from: install all nxos <image> non-disruptive
 
     install_all_non_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -197,8 +191,8 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive       rolling  
-    27       yes  non-disruptive         reset  
+     1       yes  non-disruptive       rolling
+    27       yes  non-disruptive         reset
 
 
 

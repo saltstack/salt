@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for reboot, shutdown, etc
 
@@ -6,10 +5,7 @@ This module is assumes we are using solaris-like shutdown
 
 .. versionadded:: 2016.3.0
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 

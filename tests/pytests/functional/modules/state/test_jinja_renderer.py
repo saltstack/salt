@@ -2,6 +2,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -35,5 +36,5 @@ def test_jinja_renderer_argline(state, state_tree):
         "issue51499.py", renderer_contents, state_tree / "_renderers"
     ), pytest.helpers.temp_file("issue-55124.sls", sls_contents, state_tree):
         ret = state.sls("issue-55124")
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_state_true_return()
+        for state_return in ret:
+            assert state_return.result is True

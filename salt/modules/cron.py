@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Work with cron
 
@@ -7,22 +6,16 @@ Work with cron
     backslash-escape percent characters and any other metacharacters that might
     be interpreted incorrectly by the shell.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import random
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
 
 TAG = "# Lines below here are managed by Salt, do not edit\n"
 SALT_CRON_IDENTIFIER = "SALT_CRON_IDENTIFIER"
@@ -41,8 +34,8 @@ def __virtual__():
 def _ensure_string(val):
     # Account for cases where the identifier is not a string
     # which would cause to_unicode to fail.
-    if not isinstance(val, six.string_types):
-        val = str(val)  # future lint: enable=blacklisted-function
+    if not isinstance(val, str):
+        val = str(val)
     try:
         return salt.utils.stringutils.to_unicode(val)
     except TypeError:
@@ -62,12 +55,12 @@ def _cron_id(cron):
 
 def _cron_matched(cron, cmd, identifier=None):
     """Check if:
-      - we find a cron with same cmd, old state behavior
-      - but also be smart enough to remove states changed crons where we do
-        not removed priorly by a cron.absent by matching on the provided
-        identifier.
-        We assure retrocompatibility by only checking on identifier if
-        and only if an identifier was set on the serialized crontab
+    - we find a cron with same cmd, old state behavior
+    - but also be smart enough to remove states changed crons where we do
+      not removed priorly by a cron.absent by matching on the provided
+      identifier.
+      We assure retrocompatibility by only checking on identifier if
+      and only if an identifier was set on the serialized crontab
     """
     ret, id_matched = False, None
     cid = _cron_id(cron)
@@ -120,7 +113,7 @@ def _render_tab(lst):
     """
     ret = []
     for pre in lst["pre"]:
-        ret.append("{0}\n".format(pre))
+        ret.append(f"{pre}\n")
     if ret:
         if ret[-1] != TAG:
             ret.append(TAG)
@@ -128,21 +121,21 @@ def _render_tab(lst):
         ret.append(TAG)
     for env in lst["env"]:
         if (env["value"] is None) or (env["value"] == ""):
-            ret.append('{0}=""\n'.format(env["name"]))
+            ret.append('{}=""\n'.format(env["name"]))
         else:
-            ret.append("{0}={1}\n".format(env["name"], env["value"]))
+            ret.append("{}={}\n".format(env["name"], env["value"]))
     for cron in lst["crons"]:
         if cron["comment"] is not None or cron["identifier"] is not None:
             comment = "#"
             if cron["comment"]:
-                comment += " {0}".format(cron["comment"].replace("\n", "\n# "))
+                comment += " {}".format(cron["comment"].replace("\n", "\n# "))
             if cron["identifier"]:
-                comment += " {0}:{1}".format(SALT_CRON_IDENTIFIER, cron["identifier"])
+                comment += " {}:{}".format(SALT_CRON_IDENTIFIER, cron["identifier"])
 
             comment += "\n"
             ret.append(comment)
         ret.append(
-            "{0}{1} {2} {3} {4} {5} {6}\n".format(
+            "{}{} {} {} {} {} {}\n".format(
                 cron["commented"] is True and "#DISABLED#" or "",
                 cron["minute"],
                 cron["hour"],
@@ -156,14 +149,14 @@ def _render_tab(lst):
         if cron["comment"] is not None or cron["identifier"] is not None:
             comment = "#"
             if cron["comment"]:
-                comment += " {0}".format(cron["comment"].rstrip().replace("\n", "\n# "))
+                comment += " {}".format(cron["comment"].rstrip().replace("\n", "\n# "))
             if cron["identifier"]:
-                comment += " {0}:{1}".format(SALT_CRON_IDENTIFIER, cron["identifier"])
+                comment += " {}:{}".format(SALT_CRON_IDENTIFIER, cron["identifier"])
 
             comment += "\n"
             ret.append(comment)
         ret.append(
-            "{0}{1} {2}\n".format(
+            "{}{} {}\n".format(
                 cron["commented"] is True and "#DISABLED#" or "",
                 cron["spec"],
                 cron["cmd"],
@@ -177,10 +170,10 @@ def _get_cron_cmdstr(path, user=None):
     Returns a format string, to be used to build a crontab command.
     """
     if user:
-        cmd = "crontab -u {0}".format(user)
+        cmd = f"crontab -u {user}"
     else:
         cmd = "crontab"
-    return "{0} {1}".format(cmd, path)
+    return f"{cmd} {path}"
 
 
 def _check_instance_uid_match(user):
@@ -273,11 +266,8 @@ def _write_cron_lines(user, lines):
     """
     lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
     path = salt.utils.files.mkstemp()
-    if _check_instance_uid_match("root") or __grains__.get("os_family") in (
-        "Solaris",
-        "AIX",
-    ):
-        # In some cases crontab command should be executed as user rather than root
+    # Some OS' do not support specifying user via the `crontab` command
+    if __grains__.get("os_family") in ("Solaris", "AIX"):
         with salt.utils.files.fpopen(
             path, "w+", uid=__salt__["file.user_to_uid"](user), mode=0o600
         ) as fp_:
@@ -285,10 +275,25 @@ def _write_cron_lines(user, lines):
         ret = __salt__["cmd.run_all"](
             _get_cron_cmdstr(path), runas=user, python_shell=False
         )
-    else:
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
         with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path), python_shell=False)
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match("root"):
+        with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path, user), python_shell=False)
+    # Edge cases here, let's try do a runas
+    else:
+        with salt.utils.files.fpopen(
+            path, "w+", uid=__salt__["file.user_to_uid"](user), mode=0o600
+        ) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](
+            _get_cron_cmdstr(path), runas=user, python_shell=False
+        )
     os.remove(path)
     return ret
 
@@ -301,8 +306,8 @@ def _date_time_match(cron, **kwargs):
     return all(
         [
             kwargs.get(x) is None
-            or cron[x] == six.text_type(kwargs[x])
-            or (six.text_type(kwargs[x]).lower() == "random" and cron[x] != "*")
+            or cron[x] == str(kwargs[x])
+            or (str(kwargs[x]).lower() == "random" and cron[x] != "*")
             for x in ("minute", "hour", "daymonth", "month", "dayweek")
         ]
     )
@@ -338,7 +343,7 @@ def raw_cron(user):
         ).splitlines(True)
     # If Salt is running from root user it could modify any user's crontab
     elif _check_instance_uid_match("root"):
-        cmd = "crontab -u {0} -l".format(user)
+        cmd = f"crontab -u {user} -l"
         # Preserve line endings
         lines = salt.utils.data.decode(
             __salt__["cmd.run_stdout"](
@@ -505,7 +510,7 @@ def set_special(user, special, cmd, commented=False, comment=None, identifier=No
         salt '*' cron.set_special root @hourly 'echo foobar'
     """
     lst = list_tab(user)
-    for cron in lst["special"]:
+    for cron in lst["crons"] + lst["special"]:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
             test_setted_id = (
@@ -517,21 +522,29 @@ def set_special(user, special, cmd, commented=False, comment=None, identifier=No
                 (cron["comment"], comment),
                 (cron["commented"], commented),
                 (identifier, test_setted_id),
-                (cron["spec"], special),
+                (cron.get("minute"), None),
+                (cron.get("hour"), None),
+                (cron.get("daymonth"), None),
+                (cron.get("month"), None),
+                (cron.get("dayweek"), None),
+                (cron.get("spec"), special),
             ]
             if cid or identifier:
                 tests.append((cron["cmd"], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
-                rm_special(user, cmd, identifier=cid)
+                if "spec" in cron:
+                    rm_special(user, cmd, identifier=cid)
+                else:
+                    rm_job(user, cmd, identifier=cid)
 
                 # Use old values when setting the new job if there was no
                 # change needed for a given parameter
-                if not _needs_change(cron["spec"], special):
-                    special = cron["spec"]
-                if not _needs_change(cron["commented"], commented):
-                    commented = cron["commented"]
-                if not _needs_change(cron["comment"], comment):
-                    comment = cron["comment"]
+                if not _needs_change(cron.get("spec"), special):
+                    special = cron.get("spec")
+                if not _needs_change(cron.get("commented"), commented):
+                    commented = cron.get("commented")
+                if not _needs_change(cron.get("comment"), comment):
+                    comment = cron.get("comment")
                 if not _needs_change(cron["cmd"], cmd):
                     cmd = cron["cmd"]
                     if cid == SALT_CRON_NO_IDENTIFIER:
@@ -588,13 +601,13 @@ def _get_cron_date_time(**kwargs):
 
     ret = {}
     for param in ("minute", "hour", "month", "dayweek"):
-        value = six.text_type(kwargs.get(param, "1")).lower()
+        value = str(kwargs.get(param, "1")).lower()
         if value == "random":
-            ret[param] = six.text_type(random.sample(range_max[param], 1)[0])
+            ret[param] = str(random.sample(range_max[param], 1)[0])
         elif len(value.split(":")) == 2:
             cron_range = sorted(value.split(":"))
             start, end = int(cron_range[0]), int(cron_range[1])
-            ret[param] = six.text_type(random.randint(start, end))
+            ret[param] = str(random.randint(start, end))
         else:
             ret[param] = value
 
@@ -606,9 +619,9 @@ def _get_cron_date_time(**kwargs):
         # This catches both '2' and '*'
         daymonth_max = 28
 
-    daymonth = six.text_type(kwargs.get("daymonth", "1")).lower()
+    daymonth = str(kwargs.get("daymonth", "1")).lower()
     if daymonth == "random":
-        ret["daymonth"] = six.text_type(
+        ret["daymonth"] = str(
             random.sample(list(list(range(1, (daymonth_max + 1)))), 1)[0]
         )
     else:
@@ -639,13 +652,13 @@ def set_job(
         salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     """
     # Scrub the types
-    minute = six.text_type(minute).lower()
-    hour = six.text_type(hour).lower()
-    daymonth = six.text_type(daymonth).lower()
-    month = six.text_type(month).lower()
-    dayweek = six.text_type(dayweek).lower()
+    minute = str(minute).lower()
+    hour = str(hour).lower()
+    daymonth = str(daymonth).lower()
+    month = str(month).lower()
+    dayweek = str(dayweek).lower()
     lst = list_tab(user)
-    for cron in lst["crons"]:
+    for cron in lst["crons"] + lst["special"]:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
             test_setted_id = (
@@ -657,29 +670,33 @@ def set_job(
                 (cron["comment"], comment),
                 (cron["commented"], commented),
                 (identifier, test_setted_id),
-                (cron["minute"], minute),
-                (cron["hour"], hour),
-                (cron["daymonth"], daymonth),
-                (cron["month"], month),
-                (cron["dayweek"], dayweek),
+                (cron.get("minute"), minute),
+                (cron.get("hour"), hour),
+                (cron.get("daymonth"), daymonth),
+                (cron.get("month"), month),
+                (cron.get("dayweek"), dayweek),
+                (cron.get("spec"), None),
             ]
             if cid or identifier:
                 tests.append((cron["cmd"], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
-                rm_job(user, cmd, identifier=cid)
+                if "spec" in cron:
+                    rm_special(user, cmd, identifier=cid)
+                else:
+                    rm_job(user, cmd, identifier=cid)
 
                 # Use old values when setting the new job if there was no
                 # change needed for a given parameter
-                if not _needs_change(cron["minute"], minute):
-                    minute = cron["minute"]
-                if not _needs_change(cron["hour"], hour):
-                    hour = cron["hour"]
-                if not _needs_change(cron["daymonth"], daymonth):
-                    daymonth = cron["daymonth"]
-                if not _needs_change(cron["month"], month):
-                    month = cron["month"]
-                if not _needs_change(cron["dayweek"], dayweek):
-                    dayweek = cron["dayweek"]
+                if not _needs_change(cron.get("minute"), minute):
+                    minute = cron.get("minute")
+                if not _needs_change(cron.get("hour"), hour):
+                    hour = cron.get("hour")
+                if not _needs_change(cron.get("daymonth"), daymonth):
+                    daymonth = cron.get("daymonth")
+                if not _needs_change(cron.get("month"), month):
+                    month = cron.get("month")
+                if not _needs_change(cron.get("dayweek"), dayweek):
+                    dayweek = cron.get("dayweek")
                 if not _needs_change(cron["commented"], commented):
                     commented = cron["commented"]
                 if not _needs_change(cron["comment"], comment):
@@ -747,15 +764,15 @@ def rm_special(user, cmd, special=None, identifier=None):
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["special"])):
+    for ind, val in enumerate(lst["special"]):
         if rm_ is not None:
             break
-        if _cron_matched(lst["special"][ind], cmd, identifier=identifier):
+        if _cron_matched(val, cmd, identifier=identifier):
             if special is None:
                 # No special param was specified
                 rm_ = ind
             else:
-                if lst["special"][ind]["spec"] == special:
+                if val["spec"] == special:
                     rm_ = ind
     if rm_ is not None:
         lst["special"].pop(rm_)
@@ -791,10 +808,10 @@ def rm_job(
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["crons"])):
+    for ind, val in enumerate(lst["crons"]):
         if rm_ is not None:
             break
-        if _cron_matched(lst["crons"][ind], cmd, identifier=identifier):
+        if _cron_matched(val, cmd, identifier=identifier):
             if not any(
                 [x is not None for x in (minute, hour, daymonth, month, dayweek)]
             ):
@@ -802,7 +819,7 @@ def rm_job(
                 rm_ = ind
             else:
                 if _date_time_match(
-                    lst["crons"][ind],
+                    val,
                     minute=minute,
                     hour=hour,
                     daymonth=daymonth,
@@ -866,8 +883,8 @@ def rm_env(user, name):
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["env"])):
-        if name == lst["env"][ind]["name"]:
+    for ind, val in enumerate(lst["env"]):
+        if name == val["name"]:
             rm_ = ind
     if rm_ is not None:
         lst["env"].pop(rm_)

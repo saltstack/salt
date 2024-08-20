@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **58**
 - Total PR References: **202**
 
-- Contributors: **52** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `L4rS6`_, `SteffenKockel`_, `The-Loeki`_, `amendlik`_, `andreaspe`_, `angeloudy`_, `aphor`_, `bdrung`_, `cebe`_, `ciiqr`_, `damon-atkins`_, `danlsgiga`_, `ddoh94`_, `dmurphy18`_, `dwoz`_, `eliasp`_, `frogunder`_, `garethgreenaway`_, `gclinch`_, `gtmanfred`_, `jfindlay`_, `kstreee`_, `marccardinal`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `michelsen`_, `nullify005`_, `oarmstrong`_, `oeuftete`_, `philpep`_, `racker-markh`_, `rallytime`_, `redbaron4`_, `roaldnefs`_, `rongshengfang`_, `rongzeng54`_, `rrroo`_, `samilaine`_, `samodid`_, `skizunov`_, `terminalmage`_, `tintoy`_, `twangboy`_, `viktordaniel`_, `vutny`_, `while0pass`_, `whytewolf`_, `zer0def`_)
+- Contributors: **52** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `L4rS6`_, `SteffenKockel`_,
+  `The-Loeki`_, `amendlik`_, `andreaspe`_, `angeloudy`_, `aphor`_, `bdrung`_, `cebe`_, `ciiqr`_,
+  `damon-atkins`_, `danlsgiga`_, `ddoh94`_, `dmurphy18`_, `dwoz`_, `eliasp`_, `frogunder`_,
+  `garethgreenaway`_, `gclinch`_, `gtmanfred`_, `jfindlay`_, `kstreee`_, `marccardinal`_,
+  `mcalmer`_, `mchugh19`_, `meaksh`_, `michelsen`_, `nullify005`_, `oarmstrong`_, `oeuftete`_,
+  `philpep`_, `racker-markh`_, `rallytime`_, `redbaron4`_, `roaldnefs`_, `rongshengfang`_,
+  `rongzeng54`_, `rrroo`_, `samilaine`_, `samodid`_, `skizunov`_, `terminalmage`_, `tintoy`_,
+  `twangboy`_, `viktordaniel`_, `vutny`_, `while0pass`_, `whytewolf`_, `zer0def`_)
 
 
 Changes to :py:func:`file.blockreplace <salt.states.file.blockreplace>` State
@@ -872,7 +879,7 @@ Changelog for v2017.7.4..v2017.7.5
 * **PR** `#45932`_: (`The-Loeki`_) Fix cmd run_all bg error
   @ *2018-02-16 14:53:15 UTC*
 
-  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function (refs: `#45932`_)
+  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow using `bg` kwarg for `cmd.run` state function (refs: `#45932`_)
 
   * 5e0e2a30e2 Merge pull request `#45932`_ from The-Loeki/fix_cmd_run_all_bg
 

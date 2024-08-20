@@ -30,7 +30,7 @@ EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
 
 
-class OptionsContainer(object):
+class OptionsContainer:
     """
     An empty class for holding instance attribute values.
     """
@@ -41,13 +41,12 @@ ARGS = None
 # The below line is where OPTIONS can be redefined with internal options
 # (rather than cli arguments) when the shim is bundled by
 # client.ssh.Single._cmd_str()
-# pylint: disable=block-comment-should-start-with-cardinal-space
 #%%OPTS
 
 
 def get_system_encoding():
     """
-        Get system encoding. Most of this code is a part of salt/__init__.py
+    Get system encoding. Most of this code is a part of salt/__init__.py
     """
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
@@ -67,14 +66,14 @@ def get_system_encoding():
         import locale
 
         try:
-            encoding = locale.getdefaultlocale()[-1]
-        except ValueError:
-            # A bad locale setting was most likely found:
-            #   https://github.com/saltstack/salt/issues/26063
-            pass
+            encoding = locale.getencoding()
+        except AttributeError:
+            # Python < 3.11
+            encoding = locale.getpreferredencoding(do_setlocale=True)
 
         # This is now garbage collectable
         del locale
+
         if not encoding:
             # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all
@@ -136,8 +135,9 @@ def need_deployment():
                 )
             except OSError:
                 sys.stdout.write(
-                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is set "
-                    "and is not root, be certain the user is in the same group\nas the login user"
+                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is"
+                    " set and is not root, be certain the user is in the same group\nas"
+                    " the login user"
                 )
                 sys.exit(1)
 
@@ -169,7 +169,7 @@ def unpack_thin(thin_path):
     """
     tfile = tarfile.TarFile.gzopen(thin_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    tfile.extractall(path=OPTIONS.saltdir)
+    tfile.extractall(path=OPTIONS.saltdir)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     try:
@@ -196,7 +196,7 @@ def unpack_ext(ext_path):
     )
     tfile = tarfile.TarFile.gzopen(ext_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    tfile.extractall(path=modcache)
+    tfile.extractall(path=modcache)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     os.unlink(ext_path)
@@ -215,7 +215,13 @@ def reset_time(path=".", amt=None):
         fname = os.path.join(path, fname)
         if os.path.isdir(fname):
             reset_time(fname, amt=amt)
-        os.utime(fname, (amt, amt,))
+        os.utime(
+            fname,
+            (
+                amt,
+                amt,
+            ),
+        )
 
 
 def get_executable():
@@ -223,7 +229,9 @@ def get_executable():
     Find executable which matches supported python version in the thin
     """
     pymap = {}
-    with open(os.path.join(OPTIONS.saltdir, "supported-versions")) as _fp:
+    with open(
+        os.path.join(OPTIONS.saltdir, "supported-versions"), encoding="utf-8"
+    ) as _fp:
         for line in _fp.readlines():
             ns, v_maj, v_min = line.strip().split(":")
             pymap[ns] = (int(v_maj), int(v_min))
@@ -242,7 +250,7 @@ def get_executable():
         stdout, _ = subprocess.Popen(
             [
                 py_cmd,
-                "-c"
+                "-c",
                 "import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))",
             ],
             stdout=subprocess.PIPE,
@@ -286,8 +294,9 @@ def main(argv):  # pylint: disable=W0613
 
         if os.path.exists(OPTIONS.saltdir) and not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write(
-                'ERROR: salt path "{0}" exists but is'
-                " not a directory\n".format(OPTIONS.saltdir)
+                'ERROR: salt path "{0}" exists but is not a directory\n'.format(
+                    OPTIONS.saltdir
+                )
             )
             sys.exit(EX_CANTCREAT)
 
@@ -306,7 +315,7 @@ def main(argv):  # pylint: disable=W0613
                 )
             )
             need_deployment()
-        with open(code_checksum_path, "r") as vpo:
+        with open(code_checksum_path, "r", encoding="utf-8") as vpo:
             cur_code_cs = vpo.readline().strip()
         if cur_code_cs != OPTIONS.code_checksum:
             sys.stderr.write(
@@ -322,7 +331,7 @@ def main(argv):  # pylint: disable=W0613
         sys.stderr.write('ERROR: thin is missing "{0}"\n'.format(salt_call_path))
         need_deployment()
 
-    with open(os.path.join(OPTIONS.saltdir, "minion"), "w") as config:
+    with open(os.path.join(OPTIONS.saltdir, "minion"), "w", encoding="utf-8") as config:
         config.write(OPTIONS.config + "\n")
     if OPTIONS.ext_mods:
         ext_path = os.path.join(OPTIONS.saltdir, EXT_ARCHIVE)
@@ -332,7 +341,7 @@ def main(argv):  # pylint: disable=W0613
             version_path = os.path.join(OPTIONS.saltdir, "ext_version")
             if not os.path.exists(version_path) or not os.path.isfile(version_path):
                 need_ext()
-            with open(version_path, "r") as vpo:
+            with open(version_path, "r", encoding="utf-8") as vpo:
                 cur_version = vpo.readline().strip()
             if cur_version != OPTIONS.ext_mods:
                 need_ext()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,23 +15,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N93KPlatform(NXOSPlatform):
-
-    """ Cisco Systems N93K Platform Unit Test Object """
+    """Cisco Systems N93K Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9396PX Chassis"
 
     # Captured output from: show install all nxos <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 [####################] 100% -- SUCCESS
 
@@ -70,7 +64,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     # Captured output from: install all nxos <image>
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 Installer is forced disruptive
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".

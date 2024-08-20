@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Maintainer: Erik Johnson (https://github.com/terminalmage)
 #
 # WARNING: This script will recursively remove the build and artifact
@@ -10,7 +9,6 @@
 
 # pylint: disable=file-perms,resource-leakage
 
-from __future__ import absolute_import, print_function
 
 import errno
 import glob
@@ -20,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from optparse import OptionGroup, OptionParser
+from optparse import OptionGroup, OptionParser  # pylint: disable=deprecated-module
 
 logging.QUIET = 0
 logging.GARBAGE = 1
@@ -83,20 +81,24 @@ def _init():
     path_group.add_option(
         "--source-dir",
         default="/testing",
-        help="Source directory. Must be a git checkout. " "(default: %default)",
+        help="Source directory. Must be a git checkout. (default: %default)",
     )
     path_group.add_option(
         "--build-dir",
         default="/tmp/salt-buildpackage",
-        help="Build root, will be removed if it exists "
-        "prior to running script. (default: %default)",
+        help=(
+            "Build root, will be removed if it exists "
+            "prior to running script. (default: %default)"
+        ),
     )
     path_group.add_option(
         "--artifact-dir",
         default="/tmp/salt-packages",
-        help="Location where build artifacts should be "
-        "placed for Jenkins to retrieve them "
-        "(default: %default)",
+        help=(
+            "Location where build artifacts should be "
+            "placed for Jenkins to retrieve them "
+            "(default: %default)"
+        ),
     )
     parser.add_option_group(path_group)
 
@@ -107,7 +109,7 @@ def _init():
         "--spec",
         dest="spec_file",
         default="/tmp/salt.spec",
-        help="Spec file to use as a template to build RPM. " "(default: %default)",
+        help="Spec file to use as a template to build RPM. (default: %default)",
     )
     parser.add_option_group(rpm_group)
 
@@ -131,21 +133,22 @@ def _init():
     if not opts.platform:
         problems.append("Platform ('os' grain) required")
     if not os.path.isdir(opts.source_dir):
-        problems.append("Source directory {0} not found".format(opts.source_dir))
+        problems.append(f"Source directory {opts.source_dir} not found")
     try:
         shutil.rmtree(opts.build_dir)
     except OSError as exc:
         if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append(
-                "Unable to remove pre-existing destination "
-                "directory {0}: {1}".format(opts.build_dir, exc)
+                "Unable to remove pre-existing destination directory {}: {}".format(
+                    opts.build_dir, exc
+                )
             )
     finally:
         try:
             os.makedirs(opts.build_dir)
         except OSError as exc:
             problems.append(
-                "Unable to create destination directory {0}: {1}".format(
+                "Unable to create destination directory {}: {}".format(
                     opts.build_dir, exc
                 )
             )
@@ -154,15 +157,16 @@ def _init():
     except OSError as exc:
         if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append(
-                "Unable to remove pre-existing artifact directory "
-                "{0}: {1}".format(opts.artifact_dir, exc)
+                "Unable to remove pre-existing artifact directory {}: {}".format(
+                    opts.artifact_dir, exc
+                )
             )
     finally:
         try:
             os.makedirs(opts.artifact_dir)
         except OSError as exc:
             problems.append(
-                "Unable to create artifact directory {0}: {1}".format(
+                "Unable to create artifact directory {}: {}".format(
                     opts.artifact_dir, exc
                 )
             )
@@ -194,19 +198,21 @@ def _move(src, dst):
 
 
 def _run_command(args):
-    log.info("Running command: {0}".format(args))
+    log.info("Running command: %s", args)
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if stdout:
-        log.debug("Command output: \n{0}".format(stdout))
+        log.debug("Command output: \n%s", stdout)
     if stderr:
         log.error(stderr)
-    log.info("Return code: {0}".format(proc.returncode))
+    log.info("Return code: %s", proc.returncode)
     return stdout, stderr, proc.returncode
 
 
 def _make_sdist(opts, python_bin="python"):
     os.chdir(opts.source_dir)
+
+    # TBD replace with build when implement pyproject.toml
     stdout, stderr, rcode = _run_command([python_bin, "setup.py", "sdist"])
     if rcode == 0:
         # Find the sdist with the most recently-modified metadata
@@ -214,7 +220,7 @@ def _make_sdist(opts, python_bin="python"):
             glob.iglob(os.path.join(opts.source_dir, "dist", "salt-*.tar.gz")),
             key=os.path.getctime,
         )
-        log.info("sdist is located at {0}".format(sdist_path))
+        log.info("sdist is located at %s", sdist_path)
         return sdist_path
     else:
         _abort("Failed to create sdist")
@@ -230,20 +236,20 @@ def build_centos(opts):
     log.info("Building CentOS RPM")
     log.info("Detecting major release")
     try:
-        with open("/etc/redhat-release", "r") as fp_:
+        with open("/etc/redhat-release", encoding="utf-8") as fp_:
             redhat_release = fp_.read().strip()
             major_release = int(redhat_release.split()[2].split(".")[0])
     except (ValueError, IndexError):
         _abort(
             "Unable to determine major release from /etc/redhat-release "
-            "contents: '{0}'".format(redhat_release)
+            "contents: '{}'".format(redhat_release)
         )
-    except IOError as exc:
-        _abort("{0}".format(exc))
+    except OSError as exc:
+        _abort(f"{exc}")
 
-    log.info("major_release: {0}".format(major_release))
+    log.info("major_release: %s", major_release)
 
-    define_opts = ["--define", "_topdir {0}".format(os.path.join(opts.build_dir))]
+    define_opts = ["--define", f"_topdir {os.path.join(opts.build_dir)}"]
     build_reqs = ["rpm-build"]
     if major_release == 5:
         python_bin = "python26"
@@ -256,7 +262,7 @@ def build_centos(opts):
     elif major_release == 7:
         build_reqs.extend(["python-devel", "systemd-units"])
     else:
-        _abort("Unsupported major release: {0}".format(major_release))
+        _abort(f"Unsupported major release: {major_release}")
 
     # Install build deps
     _run_command(["yum", "-y", "install"] + build_reqs)
@@ -274,7 +280,7 @@ def build_centos(opts):
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
     except AttributeError:
-        _abort("Unable to extract version info from sdist filename '{0}'".format(sdist))
+        _abort(f"Unable to extract version info from sdist filename '{sdist}'")
 
     if offset is None:
         salt_pkgver = salt_srcver = base
@@ -282,8 +288,8 @@ def build_centos(opts):
         salt_pkgver = ".".join((base, offset, oid))
         salt_srcver = "-".join((base, offset, oid))
 
-    log.info("salt_pkgver: {0}".format(salt_pkgver))
-    log.info("salt_srcver: {0}".format(salt_srcver))
+    log.info("salt_pkgver: %s", salt_pkgver)
+    log.info("salt_srcver: %s", salt_srcver)
 
     # Setup build environment
     for build_dir in "BUILD BUILDROOT RPMS SOURCES SPECS SRPMS".split():
@@ -293,7 +299,7 @@ def build_centos(opts):
         except OSError:
             pass
         if not os.path.isdir(path):
-            _abort("Unable to make directory: {0}".format(path))
+            _abort(f"Unable to make directory: {path}")
 
     # Get sources into place
     build_sources_path = os.path.join(opts.build_dir, "SOURCES")
@@ -316,14 +322,14 @@ def build_centos(opts):
 
     # Prepare SPEC file
     spec_path = os.path.join(opts.build_dir, "SPECS", "salt.spec")
-    with open(opts.spec_file, "r") as spec:
+    with open(opts.spec_file, encoding="utf-8") as spec:
         spec_lines = spec.read().splitlines()
-    with open(spec_path, "w") as fp_:
+    with open(spec_path, "w", encoding="utf-8") as fp_:
         for line in spec_lines:
             if line.startswith("%global srcver "):
-                line = "%global srcver {0}".format(salt_srcver)
+                line = f"%global srcver {salt_srcver}"
             elif line.startswith("Version: "):
-                line = "Version: {0}".format(salt_pkgver)
+                line = f"Version: {salt_pkgver}"
             fp_.write(line + "\n")
 
     # Do the thing
@@ -340,15 +346,11 @@ def build_centos(opts):
             opts.build_dir,
             "RPMS",
             "noarch",
-            "salt-*{0}*.noarch.rpm".format(salt_pkgver),
+            f"salt-*{salt_pkgver}*.noarch.rpm",
         )
     )
     packages.extend(
-        glob.glob(
-            os.path.join(
-                opts.build_dir, "SRPMS", "salt-{0}*.src.rpm".format(salt_pkgver)
-            )
-        )
+        glob.glob(os.path.join(opts.build_dir, "SRPMS", f"salt-{salt_pkgver}*.src.rpm"))
     )
     return packages
 
@@ -359,7 +361,7 @@ if __name__ == "__main__":
     opts = _init()
 
     print(
-        "Starting {0} build. Progress will be logged to {1}.".format(
+        "Starting {} build. Progress will be logged to {}.".format(
             opts.platform, opts.log_file
         )
     )
@@ -379,9 +381,7 @@ if __name__ == "__main__":
         level=LOG_LEVELS[opts.log_level],
     )
     if opts.log_level not in LOG_LEVELS:
-        log.error(
-            "Invalid log level '{0}', falling back to 'warning'".format(opts.log_level)
-        )
+        log.error("Invalid log level '%s', falling back to 'warning'", opts.log_level)
 
     # Build for the specified platform
     if not opts.platform:
@@ -389,12 +389,12 @@ if __name__ == "__main__":
     elif opts.platform.lower() == "centos":
         artifacts = build_centos(opts)
     else:
-        _abort("Unsupported platform '{0}'".format(opts.platform))
+        _abort(f"Unsupported platform '{opts.platform}'")
 
-    msg = "Build complete. Artifacts will be stored in {0}".format(opts.artifact_dir)
+    msg = f"Build complete. Artifacts will be stored in {opts.artifact_dir}"
     log.info(msg)
     print(msg)  # pylint: disable=C0325
     for artifact in artifacts:
         shutil.copy(artifact, opts.artifact_dir)
-        log.info("Copied {0} to artifact directory".format(artifact))
+        log.info("Copied %s to artifact directory", artifact)
     log.info("Done!")

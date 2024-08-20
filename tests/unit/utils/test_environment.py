@@ -1,19 +1,11 @@
-# coding=utf-8
 """
 Test case for utils/__init__.py
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.environment
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class UtilsTestCase(TestCase):
     """
     Test case for utils/__init__.py

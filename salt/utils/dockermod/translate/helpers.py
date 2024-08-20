@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Functions to translate input in the docker CLI format to the format desired by
 by the API.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.network
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range, zip
 
 NOTSET = object()
 
@@ -68,7 +60,7 @@ def get_port_range(port_def):
 
     A ValueError will be raised if bad input is provided.
     """
-    if isinstance(port_def, six.integer_types):
+    if isinstance(port_def, int):
         # Single integer, start/end of range is the same
         return port_def, port_def
     try:
@@ -80,13 +72,13 @@ def get_port_range(port_def):
         if range_start > range_end:
             raise ValueError("start > end")
     except (TypeError, ValueError) as exc:
-        if exc.__str__() == "start > end":
+        if str(exc) == "start > end":
             msg = (
-                "Start of port range ({0}) cannot be greater than end of "
-                "port range ({1})".format(range_start, range_end)
+                "Start of port range ({}) cannot be greater than end of "
+                "port range ({})".format(range_start, range_end)
             )
         else:
-            msg = "'{0}' is non-numeric or an invalid port range".format(port_def)
+            msg = f"'{port_def}' is non-numeric or an invalid port range"
         raise ValueError(msg)
     else:
         return range_start, range_end
@@ -108,19 +100,21 @@ def map_vals(val, *names, **extra_opts):
             if num_elements < expected_num_elements:
                 if fill is NOTSET:
                     raise SaltInvocationError(
-                        "'{0}' contains {1} value(s) (expected {2})".format(
+                        "'{}' contains {} value(s) (expected {})".format(
                             item, num_elements, expected_num_elements
                         )
                     )
                 elements.extend([fill] * (expected_num_elements - num_elements))
             elif num_elements > expected_num_elements:
                 raise SaltInvocationError(
-                    "'{0}' contains {1} value(s) (expected {2})".format(
+                    "'{}' contains {} value(s) (expected {})".format(
                         item,
                         num_elements,
-                        expected_num_elements
-                        if fill is NOTSET
-                        else "up to {0}".format(expected_num_elements),
+                        (
+                            expected_num_elements
+                            if fill is NOTSET
+                            else f"up to {expected_num_elements}"
+                        ),
                     )
                 )
             val[idx] = dict(zip(names, elements))
@@ -130,7 +124,7 @@ def map_vals(val, *names, **extra_opts):
 def validate_ip(val):
     try:
         if not salt.utils.network.is_ip(val):
-            raise SaltInvocationError("'{0}' is not a valid IP address".format(val))
+            raise SaltInvocationError(f"'{val}' is not a valid IP address")
     except RuntimeError:
         pass
 
@@ -138,21 +132,21 @@ def validate_ip(val):
 def validate_subnet(val):
     try:
         if not salt.utils.network.is_subnet(val):
-            raise SaltInvocationError("'{0}' is not a valid subnet".format(val))
+            raise SaltInvocationError(f"'{val}' is not a valid subnet")
     except RuntimeError:
         pass
 
 
 def translate_str(val):
-    return six.text_type(val) if not isinstance(val, six.string_types) else val
+    return str(val) if not isinstance(val, str) else val
 
 
 def translate_int(val):
-    if not isinstance(val, six.integer_types):
+    if not isinstance(val, int):
         try:
             val = int(val)
         except (TypeError, ValueError):
-            raise SaltInvocationError("'{0}' is not an integer".format(val))
+            raise SaltInvocationError(f"'{val}' is not an integer")
     return val
 
 
@@ -165,7 +159,7 @@ def translate_dict(val):
     Not really translating, just raising an exception if it's not a dict
     """
     if not isinstance(val, dict):
-        raise SaltInvocationError("'{0}' is not a dictionary".format(val))
+        raise SaltInvocationError(f"'{val}' is not a dictionary")
     return val
 
 
@@ -174,15 +168,15 @@ def translate_command(val):
     Input should either be a single string, or a list of strings. This is used
     for the two args that deal with commands ("command" and "entrypoint").
     """
-    if isinstance(val, six.string_types):
+    if isinstance(val, str):
         return val
     elif isinstance(val, list):
-        for idx in range(len(val)):
-            if not isinstance(val[idx], six.string_types):
-                val[idx] = six.text_type(val[idx])
+        for idx, item in enumerate(val):
+            if not isinstance(item, str):
+                val[idx] = str(item)
     else:
         # Make sure we have a string
-        val = six.text_type(val)
+        val = str(val)
     return val
 
 
@@ -194,8 +188,8 @@ def translate_bytes(val):
     try:
         val = int(val)
     except (TypeError, ValueError):
-        if not isinstance(val, six.string_types):
-            val = six.text_type(val)
+        if not isinstance(val, str):
+            val = str(val)
     return val
 
 
@@ -211,10 +205,10 @@ def translate_stringlist(val):
         try:
             val = split(val)
         except AttributeError:
-            val = split(six.text_type(val))
-    for idx in range(len(val)):
-        if not isinstance(val[idx], six.string_types):
-            val[idx] = six.text_type(val[idx])
+            val = split(str(val))
+    for idx, item in enumerate(val):
+        if not isinstance(item, str):
+            val[idx] = str(item)
     return val
 
 
@@ -224,31 +218,28 @@ def translate_device_rates(val, numeric_rate=True):
     dictionaries in the format [{'Path': path, 'Rate': rate}]
     """
     val = map_vals(val, "Path", "Rate")
-    for idx in range(len(val)):
+    for item in val:
         try:
-            is_abs = os.path.isabs(val[idx]["Path"])
+            is_abs = os.path.isabs(item["Path"])
         except AttributeError:
             is_abs = False
         if not is_abs:
-            raise SaltInvocationError(
-                "Path '{Path}' is not absolute".format(**val[idx])
-            )
+            raise SaltInvocationError("Path '{Path}' is not absolute".format(**item))
 
         # Attempt to convert to an integer. Will fail if rate was specified as
         # a shorthand (e.g. 1mb), this is OK as we will check to make sure the
         # value is an integer below if that is what is required.
         try:
-            val[idx]["Rate"] = int(val[idx]["Rate"])
+            item["Rate"] = int(item["Rate"])
         except (TypeError, ValueError):
             pass
 
         if numeric_rate:
             try:
-                val[idx]["Rate"] = int(val[idx]["Rate"])
+                item["Rate"] = int(item["Rate"])
             except ValueError:
                 raise SaltInvocationError(
-                    "Rate '{Rate}' for path '{Path}' is "
-                    "non-numeric".format(**val[idx])
+                    "Rate '{Rate}' for path '{Path}' is non-numeric".format(**item)
                 )
     return val
 
@@ -266,9 +257,7 @@ def translate_key_val(val, delimiter="="):
         try:
             lvalue, rvalue = split(item, delimiter, 1)
         except (AttributeError, TypeError, ValueError):
-            raise SaltInvocationError(
-                "'{0}' is not a key{1}value pair".format(item, delimiter)
-            )
+            raise SaltInvocationError(f"'{item}' is not a key{delimiter}value pair")
         new_val[lvalue] = rvalue
     return new_val
 
@@ -295,10 +284,10 @@ def translate_labels(val):
                 except ValueError:
                     key = item
                     val = ""
-            if not isinstance(key, six.string_types):
-                key = six.text_type(key)
-            if not isinstance(val, six.string_types):
-                val = six.text_type(val)
+            if not isinstance(key, str):
+                key = str(key)
+            if not isinstance(val, str):
+                val = str(val)
             new_val[key] = val
         val = new_val
     return val

@@ -16,18 +16,16 @@ from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 # pylint: disable=W0611
 try:
     import libcloud
-    from libcloud.compute.types import Provider, NodeState
-    from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment
+    from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import NodeState, Provider
 
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple(
-        [
-            int(part)
-            for part in libcloud.__version__.replace("-", ".")
-            .replace("rc", ".")
-            .split(".")[:3]
-        ]
+        int(part)
+        for part in libcloud.__version__.replace("-", ".")
+        .replace("rc", ".")
+        .split(".")[:3]
     )
 
 except ImportError:
@@ -57,11 +55,13 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
-    errormsg = "Your version of libcloud is {}. salt-cloud requires >= libcloud {}".format(
-        libcloud.__version__, ".".join([str(num) for num in reqver])
+    errormsg = (
+        "Your version of libcloud is {}. salt-cloud requires >= libcloud {}".format(
+            libcloud.__version__, ".".join([str(num) for num in reqver])
+        )
     )
     if why:
-        errormsg += " for {}".format(why)
+        errormsg += f" for {why}"
     errormsg += ". Please upgrade."
     raise ImportError(errormsg)
 
@@ -186,7 +186,7 @@ def get_location(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -204,9 +204,7 @@ def get_image(conn, vm_):
         if vm_image and vm_image in (img_id, img_name):
             return img
 
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_size(conn, vm_):
@@ -219,11 +217,12 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(size.id), str(size.name),):
+        if vm_size and str(vm_size) in (
+            str(size.id),
+            str(size.name),
+        ):
             return size
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def script(vm_):
@@ -248,13 +247,13 @@ def destroy(name, conn=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -293,7 +292,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{}/destroyed".format(name),
+            f"salt/cloud/{name}/destroyed",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -335,8 +334,8 @@ def reboot(name, conn=None):
         # Fire reboot action
         __utils__["cloud.fire_event"](
             "event",
-            "{} has been rebooted".format(name),
-            "salt-cloud" "salt/cloud/{}/rebooting".format(name),
+            f"{name} has been rebooted",
+            f"salt/cloud/{name}/rebooting",
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -409,7 +408,9 @@ def list_nodes_select(conn=None, call=None):
         conn = get_conn()  # pylint: disable=E0602
 
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(conn, "function"), __opts__["query.selection"], call,
+        list_nodes_full(conn, "function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

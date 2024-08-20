@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Common logic used by the docker state and execution module
 
@@ -6,20 +5,13 @@ This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.dockermod.translate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.dockermod.translate.helpers import split as _split
 
@@ -32,11 +24,11 @@ except ImportError:
 # functions so that we can get argspecs for the container config, host config,
 # and networking config (see the get_client_args() function).
 try:
-    import docker.types
+    import docker.types  # pylint: disable=no-name-in-module
 except ImportError:
     pass
 try:
-    import docker.utils
+    import docker.utils  # pylint: disable=no-name-in-module
 except ImportError:
     pass
 
@@ -111,23 +103,12 @@ def get_client_args(limit=None):
         if not limit or key in limit:
             try:
                 func_ref = wrapped_func
-                if six.PY2:
-                    try:
-                        # create_network is decorated, so we have to dig into the
-                        # closure created by functools.wraps
-                        ret[key] = _argspec(
-                            func_ref.__func__.__closure__[0].cell_contents
-                        ).args
-                    except (AttributeError, IndexError):
-                        # functools.wraps changed (unlikely), bail out
-                        ret[key] = []
-                else:
-                    try:
-                        # functools.wraps makes things a little easier in Python 3
-                        ret[key] = _argspec(func_ref.__wrapped__).args
-                    except AttributeError:
-                        # functools.wraps changed (unlikely), bail out
-                        ret[key] = []
+                try:
+                    # functools.wraps makes things a little easier in Python 3
+                    ret[key] = _argspec(func_ref.__wrapped__).args
+                except AttributeError:
+                    # functools.wraps changed (unlikely), bail out
+                    ret[key] = []
             except AttributeError:
                 # Function moved, bail out
                 ret[key] = []
@@ -259,7 +240,7 @@ def translate_input(
             pass
 
     except Exception as exc:  # pylint: disable=broad-except
-        error_message = exc.__str__()
+        error_message = str(exc)
         log.error("Error translating input: '%s'", error_message, exc_info=True)
     else:
         error_message = None
@@ -272,7 +253,7 @@ def translate_input(
     if collisions and not ignore_collisions:
         for item in collisions:
             error_data.setdefault("collisions", []).append(
-                "'{0}' is an alias for '{1}', they cannot both be used".format(
+                "'{}' is an alias for '{}', they cannot both be used".format(
                     translator.ALIASES_REVMAP[item], item
                 )
             )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installing of certificates to the Windows Certificate Manager
 =============================================================
@@ -11,12 +10,9 @@ Install certificates to the Windows Certificate Manager
       certutil.add_store:
         - store: TrustedPublisher
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -34,77 +30,139 @@ def __virtual__():
 
 def add_store(name, store, saltenv="base"):
     """
-    Store a certificate to the given store
+    Store a certificate to the given certificate store
 
-    name
-        The certificate to store, this can use local paths
-        or salt:// paths
+    Args:
 
-    store
-        The store to add the certificate to
+        name (str):
+            The path to the certificate to add to the store. This is either the
+            path to a local file or a file from the file server in the form of
+            ``salt://path/to/file``
 
-    saltenv
-        The salt environment to use, this is ignored if a local
-        path is specified
+        store (str):
+            The certificate store to add the certificate to
 
+        saltenv (str):
+            The salt environment to use. This is ignored if the path is local
+
+    Returns:
+        dict: A dictionary containing the results
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        add_certificate:
+          certutil.add_store:
+            name: salt://web_cert.cer
+            store: TrustedPublisher
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     cert_file = __salt__["cp.cache_file"](name, saltenv)
     if cert_file is False:
+        ret["comment"] = f"Certificate file not found: {name}"
         ret["result"] = False
-        ret["comment"] += "Certificate file not found."
-    else:
-        cert_serial = __salt__["certutil.get_cert_serial"](cert_file)
-        serials = __salt__["certutil.get_stored_cert_serials"](store)
+        return ret
 
-        if cert_serial not in serials:
-            retcode = __salt__["certutil.add_store"](name, store, retcode=True)
-            if retcode == 0:
-                ret["changes"]["added"] = name
-            else:
-                ret["result"] = False
-                ret["comment"] += "Failed to store certificate {0}".format(name)
-        else:
-            ret["comment"] += "{0} already stored.".format(name)
+    cert_serial = __salt__["certutil.get_cert_serial"](name)
+    if cert_serial is None:
+        ret["comment"] = f"Invalid certificate file: {name}"
+        ret["result"] = False
+        return ret
+
+    old_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
+    if cert_serial in old_serials:
+        ret["comment"] = f"Certificate already present: {name}"
+        return ret
+
+    if __opts__["test"]:
+        ret["comment"] = f"Certificate will be added: {name}"
+        ret["result"] = None
+        return ret
+
+    retcode = __salt__["certutil.add_store"](name, store, retcode=True)
+    if retcode != 0:
+        ret["comment"] = f"Error adding certificate: {name}"
+        ret["result"] = False
+        return ret
+
+    new_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
+    if cert_serial in new_serials:
+        ret["changes"]["added"] = name
+        ret["comment"] = f"Added certificate: {name}"
+    else:
+        ret["comment"] = f"Failed to add certificate: {name}"
+        ret["result"] = False
 
     return ret
 
 
 def del_store(name, store, saltenv="base"):
     """
-    Remove a certificate in the given store
+    Remove a certificate from the given certificate store
 
-    name
-        The certificate to remove, this can use local paths
-        or salt:// paths
+    Args:
 
-    store
-        The store to remove the certificate from
+        name (str):
+            The path to the certificate to remove from the store. This is either
+            the path to a local file or a file from the file server in the form
+            of ``salt://path/to/file``
 
-    saltenv
-        The salt environment to use, this is ignored if a local
-        path is specified
+        store (str):
+            The certificate store to remove the certificate from
 
+        saltenv (str):
+            The salt environment to use. This is ignored if the path is local
+
+    Returns:
+        dict: A dictionary containing the results
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        remove_certificate:
+          certutil.del_store:
+            name: salt://web_cert.cer
+            store: TrustedPublisher
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     cert_file = __salt__["cp.cache_file"](name, saltenv)
     if cert_file is False:
+        ret["comment"] = f"Certificate file not found: {name}"
         ret["result"] = False
-        ret["comment"] += "Certificate file not found."
-    else:
-        cert_serial = __salt__["certutil.get_cert_serial"](cert_file)
-        serials = __salt__["certutil.get_stored_cert_serials"](store)
+        return ret
 
-        if cert_serial in serials:
-            retcode = __salt__["certutil.del_store"](cert_file, store, retcode=True)
-            if retcode == 0:
-                ret["changes"]["removed"] = name
-            else:
-                ret["result"] = False
-                ret["comment"] += "Failed to remove the certificate {0}".format(name)
-        else:
-            ret["comment"] += "{0} already removed.".format(name)
+    cert_serial = __salt__["certutil.get_cert_serial"](name)
+    if cert_serial is None:
+        ret["comment"] = f"Invalid certificate file: {name}"
+        ret["result"] = False
+        return ret
+
+    old_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
+    if cert_serial not in old_serials:
+        ret["comment"] = f"Certificate already absent: {name}"
+        return ret
+
+    if __opts__["test"]:
+        ret["comment"] = f"Certificate will be removed: {name}"
+        ret["result"] = None
+        return ret
+
+    retcode = __salt__["certutil.del_store"](name, store, retcode=True)
+    if retcode != 0:
+        ret["comment"] = f"Error removing certificate: {name}"
+        ret["result"] = False
+        return ret
+
+    new_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
+    if cert_serial not in new_serials:
+        ret["changes"]["removed"] = name
+        ret["comment"] = f"Removed certificate: {name}"
+    else:
+        ret["comment"] = f"Failed to remove certificate: {name}"
+        ret["result"] = False
 
     return ret

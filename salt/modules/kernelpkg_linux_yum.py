@@ -1,29 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Manage Linux kernel packages on YUM-based systems
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
 
-try:
-    # Import Salt libs
-    from salt.ext import six
-    from salt.utils.versions import LooseVersion as _LooseVersion
-    from salt.exceptions import CommandExecutionError
-    import salt.utils.data
-    import salt.utils.functools
-    import salt.utils.systemd
-    import salt.modules.yumpkg
-
-    __IMPORT_ERROR = None
-except ImportError as exc:
-    __IMPORT_ERROR = exc.__str__()
+import salt.modules.yumpkg
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.systemd
+from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
 __virtualname__ = "kernelpkg"
 
 # Import functions from yumpkg
@@ -36,10 +26,6 @@ def __virtual__():
     """
     Load this module on RedHat-based systems only
     """
-
-    if __IMPORT_ERROR:
-        return (False, __IMPORT_ERROR)
-
     if __grains__.get("os_family", "") == "RedHat":
         return __virtualname__
     elif __grains__.get("os", "").lower() in (
@@ -50,7 +36,7 @@ def __virtual__():
     ):
         return __virtualname__
 
-    return (False, "Module kernelpkg_linux_yum: no YUM based system detected")
+    return False, "Module kernelpkg_linux_yum: no YUM based system detected"
 
 
 def active():
@@ -83,10 +69,7 @@ def list_installed():
     if result is None:
         return []
 
-    if six.PY2:
-        return sorted(result, cmp=_cmp_version)
-    else:
-        return sorted(result, key=functools.cmp_to_key(_cmp_version))
+    return sorted(result, key=functools.cmp_to_key(_cmp_version))
 
 
 def latest_available():
@@ -140,7 +123,7 @@ def needs_reboot():
 
         salt '*' kernelpkg.needs_reboot
     """
-    return _LooseVersion(active()) < _LooseVersion(latest_installed())
+    return LooseVersion(active()) < LooseVersion(latest_installed())
 
 
 def upgrade(reboot=False, at_time=None):
@@ -197,7 +180,7 @@ def upgrade_available():
 
         salt '*' kernelpkg.upgrade_available
     """
-    return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+    return LooseVersion(latest_available()) > LooseVersion(latest_installed())
 
 
 def remove(release):
@@ -216,14 +199,12 @@ def remove(release):
         salt '*' kernelpkg.remove 3.10.0-327.el7
     """
     if release not in list_installed():
-        raise CommandExecutionError(
-            "Kernel release '{0}' is not installed".format(release)
-        )
+        raise CommandExecutionError(f"Kernel release '{release}' is not installed")
 
     if release == active():
         raise CommandExecutionError("Active kernel cannot be removed")
 
-    target = "{0}-{1}".format(_package_name(), release)
+    target = f"{_package_name()}-{release}"
     log.info("Removing kernel package %s", target)
     old = __salt__["pkg.list_pkgs"]()
 
@@ -298,8 +279,8 @@ def _cmp_version(item1, item2):
     """
     Compare function for package version sorting
     """
-    vers1 = _LooseVersion(item1)
-    vers2 = _LooseVersion(item2)
+    vers1 = LooseVersion(item1)
+    vers2 = LooseVersion(item2)
 
     if vers1 < vers2:
         return -1

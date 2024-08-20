@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Allows you to manage proxy settings on minions
 ==============================================
@@ -14,16 +13,10 @@ Setup proxy settings on minions
             - localhost
             - 127.0.0.1
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd part libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "proxy"
@@ -85,16 +78,16 @@ def managed(
         ret["changes"] = {"new": []}
 
         for service in services:
-            current_settings = __salt__["proxy.get_{0}_proxy".format(service)]()
+            current_settings = __salt__[f"proxy.get_{service}_proxy"]()
 
             if current_settings.get("server") == name and current_settings.get(
                 "port"
-            ) == six.text_type(port):
-                ret["comment"] += "{0} proxy settings already set.\n".format(service)
-            elif __salt__["proxy.set_{0}_proxy".format(service)](
+            ) == str(port):
+                ret["comment"] += f"{service} proxy settings already set.\n"
+            elif __salt__[f"proxy.set_{service}_proxy"](
                 name, port, user, password, network_service
             ):
-                ret["comment"] += "{0} proxy settings updated correctly\n".format(
+                ret["comment"] += "{} proxy settings updated correctly\n".format(
                     service
                 )
                 ret["changes"]["new"].append(
@@ -145,7 +138,7 @@ def managed(
 
                 if current_settings[service]["server"] != name or current_settings[
                     service
-                ]["port"] != six.text_type(port):
+                ]["port"] != str(port):
                     changes_needed = True
                     break
         else:

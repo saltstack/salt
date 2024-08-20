@@ -1,0 +1,22 @@
+
+  build-ci-deps:
+    <%- do test_salt_needs.append("build-ci-deps") %>
+    name: CI Deps
+    <%- if workflow_slug != 'release' %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+    <%- if workflow_slug != 'release' %>
+      - build-salt-onedir
+    <%- else %>
+      - download-onedir-artifact
+    <%- endif %>
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      nox-session: ci-test-onedir
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"

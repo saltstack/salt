@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,16 +7,12 @@
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
-# Import salt libs
 import salt.modules.virtualenv_mod as virtualenv_mod
 from salt.exceptions import CommandExecutionError
 from tests.support.helpers import ForceImportErrorOn, TstSuiteLoggingHandler
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -222,7 +217,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(
-                    CommandExecutionError, virtualenv_mod.create, "/tmp/foo",
+                    CommandExecutionError,
+                    virtualenv_mod.create,
+                    "/tmp/foo",
                 )
             # <---- virtualenv binary not available --------------------------
 
@@ -277,10 +274,11 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
             virtualenv_mod.create(
-                "/tmp/foo", python=sys.executable,
+                "/tmp/foo",
+                python=sys.executable,
             )
             mock.assert_called_once_with(
-                ["virtualenv", "--python={0}".format(sys.executable), "/tmp/foo"],
+                ["virtualenv", f"--python={sys.executable}", "/tmp/foo"],
                 runas=None,
                 python_shell=False,
             )
@@ -380,7 +378,8 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             ("1.9.2", (1, 9, 2)),
             ("1.9rc2", (1, 9)),
             (
-                "virtualenv 20.0.0 from /home/ch3ll/.pyenv/versions/3.6.4/envs/virtualenv/lib/python3.6/site-packages/virtualenv/__init__.py",
+                "virtualenv 20.0.0 from"
+                " /home/ch3ll/.pyenv/versions/3.6.4/envs/virtualenv/lib/python3.6/site-packages/virtualenv/__init__.py",
                 (20, 0, 0),
             ),
             ("16.7.10", (16, 7, 10)),
@@ -404,8 +403,10 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             mock_ver = MagicMock(
                 return_value={
                     "retcode": 0,
-                    "stdout": "virtualenv 20.0.23+ds from "
-                    "/usr/lib/python3/dist-packages/virtualenv/__init__.py",
+                    "stdout": (
+                        "virtualenv 20.0.23+ds from "
+                        "/usr/lib/python3/dist-packages/virtualenv/__init__.py"
+                    ),
                 }
             )
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module providing a simple management interface to a chronos cluster.
 
@@ -6,7 +5,6 @@ Currently this only works when run through a proxy minion.
 
 .. versionadded:: 2015.8.2
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -39,7 +37,9 @@ def _jobs():
     Return the currently configured jobs.
     """
     response = salt.utils.http.query(
-        "{0}/scheduler/jobs".format(_base_url()), decode_type="json", decode=True,
+        f"{_base_url()}/scheduler/jobs",
+        decode_type="json",
+        decode=True,
     )
     jobs = {}
     for job in response["dict"]:
@@ -106,7 +106,7 @@ def update_job(name, config):
     data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
-            "{0}/scheduler/iso8601".format(_base_url()),
+            f"{_base_url()}/scheduler/iso8601",
             method="POST",
             data=data,
             header_dict={"Content-Type": "application/json"},
@@ -129,6 +129,7 @@ def rm_job(name):
         salt chronos-minion-id chronos.rm_job my-job
     """
     response = salt.utils.http.query(
-        "{0}/scheduler/job/{1}".format(_base_url(), name), method="DELETE",
+        f"{_base_url()}/scheduler/job/{name}",
+        method="DELETE",
     )
     return True

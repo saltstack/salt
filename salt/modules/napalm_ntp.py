@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM NTP
 ==========
@@ -20,8 +19,6 @@ Dependencies
 
 .. versionadded:: 2016.11.0
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -64,7 +61,6 @@ def __virtual__():
 
 @proxy_napalm_wrap
 def peers(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns a list the NTP peers configured on the network device.
 
@@ -105,7 +101,6 @@ def peers(**kwargs):  # pylint: disable=unused-argument
 
 @proxy_napalm_wrap
 def servers(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns a list of the configured NTP servers on the device.
 
@@ -143,7 +138,6 @@ def servers(**kwargs):  # pylint: disable=unused-argument
 
 @proxy_napalm_wrap
 def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
-
     """
     Returns a dictionary containing synchronization details of the NTP peers.
 
@@ -210,7 +204,6 @@ def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
 
 @proxy_napalm_wrap
 def set_peers(*peers, **options):
-
     """
     Configures a list of NTP peers on the device.
 
@@ -287,7 +280,6 @@ def set_servers(*servers, **options):
 
 @proxy_napalm_wrap
 def delete_peers(*peers, **options):
-
     """
     Removes NTP peers configured on the device.
 
@@ -327,7 +319,6 @@ def delete_peers(*peers, **options):
 
 @proxy_napalm_wrap
 def delete_servers(*servers, **options):
-
     """
     Removes NTP servers configured on the device.
 

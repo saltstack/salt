@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 This module allows you to control the power settings of a windows minion via
@@ -15,12 +14,8 @@ powercfg.
             - power: dc
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
 import salt.utils.data
 import salt.utils.platform
 
@@ -93,7 +88,7 @@ def set_timeout(name, value, power="ac", scheme=None):
     name = name.lower()
     if name not in ["monitor", "disk", "standby", "hibernate"]:
         ret["result"] = False
-        ret["comment"] = '"{0}" is not a valid setting'.format(name)
+        ret["comment"] = f'"{name}" is not a valid setting'
         log.debug(ret["comment"])
         return ret
 
@@ -101,21 +96,21 @@ def set_timeout(name, value, power="ac", scheme=None):
     power = power.lower()
     if power not in ["ac", "dc"]:
         ret["result"] = False
-        ret["comment"] = '"{0}" is not a power type'.format(power)
+        ret["comment"] = f'"{power}" is not a power type'
         log.debug(ret["comment"])
         return ret
 
     # Get current settings
-    old = __salt__["powercfg.get_{0}_timeout".format(name)](scheme=scheme)
+    old = __salt__[f"powercfg.get_{name}_timeout"](scheme=scheme)
 
     # Check current settings
     if old[power] == value:
-        ret["comment"] = "{0} timeout on {1} power is already set to {2}" "".format(
+        ret["comment"] = "{} timeout on {} power is already set to {}".format(
             name.capitalize(), power.upper(), value
         )
         return ret
     else:
-        ret["comment"] = "{0} timeout on {1} power will be set to {2}" "".format(
+        ret["comment"] = "{} timeout on {} power will be set to {}".format(
             name.capitalize(), power.upper(), value
         )
 
@@ -125,24 +120,22 @@ def set_timeout(name, value, power="ac", scheme=None):
         return ret
 
     # Set the timeout value
-    __salt__["powercfg.set_{0}_timeout".format(name)](
-        timeout=value, power=power, scheme=scheme
-    )
+    __salt__[f"powercfg.set_{name}_timeout"](timeout=value, power=power, scheme=scheme)
 
     # Get the setting after the change
-    new = __salt__["powercfg.get_{0}_timeout".format(name)](scheme=scheme)
+    new = __salt__[f"powercfg.get_{name}_timeout"](scheme=scheme)
 
     changes = salt.utils.data.compare_dicts(old, new)
 
     if changes:
         ret["changes"] = {name: changes}
-        ret["comment"] = "{0} timeout on {1} power set to {2}" "".format(
+        ret["comment"] = "{} timeout on {} power set to {}".format(
             name.capitalize(), power.upper(), value
         )
         log.debug(ret["comment"])
     else:
         ret["changes"] = {}
-        ret["comment"] = "Failed to set {0} timeout on {1} power to {2}" "".format(
+        ret["comment"] = "Failed to set {} timeout on {} power to {}".format(
             name, power.upper(), value
         )
         log.debug(ret["comment"])

@@ -3,6 +3,7 @@ import shutil
 import time
 
 import pytest
+
 import salt.config
 import salt.version
 
@@ -45,33 +46,34 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
             "inotify",
             beacon_data=[{"files": {str(inotify_test_path): {"mask": ["create"]}}}],
             minion_tgt=salt_mm_minion_1.id,
+            timeout=60,
         )
-        assert ret.exitcode == 0
-        log.debug("Inotify beacon add returned: %s", ret.json or ret.stdout)
-        assert ret.json
-        assert ret.json["result"] is True
+        assert ret.returncode == 0
+        log.debug("Inotify beacon add returned: %s", ret.data or ret.stdout)
+        assert ret.data
+        assert ret.data["result"] is True
         ret = mm_master_1_salt_cli.run(
             "beacons.add",
             "status",
             beacon_data=[{"time": ["all"]}],
             minion_tgt=salt_mm_minion_1.id,
         )
-        assert ret.exitcode == 0
-        log.debug("Status beacon add returned: %s", ret.json or ret.stdout)
-        assert ret.json
-        assert ret.json["result"] is True
+        assert ret.returncode == 0
+        log.debug("Status beacon add returned: %s", ret.data or ret.stdout)
+        assert ret.data
+        assert ret.data["result"] is True
         ret = mm_master_1_salt_cli.run(
             "beacons.list", return_yaml=False, minion_tgt=salt_mm_minion_1.id
         )
-        assert ret.exitcode == 0
-        log.debug("Beacons list: %s", ret.json or ret.stdout)
-        assert ret.json
-        assert "inotify" in ret.json
-        assert ret.json["inotify"] == [
+        assert ret.returncode == 0
+        log.debug("Beacons list: %s", ret.data or ret.stdout)
+        assert ret.data
+        assert "inotify" in ret.data
+        assert ret.data["inotify"] == [
             {"files": {str(inotify_test_path): {"mask": ["create"]}}}
         ]
-        assert "status" in ret.json
-        assert ret.json["status"] == [{"time": ["all"]}]
+        assert "status" in ret.data
+        assert ret.data["status"] == [{"time": ["all"]}]
         yield start_time
     finally:
         # Remove the added beacons
@@ -94,7 +96,7 @@ def test_beacons_duplicate_53344(
     # Since beacons will be executed both together, we wait for the status beacon event
     # which means that, the inotify becacon was executed too
     start_time = setup_beacons
-    expected_tag = "salt/beacon/{}/status/*".format(salt_mm_minion_1.id)
+    expected_tag = f"salt/beacon/{salt_mm_minion_1.id}/status/*"
     expected_patterns = [
         (salt_mm_master_1.id, expected_tag),
         (salt_mm_master_2.id, expected_tag),

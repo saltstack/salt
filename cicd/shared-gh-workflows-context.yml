@@ -1,0 +1,14 @@
+nox_version: "2022.8.7"
+python_version: "3.10.14"
+relenv_version: "0.17.0"
+release_branches:
+  - "3006.x"
+  - "3007.x"
+mandatory_os_slugs:
+  - rockylinux-9
+  - amazonlinux-2023-arm64
+  - archlinux-lts
+  - photonos-5-arm64
+  - macos-12
+  - ubuntu-24.04-arm64
+  - windows-2022

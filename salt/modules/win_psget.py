@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing PowerShell through PowerShellGet (PSGet)
 
@@ -8,13 +7,10 @@ Module for managing PowerShell through PowerShellGet (PSGet)
 
 Support for PowerShell
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import xml.etree.ElementTree
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
@@ -86,7 +82,7 @@ def _pshell(cmd, cwd=None, depth=2):
     in Xml format and load that into python
     """
 
-    cmd = '{0} | ConvertTo-Xml -Depth {1} -As "stream"'.format(cmd, depth)
+    cmd = f'{cmd} | ConvertTo-Xml -Depth {depth} -As "stream"'
     log.debug("DSC: %s", cmd)
 
     results = __salt__["cmd.run_all"](
@@ -98,9 +94,7 @@ def _pshell(cmd, cwd=None, depth=2):
 
     if "retcode" not in results or results["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing powershell {0}".format(cmd), info=results
-        )
+        raise CommandExecutionError(f"Issue executing powershell {cmd}", info=results)
 
     try:
         ret = _ps_xml_to_dict(
@@ -124,7 +118,10 @@ def bootstrap():
 
         salt 'win01' psget.bootstrap
     """
-    cmd = "Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath"
+    cmd = (
+        "Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version,"
+        " ProviderPath"
+    )
     ret = _pshell(cmd, depth=1)
     return ret
 
@@ -225,8 +222,8 @@ def install(
         flags.append(("Repository", repository))
     params = ""
     for flag, value in flags:
-        params += "-{0} {1} ".format(flag, value)
-    cmd = "Install-Module {0} -Force".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Install-Module {params} -Force"
     _pshell(cmd)
     return name in list_modules()
 
@@ -260,8 +257,8 @@ def update(name, maximum_version=None, required_version=None):
 
     params = ""
     for flag, value in flags:
-        params += "-{0} {1} ".format(flag, value)
-    cmd = "Update-Module {0} -Force".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Update-Module {params} -Force"
     _pshell(cmd)
     return name in list_modules()
 
@@ -280,7 +277,7 @@ def remove(name):
         salt 'win01' psget.remove PowerPlan
     """
     # Putting quotes around the parameter protects against command injection
-    cmd = 'Uninstall-Module "{0}"'.format(name)
+    cmd = f'Uninstall-Module "{name}"'
     no_ret = _pshell(cmd)
     return name not in list_modules()
 
@@ -314,8 +311,8 @@ def register_repository(name, location, installation_policy=None):
 
     params = ""
     for flag, value in flags:
-        params += "-{0} {1} ".format(flag, value)
-    cmd = "Register-PSRepository {0}".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Register-PSRepository {params}"
     no_ret = _pshell(cmd)
     return name not in list_modules()
 
@@ -334,6 +331,6 @@ def get_repository(name):
         salt 'win01' psget.get_repository MyRepo
     """
     # Putting quotes around the parameter protects against command injection
-    cmd = 'Get-PSRepository "{0}"'.format(name)
+    cmd = f'Get-PSRepository "{name}"'
     no_ret = _pshell(cmd)
     return name not in list_modules()

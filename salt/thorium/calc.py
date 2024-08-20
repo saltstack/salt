@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Used to manage the thorium register. The thorium register is where compound
 values are stored and computed, such as averages etc.
@@ -7,9 +6,6 @@ values are stored and computed, such as averages etc.
 
 :depends: statistics PyPi module
 """
-
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import statistics
@@ -52,7 +48,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if name not in __reg__:
-        ret["comment"] = "{0} not found in register".format(name)
+        ret["comment"] = f"{name} not found in register"
         ret["result"] = False
 
     def opadd(vals):

@@ -1,0 +1,270 @@
+name: Test Artifact
+
+on:
+  workflow_call:
+    inputs:
+      distro-slug:
+        required: true
+        type: string
+        description: The OS slug to run tests against
+      runner:
+        required: true
+        type: string
+        description: The GitHub runner name
+      platform:
+        required: true
+        type: string
+        description: The platform being tested
+      arch:
+        required: true
+        type: string
+        description: The platform arch being tested
+      pkg-type:
+        required: true
+        type: string
+        description: The platform arch being tested
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version of the packages to install and test
+      cache-prefix:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      testing-releases:
+        required: true
+        type: string
+        description: A JSON list of releases to test upgrades against
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
+      python-version:
+        required: false
+        type: string
+        description: The python version to run tests with
+        default: "3.10"
+      package-name:
+        required: false
+        type: string
+        description: The onedir package name to use
+        default: salt
+      nox-session:
+        required: false
+        type: string
+        description: The nox session to run
+        default: ci-test-onedir
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+
+jobs:
+
+  generate-matrix:
+    name: Generate Matrix
+    runs-on:
+      # We need to run on our self-hosted runners because we need proper credentials
+      # for boto3 to scan through our repositories.
+      - self-hosted
+      - linux
+      - x86_64
+    outputs:
+      pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
+      build-reports: ${{ steps.generate-pkg-matrix.outputs.build-reports }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Generate Package Test Matrix
+        id: generate-pkg-matrix
+        run: |
+          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}  --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
+
+
+  test:
+    name: Test
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    needs:
+      - generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
+          path: artifacts/pkg/
+
+      - name: Install System Dependencies
+        run: |
+          brew install tree
+
+      - name: List Packages
+        run: |
+          tree artifacts/pkg/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Download nox.macos.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-macos-${{ inputs.arch }}-${{ inputs.nox-session }}
+
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- macos ${{ inputs.arch }}
+
+      - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+
+      - name: Run Package Tests
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
+
+      - name: Prepare Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always()
+        run: |
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          tree -a artifacts
+
+      - name: Upload Test Run Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts
+            !artifacts/pkg/*
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
+
+  report:
+    name: Report
+    runs-on: ubuntu-latest
+    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    needs:
+      - generate-matrix
+      - test
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Merge Test Run Artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
+          separate-directories: true
+          delete-merged: true
+
+      - name: Download Test Run Artifacts
+        id: download-test-run-artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
+          path: artifacts
+
+      - name: Show Test Run Artifacts
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        run: |
+          tree -a artifacts
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple

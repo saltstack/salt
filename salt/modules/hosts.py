@@ -1,23 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Manage the information in the hosts file
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +58,7 @@ def _list_hosts():
                     if not line:
                         continue
                     if line.startswith("#"):
-                        ret.setdefault("comment-{0}".format(count), []).append(line)
+                        ret.setdefault(f"comment-{count}", []).append(line)
                         count += 1
                         continue
                     comment = None
@@ -81,7 +72,7 @@ def _list_hosts():
                         ret.setdefault(ip, {}).update({"comment": comment})
                     else:
                         ret.setdefault(ip, {}).setdefault("aliases", []).extend(comps)
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             salt.utils.files.process_read_exception(exc, hfn, ignore=errno.ENOENT)
             # Don't set __context__ since we weren't able to read from the
             # hosts file.
@@ -257,7 +248,7 @@ def rm_host(ip, alias):
         comps = tmpline.split()
         comment = None
         if b"#" in tmpline:
-            host_info, comment = tmpline.split("#")
+            host_info, comment = tmpline.split(b"#")
             comment = salt.utils.stringutils.to_bytes(comment).lstrip()
         else:
             host_info = tmpline
@@ -314,11 +305,11 @@ def add_host(ip, alias):
     __context__.pop("hosts._list_hosts", None)
 
     inserted = False
-    for i, h in six.iteritems(hosts):
-        for j in range(len(h)):
+    for i, h in hosts.items():
+        for num, host in enumerate(h):
             if isinstance(h, list):
-                if h[j].startswith("#") and i == ip:
-                    h.insert(j, alias)
+                if host.startswith("#") and i == ip:
+                    h.insert(num, alias)
                     inserted = True
     if not inserted:
         hosts.setdefault(ip, {}).setdefault("aliases", []).append(alias)
@@ -363,17 +354,17 @@ def set_comment(ip, comment):
 
 def _write_hosts(hosts):
     lines = []
-    for ip, host_info in six.iteritems(hosts):
+    for ip, host_info in hosts.items():
         if ip:
             if ip.startswith("comment"):
                 line = "".join(host_info)
             else:
                 if "comment" in host_info:
-                    line = "{0}\t\t{1}\t\t# {2}".format(
+                    line = "{}\t\t{}\t\t# {}".format(
                         ip, " ".join(host_info["aliases"]), host_info["comment"]
                     )
                 else:
-                    line = "{0}\t\t{1}".format(ip, " ".join(host_info["aliases"]))
+                    line = "{}\t\t{}".format(ip, " ".join(host_info["aliases"]))
         lines.append(line)
 
     hfn = _get_or_create_hostfile()
@@ -383,7 +374,5 @@ def _write_hosts(hosts):
                 # /etc/hosts needs to end with a newline so that some utils
                 # that read it do not break
                 ofile.write(
-                    salt.utils.stringutils.to_str(
-                        line.strip() + six.text_type(os.linesep)
-                    )
+                    salt.utils.stringutils.to_str(line.strip() + str(os.linesep))
                 )

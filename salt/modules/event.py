@@ -3,18 +3,17 @@ Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 """
 
-
 import logging
 import os
 import sys
 import traceback
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
 import salt.utils.event
-import salt.utils.zeromq
+import salt.utils.network
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -49,7 +48,7 @@ def fire_master(data, tag, preload=None):
         # slower because it has to independently authenticate)
         if "master_uri" not in __opts__:
             __opts__["master_uri"] = "tcp://{ip}:{port}".format(
-                ip=salt.utils.zeromq.ip_bracket(__opts__["interface"]),
+                ip=salt.utils.network.ip_bracket(__opts__["interface"]),
                 port=__opts__.get("ret_port", "4506"),  # TODO, no fallback
             )
         masters = list()
@@ -72,7 +71,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            with salt.transport.client.ReqChannel.factory(
+            with salt.channel.client.ReqChannel.factory(
                 __opts__, master_uri=master
             ) as channel:
                 try:
@@ -112,7 +111,6 @@ def fire(data, tag):
         with salt.utils.event.get_event(
             "minion",  # was __opts__['id']
             sock_dir=__opts__["sock_dir"],
-            transport=__opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:
@@ -187,22 +185,6 @@ def send(
         salt-call event.send myco/mytag foo=Foo bar=Bar
         salt-call event.send 'myco/mytag' '{foo: Foo, bar: Bar}'
 
-    A convenient way to allow Jenkins to execute ``salt-call`` is via sudo. The
-    following rule in sudoers will allow the ``jenkins`` user to run only the
-    following command.
-
-    ``/etc/sudoers`` (allow preserving the environment):
-
-    .. code-block:: text
-
-        jenkins ALL=(ALL) NOPASSWD:SETENV: /usr/bin/salt-call event.send*
-
-    Call Jenkins via sudo (preserve the environment):
-
-    .. code-block:: bash
-
-        sudo -E salt-call event.send myco/jenkins/build/success with_env=[BUILD_ID, BUILD_URL, GIT_BRANCH, GIT_COMMIT]
-
     """
     data_dict = {}
 
@@ -216,13 +198,13 @@ def send(
         if isinstance(with_grains, list):
             data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict["grains"] = __grains__
+            data_dict["grains"] = __grains__.value()
 
     if with_pillar:
         if isinstance(with_pillar, list):
             data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict["pillar"] = __pillar__
+            data_dict["pillar"] = __pillar__.value()
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")

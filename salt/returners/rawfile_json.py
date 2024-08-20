@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Take data from salt and "return" it into a raw file containing the json, with
 one line per event.
@@ -16,9 +15,6 @@ noise, so you may wish to configure batch processing and/or configure the
 :conf_master:`event_return_whitelist` or :conf_master:`event_return_blacklist`
 to restrict the events that are written.
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
 import logging
 
@@ -62,7 +58,7 @@ def returner(ret):
     try:
         with salt.utils.files.flopen(opts["filename"], "a") as logfile:
             salt.utils.json.dump(ret, logfile)
-            logfile.write(str("\n"))  # future lint: disable=blacklisted-function
+            logfile.write("\n")
     except Exception:  # pylint: disable=broad-except
         log.error("Could not write to rawdata_json file %s", opts["filename"])
         raise
@@ -81,7 +77,7 @@ def event_return(events):
         with salt.utils.files.flopen(opts["filename"], "a") as logfile:
             for event in events:
                 salt.utils.json.dump(event, logfile)
-                logfile.write(str("\n"))  # future lint: disable=blacklisted-function
+                logfile.write("\n")
     except Exception:  # pylint: disable=broad-except
         log.error("Could not write to rawdata_json file %s", opts["filename"])
         raise

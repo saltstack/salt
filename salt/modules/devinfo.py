@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
+Module for devinfo
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -46,18 +45,15 @@ def _match(udev_info, match_info):
             # If is a dict we probably make a mistake in key from
             # match_info, as is not accessing a final value
             log.warning(
-                "The key %s for the udev information "
-                "dictionary is not a leaf element",
+                "The key %s for the udev information dictionary is not a leaf element",
                 key,
             )
             continue
 
         # Converting both values to sets make easy to see if there is
         # a coincidence between both values
-        value = set(value) if isinstance(value, list) else set([value])
-        udev_value = (
-            set(udev_value) if isinstance(udev_value, list) else set([udev_value])
-        )
+        value = set(value) if isinstance(value, list) else {value}
+        udev_value = set(udev_value) if isinstance(udev_value, list) else {udev_value}
         res = res and (value & udev_value)
     return res
 
@@ -128,7 +124,7 @@ def _hwinfo_parse_short(report):
             current_result = value
             key_counter = 0
         else:
-            log.error("Error parsing hwinfo short output: {}".format(line))
+            log.error("Error parsing hwinfo short output: %s", line)
 
     return result
 
@@ -297,7 +293,7 @@ def hwinfo(items=None, short=True, listmd=False, devices=None):
 
     cmd = ["hwinfo"]
     for item in items:
-        cmd.append("--{}".format(item))
+        cmd.append(f"--{item}")
 
     if short:
         cmd.append("--short")
@@ -306,7 +302,7 @@ def hwinfo(items=None, short=True, listmd=False, devices=None):
         cmd.append("--listmd")
 
     for device in devices:
-        cmd.append("--only {}".format(device))
+        cmd.append(f"--only {device}")
 
     out = __salt__["cmd.run_stdout"](cmd)
     result["hwinfo"] = _hwinfo_parse(out, short)

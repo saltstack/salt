@@ -1,0 +1,63 @@
+---
+name: New Issues Triage Assignment
+concurrency: 1
+on:
+  issues:
+    types: [opened]
+
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
+permissions:
+  contents: read
+
+jobs:
+  label-and-assign:
+    permissions:
+      actions: read  # for dawidd6/action-download-artifact to query and download artifacts
+      contents: read  # for actions/checkout to fetch code
+      issues: write
+      pull-requests: read  # for dawidd6/action-download-artifact to query commit hash
+    name: Triage New Issue
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Install Dependencies
+        run: |
+          pip install pygithub
+
+      - name: Download last assignment cache
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: triage.yml
+          name: last-assignment
+          path: .cache
+
+      - name: Label And Assign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          READ_ORG_TOKEN: ${{ secrets.READ_ORG_TEAM_MEMBERS_ISSUE_TRIAGE }}
+        run: |
+          python .github/workflows/scripts/label-and-assign.py \
+            --org ${{ github.repository_owner }} \
+            --repo ${{ github.event.repository.name }} \
+            --team team-triage \
+            --label needs-triage \
+            --issue ${{ github.event.issue.number }}
+
+      - name: Upload last assignment cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-assignment
+          path: .cache

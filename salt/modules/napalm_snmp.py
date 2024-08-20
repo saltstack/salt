@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM SNMP
 ===========
@@ -20,8 +19,6 @@ Dependencies
 
 .. versionadded:: 2016.11.0
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -64,7 +61,6 @@ def __virtual__():
 
 @proxy_napalm_wrap
 def config(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns the SNMP configuration
 
@@ -92,7 +88,6 @@ def remove_config(
     commit=True,
     **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Removes a configuration element from the SNMP configuration.
 
@@ -159,7 +154,6 @@ def update_config(
     commit=True,
     **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Updates the SNMP configuration.
 

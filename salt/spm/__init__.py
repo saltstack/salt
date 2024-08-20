@@ -25,8 +25,8 @@ import salt.utils.yaml
 from salt.template import compile_template
 
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pass
 
@@ -136,7 +136,7 @@ class SPMClient:
             elif command == "close":
                 self._close()
             else:
-                raise SPMInvocationError("Invalid command '{}'".format(command))
+                raise SPMInvocationError(f"Invalid command '{command}'")
         except SPMException as exc:
             self.ui.error(str(exc))
 
@@ -144,7 +144,7 @@ class SPMClient:
         try:
             return getattr(getattr(self.pkgdb, self.db_prov), func)(*args, **kwargs)
         except AttributeError:
-            return self.pkgdb["{}.{}".format(self.db_prov, func)](*args, **kwargs)
+            return self.pkgdb[f"{self.db_prov}.{func}"](*args, **kwargs)
 
     def _pkgfiles_fun(self, func, *args, **kwargs):
         try:
@@ -152,7 +152,7 @@ class SPMClient:
                 *args, **kwargs
             )
         except AttributeError:
-            return self.pkgfiles["{}.{}".format(self.files_prov, func)](*args, **kwargs)
+            return self.pkgfiles[f"{self.files_prov}.{func}"](*args, **kwargs)
 
     def _list(self, args):
         """
@@ -167,7 +167,7 @@ class SPMClient:
         elif command == "repos":
             self._repo_list(args)
         else:
-            raise SPMInvocationError("Invalid list command '{}'".format(command))
+            raise SPMInvocationError(f"Invalid list command '{command}'")
 
     def _local(self, args):
         """
@@ -182,7 +182,7 @@ class SPMClient:
         elif command == "info":
             self._local_info(args)
         else:
-            raise SPMInvocationError("Invalid local command '{}'".format(command))
+            raise SPMInvocationError(f"Invalid local command '{command}'")
 
     def _repo(self, args):
         """
@@ -201,7 +201,7 @@ class SPMClient:
         elif command == "create":
             self._create_repo(args)
         else:
-            raise SPMInvocationError("Invalid repo command '{}'".format(command))
+            raise SPMInvocationError(f"Invalid repo command '{command}'")
 
     def _repo_packages(self, args, search=False):
         """
@@ -216,7 +216,7 @@ class SPMClient:
                     release = repo_metadata[repo]["packages"][pkg]["info"]["release"]
                     packages.append((pkg, version, release, repo))
         for pkg in sorted(packages):
-            self.ui.status("{}\t{}-{}\t{}".format(pkg[0], pkg[1], pkg[2], pkg[3]))
+            self.ui.status(f"{pkg[0]}\t{pkg[1]}-{pkg[2]}\t{pkg[3]}")
         return packages
 
     def _repo_list(self, args):
@@ -255,7 +255,7 @@ class SPMClient:
                     pkg_name = comps[-1]
 
                     formula_tar = tarfile.open(pkg, "r:bz2")
-                    formula_ref = formula_tar.extractfile("{}/FORMULA".format(pkg_name))
+                    formula_ref = formula_tar.extractfile(f"{pkg_name}/FORMULA")
                     formula_def = salt.utils.yaml.safe_load(formula_ref)
 
                     file_map[pkg_name] = pkg
@@ -267,7 +267,7 @@ class SPMClient:
                     recommended.extend(re_)
                     formula_tar.close()
                 else:
-                    raise SPMInvocationError("Package file {} not found".format(pkg))
+                    raise SPMInvocationError(f"Package file {pkg} not found")
             else:
                 to_, op_, re_ = self._check_all_deps(pkg_name=pkg)
                 to_install.extend(to_)
@@ -385,7 +385,7 @@ class SPMClient:
         Starting with one package, check all packages for dependencies
         """
         if pkg_file and not os.path.exists(pkg_file):
-            raise SPMInvocationError("Package file {} not found".format(pkg_file))
+            raise SPMInvocationError(f"Package file {pkg_file} not found")
 
         self.repo_metadata = self._get_repo_metadata()
         if not formula_def:
@@ -396,7 +396,7 @@ class SPMClient:
                     formula_def = self.repo_metadata[repo]["packages"][pkg_name]["info"]
 
         if not formula_def:
-            raise SPMInvocationError("Unable to read formula for {}".format(pkg_name))
+            raise SPMInvocationError(f"Unable to read formula for {pkg_name}")
 
         # Check to see if the package is already installed
         pkg_info = self._pkgdb_fun("info", pkg_name, self.db_conn)
@@ -439,7 +439,7 @@ class SPMClient:
                     pkg_info = self._pkgdb_fun("info", formula_def["name"])
                     msg = dep_pkg
                     if isinstance(pkg_info, dict):
-                        msg = "{} [Installed]".format(dep_pkg)
+                        msg = f"{dep_pkg} [Installed]"
                     optional_install.append(msg)
 
             if recommended:
@@ -448,7 +448,7 @@ class SPMClient:
                     pkg_info = self._pkgdb_fun("info", formula_def["name"])
                     msg = dep_pkg
                     if isinstance(pkg_info, dict):
-                        msg = "{} [Installed]".format(dep_pkg)
+                        msg = f"{dep_pkg} [Installed]"
                     recommended_install.append(msg)
 
             if needs:
@@ -457,7 +457,7 @@ class SPMClient:
                     pkg_info = self._pkgdb_fun("info", formula_def["name"])
                     msg = dep_pkg
                     if isinstance(pkg_info, dict):
-                        msg = "{} [Installed]".format(dep_pkg)
+                        msg = f"{dep_pkg} [Installed]"
 
         return pkgs_to_install, optional_install, recommended_install
 
@@ -465,16 +465,14 @@ class SPMClient:
         """
         Install one individual package
         """
-        self.ui.status("... installing {}".format(pkg_name))
+        self.ui.status(f"... installing {pkg_name}")
         formula_tar = tarfile.open(pkg_file, "r:bz2")
-        formula_ref = formula_tar.extractfile("{}/FORMULA".format(pkg_name))
+        formula_ref = formula_tar.extractfile(f"{pkg_name}/FORMULA")
         formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         for field in ("version", "release", "summary", "description"):
             if field not in formula_def:
-                raise SPMPackageError(
-                    "Invalid package: the {} was not found".format(field)
-                )
+                raise SPMPackageError(f"Invalid package: the {field} was not found")
 
         pkg_files = formula_tar.getmembers()
 
@@ -542,7 +540,7 @@ class SPMClient:
                     digest = ""
                 else:
                     self._verbose(
-                        "Installing file {} to {}".format(member.name, out_path),
+                        f"Installing file {member.name} to {out_path}",
                         log.trace,
                     )
                     file_hash = hashlib.sha1()
@@ -580,7 +578,7 @@ class SPMClient:
         Return a list of packages which need to be installed, to resolve all
         dependencies
         """
-        pkg_info = self.pkgdb["{}.info".format(self.db_prov)](formula_def["name"])
+        pkg_info = self.pkgdb[f"{self.db_prov}.info"](formula_def["name"])
         if not isinstance(pkg_info, dict):
             pkg_info = {}
 
@@ -592,7 +590,7 @@ class SPMClient:
             dep = dep.strip()
             if not dep:
                 continue
-            if self.pkgdb["{}.info".format(self.db_prov)](dep):
+            if self.pkgdb[f"{self.db_prov}.info"](dep):
                 continue
 
             if dep in self.avail_pkgs:
@@ -635,7 +633,7 @@ class SPMClient:
         if os.path.exists(self.opts["spm_repos_config"]):
             repo_files.append(self.opts["spm_repos_config"])
 
-        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(
+        for dirpath, dirnames, filenames in salt.utils.path.os_walk(
             "{}.d".format(self.opts["spm_repos_config"])
         ):
             for repo_file in filenames:
@@ -747,23 +745,23 @@ class SPMClient:
             raise SPMInvocationError("A path to a directory must be specified")
 
         if args[1] == ".":
-            repo_path = os.getcwdu()
+            repo_path = os.getcwd()
         else:
             repo_path = args[1]
 
         old_files = []
         repo_metadata = {}
-        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(repo_path):
+        for dirpath, dirnames, filenames in salt.utils.path.os_walk(repo_path):
             for spm_file in filenames:
                 if not spm_file.endswith(".spm"):
                     continue
-                spm_path = "{}/{}".format(repo_path, spm_file)
+                spm_path = f"{repo_path}/{spm_file}"
                 if not tarfile.is_tarfile(spm_path):
                     continue
                 comps = spm_file.split("-")
                 spm_name = "-".join(comps[:-2])
                 spm_fh = tarfile.open(spm_path, "r:bz2")
-                formula_handle = spm_fh.extractfile("{}/FORMULA".format(spm_name))
+                formula_handle = spm_fh.extractfile(f"{spm_name}/FORMULA")
                 formula_conf = salt.utils.yaml.safe_load(formula_handle.read())
 
                 use_formula = True
@@ -815,10 +813,14 @@ class SPMClient:
                     }
                     repo_metadata[spm_name]["filename"] = spm_file
 
-        metadata_filename = "{}/SPM-METADATA".format(repo_path)
+        metadata_filename = f"{repo_path}/SPM-METADATA"
         with salt.utils.files.fopen(metadata_filename, "w") as mfh:
             salt.utils.yaml.safe_dump(
-                repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False,
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
             )
 
         log.debug("Wrote %s", metadata_filename)
@@ -864,7 +866,7 @@ class SPMClient:
             self.ui.confirm(msg)
 
         for package in packages:
-            self.ui.status("... removing {}".format(package))
+            self.ui.status(f"... removing {package}")
 
             if not self._pkgdb_fun("db_exists", self.opts["spm_db"]):
                 raise SPMDatabaseError(
@@ -876,7 +878,7 @@ class SPMClient:
             # Look at local repo index
             pkg_info = self._pkgdb_fun("info", package, self.db_conn)
             if pkg_info is None:
-                raise SPMInvocationError("Package {} not installed".format(package))
+                raise SPMInvocationError(f"Package {package} not installed")
 
             # Find files that have not changed and remove them
             files = self._pkgdb_fun("list_files", package, self.db_conn)
@@ -890,22 +892,22 @@ class SPMClient:
                     "hash_file", filerow[0], file_hash, self.files_conn
                 )
                 if filerow[1] == digest:
-                    self._verbose("Removing file {}".format(filerow[0]), log.trace)
+                    self._verbose(f"Removing file {filerow[0]}", log.trace)
                     self._pkgfiles_fun("remove_file", filerow[0], self.files_conn)
                 else:
-                    self._verbose("Not removing file {}".format(filerow[0]), log.trace)
+                    self._verbose(f"Not removing file {filerow[0]}", log.trace)
                 self._pkgdb_fun("unregister_file", filerow[0], package, self.db_conn)
 
             # Clean up directories
             for dir_ in sorted(dirs, reverse=True):
                 self._pkgdb_fun("unregister_file", dir_, package, self.db_conn)
                 try:
-                    self._verbose("Removing directory {}".format(dir_), log.trace)
+                    self._verbose(f"Removing directory {dir_}", log.trace)
                     os.rmdir(dir_)
                 except OSError:
                     # Leave directories in place that still have files in them
                     self._verbose(
-                        "Cannot remove directory {}, probably not empty".format(dir_),
+                        f"Cannot remove directory {dir_}, probably not empty",
                         log.trace,
                     )
 
@@ -929,14 +931,14 @@ class SPMClient:
         pkg_file = args[1]
 
         if not os.path.exists(pkg_file):
-            raise SPMInvocationError("Package file {} not found".format(pkg_file))
+            raise SPMInvocationError(f"Package file {pkg_file} not found")
 
         comps = pkg_file.split("-")
         comps = "-".join(comps[:-2]).split("/")
         name = comps[-1]
 
         formula_tar = tarfile.open(pkg_file, "r:bz2")
-        formula_ref = formula_tar.extractfile("{}/FORMULA".format(name))
+        formula_ref = formula_tar.extractfile(f"{name}/FORMULA")
         formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         self.ui.status(self._get_info(formula_def))
@@ -953,7 +955,7 @@ class SPMClient:
 
         pkg_info = self._pkgdb_fun("info", package, self.db_conn)
         if pkg_info is None:
-            raise SPMPackageError("package {} not installed".format(package))
+            raise SPMPackageError(f"package {package} not installed")
         self.ui.status(self._get_info(pkg_info))
 
     def _get_info(self, formula_def):
@@ -991,8 +993,8 @@ class SPMClient:
             "OS Family Dependencies: {os_family_dependencies}\n"
             "Summary: {summary}\n"
             "Description:\n"
-            "{description}"
-        ).format(**formula_def)
+            "{description}".format(**formula_def)
+        )
 
     def _local_list_files(self, args):
         """
@@ -1003,7 +1005,7 @@ class SPMClient:
 
         pkg_file = args[1]
         if not os.path.exists(pkg_file):
-            raise SPMPackageError("Package file {} not found".format(pkg_file))
+            raise SPMPackageError(f"Package file {pkg_file} not found")
         formula_tar = tarfile.open(pkg_file, "r:bz2")
         pkg_files = formula_tar.getmembers()
 
@@ -1033,7 +1035,7 @@ class SPMClient:
 
         files = self._pkgdb_fun("list_files", package, self.db_conn)
         if files is None:
-            raise SPMPackageError("package {} not installed".format(package))
+            raise SPMPackageError(f"package {package} not installed")
         else:
             for file_ in files:
                 if self.opts["verbose"]:
@@ -1053,17 +1055,15 @@ class SPMClient:
         comps = self.abspath.split("/")
         self.relpath = comps[-1]
 
-        formula_path = "{}/FORMULA".format(self.abspath)
+        formula_path = f"{self.abspath}/FORMULA"
         if not os.path.exists(formula_path):
-            raise SPMPackageError("Formula file {} not found".format(formula_path))
+            raise SPMPackageError(f"Formula file {formula_path} not found")
         with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = salt.utils.yaml.safe_load(fp_)
 
         for field in ("name", "version", "release", "summary", "description"):
             if field not in formula_conf:
-                raise SPMPackageError(
-                    "Invalid package: a {} must be defined".format(field)
-                )
+                raise SPMPackageError(f"Invalid package: a {field} must be defined")
 
         out_path = "{}/{}-{}-{}.spm".format(
             self.opts["spm_build_dir"],
@@ -1090,8 +1090,8 @@ class SPMClient:
                 formula_tar.addfile(formula_dir)
                 for file_ in formula_conf["files"]:
                     for ftype in FILE_TYPES:
-                        if file_.startswith("{}|".format(ftype)):
-                            file_ = file_.lstrip("{}|".format(ftype))
+                        if file_.startswith(f"{ftype}|"):
+                            file_ = file_.lstrip(f"{ftype}|")
                     formula_tar.add(
                         os.path.join(os.getcwd(), file_),
                         os.path.join(formula_conf["name"], file_),
@@ -1114,7 +1114,7 @@ class SPMClient:
                 )
         formula_tar.close()
 
-        self.ui.status("Built package {}".format(out_path))
+        self.ui.status(f"Built package {out_path}")
 
     def _exclude(self, member):
         """
@@ -1126,7 +1126,7 @@ class SPMClient:
         for item in self.opts["spm_build_exclude"]:
             if member.name.startswith("{}/{}".format(self.formula_conf["name"], item)):
                 return None
-            elif member.name.startswith("{}/{}".format(self.abspath, item)):
+            elif member.name.startswith(f"{self.abspath}/{item}"):
                 return None
         return member
 
@@ -1148,7 +1148,7 @@ class SPMClient:
             blacklist,
             whitelist,
             input_data=data,
-            **template_vars
+            **template_vars,
         )
 
 

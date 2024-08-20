@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Custom YAML loading in Salt
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
-import warnings
 
-import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
+
+import salt.utils.stringutils
 
 try:
     yaml.Loader = yaml.CLoader
@@ -24,15 +20,6 @@ except Exception:  # pylint: disable=broad-except
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
 
 
-class DuplicateKeyWarning(RuntimeWarning):
-    """
-    Warned when duplicate keys exist
-    """
-
-
-warnings.simplefilter("always", category=DuplicateKeyWarning)
-
-
 # with code integrated from https://gist.github.com/844388
 class SaltYamlSafeLoader(yaml.SafeLoader):
     """
@@ -42,7 +29,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
     """
 
     def __init__(self, stream, dictclass=dict):
-        super(SaltYamlSafeLoader, self).__init__(stream)
+        super().__init__(stream)
         if dictclass is not dict:
             # then assume ordered dict and use it for both !map and !omap
             self.add_constructor("tag:yaml.org,2002:map", type(self).construct_yaml_map)
@@ -73,7 +60,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
             raise ConstructorError(
                 None,
                 None,
-                "expected a mapping node, but found {0}".format(node.id),
+                f"expected a mapping node, but found {node.id}",
                 node.start_mark,
             )
 
@@ -89,7 +76,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                 raise ConstructorError(
                     context,
                     node.start_mark,
-                    "found unacceptable key {0}".format(key_node.value),
+                    f"found unacceptable key {key_node.value}",
                     key_node.start_mark,
                 )
             value = self.construct_object(value_node, deep=deep)
@@ -97,7 +84,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                 raise ConstructorError(
                     context,
                     node.start_mark,
-                    "found conflicting ID '{0}'".format(key),
+                    f"found conflicting ID '{key}'",
                     key_node.start_mark,
                 )
             mapping[key] = value
@@ -122,7 +109,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
             # the proper unicode string type.
             if re.match(r'^u([\'"]).+\1$', node.value, flags=re.IGNORECASE):
                 node.value = eval(node.value, {}, {})  # pylint: disable=W0123
-        return super(SaltYamlSafeLoader, self).construct_scalar(node)
+        return super().construct_scalar(node)
 
     def construct_yaml_str(self, node):
         value = self.construct_scalar(node)
@@ -136,7 +123,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
         orig_column = self.column
         orig_pointer = self.pointer
         try:
-            return super(SaltYamlSafeLoader, self).fetch_plain()
+            return super().fetch_plain()
         except yaml.scanner.ScannerError as exc:
             problem_line = self.line
             problem_column = self.column
@@ -187,7 +174,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                             raise ConstructorError(
                                 "while constructing a mapping",
                                 node.start_mark,
-                                "expected a mapping for merging, but found {0}".format(
+                                "expected a mapping for merging, but found {}".format(
                                     subnode.id
                                 ),
                                 subnode.start_mark,
@@ -201,9 +188,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                     raise ConstructorError(
                         "while constructing a mapping",
                         node.start_mark,
-                        "expected a mapping or list of mappings for merging, but found {0}".format(
-                            value_node.id
-                        ),
+                        "expected a mapping or list of mappings for merging, but"
+                        " found {}".format(value_node.id),
                         value_node.start_mark,
                     )
             elif key_node.tag == "tag:yaml.org,2002:value":

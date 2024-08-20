@@ -3,10 +3,9 @@ Grain that indicates the system is pending a reboot
 See functions in salt.utils.win_system to see what conditions would indicate
 a reboot is pending
 """
-# Import python libs
+
 import logging
 
-# Import salt libs
 import salt.utils.platform
 import salt.utils.win_system
 

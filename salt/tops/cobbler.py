@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cobbler Tops
 ============
@@ -19,14 +18,10 @@ the Cobbler tops and Cobbler pillar modules.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
+import xmlrpc.client  # nosec
 
-import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
-
-# Set up logging
 log = logging.getLogger(__name__)
 
 
@@ -49,7 +44,7 @@ def top(**kwargs):
 
     log.info("Querying cobbler for information for %r", minion_id)
     try:
-        server = salt.ext.six.moves.xmlrpc_client.Server(url, allow_none=True)
+        server = xmlrpc.client.Server(url, allow_none=True)
         if user:
             server.login(user, password)
         data = server.get_blended_data(None, minion_id)

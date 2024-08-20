@@ -2,6 +2,7 @@
 tests.pytests.integration.modules.test_event
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import time
 
 import pytest
@@ -22,9 +23,9 @@ def test_fire_master(event_listener, salt_master, salt_minion, salt_call_cli):
     ret = salt_call_cli.run(
         "event.fire_master", "event.fire_master: just test it!!!!", event_tag
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data is True
 
     event_pattern = (salt_master.id, event_tag)
     matched_events = event_listener.wait_for_events(
@@ -48,9 +49,9 @@ def test_event_fire(event_listener, salt_minion, salt_sub_minion, salt_cli):
         ret = salt_cli.run(
             "event.fire", data=data, tag=event_tag, minion_tgt=minion_tgt
         )
-        assert ret.exitcode == 0
-        assert ret.json
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data is True
 
         event_pattern = (minion_tgt, event_tag)
         matched_events = event_listener.wait_for_events(
@@ -68,10 +69,17 @@ def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
     event_tag = random_string("salt/test/event/")
     data = {"event.fire": "just test it!!!!"}
     start_time = time.time()
-    ret = salt_call_cli.run("event.send", event_tag, data=data)
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json is True
+    ret = salt_call_cli.run(
+        "event.send",
+        event_tag,
+        data=data,
+        with_grains=True,
+        with_pillar=True,
+        preload={"foo": "bar"},
+    )
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data is True
 
     event_pattern = (salt_master.id, event_tag)
     matched_events = event_listener.wait_for_events(
@@ -82,3 +90,6 @@ def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
         assert event.data["id"] == salt_minion.id
         assert event.data["cmd"] == "_minion_event"
         assert "event.fire" in event.data["data"]
+        assert event.data["foo"] == "bar"
+        assert event.data["data"]["grains"]["test_grain"] == "cheese"
+        assert event.data["data"]["pillar"]["ext_spam"] == "eggs"

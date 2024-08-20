@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Add all extra minion data to the pillar.
 
@@ -28,9 +27,6 @@ Complete example in etc/salt/master
           include: <all>
 
 """
-
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

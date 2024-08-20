@@ -1,12 +1,9 @@
-# Import Python Libs
 import os
 
-# Import Salt Libs
-import salt.utils.platform
+import pytest
 
-# Import Salt Testing Libs
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import salt.utils.win_system as win_system
@@ -21,12 +18,10 @@ class WinSystemImportTestCase(TestCase):
 
     def test_import(self):
         if isinstance(win_system, Exception):
-            raise Exception(
-                "Importing win_system caused traceback: {}".format(win_system)
-            )
+            raise Exception(f"Importing win_system caused traceback: {win_system}")
 
 
-@skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")
+@pytest.mark.skip_unless_on_windows
 class WinSystemTestCase(TestCase):
     """
     Test cases for salt.utils.win_system

@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Decorator and functions to profile Salt using cProfile
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import datetime
 import logging
 import os
 import pstats
 import subprocess
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
@@ -39,10 +34,8 @@ def profile_func(filename=None):
             try:
                 profiler = cProfile.Profile()
                 retval = profiler.runcall(fun, *args, **kwargs)
-                profiler.dump_stats(
-                    (filename or "{0}_func.profile".format(fun.__name__))
-                )
-            except IOError:
+                profiler.dump_stats(filename or f"{fun.__name__}_func.profile")
+            except OSError:
                 logging.exception("Could not open profile file %s", filename)
 
             return retval
@@ -72,9 +65,9 @@ def output_profile(pr, stats_path="/tmp/stats", stop=False, id_=None):
             date = datetime.datetime.now().isoformat()
             if id_ is None:
                 id_ = salt.utils.hashutils.random_hash(size=32)
-            ficp = os.path.join(stats_path, "{0}.{1}.pstats".format(id_, date))
-            fico = os.path.join(stats_path, "{0}.{1}.dot".format(id_, date))
-            ficn = os.path.join(stats_path, "{0}.{1}.stats".format(id_, date))
+            ficp = os.path.join(stats_path, f"{id_}.{date}.pstats")
+            fico = os.path.join(stats_path, f"{id_}.{date}.dot")
+            ficn = os.path.join(stats_path, f"{id_}.{date}.stats")
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
                 with salt.utils.files.fopen(ficn, "w") as fic:

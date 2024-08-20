@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Monitor Web Server with Uptime
 ==============================
@@ -33,8 +32,6 @@ Example:
          - polling: 600 # every hour
 
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -56,7 +53,7 @@ def monitored(name, **params):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __salt__["uptime.check_exists"](name=name):
         ret["result"] = True
-        ret["comment"] = "URL {0} is already monitored".format(name)
+        ret["comment"] = f"URL {name} is already monitored"
         ret["changes"] = {}
         return ret
     if not __opts__["test"]:
@@ -68,7 +65,7 @@ def monitored(name, **params):
             ret["changes"] = {"url_monitored": url_monitored}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add {0} to uptime".format(name)
+            ret["comment"] = f"Failed to add {name} to uptime"
             ret["changes"] = {}
     else:
         msg = "URL {0} is going to be added to uptime"

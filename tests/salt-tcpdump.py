@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """
 Author: Volker Schwicking, vs@heg.com
 
@@ -34,10 +33,8 @@ For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 """
 # pylint: disable=resource-leakage
-# Import Python Libs
-from __future__ import absolute_import, print_function
 
-import argparse  # pylint: disable=minimum-python-version
+import argparse
 import socket
 import sys
 import time
@@ -46,7 +43,7 @@ from struct import unpack
 import pcapy  # pylint: disable=import-error,3rd-party-module-not-gated
 
 
-class ArgParser(object):
+class ArgParser:
     """
     Simple Argument-Parser class
     """
@@ -69,7 +66,7 @@ class ArgParser(object):
             default="eth0",
             dest="iface",
             required=False,
-            help=("the interface to dump the" "master runs on(default:eth0)"),
+            help="The interface to dump the master runs on(default:eth0)",
         )
 
         self.main_parser.add_argument(
@@ -78,7 +75,7 @@ class ArgParser(object):
             default=5,
             dest="ival",
             required=False,
-            help=("interval for printing stats " "(default:5)"),
+            help="Interval for printing stats (default:5)",
         )
 
         self.main_parser.add_argument(
@@ -89,7 +86,7 @@ class ArgParser(object):
             nargs="?",
             dest="only_ip",
             required=False,
-            help=("print unique IPs making new " "connections with SYN set"),
+            help="Print unique IPs making new connections with SYN set",
         )
 
     def parse_args(self):
@@ -99,7 +96,7 @@ class ArgParser(object):
         return self.main_parser.parse_args()
 
 
-class PCAPParser(object):
+class PCAPParser:
     """
     parses a network packet on given device and
     returns source, target, source_port and dest_port
@@ -127,7 +124,7 @@ class PCAPParser(object):
 
             packet_data = {"ip": {}, "tcp": {}}
 
-            (header, packet) = cap.next()  # pylint: disable=incompatible-py3-code
+            (header, packet) = cap.next()
 
             eth_length, eth_protocol = self.parse_ether(packet)
 
@@ -226,7 +223,7 @@ class PCAPParser(object):
         return source_port, dest_port, tcp_flags, data
 
 
-class SaltNetstat(object):
+class SaltNetstat:
     """
     Reads /proc/net/tcp and returns all connections
     """
@@ -235,7 +232,7 @@ class SaltNetstat(object):
         """
         Read the table of tcp connections & remove header
         """
-        with open("/proc/net/tcp", "r") as tcp_f:
+        with open("/proc/net/tcp", encoding="utf-8") as tcp_f:
             content = tcp_f.readlines()
             content.pop(0)
         return content
@@ -363,7 +360,7 @@ def main():
     # the ports we want to monitor
     ports = [4505, 4506]
 
-    print("Sniffing device {0}".format(args["iface"]))
+    print("Sniffing device {}".format(args["iface"]))
 
     stat = {
         "4506/new": 0,
@@ -378,13 +375,15 @@ def main():
 
     if args["only_ip"]:
         print(
-            "IPs making new connections "
-            "(ports:{0}, interval:{1})".format(ports, args["ival"])
+            "IPs making new connections (ports:{}, interval:{})".format(
+                ports, args["ival"]
+            )
         )
     else:
         print(
-            "Salt-Master Network Status "
-            "(ports:{0}, interval:{1})".format(ports, args["ival"])
+            "Salt-Master Network Status (ports:{}, interval:{})".format(
+                ports, args["ival"]
+            )
         )
     try:
         while 1:
@@ -425,17 +424,17 @@ def main():
                 # prevent printing within the same second
                 if r_time != s_time:
                     if args["only_ip"]:
-                        msg = "IPs/4505: {0}, IPs/4506: {1}".format(
+                        msg = "IPs/4505: {}, IPs/4506: {}".format(
                             len(ips_auth), len(ips_push)
                         )
                     else:
-                        msg = "4505=>[ est: {0}, ".format(stat["4505/est"])
-                        msg += "new: {0}/s, ".format(stat["4505/new"] / args["ival"])
-                        msg += "fin: {0}/s ] ".format(stat["4505/fin"] / args["ival"])
+                        msg = "4505=>[ est: {}, ".format(stat["4505/est"])
+                        msg += "new: {}/s, ".format(stat["4505/new"] / args["ival"])
+                        msg += "fin: {}/s ] ".format(stat["4505/fin"] / args["ival"])
 
-                        msg += " 4506=>[ est: {0}, ".format(stat["4506/est"])
-                        msg += "new: {0}/s, ".format(stat["4506/new"] / args["ival"])
-                        msg += "fin: {0}/s ]".format(stat["4506/fin"] / args["ival"])
+                        msg += " 4506=>[ est: {}, ".format(stat["4506/est"])
+                        msg += "new: {}/s, ".format(stat["4506/new"] / args["ival"])
+                        msg += "fin: {}/s ]".format(stat["4506/fin"] / args["ival"])
 
                     print(msg)
 

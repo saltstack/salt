@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Functions used for CLI color themes.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
-# Import Salt libs
-from salt.ext import six
 from salt.utils.textformat import TextFormat
 
 log = logging.getLogger(__name__)
@@ -33,7 +27,7 @@ def get_color_theme(theme):
             colors = salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
             ret = {}
             for color in colors:
-                ret[color] = "\033[{0}m".format(colors[color])
+                ret[color] = f"\033[{colors[color]}m"
             if not isinstance(colors, dict):
                 log.warning("The theme file %s is not a dict", theme)
                 return {}
@@ -83,7 +77,7 @@ def get_colors(use=True, theme=None):
     if not use:
         for color in colors:
             colors[color] = ""
-    if isinstance(use, six.string_types):
+    if isinstance(use, str):
         # Try to set all of the colors to the passed color
         if use in colors:
             for color in colors:

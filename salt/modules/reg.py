@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Manage the Windows registry
 
@@ -65,13 +64,11 @@ Value:
 
 :depends:   - salt.utils.win_reg
 """
-# When production windows installer is using Python 3, Python 2 code can be removed
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# When production windows installer is using Python 3, Python 2 code can be removed
+
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
@@ -562,13 +559,13 @@ def import_file(source, use_32bit_registry=False):
     """
     cache_path = __salt__["cp.cache_file"](source)
     if not cache_path:
-        error_msg = "File/URL '{0}' probably invalid.".format(source)
+        error_msg = f"File/URL '{source}' probably invalid."
         raise ValueError(error_msg)
     if use_32bit_registry:
         word_sz_txt = "32"
     else:
         word_sz_txt = "64"
-    cmd = 'reg import "{0}" /reg:{1}'.format(cache_path, word_sz_txt)
+    cmd = f'reg import "{cache_path}" /reg:{word_sz_txt}'
     cmd_ret_dict = __salt__["cmd.run_all"](cmd, python_shell=True)
     retcode = cmd_ret_dict["retcode"]
     if retcode != 0:

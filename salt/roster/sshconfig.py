@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Parses roster entries out of Host directives from SSH config
 
@@ -6,20 +5,15 @@ Parses roster entries out of Host directives from SSH config
 
     salt-ssh --roster sshconfig '*' -r "echo hi"
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import fnmatch
 import logging
-
-# Import python libs
 import os
 import re
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +31,9 @@ def _get_ssh_config_file(opts):
     """
     ssh_config_file = opts.get("ssh_config_file")
     if not os.path.isfile(ssh_config_file):
-        raise IOError("Cannot find SSH config file")
+        raise OSError("Cannot find SSH config file")
     if not os.access(ssh_config_file, os.R_OK):
-        raise IOError("Cannot access SSH config file: {}".format(ssh_config_file))
+        raise OSError(f"Cannot access SSH config file: {ssh_config_file}")
     return ssh_config_file
 
 
@@ -70,7 +64,7 @@ def parse_ssh_config(lines):
             for field in _ROSTER_FIELDS:
                 match = re.match(field.pattern, line)
                 if match:
-                    target[field.target_field] = match.group(1)
+                    target[field.target_field] = match.group(1).strip()
         for hostname in hostnames:
             targets[hostname] = target
 
@@ -108,7 +102,7 @@ def targets(tgt, tgt_type="glob", **kwargs):
     return matched
 
 
-class RosterMatcher(object):
+class RosterMatcher:
     """
     Matcher for the roster data structure
     """
@@ -123,7 +117,7 @@ class RosterMatcher(object):
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{0}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 
@@ -143,7 +137,7 @@ class RosterMatcher(object):
         """
         Return the configured ip
         """
-        if isinstance(self.raw[minion], six.string_types):
+        if isinstance(self.raw[minion], str):
             return {"host": self.raw[minion]}
         if isinstance(self.raw[minion], dict):
             return self.raw[minion]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,10 +15,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 import re
 from string import Template
 
@@ -29,16 +24,15 @@ from string import Template
 # pylint: disable-msg=C0301
 
 
-class NXOSPlatform(object):
-
-    """ Cisco Systems Base Platform Unit Test Object """
+class NXOSPlatform:
+    """Cisco Systems Base Platform Unit Test Object"""
 
     chassis = "Unknown NXOS Chassis"
 
     upgrade_required = False
 
     show_install_all_impact_no_module_data = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -111,12 +105,11 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     install_all_non_disruptive_success = None
 
     def __init__(self, *args, **kwargs):
-
         """
-         ckimage - current kickstart image
-         cimage - current system image
-         nkimage - new kickstart image
-         nimage - new system image
+        ckimage - current kickstart image
+        cimage - current system image
+        nkimage - new kickstart image
+        nimage - new system image
         """
 
         self.ckimage = kwargs.get("ckimage", None)
@@ -168,15 +161,13 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 
     @staticmethod
     def templatize(template, values):
-
-        """ Substitute variables in template with their corresponding values """
+        """Substitute variables in template with their corresponding values"""
 
         return Template(template).substitute(values)
 
     @staticmethod
     def version_from_image(image):
-
-        """ Given a NXOS image named image decompose to appropriate image version """
+        """Given a NXOS image named image decompose to appropriate image version"""
 
         ver = None
         if image:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read tops data from a reclass database
 
@@ -46,12 +45,10 @@ If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.reclass import (
     filter_out_source_path_option,
     prepend_reclass_source_path,
@@ -121,30 +118,27 @@ def top(**kwargs):
         return reclass_top(minion_id, **reclass_opts)
 
     except ImportError as e:
-        if "reclass" in six.text_type(e):
+        if "reclass" in str(e):
             raise SaltInvocationError(
-                "master_tops.reclass: cannot find reclass module "
-                "in {0}".format(sys.path)
+                f"master_tops.reclass: cannot find reclass module in {sys.path}"
             )
         else:
             raise
 
     except TypeError as e:
-        if "unexpected keyword argument" in six.text_type(e):
-            arg = six.text_type(e).split()[-1]
-            raise SaltInvocationError(
-                "master_tops.reclass: unexpected option: {0}".format(arg)
-            )
+        if "unexpected keyword argument" in str(e):
+            arg = str(e).split()[-1]
+            raise SaltInvocationError(f"master_tops.reclass: unexpected option: {arg}")
         else:
             raise
 
     except KeyError as e:
-        if "reclass" in six.text_type(e):
+        if "reclass" in str(e):
             raise SaltInvocationError(
-                "master_tops.reclass: no configuration " "found in master config"
+                "master_tops.reclass: no configuration found in master config"
             )
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError("master_tops.reclass: {0}".format(six.text_type(e)))
+        raise SaltInvocationError(f"master_tops.reclass: {str(e)}")

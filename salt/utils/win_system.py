@@ -5,17 +5,15 @@ Functions shared with salt.modules.win_system and salt.grains.pending_reboot
 
 .. versionadded:: 3001
 """
+
 # NOTE: DO NOT USE RAW STRINGS IN THIS MODULE! UNICODE_LITERALS DOES NOT PLAY
 # NICELY WITH RAW STRINGS CONTAINING \u or \U.
 
-# Import python libs
 import logging
 
-# Import Salt libs
 import salt.utils.win_reg
 import salt.utils.win_update
 
-# Import 3rd-party Libs
 try:
     import win32api
     import win32con

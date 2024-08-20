@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Work with incron
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 
@@ -13,11 +10,6 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.stringutils
 
-# Import salt libs
-from salt.ext import six
-from salt.ext.six.moves import range
-
-# Set up logging
 log = logging.getLogger(__name__)
 
 TAG = "# Line managed by Salt, do not edit"
@@ -64,9 +56,15 @@ def _render_tab(lst):
     """
     ret = []
     for pre in lst["pre"]:
-        ret.append("{0}\n".format(pre))
+        ret.append(f"{pre}\n")
     for cron in lst["crons"]:
-        ret.append("{0} {1} {2}\n".format(cron["path"], cron["mask"], cron["cmd"],))
+        ret.append(
+            "{} {} {}\n".format(
+                cron["path"],
+                cron["mask"],
+                cron["cmd"],
+            )
+        )
     return ret
 
 
@@ -74,7 +72,7 @@ def _get_incron_cmdstr(path):
     """
     Returns a format string, to be used to build an incrontab command.
     """
-    return "incrontab {0}".format(path)
+    return f"incrontab {path}"
 
 
 def write_incron_file(user, path):
@@ -123,7 +121,7 @@ def _write_incron_lines(user, lines):
         with salt.utils.files.fopen(path, "wb") as fp_:
             fp_.writelines(salt.utils.data.encode(lines))
         if user != "root":
-            __salt__["cmd.run"]("chown {0} {1}".format(user, path), python_shell=False)
+            __salt__["cmd.run"](f"chown {user} {path}", python_shell=False)
         ret = __salt__["cmd.run_all"](
             _get_incron_cmdstr(path), runas=user, python_shell=False
         )
@@ -137,9 +135,9 @@ def _write_file(folder, filename, data):
     """
     path = os.path.join(folder, filename)
     if not os.path.exists(folder):
-        msg = "{0} cannot be written. {1} does not exist".format(filename, folder)
+        msg = f"{filename} cannot be written. {folder} does not exist"
         log.error(msg)
-        raise AttributeError(six.text_type(msg))
+        raise AttributeError(str(msg))
     with salt.utils.files.fopen(path, "w") as fp_:
         fp_.write(salt.utils.stringutils.to_str(data))
 
@@ -154,7 +152,7 @@ def _read_file(folder, filename):
     try:
         with salt.utils.files.fopen(path, "rb") as contents:
             return salt.utils.data.decode(contents.readlines())
-    except (OSError, IOError):
+    except OSError:
         return ""
 
 
@@ -182,7 +180,7 @@ def raw_incron(user):
 
         salt '*' incron.raw_incron root
     """
-    cmd = "incrontab -l {0}".format(user)
+    cmd = f"incrontab -l {user}"
     return __salt__["cmd.run_stdout"](cmd, rstrip=False, runas=user, python_shell=False)
 
 
@@ -233,12 +231,12 @@ def set_job(user, path, mask, cmd):
         salt '*' incron.set_job root '/root' 'IN_MODIFY' 'echo "$$ $@ $# $% $&"'
     """
     # Scrub the types
-    mask = six.text_type(mask).upper()
+    mask = str(mask).upper()
 
     # Check for valid mask types
     for item in mask.split(","):
         if item not in _MASK_TYPES:
-            return "Invalid mask type: {0}".format(item)
+            return f"Invalid mask type: {item}"
 
     updated = False
     arg_mask = mask.split(",")
@@ -293,22 +291,22 @@ def rm_job(user, path, mask, cmd):
     """
 
     # Scrub the types
-    mask = six.text_type(mask).upper()
+    mask = str(mask).upper()
 
     # Check for valid mask types
     for item in mask.split(","):
         if item not in _MASK_TYPES:
-            return "Invalid mask type: {0}".format(item)
+            return f"Invalid mask type: {item}"
 
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["crons"])):
+    for ind, val in enumerate(lst["crons"]):
         if rm_ is not None:
             break
-        if path == lst["crons"][ind]["path"]:
-            if cmd == lst["crons"][ind]["cmd"]:
-                if mask == lst["crons"][ind]["mask"]:
+        if path == val["path"]:
+            if cmd == val["cmd"]:
+                if mask == val["mask"]:
                     rm_ = ind
     if rm_ is not None:
         lst["crons"].pop(rm_)

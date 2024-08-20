@@ -1,4 +1,9 @@
 # Lint requirements
-pylint==2.4.4
-SaltPyLint>=v2020.9.28
+
+--constraint=./py{py_version}/{platform}.txt
+
+docker >= 7.1.0; python_version >= '3.8'
+docker < 7.1.0; python_version < '3.8'
+pylint~=3.1.0
+SaltPyLint>=2024.2.2
 toml

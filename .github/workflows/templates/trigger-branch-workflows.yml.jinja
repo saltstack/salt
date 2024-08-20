@@ -1,0 +1,21 @@
+
+
+  <%- set job_name = "trigger-branch-{}-builds".format(workflow_slug) %>
+
+  <{ job_name }>:
+  <%- do conclusion_needs.append(job_name) %>
+    name: Trigger Branch Workflows
+    if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
+    runs-on: ubuntu-latest
+    needs:
+      - workflow-requirements
+
+    steps:
+    <%- for branch in release_branches %>
+
+      - name: Trigger <{ branch }> branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run <{ workflow_slug }>.yml --repo ${{ github.repository }} --ref <{ branch }>
+    <%- endfor %>

@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 tests for host state
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 
 

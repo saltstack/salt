@@ -96,6 +96,14 @@ The user to run the Salt processes
 
     user: root
 
+.. note::
+
+    Starting with version `3006.0`, Salt's offical packages ship with a default
+    configuration which runs the Master as a non-priviledged user. The Master's
+    configuration file has the `user` option set to `user: salt`. Unless you
+    are absolutly sure want to run salt as some other user, care should be
+    taken to preserve this setting in your Master configuration file..
+
 .. conf_master:: ret_port
 
 ``enable_ssh_minions``
@@ -112,8 +120,13 @@ Tell the master to also use salt-ssh when running commands against minions.
 
 .. note::
 
-    Cross-minion communication is still not possible.  The Salt mine and
-    publish.publish do not work between minion types.
+    Enabling this does not influence the limitations on cross-minion communication.
+    The Salt mine and ``publish.publish`` do not work from regular minions
+    to SSH minions, the other way around is partly possible since 3007.0
+    (during state rendering on the master).
+    This means you can use the mentioned functions to call out to regular minions
+    in ``sls`` templates and wrapper modules, but state modules
+    (which are executed on the remote) relying on them still do not work.
 
 ``ret_port``
 ------------
@@ -180,13 +193,68 @@ The path to the master's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/master``
+Default: ``<LIB_STATE_DIR>/pki/master``
 
 The directory to store the pki authentication keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
     pki_dir: /etc/salt/pki/master
+
+
+.. conf_master:: cluster_id
+
+``cluster_id``
+--------------
+
+.. versionadded:: 3007
+
+When defined, the master will operate in cluster mode. The master will send the
+cluster key and id to minions instead of its own key and id. The master will
+also forward its local event bus to other masters defined by ``cluster_peers``
+
+
+.. code-block:: yaml
+
+    cluster_id: master
+
+.. conf_master:: cluster_peers
+
+``cluster_peers``
+-----------------
+
+.. versionadded:: 3007
+
+When ``cluster_id`` is defined, this setting is a list of other master
+(hostnames or ips) that will be in the cluster.
+
+.. code-block:: yaml
+
+    cluster_peers:
+       - master2
+       - master3
+
+.. conf_master:: cluster_pki_dir
+
+``cluster_pki_dir``
+-------------------
+
+.. versionadded:: 3007
+
+When ``cluster_id`` is defined, this sets the location of where this cluster
+will store its cluster public and private key as well as any minion keys. This
+setting will default to the value of ``pki_dir``, but should be changed
+to the filesystem location shared between peers in the cluster.
+
+.. code-block:: yaml
+
+    cluster_pki: /my/gluster/share/pki
+
 
 .. conf_master:: extension_modules
 
@@ -201,10 +269,13 @@ The directory to store the pki authentication keys.
     moved into the master cachedir (on most platforms,
     ``/var/cache/salt/master/extmods``).
 
-Directory for custom modules. This directory can contain subdirectories for
-each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, ``engines``, ``utils``, etc.
-This path is appended to :conf_master:`root_dir`.
+Directory where custom modules are synced to. This directory can contain
+subdirectories for each of Salt's module types such as ``runners``,
+``output``, ``wheel``, ``modules``, ``states``, ``returners``, ``engines``,
+``utils``, etc.  This path is appended to :conf_master:`root_dir`.
+
+Note, any directories or files not found in the `module_dirs` location
+will be removed from the extension_modules path.
 
 .. code-block:: yaml
 
@@ -310,9 +381,26 @@ Default: ``24``
 Set the number of hours to keep old job information. Note that setting this option
 to ``0`` disables the cache cleaner.
 
+.. deprecated:: 3006
+    Replaced by :conf_master:`keep_jobs_seconds`
+
 .. code-block:: yaml
 
     keep_jobs: 24
+
+.. conf_master:: keep_jobs_seconds
+
+``keep_jobs_seconds``
+---------------------
+
+Default: ``86400``
+
+Set the number of seconds to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
+
+.. code-block:: yaml
+
+    keep_jobs_seconds: 86400
 
 .. conf_master:: gather_job_timeout
 
@@ -346,9 +434,23 @@ Set the default timeout for the salt command and api.
 
 Default: ``60``
 
-The loop_interval option controls the seconds for the master's maintenance
+The loop_interval option controls the seconds for the master's Maintenance
 process check cycle. This process updates file server backends, cleans the
 job cache and executes the scheduler.
+
+``maintenance_interval``
+------------------------
+
+.. versionadded:: 3006.0
+
+Default: ``3600``
+
+Defines how often to restart the master's Maintenance process.
+
+.. code-block:: yaml
+
+    maintenance_interval: 9600
+
 
 .. conf_master:: output
 
@@ -527,9 +629,9 @@ jobs dir.
     directory, which is ``/var/cache/salt/master/jobs/`` by default, will be
     smaller, but the JID directories will still be present.
 
-    Note that the :conf_master:`keep_jobs` option can be set to a lower value,
-    such as ``1``, to limit the number of hours jobs are stored in the job
-    cache. (The default is 24 hours.)
+    Note that the :conf_master:`keep_jobs_seconds` option can be set to a lower
+    value, such as ``3600``, to limit the number of seconds jobs are stored in
+    the job cache. (The default is 86400 seconds.)
 
     Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
     documentation for more information.
@@ -847,6 +949,39 @@ that does not send executions to minions.
 
     presence_events: False
 
+``detect_remote_minions``
+-------------------------
+
+Default: False
+
+When checking the minions connected to a master, also include the master's
+connections to minions on the port specified in the setting `remote_minions_port`.
+This is particularly useful when checking if the master is connected to any Heist-Salt
+minions. If this setting is set to True, the master will check all connections on port 22
+by default unless a user also configures a different port with the setting
+`remote_minions_port`.
+
+Changing this setting will check the remote minions the master is connected to when using
+presence events, the manage runner, and any other parts of the code that call the
+`connected_ids` method to check the status of connected minions.
+
+.. code-block:: yaml
+
+    detect_remote_minions: True
+
+``remote_minions_port``
+-----------------------
+
+Default: 22
+
+The port to use when checking for remote minions when `detect_remote_minions` is set
+to True.
+
+.. code-block:: yaml
+
+    remote_minions_port: 2222
+
+
 .. conf_master:: ping_on_rotate
 
 ``ping_on_rotate``
@@ -969,6 +1104,23 @@ is set to ``tcp`` by default on Windows.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_master:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_master:: tcp_master_pub_port
 
@@ -1523,6 +1675,8 @@ Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
 
+.. conf_master:: min_extra_mods
+
 ``min_extra_mods``
 ------------------
 
@@ -1530,6 +1684,47 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
+.. conf_master:: thin_exclude_saltexts
+
+``thin_exclude_saltexts``
+-------------------------
+
+Default: False
+
+By default, Salt-SSH autodiscovers Salt extensions in the current Python environment
+and adds them to the Salt Thin. This disables that behavior.
+
+.. note::
+
+    When the list of modules/extensions to include in the Salt Thin changes
+    for any reason (e.g. Saltext was added/removed, :conf_master:`thin_exclude_saltexts`,
+    :conf_master:`thin_saltext_allowlist` or :conf_master:`thin_saltext_blocklist`
+    was changed), you typically need to regenerate the Salt Thin by passing
+    ``--regen-thin`` to the next Salt-SSH invocation.
+
+.. conf_master:: thin_saltext_allowlist
+
+``thin_saltext_allowlist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which are allowed to be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive) and they are discovered. Any extension not in this list
+will be excluded. If unset, all discovered extensions are added,
+unless present in :conf_master:`thin_saltext_blocklist`.
+
+.. conf_master:: thin_saltext_blocklist
+
+``thin_saltext_blocklist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which should never be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive).
 
 .. _master-security-settings:
 
@@ -1796,6 +1991,11 @@ Set to True to enable keeping the calculated user's auth list in the token
 file. This is disabled by default and the auth list is calculated or requested
 from the eauth driver each time.
 
+Note: `keep_acl_in_token` will be forced to True when using external authentication
+for REST API (`rest` is present under `external_auth`). This is because the REST API
+does not store the password, and can therefore not retroactively fetch the ACL, so
+the ACL must be stored in the token.
+
 .. code-block:: yaml
 
     keep_acl_in_token: False
@@ -1853,7 +2053,7 @@ Default: ``False``
 
 Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. code-block:: yaml
 
@@ -1930,6 +2130,20 @@ The number of seconds between AES key rotations on the master.
     publish_session: Default: 86400
 
 .. conf_master:: ssl
+
+
+``publish_signing_algorithm``
+-----------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+The RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``. Minions must be at version ``3006.9`` or greater if this
+is changed from the default setting.
+
 
 ``ssl``
 -------
@@ -2056,6 +2270,11 @@ worker_threads value.
 
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
+
+Standards for busy environments:
+
+* Use one worker thread per 200 minions.
+* The value of worker_threads should not exceed 1½ times the available CPU cores.
 
 .. note::
     When the master daemon starts, it is expected behaviour to see
@@ -2532,6 +2751,34 @@ will be shown for each state run.
 
     state_output_profile: True
 
+.. conf_master:: state_output_pct
+
+``state_output_pct``
+--------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
+.. conf_master:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
+
 .. conf_master:: state_aggregate
 
 ``state_aggregate``
@@ -2585,14 +2832,14 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 ``runner_returns``
 ------------------
 
-Default: ``False``
+Default: ``True``
 
-If set to ``True``, runner jobs will be saved to job cache (defined by
+If set to ``False``, runner jobs will not be saved to job cache (defined by
 :conf_master:`master_job_cache`).
 
 .. code-block:: yaml
 
-    runner_returns: True
+    runner_returns: False
 
 
 .. _master-file-server-settings:
@@ -2659,32 +2906,6 @@ Master will not be returned to the Minion.
 .. code-block:: yaml
 
     fileserver_ignoresymlinks: False
-
-.. conf_master:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-.. deprecated:: 2018.3.4
-   This option is now ignored. Firstly, it only traversed
-   :conf_master:`file_roots`, which means it did not work for the other
-   fileserver backends. Secondly, since this option was added we have added
-   caching to the code that traverses the file_roots (and gitfs, etc.), which
-   greatly reduces the amount of traversal that is done.
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
 
 .. conf_master:: fileserver_list_cache_time
 
@@ -2836,6 +3057,8 @@ roots: Master's Local File Server
 ``file_roots``
 **************
 
+.. versionchanged:: 3005
+
 Default:
 
 .. code-block:: yaml
@@ -2869,6 +3092,30 @@ Example:
         - /srv/salt/prod/states
       __env__:
         - /srv/salt/default
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``file_roots`` filesystem path as of version 3005. It will be replaced with
+the actual ``saltenv`` and searched for states and data to provide to the
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      __env__:
+        - /srv/__env__/salt
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      dev:
+        - /srv/dev/salt
+      test:
+        - /srv/test/salt
+      prod:
+        - /srv/prod/salt
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -3919,29 +4166,6 @@ This option defines the update interval (in seconds) for :ref:`MinionFS
 
     minionfs_update_interval: 120
 
-azurefs: Azure File Server Backend
-----------------------------------
-
-.. versionadded:: 2015.8.0
-
-See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
-examples.
-
-.. conf_master:: azurefs_update_interval
-
-``azurefs_update_interval``
-***************************
-
-.. versionadded:: 2018.3.0
-
-Default: ``60``
-
-This option defines the update interval (in seconds) for azurefs.
-
-.. code-block:: yaml
-
-    azurefs_update_interval: 120
-
 s3fs: S3 File Server Backend
 ----------------------------
 
@@ -3964,6 +4188,19 @@ This option defines the update interval (in seconds) for s3fs.
 
     s3fs_update_interval: 120
 
+``fileserver_interval``
+***********************
+
+.. versionadded:: 3006.0
+
+Default: ``3600``
+
+Defines how often to restart the master's FilesServerUpdate process.
+
+.. code-block:: yaml
+
+    fileserver_interval: 9600
+
 
 .. _pillar-configuration-master:
 
@@ -3974,6 +4211,8 @@ Pillar Configuration
 
 ``pillar_roots``
 ----------------
+
+.. versionchanged:: 3005
 
 Default:
 
@@ -4000,6 +4239,30 @@ Example:
         - /srv/pillar/prod
       __env__:
         - /srv/pillar/others
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``pillar_roots`` filesystem path as of version 3005. It will be replaced
+with the actual ``pillarenv`` and searched for Pillar data to provide to the
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
 
 .. conf_master:: on_demand_ext_pillar
 
@@ -4102,6 +4365,32 @@ List of renderers which are permitted to be used for pillar decryption.
     decrypt_pillar_renderers:
       - gpg
       - my_custom_renderer
+
+.. conf_master:: gpg_decrypt_must_succeed
+
+``gpg_decrypt_must_succeed``
+----------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+If this is ``True`` and the ciphertext could not be decrypted, then an error is
+raised.
+
+Sending the ciphertext through basically is *never* desired, for example if a
+state is setting a database password from pillar and gpg rendering fails, then
+the state will update the password to the ciphertext, which by definition is
+not encrypted.
+
+.. warning::
+
+    The value defaults to ``False`` for backwards compatibility.  In the
+    ``Chlorine`` release, this option will default to ``True``.
+
+.. code-block:: yaml
+
+    gpg_decrypt_must_succeed: False
 
 .. conf_master:: pillar_opts
 
@@ -4821,6 +5110,7 @@ Default: ``3600``
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
 pillar is recompiled and stored.
+The cache TTL does not prevent pillar cache from being refreshed before its TTL expires.
 
 .. conf_master:: pillar_cache_backend
 
@@ -4964,6 +5254,41 @@ Used by ``salt-api`` for the master requests timeout.
 
     rest_timeout: 300
 
+.. conf_master:: netapi_disable_clients
+
+``netapi_enable_clients``
+--------------------------
+
+.. versionadded:: 3006.0
+
+Default: ``[]``
+
+Used by ``salt-api`` to enable access to the listed clients. Unless a
+client is addded to this list, requests will be rejected before
+authentication is attempted or processing of the low state occurs.
+
+This can be used to only expose the required functionality via
+``salt-api``.
+
+Configuration with all possible clients enabled:
+
+.. code-block:: yaml
+
+    netapi_enable_clients:
+      - local
+      - local_async
+      - local_batch
+      - local_subset
+      - runner
+      - runner_async
+      - ssh
+      - wheel
+      - wheel_async
+
+.. note::
+
+    Enabling all clients is not recommended - only enable the
+    clients that provide the functionality required.
 
 .. _syndic-server-settings:
 
@@ -5141,9 +5466,9 @@ and pkg modules.
 .. code-block:: yaml
 
     peer:
-      foo.example.com:
-          - test.*
-          - pkg.*
+      foo\.example\.com:
+          - test\..*
+          - pkg\..*
 
 This will allow all minions to execute all commands:
 
@@ -5156,16 +5481,25 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
-By adding an additional layer you can limit the target hosts in addition to the
-accessible commands:
+It is also possible to limit target hosts with the :term:`Compound Matcher`.
+You can achieve this by adding another layer in between the source and the
+allowed functions:
 
 .. code-block:: yaml
 
     peer:
-      foo.example.com:
-        'db*':
-          - test.*
-          - pkg.*
+      '.*\.example\.com':
+        - 'G@role:db':
+          - test\..*
+          - pkg\..*
+
+.. note::
+
+    Notice that the source hosts are matched by a regular expression
+    on their minion ID, while target hosts can be matched by any of
+    the :ref:`available matchers <targeting-compound>`.
+
+    Note that globbing and regex matching on pillar values is not supported. You can only match exact values.
 
 .. conf_master:: peer_run
 
@@ -5232,6 +5566,13 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
+
 .. conf_master:: log_level_logfile
 
 ``log_level_logfile``
@@ -5246,6 +5587,13 @@ it will inherit the level set by :conf_log:`log_level` option.
 .. code-block:: yaml
 
     log_level_logfile: warning
+
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_master:: log_datefmt
 

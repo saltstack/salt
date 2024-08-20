@@ -1,0 +1,693 @@
+name: Test Download Packages
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version of the packages to install and test
+      cache-prefix:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      environment:
+        required: true
+        type: string
+        description: The environment to run tests against
+      latest-release:
+        required: true
+        type: string
+        description: The latest salt release
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
+      python-version:
+        required: false
+        type: string
+        description: The python version to run tests with
+        default: "3.10"
+      package-name:
+        required: false
+        type: string
+        description: The onedir package name to use
+        default: salt
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
+      nox-session:
+        required: false
+        type: string
+        description: The nox session to run
+        default: ci-test-onedir
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+
+jobs:
+
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci pkg-downloads-matrix
+
+  linux:
+    name: Linux
+    needs:
+      - generate-matrix
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
+    env:
+      USE_S3_CACHE: 'true'
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
+
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}.tar.xz
+
+      - name: Download nox.linux.${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-linux-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}-${{ inputs.nox-session }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-linux
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Start VM
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+
+      - name: List Free Space
+        run: |
+          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        run: |
+          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+
+      - name: Decompress .nox Directory
+        run: |
+          tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
+
+      - name: Show System Info
+        run: |
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+            --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
+
+      - name: Run Package Download Tests
+        env:
+          SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.arch }}
+          SALT_REPO_TYPE: ${{ inputs.environment }}
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING  -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
+            --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
+
+      - name: Combine Coverage Reports
+        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
+
+      - name: Download Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && steps.spin-up-vm.outcome == 'success'
+        run: |
+          tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          tree -a artifacts
+
+      - name: Destroy VM
+        if: always()
+        run: |
+          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
+
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/salt.xml ]; then
+            echo "The artifacts/coverage/salt.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/salt.xml \
+          #  --flag salt --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/salt.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags salt,${{ matrix.distro-slug }},pkg \
+              --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/tests.xml ]; then
+            echo "The artifacts/coverage/tests.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/tests.xml \
+          #  --flag tests --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/tests.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags tests,${{ matrix.distro-slug }},pkg \
+              --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Test Run Artifacts
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
+
+
+  macos:
+    name: MacOS
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
+    env:
+      USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
+
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Install System Dependencies
+        run: |
+          brew install tree
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+          update-environment: true
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+
+      - name: Download nox.macos.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
+
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- macos ${{ matrix.arch }}
+
+      - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- download-pkgs
+
+      - name: Run Package Download Tests
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
+          SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          SALT_REPO_TYPE: ${{ inputs.environment }}
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- download-pkgs
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
+
+      - name: Combine Coverage Reports
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Prepare Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && job.status != 'cancelled'
+        run: |
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          tree -a artifacts
+
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/macos/codecov
+          curl -Os https://uploader.codecov.io/latest/macos/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/macos/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/salt.xml ]; then
+            echo "The artifacts/coverage/salt.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/salt.xml \
+          #  --flag salt --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/salt.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags salt,${{ matrix.distro-slug }},pkg \
+              --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/tests.xml ]; then
+            echo "The artifacts/coverage/tests.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/tests.xml \
+          #  --flag tests --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/tests.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags tests,${{ matrix.distro-slug }},pkg \
+              --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Test Run Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
+
+
+  windows:
+    name: Windows
+    needs:
+      - generate-matrix
+    env:
+      USE_S3_CACHE: 'true'
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
+
+      - name: Download nox.windows.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}-pkg-download-windows
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Start VM
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+
+      - name: List Free Space
+        run: |
+          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        run: |
+          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+
+      - name: Decompress .nox Directory
+        run: |
+          tools --timestamps vm decompress-dependencies ${{ matrix.distro-slug }}
+
+      - name: Show System Info
+        run: |
+          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
+            --nox-session=${{ inputs.nox-session }}-pkgs ${{ matrix.distro-slug }} -- download-pkgs
+
+      - name: Run Package Download Tests
+        env:
+          SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          SALT_REPO_TYPE: ${{ inputs.environment }}
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ matrix.pkg-type }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
+            --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ matrix.distro-slug }} -- download-pkgs
+
+      - name: Combine Coverage Reports
+        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          tools --timestamps vm combine-coverage ${{ matrix.distro-slug }}
+
+      - name: Download Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && steps.spin-up-vm.outcome == 'success'
+        run: |
+          tools --timestamps vm download-artifacts ${{ matrix.distro-slug }}
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          tree -a artifacts
+
+      - name: Destroy VM
+        if: always()
+        run: |
+          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }} || true
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
+
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/salt.xml ]; then
+            echo "The artifacts/coverage/salt.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/salt.xml \
+          #  --flag salt --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/salt.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags salt,${{ matrix.distro-slug }},pkg \
+              --name salt.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          if [ ! -s artifacts/coverage/tests.xml ]; then
+            echo "The artifacts/coverage/tests.xml file does not exist"
+            exit 1
+          fi
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/tests.xml \
+          #  --flag tests --flag ${{ matrix.distro-slug }} --flag pkg \
+          #  --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          n=0
+          until [ "$n" -ge 5 ]
+          do
+          if ./codecov --file artifacts/coverage/tests.xml \
+              --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
+              --flags tests,${{ matrix.distro-slug }},pkg \
+              --name tests.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.download-pkgs --nonZero; then
+              rc=$?
+              break
+          fi
+          rc=$?
+          n=$((n+1))
+          sleep 15
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "Failed to upload codecov stats"
+            exit 1
+          fi
+
+      - name: Upload Test Run Artifacts
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*

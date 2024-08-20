@@ -65,30 +65,6 @@ grains:
     keystone.password: demopass
     keystone.tenant: demo
     keystone.auth_url: 'http://127.0.0.1:5000/v3/'
-  zookeeper:
-    prod:
-      hosts: 'localhost:2181'
-      default_acl:
-        - username: daniel
-          password: test
-          read: true
-          write: true
-          create: true
-          delete: true
-          admin: true
-      username: daniel
-      password: test
-    hosts: 'localhost:2181'
-    default_acl:
-      - username: daniel
-        password: test
-        read: true
-        write: true
-        create: true
-        delete: true
-        admin: true
-    username: daniel
-    password: test
 
 config_test:
   spam: eggs
@@ -113,15 +89,6 @@ autosign_grains:
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false
-sdbvault:
-  driver: vault
-vault:
-  url: http://127.0.0.1:8200
-  auth:
-    method: token
-    token: testsecret
-  policies:
-  - testpolicy
 sdbetcd:
   driver: etcd
   etcd.host: 127.0.0.1

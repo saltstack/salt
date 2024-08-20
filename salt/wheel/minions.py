@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Wheel system wrapper for connected minions
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.config
 import salt.utils.minions
-
-# Import Salt libs
 from salt.utils.cache import CacheCli
 
 

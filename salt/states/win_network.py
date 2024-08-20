@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration of network interfaces on Windows hosts
 ====================================================
@@ -59,18 +58,13 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -114,18 +108,17 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
                 x for x in dns_servers if not salt.utils.validate.net.ipv4_addr(x)
             ]
             if bad_ips:
-                errors.append("Invalid DNS server IPs: {0}".format(", ".join(bad_ips)))
+                errors.append("Invalid DNS server IPs: {}".format(", ".join(bad_ips)))
 
     # Validate IP configuration
     if ip_proto == "dhcp":
         if ip_addrs is not None:
             errors.append(
-                "The ip_addrs param cannot be set if unless ip_proto is set "
-                "to 'static'"
+                "The ip_addrs param cannot be set if unless ip_proto is set to 'static'"
             )
         if gateway is not None:
             errors.append(
-                "A gateway IP cannot be set if unless ip_proto is set to " "'static'"
+                "A gateway IP cannot be set if unless ip_proto is set to 'static'"
             )
     else:
         if not ip_addrs:
@@ -136,14 +129,15 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             bad_ips = [x for x in ip_addrs if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
                 errors.append(
-                    "The following static IPs are invalid: "
-                    "{0}".format(", ".join(bad_ips))
+                    "The following static IPs are invalid: {}".format(
+                        ", ".join(bad_ips)
+                    )
                 )
 
             # Validate default gateway
             if gateway is not None:
                 if not salt.utils.validate.net.ipv4_addr(gateway):
-                    errors.append("Gateway IP {0} is invalid".format(gateway))
+                    errors.append(f"Gateway IP {gateway} is invalid")
 
     return errors
 
@@ -154,7 +148,7 @@ def _addrdict_to_ip_addrs(addrs):
     retrieved from ip.get_interface
     """
     return [
-        "{0}/{1}".format(x["IP Address"], x["Subnet"].rsplit("/", 1)[-1]) for x in addrs
+        "{}/{}".format(x["IP Address"], x["Subnet"].rsplit("/", 1)[-1]) for x in addrs
     ]
 
 
@@ -204,7 +198,7 @@ def managed(
     ip_addrs=None,
     gateway=None,
     enabled=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that the named interface is configured properly.
@@ -268,26 +262,24 @@ def managed(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Interface '{0}' is up to date".format(name),
+        "comment": f"Interface '{name}' is up to date",
     }
 
-    dns_proto = six.text_type(dns_proto).lower()
-    ip_proto = six.text_type(ip_proto).lower()
+    dns_proto = str(dns_proto).lower()
+    ip_proto = str(ip_proto).lower()
 
     errors = []
     if dns_proto not in __VALID_PROTO:
         ret["result"] = False
         errors.append(
-            "dns_proto must be one of the following: {0}".format(
+            "dns_proto must be one of the following: {}".format(
                 ", ".join(__VALID_PROTO)
             )
         )
 
     if ip_proto not in __VALID_PROTO:
         errors.append(
-            "ip_proto must be one of the following: {0}".format(
-                ", ".join(__VALID_PROTO)
-            )
+            "ip_proto must be one of the following: {}".format(", ".join(__VALID_PROTO))
         )
 
     if errors:
@@ -304,11 +296,11 @@ def managed(
         if currently_enabled:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Interface '{0}' will be disabled".format(name)
+                ret["comment"] = f"Interface '{name}' will be disabled"
             else:
                 ret["result"] = __salt__["ip.disable"](name)
                 if not ret["result"]:
-                    ret["comment"] = "Failed to disable interface '{0}'".format(name)
+                    ret["comment"] = f"Failed to disable interface '{name}'"
         else:
             ret["comment"] += " (already disabled)"
         return ret
@@ -316,13 +308,12 @@ def managed(
         if not currently_enabled:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Interface '{0}' will be enabled".format(name)
+                ret["comment"] = f"Interface '{name}' will be enabled"
             else:
                 if not __salt__["ip.enable"](name):
                     ret["result"] = False
                     ret["comment"] = (
-                        "Failed to enable interface '{0}' to "
-                        "make changes".format(name)
+                        f"Failed to enable interface '{name}' to make changes"
                     )
                     return ret
 
@@ -330,8 +321,9 @@ def managed(
         if errors:
             ret["result"] = False
             ret["comment"] = (
-                "The following SLS configuration errors were "
-                "detected:\n- {0}".format("\n- ".join(errors))
+                "The following SLS configuration errors were detected:\n- {}".format(
+                    "\n- ".join(errors)
+                )
             )
             return ret
 
@@ -339,8 +331,7 @@ def managed(
         if not old:
             ret["result"] = False
             ret["comment"] = (
-                "Unable to get current configuration for "
-                "interface '{0}'".format(name)
+                f"Unable to get current configuration for interface '{name}'"
             )
             return ret
 
@@ -358,25 +349,25 @@ def managed(
             comments = []
             if "dns_proto" in changes:
                 comments.append(
-                    "DNS protocol will be changed to: {0}".format(changes["dns_proto"])
+                    "DNS protocol will be changed to: {}".format(changes["dns_proto"])
                 )
             if dns_proto == "static" and "dns_servers" in changes:
                 if len(changes["dns_servers"]) == 0:
                     comments.append("The list of DNS servers will be cleared")
                 else:
                     comments.append(
-                        "DNS servers will be set to the following: {0}".format(
+                        "DNS servers will be set to the following: {}".format(
                             ", ".join(changes["dns_servers"])
                         )
                     )
             if "ip_proto" in changes:
                 comments.append(
-                    "IP protocol will be changed to: {0}".format(changes["ip_proto"])
+                    "IP protocol will be changed to: {}".format(changes["ip_proto"])
                 )
             if ip_proto == "static":
                 if "ip_addrs" in changes:
                     comments.append(
-                        "IP addresses will be set to the following: {0}".format(
+                        "IP addresses will be set to the following: {}".format(
                             ", ".join(changes["ip_addrs"])
                         )
                     )
@@ -385,15 +376,16 @@ def managed(
                         comments.append("Default gateway will be removed")
                     else:
                         comments.append(
-                            "Default gateway will be set to {0}".format(
+                            "Default gateway will be set to {}".format(
                                 changes["gateway"]
                             )
                         )
 
             ret["result"] = None
             ret["comment"] = (
-                "The following changes will be made to "
-                "interface '{0}':\n- {1}".format(name, "\n- ".join(comments))
+                "The following changes will be made to interface '{}':\n- {}".format(
+                    name, "\n- ".join(comments)
+                )
             )
             return ret
 
@@ -436,10 +428,10 @@ def managed(
             ret["result"] = False
             ret["comment"] = (
                 "Failed to set desired configuration settings "
-                "for interface '{0}'".format(name)
+                "for interface '{}'".format(name)
             )
         else:
-            ret[
-                "comment"
-            ] = "Successfully updated configuration for " "interface '{0}'".format(name)
+            ret["comment"] = (
+                f"Successfully updated configuration for interface '{name}'"
+            )
         return ret

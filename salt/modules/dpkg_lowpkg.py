@@ -37,12 +37,12 @@ def bin_pkg_info(path, saltenv="base"):
     """
     .. versionadded:: 2015.8.0
 
-    Parses RPM metadata and returns a dictionary of information about the
+    Parses DEB metadata and returns a dictionary of information about the
     package (name, version, etc.).
 
     path
         Path to the file. Can either be an absolute path to a file on the
-        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).
+        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.deb``).
         If a salt fileserver URL is passed, the file will be cached to the
         minion so that it can be examined.
 
@@ -62,14 +62,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
+                f"Unable to retrieve {path} from saltenv '{saltenv}'"
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{} does not exist on minion".format(path))
+            raise CommandExecutionError(f"{path} does not exist on minion")
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{} does not exist on minion".format(path))
+            raise SaltInvocationError(f"{path} does not exist on minion")
 
     cmd = ["dpkg", "-I", path]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
@@ -99,7 +99,7 @@ def bin_pkg_info(path, saltenv="base"):
         osarch = __grains__.get("osarch", "")
         arch = ret["arch"]
         if arch != "all" and osarch == "amd64" and osarch != arch:
-            ret["name"] += ":{}".format(arch)
+            ret["name"] += f":{arch}"
 
     return ret
 
@@ -120,7 +120,7 @@ def unpurge(*packages):
     ret = {}
     __salt__["cmd.run"](
         ["dpkg", "--set-selections"],
-        stdin=r"\n".join(["{} install".format(x) for x in packages]),
+        stdin=r"\n".join([f"{x} install" for x in packages]),
         python_shell=False,
         output_loglevel="trace",
     )
@@ -271,14 +271,13 @@ def _get_pkg_info(*packages, **kwargs):
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
         "status:${db:Status-Abbrev}\\n"
-        "======\\n"
         "description:${Description}\\n"
-        "------\\n'"
+        "\\n*/~^\\\\*\\n'"
     )
     cmd += " {}".format(" ".join(packages))
     cmd = cmd.strip()
 
-    call = __salt__["cmd.run_all"](cmd, python_chell=False)
+    call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
         if failhard:
             raise CommandExecutionError(
@@ -287,9 +286,13 @@ def _get_pkg_info(*packages, **kwargs):
         else:
             return ret
 
-    for pkg_info in [elm for elm in re.split(r"------", call["stdout"]) if elm.strip()]:
+    for pkg_info in [
+        elm
+        for elm in re.split(r"\r?\n\*/~\^\\\*(\r?\n|)", call["stdout"])
+        if elm.strip()
+    ]:
         pkg_data = {}
-        pkg_info, pkg_descr = re.split(r"======", pkg_info)
+        pkg_info, pkg_descr = pkg_info.split("\ndescription:", 1)
         for pkg_info_line in [
             el.strip() for el in pkg_info.split(os.linesep) if el.strip()
         ]:
@@ -299,7 +302,7 @@ def _get_pkg_info(*packages, **kwargs):
             install_date = _get_pkg_install_time(pkg_data.get("package"))
             if install_date:
                 pkg_data["install_date"] = install_date
-        pkg_data["description"] = pkg_descr.split(":", 1)[-1]
+        pkg_data["description"] = pkg_descr
         ret.append(pkg_data)
 
     return ret
@@ -314,9 +317,9 @@ def _get_pkg_license(pkg):
     :return:
     """
     licenses = set()
-    cpr = "/usr/share/doc/{}/copyright".format(pkg)
+    cpr = f"/usr/share/doc/{pkg}/copyright"
     if os.path.exists(cpr):
-        with salt.utils.files.fopen(cpr) as fp_:
+        with salt.utils.files.fopen(cpr, errors="ignore") as fp_:
             for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
                 if line.startswith("License:"):
                     licenses.add(line.split(":", 1)[1].strip())
@@ -332,7 +335,7 @@ def _get_pkg_install_time(pkg):
     """
     iso_time = None
     if pkg is not None:
-        location = "/var/lib/dpkg/info/{}.list".format(pkg)
+        location = f"/var/lib/dpkg/info/{pkg}.list"
         if os.path.exists(location):
             iso_time = (
                 datetime.datetime.utcfromtimestamp(

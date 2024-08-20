@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The pkgbuild state is the front of Salt package building backend. It
 automatically builds DEB and RPM packages from specified sources
@@ -42,15 +41,10 @@ automatically builds DEB and RPM packages from specified sources
     /tmp/pkg:
       pkgbuild.repo
 """
-# Import python libs
-from __future__ import absolute_import, print_function
 
 import errno
 import logging
 import os
-
-# Import salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -64,9 +58,9 @@ def _get_missing_results(results, dest_dir):
         present = set(os.listdir(dest_dir))
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            log.debug("pkgbuild.built: dest_dir '{0}' does not exist".format(dest_dir))
+            log.debug("pkgbuild.built: dest_dir '%s' does not exist", dest_dir)
         elif exc.errno == errno.EACCES:
-            log.error("pkgbuilt.built: cannot access dest_dir '{0}'".format(dest_dir))
+            log.error("pkgbuilt.built: cannot access dest_dir '%s'", dest_dir)
         present = set()
     return sorted(set(results).difference(present))
 
@@ -166,7 +160,7 @@ def built(
         ret["result"] = False
         return ret
 
-    if isinstance(results, six.string_types):
+    if isinstance(results, str):
         results = results.split(",")
 
     needed = _get_missing_results(results, dest_dir)
@@ -186,7 +180,7 @@ def built(
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See documentation."
         ret["result"] = False
         return ret
 
@@ -336,13 +330,13 @@ def repo(
 
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "Package repo metadata at {0} will be refreshed".format(name)
+        ret["comment"] = f"Package repo metadata at {name} will be refreshed"
         return ret
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See documentation."
         return ret
 
     func = "pkgbuild.make_repo"
@@ -360,7 +354,7 @@ def repo(
         ret["changes"] = {"refresh": True}
 
     if res["stdout"] and res["stderr"]:
-        ret["comment"] = "{0}\n{1}".format(res["stdout"], res["stderr"])
+        ret["comment"] = "{}\n{}".format(res["stdout"], res["stderr"])
     elif res["stdout"]:
         ret["comment"] = res["stdout"]
     elif res["stderr"]:

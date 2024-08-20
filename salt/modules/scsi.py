@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 SCSI administration module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os.path
@@ -49,7 +47,7 @@ def ls_(get_size=True):
         __context__["retcode"] = rc
         error = res.get("stderr", "").split("\n")[0]
         if error == "lsscsi: invalid option -- 's'":
-            return "{0} - try get_size=False".format(error)
+            return f"{error} - try get_size=False"
         return res.get("stderr", "").split("\n")[0]
     data = res.get("stdout", "")
 
@@ -95,8 +93,8 @@ def rescan_all(host):
 
         salt '*' scsi.rescan_all 0
     """
-    if os.path.isdir("/sys/class/scsi_host/host{0}".format(host)):
-        cmd = 'echo "- - -" > /sys/class/scsi_host/host{0}/scan'.format(host)
+    if os.path.isdir(f"/sys/class/scsi_host/host{host}"):
+        cmd = f'echo "- - -" > /sys/class/scsi_host/host{host}/scan'
     else:
-        return "Host {0} does not exist".format(host)
+        return f"Host {host} does not exist"
     return __salt__["cmd.run"](cmd).splitlines()

@@ -1,0 +1,102 @@
+---
+name: Build Documentation
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  build:
+    name: Build
+    runs-on:
+      - ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        docs-output:
+          - linkcheck
+          - spellcheck
+          - html
+          - epub
+          # - pdf
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Cache Python Tools Docs Virtualenv
+        id: tools-venvs-dependencies-cache
+        uses: ./.github/actions/cache
+        with:
+          path: .tools-venvs/docs
+          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+
+      - name: Prepare Docs Build
+        run: |
+          git clone https://gitlab.com/saltstack/open/docs/builddocs-fonts.git .builddocs-fonts
+          sudo mkdir -p /usr/share/fonts/truetype /usr/share/fonts/opentype
+          sudo cp -rfv .builddocs-fonts/truetype/*.ttf /usr/share/fonts/truetype/
+          sudo cp -rfv .builddocs-fonts/opentype/*.otf /usr/share/fonts/opentype/
+          sudo fc-cache -f -v
+
+      - name: Build Documentation (${{ matrix.docs-output }})
+        id: build-docs
+        shell: bash
+        continue-on-error: ${{ matrix.docs-output == 'linkcheck' || matrix.docs-output == 'spellcheck' }}
+        env:
+          LATEST_RELEASE: "${{ inputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
+          ARCHIVE_FILENAME: "${{ format('salt-{0}-docs-{1}.tar.xz', inputs.salt-version, matrix.docs-output) }}"
+        run: |
+          tools docs ${{ matrix.docs-output }}
+
+      - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
+        if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build-docs.outputs.artifact-name }}
+          path: ${{ steps.build-docs.outputs.artifact-path }}
+          retention-days: 7
+          if-no-files-found: error

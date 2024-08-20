@@ -206,6 +206,7 @@ Multiple policy configuration
 
         Windows Components\\Windows Update\\Configure Automatic Updates:
 """
+
 import logging
 
 import salt.utils.data
@@ -284,6 +285,7 @@ def set_(
     user_policy=None,
     cumulative_rights_assignments=True,
     adml_language="en-US",
+    refresh_cache=False,
 ):
     """
     Ensure the specified policy is set.
@@ -322,6 +324,18 @@ def set_(
         adml_language (str):
             The adml language to use for AMDX policy data/display conversions.
             Default is ``en-US``
+
+        refresh_cache (bool):
+            Clear the cached policy definitions before applying the state. This
+            is useful when the underlying policy files (ADMX/ADML) have been
+            added/modified in the same state. This will allow those new policies
+            to be picked up. This adds time to the state run when applied to
+            multiple states within the same run. Therefore, it is best to only
+            apply this to the first policy that is applied. For individual runs
+            this will have no effect. Default is ``False``
+
+            .. versionadded:: 3006.8
+            .. versionadded:: 3007.1
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
     policy_classes = ["machine", "computer", "user", "both"]
@@ -386,6 +400,10 @@ def set_(
         "machine": {"requested_policy": computer_policy, "policy_lookup": {}},
     }
 
+    if refresh_cache:
+        # Remove cached policies so new policies can be picked up
+        __salt__["lgpo.clear_policy_cache"]()
+
     current_policy = {}
     deprecation_comments = []
     for p_class, p_data in pol_data.items():
@@ -418,37 +436,31 @@ def set_(
                             if e_name not in valid_names:
                                 new_e_name = e_name.split(":")[-1].strip()
                                 # If we find an invalid name, test the new
-                                # format. If found, replace the old with the
-                                # new
+                                # format. If found, add to deprecation comments
+                                # and bail
                                 if new_e_name in valid_names:
                                     msg = (
-                                        "The LGPO module changed the way "
-                                        "it gets policy element names.\n"
                                         '"{}" is no longer valid.\n'
                                         'Please use "{}" instead.'
                                         "".format(e_name, new_e_name)
                                     )
-                                    salt.utils.versions.warn_until("Phosphorus", msg)
-                                    pol_data[p_class]["requested_policy"][p_name][
-                                        new_e_name
-                                    ] = pol_data[p_class]["requested_policy"][
-                                        p_name
-                                    ].pop(
-                                        e_name
-                                    )
                                     deprecation_comments.append(msg)
                                 else:
-                                    msg = "Invalid element name: {}".format(e_name)
+                                    msg = f"Invalid element name: {e_name}"
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
-                                    ret["result"] = False
+                                ret["result"] = False
                 else:
                     ret["comment"] = "\n".join(
                         [ret["comment"], lookup["message"]]
                     ).strip()
                     ret["result"] = False
     if not ret["result"]:
+        if deprecation_comments:
+            deprecation_comments.insert(
+                0, "The LGPO module changed the way it gets policy element names."
+            )
         deprecation_comments.append(ret["comment"])
         ret["comment"] = "\n".join(deprecation_comments).strip()
         return ret
@@ -463,17 +475,34 @@ def set_(
         if requested_policy:
             for p_name, p_setting in requested_policy.items():
                 if p_name in current_policy[class_map[p_class]]:
-                    # compare
+                    # compare the requested and current policies
                     log.debug(
-                        "need to compare %s from current/requested " "policy", p_name
+                        "need to compare %s from current/requested policy", p_name
                     )
+
+                    # resolve user names in the requested policy and the current
+                    # policy so that we are comparing apples to apples
+                    if p_data["policy_lookup"][p_name]["rights_assignment"]:
+                        resolved_names = []
+                        for name in p_data["requested_policy"][p_name]:
+                            resolved_names.append(
+                                salt.utils.win_functions.get_sam_name(name)
+                            )
+                        p_data["requested_policy"][p_name] = resolved_names
+                        resolved_names = []
+                        for name in current_policy[class_map[p_class]][p_name]:
+                            resolved_names.append(
+                                salt.utils.win_functions.get_sam_name(name)
+                            )
+                        current_policy[class_map[p_class]][p_name] = resolved_names
+
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(
                         p_data["requested_policy"][p_name], sort_keys=True
-                    ).lower()
+                    )
                     current_policy_json = salt.utils.json.dumps(
                         current_policy[class_map[p_class]][p_name], sort_keys=True
-                    ).lower()
+                    )
 
                     requested_policy_check = salt.utils.json.loads(
                         requested_policy_json
@@ -514,7 +543,7 @@ def set_(
                             )
                             policy_changes.append(p_name)
                     else:
-                        msg = '"{}" is already set'.format(p_name)
+                        msg = f'"{p_name}" is already set'
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)
@@ -560,14 +589,15 @@ def set_(
                         "\n".join(policy_changes)
                     )
                 else:
-                    msg = (
-                        "The following policies are in the correct "
-                        "state:\n{}".format("\n".join(policy_changes))
+                    msg = "Failed to set the following policies:\n{}".format(
+                        "\n".join(policy_changes)
                     )
+                    ret["result"] = False
             else:
                 msg = (
-                    "Errors occurred while attempting to configure "
-                    "policies: {}".format(_ret)
+                    "Errors occurred while attempting to configure policies: {}".format(
+                        _ret
+                    )
                 )
                 ret["result"] = False
             deprecation_comments.append(msg)

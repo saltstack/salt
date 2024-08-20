@@ -76,7 +76,7 @@ def setval(key, val, false_unsets=False, permanent=False):
                 return None
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "%s: Exception occurred when unsetting " "environ key '%s': '%s'",
+                    "%s: Exception occurred when unsetting environ key '%s': '%s'",
                     __name__,
                     key,
                     exc,
@@ -93,7 +93,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             return os.environ[key]
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "%s: Exception occurred when setting" "environ key '%s': '%s'",
+                "%s: Exception occurred when setting environ key '%s': '%s'",
                 __name__,
                 key,
                 exc,
@@ -101,7 +101,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             return False
     else:
         log.debug(
-            "%s: 'val' argument for key '%s' is not a string " "or False: '%s'",
+            "%s: 'val' argument for key '%s' is not a string or False: '%s'",
             __name__,
             key,
             val,
@@ -173,7 +173,7 @@ def setenv(
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                "%s: 'val' argument for key '%s' is not a string " "or False: '%s'",
+                "%s: 'val' argument for key '%s' is not a string or False: '%s'",
                 __name__,
                 key,
                 val,

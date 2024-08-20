@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,13 +8,7 @@
     Test salt.utils.immutabletypes
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
-# Import salt libs
 import salt.utils.immutabletypes as immutabletypes
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

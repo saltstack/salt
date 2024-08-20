@@ -17,36 +17,37 @@ import tempfile
 from contextlib import closing
 
 import pytest
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 def _git_version():
-    try:
-        git_version = subprocess.Popen(
-            ["git", "--version"],
-            shell=False,
-            close_fds=False if salt.utils.platform.is_windows() else True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ).communicate()[0]
-    except OSError:
-        return False
-    if not git_version:
+    git = shutil.which("git")
+    if not git:
         log.debug("Git not installed")
         return False
-    git_version = git_version.strip().split()[-1]
-    git_version = git_version.decode(__salt_system_encoding__)
+    ret = subprocess.run(
+        ["git", "--version"],
+        stdout=subprocess.PIPE,
+        check=False,
+        shell=False,
+        text=True,
+    )
+    # On macOS, the git version is displayed in a different format
+    #  git version 2.21.1 (Apple Git-122.3)
+    # As opposed to:
+    #  git version 2.21.1
+    version_str = ret.stdout.strip().split("(")[0].strip().split()[-1]
+    git_version = LooseVersion(version_str)
     log.debug("Detected git version: %s", git_version)
-    return LooseVersion(git_version)
+    return git_version
 
 
 def _worktrees_supported():
@@ -80,11 +81,9 @@ class GitModuleTest(ModuleCase):
             dir_path.mkdir(parents=True, exist_ok=True)
             for filename in self.files:
                 with salt.utils.files.fopen(str(dir_path / filename), "wb") as fp_:
-                    fp_.write(
-                        "This is a test file named {}.".format(filename).encode("utf-8")
-                    )
+                    fp_.write(f"This is a test file named {filename}.".encode())
         # Navigate to the root of the repo to init, stage, and commit
-        with change_cwd(self.repo):
+        with pytest.helpers.change_cwd(self.repo):
             # Initialize a new git repository
             subprocess.check_call(["git", "init", "--quiet", self.repo])
 
@@ -151,13 +150,9 @@ class GitModuleTest(ModuleCase):
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
             with salt.utils.files.fopen(path, "wb") as fp_:
-                fp_.write(
-                    "This is a test file with relative path {}.\n".format(path).encode(
-                        "utf-8"
-                    )
-                )
+                fp_.write(f"This is a test file with relative path {path}.\n".encode())
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted(f"add '{x}'" for x in files_relpath))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
@@ -172,11 +167,11 @@ class GitModuleTest(ModuleCase):
         with salt.utils.files.fopen(file_path, "w") as fp_:
             fp_.write(
                 salt.utils.stringutils.to_str(
-                    "This is a test file named {}.\n".format(filename)
+                    f"This is a test file named {filename}.\n"
                 )
             )
         ret = self.run_function("git.add", [self.repo, filename])
-        self.assertEqual(ret, "add '{}'".format(filename))
+        self.assertEqual(ret, f"add '{filename}'")
 
     @pytest.mark.slow_test
     def test_archive(self):
@@ -385,13 +380,13 @@ class GitModuleTest(ModuleCase):
                     cwd=self.repo,
                 )
             )
-            log.debug(
-                "Try to set single local value without cwd (should raise " "error)"
-            )
+            log.debug("Try to set single local value without cwd (should raise error)")
             self.assertTrue(
                 "'cwd' argument required unless global=True"
                 in self.run_function(
-                    "git.config_set", ["foo.single"], value=cfg_local["foo.single"][0],
+                    "git.config_set",
+                    ["foo.single"],
+                    value=cfg_local["foo.single"][0],
                 )
             )
             log.debug("Set single local value")
@@ -410,7 +405,7 @@ class GitModuleTest(ModuleCase):
                     "git.config_set",
                     ["foo.single"],
                     value=cfg_global["foo.single"][0],
-                    **{"global": True}
+                    **{"global": True},
                 ),
                 cfg_global["foo.single"],
             )
@@ -430,7 +425,7 @@ class GitModuleTest(ModuleCase):
                     "git.config_set",
                     ["foo.multi"],
                     multivar=cfg_global["foo.multi"],
-                    **{"global": True}
+                    **{"global": True},
                 ),
                 cfg_global["foo.multi"],
             )
@@ -481,7 +476,7 @@ class GitModuleTest(ModuleCase):
                     "git.config_get_regexp",
                     ["foo.(single|multi)"],
                     cwd=self.repo,
-                    **{"global": True}
+                    **{"global": True},
                 ),
                 cfg_global,
             )
@@ -502,7 +497,7 @@ class GitModuleTest(ModuleCase):
                     ["foo.multi"],
                     value_regex="a",
                     cwd=self.repo,
-                    **{"global": True}
+                    **{"global": True},
                 ),
                 {"foo.multi": [x for x in cfg_global["foo.multi"] if "a" in x]},
             )
@@ -512,7 +507,11 @@ class GitModuleTest(ModuleCase):
 
             log.debug("Unset a single local value")
             self.assertTrue(
-                self.run_function("git.config_unset", ["foo.single"], cwd=self.repo,)
+                self.run_function(
+                    "git.config_unset",
+                    ["foo.single"],
+                    cwd=self.repo,
+                )
             )
             log.debug("Unset an entire local multivar")
             self.assertTrue(
@@ -581,7 +580,7 @@ class GitModuleTest(ModuleCase):
         else:
             self.assertEqual(
                 self.run_function("git.init", [new_repo]).lower(),
-                "Initialized empty Git repository in {}/.git/".format(new_repo).lower(),
+                f"Initialized empty Git repository in {new_repo}/.git/".lower(),
             )
 
         shutil.rmtree(new_repo)
@@ -779,7 +778,7 @@ class GitModuleTest(ModuleCase):
         )
         # Remove an entire dir
         expected = "\n".join(
-            sorted(["rm '" + os.path.join(entire_dir, x) + "'" for x in self.files])
+            sorted("rm '" + os.path.join(entire_dir, x) + "'" for x in self.files)
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace("\\", "/")
@@ -835,7 +834,7 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {}.".format(filename)
+                        f"This is a new file named {filename}."
                     )
                 )
             # Stage the new file so it shows up as a 'new' file
@@ -848,7 +847,7 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {}.".format(filename)
+                        f"This is a new file named {filename}."
                     )
                 )
         self.assertEqual(self.run_function("git.status", [self.repo]), changes)
@@ -865,8 +864,9 @@ class GitModuleTest(ModuleCase):
             "refs/heads/master",
         )
 
-    @skipIf(
-        not _worktrees_supported(), "Git 2.5 or newer required for worktree support"
+    @pytest.mark.skipif(
+        not _worktrees_supported(),
+        reason="Git 2.5 or newer required for worktree support",
     )
     @pytest.mark.slow_test
     def test_worktree_add_rm(self):
@@ -878,7 +878,8 @@ class GitModuleTest(ModuleCase):
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
         # get here in the first place.
-        if _git_version() >= LooseVersion("2.6.0"):
+        git_version = _git_version()
+        if git_version >= LooseVersion("2.6.0"):
             worktree_add_prefix = "Preparing "
         else:
             worktree_add_prefix = "Enter "
@@ -894,7 +895,10 @@ class GitModuleTest(ModuleCase):
             worktree_path2 = worktree_path2.replace("\\", "/")
 
         # Add the worktrees
-        ret = self.run_function("git.worktree_add", [self.repo, worktree_path],)
+        ret = self.run_function(
+            "git.worktree_add",
+            [self.repo, worktree_path],
+        )
         self.assertTrue(worktree_add_prefix in ret)
         self.assertTrue(worktree_basename in ret)
         ret = self.run_function("git.worktree_add", [self.repo, worktree_path2])
@@ -912,8 +916,9 @@ class GitModuleTest(ModuleCase):
         self.assertTrue(self.run_function("git.worktree_rm", [worktree_path]))
         # Prune the worktrees
         prune_message = (
-            "Removing worktrees/{}: gitdir file points to non-existent "
-            "location".format(worktree_basename)
+            "Removing worktrees/{}: gitdir file points to non-existent location".format(
+                worktree_basename
+            )
         )
         # Test dry run output. It should match the same output we get when we
         # actually prune the worktrees.

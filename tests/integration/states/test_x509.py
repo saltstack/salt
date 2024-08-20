@@ -6,12 +6,12 @@ import pprint
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -23,8 +23,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.skip(reason="x509 modules are deprecated")
 @pytest.mark.usefixtures("salt_sub_minion")
-@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
+@pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
@@ -184,8 +185,10 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[first_key]["changes"]
         assert "New" in ret[first_key]["changes"]["Certificate"]
         # check whether the second defined cert is considered to match the first one
-        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
-            RUNTIME_VARS.TMP
+        second_key = (
+            "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+                RUNTIME_VARS.TMP
+            )
         )
         assert second_key in ret
         assert "changes" in ret[second_key]
@@ -212,7 +215,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Revoked Certificates" in ret[key]["changes"]["New"]
         self.assertEqual(
             ret[key]["changes"]["Old"],
-            "{}/pki/ca.crl does not exist.".format(RUNTIME_VARS.TMP),
+            f"{RUNTIME_VARS.TMP}/pki/ca.crl does not exist.",
         )
 
     @pytest.mark.slow_test
@@ -259,7 +262,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         assert "Revoked Certificates" in ret[key]["changes"]["New"]
         self.assertEqual(
             ret[key]["changes"]["Old"],
-            "{}/pki/ca.crl is not a valid CRL.".format(RUNTIME_VARS.TMP),
+            f"{RUNTIME_VARS.TMP}/pki/ca.crl is not a valid CRL.",
         )
 
     def test_cert_issue_not_before_not_after(self):
@@ -319,7 +322,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
     def test_issue_41858(self, keyfile, crtfile):
-        ret_key = "x509_|-test_crt_|-{}_|-certificate_managed".format(crtfile)
+        ret_key = f"x509_|-test_crt_|-{crtfile}_|-certificate_managed"
         signing_policy = "no_such_policy"
         ret = self.run_function(
             "state.apply",
@@ -349,7 +352,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
     def test_compound_match_minion_have_correct_grain_value(self, keyfile, crtfile):
-        ret_key = "x509_|-test_crt_|-{}_|-certificate_managed".format(crtfile)
+        ret_key = f"x509_|-test_crt_|-{crtfile}_|-certificate_managed"
         signing_policy = "compound_match"
         ret = self.run_function(
             "state.apply",
@@ -383,7 +386,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             minion_tgt="sub_minion",
         )
 
-        ret_key = "x509_|-test_crt_|-{}_|-certificate_managed".format(crtfile)
+        ret_key = f"x509_|-test_crt_|-{crtfile}_|-certificate_managed"
         signing_policy = "compound_match"
         self.run_function(
             "state.apply",
@@ -416,7 +419,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ["x509.self_signed"],
             pillar={"keyfile": keyfile, "crtfile": crtfile},
         )
-        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(crtfile)
+        key = f"x509_|-self_signed_cert_|-{crtfile}_|-certificate_managed"
         self.assertIn("New", first_run[key]["changes"]["Certificate"])
         self.assertEqual(
             "Certificate is valid and up to date",
@@ -459,7 +462,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                 "days_remaining": 10,
             },
         )
-        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(crtfile)
+        key = f"x509_|-self_signed_cert_|-{crtfile}_|-certificate_managed"
         self.assertEqual(
             "Certificate is valid and up to date",
             first_run[key]["changes"]["Status"]["New"],
@@ -485,7 +488,8 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             },
         )
         self.assertEqual(
-            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            "Certificate needs renewal: 29 days remaining but it needs to be at"
+            " least 90",
             second_run[key]["changes"]["Status"]["Old"],
         )
         expiry = datetime.datetime.strptime(
@@ -519,7 +523,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                 "subjectAltName": "DNS:alt.service.local",
             },
         )
-        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(crtfile)
+        key = f"x509_|-self_signed_cert_|-{crtfile}_|-certificate_managed"
         self.assertEqual(
             "Certificate is valid and up to date",
             first_run[key]["changes"]["Status"]["New"],
@@ -609,7 +613,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ["x509.self_signed_different_properties"],
             pillar={"keyfile": keyfile, "crtfile": crtfile, "fileMode": "0755"},
         )
-        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(crtfile)
+        key = f"x509_|-self_signed_cert_|-{crtfile}_|-certificate_managed"
         self.assertEqual(
             "Certificate is valid and up to date",
             first_run[key]["changes"]["Status"]["New"],
@@ -654,7 +658,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             pillar={"keyfile": keyfile, "crtfile": bad_crtfile},
         )
 
-        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(bad_crtfile)
+        key = f"x509_|-self_signed_cert_|-{bad_crtfile}_|-certificate_managed"
         self.assertFalse(ret[key]["result"], "State should have failed.")
         self.assertEqual({}, ret[key]["changes"])
         self.assertFalse(

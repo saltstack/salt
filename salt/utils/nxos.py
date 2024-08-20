@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,6 @@
 """
 Util functions for the NXOS modules.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import http.client
@@ -54,7 +52,7 @@ class UHTTPConnection(http.client.HTTPConnection):
         self.sock = sock
 
 
-class NxapiClient(object):
+class NxapiClient:
     """
     Class representing an NX-API client that connects over http(s) or
     unix domain socket (UDS).
@@ -85,7 +83,7 @@ class NxapiClient(object):
         if self.nxargs["connect_over_uds"]:
             if not os.path.exists(self.NXAPI_UDS):
                 raise NxosClientError(
-                    "No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS)
+                    f"No host specified and no UDS found at {self.NXAPI_UDS}\n"
                 )
 
             # Create UHTTPConnection object for NX-API communication over UDS.
@@ -192,7 +190,7 @@ class NxapiClient(object):
                 header_dict=req["headers"],
                 decode=True,
                 decode_type="json",
-                **self.nxargs
+                **self.nxargs,
             )
 
         return self.parse_response(response, command_list)
@@ -204,9 +202,9 @@ class NxapiClient(object):
         # Check for 500 level NX-API Server Errors
         if isinstance(response, Iterable) and "status" in response:
             if int(response["status"]) >= 500:
-                raise NxosError("{}".format(response))
+                raise NxosError(f"{response}")
             else:
-                raise NxosError("NX-API Request Not Supported: {}".format(response))
+                raise NxosError(f"NX-API Request Not Supported: {response}")
 
         if isinstance(response, Iterable):
             body = response["dict"]
@@ -220,7 +218,7 @@ class NxapiClient(object):
         # Don't just return body['ins_api']['outputs']['output'] directly.
         output = body.get("ins_api")
         if output is None:
-            raise NxosClientError("Unexpected JSON output\n{0}".format(body))
+            raise NxosClientError(f"Unexpected JSON output\n{body}")
         if output.get("outputs"):
             output = output["outputs"]
         if output.get("output"):
@@ -259,9 +257,9 @@ class NxapiClient(object):
                     }
                 )
             elif code == "413":
-                raise NxosRequestNotSupported("Error 413: {}".format(msg))
+                raise NxosRequestNotSupported(f"Error 413: {msg}")
             elif code != "200":
-                raise NxosError("Unknown Error: {}, Code: {}".format(msg, code))
+                raise NxosError(f"Unknown Error: {msg}, Code: {code}")
             else:
                 previous_commands.append(cmd)
                 result.append(cmd_result["body"])
@@ -323,7 +321,7 @@ def ping(**kwargs):
 
 
 def _parser(block):
-    return re.compile("^{block}\n(?:^[ \n].*$\n?)+".format(block=block), re.MULTILINE)
+    return re.compile(f"^{block}\n(?:^[ \n].*$\n?)+", re.MULTILINE)
 
 
 def _parse_software(data):

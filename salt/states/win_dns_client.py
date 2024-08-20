@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for configuring DNS Client on Windows systems
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -55,7 +53,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
     # Do nothing is already configured
     configured_list = __salt__["win_dns_client.get_dns_servers"](interface)
     if configured_list == servers:
-        ret["comment"] = "{0} are already configured".format(servers)
+        ret["comment"] = f"{servers} are already configured"
         ret["changes"] = {}
         ret["result"] = True
         return ret
@@ -70,7 +68,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                 ret["changes"]["Servers Added"].append(server)
         else:
             if not __salt__["win_dns_client.add_dns"](server, interface, i + 1):
-                ret["comment"] = ("Failed to add {0} as DNS server number {1}").format(
+                ret["comment"] = "Failed to add {} as DNS server number {}".format(
                     server, i + 1
                 )
                 ret["result"] = False
@@ -92,8 +90,8 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                 else:
                     if not __salt__["win_dns_client.rm_dns"](server, interface):
                         ret["comment"] = (
-                            "Failed to remove {0} from DNS server list"
-                        ).format(server)
+                            f"Failed to remove {server} from DNS server list"
+                        )
                         ret["result"] = False
                         return ret
                     else:
@@ -111,7 +109,7 @@ def dns_dhcp(name, interface="Local Area Connection"):
     # Check the config
     config = __salt__["win_dns_client.get_dns_config"](interface)
     if config == "dhcp":
-        ret["comment"] = "{0} already configured with DNS from DHCP".format(interface)
+        ret["comment"] = f"{interface} already configured with DNS from DHCP"
         return ret
     else:
         ret["changes"] = {"dns": "configured from DHCP"}
@@ -124,7 +122,7 @@ def dns_dhcp(name, interface="Local Area Connection"):
     ret["result"] = __salt__["win_dns_client.dns_dhcp"](interface)
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = ('Could not configure "{0}" DNS servers from DHCP').format(
+        ret["comment"] = 'Could not configure "{}" DNS servers from DHCP'.format(
             interface
         )
 
@@ -210,7 +208,7 @@ def primary_suffix(name, suffix=None, updates=False):
             return ret
         # Changes to update policy needed
         else:
-            ret["comment"] = "{0} suffix updates".format(updates_operation)
+            ret["comment"] = f"{updates_operation} suffix updates"
             ret["changes"] = {
                 "old": {"updates": reg_data["updates"]["old"]},
                 "new": {"updates": reg_data["updates"]["new"]},
@@ -219,10 +217,10 @@ def primary_suffix(name, suffix=None, updates=False):
     else:
         # Changes to updates policy needed
         if reg_data["updates"]["new"] != reg_data["updates"]["old"]:
-            ret[
-                "comment"
-            ] = "Updated primary DNS suffix ({0}) and {1} suffix updates".format(
-                suffix, updates_operation
+            ret["comment"] = (
+                "Updated primary DNS suffix ({}) and {} suffix updates".format(
+                    suffix, updates_operation
+                )
             )
             ret["changes"] = {
                 "old": {
@@ -236,7 +234,7 @@ def primary_suffix(name, suffix=None, updates=False):
             }
         # No changes to updates policy needed
         else:
-            ret["comment"] = "Updated primary DNS suffix ({0})".format(suffix)
+            ret["comment"] = f"Updated primary DNS suffix ({suffix})"
             ret["changes"] = {
                 "old": {"suffix": reg_data["suffix"]["old"]},
                 "new": {"suffix": reg_data["suffix"]["new"]},

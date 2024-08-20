@@ -1,0 +1,27 @@
+  <%- for backend in ("onedir", "src") %>
+  <%- set job_name = "build-pkgs-{}".format(backend) %>
+  <%- if backend == "src" %>
+    <%- do conclusion_needs.append(job_name) %>
+  <%- endif %>
+
+  <{ job_name }>:
+    name: Build Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      relenv-version: "<{ relenv_version }>"
+      python-version: "<{ python_version }>"
+      source: "<{ backend }>"
+    <%- if gh_environment != "ci" %>
+      environment: <{ gh_environment }>
+      sign-macos-packages: true
+      sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
+    secrets: inherit
+    <%- endif %>
+
+  <%- endfor %>

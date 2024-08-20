@@ -1,6 +1,7 @@
 """
 Module for managing timezone on Windows systems.
 """
+
 import logging
 from datetime import datetime
 
@@ -218,7 +219,10 @@ def get_zone():
         raise CommandExecutionError(
             "tzutil encountered an error getting timezone", info=res
         )
-    tz = res["stdout"].lower().strip("_dstoff")
+    tz = res["stdout"].lower()
+    if tz.endswith("_dstoff"):
+        tz = tz[:-7]
+
     return mapper.get_unix(tz, "Unknown")
 
 
@@ -290,14 +294,14 @@ def set_zone(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     # Set the value
     cmd = ["tzutil", "/s", win_zone]
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     if res["retcode"]:
         raise CommandExecutionError(
-            "tzutil encountered an error setting " "timezone: {}".format(timezone),
+            f"tzutil encountered an error setting timezone: {timezone}",
             info=res,
         )
     return zone_compare(timezone)
@@ -332,7 +336,7 @@ def zone_compare(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}" "".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     return get_zone() == mapper.get_unix(check_zone, "Unknown")
 

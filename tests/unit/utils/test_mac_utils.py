@@ -2,11 +2,12 @@
 mac_utils tests
 """
 
-
 import os
 import plistlib
 import subprocess
 import xml.parsers.expat
+
+import pytest
 
 import salt.modules.cmdmod as cmd
 import salt.utils.mac_utils as mac_utils
@@ -14,10 +15,10 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, MockTimedProc, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_darwin(), "These tests run only on mac")
+@pytest.mark.skip_unless_on_darwin
 class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     """
     test mac_utils salt utility
@@ -300,7 +301,10 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists")
     @patch("salt.utils.mac_utils.__salt__")
     def test_available_services_binary_plist(
-        self, mock_run, mock_exists, mock_os_walk,
+        self,
+        mock_run,
+        mock_exists,
+        mock_os_walk,
     ):
         """
         test available_services handles binary plist files.

@@ -21,6 +21,7 @@ node and the local ``salt-master`` daemon.  This gives the Master node control
 over the Minion nodes attached to the ``salt-master`` daemon running on the
 Syndic node.
 
+
 Configuring the Syndic
 ======================
 
@@ -61,6 +62,10 @@ the Syndic just as with a Minion.
 The :conf_master:`order_masters` option configures the Master node to send
 extra information with its publications that is needed by Syndic nodes
 connected directly to it.
+
+.. warning::
+   The syndic process must be run as the same user as the syndic master.
+
 
 .. note::
 

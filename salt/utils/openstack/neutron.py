@@ -2,7 +2,6 @@
 Neutron class
 """
 
-
 import logging
 
 import salt.utils.versions
@@ -11,8 +10,8 @@ from salt import exceptions
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
-    from neutronclient.v2_0 import client
     from neutronclient.shell import NeutronShell
+    from neutronclient.v2_0 import client
 
     HAS_NEUTRON = True
 except ImportError:
@@ -89,16 +88,20 @@ class SaltNeutron(NeutronShell):
         use_keystoneauth=False,
         **kwargs
     ):
-
         """
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Sulfur",
-            (
-                "The neutron module has been deprecated and will be removed in {version}.  "
-                "Please update to using the neutronng module"
-            ),
+            3008,
+            "The neutron module has been deprecated and will be removed in {version}.\n"
+            "This includes\n"
+            "* salt.utils.openstack.neutron\n"
+            "* salt.modules.neutron\n"
+            "* salt.pillar.neutron\n"
+            "Please migrate to neutronng.\n"
+            "salt.modules.neutron -> salt.modules.neutronng\n"
+            "salt.pillar.neutron -> salt.pillar.neutronng\n"
+            "Please update to using the neutronng module",
         )
         if not HAS_NEUTRON:
             return None

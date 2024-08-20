@@ -1,0 +1,34 @@
+---
+name: setup-actionlint
+description: Setup actionlint
+
+inputs:
+  version:
+    description: The version of actionlint
+    default: 1.6.26
+  cache-seed:
+    required: true
+    description: Seed used to invalidate caches
+
+
+runs:
+  using: composite
+  steps:
+
+    - name: Cache actionlint Binary
+      uses: ./.github/actions/cache
+      with:
+        path: /usr/local/bin/actionlint
+        key: ${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|actionlint|${{ inputs.version }}
+
+    - name: Setup actionlint
+      shell: bash
+      run: |
+        if ! command -v actionlint; then
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) ${{ inputs.version }}
+          mv ./actionlint /usr/local/bin/actionlint
+        fi
+    - name: Show actionlint Version
+      shell: bash
+      run: |
+        actionlint --version

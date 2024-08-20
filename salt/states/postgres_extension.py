@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL extensions
 ===================================
@@ -13,12 +12,9 @@ A module used to install and manage PostgreSQL extensions.
 
 .. versionadded:: 2014.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import salt libs
 from salt.modules import postgres
 
 log = logging.getLogger(__name__)
@@ -97,7 +93,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Extension {0} is already present".format(name),
+        "comment": f"Extension {name} is already present",
     }
     db_args = {
         "maintenance_db": maintenance_db,
@@ -128,7 +124,7 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             if mode:
-                ret["comment"] = "Extension {0} is set to be {1}ed".format(
+                ret["comment"] = "Extension {} is set to be {}ed".format(
                     name, mode
                 ).replace("eed", "ed")
             return ret
@@ -139,17 +135,17 @@ def present(
             schema=schema,
             ext_version=ext_version,
             from_version=from_version,
-            **db_args
+            **db_args,
         )
     if cret:
         if mode.endswith("e"):
             suffix = "d"
         else:
             suffix = "ed"
-        ret["comment"] = "The extension {0} has been {1}{2}".format(name, mode, suffix)
-        ret["changes"][name] = "{0}{1}".format(mode.capitalize(), suffix)
+        ret["comment"] = f"The extension {name} has been {mode}{suffix}"
+        ret["changes"][name] = f"{mode.capitalize()}{suffix}"
     elif cret is not None:
-        ret["comment"] = "Failed to {1} extension {0}".format(name, mode)
+        ret["comment"] = f"Failed to {mode} extension {name}"
         ret["result"] = False
 
     return ret
@@ -214,21 +210,21 @@ def absent(
     if exists:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Extension {0} is set to be removed".format(name)
+            ret["comment"] = f"Extension {name} is set to be removed"
             return ret
         if __salt__["postgres.drop_extension"](
             name, if_exists=if_exists, restrict=restrict, cascade=cascade, **db_args
         ):
-            ret["comment"] = "Extension {0} has been removed".format(name)
+            ret["comment"] = f"Extension {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Extension {0} failed to be removed".format(name)
+            ret["comment"] = f"Extension {name} failed to be removed"
             return ret
     else:
-        ret[
-            "comment"
-        ] = "Extension {0} is not present, so it cannot " "be removed".format(name)
+        ret["comment"] = "Extension {} is not present, so it cannot be removed".format(
+            name
+        )
 
     return ret

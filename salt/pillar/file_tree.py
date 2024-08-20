@@ -512,7 +512,8 @@ def _ext_pillar(
         else:
             if debug is True:
                 log.debug(
-                    "file_tree: no nodegroups found in file tree directory %s, skipping...",
+                    "file_tree: no nodegroups found in file tree directory %s,"
+                    " skipping...",
                     ext_pillar_dirs,
                 )
     else:
@@ -523,7 +524,8 @@ def _ext_pillar(
     if not os.path.exists(host_dir):
         if debug is True:
             log.debug(
-                "file_tree: no pillar data for minion %s found in file tree directory %s",
+                "file_tree: no pillar data for minion %s found in file tree"
+                " directory %s",
                 minion_id,
                 host_dir,
             )

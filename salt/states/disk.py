@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Disk monitoring state
 
@@ -43,12 +42,8 @@ specify the ``absolute`` flag:
         - maximum: 1048576 KB
         - absolute: True
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from os import path
-
-# Import salt libs
-from salt.ext.six import string_types
 
 __monitor__ = [
     "status",
@@ -63,11 +58,11 @@ def _validate_int(name, value, limits=(), strip="%"):
     comment = ""
     # Must be integral
     try:
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = value.strip(" " + strip)
         value = int(value)
     except (TypeError, ValueError):
-        comment += "{0} must be an integer ".format(name)
+        comment += f"{name} must be an integer "
     # Must be in range
     else:
         if len(limits) == 2:
@@ -96,7 +91,7 @@ def _status_mount(name, ret, minimum, maximum, absolute, free, data):
 def _status_path(directory, ret, minimum, maximum, absolute, free):
     if path.isdir(directory) is False:
         ret["result"] = False
-        ret["comment"] += "Directory {0} does not exist or is not a directory".format(
+        ret["comment"] += "Directory {} does not exist or is not a directory".format(
             directory
         )
         return ret
@@ -142,9 +137,9 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
         else:
             if used < minimum:
                 ret["comment"] = (
-                    "Disk used space is below minimum"
-                    " of {0} {2} at {1} {2}"
-                    "".format(minimum, used, unit)
+                    "Disk used space is below minimum of {0} {2} at {1} {2}".format(
+                        minimum, used, unit
+                    )
                 )
                 return ret
     if maximum is not None:
@@ -159,9 +154,9 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
         else:
             if used > maximum:
                 ret["comment"] = (
-                    "Disk used space is above maximum"
-                    " of {0} {2} at {1} {2}"
-                    "".format(maximum, used, unit)
+                    "Disk used space is above maximum of {0} {2} at {1} {2}".format(
+                        maximum, used, unit
+                    )
                 )
                 return ret
     ret["comment"] = "Disk used space in acceptable range"
@@ -224,7 +219,7 @@ def status(name, maximum=None, minimum=None, absolute=False, free=False):
 
     # Validate name
     if name not in data:
-        ret["comment"] += "Disk mount {0} not present. ".format(name)
+        ret["comment"] += f"Disk mount {name} not present. "
         return _status_path(name, ret, minimum, maximum, absolute, free)
     else:
         return _status_mount(name, ret, minimum, maximum, absolute, free, data)

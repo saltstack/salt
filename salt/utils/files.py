@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Functions for working with files
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -17,19 +14,13 @@ import stat
 import subprocess
 import tempfile
 import time
+import urllib.parse
 
 import salt.modules.selinux
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
-from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -55,7 +46,7 @@ HASHES = {
     "sha1": 40,
     "md5": 32,
 }
-HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
+HASHES_REVMAP = {y: x for x, y in HASHES.items()}
 
 
 def __clean_tmp(tmp):
@@ -64,8 +55,12 @@ def __clean_tmp(tmp):
     """
     try:
         rm_rf(tmp)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "Exception while removing temp directory: %s",
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
 
 
 def guess_archive_type(name):
@@ -135,9 +130,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     specified cache the file.
     """
     if not os.path.isfile(source):
-        raise IOError("[Errno 2] No such file or directory: {0}".format(source))
+        raise OSError(f"[Errno 2] No such file or directory: {source}")
     if not os.path.isdir(os.path.dirname(dest)):
-        raise IOError("[Errno 2] No such file or directory: {0}".format(dest))
+        raise OSError(f"[Errno 2] No such file or directory: {dest}")
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
@@ -203,9 +198,7 @@ def rename(src, dst):
             os.remove(dst)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise MinionError(
-                    "Error: Unable to remove {0}: {1}".format(dst, exc.strerror)
-                )
+                raise MinionError(f"Error: Unable to remove {dst}: {exc.strerror}")
         os.rename(src, dst)
 
 
@@ -217,7 +210,7 @@ def process_read_exception(exc, path, ignore=None):
     integer error code) that should be ignored.
     """
     if ignore is not None:
-        if isinstance(ignore, six.integer_types):
+        if isinstance(ignore, int):
             ignore = (ignore,)
     else:
         ignore = ()
@@ -226,12 +219,12 @@ def process_read_exception(exc, path, ignore=None):
         return
 
     if exc.errno == errno.ENOENT:
-        raise CommandExecutionError("{0} does not exist".format(path))
+        raise CommandExecutionError(f"{path} does not exist")
     elif exc.errno == errno.EACCES:
-        raise CommandExecutionError("Permission denied reading from {0}".format(path))
+        raise CommandExecutionError(f"Permission denied reading from {path}")
     else:
         raise CommandExecutionError(
-            "Error {0} encountered reading from {1}: {2}".format(
+            "Error {} encountered reading from {}: {}".format(
                 exc.errno, path, exc.strerror
             )
         )
@@ -242,7 +235,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
     """
     Obtain a write lock. If one exists, wait for it to release first
     """
-    if not isinstance(path, six.string_types):
+    if not isinstance(path, str):
         raise FileLockError("path must be a string")
     if lock_fn is None:
         lock_fn = path + ".w"
@@ -258,7 +251,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
     try:
         if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error("lock_fn {0} exists and is not a file".format(lock_fn))
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -267,10 +260,10 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 # exception if the file already exists. Concept found here:
                 # http://stackoverflow.com/a/10979569
                 fh_ = os.open(lock_fn, open_flags)
-            except (IOError, OSError) as exc:
+            except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     _raise_error(
-                        "Error {0} encountered obtaining file lock {1}: {2}".format(
+                        "Error {} encountered obtaining file lock {}: {}".format(
                             exc.errno, lock_fn, exc.strerror
                         )
                     )
@@ -290,7 +283,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
         else:
             _raise_error(
-                "Timeout of {0} seconds exceeded waiting for lock_fn {1} "
+                "Timeout of {} seconds exceeded waiting for lock_fn {} "
                 "to be released".format(timeout, lock_fn)
             )
 
@@ -298,9 +291,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
-        _raise_error(
-            "Error encountered obtaining file lock {0}: {1}".format(lock_fn, exc)
-        )
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
         if obtained_lock:
@@ -326,8 +317,8 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
+        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
         try:
-            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
             os.umask(orig_mask)  # pylint: disable=blacklisted-function
@@ -346,22 +337,16 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     """
-    if six.PY3:
-        try:
-            # Don't permit stdin/stdout/stderr to be opened. The boolean False
-            # and True are treated by Python 3's open() as file descriptors 0
-            # and 1, respectively.
-            if args[0] in (0, 1, 2):
-                raise TypeError(
-                    "{0} is not a permitted file descriptor".format(args[0])
-                )
-        except IndexError:
-            pass
+    try:
+        # Don't permit stdin/stdout/stderr to be opened. The boolean False
+        # and True are treated by Python 3's open() as file descriptors 0
+        # and 1, respectively.
+        if args[0] in (0, 1, 2):
+            raise TypeError(f"{args[0]} is not a permitted file descriptor")
+    except IndexError:
+        pass
     binary = None
-    # ensure 'binary' mode is always used on Windows in Python 2
-    if (
-        six.PY2 and salt.utils.platform.is_windows() and "binary" not in kwargs
-    ) or kwargs.pop("binary", False):
+    if kwargs.pop("binary", None):
         if len(args) > 1:
             args = list(args)
             if "b" not in args[1]:
@@ -376,7 +361,7 @@ def fopen(*args, **kwargs):
         else:
             # the default is to read
             kwargs["mode"] = "rb"
-    elif six.PY3 and "encoding" not in kwargs:
+    if "encoding" not in kwargs:
         # In Python 3, if text mode is used and the encoding
         # is not specified, set the encoding to 'utf-8'.
         binary = False
@@ -390,10 +375,20 @@ def fopen(*args, **kwargs):
         if not binary:
             kwargs["encoding"] = __salt_system_encoding__
 
-    if six.PY3 and not binary and not kwargs.get("newline", None):
+    if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    # Workaround callers with bad buffering setting for binary files
+    if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
+        log.debug(
+            "Line buffering (buffering=1) isn't supported in binary mode, "
+            "the default buffer size will be used"
+        )
+        kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
+
+    f_handle = open(  # pylint: disable=resource-leakage,unspecified-encoding
+        *args, **kwargs
+    )
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -491,7 +486,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = os.listdir(top)
-    except os.error as err:
+    except OSError as err:
         if onerror is not None:
             onerror(err)
         return
@@ -518,8 +513,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
     for name in dirs:
         new_path = os.path.join(top, name)
         if followlinks or not os.path.islink(new_path):
-            for x in safe_walk(new_path, topdown, onerror, followlinks, _seen):
-                yield x
+            yield from safe_walk(new_path, topdown, onerror, followlinks, _seen)
     if not topdown:
         yield top, dirs, nondirs
 
@@ -530,7 +524,7 @@ def safe_rm(tgt):
     """
     try:
         os.remove(tgt)
-    except (IOError, OSError):
+    except OSError:
         pass
 
 
@@ -596,7 +590,7 @@ def is_fcntl_available(check_sunos=False):
 def safe_filename_leaf(file_basename):
     """
     Input the basename of a file, without the directory tree, and returns a safe name to use
-    i.e. only the required characters are converted by urllib.quote
+    i.e. only the required characters are converted by urllib.parse.quote
     If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
     For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
     windows is \\ / : * ? " < > | posix is /
@@ -607,14 +601,14 @@ def safe_filename_leaf(file_basename):
     """
 
     def _replace(re_obj):
-        return quote(re_obj.group(0), safe="")
+        return urllib.parse.quote(re_obj.group(0), safe="")
 
-    if not isinstance(file_basename, six.text_type):
+    if not isinstance(file_basename, str):
         # the following string is not prefixed with u
         return re.sub(
             '[\\\\:/*?"<>|]',
             _replace,
-            six.text_type(file_basename, "utf8").encode("ascii", "backslashreplace"),
+            str(file_basename, "utf8").encode("ascii", "backslashreplace"),
         )
     # the following string is prefixed with u
     return re.sub('[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
@@ -633,9 +627,7 @@ def safe_filepath(file_path_name, dir_sep=None):
         dir_sep = os.sep
     # Normally if file_path_name or dir_sep is Unicode then the output will be Unicode
     # This code ensure the output type is the same as file_path_name
-    if not isinstance(file_path_name, six.text_type) and isinstance(
-        dir_sep, six.text_type
-    ):
+    if not isinstance(file_path_name, str) and isinstance(dir_sep, str):
         dir_sep = dir_sep.encode("ascii")  # This should not be executed under PY3
     # splitdrive only set drive on windows platform
     (drive, path) = os.path.splitdrive(file_path_name)
@@ -655,7 +647,10 @@ def is_text(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     """
-    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
+
+    def int2byte(x):
+        return bytes((x,))
+
     text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
     try:
         block = fp_.read(blocksize)
@@ -665,7 +660,7 @@ def is_text(fp_, blocksize=512):
         try:
             with fopen(fp_, "rb") as fp2_:
                 block = fp2_.read(blocksize)
-        except IOError:
+        except OSError:
             # Unable to open file, bail out and return false
             return False
     if b"\x00" in block:
@@ -696,12 +691,11 @@ def is_binary(path):
         with fopen(path, "rb") as fp_:
             try:
                 data = fp_.read(2048)
-                if six.PY3:
-                    data = data.decode(__salt_system_encoding__)
+                data = data.decode(__salt_system_encoding__)
                 return salt.utils.stringutils.is_binary(data)
             except UnicodeDecodeError:
                 return True
-    except os.error:
+    except OSError:
         return False
 
 
@@ -753,10 +747,9 @@ def normalize_mode(mode):
     """
     if mode is None:
         return None
-    if not isinstance(mode, six.string_types):
-        mode = six.text_type(mode)
-    if six.PY3:
-        mode = mode.replace("0o", "0")
+    if not isinstance(mode, str):
+        mode = str(mode)
+    mode = mode.replace("0o", "0")
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
     # This ensures that somethign like '00644' is normalized to '0644'
     return mode.strip('"').strip("'").lstrip("0").zfill(4)
@@ -767,11 +760,11 @@ def human_size_to_bytes(human_size):
     Convert human-readable units to bytes
     """
     size_exp_map = {"K": 1, "M": 2, "G": 3, "T": 4, "P": 5}
-    human_size_str = six.text_type(human_size)
+    human_size_str = str(human_size)
     match = re.match(r"^(\d+)([KMGTP])?$", human_size_str)
     if not match:
         raise ValueError(
-            "Size must be all digits, with an optional unit type " "(K, M, G, T, or P)"
+            "Size must be all digits, with an optional unit type (K, M, G, T, or P)"
         )
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
@@ -789,20 +782,34 @@ def backup_minion(path, bkroot):
         src_dir = dname[1:]
     if not salt.utils.platform.is_windows():
         fstat = os.stat(path)
-    msecs = six.text_type(int(time.time() * 1000000))[-6:]
+    msecs = str(int(time.time() * 1000000))[-6:]
     if salt.utils.platform.is_windows():
         # ':' is an illegal filesystem path character on Windows
         stamp = time.strftime("%a_%b_%d_%H-%M-%S_%Y")
     else:
         stamp = time.strftime("%a_%b_%d_%H:%M:%S_%Y")
-    stamp = "{0}{1}_{2}".format(stamp[:-4], msecs, stamp[-4:])
-    bkpath = os.path.join(bkroot, src_dir, "{0}_{1}".format(bname, stamp))
+    stamp = f"{stamp[:-4]}{msecs}_{stamp[-4:]}"
+    bkpath = os.path.join(bkroot, src_dir, f"{bname}_{stamp}")
     if not os.path.isdir(os.path.dirname(bkpath)):
         os.makedirs(os.path.dirname(bkpath))
     shutil.copyfile(path, bkpath)
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
+
+
+def case_insensitive_filesystem(path=None):
+    """
+    Detect case insensitivity on a system.
+
+    Returns:
+        bool: Flag to indicate case insensitivity
+
+    .. versionadded:: 3004
+
+    """
+    with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
+        return os.path.exists(tmp_file.name.lower())
 
 
 def get_encoding(path):
@@ -862,11 +869,6 @@ def get_encoding(path):
         except UnicodeDecodeError:
             return False
         else:
-            # Reject surrogate characters in Py2 (Py3 behavior)
-            if six.PY2:
-                for char in decoded:
-                    if 0xD800 <= ord(char) <= 0xDFFF:
-                        return False
             return True
 
     def check_system_encoding(_data):
@@ -882,7 +884,7 @@ def get_encoding(path):
     try:
         with fopen(path, "rb") as fp_:
             data = fp_.read(2048)
-    except os.error:
+    except OSError:
         raise CommandExecutionError("Failed to open file")
 
     # Check for Unicode BOM

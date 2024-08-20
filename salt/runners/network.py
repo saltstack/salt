@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Network tools to run from the Master
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import socket
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.network
 import salt.utils.stringutils
@@ -36,11 +31,11 @@ def wollist(maclist, bcast="255.255.255.255", destport=9):
             for mac in ifile:
                 mac = salt.utils.stringutils.to_unicode(mac).strip()
                 wol(mac, bcast, destport)
-                print("Waking up {0}".format(mac))
+                print(f"Waking up {mac}")
                 ret.append(mac)
     except Exception as err:  # pylint: disable=broad-except
         __jid_event__.fire_event(
-            {"error": "Failed to open the MAC file. Error: {0}".format(err)}, "progress"
+            {"error": f"Failed to open the MAC file. Error: {err}"}, "progress"
         )
         return []
     return ret
@@ -79,7 +74,7 @@ def wolmatch(tgt, tgt_type="glob", bcast="255.255.255.255", destport=9):
     ret = []
     minions = __salt__["cache.grains"](tgt, tgt_type)
     for minion in minions:
-        for iface, mac in minion["hwaddr_interfaces"].items():
+        for iface, mac in minions[minion]["hwaddr_interfaces"].items():
             if iface == "lo":
                 continue
             mac = mac.strip()

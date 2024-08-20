@@ -1,0 +1,189 @@
+---
+name: Build Packaging Dependencies Onedir
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      github-hosted-runners:
+        type: boolean
+        required: true
+      self-hosted-runners:
+        type: boolean
+        required: true
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      relenv-version:
+        required: true
+        type: string
+        description: The version of relenv to use
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
+
+env:
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+
+  build-deps-linux:
+    name: Linux
+    if: ${{ inputs.self-hosted-runners }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - arm64
+    runs-on:
+      - self-hosted
+      - linux
+      - medium
+      - ${{ matrix.arch }}
+    env:
+      USE_S3_CACHE: 'true'
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|linux|${{ matrix.arch }}
+
+      - name: Setup Relenv
+        id: setup-relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+
+  build-deps-macos:
+    name: macOS
+    if: ${{ inputs.github-hosted-runners }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+    runs-on:
+      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+    env:
+      USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|macos
+
+      - name: Setup Relenv
+        id: setup-relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: macos
+          arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
+        with:
+          platform: macos
+          arch: ${{ matrix.arch }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+
+  build-deps-windows:
+    name: Windows
+    if: ${{ inputs.github-hosted-runners }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86
+          - amd64
+    runs-on: windows-latest
+    env:
+      USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|windows|${{ matrix.arch }}
+
+      - name: Setup Relenv
+        id: setup-relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}

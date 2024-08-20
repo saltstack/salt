@@ -1,37 +1,23 @@
-# -*- coding: utf-8 -*-
-
-# Import python
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import subprocess
 import time
 
-# Import salt libs
-import salt.utils.path
+import pytest
 
-# Import 3rd-party libs
-from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
-@skipIf(six.PY3, "supervisor does not work under python 3")
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
-)
-@skipIf(salt.utils.path.which("supervisorctl") is None, "supervisord not installed")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
+@pytest.mark.skip_if_binaries_missing("supervisorctl")
 class SupervisordModuleTest(ModuleCase):
     """
     Validates the supervisorctl functions.
     """
 
     def setUp(self):
-        super(SupervisordModuleTest, self).setUp()
+        super().setUp()
 
         self.venv_test_dir = os.path.join(RUNTIME_VARS.TMP, "supervisortests")
         self.venv_dir = os.path.join(self.venv_test_dir, "venv")

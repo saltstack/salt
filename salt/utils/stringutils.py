@@ -2,7 +2,6 @@
 Functions for manipulating or otherwise processing strings
 """
 
-
 import base64
 import difflib
 import errno
@@ -14,7 +13,6 @@ import shlex
 import time
 import unicodedata
 
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
@@ -51,7 +49,7 @@ def to_bytes(s, encoding=None, errors="strict"):
         # raised, otherwise we would have already returned (or raised some
         # other exception).
         raise exc  # pylint: disable=raising-bad-type
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 def to_str(s, encoding=None, errors="strict", normalize=False):
@@ -74,8 +72,6 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    # This shouldn't be six.string_types because if we're on PY2 and we already
-    # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
 
@@ -91,7 +87,7 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
         # raised, otherwise we would have already returned (or raised some
         # other exception).
         raise exc  # pylint: disable=raising-bad-type
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 def to_unicode(s, encoding=None, errors="strict", normalize=False):
@@ -115,7 +111,7 @@ def to_unicode(s, encoding=None, errors="strict", normalize=False):
         return _normalize(s)
     elif isinstance(s, (bytes, bytearray)):
         return _normalize(to_str(s, encoding, errors))
-    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    raise TypeError(f"expected str, bytes, or bytearray not {type(s)}")
 
 
 @jinja_filter("str_to_num")
@@ -226,31 +222,36 @@ def contains_whitespace(text):
     return any(x.isspace() for x in text)
 
 
-def human_to_bytes(size):
+@jinja_filter("human_to_bytes")
+def human_to_bytes(size, default_unit="B", handle_metric=False):
     """
-    Given a human-readable byte string (e.g. 2G, 30M),
+    Given a human-readable byte string (e.g. 2G, 30MB, 64KiB),
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 3005
     """
-    sbytes = size[:-1]
-    unit = size[-1]
-    if sbytes.isdigit():
-        sbytes = int(sbytes)
-        if unit == "P":
-            sbytes *= 1125899906842624
-        elif unit == "T":
-            sbytes *= 1099511627776
-        elif unit == "G":
-            sbytes *= 1073741824
-        elif unit == "M":
-            sbytes *= 1048576
-        else:
-            sbytes = 0
-    else:
-        sbytes = 0
-    return sbytes
+    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(size).strip())
+    value = m.group("value")
+    # default unit
+    unit = m.group("unit").lower() or default_unit.lower()
+    try:
+        value = int(value)
+    except ValueError:
+        try:
+            value = float(value)
+        except ValueError:
+            return 0
+    # flag for base ten
+    dec = False
+    if re.match(r"[kmgtpezy]b$", unit):
+        dec = True if handle_metric else False
+    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
+        return 0
+    p = "bkmgtpezy".index(unit[0])
+    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
+    return int(value)
 
 
 def build_whitespace_split_regex(text):
@@ -299,7 +300,7 @@ def build_whitespace_split_regex(text):
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r"(?:[\s]+)?{}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
-    return r"(?m)^{}$".format(regex)
+    return rf"(?m)^{regex}$"
 
 
 def expr_match(line, expr):
@@ -321,7 +322,7 @@ def expr_match(line, expr):
         if fnmatch.fnmatch(line, expr):
             return True
         try:
-            if re.match(r"\A{}\Z".format(expr), line):
+            if re.match(rf"\A{expr}\Z", line):
                 return True
         except re.error:
             pass
@@ -458,7 +459,7 @@ def print_cli(msg, retries=10, step=0.01):
             except UnicodeEncodeError:
                 print(msg.encode("utf-8"))
         except OSError as exc:
-            err = "{}".format(exc)
+            err = f"{exc}"
             if exc.errno != errno.EPIPE:
                 if (
                     "temporarily unavailable" in err or exc.errno in (errno.EAGAIN,)
@@ -506,24 +507,126 @@ def get_context(template, line, num_lines=5, marker=None):
     return "---\n{}\n---".format("\n".join(buf))
 
 
-def get_diff(a, b, *args, **kwargs):
+def get_diff_list(a, b, *args, **kwargs):
     """
     Perform diff on two iterables containing lines from two files, and return
-    the diff as as string. Lines are normalized to str types to avoid issues
+    the diff as a list. Lines are normalized to str types to avoid issues
     with unicode on PY2.
     """
     encoding = ("utf-8", "latin-1", __salt_system_encoding__)
     # Late import to avoid circular import
     import salt.utils.data
 
-    return "".join(
-        difflib.unified_diff(
-            salt.utils.data.decode_list(a, encoding=encoding),
-            salt.utils.data.decode_list(b, encoding=encoding),
-            *args,
-            **kwargs
-        )
+    return difflib.unified_diff(
+        salt.utils.data.decode_list(a, encoding=encoding),
+        salt.utils.data.decode_list(b, encoding=encoding),
+        *args,
+        **kwargs,
     )
+
+
+def get_diff(a, b, *args, **kwargs):
+    """
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as a string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    """
+    return "".join(get_diff_list(a, b, *args, **kwargs))
+
+
+def get_conditional_diff(
+    a,
+    b,
+    *args,
+    ignore_ordering=True,
+    ignore_whitespace=True,
+    ignore_comment_characters="#",
+    **kwargs,
+):
+    """
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+
+    Perform a diff on two iterables containing lines from two files, and return
+    the diff as a string. The resulting diff list will be filtered based on the
+    `ignore_ordering`, `ignore_whitespace`, and `ignore_comment_characters`
+    parameters. If any of those parameters are set, the function will check for
+    differences between the added and removed lines, after processing the diff
+    list.
+
+    If there are any differences, the function will return the boolean result
+    of the filtered diff list using the provided parameters as well as the
+    original diff list as a string. If there aren't any differences, the
+    function will return ``False`` and an empty string.
+
+    Parameters:
+    a: iterable
+        The first iterable to perform the diff against.
+    b: iterable
+        The second iterable to perform the diff against.
+    *args :
+        Additional arguments to pass to the ``get_diff_list`` function.
+    ignore_ordering (bool):
+        If True, the function will ignore the order of lines when checking for
+        differences.
+    ignore_whitespace (bool):
+        If True, the function will ignore leading and trailing white spaces when
+        checking for differences. Implies ``ignore_ordering``
+    ignore_comment_characters (str or list of str):
+        A string or list of strings representing comment characters. If
+        provided, the function will ignore any characters on the line after any
+        of these characters when checking for differences. Implies
+        ``ignore_ordering``
+    **kwargs :
+        Additional keyword arguments to pass to the ``get_diff_list`` function.
+
+    Returns:
+    bool: The boolean result of the filtered diff list using the provided
+          parameters.
+    str: The diff of the two iterables as a string. Empty string if no
+         differences are found.
+    """
+    if ignore_comment_characters is None:
+        ignore_comment_characters = []
+    elif isinstance(ignore_comment_characters, str):
+        ignore_comment_characters = [ignore_comment_characters]
+    elif not isinstance(ignore_comment_characters, list):
+        log.warning("ignore_comment_characters must be set to a string or list")
+        ignore_comment_characters = []
+
+    diff = list(get_diff_list(a, b, *args, **kwargs))
+
+    has_changes = False
+    if any([ignore_whitespace, ignore_ordering, ignore_comment_characters]):
+        adds = []
+        subs = []
+        for line in diff:
+            if line.startswith("+++") or line.startswith("---"):
+                continue
+            if line.startswith("+") or line.startswith("-"):
+                oper, *line = line
+                line = "".join(line)
+
+                for char in ignore_comment_characters:
+                    if char in line:
+                        # find 1st index of comment and delete everything after
+                        line = line[: line.index(char)]
+
+                if ignore_whitespace:
+                    line = line.strip()
+
+                if line and oper == "+":
+                    adds.append(line)
+                elif line and oper == "-":
+                    subs.append(line)
+
+        if sorted(adds) != sorted(subs):
+            has_changes = True
+    else:
+        has_changes = bool(diff)
+
+    return has_changes, "".join(diff)
 
 
 @jinja_filter("to_snake_case")

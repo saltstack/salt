@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.support.sminion
 ~~~~~~~~~~~~~~~~~~~~~
 
 SMinion's support functions
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import hashlib
@@ -236,7 +234,7 @@ def check_required_sminion_attributes(sminion_attr, required_items):
     available_items = list(getattr(sminion, sminion_attr))
     not_available_items = set()
 
-    name = "__not_available_{items}s__".format(items=sminion_attr)
+    name = f"__not_available_{sminion_attr}s__"
     if not hasattr(sminion, name):
         setattr(sminion, name, set())
 

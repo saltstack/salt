@@ -1,0 +1,48 @@
+name: Backport PR
+run-name: "Backport PR #${{ github.event.number }}"
+
+on:
+  pull_request_target:
+    types:
+      - "labeled"
+      - "closed"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Backport PR
+    runs-on:
+      - ubuntu-latest
+    if: |
+      github.event.pull_request.merged == true
+      && (
+        contains(github.event.pull_request.labels.*.name, 'backport:master') ||
+        contains(github.event.pull_request.labels.*.name, 'backport:3006.x') ||
+        contains(github.event.pull_request.labels.*.name, 'backport:3005.x')
+      )
+      && (
+        (github.event.action == 'labeled' && (
+          contains(github.event.pull_request.labels.*.name, 'backport:master') ||
+          contains(github.event.pull_request.labels.*.name, 'backport:3006.x') ||
+          contains(github.event.pull_request.labels.*.name, 'backport:3005.x')
+        ))
+        || (github.event.action == 'closed')
+      )
+    steps:
+      - name: Backport Action
+        uses: sorenlouv/backport-github-action@v8.9.7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          auto_backport_label_prefix: "backport:"
+          add_original_reviewers: true
+
+      - name: Info log
+        if: ${{ success() }}
+        run: jq -C '.' ~/.backport/backport.info.log
+
+      - name: Debug log
+        if: ${{ failure() }}
+        run: jq -C '.' ~/.backport/backport.debug.log

@@ -9,15 +9,15 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-
 import collections
 import logging
 import math
 import operator
 import os
-import random
 from collections.abc import Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
+
+import yaml
 
 import salt.utils.compat
 import salt.utils.data
@@ -40,8 +40,11 @@ __outputter__ = {
     "setval": "nested",
 }
 
+
 # http://stackoverflow.com/a/12414913/127816
-_infinitedict = lambda: collections.defaultdict(_infinitedict)
+def _infinitedict():
+    return collections.defaultdict(_infinitedict)
+
 
 _non_existent_key = "NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK"
 
@@ -55,21 +58,28 @@ def _serial_sanitizer(instr):
     return "{}{}".format(instr[:index], "X" * (length - index))
 
 
-_FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
-_HOSTNAME_SANITIZER = lambda x: "MINION"
-_DOMAINNAME_SANITIZER = lambda x: "DOMAINNAME"
+def _fqdn_sanitizer(x):
+    return "MINION.DOMAINNAME"
+
+
+def _hostname_sanitizer(x):
+    return "MINION"
+
+
+def _domainname_sanitizer(x):
+    return "DOMAINNAME"
 
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _SANITIZERS = {
     "serialnumber": _serial_sanitizer,
-    "domain": _DOMAINNAME_SANITIZER,
-    "fqdn": _FQDN_SANITIZER,
-    "id": _FQDN_SANITIZER,
-    "host": _HOSTNAME_SANITIZER,
-    "localhost": _HOSTNAME_SANITIZER,
-    "nodename": _HOSTNAME_SANITIZER,
+    "domain": _domainname_sanitizer,
+    "fqdn": _fqdn_sanitizer,
+    "id": _fqdn_sanitizer,
+    "host": _hostname_sanitizer,
+    "localhost": _hostname_sanitizer,
+    "nodename": _hostname_sanitizer,
 }
 
 
@@ -254,9 +264,10 @@ def setvals(grains, destructive=False, refresh_pillar=True):
     if os.path.isfile(gfn):
         with salt.utils.files.fopen(gfn, "rb") as fp_:
             try:
-                grains = salt.utils.yaml.safe_load(fp_)
-            except salt.utils.yaml.YAMLError as exc:
-                return "Unable to read existing grains file: {}".format(exc)
+                # DO NOT USE salt.utils.yaml.safe_load HERE
+                grains = yaml.safe_load(fp_)
+            except Exception as exc:  # pylint: disable=broad-except
+                return f"Unable to read existing grains file: {exc}"
         if not isinstance(grains, dict):
             grains = {}
     for key, val in new_grains.items():
@@ -352,9 +363,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         if not isinstance(grains, list):
             grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val in grains:
-        return "The val {} was already in the list {}".format(val, key)
+        return f"The val {val} was already in the list {key}"
     if isinstance(val, list):
         for item in val:
             grains.append(item)
@@ -399,9 +410,9 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     """
     grains = get(key, [], delimiter)
     if not isinstance(grains, list):
-        return "The key {} is not a valid list".format(key)
+        return f"The key {key} is not a valid list"
     if val not in grains:
-        return "The val {} was not in the list {}".format(val, key)
+        return f"The val {val} was not in the list {key}"
     grains.remove(val)
 
     while delimiter in key:
@@ -604,63 +615,6 @@ def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
     lastplace[keys[-1]] = val
 
     return nested_dict
-
-
-def get_or_set_hash(
-    name, length=8, chars="abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)"
-):
-    """
-    Perform a one-time generation of a hash and write it to the local grains.
-    If that grain has already been set return the value instead.
-
-    This is useful for generating passwords or keys that are specific to a
-    single minion that don't need to be stored somewhere centrally.
-
-    State Example:
-
-    .. code-block:: yaml
-
-        some_mysql_user:
-          mysql_user:
-            - present
-            - host: localhost
-            - password: {{ salt['grains.get_or_set_hash']('mysql:some_mysql_user') }}
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' grains.get_or_set_hash 'django:SECRET_KEY' 50
-
-    .. warning::
-
-        This function could return strings which may contain characters which are reserved
-        as directives by the YAML parser, such as strings beginning with ``%``. To avoid
-        issues when using the output of this function in an SLS file containing YAML+Jinja,
-        surround the call with single quotes.
-    """
-    salt.utils.versions.warn_until(
-        "Phosphorus",
-        "The 'grains.get_or_set_hash' function has been deprecated and it's "
-        "functionality will be completely removed. Reference pillar and SDB "
-        "documentation for secure ways to manage sensitive information. Grains "
-        "are an insecure way to store secrets.",
-    )
-    ret = get(name, None)
-
-    if ret is None:
-        val = "".join([random.SystemRandom().choice(chars) for _ in range(length)])
-
-        if DEFAULT_TARGET_DELIM in name:
-            root, rest = name.split(DEFAULT_TARGET_DELIM, 1)
-            curr = get(root, _infinitedict())
-            val = _dict_from_path(rest, val)
-            curr.update(val)
-            setval(root, curr)
-        else:
-            setval(name, val)
-
-    return get(name)
 
 
 def set(key, val="", force=False, destructive=False, delimiter=DEFAULT_TARGET_DELIM):

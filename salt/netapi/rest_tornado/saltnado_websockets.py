@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 A Websockets add-on to saltnado
 ===============================
@@ -289,12 +288,12 @@ in which each job's information is keyed by salt's ``jid``.
 Setup
 =====
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.ext.tornado.gen
-import salt.ext.tornado.websocket
+import tornado.gen
+import tornado.websocket
+
 import salt.netapi
 import salt.utils.json
 
@@ -308,27 +307,26 @@ log = logging.getLogger(__name__)
 
 
 class AllEventsHandler(
-    salt.ext.tornado.websocket.WebSocketHandler
+    tornado.websocket.WebSocketHandler
 ):  # pylint: disable=W0223,W0232
     """
     Server side websocket handler.
     """
 
     # pylint: disable=W0221
-    def get(self, token):
+    def get(self, token):  # pylint: disable=invalid-overridden-method
         """
         Check the token, returns a 401 if the token is invalid.
         Else open the websocket connection
         """
         log.debug("In the websocket get method")
-
         self.token = token
         # close the connection, if not authenticated
         if not self.application.auth.get_tok(token):
             log.debug("Refusing websocket connection, bad token!")
             self.send_error(401)
             return
-        super(AllEventsHandler, self).get(token)
+        return super().get(token)
 
     def open(self, token):  # pylint: disable=W0221
         """
@@ -337,7 +335,7 @@ class AllEventsHandler(
         """
         self.connected = False
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
@@ -371,9 +369,7 @@ class AllEventsHandler(
             pass
 
     def on_close(self, *args, **kwargs):
-        """Cleanup.
-
-        """
+        """Cleanup."""
         log.debug("In the websocket close method")
         self.close()
 
@@ -387,11 +383,11 @@ class AllEventsHandler(
         if mod_opts.get("cors_origin"):
             return bool(_check_cors_origin(origin, mod_opts["cors_origin"]))
         else:
-            return super(AllEventsHandler, self).check_origin(origin)
+            return super().check_origin(origin)
 
 
 class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job

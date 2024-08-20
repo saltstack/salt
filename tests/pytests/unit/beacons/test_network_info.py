@@ -4,9 +4,11 @@
 
     Network info beacon test cases
 """
+
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.network_info as network_info
 from tests.support.mock import MagicMock, patch
 
@@ -21,7 +23,8 @@ def stub_net_io_counters():
     return {
         "eth0": namedtuple(
             "snetio",
-            "bytes_sent bytes_recv packets_sent packets_recv errin errout dropin dropout",
+            "bytes_sent bytes_recv packets_sent packets_recv errin errout dropin"
+            " dropout",
         )(93662618, 914626664, 465694, 903802, 0, 0, 0, 0)
     }
 
@@ -42,7 +45,7 @@ def test_empty_config():
 
 def test_network_info_equal(stub_net_io_counters):
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=stub_net_io_counters),
     ):
         config = [
@@ -88,7 +91,7 @@ def test_network_info_equal(stub_net_io_counters):
 
 def test_network_info_greater_than(stub_net_io_counters):
     with patch(
-        "salt.utils.psutil_compat.net_io_counters",
+        "psutil.net_io_counters",
         MagicMock(return_value=stub_net_io_counters),
     ):
         config = [

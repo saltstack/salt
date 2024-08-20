@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.serializers.yaml
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,17 +8,15 @@
     It also use C bindings if they are available.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 
 import yaml
-from salt.ext import six
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
+from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 
@@ -32,7 +29,7 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 BaseDumper = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 
@@ -92,7 +89,7 @@ class EncryptedString(str):
 
     @staticmethod
     def yaml_dumper(dumper, data):
-        return dumper.represent_scalar(EncryptedString.yaml_tag, data.__str__())
+        return dumper.represent_scalar(EncryptedString.yaml_tag, str(data))
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232
@@ -123,9 +120,6 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
-if six.PY2:
-    Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    Dumper.add_multi_representer(int, Dumper.represent_long)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
 Dumper.add_multi_representer(float, Dumper.represent_float)

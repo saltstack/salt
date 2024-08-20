@@ -1,7 +1,7 @@
 r"""
 Renderer that will decrypt GPG ciphers
 
-Any key in the SLS file can be a GPG cipher, and this renderer will decrypt it
+Any value in the SLS file can be a GPG cipher, and this renderer will decrypt it
 before passing it off to Salt. This allows you to safely store secrets in
 source control, in such a way that only your Salt master can decrypt them and
 distribute them only to the minions that need them.
@@ -18,109 +18,162 @@ the 2015.8.0 release.
 GPG Homedir
 -----------
 
-When running gpg commands, it is important to run commands as the user that owns
-the keys directory. If salt-master runs as user salt, then ``su salt`` before
-running any gpg commands.
-
-To avoid compatibility and upgrade problems and to provide a standardized location
-for keys, salt uses ``/etc/salt/gpgkeys``. In order to make the gpg command use
-this directory, use ``gpg --homedir /etc/salt/gpgkeys`` with gpg commands or set
-the homedir for that user using ``echo 'homedir /etc/salt/gpgkeys' >> ~/.gnupg``.
-
-.. _gpg: https://gnupg.org
-
-Setup
------
-
-To set things up, first generate a keypair. On the master, run the following:
-
-.. code-block:: bash
-
-    # mkdir -p /etc/salt/gpgkeys
-    # chmod 0700 /etc/salt/gpgkeys
-    # gpg --gen-key --homedir /etc/salt/gpgkeys
-
-Do not supply a password for the keypair, and use a name that makes sense for
-your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
-
-.. note::
-    Unfortunately, there are some scenarios - for example, on virtual machines
-    which don’t have real hardware - where insufficient entropy causes key
-    generation to be extremely slow. In these cases, there are usually means of
-    increasing the system entropy. On virtualised Linux systems, this can often
-    be achieved by installing the ``rng-tools`` package.
-
-Import keys to a master
-***********************
-
-If the keys already exist and need to be imported to the salt master, run the
-following to import them.
-
-.. code-block:: bash
-
-    gpg --homedir /etc/salt/gpgkeys --import /path/to/private.key
-    gpg --homedir /etc/salt/gpgkeys --import /path/to/pubkey.gpg
-
-Note: The default `GPG Homedir <gpg-homedir>` is ``~/.gnupg`` and needs to be
-set using ``--homedir``.
-
-Adjust trust level of imported keys
-***********************************
-
-In some cases, importing existing keys may not be enough and the trust level of
-the key needs to be adjusted. This can be done by editing the key. The ``key_id``
-and the actual trust level of the key can be seen by listing the already imported
-keys.
-
-.. code-block:: bash
-
-    gpg --homedir /etc/salt/gpgkeys --list-keys
-    gpg --homedir /etc/salt/gpgkeys --list-secret-keys
-
-If the trust-level is not ``ultimate`` it needs to be changed by running
-
-.. code-block:: bash
-
-    gpg --homedir /etc/salt/gpgkeys --edit-key <key_id>
-
-This will open an interactive shell for the management of the GPG encryption key.
-Type ``trust`` to be able to set the trust level for the key and then select ``5
-(I trust ultimately)``. Then quit the shell by typing ``save``.
-
-Different GPG Location
-**********************
+The default `GPG Homedir <gpg-homedir>` is ``~/.gnupg`` and needs to be set using
+``gpg --homedir``. Be very careful to not forget this option. It is also important
+to run ``gpg`` commands as the user that owns the keys directory. If the salt-master
+runs as user ``salt``, then use ``su - salt`` before running any gpg commands.
 
 In some cases, it's preferable to have gpg keys stored on removable media or
 other non-standard locations. This can be done using the ``gpg_keydir`` option
-on the salt master. This will also require using a different path to ``--homedir``,
-as mentioned in the `GPG Homedir <gpg-homedir>` section.
+on the salt master. This will also require using a different path to ``--homedir``.
+
+The ``--homedir`` argument can be configured for the current user using
+``echo 'homedir /etc/salt/gpgkeys' >> ~/.gnupg``, but this should be used with
+caution to avoid potential confusion.
 
 .. code-block:: bash
 
     gpg_keydir: <path/to/homedir>
 
-Export the Public Key
----------------------
+.. _gpg: https://gnupg.org
+
+GPG Keys
+--------
+
+GPG key pairs include both a public and private key. The private key is akin to
+a password and should be kept secure by the owner. A public key is used to
+encrypt data being sent to the owner of the private key.
+
+This means that the public key will be freely distributed so that others can
+encrypt pillar data without access to the secret key.
+
+New Key Pair
+************
+
+To create a new GPG key pair for encrypting data, log in to the master as root
+and run the following:
 
 .. code-block:: bash
 
-    # gpg --homedir /etc/salt/gpgkeys --armor --export <KEY-NAME> > exported_pubkey.gpg
+    # mkdir -p /etc/salt/gpgkeys
+    # chmod 0700 /etc/salt/gpgkeys
+    # gpg --homedir /etc/salt/gpgkeys --gen-key
 
+Do not supply a password for the keypair and use a name that makes sense for
+your application.
 
-Import the Public Key
----------------------
+.. note::
+    In some situations, gpg may be starved of entropy and will take an incredibly
+    long time to finish. Two common tools to generate (less secure) pseudo-random
+    data are ``rng-tools`` and ``haveged``.
 
-To encrypt secrets, copy the public key to your local machine and run:
+The new keys can be seen and verified using ``--list-secret-keys``:
 
 .. code-block:: bash
 
-    $ gpg --import exported_pubkey.gpg
+    # gpg --homedir /etc/salt/gpgkeys --list-secret-keys
+    /etc/salt/gpgkeys/pubring.kbx
+    -----------------------------
+    sec   rsa4096 2002-05-12 [SC] [expires: 2012-05-10]
+          2DC47B416EE8C3484450B450A4D44406274AF44E
+    uid           [ultimate] salt-master (gpg key for salt) <salt@cm.domain.tld>
+    ssb   rsa4096 2002-05-12 [E] [expires: 2012-05-10]
+
+In the example above, our KEY-ID is ``2DC47B416EE8C3484450B450A4D44406274AF44E``.
+
+Export Public Key
+*****************
+
+To export a public key suitable for public distribution:
+
+.. code-block:: bash
+
+    # gpg --homedir /etc/salt/gpgkeys --armor --export <KEY-ID> > exported_pubkey.asc
+
+.. _gpg-importpubkey:
+
+Import Public Key
+*****************
+
+Users wishing to import the public key into their local keychain may run:
+
+.. code-block:: bash
+
+    $ gpg --import exported_pubkey.asc
+
+Export (Save) Private Key
+*************************
+
+This key protects all gpg-encrypted pillar data and should be backed up to a
+safe and secure location. This command will generate a backup of secret keys
+in the ``/etc/salt/gpgkeys`` directory to the ``gpgkeys.secret`` file:
+
+.. code-block:: bash
+
+    # gpg --homedir /etc/salt/gpgkeys --export-secret-keys --export-options export-backup -o gpgkeys.secret
+
+Salt does not support password-protected private keys, which means this file
+is essentially a clear-text password (just add ``--armor``). Fortunately, it
+is trivial to pass this export back to gpg to be encrypted with symmetric key:
+
+.. code-block:: bash
+
+    # gpg --homedir /etc/salt/gpgkeys --export-secret-keys --export-options export-backup | gpg --symmetric -o gpgkeys.gpg
+
+.. note::
+    In some cases, particularly when using su/sudo, gpg gets confused and needs
+    to be told which TTY to use; this can be done with: ``export GPG_TTY=$(tty)``.
+
+Import (Restore) Private Key
+****************************
+
+To import/restore a private key, create a directory with the correct permissions
+and import using gpg.
+
+.. code-block:: bash
+
+    # mkdir -p /etc/salt/gpgkeys
+    # chmod 0700 /etc/salt/gpgkeys
+    # gpg --homedir /etc/salt/gpgkeys --import gpgkeys.secret
+
+If the export was encrypted using a symmetric key, then decrypt first with:
+
+.. code-block:: bash
+
+    # gpg --decrypt gpgkeys.gpg | gpg --homedir /etc/salt/gpgkeys --import
+
+
+Adjust trust level of imported keys
+***********************************
+
+In some cases, importing existing keys may not be enough and the trust level of
+the key needs to be adjusted. This can be done by editing the key. The ``KEY-ID``
+and the actual trust level of the key can be seen by listing the already imported
+keys.
+
+
+If the trust-level is not ``ultimate`` it needs to be changed by running
+
+.. code-block:: bash
+
+    gpg --homedir /etc/salt/gpgkeys --edit-key <KEY-ID>
+
+This will open an interactive shell for the management of the GPG encryption key.
+Type ``trust`` to be able to set the trust level for the key and then select ``5
+(I trust ultimately)``. Then quit the shell by typing ``save``.
+
+Encrypting Data
+---------------
+
+In order to encrypt data to a recipient (salt), the public key must be imported
+into the local keyring. Importing the public key is described above in the
+`Import Public Key <gpg-importpubkey:>` section.
 
 To generate a cipher from a secret:
 
 .. code-block:: bash
 
-   $ echo -n "supersecret" | gpg --armor --batch --trust-model always --encrypt -r <KEY-name>
+   $ echo -n 'supersecret' | gpg --trust-model always -ear <KEY-ID>
 
 To apply the renderer on a file-by-file basis add the following line to the
 top of any pillar with gpg data in it:
@@ -150,7 +203,6 @@ data like so:
       skqmFTbOiA===Eqsm
       -----END PGP MESSAGE-----
 
-
 .. _encrypted-cli-pillar-data:
 
 Encrypted CLI Pillar Data
@@ -168,7 +220,6 @@ passed on the CLI.
 
 Starting with the 2016.3.0 release of Salt, it is now possible for this pillar
 data to be GPG-encrypted, and to use the GPG renderer to decrypt it.
-
 
 Replacing Newlines
 ******************
@@ -267,8 +318,22 @@ pillar data like so:
 .. code-block:: bash
 
     salt myminion state.sls secretstuff pillar_enc=gpg pillar="$ciphertext"
-"""
 
+Configuration
+*************
+
+The default behaviour of this renderer is to log a warning if a block could not
+be decrypted; in other words, it just returns the ciphertext rather than the
+encrypted secret.
+
+This behaviour can be changed via the `gpg_decrypt_must_succeed` configuration
+option.  If set to `True`, any gpg block that cannot be decrypted raises a
+`SaltRenderError` exception, which registers an error in ``_errors`` during
+rendering.
+
+In the Chlorine release, the default behavior will be reversed and an error
+message will be added to ``_errors`` by default.
+"""
 
 import logging
 import os
@@ -280,6 +345,7 @@ import salt.utils.cache
 import salt.utils.path
 import salt.utils.stringio
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
@@ -365,6 +431,13 @@ def _decrypt_ciphertext(cipher):
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
         log.warning("Could not decrypt cipher %r, received: %r", cipher, decrypt_error)
+        if __opts__["gpg_decrypt_must_succeed"]:
+            raise SaltRenderError(
+                "Could not decrypt cipher {!r}, received: {!r}".format(
+                    cipher,
+                    decrypt_error,
+                )
+            )
         return cipher
     else:
         if __opts__.get("gpg_cache"):

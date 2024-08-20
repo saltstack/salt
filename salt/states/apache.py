@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache state
 
@@ -37,7 +36,7 @@ the above word between angle brackets (<>).
                   - FollowSymlinks
                 AllowOverride: All
 
-.. versionchanged:: 2018.3
+.. versionchanged:: 2018.3.0
 
 Allows having the same section container multiple times (e.g. <Directory /path/to/dir>).
 
@@ -85,14 +84,16 @@ it still needs keyword ``this`` with empty string (or "\b" if nicer output is re
                     do: another thing
 """
 
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
-# Import python libs
 import os
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
+
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
 
 
 def __virtual__():

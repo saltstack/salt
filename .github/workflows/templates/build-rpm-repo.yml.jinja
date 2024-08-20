@@ -1,0 +1,92 @@
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        <%- for distro, version, arch in build_rpms_listing %>
+          - pkg-type: rpm
+            distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download System Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y rpm
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Download RPM Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}-rpm
+          path: artifacts/pkgs/incoming
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          sync
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          sync
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
+      - name: Create Repository Path
+        run: |
+          mkdir -p artifacts/pkgs/repo
+
+      - name: Create Repository
+        env:
+          <%- if gh_environment == 'staging' %>
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          <%- endif %>
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+        run: |
+          tools pkg repo create rpm --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
+            --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
+            --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
+
+      - name: Upload Repository As An Artifact
+        uses: ./.github/actions/upload-artifact
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
+          path: artifacts/pkgs/repo/*
+          retention-days: 7
+          if-no-files-found: error
+          archive-name: ${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}-repo

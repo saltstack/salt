@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Microsoft certificate management via the PKI Client PowerShell module.
 https://technet.microsoft.com/en-us/itpro/powershell/windows/pkiclient/pkiclient
@@ -15,22 +14,16 @@ https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 
 .. versionadded:: 2016.11.0
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
 import logging
 import os
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
-from salt.exceptions import SaltInvocationError
-
-# Import 3rd party libs
-from salt.ext import six
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 _DEFAULT_CONTEXT = "LocalMachine"
 _DEFAULT_FORMAT = "cer"
@@ -72,23 +65,27 @@ def _cmd_run(cmd, as_json=False):
 
     if as_json:
         cmd_full.append(
-            r"ConvertTo-Json -Compress -Depth 4 -InputObject " r"@({0})".format(cmd)
+            r"ConvertTo-Json -Compress -Depth 4 -InputObject " r"@({})".format(cmd)
         )
     else:
         cmd_full.append(cmd)
     cmd_ret = __salt__["cmd.run_all"](
-        six.text_type().join(cmd_full), shell="powershell", python_shell=True
+        "".join(cmd_full), shell="powershell", python_shell=True
     )
 
-    if cmd_ret["retcode"] != 0:
-        _LOG.error("Unable to execute command: %s\nError: %s", cmd, cmd_ret["stderr"])
+    if cmd_ret["stderr"]:
+        raise CommandExecutionError(
+            "Unable to execute command: {}\nError: {}".format(cmd, cmd_ret["stderr"])
+        )
 
     if as_json:
         try:
             items = salt.utils.json.loads(cmd_ret["stdout"], strict=False)
             return items
         except ValueError:
-            _LOG.error("Unable to parse return data as Json.")
+            raise CommandExecutionError(
+                "Unable to parse return data as JSON:\n{}".format(cmd_ret["stdout"])
+            )
 
     return cmd_ret["stdout"]
 
@@ -97,10 +94,10 @@ def _validate_cert_path(name):
     """
     Ensure that the certificate path, as determind from user input, is valid.
     """
-    cmd = r"Test-Path -Path '{0}'".format(name)
+    cmd = rf"Test-Path -Path '{name}'"
 
     if not ast.literal_eval(_cmd_run(cmd=cmd)):
-        raise SaltInvocationError(r"Invalid path specified: {0}".format(name))
+        raise SaltInvocationError(rf"Invalid path specified: {name}")
 
 
 def _validate_cert_format(name):
@@ -110,10 +107,11 @@ def _validate_cert_format(name):
     cert_formats = ["cer", "pfx"]
 
     if name not in cert_formats:
-        message = (
-            "Invalid certificate format '{0}' specified. Valid formats:" " {1}"
-        ).format(name, cert_formats)
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid certificate format '{}' specified. Valid formats: {}".format(
+                name, cert_formats
+            )
+        )
 
 
 def get_stores():
@@ -130,7 +128,7 @@ def get_stores():
         salt '*' win_pki.get_stores
     """
     ret = dict()
-    cmd = r"Get-ChildItem -Path 'Cert:\' | " r"Select-Object LocationName, StoreNames"
+    cmd = r"Get-ChildItem -Path 'Cert:\' | Select-Object LocationName, StoreNames"
 
     items = _cmd_run(cmd=cmd, as_json=True)
 
@@ -161,14 +159,14 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     ret = dict()
     cmd = list()
     blacklist_keys = ["DnsNameList"]
-    store_path = r"Cert:\{0}\{1}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
 
     _validate_cert_path(name=store_path)
 
-    cmd.append(r"Get-ChildItem -Path '{0}' | Select-Object".format(store_path))
+    cmd.append(rf"Get-ChildItem -Path '{store_path}' | Select-Object")
     cmd.append(" DnsNameList, SerialNumber, Subject, Thumbprint, Version")
 
-    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
+    items = _cmd_run(cmd="".join(cmd), as_json=True)
 
     for item in items:
         cert_info = dict()
@@ -222,15 +220,15 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=""):
             cmd.append(
                 " System.Security.Cryptography.X509Certificates.X509Certificate2;"
             )
-            cmd.append(r" $CertObject.Import('{0}'".format(name))
-            cmd.append(",'{0}'".format(password))
+            cmd.append(rf" $CertObject.Import('{name}'")
+            cmd.append(f",'{password}'")
             cmd.append(",'DefaultKeySet') ; $CertObject")
             cmd.append(
                 " | Select-Object DnsNameList, SerialNumber, Subject, "
                 "Thumbprint, Version"
             )
         else:
-            cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
+            cmd.append(rf"Get-PfxCertificate -FilePath '{name}'")
             cmd.append(
                 " | Select-Object DnsNameList, SerialNumber, Subject, "
                 "Thumbprint, Version"
@@ -238,13 +236,12 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=""):
     else:
         cmd.append("$CertObject = New-Object")
         cmd.append(" System.Security.Cryptography.X509Certificates.X509Certificate2;")
-        cmd.append(r" $CertObject.Import('{0}'); $CertObject".format(name))
+        cmd.append(rf" $CertObject.Import('{name}'); $CertObject")
         cmd.append(
-            " | Select-Object DnsNameList, SerialNumber, Subject, "
-            "Thumbprint, Version"
+            " | Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version"
         )
 
-    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
+    items = _cmd_run(cmd="".join(cmd), as_json=True)
 
     for item in items:
         for key in item:
@@ -295,7 +292,7 @@ def import_cert(
     """
     cmd = list()
     thumbprint = None
-    store_path = r"Cert:\{0}\{1}".format(context, store)
+    store_path = rf"Cert:\{context}\{store}"
     cert_format = cert_format.lower()
 
     _validate_cert_format(name=cert_format)
@@ -329,25 +326,25 @@ def import_cert(
         # not convert an empty string.
         if password:
             cmd.append(
-                r"$Password = ConvertTo-SecureString " r"-String '{0}'".format(password)
+                r"$Password = ConvertTo-SecureString " r"-String '{}'".format(password)
             )
             cmd.append(" -AsPlainText -Force; ")
         else:
             cmd.append("$Password = New-Object System.Security.SecureString; ")
 
         cmd.append(
-            r"Import-PfxCertificate " r"-FilePath '{0}'".format(cached_source_path)
+            r"Import-PfxCertificate " r"-FilePath '{}'".format(cached_source_path)
         )
-        cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
+        cmd.append(rf" -CertStoreLocation '{store_path}'")
         cmd.append(r" -Password $Password")
 
         if exportable:
             cmd.append(" -Exportable")
     else:
-        cmd.append(r"Import-Certificate " r"-FilePath '{0}'".format(cached_source_path))
-        cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
+        cmd.append(r"Import-Certificate " r"-FilePath '{}'".format(cached_source_path))
+        cmd.append(rf" -CertStoreLocation '{store_path}'")
 
-    _cmd_run(cmd=six.text_type().join(cmd))
+    _cmd_run(cmd="".join(cmd))
 
     new_certs = get_certs(context=context, store=store)
 
@@ -394,7 +391,7 @@ def export_cert(
     """
     cmd = list()
     thumbprint = thumbprint.upper()
-    cert_path = r"Cert:\{0}\{1}\{2}".format(context, store, thumbprint)
+    cert_path = rf"Cert:\{context}\{store}\{thumbprint}"
     cert_format = cert_format.lower()
 
     _validate_cert_path(name=cert_path)
@@ -406,7 +403,7 @@ def export_cert(
         # not convert an empty string.
         if password:
             cmd.append(
-                r"$Password = ConvertTo-SecureString " r"-String '{0}'".format(password)
+                r"$Password = ConvertTo-SecureString " r"-String '{}'".format(password)
             )
             cmd.append(" -AsPlainText -Force; ")
         else:
@@ -414,18 +411,17 @@ def export_cert(
 
         cmd.append(
             r"Export-PfxCertificate "
-            r"-Cert '{0}' -FilePath '{1}'".format(cert_path, name)
+            r"-Cert '{}' -FilePath '{}'".format(cert_path, name)
         )
         cmd.append(r" -Password $Password")
     else:
         cmd.append(
-            r"Export-Certificate "
-            r"-Cert '{0}' -FilePath '{1}'".format(cert_path, name)
+            r"Export-Certificate " r"-Cert '{}' -FilePath '{}'".format(cert_path, name)
         )
 
-    cmd.append(r" | Out-Null; Test-Path -Path '{0}'".format(name))
+    cmd.append(rf" | Out-Null; Test-Path -Path '{name}'")
 
-    ret = ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
+    ret = ast.literal_eval(_cmd_run(cmd="".join(cmd)))
 
     if ret:
         _LOG.debug("Certificate exported successfully: %s", name)
@@ -466,21 +462,21 @@ def test_cert(
     """
     cmd = list()
     thumbprint = thumbprint.upper()
-    cert_path = r"Cert:\{0}\{1}\{2}".format(context, store, thumbprint)
-    cmd.append(r"Test-Certificate -Cert '{0}'".format(cert_path))
+    cert_path = rf"Cert:\{context}\{store}\{thumbprint}"
+    cmd.append(rf"Test-Certificate -Cert '{cert_path}'")
 
     _validate_cert_path(name=cert_path)
 
     if untrusted_root:
         cmd.append(" -AllowUntrustedRoot")
     if dns_name:
-        cmd.append(" -DnsName '{0}'".format(dns_name))
+        cmd.append(f" -DnsName '{dns_name}'")
     if eku:
-        cmd.append(" -EKU '{0}'".format(eku))
+        cmd.append(f" -EKU '{eku}'")
 
     cmd.append(" -ErrorAction SilentlyContinue")
 
-    return ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
+    return ast.literal_eval(_cmd_run(cmd="".join(cmd)))
 
 
 def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
@@ -501,9 +497,9 @@ def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
         salt '*' win_pki.remove_cert thumbprint='AAA000'
     """
     thumbprint = thumbprint.upper()
-    store_path = r"Cert:\{0}\{1}".format(context, store)
-    cert_path = r"{0}\{1}".format(store_path, thumbprint)
-    cmd = r"Remove-Item -Path '{0}'".format(cert_path)
+    store_path = rf"Cert:\{context}\{store}"
+    cert_path = rf"{store_path}\{thumbprint}"
+    cmd = rf"Remove-Item -Path '{cert_path}'"
 
     current_certs = get_certs(context=context, store=store)
 

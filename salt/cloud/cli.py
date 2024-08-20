@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Primary interfaces for the salt-cloud system
 """
+
 # Need to get data from 4 sources!
 # CLI options
 # salt cloud config - CONFIG_DIR + '/cloud'
@@ -11,14 +11,11 @@ Primary interfaces for the salt-cloud system
 # The cli, master and cloud configs will merge for opts
 # the VM data will be in opts['profiles']
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
 
-# Import salt libs
 import salt.cloud
 import salt.config
 import salt.defaults.exitcodes
@@ -28,15 +25,9 @@ import salt.utils.cloud
 import salt.utils.parsers
 import salt.utils.user
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import input
-from salt.utils.verify import check_user, verify_env, verify_log, verify_log_files
+from salt.utils.verify import check_user, verify_env
 
 log = logging.getLogger(__name__)
-
-# pylint: disable=broad-except
 
 
 class SaltCloud(salt.utils.parsers.SaltCloudParser):
@@ -68,17 +59,9 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     salt_master_user,
                     root_dir=self.config["root_dir"],
                 )
-                logfile = self.config["log_file"]
-                if logfile is not None:
-                    # Logfile is not using Syslog, verify
-                    verify_log_files([logfile], salt_master_user)
-        except (IOError, OSError) as err:
+        except OSError as err:
             log.error("Error while verifying the environment: %s", err)
             sys.exit(err.errno)
-
-        # Setup log file logging
-        self.setup_logfile_logger()
-        verify_log(self.config)
 
         if self.options.update_bootstrap:
             ret = salt.utils.cloud.update_bootstrap(self.config)
@@ -112,70 +95,56 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
         if self.selected_query_option is not None:
             if self.selected_query_option == "list_providers":
-                # pylint: disable=broad-except
                 try:
                     ret = mapper.provider_list()
-                except (SaltCloudException, Exception,) as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     msg = "There was an error listing providers: {0}"
                     self.handle_exception(msg, exc)
-                # pylint: enable=broad-except
 
             elif self.selected_query_option == "list_profiles":
                 provider = self.options.list_profiles
-                # pylint: disable=broad-except
                 try:
                     ret = mapper.profile_list(provider)
-                except (SaltCloudException, Exception,) as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     msg = "There was an error listing profiles: {0}"
                     self.handle_exception(msg, exc)
-                # pylint: enable=broad-except
 
             elif self.config.get("map", None):
                 log.info("Applying map from '%s'.", self.config["map"])
-                # pylint: disable=broad-except
                 try:
                     ret = mapper.interpolated_map(query=self.selected_query_option)
-                except (SaltCloudException, Exception,) as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     msg = "There was an error with a custom map: {0}"
                     self.handle_exception(msg, exc)
-                # pylint: enable=broad-except
             else:
-                # pylint: disable=broad-except
                 try:
                     ret = mapper.map_providers_parallel(
                         query=self.selected_query_option
                     )
-                except (SaltCloudException, Exception,) as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     msg = "There was an error with a map: {0}"
                     self.handle_exception(msg, exc)
-                # pylint: enable=broad-except
 
         elif self.options.list_locations is not None:
-            # pylint: disable=broad-except
             try:
                 ret = mapper.location_list(self.options.list_locations)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error listing locations: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.list_images is not None:
-            # pylint: disable=broad-except
             try:
                 ret = mapper.image_list(self.options.list_images)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error listing images: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.list_sizes is not None:
-            # pylint: disable=broad-except
             try:
                 ret = mapper.size_list(self.options.list_sizes)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error listing sizes: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.destroy and (
             self.config.get("names", None) or self.config.get("map", None)
@@ -185,10 +154,10 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if map_file is not None:
                 if names != ():
                     msg = (
-                        "Supplying a mapfile, '{0}', in addition to instance names {1} "
-                        "with the '--destroy' or '-d' function is not supported. "
-                        "Please choose to delete either the entire map file or individual "
-                        "instances.".format(map_file, names)
+                        "Supplying a mapfile, '{}', in addition to instance names {}"
+                        " with the '--destroy' or '-d' function is not supported."
+                        " Please choose to delete either the entire map file or"
+                        " individual instances.".format(map_file, names)
                     )
                     self.handle_exception(msg, SaltCloudSystemExit)
 
@@ -205,21 +174,19 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
             msg = "The following virtual machines are set to be destroyed:\n"
             names = set()
-            for alias, drivers in six.iteritems(matching):
-                msg += "  {0}:\n".format(alias)
-                for driver, vms in six.iteritems(drivers):
-                    msg += "    {0}:\n".format(driver)
+            for alias, drivers in matching.items():
+                msg += f"  {alias}:\n"
+                for driver, vms in drivers.items():
+                    msg += f"    {driver}:\n"
                     for name in vms:
-                        msg += "      {0}\n".format(name)
+                        msg += f"      {name}\n"
                         names.add(name)
-            # pylint: disable=broad-except
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names, cached=True)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error destroying machines: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.action and (
             self.config.get("names", None) or self.config.get("map", None)
@@ -238,7 +205,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             machines = []
             msg = (
                 "The following virtual machines are set to be actioned with "
-                '"{0}":\n'.format(self.options.action)
+                '"{}":\n'.format(self.options.action)
             )
             for name in names:
                 if "=" in name:
@@ -246,18 +213,16 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     key, value = name.split("=", 1)
                     kwargs[key] = value
                 else:
-                    msg += "  {0}\n".format(name)
+                    msg += f"  {name}\n"
                     machines.append(name)
             names = machines
 
-            # pylint: disable=broad-except
             try:
                 if self.print_confirm(msg):
                     ret = mapper.do_action(names, kwargs)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error actioning machines: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.function:
             kwargs = {}
@@ -272,30 +237,26 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 self.error(
                     "Any arguments passed to --function need to be passed "
                     "as kwargs. Ex: image=ami-54cf5c3d. Remaining "
-                    "arguments: {0}".format(args)
+                    "arguments: {}".format(args)
                 )
-            # pylint: disable=broad-except
             try:
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs
                 )
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error running the function: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.profile and self.config.get("names", False):
-            # pylint: disable=broad-except
             try:
                 ret = mapper.run_profile(self.options.profile, self.config.get("names"))
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was a profile error: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.set_password:
             username = self.credential_username
-            provider_name = "salt.cloud.provider.{0}".format(self.credential_provider)
+            provider_name = f"salt.cloud.provider.{self.credential_provider}"
             # TODO: check if provider is configured
             # set the password
             salt.utils.cloud.store_password_in_keyring(provider_name, username)
@@ -303,7 +264,6 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if not mapper.rendered_map:
                 sys.stderr.write("No nodes defined in this map")
                 self.exit(salt.defaults.exitcodes.EX_GENERIC)
-            # pylint: disable=broad-except
             try:
                 ret = {}
                 run_map = True
@@ -315,8 +275,8 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if "errors" in dmap:
                     # display profile errors
                     msg += "Found the following errors:\n"
-                    for profile_name, error in six.iteritems(dmap["errors"]):
-                        msg += "  {0}: {1}\n".format(profile_name, error)
+                    for profile_name, error in dmap["errors"].items():
+                        msg += f"  {profile_name}: {error}\n"
                     sys.stderr.write(msg)
                     sys.stderr.flush()
 
@@ -324,19 +284,17 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if "existing" in dmap:
                     msg += "The following virtual machines already exist:\n"
                     for name in dmap["existing"]:
-                        msg += "  {0}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if dmap["create"]:
-                    msg += "The following virtual machines are set to be " "created:\n"
+                    msg += "The following virtual machines are set to be created:\n"
                     for name in dmap["create"]:
-                        msg += "  {0}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if "destroy" in dmap:
-                    msg += (
-                        "The following virtual machines are set to be " "destroyed:\n"
-                    )
+                    msg += "The following virtual machines are set to be destroyed:\n"
                     for name in dmap["destroy"]:
-                        msg += "  {0}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if not dmap["create"] and not dmap.get("destroy", None):
                     if not dmap.get("existing", None):
@@ -357,15 +315,17 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if dmap.get("existing", None):
                     for name in dmap["existing"]:
                         if "ec2" in dmap["existing"][name]["provider"]:
-                            msg = "Instance already exists, or is terminated and has the same name."
+                            msg = (
+                                "Instance already exists, or is terminated and has the"
+                                " same name."
+                            )
                         else:
                             msg = "Already running."
                         ret[name] = {"Message": msg}
 
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was a query error: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         elif self.options.bootstrap:
             host = self.options.bootstrap
@@ -389,18 +349,16 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if args:
                 self.error(
                     "Any arguments passed to --bootstrap need to be passed as "
-                    "kwargs. Ex: ssh_username=larry. Remaining arguments: {0}".format(
+                    "kwargs. Ex: ssh_username=larry. Remaining arguments: {}".format(
                         args
                     )
                 )
 
-            # pylint: disable=broad-except
             try:
                 ret = salt.utils.cloud.bootstrap(vm_, self.config)
-            except (SaltCloudException, Exception,) as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = "There was an error bootstrapping the minion: {0}"
                 self.handle_exception(msg, exc)
-            # pylint: enable=broad-except
 
         else:
             self.error("Nothing was done. Using the proper arguments?")
@@ -425,19 +383,17 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 # This is a salt cloud system exit
                 if exc.exit_code > 0:
                     # the exit code is bigger than 0, it's an error
-                    msg = "Error: {0}".format(msg)
+                    msg = f"Error: {msg}"
                 self.exit(exc.exit_code, msg.format(exc).rstrip() + "\n")
             # It's not a system exit but it's an error we can
             # handle
             self.error(msg.format(exc))
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
-        # pylint: disable=str-format-in-logging
         log.error(
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
-        # pylint: enable=str-format-in-logging
         self.exit(salt.defaults.exitcodes.EX_GENERIC)

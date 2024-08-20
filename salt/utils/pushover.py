@@ -4,16 +4,12 @@ Library for interacting with Pushover API
 .. versionadded:: 2016.3.0
 """
 
+import http.client
 import logging
+from urllib.parse import urlencode, urljoin
 
-import salt.ext.six.moves.http_client
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+import salt.utils.http
 from salt.version import __version__
-
-# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -48,9 +44,9 @@ def query(
     }
 
     api_url = "https://api.pushover.net"
-    base_url = _urljoin(api_url, api_version + "/")
+    base_url = urljoin(api_url, api_version + "/")
     path = pushover_functions.get(function).get("request")
-    url = _urljoin(base_url, path, False)
+    url = urljoin(base_url, path, False)
 
     if not query_params:
         query_params = {}
@@ -74,7 +70,7 @@ def query(
         opts=opts,
     )
 
-    if result.get("status", None) == salt.ext.six.moves.http_client.OK:
+    if result.get("status", None) == http.client.OK:
         response = pushover_functions.get(function).get("response")
         if response in result and result[response] == 0:
             ret["res"] = False
@@ -110,10 +106,10 @@ def validate_sound(sound, token):
                 if _message.get("dict", {}).get("status", "") == 1:
                     sounds = _message.get("dict", {}).get("sounds", "")
                     if sound in sounds:
-                        ret["message"] = "Valid sound {}.".format(sound)
+                        ret["message"] = f"Valid sound {sound}."
                         ret["res"] = True
                     else:
-                        ret["message"] = "Warning: {} not a valid sound.".format(sound)
+                        ret["message"] = f"Warning: {sound} not a valid sound."
                         ret["res"] = False
                 else:
                     ret["message"] = "".join(_message.get("dict", {}).get("errors"))
@@ -139,7 +135,7 @@ def validate_user(user, device, token):
         function="validate_user",
         method="POST",
         header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-        data=_urlencode(parameters),
+        data=urlencode(parameters),
     )
 
     if response["res"]:

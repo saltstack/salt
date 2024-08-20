@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-'''\
+'''
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
 
@@ -22,20 +21,17 @@ completion behavior can be customized via the ~/.inputrc file.
 '''
 # pylint: disable=file-perms
 
-# Import python libs
-from __future__ import absolute_import
 
 import atexit
+import builtins
 import os
 import pprint  # pylint: disable=unused-import
 import readline
 import sys
 from code import InteractiveConsole
 
-# Import 3rd party libs
 import jinja2
 
-# Import salt libs
 import salt.client
 import salt.config
 import salt.loader
@@ -46,7 +42,6 @@ import salt.runner
 # pylint: disable=unused-import
 # These are imported to be available in the spawned shell
 import salt.utils.yaml
-from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
 # pylint: enable=unused-import
 
@@ -87,15 +82,20 @@ def get_salt_vars():
 
     if __opts__["file_client"] == "local":
         __pillar__ = salt.pillar.get_pillar(
-            __opts__, __grains__, __opts__.get("id"), __opts__.get("saltenv"),
+            __opts__,
+            __grains__,
+            __opts__.get("id"),
+            __opts__.get("saltenv"),
         ).compile_pillar()
     else:
         __pillar__ = {}
 
     # pylint: disable=invalid-name,unused-variable,possibly-unused-variable
-    JINJA = lambda x, **y: jinja2.Template(x).render(
-        grains=__grains__, salt=__salt__, opts=__opts__, pillar=__pillar__, **y
-    )
+    def JINJA(x, **y):
+        return jinja2.Template(x).render(
+            grains=__grains__, salt=__salt__, opts=__opts__, pillar=__pillar__, **y
+        )
+
     # pylint: enable=invalid-name,unused-variable,possibly-unused-variable
 
     return locals()

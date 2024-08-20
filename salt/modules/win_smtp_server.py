@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing IIS SMTP server configuration on Windows servers.
 The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
@@ -18,23 +17,17 @@ The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
 #   https://goo.gl/aBMZ9K
 #   http://goo.gl/MrybFq
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
 import salt.utils.args
 import salt.utils.platform
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import wmi
+
     import salt.utils.winapi
 
     _HAS_MODULE_DEPENDENCIES = True
@@ -114,9 +107,9 @@ def _normalize_server_settings(**settings):
     for setting in settings:
         if isinstance(settings[setting], dict):
             _LOG.debug("Fixing value: %s", settings[setting])
-            value_from_key = next(six.iterkeys(settings[setting]))
+            value_from_key = next(iter(settings[setting].keys()))
 
-            ret[setting] = "{{{0}}}".format(value_from_key)
+            ret[setting] = f"{{{value_from_key}}}"
         else:
             ret[setting] = settings[setting]
     return ret
@@ -145,8 +138,8 @@ def get_log_format_types():
 
             # Remove the prefix from the name.
             for obj in objs:
-                name = six.text_type(obj.Name).replace(prefix, "", 1)
-                ret[name] = six.text_type(obj.LogModuleId)
+                name = str(obj.Name).replace(prefix, "", 1)
+                ret[name] = str(obj.LogModuleId)
         except wmi.x_wmi as error:
             _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
@@ -178,7 +171,7 @@ def get_servers():
             objs = connection.IIsSmtpServerSetting()
 
             for obj in objs:
-                ret.append(six.text_type(obj.Name))
+                ret.append(str(obj.Name))
         except wmi.x_wmi as error:
             _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
@@ -216,7 +209,7 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
             objs = connection.IIsSmtpServerSetting(settings, Name=server)[0]
 
             for setting in settings:
-                ret[setting] = six.text_type(getattr(objs, setting))
+                ret[setting] = str(getattr(objs, setting))
         except wmi.x_wmi as error:
             _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
@@ -271,9 +264,7 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
             _LOG.error("Error getting IIsSmtpServerSetting: %s", error)
 
         for setting in settings:
-            if six.text_type(settings[setting]) != six.text_type(
-                current_settings[setting]
-            ):
+            if str(settings[setting]) != str(current_settings[setting]):
                 try:
                     setattr(objs, setting, settings[setting])
                 except wmi.x_wmi as error:
@@ -287,7 +278,7 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
     failed_settings = dict()
 
     for setting in settings:
-        if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
+        if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
     if failed_settings:
         _LOG.error("Failed to change settings: %s", failed_settings)
@@ -318,7 +309,7 @@ def get_log_format(server=_DEFAULT_SERVER):
     # Since IIsSmtpServerSetting stores the log type as an id, we need
     # to get the mapping from IISLogModuleSetting and extract the name.
     for key in log_format_types:
-        if six.text_type(format_id) == log_format_types[key]:
+        if str(format_id) == log_format_types[key]:
             return key
     _LOG.warning("Unable to determine log format.")
     return None
@@ -345,7 +336,7 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     format_id = log_format_types.get(log_format, None)
 
     if not format_id:
-        message = ("Invalid log format '{0}' specified. Valid formats:" " {1}").format(
+        message = "Invalid log format '{}' specified. Valid formats: {}".format(
             log_format, log_format_types.keys()
         )
         raise SaltInvocationError(message)
@@ -400,7 +391,7 @@ def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
     for unnormalized_address in addresses:
         ip_address, subnet = re.split(reg_separator, unnormalized_address)
         if as_wmi_format:
-            ret.append("{0}, {1}".format(ip_address, subnet))
+            ret.append(f"{ip_address}, {subnet}")
         else:
             ret[ip_address] = subnet
 
@@ -440,9 +431,7 @@ def set_connection_ip_list(
     # Convert addresses to the 'ip_address, subnet' format used by
     # IIsIPSecuritySetting.
     for address in addresses:
-        formatted_addresses.append(
-            "{0}, {1}".format(address.strip(), addresses[address].strip())
-        )
+        formatted_addresses.append(f"{address.strip()}, {addresses[address].strip()}")
 
     current_addresses = get_connection_ip_list(as_wmi_format=True, server=server)
 
@@ -510,7 +499,7 @@ def get_relay_ip_list(server=_DEFAULT_SERVER):
     # need to group them and reassemble them into IP addresses.
     i = 0
     while i < len(lines):
-        octets = [six.text_type(x) for x in lines[i : i + 4]]
+        octets = [str(x) for x in lines[i : i + 4]]
         address = ".".join(octets)
         ret.append(address)
         i += 4

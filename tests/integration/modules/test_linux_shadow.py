@@ -5,15 +5,17 @@ integration tests for shadow linux
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.slow_test
 class ShadowModuleTest(ModuleCase):
     """
     Validate the linux shadow system module
@@ -25,7 +27,7 @@ class ShadowModuleTest(ModuleCase):
         """
         self._password = self.run_function("shadow.gen_password", ["Password1234"])
         if "ERROR" in self._password:
-            self.fail("Failed to generate password: {}".format(self._password))
+            self.fail(f"Failed to generate password: {self._password}")
         super().setUp()
         self._no_user = random_string("tu-", uppercase=False)
         self._test_user = random_string("tu-", uppercase=False)

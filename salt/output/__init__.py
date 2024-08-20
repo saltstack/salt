@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import io
@@ -15,14 +11,10 @@ import re
 import sys
 import traceback
 
-# Import Salt libs
 import salt.loader
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
@@ -61,7 +53,7 @@ def get_progress(opts, out, progress):
     Get the progress bar from the given outputter
     """
     return salt.loader.raw_mod(opts, out, "rawmodule", mod="output")[
-        "{0}.progress_iter".format(out)
+        f"{out}.progress_iter"
     ](progress)
 
 
@@ -111,7 +103,7 @@ def display_output(data, out=None, opts=None, **kwargs):
 
             try:
                 fdata = display_data
-                if isinstance(fdata, six.text_type):
+                if isinstance(fdata, str):
                     try:
                         fdata = fdata.encode("utf-8")
                     except (UnicodeDecodeError, UnicodeEncodeError):
@@ -127,10 +119,10 @@ def display_output(data, out=None, opts=None, **kwargs):
             return
         if display_data:
             salt.utils.stringutils.print_cli(display_data)
-    except IOError as exc:
+    except OSError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
-            six.reraise(*sys.exc_info())
+            raise
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -198,7 +190,8 @@ def get_printout(out, opts=None, **kwargs):
         # error when old minions are asking for it
         if out != "grains":
             log.error(
-                "Invalid outputter %s specified, fall back to nested", out,
+                "Invalid outputter %s specified, fall back to nested",
+                out,
             )
         return outputters["nested"]
     return outputters[out]
@@ -233,12 +226,7 @@ def strip_esc_sequence(txt):
     Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
     from writing their own terminal manipulation commands
     """
-    if isinstance(txt, six.string_types):
-        try:
-            return txt.replace("\033", "?")
-        except UnicodeDecodeError:
-            return txt.replace(
-                str("\033"), str("?")
-            )  # future lint: disable=blacklisted-function
+    if isinstance(txt, str):
+        return txt.replace("\033", "?")
     else:
         return txt

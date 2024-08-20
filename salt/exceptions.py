@@ -7,7 +7,6 @@ import logging
 import time
 
 import salt.defaults.exitcodes
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -42,24 +41,8 @@ class SaltException(Exception):
 
         if not isinstance(message, str):
             message = str(message)
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if six.PY3 or isinstance(message, unicode):
-            super().__init__(salt.utils.stringutils.to_str(message))
-            self.message = self.strerror = message
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        elif isinstance(message, str):
-            super().__init__(message)
-            self.message = self.strerror = salt.utils.stringutils.to_unicode(message)
-        else:
-            # Some non-string input was passed. Run the parent dunder init with
-            # a str version, and convert the passed value to unicode for the
-            # message/strerror attributes.
-            # futurdisable lint: blacklisteenable-function
-            super().__init__(str(message))
-            # future lint: blacklisteenable-function
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.message = self.strerror = unicode(message)
-            # pylint: enable=incompatible-py3-code,undefined-variable
+        super().__init__(salt.utils.stringutils.to_str(message))
+        self.message = self.strerror = message
 
     def pack(self):
         """
@@ -111,6 +94,12 @@ class AuthenticationError(SaltException):
     """
 
 
+class InvalidKeyError(SaltException):
+    """
+    Raised when we encounter an invalid RSA key.
+    """
+
+
 class CommandNotFoundError(SaltException):
     """
     Used in modules or grains when a required binary is not available
@@ -138,9 +127,7 @@ class CommandExecutionError(SaltException):
             try:
                 exc_str_prefix = str(message)
             except UnicodeDecodeError:
-                exc_str_prefix = salt.utils.stringutils.to_unicode(
-                    str(message)
-                )  # future lint: disable=blacklisted-function
+                exc_str_prefix = salt.utils.stringutils.to_unicode(str(message))
         self.error = exc_str_prefix
         self.info = info
         if self.info:
@@ -292,14 +279,12 @@ class SaltRenderError(SaltException):
             try:
                 exc_str = str(message)
             except UnicodeDecodeError:
-                exc_str = salt.utils.stringutils.to_unicode(
-                    str(message)
-                )  # future lint: disable=blacklisted-function
+                exc_str = salt.utils.stringutils.to_unicode(str(message))
         self.line_num = line_num
         self.buffer = buf
         self.context = ""
         if trace:
-            exc_str += "\n{}\n".format(trace)
+            exc_str += f"\n{trace}\n"
         if self.line_num and self.buffer:
             # Avoid circular import
             import salt.utils.templates
@@ -308,7 +293,8 @@ class SaltRenderError(SaltException):
                 self.buffer, self.line_num, marker=marker
             )
             exc_str += "; line {}\n\n{}".format(
-                self.line_num, salt.utils.stringutils.to_unicode(self.context),
+                self.line_num,
+                salt.utils.stringutils.to_unicode(self.context),
             )
         super().__init__(exc_str)
 
@@ -373,6 +359,12 @@ class SaltDeserializationError(SaltException):
 class AuthorizationError(SaltException):
     """
     Thrown when runner or wheel execution fails due to permissions
+    """
+
+
+class UnsupportedAlgorithm(SaltException):
+    """
+    Thrown when a requested encryption or signing algorithm is un-supported.
     """
 
 

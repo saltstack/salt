@@ -1,0 +1,72 @@
+---
+name: setup-python-tools-scripts
+description: Setup 'python-tools-scripts'
+
+inputs:
+  cache-prefix:
+    required: true
+    description: Seed used to invalidate caches
+  cwd:
+    description: The directory the salt checkout is located in
+    default: "."
+
+outputs:
+  version:
+    description: "Return the python-tools-scripts version"
+    value: ${{ steps.get-version.outputs.version }}
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Get Python Version
+      id: get-python-version
+      uses: ./.github/actions/get-python-version
+      with:
+        python-binary: python3
+
+    - name: Define Cache Hash
+      id: venv-hash
+      shell: bash
+      run: |
+        VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
+          steps.get-python-version.outputs.version-sha256sum }}|${{
+          hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+        echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
+        echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
+
+    - uses: ./.github/actions/cached-virtualenv
+      id: tools-virtualenv
+      with:
+        name: tools.${{ steps.venv-hash.outputs.venv-hash }}
+        cache-seed: tools|${{ steps.venv-hash.outputs.venv-hash }}
+
+    - name: Restore Python Tools Virtualenvs Cache
+      uses: ./.github/actions/cache
+      with:
+        path: ${{ inputs.cwd }}/.tools-venvs
+        key: ${{ inputs.cache-prefix }}|${{ steps.venv-hash.outputs.venv-hash }}
+
+    - name: Install 'python-tools-scripts'
+      shell: bash
+      working-directory: ${{ inputs.cwd }}
+      run: |
+        PYTHON_EXE=${{ steps.tools-virtualenv.outputs.python-executable }}
+        (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
+        if [ $exitcode -eq 0 ]; then
+          ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        else
+          ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        fi
+
+    - name: Get 'python-tools-scripts' Version
+      id: get-version
+      shell: bash
+      working-directory: ${{ inputs.cwd }}
+      run: |
+        # The first time `tools` runs with newer virtual enviroments we need to disregard the output
+        tools --debug --version
+        VERSION=$(tools --version | tail -n 1)
+        echo "version=$VERSION" >> "${GITHUB_OUTPUT}"

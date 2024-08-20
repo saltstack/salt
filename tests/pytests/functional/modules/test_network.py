@@ -1,6 +1,7 @@
 """
 Validate network module
 """
+
 import pytest
 
 pytestmark = [
@@ -11,7 +12,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def url(modules):
-    return "google-public-dns-a.google.com"
+    return "rewrite.amazon.com"
 
 
 @pytest.fixture(scope="module")
@@ -76,6 +77,4 @@ def test_network_nslookup(network, url):
             if out in val:
                 exp_out.remove(out)
     if exp_out:
-        pytest.fail(
-            "Failed to find the {} key(s) on the returned data: {}".format(exp_out, ret)
-        )
+        pytest.fail(f"Failed to find the {exp_out} key(s) on the returned data: {ret}")

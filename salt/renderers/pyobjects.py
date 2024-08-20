@@ -210,6 +210,24 @@ The following pairs of lines are functionally equivalent:
     value = __salt__['config.get']('foo:bar:baz', 'qux')
 
 
+Opts dictionary and SLS name
+----------------------------
+
+Pyobjects provides variable access to the minion options dictionary and the SLS
+name that the code resides in. These variables are the same as the `opts` and
+`sls` variables available in the Jinja renderer.
+
+The following lines show how to access that information.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    test_mode = __opts__["test"]
+    sls_name = __sls__
+
+
 Map Data
 --------
 
@@ -295,6 +313,7 @@ file ``samba/map.sls``, you could do the following.
         Service.running("samba", name=Samba.service)
 
 """
+
 # TODO: Interface for working with reactor files
 
 
@@ -328,7 +347,7 @@ class PyobjectsModule:
         self.__dict__ = attrs
 
     def __repr__(self):
-        return "<module '{!s}' (pyobjects)>".format(self.name)
+        return f"<module '{self.name!s}' (pyobjects)>"
 
 
 def load_states():
@@ -400,6 +419,8 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 "__salt__": __salt__,
                 "__pillar__": __pillar__,
                 "__grains__": __grains__,
+                "__opts__": __opts__,
+                "__sls__": sls,
             }
         )
     except NameError:
@@ -409,9 +430,6 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
     # built instead of returning salt data from the registry
     if not salt_data:
         return _globals
-
-    # this will be used to fetch any import files
-    client = get_file_client(__opts__)
 
     # process our sls imports
     #
@@ -441,15 +459,16 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                     # that we're importing everything
                     imports = None
 
-                state_file = client.cache_file(import_file, saltenv)
-                if not state_file:
-                    raise ImportError(
-                        "Could not find the file '{}'".format(import_file)
-                    )
+                # this will be used to fetch any import files
+                # For example salt://test.sls
+                with get_file_client(__opts__) as client:
+                    state_file = client.cache_file(import_file, saltenv)
+                    if not state_file:
+                        raise ImportError(f"Could not find the file '{import_file}'")
 
-                with salt.utils.files.fopen(state_file) as state_fh:
-                    state_contents, state_globals = process_template(state_fh)
-                exec(state_contents, state_globals)
+                    with salt.utils.files.fopen(state_file) as state_fh:
+                        state_contents, state_globals = process_template(state_fh)
+                    exec(state_contents, state_globals)
 
                 # if no imports have been specified then we are being imported as: import salt://foo.sls
                 # so we want to stick all of the locals from our state file into the template globals
@@ -470,7 +489,7 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
 
                         if name not in state_globals:
                             raise ImportError(
-                                "'{}' was not found in '{}'".format(name, import_file)
+                                f"'{name}' was not found in '{import_file}'"
                             )
                         template_globals[alias] = state_globals[name]
 

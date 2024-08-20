@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing NFS version 3.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +18,8 @@ def __virtual__():
     if not salt.utils.path.which("showmount"):
         return (
             False,
-            "The nfs3 execution module failed to load: the showmount binary is not in the path.",
+            "The nfs3 execution module failed to load: the showmount binary is not in"
+            " the path.",
         )
     return True
 
@@ -60,7 +55,7 @@ def list_exports(exports="/etc/exports"):
                 permcomps = perm.split("(")
                 permcomps[1] = permcomps[1].replace(")", "")
                 hosts = permcomps[0]
-                if not isinstance(hosts, six.string_types):
+                if not isinstance(hosts, str):
                     # Lists, etc would silently mangle /etc/exports
                     raise TypeError("hosts argument must be a string")
                 options = permcomps[1].split(",")
@@ -98,7 +93,7 @@ def add_export(exports="/etc/exports", path=None, hosts=None, options=None):
     """
     if options is None:
         options = []
-    if not isinstance(hosts, six.string_types):
+    if not isinstance(hosts, str):
         # Lists, etc would silently mangle /etc/exports
         raise TypeError("hosts argument must be a string")
     edict = list_exports(exports)
@@ -130,8 +125,8 @@ def _write_exports(exports, edict):
             for perms in edict[export]:
                 hosts = perms["hosts"]
                 options = ",".join(perms["options"])
-                line += " {0}({1})".format(hosts, options)
-            efh.write("{0}\n".format(line))
+                line += f" {hosts}({options})"
+            efh.write(f"{line}\n")
 
 
 def reload_exports():

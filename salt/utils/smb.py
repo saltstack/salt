@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for SMB connections
 
 :depends: impacket
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import socket
 import uuid
 
-# Import python libs
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
@@ -22,23 +18,21 @@ log = logging.getLogger(__name__)
 
 try:
     from smbprotocol.connection import Connection
-    from smbprotocol.session import Session
-    from smbprotocol.tree import TreeConnect
-    from smbprotocol.open import (
-        Open,
-        ImpersonationLevel,
-        FilePipePrinterAccessMask,
-        FileAttributes,
-        CreateDisposition,
-        CreateOptions,
-        ShareAccess,
-        DirectoryAccessMask,
-        FileInformationClass,
-    )
     from smbprotocol.create_contexts import (
         CreateContextName,
         SMB2CreateContextRequest,
         SMB2CreateQueryMaximalAccessRequest,
+    )
+    from smbprotocol.open import (
+        CreateDisposition,
+        CreateOptions,
+        DirectoryAccessMask,
+        FileAttributes,
+        FileInformationClass,
+        FilePipePrinterAccessMask,
+        ImpersonationLevel,
+        Open,
+        ShareAccess,
     )
     from smbprotocol.security_descriptor import (
         AccessAllowedAce,
@@ -48,6 +42,8 @@ try:
         SIDPacket,
         SMB2CreateSDBuffer,
     )
+    from smbprotocol.session import Session
+    from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
     HAS_SMBPROTOCOL = True
@@ -55,7 +51,7 @@ except ImportError:
     HAS_SMBPROTOCOL = False
 
 
-class SMBProto(object):
+class SMBProto:
     def __init__(self, server, username, password, port=445):
         connection_id = uuid.uuid4()
         addr = socket.getaddrinfo(server, None, 0, 0, socket.IPPROTO_TCP)[0][4][0]
@@ -76,7 +72,7 @@ class SMBProto(object):
 
     def tree_connect(self, share):
         if share.endswith("$"):
-            share = r"\\{}\{}".format(self.server, share)
+            share = rf"\\{self.server}\{share}"
         tree = TreeConnect(self.session, share)
         tree.connect()
         return tree
@@ -90,9 +86,9 @@ class SMBProto(object):
         file = cls.normalize_filename(file)
         # ensure file is created, get maximal access, and set everybody read access
         max_req = SMB2CreateContextRequest()
-        max_req[
-            "buffer_name"
-        ] = CreateContextName.SMB2_CREATE_QUERY_MAXIMAL_ACCESS_REQUEST
+        max_req["buffer_name"] = (
+            CreateContextName.SMB2_CREATE_QUERY_MAXIMAL_ACCESS_REQUEST
+        )
         max_req["buffer_data"] = SMB2CreateQueryMaximalAccessRequest()
 
         # create security buffer that sets the ACL for everyone to have read access

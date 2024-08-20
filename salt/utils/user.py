@@ -1,26 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Functions for querying and modifying a user account and the groups to which it
 belongs.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import ctypes
 import getpass
 import logging
 import os
 import sys
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
 
 # Conditional imports
@@ -39,18 +31,15 @@ except ImportError:
     HAS_GRP = False
 
 try:
-    import pysss
-
-    HAS_PYSSS = True
-except ImportError:
-    HAS_PYSSS = False
-
-try:
     import salt.utils.win_functions
 
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
+
+if sys.platform == "win32":
+    import ctypes.wintypes
+
 
 log = logging.getLogger(__name__)
 
@@ -165,13 +154,13 @@ def get_specific_user():
     user = get_user()
     if salt.utils.platform.is_windows():
         if _win_current_user_is_admin():
-            return "sudo_{0}".format(user)
+            return f"sudo_{user}"
     else:
         env_vars = ("SUDO_USER",)
         if user == "root":
             for evar in env_vars:
                 if evar in os.environ:
-                    return "sudo_{0}".format(os.environ[evar])
+                    return f"sudo_{os.environ[evar]}"
     return user
 
 
@@ -189,7 +178,7 @@ def chugid(runas, group=None):
             target_pw_gid = grp.getgrnam(group).gr_gid
         except KeyError as err:
             raise CommandExecutionError(
-                "Failed to fetch the GID for {0}. Error: {1}".format(group, err)
+                f"Failed to fetch the GID for {group}. Error: {err}"
             )
     else:
         target_pw_gid = uinfo.pw_gid
@@ -205,9 +194,7 @@ def chugid(runas, group=None):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == "darwin":
-        group_list = dict(
-            (k, v) for k, v in six.iteritems(group_list) if not k.startswith("_")
-        )
+        group_list = {k: v for k, v in group_list.items() if not k.startswith("_")}
     for group_name in group_list:
         gid = group_list[group_name]
         if gid not in supgroups_seen and not supgroups_seen.add(gid):
@@ -218,7 +205,7 @@ def chugid(runas, group=None):
             os.setgid(target_pw_gid)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to change from gid {0} to {1}. Error: {2}".format(
+                "Failed to change from gid {} to {}. Error: {}".format(
                     os.getgid(), target_pw_gid, err
                 )
             )
@@ -229,7 +216,7 @@ def chugid(runas, group=None):
             os.setgroups(supgroups)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to set supplemental groups to {0}. Error: {1}".format(
+                "Failed to set supplemental groups to {}. Error: {}".format(
                     supgroups, err
                 )
             )
@@ -239,7 +226,7 @@ def chugid(runas, group=None):
             os.setuid(uinfo.pw_uid)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to change from uid {0} to {1}. Error: {2}".format(
+                "Failed to change from uid {} to {}. Error: {}".format(
                     os.getuid(), uinfo.pw_uid, err
                 )
             )
@@ -298,28 +285,35 @@ def get_group_list(user, include_default=True):
         return []
     group_names = None
     ugroups = set()
-    if hasattr(os, "getgrouplist"):
-        # Try os.getgrouplist, available in python >= 3.3
-        log.trace("Trying os.getgrouplist for '%s'", user)
-        try:
-            group_names = [
-                grp.getgrgid(grpid).gr_name
-                for grpid in os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
-            ]
-        except Exception:  # pylint: disable=broad-except
-            pass
-    elif HAS_PYSSS:
-        # Try pysss.getgrouplist
-        log.trace("Trying pysss.getgrouplist for '%s'", user)
-        try:
-            group_names = list(pysss.getgrouplist(user))
-        except Exception:  # pylint: disable=broad-except
-            pass
+    # Try os.getgrouplist, available in python >= 3.3
+    log.trace("Trying os.getgrouplist for '%s'", user)
+    try:
+        user_group_list = sorted(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+        local_grall = _getgrall()
+        local_gids = sorted(lgrp.gr_gid for lgrp in local_grall)
+        max_idx = -1
+        local_max = local_gids[max_idx]
+        while local_max >= 65000:
+            max_idx -= 1
+            local_max = local_gids[max_idx]
+        user_group_list_local = [lgrp for lgrp in user_group_list if lgrp <= local_max]
+        user_group_list_remote = [rgrp for rgrp in user_group_list if rgrp > local_max]
+        local_group_names = [
+            _group.gr_name
+            for _group in local_grall
+            if _group.gr_gid in user_group_list_local
+        ]
+        remote_group_names = [
+            grp.getgrgid(group_id).gr_name for group_id in user_group_list_remote
+        ]
+        group_names = local_group_names + remote_group_names
+    except Exception:  # pylint: disable=broad-except
+        pass
 
     if group_names is None:
         # Fall back to generic code
         # Include the user's default group to match behavior of
-        # os.getgrouplist() and pysss.getgrouplist()
+        # os.getgrouplist()
         log.trace("Trying generic group list for '%s'", user)
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
@@ -359,7 +353,11 @@ def get_group_dict(user=None, include_default=True):
     group_dict = {}
     group_names = get_group_list(user, include_default=include_default)
     for group in group_names:
-        group_dict.update({group: grp.getgrnam(group).gr_gid})
+        try:
+            group_dict.update({group: grp.getgrnam(group).gr_gid})
+        except KeyError:
+            # In case if imporer duplicate group was returned by get_group_list
+            pass
     return group_dict
 
 
@@ -370,9 +368,7 @@ def get_gid_list(user, include_default=True):
     """
     if HAS_GRP is False or HAS_PWD is False:
         return []
-    gid_list = list(
-        six.itervalues(get_group_dict(user, include_default=include_default))
-    )
+    gid_list = list(get_group_dict(user, include_default=include_default).values())
     return sorted(set(gid_list))
 
 
@@ -394,3 +390,24 @@ def get_gid(group=None):
             return grp.getgrnam(group).gr_gid
         except KeyError:
             return None
+
+
+def _getgrall(root=None):
+    """
+    Alternative implemetantion for getgrall, that uses only /etc/group
+    """
+    ret = []
+    root = "/" if not root else root
+    etc_group = os.path.join(root, "etc/group")
+    with salt.utils.files.fopen(etc_group) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(":")
+            # Generate a getgrall compatible output
+            comps[2] = int(comps[2])
+            if comps[3]:
+                comps[3] = [mem.strip() for mem in comps[3].split(",")]
+            else:
+                comps[3] = []
+            ret.append(grp.struct_group(comps))
+    return ret

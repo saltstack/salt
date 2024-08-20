@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pure python state renderer
 ==========================
@@ -47,8 +46,24 @@ execution functions, grains, pillar, etc. They are:
   ``/srv/salt/foo/bar/baz.sls``, then ``__sls__`` in that file will be
   ``foo.bar.baz``.
 
-When writing a reactor SLS file the global context ``data`` (same as context ``{{ data }}``
-for states written with Jinja + YAML) is available. The following YAML + Jinja state declaration:
+When used in a scenario where additional user-provided context data is supplied
+(such as with :mod:`file.managed <salt.states.file.managed>`), the additional
+data will typically be injected into the script as one or more global
+variables:
+
+.. code-block:: jinja
+
+    /etc/http/conf/http.conf:
+      file.managed:
+        - source: salt://apache/generate_http_conf.py
+        - template: py
+        - context:
+            # Will be injected as the global variable "site_name".
+            site_name: {{ site_name }}
+
+When writing a reactor SLS file the global context ``data`` (same as context
+``{{ data }}`` for states written with Jinja + YAML) is available. The
+following YAML + Jinja state declaration:
 
 .. code-block:: jinja
 
@@ -110,14 +125,10 @@ Full Example
         return config
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
 import salt.utils.templates
-
-# Import salt libs
 from salt.exceptions import SaltRenderError
 
 
@@ -129,7 +140,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
     """
     template = tmplpath
     if not os.path.isfile(template):
-        raise SaltRenderError("Template {0} is not a file!".format(template))
+        raise SaltRenderError(f"Template {template} is not a file!")
 
     tmp_data = salt.utils.templates.py(
         template,
@@ -146,7 +157,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
         saltenv=saltenv,
         __sls__=sls,
         sls=sls,
-        **kws
+        **kws,
     )
     if not tmp_data.get("result", False):
         raise SaltRenderError(

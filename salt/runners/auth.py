@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Authentication runner for creating, deleting, and managing eauth tokens.
 
@@ -6,12 +5,8 @@ Authentication runner for creating, deleting, and managing eauth tokens.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import Salt libs
 import salt.auth
 import salt.exceptions
 import salt.netapi

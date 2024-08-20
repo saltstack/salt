@@ -184,7 +184,6 @@ RUNTIME_VARS = RuntimeVars(
     TMP_SUB_MINION_CONF_DIR=paths.TMP_SUB_MINION_CONF_DIR,
     TMP_SYNDIC_MASTER_CONF_DIR=paths.TMP_SYNDIC_MASTER_CONF_DIR,
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
-    TMP_PROXY_CONF_DIR=paths.TMP_PROXY_CONF_DIR,
     TMP_SSH_CONF_DIR=paths.TMP_SSH_CONF_DIR,
     TMP_SCRIPT_DIR=paths.TMP_SCRIPT_DIR,
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
@@ -193,12 +192,16 @@ RUNTIME_VARS = RuntimeVars(
     TMP_BASEENV_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     TMP_PRODENV_PILLAR_TREE=paths.TMP_PRODENV_PILLAR_TREE,
-    SHELL_TRUE_PATH=salt.utils.path.which("true")
-    if not salt.utils.platform.is_windows()
-    else "cmd /c exit 0 > nul",
-    SHELL_FALSE_PATH=salt.utils.path.which("false")
-    if not salt.utils.platform.is_windows()
-    else "cmd /c exit 1 > nul",
+    SHELL_TRUE_PATH=(
+        salt.utils.path.which("true")
+        if not salt.utils.platform.is_windows()
+        else "cmd /c exit 0 > nul"
+    ),
+    SHELL_FALSE_PATH=(
+        salt.utils.path.which("false")
+        if not salt.utils.platform.is_windows()
+        else "cmd /c exit 1 > nul"
+    ),
     RUNNING_TESTS_USER=this_user(),
     RUNTIME_CONFIGS={},
     CODE_DIR=paths.CODE_DIR,

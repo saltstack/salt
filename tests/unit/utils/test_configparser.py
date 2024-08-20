@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.utils.test_configparser
 ==================================
 
 Test the funcs in the custom parsers in salt.utils.configparser
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
@@ -14,14 +11,9 @@ import logging
 import os
 
 import salt.utils.configparser
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -111,7 +103,7 @@ class TestGitConfigParser(TestCase):
 
     def _test_write(self, mode):
         kwargs = {"mode": mode}
-        if six.PY3 and salt.utils.platform.is_windows() and "b" not in mode:
+        if salt.utils.platform.is_windows() and "b" not in mode:
             kwargs["encoding"] = "utf-8"
         with salt.utils.files.fopen(self.new_config, **kwargs) as fp_:
             self.conf.write(fp_)
@@ -129,14 +121,12 @@ class TestGitConfigParser(TestCase):
             self.conf.get("alias", "modified"),
             """! git status --porcelain | awk 'match($1, "M"){print $2}'""",
         )
-        # future lint: disable=non-unicode-string
         self.assertEqual(
             self.conf.get("alias", "hist"),
             salt.utils.stringutils.to_unicode(
                 r"""log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short"""
             ),
         )
-        # future lint: enable=non-unicode-string
 
     def test_read_space_indent(self):
         """
@@ -189,9 +179,7 @@ class TestGitConfigParser(TestCase):
             self.conf.write(fp_)
         # Confirm that the new file was written correctly
         expected = self.fix_indent(ORIG_CONFIG)
-        # pylint: disable=string-substitution-usage-error
-        expected.insert(6, "\tfetch = %s" % new_refspec)
-        # pylint: enable=string-substitution-usage-error
+        expected.insert(6, f"\tfetch = {new_refspec}")
         self.assertEqual(self.get_lines(self.new_config), expected)
 
     def test_remove_option(self):
@@ -226,9 +214,7 @@ class TestGitConfigParser(TestCase):
             self.conf.remove_option_regexp(
                 self.remote,
                 "fetch",
-                salt.utils.stringutils.to_unicode(
-                    r"\d{7,10}"
-                ),  # future lint: disable=non-unicode-string
+                salt.utils.stringutils.to_unicode(r"\d{7,10}"),
             )
         )
         # Make sure that all three values are still there (since none should

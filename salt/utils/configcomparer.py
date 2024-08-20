@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for comparing and updating configurations while keeping track of
 changes in a way that can be easily reported in a state.
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
 
 
 def compare_and_update_config(config, update_config, changes, namespace=""):
@@ -36,12 +29,15 @@ def compare_and_update_config(config, update_config, changes, namespace=""):
             # compare each key in the base config with the values in the
             # update_config, overwriting the values that are different but
             # keeping any that are not defined in config
-            for key, value in six.iteritems(config):
+            for key, value in config.items():
                 _namespace = key
                 if namespace:
-                    _namespace = "{0}.{1}".format(namespace, _namespace)
+                    _namespace = f"{namespace}.{_namespace}"
                 update_config[key] = compare_and_update_config(
-                    value, update_config.get(key, None), changes, namespace=_namespace,
+                    value,
+                    update_config.get(key, None),
+                    changes,
+                    namespace=_namespace,
                 )
             return update_config
 
@@ -65,15 +61,18 @@ def compare_and_update_config(config, update_config, changes, namespace=""):
             # iterate through config list, ensuring that each index in the
             # update_config list is the same
             for idx, item in enumerate(config):
-                _namespace = "[{0}]".format(idx)
+                _namespace = f"[{idx}]"
                 if namespace:
-                    _namespace = "{0}{1}".format(namespace, _namespace)
+                    _namespace = f"{namespace}{_namespace}"
                 _update = None
                 if len(update_config) > idx:
                     _update = update_config[idx]
                 if _update:
                     update_config[idx] = compare_and_update_config(
-                        config[idx], _update, changes, namespace=_namespace,
+                        config[idx],
+                        _update,
+                        changes,
+                        namespace=_namespace,
                     )
                 else:
                     changes[_namespace] = {
@@ -87,9 +86,9 @@ def compare_and_update_config(config, update_config, changes, namespace=""):
                 for idx, old_item in enumerate(update_config):
                     if idx < len(config):
                         continue
-                    _namespace = "[{0}]".format(idx)
+                    _namespace = f"[{idx}]"
                     if namespace:
-                        _namespace = "{0}{1}".format(namespace, _namespace)
+                        _namespace = f"{namespace}{_namespace}"
                     changes[_namespace] = {
                         "new": None,
                         "old": old_item,

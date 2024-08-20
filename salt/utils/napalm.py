@@ -14,7 +14,6 @@ Utils for the NAPALM modules and proxy.
 .. versionadded:: 2017.7.0
 """
 
-
 import copy
 import importlib
 import logging
@@ -30,7 +29,6 @@ try:
     # https://github.com/napalm-automation/napalm
     # pylint: disable=unused-import,no-name-in-module
     import napalm
-    import napalm.base as napalm_base
 
     # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
@@ -45,7 +43,10 @@ try:
     # try importing ConnectionClosedException
     # from napalm-base
     # this exception has been introduced only in version 0.24.0
-    from napalm_base.exceptions import ConnectionClosedException
+    # pylint: disable=unused-import,no-name-in-module
+    from napalm.base.exceptions import ConnectionClosedException
+
+    # pylint: enable=unused-import,no-name-in-module
 
     HAS_CONN_CLOSED_EXC_CLASS = True
 except ImportError:
@@ -94,12 +95,8 @@ def virtual(opts, virtualname, filename):
     else:
         return (
             False,
-            (
-                '"{vname}"" {filename} cannot be loaded: '
-                "NAPALM is not installed: ``pip install napalm``"
-            ).format(
-                vname=virtualname, filename="({filename})".format(filename=filename)
-            ),
+            f'"{virtualname}" ({filename}) cannot be loaded: '
+            "NAPALM is not installed: ``pip install napalm``",
         )
 
 
@@ -179,8 +176,10 @@ def call(napalm_device, method, *args, **kwargs):
             traceback.format_exc()
         )  # let's get the full traceback and display for debugging reasons.
         if isinstance(error, NotImplementedError):
-            comment = "{method} is not implemented for the NAPALM {driver} driver!".format(
-                method=method, driver=napalm_device.get("DRIVER_NAME")
+            comment = (
+                "{method} is not implemented for the NAPALM {driver} driver!".format(
+                    method=method, driver=napalm_device.get("DRIVER_NAME")
+                )
             )
         elif (
             retry
@@ -228,18 +227,21 @@ def call(napalm_device, method, *args, **kwargs):
             #   Salt proxy keepalive helps: immediately after the first failure, it
             #   will know the state of the connection and will try reconnecting.
         else:
-            comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-                device=napalm_device.get("HOSTNAME", "[unspecified hostname]"),
-                port=(
-                    ":{port}".format(
-                        port=napalm_device.get("OPTIONAL_ARGS", {}).get("port")
-                    )
-                    if napalm_device.get("OPTIONAL_ARGS", {}).get("port")
-                    else ""
-                ),
-                user=napalm_device.get("USERNAME", ""),
-                method=method,
-                error=error,
+            comment = (
+                'Cannot execute "{method}" on {device}{port} as {user}. Reason:'
+                " {error}!".format(
+                    device=napalm_device.get("HOSTNAME", "[unspecified hostname]"),
+                    port=(
+                        ":{port}".format(
+                            port=napalm_device.get("OPTIONAL_ARGS", {}).get("port")
+                        )
+                        if napalm_device.get("OPTIONAL_ARGS", {}).get("port")
+                        else ""
+                    ),
+                    user=napalm_device.get("USERNAME", ""),
+                    method=method,
+                    error=error,
+                )
             )
         log.error(comment)
         log.error(err_tb)
@@ -312,16 +314,8 @@ def get_device(opts, salt_obj=None):
     """
     log.debug("Setting up NAPALM connection")
     network_device = get_device_opts(opts, salt_obj=salt_obj)
-    provider_lib = napalm_base
+    provider_lib = napalm.base
     if network_device.get("PROVIDER"):
-        # In case the user requires a different provider library,
-        #   other than napalm-base.
-        # For example, if napalm-base does not satisfy the requirements
-        #   and needs to be enahanced with more specific features,
-        #   we may need to define a custom library on top of napalm-base
-        #   with the constraint that it still needs to provide the
-        #   `get_network_driver` function. However, even this can be
-        #   extended later, if really needed.
         # Configuration example:
         #   provider: napalm_base_example
         try:
@@ -330,7 +324,6 @@ def get_device(opts, salt_obj=None):
             log.error(
                 "Unable to import %s", network_device.get("PROVIDER"), exc_info=True
             )
-            log.error("Falling back to napalm-base")
     _driver_ = provider_lib.get_network_driver(network_device.get("DRIVER_NAME"))
     try:
         network_device["DRIVER"] = _driver_(
@@ -343,7 +336,7 @@ def get_device(opts, salt_obj=None):
         network_device.get("DRIVER").open()
         # no exception raised here, means connection established
         network_device["UP"] = True
-    except napalm_base.exceptions.ConnectionException as error:
+    except napalm.base.exceptions.ConnectionException as error:
         base_err_msg = "Cannot connect to {hostname}{port} as {username}.".format(
             hostname=network_device.get("HOSTNAME", "[unspecified hostname]"),
             port=(
@@ -357,7 +350,7 @@ def get_device(opts, salt_obj=None):
         )
         log.error(base_err_msg)
         log.error("Please check error: %s", error)
-        raise napalm_base.exceptions.ConnectionException(base_err_msg)
+        raise napalm.base.exceptions.ConnectionException(base_err_msg)
     return network_device
 
 
@@ -417,7 +410,7 @@ def proxy_napalm_wrap(func):
                 # in order to make sure we are editing the same session.
                 try:
                     wrapped_global_namespace["napalm_device"] = get_device(opts)
-                except napalm_base.exceptions.ConnectionException as nce:
+                except napalm.base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return "{base_msg}. See log for details.".format(
                         base_msg=str(nce.msg)
@@ -465,7 +458,8 @@ def proxy_napalm_wrap(func):
                 log.debug(inventory_opts)
                 napalm_opts.update(inventory_opts)
                 log.debug(
-                    "Merging the config for %s with the details found in the napalm inventory:",
+                    "Merging the config for %s with the details found in the napalm"
+                    " inventory:",
                     host,
                 )
                 log.debug(napalm_opts)
@@ -486,7 +480,7 @@ def proxy_napalm_wrap(func):
                     wrapped_global_namespace["napalm_device"] = get_device(
                         opts, salt_obj=_salt_obj
                     )
-                except napalm_base.exceptions.ConnectionException as nce:
+                except napalm.base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return "{base_msg}. See log for details.".format(
                         base_msg=str(nce.msg)

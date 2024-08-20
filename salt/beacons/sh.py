@@ -1,6 +1,7 @@
 """
 Watch the shell commands being executed actively. This beacon requires strace.
 """
+
 import logging
 import time
 
@@ -17,7 +18,12 @@ def __virtual__():
     """
     Only load if strace is installed
     """
-    return __virtualname__ if salt.utils.path.which("strace") else False
+    if salt.utils.path.which("strace"):
+        return __virtualname__
+    else:
+        err_msg = "strace is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def _get_shells():
@@ -42,7 +48,7 @@ def validate(config):
     """
     # Configuration for sh beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for sh beacon must be a list.")
+        return False, "Configuration for sh beacon must be a list."
     return True, "Valid beacon configuration"
 
 
@@ -67,7 +73,7 @@ def beacon(config):
         __context__[pkey] = {}
     for pid in track_pids:
         if pid not in __context__[pkey]:
-            cmd = ["strace", "-f", "-e", "execve", "-p", "{}".format(pid)]
+            cmd = ["strace", "-f", "-e", "execve", "-p", f"{pid}"]
             __context__[pkey][pid] = {}
             __context__[pkey][pid]["vt"] = salt.utils.vt.Terminal(
                 cmd,

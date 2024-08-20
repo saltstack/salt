@@ -1,24 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Run-time utilities
 """
+
 #
 # Copyright (C) 2014 SUSE LLC
 
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +58,10 @@ def _blkid_output(out, fs_type=None):
     """
     Parse blkid output.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = {}
     for dev_meta in flt(out.split("\n\n")):
         dev = {}
@@ -79,7 +75,7 @@ def _blkid_output(out, fs_type=None):
 
     if fs_type:
         mounts = _get_mounts(fs_type)
-        for device in six.iterkeys(mounts):
+        for device in mounts:
             if data.get(device):
                 data[device]["mounts"] = mounts[device]
 
@@ -92,7 +88,10 @@ def _blkid(fs_type=None):
 
     :param fs_type: Filter only devices that are formatted by that file system.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = dict()
     for dev_meta in flt(
         os.popen("blkid -o full").read().split(os.linesep)
@@ -104,12 +103,12 @@ def _blkid(fs_type=None):
         dev_name = device.pop(0)[:-1]
         data[dev_name] = dict()
         for k_set in device:
-            ks_key, ks_value = [elm.replace('"', "") for elm in k_set.split("=")]
+            ks_key, ks_value = (elm.replace('"', "") for elm in k_set.split("="))
             data[dev_name][ks_key.lower()] = ks_value
 
     if fs_type:
         mounts = _get_mounts(fs_type)
-        for device in six.iterkeys(mounts):
+        for device in mounts:
             if data.get(device):
                 data[device]["mounts"] = mounts[device]
 
@@ -120,7 +119,7 @@ def _is_device(path):
     """
     Return True if path is a physical device.
     """
-    out = __salt__["cmd.run_all"]("file -i {0}".format(path))
+    out = __salt__["cmd.run_all"](f"file -i {path}")
     _verify_run(out)
 
     # Always [device, mime, charset]. See (file --help)

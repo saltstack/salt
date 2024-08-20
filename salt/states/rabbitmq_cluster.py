@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage RabbitMQ Clusters
 ========================
@@ -12,12 +11,9 @@ Example:
         - user: rabbit
         - host: rabbit.example.com
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.functools
 import salt.utils.path
 
@@ -52,7 +48,7 @@ def joined(name, host, user="rabbit", ram_node=None, runas="root"):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     status = __salt__["rabbitmq.cluster_status"]()
-    if "{0}@{1}".format(user, host) in status:
+    if f"{user}@{host}" in status:
         ret["comment"] = "Already in cluster"
         return ret
 
@@ -66,11 +62,11 @@ def joined(name, host, user="rabbit", ram_node=None, runas="root"):
             ret["comment"] = result["Join"]
 
     # If we've reached this far before returning, we have changes.
-    ret["changes"] = {"old": "", "new": "{0}@{1}".format(user, host)}
+    ret["changes"] = {"old": "", "new": f"{user}@{host}"}
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Node is set to join cluster {0}@{1}".format(user, host)
+        ret["comment"] = f"Node is set to join cluster {user}@{host}"
 
     return ret
 

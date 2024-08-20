@@ -44,6 +44,7 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 """
+
 import logging
 import shlex
 import subprocess
@@ -85,7 +86,6 @@ def top(**kwargs):
         ],
         stdout=subprocess.PIPE,
         check=True,
-        shell=True,  # nosec
     )
     ndata = salt.utils.yaml.safe_load(proc.stdout)
     if not ndata:

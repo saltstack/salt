@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Saltclass Configuration
 =======================
@@ -207,9 +206,6 @@ Not using ``^`` as the first entry will simply merge the lists
     Currently you can't have both a variable and an escaped variable in the same string as the
     escaped one will not be correctly rendered - '\${xx}' will stay as is instead of being rendered as '${xx}'
 """
-
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

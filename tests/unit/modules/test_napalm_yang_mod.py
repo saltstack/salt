@@ -2,7 +2,6 @@
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-
 import salt.modules.napalm_network as napalm_network
 import salt.modules.napalm_yang_mod as napalm_yang_mod
 import tests.support.napalm as napalm_test_support
@@ -44,7 +43,9 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": "Configuration discarded.",
                 "already_configured": False,
                 "result": True,
-                "diff": '[edit interfaces xe-0/0/5]+   description "Adding a description";',
+                "diff": (
+                    '[edit interfaces xe-0/0/5]+   description "Adding a description";'
+                ),
             }
         )
         cls._test_diff = freeze({"diff1": "value"})

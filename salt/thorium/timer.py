@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Allow for flow based timers. These timers allow for a sleep to exist across
 multiple runs of the flow
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 

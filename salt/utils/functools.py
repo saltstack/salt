@@ -1,48 +1,63 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions to modify other functions
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
-
-# Import Python libs
 import types
 
 import salt.utils.args
-
-# Import salt libs
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
 
-def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
+def namespaced_function(function, global_dict, defaults=None, preserve_context=None):
     """
-    Redefine (clone) a function under a different globals() namespace scope
+    Redefine (clone) a function under a different globals() namespace scope.
 
-        preserve_context:
-            Allow keeping the context taken from orignal namespace,
-            and extend it with globals() taken from
-            new targetted namespace.
+    Any keys missing in the passed ``global_dict`` that is present in the
+    passed function ``__globals__`` attribute get's copied over into
+    ``global_dict``, thus avoiding ``NameError`` from modules imported in
+    the original function module.
+
+    :param defaults:
+        .. deprecated:: 3005
+
+    :param preserve_context:
+        .. deprecated:: 3005
+
+        Allow keeping the context taken from orignal namespace,
+        and extend it with globals() taken from
+        new targetted namespace.
     """
-    if defaults is None:
-        defaults = function.__defaults__
+    if defaults is not None:
+        salt.utils.versions.warn_until(
+            3008,
+            "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
+            "for removal in {version} and no longer does anything for the "
+            "function being namespaced.",
+        )
 
-    if preserve_context:
-        _global_dict = function.__globals__.copy()
-        _global_dict.update(global_dict)
-        global_dict = _global_dict
+    if preserve_context is not None:
+        salt.utils.versions.warn_until(
+            3008,
+            "Passing 'preserve_context' to 'namespaced_function' is deprecated, "
+            "slated for removal in {version} and no longer does anything for the "
+            "function being namespaced.",
+        )
+
+    # Make sure that any key on the globals of the function being copied get's
+    # added to the destination globals dictionary, if not present.
+    for key, value in function.__globals__.items():
+        if key not in global_dict:
+            global_dict[key] = value
+
     new_namespaced_function = types.FunctionType(
         function.__code__,
         global_dict,
         name=function.__name__,
-        argdefs=defaults,
+        argdefs=function.__defaults__,
         closure=function.__closure__,
     )
     new_namespaced_function.__dict__.update(function.__dict__)
@@ -56,17 +71,17 @@ def alias_function(fun, name, doc=None):
     alias_fun = types.FunctionType(
         fun.__code__,
         fun.__globals__,
-        str(name),  # future lint: disable=blacklisted-function
+        str(name),
         fun.__defaults__,
         fun.__closure__,
     )
     alias_fun.__dict__.update(fun.__dict__)
 
-    if doc and isinstance(doc, six.string_types):
+    if doc and isinstance(doc, str):
         alias_fun.__doc__ = doc
     else:
         orig_name = fun.__name__
-        alias_msg = "\nThis function is an alias of " "``{0}``.\n".format(orig_name)
+        alias_msg = f"\nThis function is an alias of ``{orig_name}``.\n"
         alias_fun.__doc__ = alias_msg + (fun.__doc__ or "")
 
     return alias_fun
@@ -105,9 +120,7 @@ def call_function(salt_function, *args, **kwargs):
     # function_kwargs is initialized to a dictionary of keyword arguments the function to be run accepts
     function_kwargs = dict(
         zip(
-            argspec.args[
-                -len(argspec.defaults or []) :
-            ],  # pylint: disable=incompatible-py3-code
+            argspec.args[-len(argspec.defaults or []) :],
             argspec.defaults or [],
         )
     )
@@ -122,7 +135,7 @@ def call_function(salt_function, *args, **kwargs):
             # those to the arg list that we will pass to the func.
             function_args.append(funcset)
         else:
-            for kwarg_key in six.iterkeys(funcset):
+            for kwarg_key in funcset.keys():
                 # We are going to pass in a keyword argument. The trick here is to make certain
                 # that if we find that in the *args* list that we pass it there and not as a kwarg
                 if kwarg_key in expected_args:
@@ -149,11 +162,12 @@ def call_function(salt_function, *args, **kwargs):
                 # increase the _passed_prm count
                 _passed_prm += 1
     if missing:
-        raise SaltInvocationError("Missing arguments: {0}".format(", ".join(missing)))
+        raise SaltInvocationError("Missing arguments: {}".format(", ".join(missing)))
     elif _exp_prm > _passed_prm:
         raise SaltInvocationError(
-            "Function expects {0} positional parameters, "
-            "got only {1}".format(_exp_prm, _passed_prm)
+            "Function expects {} positional parameters, got only {}".format(
+                _exp_prm, _passed_prm
+            )
         )
 
     return salt_function(*function_args, **function_kwargs)

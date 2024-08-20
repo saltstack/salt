@@ -14,7 +14,7 @@ Install, enable and disable assistive access on macOS minions
 import logging
 
 import salt.utils.platform
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +25,9 @@ def __virtual__():
     """
     Only work on Mac OS
     """
-    if salt.utils.platform.is_darwin() and _LooseVersion(
-        __grains__["osrelease"]
-    ) >= _LooseVersion("10.9"):
+    if salt.utils.platform.is_darwin() and Version(__grains__["osrelease"]) >= Version(
+        "10.9"
+    ):
         return True
     return (False, "Only supported on Mac OS 10.9+")
 
@@ -53,12 +53,12 @@ def installed(name, enabled=True):
 
         if enabled != is_enabled:
             __salt__["assistive.enable"](name, enabled)
-            ret["comment"] = "Updated enable to {}".format(enabled)
+            ret["comment"] = f"Updated enable to {enabled}"
         else:
             ret["comment"] = "Already in the correct state"
 
     else:
         __salt__["assistive.install"](name, enabled)
-        ret["comment"] = "Installed {} into the assistive access panel".format(name)
+        ret["comment"] = f"Installed {name} into the assistive access panel"
 
     return ret

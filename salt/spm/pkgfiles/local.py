@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 This module allows SPM to use the local filesystem to install files for SPM.
 
 .. versionadded:: 2015.8.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import os.path
 
-# Import Salt libs
 import salt.syspaths
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -56,7 +48,7 @@ def check_existing(package, pkg_files, formula_def, conn=None):
     if conn is None:
         conn = init()
 
-    node_type = six.text_type(__opts__.get("spm_node_type"))
+    node_type = str(__opts__.get("spm_node_type"))
 
     existing_files = []
     for member in pkg_files:
@@ -64,11 +56,11 @@ def check_existing(package, pkg_files, formula_def, conn=None):
             continue
 
         tld = formula_def.get("top_level_dir", package)
-        new_name = member.name.replace("{0}/".format(package), "")
+        new_name = member.name.replace(f"{package}/", "")
         if not new_name.startswith(tld):
             continue
 
-        if member.name.startswith("{0}/_".format(package)):
+        if member.name.startswith(f"{package}/_"):
             if node_type in ("master", "minion"):
                 # Module files are distributed via extmods directory
                 out_file = os.path.join(
@@ -80,9 +72,9 @@ def check_existing(package, pkg_files, formula_def, conn=None):
             else:
                 # Module files are distributed via _modules, _states, etc
                 out_file = os.path.join(conn["formula_path"], new_name)
-        elif member.name == "{0}/pillar.example".format(package):
+        elif member.name == f"{package}/pillar.example":
             # Pillars are automatically put in the pillar_path
-            new_name = "{0}.sls.orig".format(package)
+            new_name = f"{package}.sls.orig"
             out_file = os.path.join(conn["pillar_path"], new_name)
         elif package.endswith("-conf"):
             # Configuration files go into /etc/salt/
@@ -111,12 +103,12 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if conn is None:
         conn = init()
 
-    node_type = six.text_type(__opts__.get("spm_node_type"))
+    node_type = str(__opts__.get("spm_node_type"))
 
     out_path = conn["formula_path"]
 
     tld = formula_def.get("top_level_dir", package)
-    new_name = member.name.replace("{0}/".format(package), "", 1)
+    new_name = member.name.replace(f"{package}/", "", 1)
     if (
         not new_name.startswith(tld)
         and not new_name.startswith("_")
@@ -129,7 +121,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     for line in formula_def.get("files", []):
         tag = ""
         for ftype in FILE_TYPES:
-            if line.startswith("{0}|".format(ftype)):
+            if line.startswith(f"{ftype}|"):
                 tag = line.split("|", 1)[0]
                 line = line.split("|", 1)[1]
         if tag and new_name == line:
@@ -138,21 +130,25 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
             elif tag in ("s", "m"):
                 pass
 
-    if member.name.startswith("{0}/_".format(package)):
+    if member.name.startswith(f"{package}{os.sep}_"):
         if node_type in ("master", "minion"):
             # Module files are distributed via extmods directory
-            member.name = new_name.name.replace("{0}/_".format(package), "")
-            out_path = os.path.join(salt.syspaths.CACHE_DIR, node_type, "extmods",)
+            member.name = new_name.replace(f"{package}{os.sep}_", "")
+            out_path = os.path.join(
+                salt.syspaths.CACHE_DIR,
+                node_type,
+                "extmods",
+            )
         else:
             # Module files are distributed via _modules, _states, etc
-            member.name = new_name.name.replace("{0}/".format(package), "")
-    elif member.name == "{0}/pillar.example".format(package):
+            member.name = new_name.replace(f"{package}{os.sep}", "")
+    elif member.name == f"{package}/pillar.example":
         # Pillars are automatically put in the pillar_path
-        member.name = "{0}.sls.orig".format(package)
+        member.name = f"{package}.sls.orig"
         out_path = conn["pillar_path"]
     elif package.endswith("-conf"):
         # Configuration files go into /etc/salt/
-        member.name = member.name.replace("{0}/".format(package), "")
+        member.name = member.name.replace(f"{package}/", "")
         out_path = salt.syspaths.CONFIG_DIR
     elif package.endswith("-reactor"):
         # Reactor files go into /srv/reactor/

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # The MIT License (MIT)
 # Copyright (C) 2014 SUSE LLC
@@ -25,8 +24,6 @@
 Module for managing XFS file systems.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -34,16 +31,10 @@ import re
 import time
 
 import salt.utils.data
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +90,7 @@ def _parse_xfs_info(data):
     spr = re.compile(r"\s+")
     entry = None
     for line in [spr.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
-        if not line:
+        if not line or "=" not in line:
             continue
         nfo = _xfs_info_get_kv(line)
         if not line.startswith("="):
@@ -120,7 +111,7 @@ def info(device):
 
         salt '*' xfs.info /dev/sda1
     """
-    out = __salt__["cmd.run_all"]("xfs_info {0}".format(device))
+    out = __salt__["cmd.run_all"](f"xfs_info {device}")
     if out.get("stderr"):
         raise CommandExecutionError(out["stderr"].replace("xfs_info:", "").strip())
     return _parse_xfs_info(out["stdout"])
@@ -195,16 +186,16 @@ def dump(device, destination, level=0, label=None, noerase=None):
         label
         and label
         or time.strftime(
-            'XFS dump for "{0}" of %Y.%m.%d, %H:%M'.format(device), time.localtime()
+            f'XFS dump for "{device}" of %Y.%m.%d, %H:%M', time.localtime()
         ).replace("'", '"')
     )
     cmd = ["xfsdump"]
     cmd.append("-F")  # Force
     if not noerase:
         cmd.append("-E")  # pre-erase
-    cmd.append("-L '{0}'".format(label))  # Label
-    cmd.append("-l {0}".format(level))  # Dump level
-    cmd.append("-f {0}".format(destination))  # Media destination
+    cmd.append(f"-L '{label}'")  # Label
+    cmd.append(f"-l {level}")  # Dump level
+    cmd.append(f"-f {destination}")  # Media destination
     cmd.append(device)  # Device
 
     cmd = " ".join(cmd)
@@ -220,10 +211,10 @@ def _xr_to_keyset(line):
     """
     tkns = [elm for elm in line.strip().split(":", 1) if elm]
     if len(tkns) == 1:
-        return "'{0}': ".format(tkns[0])
+        return f"'{tkns[0]}': "
     else:
         key, val = tkns
-        return "'{0}': '{1}',".format(key.strip(), val.strip())
+        return f"'{key.strip()}': '{val.strip()}',"
 
 
 def _xfs_inventory_output(out):
@@ -297,7 +288,7 @@ def _xfs_prune_output(out, uuid):
             cnt.append(line)
 
     for kset in [e for e in cnt[1:] if ":" in e]:
-        key, val = [t.strip() for t in kset.split(":", 1)]
+        key, val = (t.strip() for t in kset.split(":", 1))
         data[key.lower().replace(" ", "_")] = val
 
     return data.get("uuid") == uuid and data or {}
@@ -314,21 +305,24 @@ def prune_dump(sessionid):
         salt '*' xfs.prune_dump b74a3586-e52e-4a4a-8775-c3334fa8ea2c
 
     """
-    out = __salt__["cmd.run_all"]("xfsinvutil -s {0} -F".format(sessionid))
+    out = __salt__["cmd.run_all"](f"xfsinvutil -s {sessionid} -F")
     _verify_run(out)
 
     data = _xfs_prune_output(out["stdout"], sessionid)
     if data:
         return data
 
-    raise CommandExecutionError('Session UUID "{0}" was not found.'.format(sessionid))
+    raise CommandExecutionError(f'Session UUID "{sessionid}" was not found.')
 
 
 def _blkid_output(out):
     """
     Parse blkid output.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = {}
     for dev_meta in flt(out.split("\n\n")):
         dev = {}
@@ -340,7 +334,7 @@ def _blkid_output(out):
             data[dev.pop("devname")] = dev
 
     mounts = _get_mounts()
-    for device in six.iterkeys(mounts):
+    for device in mounts:
         if data.get(device):
             data[device].update(mounts[device])
 
@@ -396,9 +390,9 @@ def estimate(path):
         salt '*' xfs.estimate /path/to/dir/*
     """
     if not os.path.exists(path):
-        raise CommandExecutionError('Path "{0}" was not found.'.format(path))
+        raise CommandExecutionError(f'Path "{path}" was not found.')
 
-    out = __salt__["cmd.run_all"]("xfs_estimate -v {0}".format(path))
+    out = __salt__["cmd.run_all"](f"xfs_estimate -v {path}")
     _verify_run(out)
 
     return _xfs_estimate_output(out["stdout"])
@@ -448,15 +442,17 @@ def mkfs(
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' lso='logdev=/dev/sda2,size=10000b'
     """
 
-    getopts = lambda args: dict(
-        ((args and ("=" in args) and args or None))
-        and [kw.split("=") for kw in args.split(",")]
-        or []
-    )
+    def getopts(args):
+        return dict(
+            (args and ("=" in args) and args or None)
+            and [kw.split("=") for kw in args.split(",")]
+            or []
+        )
+
     cmd = ["mkfs.xfs"]
     if label:
         cmd.append("-L")
-        cmd.append("'{0}'".format(label))
+        cmd.append(f"'{label}'")
 
     if ssize:
         cmd.append("-s")
@@ -477,7 +473,7 @@ def mkfs(
                 cmd.append(opts)
         except Exception:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                'Wrong parameters "{0}" for option "{1}"'.format(opts, switch)
+                f'Wrong parameters "{opts}" for option "{switch}"'
             )
 
     if not noforce:
@@ -505,13 +501,13 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
     """
     if not label and lazy_counting is None and uuid is None:
         raise CommandExecutionError(
-            'Nothing specified for modification for "{0}" device'.format(device)
+            f'Nothing specified for modification for "{device}" device'
         )
 
     cmd = ["xfs_admin"]
     if label:
         cmd.append("-L")
-        cmd.append("'{0}'".format(label))
+        cmd.append(f"'{label}'")
 
     if lazy_counting is False:
         cmd.append("-c")
@@ -531,7 +527,7 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
     cmd = " ".join(cmd)
     _verify_run(__salt__["cmd.run_all"](cmd), cmd=cmd)
 
-    out = __salt__["cmd.run_all"]("blkid -o export {0}".format(device))
+    out = __salt__["cmd.run_all"](f"blkid -o export {device}")
     _verify_run(out)
 
     return _blkid_output(out["stdout"])
@@ -572,9 +568,9 @@ def defragment(device):
         raise CommandExecutionError("Root is not a device.")
 
     if not _get_mounts().get(device):
-        raise CommandExecutionError('Device "{0}" is not mounted'.format(device))
+        raise CommandExecutionError(f'Device "{device}" is not mounted')
 
-    out = __salt__["cmd.run_all"]("xfs_fsr {0}".format(device))
+    out = __salt__["cmd.run_all"](f"xfs_fsr {device}")
     _verify_run(out)
 
     return {"log": out["stdout"]}

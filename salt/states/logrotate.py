@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing logrotate.
 
 .. versionadded:: 2017.7.0
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
 
 _DEFAULT_CONF = "/etc/logrotate.conf"
 
@@ -40,7 +33,7 @@ def _convert_if_int(value):
     :rtype: bool|int|str
     """
     try:
-        value = int(six.text_type(value))
+        value = int(str(value))
     except ValueError:
         pass
     return value
@@ -75,7 +68,7 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
             - setting: 2
             - conf_file: /etc/logrotate.conf
     """
-    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
     try:
         if setting is None:
@@ -91,12 +84,10 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
         value = _convert_if_int(value)
 
         if current_value == value:
-            ret["comment"] = "Command '{0}' already has value: {1}".format(key, value)
+            ret["comment"] = f"Command '{key}' already has value: {value}"
             ret["result"] = True
         elif __opts__["test"]:
-            ret["comment"] = "Command '{0}' will be set to value: {1}".format(
-                key, value
-            )
+            ret["comment"] = f"Command '{key}' will be set to value: {value}"
             ret["changes"] = {"old": current_value, "new": value}
         else:
             ret["changes"] = {"old": current_value, "new": value}
@@ -104,9 +95,9 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
                 key=key, value=value, conf_file=conf_file
             )
             if ret["result"]:
-                ret["comment"] = "Set command '{0}' value: {1}".format(key, value)
+                ret["comment"] = f"Set command '{key}' value: {value}"
             else:
-                ret["comment"] = "Unable to set command '{0}' value: {1}".format(
+                ret["comment"] = "Unable to set command '{}' value: {}".format(
                     key, value
                 )
         return ret
@@ -114,12 +105,12 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
     setting = _convert_if_int(setting)
 
     if current_value == setting:
-        ret["comment"] = "Block '{0}' command '{1}' already has value: {2}".format(
+        ret["comment"] = "Block '{}' command '{}' already has value: {}".format(
             key, value, setting
         )
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Block '{0}' command '{1}' will be set to value: {2}".format(
+        ret["comment"] = "Block '{}' command '{}' will be set to value: {}".format(
             key, value, setting
         )
         ret["changes"] = {"old": current_value, "new": setting}
@@ -129,13 +120,11 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
             key=key, value=value, setting=setting, conf_file=conf_file
         )
         if ret["result"]:
-            ret["comment"] = "Set block '{0}' command '{1}' value: {2}".format(
+            ret["comment"] = "Set block '{}' command '{}' value: {}".format(
                 key, value, setting
             )
         else:
-            ret[
-                "comment"
-            ] = "Unable to set block '{0}' command '{1}' value: {2}".format(
+            ret["comment"] = "Unable to set block '{}' command '{}' value: {}".format(
                 key, value, setting
             )
     return ret

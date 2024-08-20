@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
-from __future__ import absolute_import, print_function
-
+import argparse
 import modulefinder
 import os
 import pprint
@@ -10,13 +8,6 @@ import sys
 
 import salt.utils.json
 import salt.utils.yaml
-
-try:
-    import argparse  # pylint: disable=minimum-python-version
-
-    HAS_ARGPARSE = True
-except ImportError:
-    HAS_ARGPARSE = False
 
 
 def parse():
@@ -48,7 +39,7 @@ def mod_data(opts, full):
     try:
         finder.load_file(full)
     except ImportError as exc:
-        print("ImportError - {0} (Reason: {1})".format(full, exc), file=sys.stderr)
+        print(f"ImportError - {full} (Reason: {exc})", file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split(".")[0]
@@ -88,8 +79,6 @@ def scan(opts):
 
 
 if __name__ == "__main__":
-    if not HAS_ARGPARSE:
-        print("The argparse python module is required")
     opts = parse()
     try:
         scand = scan(opts)

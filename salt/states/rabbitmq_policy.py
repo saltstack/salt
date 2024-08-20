@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage RabbitMQ Policies
 ========================
@@ -17,11 +16,8 @@ Example:
         - pattern: '.*'
         - definition: '{"ha-mode": "all"}'
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
-
-# Import python libs
 import logging
 
 import salt.utils.path
@@ -44,7 +40,7 @@ def present(
     """
     Ensure the RabbitMQ policy exists.
 
-    Reference: http://www.rabbitmq.com/ha.html
+    Reference: https://rabbitmq.com/parameters.html#policies
 
     name
         Policy name
@@ -83,13 +79,13 @@ def present(
             updates.append("Priority")
 
     if policy and not updates:
-        ret["comment"] = "Policy {0} {1} is already present".format(vhost, name)
+        ret["comment"] = f"Policy {vhost} {name} is already present"
         return ret
 
     if not policy:
         ret["changes"].update({"old": {}, "new": name})
         if __opts__["test"]:
-            ret["comment"] = "Policy {0} {1} is set to be created".format(vhost, name)
+            ret["comment"] = f"Policy {vhost} {name} is set to be created"
         else:
             log.debug("Policy doesn't exist - Creating")
             result = __salt__["rabbitmq.set_policy"](
@@ -104,7 +100,7 @@ def present(
     elif updates:
         ret["changes"].update({"old": policy, "new": updates})
         if __opts__["test"]:
-            ret["comment"] = "Policy {0} {1} is set to be updated".format(vhost, name)
+            ret["comment"] = f"Policy {vhost} {name} is set to be updated"
         else:
             log.debug("Policy exists but needs updating")
             result = __salt__["rabbitmq.set_policy"](
@@ -121,7 +117,7 @@ def present(
         ret["result"] = False
         ret["comment"] = result["Error"]
     elif ret["changes"] == {}:
-        ret["comment"] = "'{0}' is already in the desired state.".format(name)
+        ret["comment"] = f"'{name}' is already in the desired state."
     elif __opts__["test"]:
         ret["result"] = None
     elif "Set" in result:
@@ -146,7 +142,7 @@ def absent(name, vhost="/", runas=None):
     policy_exists = __salt__["rabbitmq.policy_exists"](vhost, name, runas=runas)
 
     if not policy_exists:
-        ret["comment"] = "Policy '{0} {1}' is not present.".format(vhost, name)
+        ret["comment"] = f"Policy '{vhost} {name}' is not present."
         return ret
 
     if not __opts__["test"]:
@@ -163,6 +159,6 @@ def absent(name, vhost="/", runas=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Policy '{0} {1}' will be removed.".format(vhost, name)
+        ret["comment"] = f"Policy '{vhost} {name}' will be removed."
 
     return ret

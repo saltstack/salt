@@ -21,4 +21,3 @@ Fixed
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
 - Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
-

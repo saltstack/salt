@@ -1,24 +1,24 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
+import logging
 import os
+import pathlib
 import time
 
-# Import Salt libs
 import salt.utils.decorators
-from tests.support.runtests import RUNTIME_VARS
 
-EXIT_CODE_SH = os.path.join(RUNTIME_VARS.BASE_FILES, "exit_code.sh")
-EXIT_CODE_CMD = os.path.join(RUNTIME_VARS.BASE_FILES, "exit_code.cmd")
+log = logging.getLogger(__name__)
+
+REPO_ROOT_DIR = pathlib.Path(os.environ["REPO_ROOT_DIR"]).resolve()
+STATE_BASE_DIR = REPO_ROOT_DIR / "tests" / "integration" / "files" / "file" / "base"
+EXIT_CODE_SH = STATE_BASE_DIR / "exit_code.sh"
+EXIT_CODE_CMD = STATE_BASE_DIR / "exit_code.cmd"
 
 
 def _exit_code(code):
     if os.name == "nt":
-        return "cmd /c {0} {1}".format(EXIT_CODE_CMD, code)
+        cmd = f"cmd /c {EXIT_CODE_CMD} {code}"
     else:
-        return "/usr/bin/env sh {0} {1}".format(EXIT_CODE_SH, code)
+        cmd = f"/usr/bin/env sh {EXIT_CODE_SH} {code}"
+    return cmd
 
 
 def _fallbackfunc():

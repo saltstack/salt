@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
@@ -44,21 +43,16 @@ about this, at least.
     used, as it supports the hybrid upstart/sysvinit system used in
     RHEL/CentOS 6.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
-
-# Import python libs
 import glob
 import os
 import re
 
-# Import salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.path
 import salt.utils.systemd
-from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
 
 __func_alias__ = {"reload_": "reload"}
 
@@ -74,7 +68,8 @@ def __virtual__():
     if salt.utils.systemd.booted(__context__):
         return (
             False,
-            "The upstart execution module failed to load: this system was booted with systemd.",
+            "The upstart execution module failed to load: this system was booted with"
+            " systemd.",
         )
     elif __grains__["os"] in ("Ubuntu", "Linaro", "elementary OS", "Mint"):
         return __virtualname__
@@ -141,9 +136,7 @@ def _default_runlevel():
     # The default runlevel can also be set via the kernel command-line.
     # Kinky.
     try:
-        valid_strings = set(
-            ("0", "1", "2", "3", "4", "5", "6", "s", "S", "-s", "single")
-        )
+        valid_strings = {"0", "1", "2", "3", "4", "5", "6", "s", "S", "-s", "single"}
         with salt.utils.files.fopen("/proc/cmdline") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
@@ -166,7 +159,7 @@ def _runlevel():
     ret = _default_runlevel()
     utmp = _find_utmp()
     if utmp:
-        out = __salt__["cmd.run"](["runlevel", "{0}".format(utmp)], python_shell=False)
+        out = __salt__["cmd.run"](["runlevel", f"{utmp}"], python_shell=False)
         try:
             ret = out.split()[1]
         except IndexError:
@@ -187,7 +180,7 @@ def _service_is_upstart(name):
     Jobs are defined in files placed in /etc/init, the name of the job
     is the filename under this directory without the .conf extension.
     """
-    return os.access("/etc/init/{0}.conf".format(name), os.R_OK)
+    return os.access(f"/etc/init/{name}.conf", os.R_OK)
 
 
 def _upstart_is_disabled(name):
@@ -197,7 +190,7 @@ def _upstart_is_disabled(name):
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     """
-    files = ["/etc/init/{0}.conf".format(name), "/etc/init/{0}.override".format(name)]
+    files = [f"/etc/init/{name}.conf", f"/etc/init/{name}.override"]
     for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name) as fp_:
             if re.search(
@@ -224,7 +217,7 @@ def _service_is_sysv(name):
     to Upstart's /lib/init/upstart-job, and anything that isn't an
     executable, like README or skeleton.
     """
-    script = "/etc/init.d/{0}".format(name)
+    script = f"/etc/init.d/{name}"
     return not _service_is_upstart(name) and os.access(script, os.X_OK)
 
 
@@ -234,7 +227,7 @@ def _sysv_is_disabled(name):
     start-up link (starts with "S") to its script in /etc/init.d in
     the current runlevel.
     """
-    return not bool(glob.glob("/etc/rc{0}.d/S*{1}".format(_runlevel(), name)))
+    return not bool(glob.glob(f"/etc/rc{_runlevel()}.d/S*{name}"))
 
 
 def _sysv_is_enabled(name):
@@ -515,7 +508,7 @@ def _upstart_disable(name):
     """
     if _upstart_is_disabled(name):
         return _upstart_is_disabled(name)
-    override = "/etc/init/{0}.override".format(name)
+    override = f"/etc/init/{name}.override"
     with salt.utils.files.fopen(override, "a") as ofile:
         ofile.write(salt.utils.stringutils.to_str("manual\n"))
     return _upstart_is_disabled(name)
@@ -527,8 +520,8 @@ def _upstart_enable(name):
     """
     if _upstart_is_enabled(name):
         return _upstart_is_enabled(name)
-    override = "/etc/init/{0}.override".format(name)
-    files = ["/etc/init/{0}.conf".format(name), override]
+    override = f"/etc/init/{name}.override"
+    files = [f"/etc/init/{name}.conf", override]
     for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name, "r+") as fp_:
             new_text = re.sub(
@@ -559,7 +552,7 @@ def enable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = "{0} -f {1} defaults".format(executable, name)
+    cmd = f"{executable} -f {name} defaults"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 

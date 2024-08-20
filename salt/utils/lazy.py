@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Lazily-evaluated data structures, primarily used by Salt's loader
 """
-
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 from collections.abc import MutableMapping
@@ -20,7 +16,7 @@ def verify_fun(lazy_obj, fun):
     """
     if not fun:
         raise salt.exceptions.SaltInvocationError(
-            "Must specify a function to run!\n" "ex: manage.up"
+            "Must specify a function to run!\nex: manage.up"
         )
     if fun not in lazy_obj:
         # If the requested function isn't available, lets say why
@@ -81,7 +77,7 @@ class LazyDict(MutableMapping):
 
         Override this to return a more meaningfull error message if possible
         """
-        return "'{0}' is not available.".format(function_name)
+        return f"'{function_name}' is not available."
 
     def __setitem__(self, key, val):
         self._dict[key] = val

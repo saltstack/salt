@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.utils.extend_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,21 +5,17 @@
     Test the salt extend script, leave templates/test alone to keep this working!
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 from datetime import date
 
-# Import salt libs
+import pytest
+
 import salt.utils.extend
 import salt.utils.files
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class ExtendTestCase(TestCase):
@@ -35,9 +30,9 @@ class ExtendTestCase(TestCase):
                 shutil.rmtree(self.out, True)
         os.chdir(self.starting_dir)
 
-    @skipIf(
+    @pytest.mark.skipif(
         not os.path.exists(os.path.join(RUNTIME_VARS.CODE_DIR, "templates")),
-        "Test template directory 'templates/' missing.",
+        reason="Test template directory 'templates/' missing.",
     )
     def test_run(self):
         with patch("sys.exit", MagicMock):

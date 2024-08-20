@@ -1,0 +1,509 @@
+<%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = "${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }}" %>
+<%- set gh_environment = "release" %>
+<%- extends 'layout.yml.jinja' %>
+
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
+
+<%- endblock name %>
+
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to get from staging to publish the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block permissions %>
+
+permissions:
+  contents: write  # To be able to publish the release
+
+<%- endblock permissions %>
+
+<%- block pre_jobs %>
+
+  <%- set job_name = "check-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    environment: <{ gh_environment }>-check
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+
+<%- endblock pre_jobs %>
+
+<%- if includes.get("prepare-workflow", True) %>
+<%- block prepare_workflow_job %>
+<%- do conclusion_needs.append("prepare-workflow") %>
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    environment: <{ gh_environment }>
+    <%- if prepare_workflow_needs %>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    <%- endif %>
+    outputs:
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ env.CACHE_SEED }}
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
+
+      - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
+
+      - name: Check Release Staged
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
+        run: |
+          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
+
+  <%- endblock prepare_workflow_job %>
+  <%- endif %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  download-onedir-artifact:
+    name: Download Staging Onedir Artifact
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x86_64
+          - platform: linux
+            arch: arm64
+          - platform: windows
+            arch: amd64
+          - platform: windows
+            arch: x86
+          - platform: macos
+            arch: x86_64
+          - platform: macos
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Download Onedir Tarball Artifact
+        run: |
+          tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
+
+      - name: Upload Onedir Tarball as an Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
+          retention-days: 7
+          if-no-files-found: error
+
+  <%- include "build-ci-deps.yml.jinja" %>
+
+  backup:
+    name: Backup
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    needs:
+      - prepare-workflow
+    env:
+      USE_S3_CACHE: 'true'
+    environment: <{ gh_environment }>
+    outputs:
+      backup-complete: ${{ steps.backup.outputs.backup-complete }}
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Backup Previous Releases
+        id: backup
+        run: |
+          tools pkg repo backup-previous-releases
+
+  publish-repositories:
+    <%- do conclusion_needs.append('publish-repositories') %>
+    name: Publish Repositories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    needs:
+      - prepare-workflow
+      - backup
+      - download-onedir-artifact
+    environment: <{ gh_environment }>
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v4
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Publish Release Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+        run: |
+          tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
+
+  <%- if includes.get("test-pkg-downloads", True) %>
+  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
+  <%- endif %>
+
+  release:
+    <%- do conclusion_needs.append('release') %>
+    name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    if: ${{ always() && ! failure() && ! cancelled() }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    needs:
+      - prepare-workflow
+      - backup
+      - publish-repositories
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    environment: <{ gh_environment }>
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          sync
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          sync
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
+      - name: Prepare Release
+        id: prepare-release
+        run: |
+          tools pkg repo publish github --repository ${{ github.repository }} --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.signingkey <{ gpg_key_id }>
+          git config --global commit.gpgsign true
+
+      - name: Apply The Release Patch
+        run: |
+          git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          rm release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
+        run: |
+          git tag -m "Release v${{ needs.prepare-workflow.outputs.salt-version }}" -as v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Push Changes
+        uses: ad-m/github-push-action@b87afee92c6e70ea888be6203a3e9426fda49839
+        with:
+          ssh: true
+          tags: true
+          atomic: true
+          branch: ${{ github.ref }}
+
+      - name: Create Github Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifactErrorsFailBuild: true
+          artifacts: ${{ steps.prepare-release.outputs.release-artifacts }}
+          bodyFile: ${{ steps.prepare-release.outputs.release-messsage-file }}
+          draft: false
+          generateReleaseNotes: false
+          makeLatest: fromJSON(${{ steps.prepare-release.outputs.make-latest }})
+          name: v${{ needs.prepare-workflow.outputs.salt-version }}
+          prerelease: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Upload PyPi Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-artifacts
+          path: |
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
+          retention-days: 7
+          if-no-files-found: error
+
+  {#- Disable automatic backup restore
+  restore:
+    <%- do conclusion_needs.append('restore') %>
+    name: Restore Release Bucket From Backup
+    if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    needs:
+      - backup
+      - release
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    environment: <{ gh_environment }>
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Restore Release Bucket
+        run: |
+          tools pkg repo restore-previous-releases
+  #}
+
+  publish-pypi:
+    <%- do conclusion_needs.append('publish-pypi') %>
+    name: Publish to PyPi
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
+    needs:
+      - prepare-workflow
+      - release  {#- Disable automatic backup restore
+      - restore #}
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Download PyPi Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-artifacts
+          path: artifacts/release
+
+      - name: Publish to PyPi
+        env:
+          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+        run: |
+          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+<%- endblock jobs %>
+
+<%- block set_pipeline_exit_status_extra_steps %>
+
+      - run: |
+          # shellcheck disable=SC2129
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            echo 'To restore the release bucket run:' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+            echo 'tools pkg repo restore-previous-releases' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+<%- endblock set_pipeline_exit_status_extra_steps %>

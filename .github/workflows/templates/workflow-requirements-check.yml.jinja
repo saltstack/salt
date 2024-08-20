@@ -1,0 +1,34 @@
+
+  <%- set job_name = "workflow-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Workflow Requirements
+    runs-on: ubuntu-latest
+    outputs:
+      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
+    steps:
+      - name: Check Requirements
+        id: check-requirements
+        run: |
+          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
+            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          else
+            MSG="Running workflow because ${{ github.repository }} is not a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          fi

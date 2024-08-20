@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     Detect disks
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import glob
 import logging
 import re
@@ -12,8 +9,6 @@ import re
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -40,7 +35,7 @@ def disks():
         log.trace("Disk grain does not support OS")
 
 
-class _geomconsts(object):
+class _geomconsts:
     GEOMNAME = "Geom name"
     MEDIASIZE = "Mediasize"
     SECTORSIZE = "Sectorsize"
@@ -96,14 +91,14 @@ def _freebsd_geom():
     geom = salt.utils.path.which("geom")
     ret = {"disks": {}, "ssds": []}
 
-    devices = __salt__["cmd.run"]("{0} disk list".format(geom))
+    devices = __salt__["cmd.run"](f"{geom} disk list")
     devices = devices.split("\n\n")
 
     def parse_geom_attribs(device):
         tmp = {}
         for line in device.split("\n"):
             for attrib in _geom_attribs:
-                search = re.search(r"{0}:\s(.*)".format(attrib), line)
+                search = re.search(rf"{attrib}:\s(.*)", line)
                 if search:
                     value = _datavalue(
                         _geomconsts._datatypes.get(attrib), search.group(1)
@@ -152,7 +147,7 @@ def _linux_disks():
                             "not report 0 or 1",
                             device,
                         )
-        except IOError:
+        except OSError:
             pass
     return ret
 
@@ -167,7 +162,7 @@ def _windows_disks():
     ret = {"disks": [], "ssds": []}
 
     cmdret = __salt__["cmd.run_all"](
-        "{0} /namespace:{1} path {2} get {3} /format:table".format(
+        "{} /namespace:{} path {} get {} /format:table".format(
             wmic, namespace, path, get
         )
     )
@@ -179,7 +174,7 @@ def _windows_disks():
             info = line.split()
             if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
                 continue
-            device = r"\\.\PhysicalDrive{0}".format(info[0])
+            device = rf"\\.\PhysicalDrive{info[0]}"
             mediatype = info[1]
             if mediatype == "3":
                 log.trace("Device %s reports itself as an HDD", device)

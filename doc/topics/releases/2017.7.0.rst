@@ -316,11 +316,11 @@ structure to include job meta data such as ``retcode``.
 
 This is useful at the Python API:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> client = salt.client.LocalClient()
-    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    >>> client.cmd("*", "cmd.run", ["return 1"], full_return=True)
     {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
 
 As well as from salt-api:
@@ -581,14 +581,13 @@ if so, the old container is stopped and destroyed, and the temporary container
 is renamed and started.
 
 Salt still needs to translate arguments into the format which docker-py
-expects, but if it does not properly do so, the :ref:`skip_translate
-<docker-container-running-skip-translate>` argument can be used to skip input
-translation on an argument-by-argument basis, and you can then format your SLS
-file to pass the data in the format that the docker-py expects. This allows you
-to work around any changes in Docker's API or issues with the input
-translation, and continue to manage your Docker containers using Salt. Read the
-documentation for :ref:`skip_translate
-<docker-container-running-skip-translate>` for more information.
+expects, but if it does not properly do so, the REMOVED DURRING MODULE
+MIGRATION argument can be used to skip input translation on an
+argument-by-argument basis, and you can then format your SLS file to pass the
+data in the format that the docker-py expects. This allows you to work around
+any changes in Docker's API or issues with the input translation, and continue
+to manage your Docker containers using Salt. Read the documentation for REMOVED
+DURRING MODULE MIGRATION for more information.
 
 .. note::
     When running the :py:func:`docker_container.running

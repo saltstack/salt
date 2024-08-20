@@ -1,0 +1,55 @@
+---
+name: build-onedir-deps
+description: Build Onedir Dependencies
+
+inputs:
+  platform:
+    required: true
+    description: The platform to build
+  arch:
+    required: true
+    description: The platform arch to build
+  python-version:
+    required: true
+    description: The python version to build
+  package-name:
+    required: false
+    description: The onedir package name to create
+    default: salt
+  cache-prefix:
+    required: true
+    description: Seed used to invalidate caches
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Cache Deps Onedir Package Directory
+      id: onedir-pkg-cache
+      uses: ./.github/actions/cache
+      with:
+        path: artifacts/${{ inputs.package-name }}
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
+            hashFiles(
+              format('{0}/.relenv/**/*.xz', github.workspace),
+              'requirements/static/pkg/*/*.txt',
+              '.github/actions/build-onedir-deps/action.yml',
+              '.github/workflows/build-deps-onedir-*.yml',
+              'cicd/shared-gh-workflows-context.yml'
+            )
+          }}
+
+    - name: Install Salt Onedir Package Dependencies
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      env:
+        RELENV_BUILDENV: "1"
+      run: |
+        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
+
+    - name: Cleanup Salt Onedir Directory
+      shell: bash
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}

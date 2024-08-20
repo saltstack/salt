@@ -114,12 +114,12 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
     if ki is not None:
         cmd = cmd + " kickstart {0}:{1} system {0}:{2}".format(dev, ki, si)
     else:
-        cmd = cmd + " nxos {}:{}".format(dev, si)
+        cmd = cmd + f" nxos {dev}:{si}"
 
     if issu and ki is None:
         cmd = cmd + " non-disruptive"
 
-    log.info("Check upgrade impact using command: '{}'".format(cmd))
+    log.info("Check upgrade impact using command: '%s'", cmd)
     kwargs.update({"timeout": kwargs.get("timeout", 900)})
     error_pattern_list = [
         "Another install procedure may be in progress",
@@ -195,7 +195,7 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
             if impact["invalid_command"]:
                 impact = False
                 continue
-            log.info("Impact data gathered:\n{}".format(impact))
+            log.info("Impact data gathered:\n%s", impact)
 
             # Check to see if conditions are sufficent to return the impact
             # data and not proceed with the actual upgrade.
@@ -254,14 +254,14 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
 
     if ki is None:
         logmsg = "Upgrading device using combined system/kickstart image."
-        logmsg += "\nSystem Image: {}".format(si)
-        cmd = cmd + " nxos {}:{}".format(dev, si)
+        logmsg += f"\nSystem Image: {si}"
+        cmd = cmd + f" nxos {dev}:{si}"
         if issu:
             cmd = cmd + " non-disruptive"
     else:
         logmsg = "Upgrading device using separate system/kickstart images."
-        logmsg += "\nSystem Image: {}".format(si)
-        logmsg += "\nKickstart Image: {}".format(ki)
+        logmsg += f"\nSystem Image: {si}"
+        logmsg += f"\nKickstart Image: {ki}"
         if not issu:
             log.info("Attempting upgrade using force option")
             cmd = cmd + " force"
@@ -273,7 +273,7 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
         logmsg += "\nDisruptive Upgrade/Downgrade requested."
 
     log.info(logmsg)
-    log.info("Begin upgrade using command: '{}'".format(cmd))
+    log.info("Begin upgrade using command: '%s'", cmd)
 
     kwargs.update({"timeout": kwargs.get("timeout", 900)})
     error_pattern_list = ["Another install procedure may be in progress"]
@@ -347,7 +347,7 @@ def _parse_upgrade_data(data):
     upgrade_result["upgrade_data"] = data
     for line in data.split("\n"):
 
-        log.info("Processing line: ({})".format(line))
+        log.info("Processing line: (%s)", line)
 
         # Check to see if upgrade is disruptive or non-disruptive
         if re.search(r"non-disruptive", line):
@@ -367,7 +367,7 @@ def _parse_upgrade_data(data):
             g3 = mo.group(3)
             g4 = mo.group(4)
             g5 = mo.group(5)
-            mk = "module {}:image {}".format(g1, g2)  # module key
+            mk = f"module {g1}:image {g2}"  # module key
             upgrade_result[bk][mk] = {}
             upgrade_result[bk][mk]["running_version"] = g3
             upgrade_result[bk][mk]["new_version"] = g4

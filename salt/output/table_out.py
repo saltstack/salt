@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Display output in a table format
 =================================
@@ -43,20 +42,12 @@ CLI Example:
     salt '*' foo.bar --out=table
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import Salt libs
 import salt.output
 import salt.utils.color
 import salt.utils.data
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
 __virtualname__ = "table"
 
@@ -65,15 +56,15 @@ def __virtual__():
     return __virtualname__
 
 
-class TableDisplay(object):
+class TableDisplay:
     """
     Manage the table display content.
     """
 
     _JUSTIFY_MAP = {
-        "center": six.text_type.center,
-        "right": six.text_type.rjust,
-        "left": six.text_type.ljust,
+        "center": str.center,
+        "right": str.rjust,
+        "left": str.ljust,
     }
 
     def __init__(
@@ -125,9 +116,9 @@ class TableDisplay(object):
             )
 
     def wrap_onspace(self, text):
-
         """
-        When the text inside the column is longer then the width, will split by space and continue on the next line."""
+        When the text inside the column is longer then the width, will split by space and continue on the next line.
+        """
 
         def _truncate(line, word):
             return "{line}{part}{word}".format(
@@ -144,7 +135,6 @@ class TableDisplay(object):
         return reduce(_truncate, text.split(" "))
 
     def prepare_rows(self, rows, indent, has_header):
-
         """Prepare rows content to be displayed."""
 
         out = []
@@ -163,9 +153,7 @@ class TableDisplay(object):
 
         columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
-        max_widths = [
-            max([len(six.text_type(item)) for item in column]) for column in columns
-        ]
+        max_widths = [max(len(str(item)) for item in column) for column in columns]
         row_separator = self.row_delimiter * (
             len(self.prefix)
             + len(self.suffix)
@@ -187,7 +175,7 @@ class TableDisplay(object):
                     self.prefix
                     + self.delim.join(
                         [
-                            justify(six.text_type(item), width)
+                            justify(str(item), width)
                             for (item, width) in zip(row, max_widths)
                         ]
                     )
@@ -208,7 +196,6 @@ class TableDisplay(object):
         return out
 
     def display_rows(self, rows, labels, indent):
-
         """Prepares row content and displays."""
 
         out = []
@@ -236,16 +223,15 @@ class TableDisplay(object):
             temp_rows = []
             if not labels:
                 labels = [
-                    six.text_type(label).replace("_", " ").title()
-                    for label in sorted(rows[0])
+                    str(label).replace("_", " ").title() for label in sorted(rows[0])
                 ]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
-                    temp_row.append(six.text_type(row[key]))
+                    temp_row.append(str(row[key]))
                 temp_rows.append(temp_row)
             rows = temp_rows
-        elif isinstance(rows[0], six.string_types):
+        elif isinstance(rows[0], str):
             rows = [
                 [row] for row in rows
             ]  # encapsulate each row in a single-element list
@@ -256,7 +242,6 @@ class TableDisplay(object):
         return self.prepare_rows(labels_and_rows, indent + 4, has_header)
 
     def display(self, ret, indent, out, rows_key=None, labels_key=None):
-
         """Display table(s)."""
 
         rows = []
@@ -361,7 +346,7 @@ def output(ret, **kwargs):
     )
 
     for argk in argks:
-        argv = kwargs.get(argk) or __opts__.get("out.table.{key}".format(key=argk))
+        argv = kwargs.get(argk) or __opts__.get(f"out.table.{argk}")
         if argv is not None:
             class_kvargs[argk] = argv
 

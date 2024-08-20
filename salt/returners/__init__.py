@@ -7,8 +7,6 @@ use to fetch their configuration options.
 
 import logging
 
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 
@@ -73,7 +71,15 @@ def get_returner_options(virtualname=None, ret=None, attrs=None, **kwargs):
     cfg = __salt__.get("config.option", __opts__)
 
     # browse the config for relevant options, store them in a dict
-    _options = dict(_options_browser(cfg, ret_config, defaults, virtualname, attrs,))
+    _options = dict(
+        _options_browser(
+            cfg,
+            ret_config,
+            defaults,
+            virtualname,
+            attrs,
+        )
+    )
 
     # override some values with relevant profile options
     _options.update(
@@ -114,9 +120,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if isinstance(cfg, dict):
         c_cfg = cfg
     else:
-        c_cfg = cfg("{}".format(virtualname), {})
+        c_cfg = cfg(f"{virtualname}", {})
 
-    default_cfg_key = "{}.{}".format(virtualname, attr_name)
+    default_cfg_key = f"{virtualname}.{attr_name}"
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
@@ -128,9 +134,13 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
             return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
-    ret_cfg = cfg("{}.{}".format(ret_config, virtualname), {})
+    ret_cfg = cfg(f"{ret_config}.{virtualname}", {})
 
-    override_default_cfg_key = "{}.{}.{}".format(ret_config, virtualname, attr_name,)
+    override_default_cfg_key = "{}.{}.{}".format(
+        ret_config,
+        virtualname,
+        attr_name,
+    )
     override_cfg_default = cfg(override_default_cfg_key)
 
     # Look for the configuration item in the override location
@@ -199,6 +209,6 @@ def _fetch_profile_opts(
         return {}
 
     return {
-        pattr: creds.get("{}.{}".format(virtualname, profile_attrs[pattr]))
+        pattr: creds.get(f"{virtualname}.{profile_attrs[pattr]}")
         for pattr in profile_attrs
     }

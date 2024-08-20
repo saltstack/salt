@@ -1,0 +1,478 @@
+---
+name: Build Packages
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
+      sign-macos-packages:
+        type: boolean
+        default: false
+        description: Sign MacOS Packages
+      sign-windows-packages:
+        type: boolean
+        default: false
+        description: Sign Windows Packages
+      environment:
+        type: string
+        description: The GitHub Environment where this workflow should run
+        default: ci
+      source:
+        required: true
+        type: string
+        description: The backend to build the packages with
+      cache-prefix:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+
+  build-macos-pkgs:
+    name: macOS
+    environment: ${{ inputs.environment }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+        source:
+          - ${{ inputs.source }}
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+    runs-on:
+      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+
+    steps:
+      - name: Check Package Signing Enabled
+        shell: bash
+        id: check-pkg-sign
+        run: |
+          if [ "${{ inputs.sign-macos-packages }}" == "true" ]; then
+            if [ "${{ (secrets.MAC_SIGN_APPLE_ACCT != '' && contains(fromJSON('["nightly", "staging"]'), inputs.environment)) && 'true' || 'false' }}" != "true" ]; then
+              MSG="Secrets for signing packages are not available. The packages created will NOT be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+            else
+              MSG="The packages created WILL be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            MSG="The sign-macos-packages input is false. The packages created will NOT be signed."
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Prepare Package Signing
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        run: |
+          echo ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }} | base64 --decode > app-cert.p12
+          echo ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }} | base64 --decode > install-cert.p12
+          # Create SaltSigning keychain. This will contain the certificates for signing
+          security create-keychain -p "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}"
+          # Append SaltSigning keychain to the search list
+          security list-keychains -d user -s "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" "$(security list-keychains -d user | sed s/\"//g)"
+          # Unlock the keychain so we can import certs
+          security unlock-keychain -p "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}"
+          # Developer Application Certificate
+          security import "app-cert.p12" -t agg -k "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" -P "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" -A
+          rm app-cert.p12
+          # Developer Installer Certificate
+          security import "install-cert.p12" -t agg -k "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" -P "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" -A
+          rm install-cert.p12
+          security set-key-partition-list -S apple-tool:,apple: -k "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" &> /dev/null
+
+      - name: Build MacOS Package
+        env:
+          DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
+          DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
+          APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
+          APPLE_TEAM_ID: "${{ secrets.MAC_SIGN_APPLE_TEAM_ID }}"
+          APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
+        run: |
+          tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
+              format(
+                '--onedir salt-{0}-onedir-macos-{1}.tar.xz --salt-version {0} {2}',
+                inputs.salt-version,
+                matrix.arch,
+                steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
+              )
+              ||
+              format('--salt-version {0}', inputs.salt-version)
+          }}
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload ${{ matrix.arch }} Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
+          retention-days: 7
+          if-no-files-found: error
+
+  build-deb-packages:
+    name: DEB
+    runs-on:
+      - self-hosted
+      - linux
+      - medium
+      - ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - arm64
+        source:
+          - ${{ inputs.source }}
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
+
+    steps:
+      # Checkout here so we can easily use custom actions
+      - uses: actions/checkout@v4
+
+      # We need a more recent rustc
+      - name: Install a more recent `rustc`
+        if: ${{ inputs.source == 'src' }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Set rust environment variables
+        if: ${{ inputs.source == 'src' }}
+        run: |
+          CARGO_HOME=${CARGO_HOME:-${HOME}/.cargo}
+          export CARGO_HOME
+          echo "CARGO_HOME=${CARGO_HOME}" | tee -a "${GITHUB_ENV}"
+          echo "${CARGO_HOME}/bin" | tee -a "${GITHUB_PATH}"
+
+      # Checkout here for the build process
+      - name: Checkout in build directory
+        uses: actions/checkout@v4
+        with:
+          path:
+            pkgs/checkout/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: pkgs/checkout/artifacts/
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+          path: pkgs/checkout/
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cwd: pkgs/checkout/
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+          cwd: pkgs/checkout/
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Build Deb
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
+
+      - name: Cleanup
+        run: |
+          rm -rf pkgs/checkout/
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload DEBs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: ${{ github.workspace }}/pkgs/*
+          retention-days: 7
+          if-no-files-found: error
+
+  build-rpm-packages:
+    name: RPM
+    runs-on:
+      - self-hosted
+      - linux
+      - medium
+      - ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - arm64
+        source:
+          - ${{ inputs.source }}
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Build RPM
+        run: |
+          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
+  build-windows-pkgs:
+    name: Windows
+    environment: ${{ inputs.environment }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86
+          - amd64
+        source:
+          - ${{ inputs.source }}
+
+    runs-on:
+      - windows-latest
+    env:
+      SM_HOST: "${{ secrets.WIN_SIGN_HOST_PROD }}"
+      SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
+      SM_CLIENT_CERT_FILE: "D:\\Certificate_pkcs12.p12"
+      SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
+      SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
+      WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      PIP_INDEX_URL: https://pypi.org/simple
+
+    steps:
+      - name: Check Package Signing Enabled
+        shell: bash
+        id: check-pkg-sign
+        run: |
+          if [ "${{ inputs.sign-windows-packages }}" == "true" ]; then
+            if [ "${{ (secrets.WIN_SIGN_API_KEY != '' && env.SM_HOST != '' && inputs.environment == 'staging') && 'true' || 'false' }}" != "true" ]; then
+              MSG="Secrets for signing packages are not available. The packages created will NOT be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+            else
+              MSG="The packages created WILL be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            MSG="The sign-windows-packages input is false. The packages created will NOT be signed."
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
+          path: artifacts/
+
+      - name: Code signing with Software Trust Manager
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        uses: digicert/ssm-code-signing@v0.0.2
+
+      - name: Setup Certificate
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        shell: bash
+        run: |
+          echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+
+      - name: Build Windows Packages
+        run: |
+          tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+            inputs.source == 'onedir' &&
+            format(
+              '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',
+              inputs.salt-version,
+              matrix.arch,
+              steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
+            )
+            ||
+            format('--salt-version {0} --arch {1}', inputs.salt-version, matrix.arch)
+          }}
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        shell: bash
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS" >> "$GITHUB_OUTPUT"
+            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS-from-src" >> "$GITHUB_OUTPUT"
+            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload ${{ matrix.arch }} NSIS Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
+          path: pkg/windows/build/Salt-*.exe
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload ${{ matrix.arch }} MSI Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
+          path: pkg/windows/build/Salt-*.msi
+          retention-days: 7
+          if-no-files-found: error

@@ -52,7 +52,7 @@ def computer_desc(name):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer description already set to '{}'".format(name),
+        "comment": f"Computer description already set to '{name}'",
     }
 
     before_desc = __salt__["system.get_computer_desc"]()
@@ -62,7 +62,7 @@ def computer_desc(name):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer description will be changed to '{}'".format(name)
+        ret["comment"] = f"Computer description will be changed to '{name}'"
         return ret
 
     result = __salt__["system.set_computer_desc"](name)
@@ -73,7 +73,7 @@ def computer_desc(name):
         ret["changes"] = {"old": before_desc, "new": name}
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to set computer description to " "'{}'".format(name)
+        ret["comment"] = f"Unable to set computer description to '{name}'"
     return ret
 
 
@@ -96,7 +96,7 @@ def computer_name(name):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer name already set to '{}'".format(name),
+        "comment": f"Computer name already set to '{name}'",
     }
 
     before_name = __salt__["system.get_computer_name"]()
@@ -113,7 +113,7 @@ def computer_name(name):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer name will be changed to '{}'".format(name)
+        ret["comment"] = f"Computer name will be changed to '{name}'"
         return ret
 
     result = __salt__["system.set_computer_name"](name)
@@ -123,13 +123,13 @@ def computer_name(name):
         if (after_pending is not None and after_pending == name) or (
             after_pending is None and after_name == name
         ):
-            ret["comment"] = "Computer name successfully set to '{}'".format(name)
+            ret["comment"] = f"Computer name successfully set to '{name}'"
             if after_pending is not None:
                 ret["comment"] += " (reboot required for change to take effect)"
         ret["changes"] = {"old": before_name, "new": name}
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to set computer name to '{}'".format(name)
+        ret["comment"] = f"Unable to set computer name to '{name}'"
     return ret
 
 
@@ -147,7 +147,7 @@ def hostname(name):
     current_hostname = __salt__["system.get_hostname"]()
 
     if current_hostname.upper() == name.upper():
-        ret["comment"] = "Hostname is already set to '{}'".format(name)
+        ret["comment"] = f"Hostname is already set to '{name}'"
         return ret
 
     out = __salt__["system.set_hostname"](name)
@@ -191,22 +191,20 @@ def workgroup(name):
     current_workgroup = (
         out["Domain"]
         if "Domain" in out
-        else out["Workgroup"]
-        if "Workgroup" in out
-        else ""
+        else out["Workgroup"] if "Workgroup" in out else ""
     )
 
     # Notify the user if the requested workgroup is the same
     if current_workgroup.upper() == name.upper():
         ret["result"] = True
-        ret["comment"] = "Workgroup is already set to '{}'".format(name.upper())
+        ret["comment"] = f"Workgroup is already set to '{name.upper()}'"
         return ret
 
     # If being run in test-mode, inform the user what is supposed to happen
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {}
-        ret["comment"] = "Computer will be joined to workgroup '{}'".format(name)
+        ret["comment"] = f"Computer will be joined to workgroup '{name}'"
         return ret
 
     # Set our new workgroup, and then immediately ask the machine what it
@@ -216,9 +214,7 @@ def workgroup(name):
     new_workgroup = (
         out["Domain"]
         if "Domain" in out
-        else out["Workgroup"]
-        if "Workgroup" in out
-        else ""
+        else out["Workgroup"] if "Workgroup" in out else ""
     )
 
     # Return our results based on the changes
@@ -299,7 +295,7 @@ def join_domain(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer already added to '{}'".format(name),
+        "comment": f"Computer already added to '{name}'",
     }
 
     current_domain_dic = __salt__["system.get_domain_workgroup"]()
@@ -311,12 +307,12 @@ def join_domain(
         current_domain = None
 
     if name.lower() == current_domain.lower():
-        ret["comment"] = "Computer already added to '{}'".format(name)
+        ret["comment"] = f"Computer already added to '{name}'"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer will be added to '{}'".format(name)
+        ret["comment"] = f"Computer will be added to '{name}'"
         return ret
 
     result = __salt__["system.join_domain"](
@@ -328,14 +324,14 @@ def join_domain(
         restart=restart,
     )
     if result is not False:
-        ret["comment"] = "Computer added to '{}'".format(name)
+        ret["comment"] = f"Computer added to '{name}'"
         if restart:
             ret["comment"] += "\nSystem will restart"
         else:
             ret["comment"] += "\nSystem needs to be restarted"
         ret["changes"] = {"old": current_domain, "new": name}
     else:
-        ret["comment"] = "Computer failed to join '{}'".format(name)
+        ret["comment"] = f"Computer failed to join '{name}'"
         ret["result"] = False
     return ret
 
@@ -462,17 +458,19 @@ def shutdown(
     if only_on_pending_reboot and not __salt__["system.get_pending_reboot"]():
         if __opts__["test"]:
             ret["comment"] = (
-                "System {} will be skipped because " "no reboot is pending"
-            ).format(action)
+                f"System {action} will be skipped because no reboot is pending"
+            )
         else:
             ret["comment"] = (
-                "System {} has been skipped because " "no reboot was pending"
-            ).format(action)
+                "System {} has been skipped because no reboot was pending".format(
+                    action
+                )
+            )
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Will attempt to schedule a {}".format(action)
+        ret["comment"] = f"Will attempt to schedule a {action}"
         return ret
 
     ret["result"] = __salt__["system.shutdown"](
@@ -487,9 +485,9 @@ def shutdown(
     if ret["result"]:
         ret["changes"] = {
             "old": "No reboot or shutdown was scheduled",
-            "new": "A {} has been scheduled".format(action),
+            "new": f"A {action} has been scheduled",
         }
-        ret["comment"] = "Request to {} was successful".format(action)
+        ret["comment"] = f"Request to {action} was successful"
     else:
-        ret["comment"] = "Request to {} failed".format(action)
+        ret["comment"] = f"Request to {action} failed"
     return ret

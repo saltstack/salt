@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -19,7 +18,6 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -62,7 +60,7 @@ class TimeStampException(Exception):
     pass
 
 
-class SSDPBase(object):
+class SSDPBase:
     """
     Salt Service Discovery Protocol.
     """
@@ -159,7 +157,10 @@ class SSDPFactory(SSDPBase):
         :return:
         """
         tries = 0
-        slp_time = lambda: 0.5 / random.randint(10, 30)
+
+        def slp_time():
+            return 0.5 / random.randint(10, 30)
+
         slp = slp_time()
         while tries < attempts:
             try:
@@ -190,7 +191,7 @@ class SSDPFactory(SSDPBase):
                 )
                 if self.disable_hidden:
                     self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Invalid timestamp"), addr
+                        "{}:E:{}".format(self.signature, "Invalid timestamp"), addr
                     )
                 return
 
@@ -199,7 +200,7 @@ class SSDPFactory(SSDPBase):
             ):
                 if self.disable_hidden:
                     self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Timestamp is too old"), addr
+                        "{}:E:{}".format(self.signature, "Timestamp is too old"), addr
                     )
                 self.log.debug("Received outdated package from %s:%s", *addr)
                 return
@@ -207,9 +208,7 @@ class SSDPFactory(SSDPBase):
             self.log.debug('Received "%s" from %s:%s', message, *addr)
             self._sendto(
                 salt.utils.stringutils.to_bytes(
-                    str(
-                        "{0}:@:{1}"
-                    ).format(  # future lint: disable=blacklisted-function
+                    "{}:@:{}".format(
                         self.signature,
                         salt.utils.json.dumps(self.answer, _json_module=_json),
                     )
@@ -220,7 +219,7 @@ class SSDPFactory(SSDPBase):
             if self.disable_hidden:
                 self._sendto(
                     salt.utils.stringutils.to_bytes(
-                        "{0}:E:{1}".format(self.signature, "Invalid packet signature"),
+                        "{}:E:{}".format(self.signature, "Invalid packet signature"),
                         addr,
                     )
                 )
@@ -286,11 +285,11 @@ class SSDPDiscoveryServer(SSDPBase):
                             family=family,
                             type=socket.SOCK_DGRAM,
                             proto=proto,
-                            flags=flags
+                            flags=flags,
                         )
                     )
                     if not infos:
-                        raise socket.error("getaddrinfo() returned empty list")
+                        raise OSError("getaddrinfo() returned empty list")
                     for fam, _, pro, _, address in infos:
                         key = (fam, pro)
                         if key not in addr_infos:
@@ -307,7 +306,7 @@ class SSDPDiscoveryServer(SSDPBase):
             if not addr_pairs_info:
                 raise ValueError("can not get address information")
         exceptions = []
-        for ((family, proto), (local_address, remote_address)) in addr_pairs_info:
+        for (family, proto), (local_address, remote_address) in addr_pairs_info:
             sock = r_addr = None
             try:
                 sock = socket.socket(family=family, type=socket.SOCK_DGRAM, proto=proto)
@@ -321,7 +320,7 @@ class SSDPDiscoveryServer(SSDPBase):
                         loop.sock_connect(sock, remote_address)
                     )
                     r_addr = remote_address
-            except socket.error as exc:
+            except OSError as exc:
                 if sock is not None:
                     sock.close()
                 exceptions.append(exc)
@@ -408,9 +407,7 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         """
-        query = salt.utils.stringutils.to_bytes(
-            "{}{}".format(self.signature, time.time())
-        )
+        query = salt.utils.stringutils.to_bytes(f"{self.signature}{time.time()}")
         self._socket.sendto(query, ("<broadcast>", self.port))
 
         return query

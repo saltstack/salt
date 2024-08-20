@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Manage the Windows System PATH
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import os
 
 import salt.utils.stringutils
-
-# Import Salt libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -41,21 +35,21 @@ def absent(name):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not __salt__["win_path.exists"](name):
-        ret["comment"] = "{0} is not in the PATH".format(name)
+        ret["comment"] = f"{name} is not in the PATH"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "{0} would be removed from the PATH".format(name)
+        ret["comment"] = f"{name} would be removed from the PATH"
         ret["result"] = None
         return ret
 
     __salt__["win_path.remove"](name)
 
     if __salt__["win_path.exists"](name):
-        ret["comment"] = "Failed to remove {0} from the PATH".format(name)
+        ret["comment"] = f"Failed to remove {name} from the PATH"
         ret["result"] = False
     else:
-        ret["comment"] = "Removed {0} from the PATH".format(name)
+        ret["comment"] = f"Removed {name} from the PATH"
         ret["changes"]["removed"] = name
 
     return ret
@@ -92,11 +86,11 @@ def exists(name, index=None):
     try:
         name = os.path.normpath(salt.utils.stringutils.to_unicode(name))
     except TypeError:
-        name = six.text_type(name)
+        name = str(name)
 
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-    if index is not None and not isinstance(index, six.integer_types):
+    if index is not None and not isinstance(index, int):
         ret["comment"] = "Index must be an integer"
         ret["result"] = False
         return ret
@@ -135,8 +129,8 @@ def exists(name, index=None):
             index = num_dirs
         elif index <= -num_dirs:
             ret.setdefault("warnings", []).append(
-                "There are only {0} directories in the PATH, using an index "
-                "of 0 instead of {1}.".format(num_dirs, index)
+                "There are only {} directories in the PATH, using an index "
+                "of 0 instead of {}.".format(num_dirs, index)
             )
             index = 0
 
@@ -149,19 +143,17 @@ def exists(name, index=None):
         if index is None:
             # We're not enforcing the index, and the directory is in the PATH.
             # There's nothing to do here.
-            comments.append("{0} already exists in the PATH.".format(name))
+            comments.append(f"{name} already exists in the PATH.")
             return _format_comments(ret, comments)
         else:
             if index == old_index:
-                comments.append(
-                    "{0} already exists in the PATH at index {1}.".format(name, index)
-                )
+                comments.append(f"{name} already exists in the PATH at index {index}.")
                 return _format_comments(ret, comments)
             else:
                 if __opts__["test"]:
                     ret["result"] = None
                     comments.append(
-                        "{0} would be moved from index {1} to {2}.".format(
+                        "{} would be moved from index {} to {}.".format(
                             name, old_index, index
                         )
                     )
@@ -173,8 +165,8 @@ def exists(name, index=None):
         if __opts__["test"]:
             ret["result"] = None
             comments.append(
-                "{0} would be added to the PATH{1}.".format(
-                    name, " at index {0}".format(index) if index is not None else ""
+                "{} would be added to the PATH{}.".format(
+                    name, f" at index {index}" if index is not None else ""
                 )
             )
             ret["changes"] = _changes(old_index, index)
@@ -183,7 +175,7 @@ def exists(name, index=None):
     try:
         ret["result"] = __salt__["win_path.add"](name, index=index, rehash=False)
     except Exception as exc:  # pylint: disable=broad-except
-        comments.append("Encountered error: {0}.".format(exc))
+        comments.append(f"Encountered error: {exc}.")
         ret["result"] = False
 
     if ret["result"]:
@@ -200,16 +192,16 @@ def exists(name, index=None):
 
     if index is not None and old_index is not None:
         comments.append(
-            "{0} {1} from index {2} to {3}.".format(
+            "{} {} from index {} to {}.".format(
                 "Moved" if ret["result"] else "Failed to move", name, old_index, index
             )
         )
     else:
         comments.append(
-            "{0} {1} to the PATH{2}.".format(
+            "{} {} to the PATH{}.".format(
                 "Added" if ret["result"] else "Failed to add",
                 name,
-                " at index {0}".format(index) if index is not None else "",
+                f" at index {index}" if index is not None else "",
             )
         )
 

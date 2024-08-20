@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Common functions for working with powershell
 
@@ -8,8 +7,6 @@ Common functions for working with powershell
     If Salt can't find your modules, ensure that the PSModulePath is set and
     pointing to all locations of your Powershell modules.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -73,16 +70,16 @@ def get_modules():
     root_paths = []
 
     home_dir = os.environ.get("HOME", os.environ.get("HOMEPATH"))
-    system_dir = "{0}\\System32".format(os.environ.get("WINDIR", "C:\\Windows"))
+    system_dir = "{}\\System32".format(os.environ.get("WINDIR", "C:\\Windows"))
     program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
     default_paths = [
-        "{0}/.local/share/powershell/Modules".format(home_dir),
+        f"{home_dir}/.local/share/powershell/Modules",
         # Once version is available, these can be enabled
         # '/opt/microsoft/powershell/{0}/Modules'.format(ps_version),
         # '/usr/local/microsoft/powershell/{0}/Modules'.format(ps_version),
         "/usr/local/share/powershell/Modules",
-        "{0}\\WindowsPowerShell\\v1.0\\Modules\\".format(system_dir),
-        "{0}\\WindowsPowerShell\\Modules".format(program_files),
+        f"{system_dir}\\WindowsPowerShell\\v1.0\\Modules\\",
+        f"{program_files}\\WindowsPowerShell\\Modules",
     ]
     default_paths = ";".join(default_paths)
 

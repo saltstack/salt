@@ -1,24 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 URL utils
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 import sys
+from urllib.parse import urlparse, urlunparse
 
 import salt.utils.data
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-
-# Import salt libs
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=import-error,no-name-in-module
-    urlparse,
-    urlunparse,
-)
 
 
 def parse(url):
@@ -49,13 +40,14 @@ def create(path, saltenv=None):
     """
     join `path` and `saltenv` into a 'salt://' URL.
     """
+    path = path.replace("\\", "/")
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
     path = salt.utils.data.decode(path)
 
-    query = "saltenv={0}".format(saltenv) if saltenv else ""
+    query = f"saltenv={saltenv}" if saltenv else ""
     url = salt.utils.data.decode(urlunparse(("file", "", path, "", query, "")))
-    return "salt://{0}".format(url[len("file:///") :])
+    return "salt://{}".format(url[len("file:///") :])
 
 
 def is_escaped(url):
@@ -87,13 +79,13 @@ def escape(url):
         if url.startswith("|"):
             return url
         else:
-            return "|{0}".format(url)
+            return f"|{url}"
     elif scheme == "salt":
         path, saltenv = parse(url)
         if path.startswith("|"):
             return create(path, saltenv)
         else:
-            return create("|{0}".format(path), saltenv)
+            return create(f"|{path}", saltenv)
     else:
         return url
 
@@ -165,11 +157,11 @@ def add_http_basic_auth(url, user=None, password=None, https_only=False):
         if https_only and urltuple.scheme != "https":
             raise ValueError("Basic Auth only supported for HTTPS")
         if password is None:
-            netloc = "{0}@{1}".format(user, urltuple.netloc)
+            netloc = f"{user}@{urltuple.netloc}"
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
         else:
-            netloc = "{0}:{1}@{2}".format(user, password, urltuple.netloc)
+            netloc = f"{user}:{password}@{urltuple.netloc}"
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
 

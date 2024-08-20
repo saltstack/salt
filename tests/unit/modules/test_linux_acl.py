@@ -1,13 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.modules.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -23,7 +15,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         self.file = "/tmp/file"
         self.quoted_file = '"/tmp/file"'
         self.files = ["/tmp/file1", "/tmp/file2", "/tmp/file3 with whitespaces"]
-        self.quoted_files = ['"{0}"'.format(f) for f in self.files]
+        self.quoted_files = [f'"{f}"' for f in self.files]
         self.u_acl = ["u", "myuser", "rwx"]
         self.user_acl = ["user", "myuser", "rwx"]
         self.user_acl_cmd = "u:myuser:rwx"

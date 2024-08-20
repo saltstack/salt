@@ -1,0 +1,99 @@
+  <%- for os in test_salt_pkg_listing["linux"] %>
+    <%- set job_name = "{}-pkg-tests{}".format(os.slug.replace(".", ""), os.fips and '-fips' or '') %>
+
+  <{ job_name }>:
+    <%- do test_salt_pkg_needs.append(job_name) %>
+    name: <{ os.display_name }> Package Test<%- if os.fips %> (fips)<%- endif %>
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-linux.yml
+    with:
+      distro-slug: <{ os.slug }>
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: <{ os.arch }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: <{ os.pkg_type }>
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      skip-code-coverage: <{ skip_test_coverage_check }>
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+    <%- if os.fips %>
+      fips: true
+    <%- endif %>
+
+  <%- endfor %>
+
+
+
+  <%- for os in test_salt_pkg_listing["macos"] %>
+    <%- set job_name = "{}-pkg-tests".format(os.slug.replace(".", "")) %>
+
+  <{ job_name }>:
+    <%- do test_salt_pkg_needs.append(job_name) %>
+    name: <{ os.display_name }> Package Test
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: <{ os.slug }>
+      runner: <{ os.runner }>
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: <{ os.arch }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      skip-code-coverage: <{ skip_test_coverage_check }>
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  <%- endfor %>
+
+
+  <%- for os in test_salt_pkg_listing["windows"] %>
+    <%- set job_name = "{}-{}-pkg-tests".format(os.slug.replace(".", ""), os.pkg_type.lower()) %>
+
+  <{ job_name }>:
+    <%- do test_salt_pkg_needs.append(job_name) %>
+    name: <{ os.display_name }> <{ os.pkg_type }> Package Test
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action-windows.yml
+    with:
+      distro-slug: <{ os.slug }>
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: <{ os.arch }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: <{ os.pkg_type }>
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      skip-code-coverage: <{ skip_test_coverage_check }>
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  <%- endfor %>

@@ -1,0 +1,58 @@
+---
+name: setup-relenv
+description: Setup Relenv
+
+inputs:
+  platform:
+    required: true
+    description: The platform to build
+  arch:
+    required: true
+    description: The platform arch to build
+  python-version:
+    required: true
+    description: The version of python to build
+  cache-seed:
+    required: true
+    description: Seed used to invalidate caches
+  version:
+    required: false
+    description: The version of relenv to use
+    default: 0.13.2
+
+outputs:
+  version:
+    description: The relenv version
+    value: ${{ inputs.version }}
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install Relenv
+      shell: bash
+      run: |
+        python3 -m pip install relenv==${{ inputs.version }}
+
+    - name: Cache Relenv Data Directory
+      uses: ./.github/actions/cache
+      with:
+        path: ${{ github.workspace }}/.relenv
+        key: ${{ inputs.cache-seed }}|relenv|${{ inputs.version }}|${{ inputs.python-version }}|${{ inputs.platform }}|${{ inputs.arch }}
+
+    - name: Fetch Toolchain
+      if: ${{ inputs.platform == 'linux' }}
+      shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
+      run: |
+        python3 -m relenv toolchain fetch --arch=${{ inputs.arch }}
+
+    - name: Fetch Native Python Build
+      shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
+      run: |
+        python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}

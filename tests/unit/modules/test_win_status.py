@@ -1,8 +1,10 @@
 import sys
 
+import pytest
+
 import salt.modules.win_status as status
 from tests.support.mock import ANY, Mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import wmi
@@ -10,7 +12,7 @@ except ImportError:
     pass
 
 
-@skipIf(status.HAS_WMI is False, "This test requires Windows")
+@pytest.mark.skipif(status.HAS_WMI is False, reason="This test requires Windows")
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
@@ -82,9 +84,9 @@ class TestProcsAttributes(TestProcsBase):
         self.assertEqual(self.proc["user_domain"], self._expected_domain)
 
 
-@skipIf(
+@pytest.mark.skipif(
     sys.stdin.encoding != "UTF-8",
-    "UTF-8 encoding required for this test is not supported",
+    reason="UTF-8 encoding required for this test is not supported",
 )
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):

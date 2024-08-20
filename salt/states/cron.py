@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of cron, the Unix command scheduler
 ==============================================
@@ -137,14 +136,10 @@ The script will be executed every reboot if cron daemon support this option.
 This counter part definition will ensure than a job with a special keyword
 is not set.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.files
-from salt.ext import six
 from salt.modules.cron import _cron_matched, _needs_change
 
 
@@ -171,21 +166,21 @@ def _check_cron(
     Return the changes
     """
     if minute is not None:
-        minute = six.text_type(minute).lower()
+        minute = str(minute).lower()
     if hour is not None:
-        hour = six.text_type(hour).lower()
+        hour = str(hour).lower()
     if daymonth is not None:
-        daymonth = six.text_type(daymonth).lower()
+        daymonth = str(daymonth).lower()
     if month is not None:
-        month = six.text_type(month).lower()
+        month = str(month).lower()
     if dayweek is not None:
-        dayweek = six.text_type(dayweek).lower()
+        dayweek = str(dayweek).lower()
     if identifier is not None:
-        identifier = six.text_type(identifier)
+        identifier = str(identifier)
     if commented is not None:
         commented = commented is True
     if cmd is not None:
-        cmd = six.text_type(cmd)
+        cmd = str(cmd)
     lst = __salt__["cron.list_tab"](user)
     if special is None:
         for cron in lst["crons"]:
@@ -351,12 +346,12 @@ def present(
         )
         ret["result"] = None
         if status == "absent":
-            ret["comment"] = "Cron {0} is set to be added".format(name)
+            ret["comment"] = f"Cron {name} is set to be added"
         elif status == "present":
             ret["result"] = True
-            ret["comment"] = "Cron {0} already present".format(name)
+            ret["comment"] = f"Cron {name} already present"
         elif status == "update":
-            ret["comment"] = "Cron {0} is set to be updated".format(name)
+            ret["comment"] = f"Cron {name} is set to be updated"
         return ret
 
     if special is None:
@@ -382,19 +377,19 @@ def present(
             identifier=identifier,
         )
     if data == "present":
-        ret["comment"] = "Cron {0} already present".format(name)
+        ret["comment"] = f"Cron {name} already present"
         return ret
 
     if data == "new":
-        ret["comment"] = "Cron {0} added to {1}'s crontab".format(name, user)
+        ret["comment"] = f"Cron {name} added to {user}'s crontab"
         ret["changes"] = {user: name}
         return ret
 
     if data == "updated":
-        ret["comment"] = "Cron {0} updated".format(name)
+        ret["comment"] = f"Cron {name} updated"
         ret["changes"] = {user: name}
         return ret
-    ret["comment"] = "Cron {0} for user {1} failed to commit with error \n{2}".format(
+    ret["comment"] = "Cron {} for user {} failed to commit with error \n{}".format(
         name, user, data
     )
     ret["result"] = False
@@ -403,8 +398,10 @@ def present(
 
 def absent(name, user="root", identifier=False, special=None, **kwargs):
     """
-    Verifies that the specified cron job is absent for the specified user; only
-    the name is matched when removing a cron job.
+    Verifies that the specified cron job is absent for the specified user.
+
+    If an ``identifier`` is not passed then the ``name`` is used to identify
+    the cron job for removal.
 
     name
         The command that should be absent in the user crontab.
@@ -435,9 +432,9 @@ def absent(name, user="root", identifier=False, special=None, **kwargs):
         ret["result"] = None
         if status == "absent":
             ret["result"] = True
-            ret["comment"] = "Cron {0} is absent".format(name)
+            ret["comment"] = f"Cron {name} is absent"
         elif status == "present" or status == "update":
-            ret["comment"] = "Cron {0} is set to be removed".format(name)
+            ret["comment"] = f"Cron {name} is set to be removed"
         return ret
 
     if special is None:
@@ -448,13 +445,13 @@ def absent(name, user="root", identifier=False, special=None, **kwargs):
         )
 
     if data == "absent":
-        ret["comment"] = "Cron {0} already absent".format(name)
+        ret["comment"] = f"Cron {name} already absent"
         return ret
     if data == "removed":
-        ret["comment"] = "Cron {0} removed from {1}'s crontab".format(name, user)
+        ret["comment"] = f"Cron {name} removed from {user}'s crontab"
         ret["changes"] = {user: name}
         return ret
-    ret["comment"] = "Cron {0} for user {1} failed to commit with error {2}".format(
+    ret["comment"] = "Cron {} for user {} failed to commit with error {}".format(
         name, user, data
     )
     ret["result"] = False
@@ -471,7 +468,7 @@ def file(
     replace=True,
     defaults=None,
     backup="",
-    **kwargs
+    **kwargs,
 ):
     """
     Provides file.managed-like functionality (templating, etc.) for a pre-made
@@ -562,7 +559,7 @@ def file(
     except Exception:  # pylint: disable=broad-except
         ret = {
             "changes": {},
-            "comment": "Could not identify group for user {0}".format(user),
+            "comment": f"Could not identify group for user {user}",
             "name": name,
             "result": False,
         }
@@ -572,7 +569,7 @@ def file(
     with salt.utils.files.fopen(cron_path, "w+") as fp_:
         raw_cron = __salt__["cron.raw_cron"](user)
         if not raw_cron.endswith("\n"):
-            raw_cron = "{0}\n".format(raw_cron)
+            raw_cron = f"{raw_cron}\n"
         fp_.write(salt.utils.stringutils.to_str(raw_cron))
 
     ret = {"changes": {}, "comment": "", "name": name, "result": True}
@@ -582,9 +579,7 @@ def file(
     source = name
 
     if not replace and os.stat(cron_path).st_size > 0:
-        ret["comment"] = "User {0} already has a crontab. No changes " "made".format(
-            user
-        )
+        ret["comment"] = f"User {user} already has a crontab. No changes made"
         os.unlink(cron_path)
         return ret
 
@@ -602,7 +597,7 @@ def file(
             context=context,
             defaults=defaults,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
         ret["result"], ret["comment"] = fcm
         os.unlink(cron_path)
@@ -627,12 +622,12 @@ def file(
             context=context,
             defaults=defaults,
             skip_verify=False,  # skip_verify
-            **kwargs
+            **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Unable to manage file: {0}".format(exc)
+        ret["comment"] = f"Unable to manage file: {exc}"
         return ret
 
     if comment:
@@ -658,7 +653,7 @@ def file(
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Unable to manage file: {0}".format(exc)
+        ret["comment"] = f"Unable to manage file: {exc}"
         return ret
 
     cron_ret = None
@@ -666,18 +661,17 @@ def file(
         cron_ret = __salt__["cron.write_cron_file_verbose"](user, cron_path)
         # Check cmd return code and show success or failure
         if cron_ret["retcode"] == 0:
-            ret["comment"] = "Crontab for user {0} was updated".format(user)
+            ret["comment"] = f"Crontab for user {user} was updated"
             ret["result"] = True
             ret["changes"] = ret["changes"]
         else:
-            ret["comment"] = (
-                "Unable to update user {0} crontab {1}."
-                " Error: {2}".format(user, cron_path, cron_ret["stderr"])
+            ret["comment"] = "Unable to update user {} crontab {}. Error: {}".format(
+                user, cron_path, cron_ret["stderr"]
             )
             ret["result"] = False
             ret["changes"] = {}
     elif ret["result"]:
-        ret["comment"] = "Crontab for user {0} is in the correct " "state".format(user)
+        ret["comment"] = f"Crontab for user {user} is in the correct state"
         ret["changes"] = {}
 
     os.unlink(cron_path)
@@ -704,31 +698,29 @@ def env_present(name, value=None, user="root"):
         status = _check_cron_env(user, name, value=value)
         ret["result"] = None
         if status == "absent":
-            ret["comment"] = "Cron env {0} is set to be added".format(name)
+            ret["comment"] = f"Cron env {name} is set to be added"
         elif status == "present":
             ret["result"] = True
-            ret["comment"] = "Cron env {0} already present".format(name)
+            ret["comment"] = f"Cron env {name} already present"
         elif status == "update":
-            ret["comment"] = "Cron env {0} is set to be updated".format(name)
+            ret["comment"] = f"Cron env {name} is set to be updated"
         return ret
 
     data = __salt__["cron.set_env"](user, name, value=value)
     if data == "present":
-        ret["comment"] = "Cron env {0} already present".format(name)
+        ret["comment"] = f"Cron env {name} already present"
         return ret
 
     if data == "new":
-        ret["comment"] = "Cron env {0} added to {1}'s crontab".format(name, user)
+        ret["comment"] = f"Cron env {name} added to {user}'s crontab"
         ret["changes"] = {user: name}
         return ret
 
     if data == "updated":
-        ret["comment"] = "Cron env {0} updated".format(name)
+        ret["comment"] = f"Cron env {name} updated"
         ret["changes"] = {user: name}
         return ret
-    ret[
-        "comment"
-    ] = "Cron env {0} for user {1} failed to commit with error \n{2}".format(
+    ret["comment"] = "Cron env {} for user {} failed to commit with error \n{}".format(
         name, user, data
     )
     ret["result"] = False
@@ -756,20 +748,20 @@ def env_absent(name, user="root"):
         ret["result"] = None
         if status == "absent":
             ret["result"] = True
-            ret["comment"] = "Cron env {0} is absent".format(name)
+            ret["comment"] = f"Cron env {name} is absent"
         elif status == "present" or status == "update":
-            ret["comment"] = "Cron env {0} is set to be removed".format(name)
+            ret["comment"] = f"Cron env {name} is set to be removed"
         return ret
 
     data = __salt__["cron.rm_env"](user, name)
     if data == "absent":
-        ret["comment"] = "Cron env {0} already absent".format(name)
+        ret["comment"] = f"Cron env {name} already absent"
         return ret
     if data == "removed":
-        ret["comment"] = "Cron env {0} removed from {1}'s crontab".format(name, user)
+        ret["comment"] = f"Cron env {name} removed from {user}'s crontab"
         ret["changes"] = {user: name}
         return ret
-    ret["comment"] = "Cron env {0} for user {1} failed to commit with error {2}".format(
+    ret["comment"] = "Cron env {} for user {} failed to commit with error {}".format(
         name, user, data
     )
     ret["result"] = False

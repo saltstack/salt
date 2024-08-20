@@ -551,15 +551,13 @@ General Deprecations
 
   .. code-block:: python
 
-    def fcn(msg="", env="base", refresh=True, saltenv="base", **kwargs):
-        ...
+    def fcn(msg="", env="base", refresh=True, saltenv="base", **kwargs): ...
 
   has been changed to
 
   .. code-block:: python
 
-    def fcn(msg="", refresh=True, saltenv="base", **kwargs):
-        ...
+    def fcn(msg="", refresh=True, saltenv="base", **kwargs): ...
 
   - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
     that also accepts arbitrary keyword arguments, then a new warning informs the
@@ -568,8 +566,7 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg="", refresh=True, saltenv="base", **kwargs):
-          ...
+      def fcn(msg="", refresh=True, saltenv="base", **kwargs): ...
 
     .. code-block:: python
 
@@ -582,8 +579,7 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg="", refresh=True, saltenv="base"):
-          ...
+      def fcn(msg="", refresh=True, saltenv="base"): ...
 
     .. code-block:: python
 
@@ -597,8 +593,7 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg="", refresh=True, saltenv="base"):
-          ...
+      def fcn(msg="", refresh=True, saltenv="base"): ...
 
     .. code-block:: python
 

@@ -1,0 +1,73 @@
+---
+name: Pre-Commit
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+      pre-commit-version:
+        required: true
+        type: string
+        description: The pre-commit version to install
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+
+jobs:
+  Pre-Commit:
+    name: Run Pre-Commit Against Salt
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
+
+    env:
+      PRE_COMMIT_COLOR: always
+
+    steps:
+
+      - name: Install System Deps
+        run: |
+          apt-get update
+          apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev rustc
+
+      - name: Add Git Safe Directory
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-actionlint
+        with:
+          cache-seed: ${{ inputs.cache-seed }}
+      - uses: ./.github/actions/setup-shellcheck
+        with:
+          cache-seed: ${{ inputs.cache-seed }}
+      - uses: ./.github/actions/setup-pre-commit
+        with:
+          version: ${{ inputs.pre-commit-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Check ALL Files On Branch
+        if: github.event_name != 'pull_request'
+        env:
+          SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --all-files
+
+      - name: Check Changed Files On PR
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo']
+        env:
+          SKIP: lint-salt,lint-tests
+          GH_ACTIONS_ANNOTATE: "1"
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
+
+      - name: Check Docs On Deleted Files
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['deleted']
+        run: |
+          pre-commit run --show-diff-on-failure --color=always check-docs --files ${{ join(fromJSON(inputs.changed-files)['deleted_files'], ' ') }}

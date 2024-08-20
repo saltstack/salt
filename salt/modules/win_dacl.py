@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Manage DACLs on Windows
 
 :depends:   - winreg Python module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from salt.ext.six import string_types
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # TODO: Figure out the exceptions that could be raised and properly catch
 #       them instead of a bare except that catches any exception at all
@@ -24,11 +17,11 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 #       permissions if the minion is running as a user and not LOCALSYSTEM
 
 
-# Import third party libs
 try:
-    import salt.ext.six.moves.winreg  # pylint: disable=redefined-builtin,no-name-in-module,import-error
-    import win32security
+    import winreg
+
     import ntsecuritycon
+    import win32security
 
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -40,7 +33,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = "win_dacl"
 
 
-class daclConstants(object):
+class daclConstants:
     """
     DACL constants used throughout the module
     """
@@ -71,11 +64,8 @@ class daclConstants(object):
         }
         self.rights = {
             win32security.SE_REGISTRY_KEY: {
-                "READ": {"BITS": salt.ext.six.moves.winreg.KEY_READ, "TEXT": "read"},
-                "FULLCONTROL": {
-                    "BITS": salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
-                    "TEXT": "full control",
-                },
+                "READ": {"BITS": winreg.KEY_READ, "TEXT": "read"},
+                "FULLCONTROL": {"BITS": winreg.KEY_ALL_ACCESS, "TEXT": "full control"},
             },
             win32security.SE_FILE_OBJECT: {
                 "READ": {"BITS": ntsecuritycon.FILE_GENERIC_READ, "TEXT": "read"},
@@ -203,9 +193,8 @@ class daclConstants(object):
             },
         }
         self.reflection_mask = {
-            True: salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
-            False: salt.ext.six.moves.winreg.KEY_ALL_ACCESS
-            | salt.ext.six.moves.winreg.KEY_WOW64_64KEY,
+            True: winreg.KEY_ALL_ACCESS,
+            False: winreg.KEY_ALL_ACCESS | winreg.KEY_WOW64_64KEY,
         }
         self.objectType = {
             "FILE": win32security.SE_FILE_OBJECT,
@@ -217,15 +206,15 @@ class daclConstants(object):
         """
         returns the bit value of the string object type
         """
-        if isinstance(t, string_types):
+        if isinstance(t, str):
             t = t.upper()
             try:
                 return self.objectType[t]
             except KeyError:
                 raise CommandExecutionError(
-                    (
-                        'Invalid object type "{0}".  It should be one of the following:  {1}'
-                    ).format(t, ", ".join(self.objectType))
+                    'Invalid object type "{}". It should be one of the following:  {}'.format(
+                        t, ", ".join(self.objectType)
+                    )
                 )
         else:
             return t
@@ -238,9 +227,9 @@ class daclConstants(object):
             return self.hkeys_security[s]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No HKEY named "{0}".  It should be one of the following:  {1}'
-                ).format(s, ", ".join(self.hkeys_security))
+                'No HKEY named "{}".  It should be one of the following:  {}'.format(
+                    s, ", ".join(self.hkeys_security)
+                )
             )
 
     def getPermissionBit(self, t, m):
@@ -248,13 +237,13 @@ class daclConstants(object):
         returns a permission bit of the string permission value for the specified object type
         """
         try:
-            if isinstance(m, string_types):
+            if isinstance(m, str):
                 return self.rights[t][m]["BITS"]
             else:
                 return m
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{0}".  It should be one of the following:  {1}').format(
+                'No right "{}".  It should be one of the following:  {}'.format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -267,7 +256,7 @@ class daclConstants(object):
             return self.rights[t][m]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{0}".  It should be one of the following:  {1}').format(
+                'No right "{}".  It should be one of the following:  {}'.format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -280,7 +269,7 @@ class daclConstants(object):
             return self.validAceTypes[t]["BITS"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{0}".  It should be one of the following:  {1}').format(
+                'No ACE type "{}".  It should be one of the following:  {}'.format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
@@ -293,7 +282,7 @@ class daclConstants(object):
             return self.validAceTypes[t]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{0}".  It should be one of the following:  {1}').format(
+                'No ACE type "{}".  It should be one of the following:  {}'.format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
@@ -306,9 +295,9 @@ class daclConstants(object):
             return self.validPropagations[t][p]["BITS"]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No propagation type of "{0}".  It should be one of the following:  {1}'
-                ).format(p, ", ".join(self.validPropagations[t]))
+                'No propagation type of "{}".  It should be one of the following:  {}'.format(
+                    p, ", ".join(self.validPropagations[t])
+                )
             )
 
     def getPropagationText(self, t, p):
@@ -319,9 +308,9 @@ class daclConstants(object):
             return self.validPropagations[t][p]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No propagation type of "{0}".  It should be one of the following:  {1}'
-                ).format(p, ", ".join(self.validPropagations[t]))
+                'No propagation type of "{}".  It should be one of the following:  {}'.format(
+                    p, ", ".join(self.validPropagations[t])
+                )
             )
 
     def processPath(self, path, objectType):
@@ -340,7 +329,7 @@ class daclConstants(object):
         return path
 
 
-def _getUserSid(user):
+def _get_user_sid(user):
     """
     return a state error dictionary, with 'sid' as a field if it could be returned
     if user is None, sid will also be None
@@ -354,10 +343,9 @@ def _getUserSid(user):
             sid = win32security.GetBinarySid(user)
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to obtain the binary security identifier for {0}.  The exception was {1}.".format(
-                user, e
+            ret["comment"] = (
+                "Unable to obtain the binary security identifier for {}.  The exception"
+                " was {}.".format(user, e)
             )
         else:
             try:
@@ -366,10 +354,9 @@ def _getUserSid(user):
                 ret["sid"] = sid
             except Exception as e:  # pylint: disable=broad-except
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] = "Unable to lookup the account for the security identifier {0}.  The exception was {1}.".format(
-                    user, e
+                ret["comment"] = (
+                    "Unable to lookup the account for the security identifier {}.  The"
+                    " exception was {}.".format(user, e)
                 )
     else:
         try:
@@ -378,10 +365,9 @@ def _getUserSid(user):
             ret["sid"] = sid
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to obtain the security identifier for {0}.  The exception was {1}.".format(
-                user, e
+            ret["comment"] = (
+                "Unable to obtain the security identifier for {}.  The exception"
+                " was {}.".format(user, e)
             )
     return ret
 
@@ -427,7 +413,7 @@ def get(path, objectType, user=None):
     """
     ret = {"Path": path, "ACLs": []}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     if path and objectType:
         dc = daclConstants()
@@ -472,7 +458,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
         acetype = acetype.strip().upper()
         propagation = propagation.strip().upper()
 
-        sidRet = _getUserSid(user)
+        sidRet = _get_user_sid(user)
         if not sidRet["result"]:
             return sidRet
         permissionbit = dc.getPermissionBit(objectTypeBit, permission)
@@ -507,7 +493,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     None,
                 )
                 acesAdded.append(
-                    ("{0} {1} {2} on {3}").format(
+                    "{} {} {} on {}".format(
                         user,
                         dc.getAceTypeText(acetype),
                         dc.getPermissionText(objectTypeBit, permission),
@@ -516,17 +502,17 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                 )
                 ret["result"] = True
             except Exception as e:  # pylint: disable=broad-except
-                ret[
-                    "comment"
-                ] = "An error occurred attempting to add the ace.  The error was {0}".format(
-                    e
+                ret["comment"] = (
+                    "An error occurred attempting to add the ace.  The error was {}".format(
+                        e
+                    )
                 )
                 ret["result"] = False
                 return ret
             if acesAdded:
                 ret["changes"]["Added ACEs"] = acesAdded
         else:
-            ret["comment"] = "Unable to obtain the DACL of {0}".format(path)
+            ret["comment"] = f"Unable to obtain the DACL of {path}"
     else:
         ret["comment"] = "An empty value was specified for a required item."
         ret["result"] = False
@@ -569,7 +555,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
         if check_ace(path, objectType, user, permission, acetype, propagation, True)[
             "Exists"
         ]:
-            sidRet = _getUserSid(user)
+            sidRet = _get_user_sid(user)
             if not sidRet["result"]:
                 return sidRet
             permissionbit = (
@@ -617,7 +603,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
                     ret["result"] = True
                 except Exception as e:  # pylint: disable=broad-except
                     ret["result"] = False
-                    ret["comment"] = "Error removing ACE.  The error was {0}.".format(e)
+                    ret["comment"] = f"Error removing ACE.  The error was {e}."
                     return ret
         else:
             ret["comment"] = "The specified ACE was not found on the path."
@@ -633,9 +619,9 @@ def _ace_to_text(ace, objectType):
     try:
         userSid = win32security.LookupAccountSid("", ace[2])
         if userSid[1]:
-            userSid = "{1}\\{0}".format(userSid[0], userSid[1])
+            userSid = f"{userSid[1]}\\{userSid[0]}"
         else:
-            userSid = "{0}".format(userSid[0])
+            userSid = f"{userSid[0]}"
     except Exception:  # pylint: disable=broad-except
         userSid = win32security.ConvertSidToStringSid(ace[2])
     tPerm = ace[1]
@@ -657,9 +643,7 @@ def _ace_to_text(ace, objectType):
         if dc.validPropagations[objectType][x]["BITS"] == tProps:
             tProps = dc.validPropagations[objectType][x]["TEXT"]
             break
-    return ("{0} {1} {2} on {3} {4}").format(
-        userSid, tAceType, tPerm, tProps, tInherited
-    )
+    return f"{userSid} {tAceType} {tPerm} on {tProps} {tInherited}"
 
 
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
@@ -745,9 +729,9 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret["result"] = True
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Error attempting to set the inheritance.  The error was {0}.".format(e)
+            ret["comment"] = (
+                f"Error attempting to set the inheritance.  The error was {e}."
+            )
 
     return ret
 
@@ -820,7 +804,7 @@ def check_inheritance(path, objectType, user=None):
 
     ret = {"result": False, "Inheritance": False, "comment": ""}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -833,10 +817,8 @@ def check_inheritance(path, objectType, user=None):
         dacls = sd.GetSecurityDescriptorDacl()
     except Exception as e:  # pylint: disable=broad-except
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Error obtaining the Security Descriptor or DACL of the path: {0}.".format(
-            e
+        ret["comment"] = (
+            f"Error obtaining the Security Descriptor or DACL of the path: {e}."
         )
         return ret
 
@@ -898,7 +880,7 @@ def check_ace(
         dc.getPropagationBit(objectTypeBit, propagation) if propagation else None
     )
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
     if not sidRet["result"]:
         return sidRet
 

@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for configuring Windows Firewall using ``netsh``
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import re
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError
@@ -155,7 +151,7 @@ def get_rule(name="all"):
 
         salt '*' firewall.get_rule 'MyAppPort'
     """
-    cmd = ["netsh", "advfirewall", "firewall", "show", "rule", "name={0}".format(name)]
+    cmd = ["netsh", "advfirewall", "firewall", "show", "rule", f"name={name}"]
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:
         raise CommandExecutionError(ret["stdout"])
@@ -232,15 +228,15 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip
         "firewall",
         "add",
         "rule",
-        "name={0}".format(name),
-        "protocol={0}".format(protocol),
-        "dir={0}".format(dir),
-        "action={0}".format(action),
-        "remoteip={0}".format(remoteip),
+        f"name={name}",
+        f"protocol={protocol}",
+        f"dir={dir}",
+        f"action={action}",
+        f"remoteip={remoteip}",
     ]
 
     if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
-        cmd.append("localport={0}".format(localport))
+        cmd.append(f"localport={localport}")
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:
@@ -296,19 +292,19 @@ def delete_rule(name=None, localport=None, protocol=None, dir=None, remoteip=Non
     """
     cmd = ["netsh", "advfirewall", "firewall", "delete", "rule"]
     if name:
-        cmd.append("name={0}".format(name))
+        cmd.append(f"name={name}")
     if protocol:
-        cmd.append("protocol={0}".format(protocol))
+        cmd.append(f"protocol={protocol}")
     if dir:
-        cmd.append("dir={0}".format(dir))
+        cmd.append(f"dir={dir}")
     if remoteip:
-        cmd.append("remoteip={0}".format(remoteip))
+        cmd.append(f"remoteip={remoteip}")
 
     if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
         if localport:
             if not protocol:
                 cmd.append("protocol=tcp")
-            cmd.append("localport={0}".format(localport))
+            cmd.append(f"localport={localport}")
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if ret["retcode"] != 0:

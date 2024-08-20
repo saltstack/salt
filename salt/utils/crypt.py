@@ -1,23 +1,15 @@
 """
 Functions dealing with encryption
 """
+
 import hashlib
 import logging
 import os
 
-import salt.loader
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
-
-
-try:
-    import Crypto.Random  # nosec
-
-    HAS_CRYPTO = True
-except ImportError:
-    HAS_CRYPTO = False
 
 
 def decrypt(
@@ -68,8 +60,9 @@ def decrypt(
     try:
         if valid_rend and rend not in valid_rend:
             raise SaltInvocationError(
-                "'{}' is not a valid decryption renderer. Valid choices "
-                "are: {}".format(rend, ", ".join(valid_rend))
+                "'{}' is not a valid decryption renderer. Valid choices are: {}".format(
+                    rend, ", ".join(valid_rend)
+                )
             )
     except TypeError as exc:
         # SaltInvocationError inherits TypeError, so check for it first and
@@ -82,29 +75,17 @@ def decrypt(
     if renderers is None:
         if opts is None:
             raise TypeError("opts are required")
+
+        # Avaoid circular import
+        import salt.loader
+
         renderers = salt.loader.render(opts, {})
 
     rend_func = renderers.get(rend)
     if rend_func is None:
-        raise SaltInvocationError(
-            "Decryption renderer '{}' is not available".format(rend)
-        )
+        raise SaltInvocationError(f"Decryption renderer '{rend}' is not available")
 
     return rend_func(data, translate_newlines=translate_newlines)
-
-
-def reinit_crypto():
-    """
-    When a fork arises, pycrypto needs to reinit
-    From its doc::
-
-        Caveat: For the random number generator to work correctly,
-        you must call Random.atfork() in both the parent and
-        child processes after using os.fork()
-
-    """
-    if HAS_CRYPTO:
-        Crypto.Random.atfork()
 
 
 def pem_finger(path=None, key=None, sum_type="sha256"):
@@ -121,13 +102,20 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
 
         with salt.utils.files.fopen(path, "rb") as fp_:
             key = b"".join([x for x in fp_.readlines() if x.strip()][1:-1])
+            # We should never have \r\n in a key file. This will cause the
+            # finger to be different even though the only difference is the line
+            # endings.
+            key = key.replace(b"\r\n", b"\n")
+
+    if not isinstance(key, bytes):
+        key = key.encode("utf-8")
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ""
     for ind, _ in enumerate(pre):
         if ind % 2:
             # Is odd
-            finger += "{}:".format(pre[ind])
+            finger += f"{pre[ind]}:"
         else:
             finger += pre[ind]
     return finger.rstrip(":")

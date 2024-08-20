@@ -86,18 +86,22 @@ deeply-nested dict can be declared with curly braces:
 Here is a more concrete example of how YAML actually handles these
 indentations, using the Python interpreter on the command line:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('''mystate:
+    >>> yaml.safe_load(
+    ...     """mystate:
     ...   file.managed:
     ...     - context:
-    ...         some: var''')
+    ...         some: var"""
+    ... )
     {'mystate': {'file.managed': [{'context': {'some': 'var'}}]}}
-    >>> yaml.safe_load('''mystate:
+    >>> yaml.safe_load(
+    ...     """mystate:
     ...   file.managed:
     ...     - context:
-    ...       some: var''')
+    ...       some: var"""
+    ... )
     {'mystate': {'file.managed': [{'some': 'var', 'context': None}]}}
 
 Note that in the second example, ``some`` is added as another key in the same
@@ -343,7 +347,7 @@ Python can also be used to discover the Unicode number for a character:
 
 .. code-block:: python
 
-    repr(u"Text with wrong characters i need to figure out")
+    repr("Text with wrong characters i need to figure out")
 
 This shell command can find wrong characters in your SLS files:
 
@@ -367,10 +371,10 @@ string, it should be surrounded by quotes.  `More information here`_.
 
 Here's an example:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('2013_05_10')
+    >>> yaml.safe_load("2013_05_10")
     20130510
     >>> yaml.safe_load('"2013_05_10"')
     '2013_05_10'
@@ -385,10 +389,10 @@ functionality.  If values such as these are needed in a salt YAML file
 (specifically a configuration file), they should be formatted with surrounding
 strings to force YAML to serialize them as strings:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('2014-01-20 14:23:23')
+    >>> yaml.safe_load("2014-01-20 14:23:23")
     datetime.datetime(2014, 1, 20, 14, 23, 23)
     >>> yaml.safe_load('"2014-01-20 14:23:23"')
     '2014-01-20 14:23:23'
@@ -400,10 +404,10 @@ is a real one).  Thus, for example, if a minion were to have an ID of
 date was out of range.  The workaround is the same, surround the offending
 string with quotes:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import yaml
-    >>> yaml.safe_load('4017-16-20')
+    >>> yaml.safe_load("4017-16-20")
     Traceback (most recent call last):
       File "<stdin>", line 1, in <module>
       File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 93, in safe_load

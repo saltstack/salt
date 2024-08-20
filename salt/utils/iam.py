@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for Amazon IAM
 
 :depends: requests
 """
-from __future__ import absolute_import, unicode_literals
 
-# Import Python libs
 import logging
 import pprint
 import time
-
-import salt.utils.data
-from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     import requests
@@ -31,6 +24,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     Based heavily on boto.utils.retry_url
     """
     for i in range(0, num_retries):
+        exc = None
         try:
             result = requests.get(url, timeout=timeout, proxies={"http": ""})
             if hasattr(result, "text"):
@@ -46,7 +40,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
 
         log.warning("Caught exception reading from URL. Retry no. %s", i)
         log.warning(pprint.pformat(exc))
-        time.sleep(2 ** i)
+        time.sleep(2**i)
     log.error("Failed to read from URL for %s times. Giving up.", num_retries)
     return ""
 
@@ -55,9 +49,4 @@ def _convert_key_to_str(key):
     """
     Stolen completely from boto.providers
     """
-    # IMPORTANT: on PY2, the secret key must be str and not unicode to work
-    # properly with hmac.new (see http://bugs.python.org/issue5285)
-    #
-    # pylint: disable=incompatible-py3-code,undefined-variable
-    return salt.utils.data.encode(key) if six.PY2 and isinstance(key, unicode) else key
-    # pylint: enable=incompatible-py3-code,undefined-variable
+    return key

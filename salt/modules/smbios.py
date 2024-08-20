@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface to SMBIOS/DMI
 
@@ -11,8 +10,6 @@ External References
 | `DMIdecode <http://www.nongnu.org/dmidecode/>`_
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -21,11 +18,7 @@ import uuid
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.path
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +29,8 @@ def __virtual__():
     """
     return (
         bool(salt.utils.path.which_bin(["dmidecode", "smbios"])),
-        "The smbios execution module failed to load: neither dmidecode nor smbios in the path.",
+        "The smbios execution module failed to load: neither dmidecode nor smbios in"
+        " the path.",
     )
 
 
@@ -81,7 +75,7 @@ def get(string, clean=True):
         salt '*' smbios.get system-uuid clean=False
     """
 
-    val = _dmidecoder("-s {0}".format(string)).strip()
+    val = _dmidecoder(f"-s {string}").strip()
 
     # Cleanup possible comments in strings.
     val = "\n".join([v for v in val.split("\n") if not v.startswith("#")])
@@ -164,7 +158,7 @@ def records(rec_type=None, fields=None, clean=True):
     if rec_type is None:
         smbios = _dmi_parse(_dmidecoder(), clean, fields)
     else:
-        smbios = _dmi_parse(_dmidecoder("-t {0}".format(rec_type)), clean, fields)
+        smbios = _dmi_parse(_dmidecoder(f"-t {rec_type}"), clean, fields)
 
     return smbios
 
@@ -284,7 +278,7 @@ def _dmi_isclean(key, val):
     """
     Clean out well-known bogus values
     """
-    if val is None or not val or re.match("none", val, flags=re.IGNORECASE):
+    if not val or re.match("none", val, flags=re.IGNORECASE):
         # log.debug('DMI {0} value {1} seems invalid or empty'.format(key, val))
         return False
     elif "uuid" in key:
@@ -324,7 +318,8 @@ def _dmi_isclean(key, val):
         return not re.search(
             r"to be filled", val, flags=re.IGNORECASE
         ) and not re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         )
@@ -339,6 +334,6 @@ def _dmidecoder(args=None):
     if not args:
         out = salt.modules.cmdmod._run_quiet(dmidecoder)
     else:
-        out = salt.modules.cmdmod._run_quiet("{0} {1}".format(dmidecoder, args))
+        out = salt.modules.cmdmod._run_quiet(f"{dmidecoder} {args}")
 
     return out

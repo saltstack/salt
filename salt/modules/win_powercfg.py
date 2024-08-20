@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to control the power settings of a windows minion via
 powercfg.
@@ -12,13 +11,10 @@ powercfg.
     # Set disk timeout to 120 minutes on AC power
     salt '*' powercfg.set_disk_timeout 120 power=ac
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt Libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -51,9 +47,9 @@ def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
         scheme = _get_current_scheme()
 
     if __grains__["osrelease"] == "7":
-        cmd = "powercfg /q {0} {1}".format(scheme, guid)
+        cmd = f"powercfg /q {scheme} {guid}"
     else:
-        cmd = "powercfg /q {0} {1} {2}".format(scheme, guid, subguid)
+        cmd = f"powercfg /q {scheme} {guid} {subguid}"
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     split = out.split("\r\n\r\n")
@@ -76,7 +72,7 @@ def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
     if scheme is None:
         scheme = _get_current_scheme()
 
-    cmd = "powercfg /set{0}valueindex {1} {2} {3} {4}" "".format(
+    cmd = "powercfg /set{}valueindex {} {} {} {}".format(
         power, scheme, sub_group, setting_guid, value * 60
     )
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0

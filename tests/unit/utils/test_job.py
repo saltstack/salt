@@ -1,25 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for salt.utils.job
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.minion
-
-# Import Salt Libs
 import salt.utils.job as job
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-class MockMasterMinion(object):
+class MockMasterMinion:
     def return_mock_jobs(self):
         return self.mock_jobs_cache
 
@@ -41,7 +30,6 @@ class JobTest(TestCase):
     Validate salt.utils.job
     """
 
-    @skipIf(not six.PY3, "Can only assertLogs in PY3")
     def test_store_job_exception_handled(self):
         """
         test store_job exception handling

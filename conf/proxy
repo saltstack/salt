@@ -7,10 +7,10 @@
 # not be set in the config. If there is no blank line after the comment, the
 # value is presented as an example and is not the default.
 
-# Per default the minion will automatically include all config files
-# from minion.d/*.conf (minion.d is a directory in the same directory
+# Per default the proxy minion will automatically include all config files
+# from proxy.d/*.conf (proxy.d is a directory in the same directory
 # as the main minion config file).
-#default_include: minion.d/*.conf
+#default_include: proxy.d/*.conf
 
 # Backwards compatibility option for proxymodules created before 2015.8.2
 # This setting will default to 'False' in the 2016.3.0 release
@@ -361,7 +361,7 @@
 # templating on the SLS file, and then load the result as YAML. This syntax is
 # documented in further depth at the following URL:
 #
-# https://docs.saltstack.com/en/latest/ref/renderers/#composing-renderers
+# https://docs.saltproject.io/en/latest/ref/renderers/#composing-renderers
 #
 # NOTE: The "shebang" prefix (e.g. "#!jinja|yaml") described in the
 # documentation linked above is for use in an SLS file to override the default
@@ -447,14 +447,6 @@
 #  base:
 #    - /srv/salt
 
-# By default, the Salt fileserver recurses fully into all defined environments
-# to attempt to find files. To limit this behavior so that the fileserver only
-# traverses directories with SLS files and special Salt directories like _modules,
-# enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is negatively impacted. Default
-# is False.
-#fileserver_limit_traversal: False
-
 # The hash_type is the hash to use when discovering the hash of a file in
 # the local fileserver. The default is sha256 but sha224, sha384 and sha512
 # are also supported.
@@ -514,6 +506,14 @@
 # will be shown for each state run.
 #state_output_profile: True
 
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
+
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
+
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running
 # "salt-key -F master" on the Salt master.
@@ -545,7 +545,7 @@
 # One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 # Default: 'warning'
 #log_level: warning

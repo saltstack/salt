@@ -1,0 +1,54 @@
+---
+name: build-source-tarball
+description: Build Source Tarball
+
+inputs:
+  salt-version:
+    required: true
+    description: The Salt version to set prior to building the tarball.
+  nox-version:
+    required: false
+    description: The version of Nox to install
+    default: "2022.8.7"
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Download Release Patch
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+      uses: actions/download-artifact@v4
+      with:
+        name: salt-${{ inputs.salt-version }}.patch
+
+    - name: Configure Git
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+      shell: bash
+      run: |
+        tools pkg configure-git
+
+    - name: Apply Release Patch
+      if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+      shell: bash
+      run: |
+        tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+    - name: Create Source Tarball
+      shell: bash
+      run: |
+        tools pkg source-tarball
+
+    - name: Create Hash Files
+      shell: bash
+      run: |
+        tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
+
+    - name: Upload Source Tarball as an Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: salt-${{ inputs.salt-version }}.tar.gz
+        path: dist/salt-*.tar.gz*
+        retention-days: 7
+        if-no-files-found: error

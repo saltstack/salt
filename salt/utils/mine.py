@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 This module contains routines used for the salt mine
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.data
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 

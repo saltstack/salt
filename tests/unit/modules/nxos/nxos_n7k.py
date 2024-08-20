@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,23 +15,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N7KPlatform(NXOSPlatform):
-
-    """ Cisco Systems N7K Platform Unit Test Object """
+    """Cisco Systems N7K Platform Unit Test Object"""
 
     chassis = "Nexus7000 C7010 (10 Slot) Chassis"
 
     # Captured output from: show install all impact kickstart <kimage> system <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$KIMAGE for boot variable "kickstart".
 [####################] 100% -- SUCCESS
@@ -84,7 +78,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     # Captured output from: install all kickstart <kimage> system <image>
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 
 Verifying image bootflash:/$KIMAGE for boot variable "kickstart".
 [####################] 100% -- SUCCESS
@@ -123,7 +117,7 @@ Images will be upgraded according to following table:
 Module       Image                  Running-Version(pri:alt)           New-Version  Upg-Required
 ------  ----------  ----------------------------------------  --------------------  ------------
      5      system                               $CVER                 $NVER           $REQ
-     5   kickstart                               $CKVER                $NKVER          $KREQ 
+     5   kickstart                               $CKVER                $NKVER          $KREQ
      5        bios   v2.12.0(05/29/2013):v2.12.0(05/29/2013)   v2.13.0(10/23/2018)           yes
 
 

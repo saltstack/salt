@@ -57,7 +57,7 @@ eval_pkg() {
 	if [ ${path:-NULL} != NULL ]; then
 		PKGSRC=${path:?undefined}
 
-		
+
 
 		if [ -r $PKGSRC/archive/none -o \
 			-r $PKGSRC/archive/none.Z -o \

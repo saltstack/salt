@@ -1,20 +1,23 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for use with or in SLS files
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import logging
 import os
+import posixpath
 import textwrap
 
-# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.template
 import salt.utils.args
 import salt.utils.dictupdate
+import salt.utils.path
+
+CONTEXT_BASE = "slsutil"
+
+
+log = logging.getLogger(__name__)
 
 
 def update(dest, upd, recursive_update=True, merge_lists=False):
@@ -161,7 +164,10 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     """
     if not path and not string:
-        raise salt.exceptions.SaltInvocationError("Must pass either path or string")
+        raise salt.exceptions.SaltInvocationError("Must pass path or string.")
+
+    if path and string:
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string.")
 
     renderers = salt.loader.render(__opts__, __salt__)
 
@@ -169,7 +175,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         path_or_string = __salt__["cp.get_url"](
             path, saltenv=kwargs.get("saltenv", "base")
         )
-    elif string:
+    if string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
 
@@ -179,7 +185,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         default_renderer,
         __opts__["renderer_blacklist"],
         __opts__["renderer_whitelist"],
-        **kwargs
+        **kwargs,
     )
     return ret.read() if __utils__["stringio.is_readable"](ret) else ret
 
@@ -191,12 +197,12 @@ def _get_serialize_fn(serializer, fn_name):
 
     if not fns:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' not found.".format(serializer)
+            f"Serializer '{serializer}' not found."
         )
 
     if not fn:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' does not implement {1}.".format(serializer, fn_name)
+            f"Serializer '{serializer}' does not implement {fn_name}."
         )
 
     return fn
@@ -281,7 +287,7 @@ def banner(
     :param title: The first field of the comment block. This field appears
         centered at the top of the box.
     :param text: The second filed of the comment block. This field appears
-        left-justifed at the bottom of the box.
+        left-justified at the bottom of the box.
     :param newline: Boolean value to indicate whether the comment block should
         end with a newline. Default is ``False``.
 
@@ -323,17 +329,17 @@ def banner(
 
     .. code-block:: jinja
 
-        {{ set copyright='This file may not be copied or distributed without permission of SaltStack, Inc.' }}
-        {{ salt['slsutil.banner'](title='Copyright 2019 SaltStack, Inc.', text=copyright, width=60) }}
+        {{ set copyright='This file may not be copied or distributed without permission of VMware, Inc.' }}
+        {{ salt['slsutil.banner'](title='Copyright 2019 VMware, Inc.', text=copyright, width=60) }}
 
     .. code-block:: none
 
         ############################################################
         #                                                          #
-        #              Copyright 2019 SaltStack, Inc.              #
+        #              Copyright 2019 VMware, Inc.                 #
         #                                                          #
         # This file may not be copied or distributed without       #
-        # permission of SaltStack, Inc.                            #
+        # permission of VMware, Inc.                               #
         ############################################################
 
     """
@@ -396,7 +402,7 @@ def boolstr(value, true="true", false="false"):
     Convert a boolean value into a string. This function is
     intended to be used from within file templates to provide
     an easy way to take boolean values stored in Pillars or
-    Grains, and write them out in the apprpriate syntax for
+    Grains, and write them out in the appropriate syntax for
     a particular file template.
 
     :param value: The boolean value to be converted
@@ -427,3 +433,173 @@ def boolstr(value, true="true", false="false"):
         return true
 
     return false
+
+
+def _set_context(keys, function, fun_args=None, fun_kwargs=None, force=False):
+    """
+    Convenience function to set a value in the ``__context__`` dictionary.
+
+    .. versionadded:: 3004
+
+    :param keys: The list of keys specifying the dictionary path to set. This
+                 list can be of arbitrary length and the path will be created
+                 in the dictionary if it does not exist.
+
+    :param function: A python function to be called if the specified path does
+                     not exist, if the force parameter is ``True``.
+
+    :param fun_args: A list of positional arguments to the function.
+
+    :param fun_kwargs: A dictionary of keyword arguments to the function.
+
+    :param force: If ``True``, force the ```__context__`` path to be updated.
+                  Otherwise, only create it if it does not exist.
+    """
+
+    target = __context__
+
+    # Build each level of the dictionary as needed
+    for key in keys[:-1]:
+        if key not in target:
+            target[key] = {}
+        target = target[key]
+
+    # Call the supplied function to populate the dictionary
+    if force or keys[-1] not in target:
+        if not fun_args:
+            fun_args = []
+
+        if not fun_kwargs:
+            fun_kwargs = {}
+
+        target[keys[-1]] = function(*fun_args, *fun_kwargs)
+
+
+def file_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a file exists in the state tree, ``False`` otherwise.
+
+    .. versionadded:: 3004
+
+    :param str path: The fully qualified path to a file in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.file_exists nginx/defaults.yaml
+    """
+
+    _set_context(
+        [CONTEXT_BASE, saltenv, "file_list"], __salt__["cp.list_master"], [saltenv]
+    )
+    return path in __context__[CONTEXT_BASE][saltenv]["file_list"]
+
+
+def dir_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a directory exists in the state tree, ``False`` otherwise.
+
+    :param str path: The fully qualified path to a directory in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    .. versionadded:: 3004
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.dir_exists nginx/files
+    """
+
+    _set_context(
+        [CONTEXT_BASE, saltenv, "dir_list"], __salt__["cp.list_master_dirs"], [saltenv]
+    )
+    return path in __context__[CONTEXT_BASE][saltenv]["dir_list"]
+
+
+def path_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a path exists in the state tree, ``False`` otherwise. The path
+    could refer to a file or directory.
+
+    .. versionadded:: 3004
+
+    :param str path: The fully qualified path to a file or directory in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.path_exists nginx/defaults.yaml
+    """
+
+    return file_exists(path, saltenv) or dir_exists(path, saltenv)
+
+
+def findup(startpath, filenames, saltenv="base"):
+    """
+    Find the first path matching a filename or list of filenames in a specified
+    directory or the nearest ancestor directory. Returns the full path to the
+    first file found.
+
+    .. versionadded:: 3004
+
+    :param str startpath: The fileserver path from which to begin the search.
+        An empty string refers to the state tree root.
+    :param filenames: A filename or list of filenames to search for. Searching for
+        directory names is also supported.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    Example: return the path to ``defaults.yaml``, walking up the tree from the
+    state file currently being processed.
+
+    .. code-block:: jinja
+
+        {{ salt["slsutil.findup"](tplfile, "defaults.yaml") }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.findup formulas/shared/nginx map.jinja
+    """
+
+    # Normalize the path
+    if startpath:
+        startpath = posixpath.normpath(startpath)
+
+    # Verify the cwd is a valid path in the state tree
+    if startpath and not path_exists(startpath, saltenv):
+        raise salt.exceptions.SaltInvocationError(
+            f"Starting path not found in the state tree: {startpath}"
+        )
+
+    # Ensure that patterns is a string or list of strings
+    if isinstance(filenames, str):
+        filenames = [filenames]
+    if not isinstance(filenames, list):
+        raise salt.exceptions.SaltInvocationError(
+            "Filenames argument must be a string or list of strings"
+        )
+
+    while True:
+
+        # Loop over filenames, looking for one at the current path level
+        for filename in filenames:
+            fullname = salt.utils.path.join(
+                startpath or "", filename, use_posixpath=True
+            )
+            if path_exists(fullname, saltenv):
+                return fullname
+
+        # If the root path was just checked, raise an error
+        if not startpath:
+            raise salt.exceptions.CommandExecutionError(
+                "File pattern(s) not found in path ancestry"
+            )
+
+        # Move up one level in the ancestry
+        startpath = os.path.dirname(startpath)

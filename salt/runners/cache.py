@@ -9,7 +9,6 @@ import os
 import salt.cache
 import salt.config
 import salt.fileserver.gitfs
-import salt.log
 import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo
@@ -328,7 +327,7 @@ def clear_git_lock(role, remote=None, **kwargs):
             )
             git_objects.append(obj)
     else:
-        raise SaltInvocationError("Invalid role '{}'".format(role))
+        raise SaltInvocationError(f"Invalid role '{role}'")
 
     ret = {}
     for obj in git_objects:

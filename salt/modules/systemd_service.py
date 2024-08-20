@@ -55,15 +55,15 @@ VALID_UNIT_TYPES = (
 # Define the module's virtual name
 __virtualname__ = "service"
 
-# Disable check for string substitution
-# pylint: disable=E1321
-
 
 def __virtual__():
     """
     Only work on systems that have been booted with systemd
     """
-    if __grains__.get("kernel") == "Linux" and salt.utils.systemd.booted(__context__):
+    is_linux = __grains__.get("kernel") == "Linux"
+    is_booted = salt.utils.systemd.booted(__context__)
+    is_offline = salt.utils.systemd.offline(__context__)
+    if is_linux and (is_booted or is_offline):
         return __virtualname__
     return (
         False,
@@ -98,6 +98,11 @@ def _check_available(name):
     """
     Returns boolean telling whether or not the named service is available
     """
+    if offline():
+        raise CommandExecutionError(
+            "Cannot run in offline mode. Failed to get information on unit '%s'" % name
+        )
+
     _status = _systemctl_status(name)
     sd_version = salt.utils.systemd.version(__context__)
     if sd_version is not None and sd_version >= 231:
@@ -130,7 +135,7 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     """
-    contextkey = "systemd._check_for_unit_changes.{}".format(name)
+    contextkey = f"systemd._check_for_unit_changes.{name}"
     if contextkey not in __context__:
         if _untracked_custom_unit_found(name) or _unit_file_changed(name):
             systemctl_reload()
@@ -297,7 +302,9 @@ def _runlevel():
     contextkey = "systemd._runlevel"
     if contextkey in __context__:
         return __context__[contextkey]
-    out = __salt__["cmd.run"]("runlevel", python_shell=False, ignore_retcode=True)
+    out = __salt__["cmd.run"](
+        salt.utils.path.which("runlevel"), python_shell=False, ignore_retcode=True
+    )
     try:
         ret = out.split()[1]
     except IndexError:
@@ -319,7 +326,9 @@ def _strip_scope(msg):
     return "\n".join(ret).strip()
 
 
-def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=None):
+def _systemctl_cmd(
+    action, name=None, systemd_scope=False, no_block=False, root=None, extra_args=None
+):
     """
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
@@ -330,8 +339,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=
         and salt.utils.systemd.has_scope(__context__)
         and __salt__["config.get"]("systemd.scope", True)
     ):
-        ret.extend(["systemd-run", "--scope"])
-    ret.append("systemctl")
+        ret.extend([salt.utils.path.which("systemd-run"), "--scope"])
+    ret.append(salt.utils.path.which("systemctl"))
     if no_block:
         ret.append("--no-block")
     if root:
@@ -343,6 +352,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=
         ret.append(_canonical_unit_name(name))
     if "status" in ret:
         ret.extend(["-n", "0"])
+    if isinstance(extra_args, list):
+        ret.extend(extra_args)
     return ret
 
 
@@ -370,7 +381,7 @@ def _sysv_enabled(name, root):
     runlevel.
     """
     # Find exact match (disambiguate matches like "S01anacron" for cron)
-    rc = _root("/etc/rc{}.d/S*{}".format(_runlevel(), name), root)
+    rc = _root(f"/etc/rc{_runlevel()}.d/S*{name}", root)
     for match in glob.glob(rc):
         if re.match(r"S\d{,2}%s" % name, os.path.basename(match)):
             return True
@@ -1279,15 +1290,27 @@ def enabled(name, root=None, **kwargs):  # pylint: disable=unused-argument
     # Try 'systemctl is-enabled' first, then look for a symlink created by
     # systemctl (older systemd releases did not support using is-enabled to
     # check templated services), and lastly check for a sysvinit service.
-    if (
-        __salt__["cmd.retcode"](
-            _systemctl_cmd("is-enabled", name, root=root),
-            python_shell=False,
-            ignore_retcode=True,
-        )
-        == 0
-    ):
+    cmd_result = __salt__["cmd.run_all"](
+        _systemctl_cmd("is-enabled", name, root=root),
+        python_shell=False,
+        ignore_retcode=True,
+    )
+    if cmd_result["retcode"] == 0 and cmd_result["stdout"] != "alias":
         return True
+    elif cmd_result["stdout"] == "alias":
+        # check the service behind the alias
+        aliased_name = __salt__["cmd.run_stdout"](
+            _systemctl_cmd("show", name, root=root, extra_args=["-P", "Id"]),
+            python_shell=False,
+        )
+        if (
+            __salt__["cmd.retcode"](
+                _systemctl_cmd("is-enabled", aliased_name, root=root),
+                python_shell=False,
+                ignore_retcode=True,
+            )
+        ) == 0:
+            return True
     elif "@" in name:
         # On older systemd releases, templated services could not be checked
         # with ``systemctl is-enabled``. As a fallback, look for the symlinks
@@ -1432,7 +1455,7 @@ def firstboot(
         salt '*' service.firstboot keymap=jp locale=en_US.UTF-8
 
     """
-    cmd = ["systemd-firstboot"]
+    cmd = [salt.utils.path.which("systemd-firstboot")]
     parameters = [
         ("locale", locale),
         ("locale-message", locale_message),
@@ -1444,7 +1467,7 @@ def firstboot(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     out = __salt__["cmd.run_all"](cmd)
 
@@ -1452,3 +1475,21 @@ def firstboot(
         raise CommandExecutionError("systemd-firstboot error: {}".format(out["stderr"]))
 
     return True
+
+
+def offline():
+    """
+    .. versionadded:: 3004
+
+    Check if systemd is working in offline mode, where is not possible
+    to talk with PID 1.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.offline
+
+    """
+
+    return salt.utils.systemd.offline(__context__)

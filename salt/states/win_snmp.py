@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing SNMP service settings on Windows servers.
 
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -40,7 +33,7 @@ def agent_settings(name, contact, location, services=None):
                     - Physical
                     - Internet
     """
-    ret = {"name": name, "changes": {}, "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     ret_settings = {"changes": dict(), "failures": dict()}
 
@@ -55,7 +48,7 @@ def agent_settings(name, contact, location, services=None):
     current_settings = __salt__["win_snmp.get_agent_settings"]()
 
     for setting in settings:
-        if six.text_type(settings[setting]) != six.text_type(current_settings[setting]):
+        if str(settings[setting]) != str(current_settings[setting]):
             ret_settings["changes"][setting] = {
                 "old": current_settings[setting],
                 "new": settings[setting],
@@ -105,19 +98,19 @@ def auth_traps_enabled(name, status=True):
             win_snmp.auth_traps_enabled:
                 - status: True
     """
-    ret = {"name": name, "changes": {}, "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     vname = "EnableAuthenticationTraps"
     current_status = __salt__["win_snmp.get_auth_traps_enabled"]()
 
     if status == current_status:
-        ret["comment"] = "{0} already contains the provided value.".format(vname)
+        ret["comment"] = f"{vname} already contains the provided value."
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "{0} will be changed.".format(vname)
+        ret["comment"] = f"{vname} will be changed."
         ret["changes"] = {"old": current_status, "new": status}
     else:
-        ret["comment"] = "Set {0} to contain the provided value.".format(vname)
+        ret["comment"] = f"Set {vname} to contain the provided value."
         ret["changes"] = {"old": current_status, "new": status}
         ret["result"] = __salt__["win_snmp.set_auth_traps_enabled"](status=status)
 
@@ -140,7 +133,7 @@ def community_names(name, communities=None):
                     TestCommunity: Read Only
                     OtherCommunity: Read Write
     """
-    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
+    ret = {"name": name, "changes": dict(), "comment": "", "result": None}
 
     ret_communities = {"changes": dict(), "failures": dict()}
 

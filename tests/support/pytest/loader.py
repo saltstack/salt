@@ -4,12 +4,14 @@
 
     Salt's Loader PyTest Mock Support
 """
+
 import logging
 import sys
 import types
 from collections import deque
 
 import attr
+
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
@@ -42,7 +44,10 @@ class LoaderModuleMock:
     )
     # These dunders might exist at the module global scope
     salt_module_dunders_optional = attr.ib(
-        init=True, repr=False, kw_only=True, default=("__proxy__",),
+        init=True,
+        repr=False,
+        kw_only=True,
+        default=("__proxy__",),
     )
     # These dunders might exist at the function global scope
     salt_module_dunder_attributes = attr.ib(
@@ -110,7 +115,10 @@ class LoaderModuleMock:
                 func(*args, **kwargs)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Failed to run finalizer %s: %s", func_repr, exc, exc_info=True,
+                    "Failed to run finalizer %s: %s",
+                    func_repr,
+                    exc,
+                    exc_info=True,
                 )
 
     def addfinalizer(self, func, *args, **kwargs):
@@ -120,13 +128,11 @@ class LoaderModuleMock:
         self._finalizers.append((func, args, kwargs))
 
     def _format_callback(self, callback, args, kwargs):
-        callback_str = "{}(".format(callback.__qualname__)
+        callback_str = f"{callback.__qualname__}("
         if args:
             callback_str += ", ".join([repr(arg) for arg in args])
         if kwargs:
-            callback_str += ", ".join(
-                ["{}={!r}".format(k, v) for (k, v) in kwargs.items()]
-            )
+            callback_str += ", ".join([f"{k}={v!r}" for (k, v) in kwargs.items()])
         callback_str += ")"
         return callback_str
 
@@ -136,7 +142,7 @@ class LoaderModuleMock:
         sys_modules = mocks["sys.modules"]
         if not isinstance(sys_modules, dict):
             raise RuntimeError(
-                "'sys.modules' must be a dictionary not: {}".format(type(sys_modules))
+                f"'sys.modules' must be a dictionary not: {type(sys_modules)}"
             )
         patcher = patch.dict(sys.modules, values=sys_modules)
         patcher.start()
@@ -154,13 +160,15 @@ class LoaderModuleMock:
                 if key in ("__init__", "__virtual__"):
                     raise RuntimeError(
                         "No need to patch {!r}. Passed loader module dict: {}".format(
-                            key, self.setup_loader_modules,
+                            key,
+                            self.setup_loader_modules,
                         )
                     )
                 elif key not in allowed_salt_dunders:
                     raise RuntimeError(
                         "Don't know how to handle {!r}. Passed loader module dict: {}".format(
-                            key, self.setup_loader_modules,
+                            key,
+                            self.setup_loader_modules,
                         )
                     )
                 elif key in salt_dunder_dicts and not hasattr(module, key):

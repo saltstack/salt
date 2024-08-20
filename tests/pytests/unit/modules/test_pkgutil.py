@@ -2,8 +2,8 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import pytest
+
 import salt.modules.pkgutil as pkgutil
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError

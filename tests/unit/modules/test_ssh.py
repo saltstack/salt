@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import tempfile
 
 import salt.modules.ssh as ssh
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -74,6 +65,28 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         invalid_key = "AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY"  # missing padding
         self.assertEqual(ssh.set_auth_key("user", invalid_key), "Invalid public key")
 
+    def test_set_auth_key_sk_ed25519_cert(self):
+        self.user_info_mock = {"home": "/dev/null"}
+        valid_key = (
+            "AAAAI3NrLXNzaC1lZDI1NTE5LWNlcnQtdjAxQG9wZW5zc2guY29tAAAAIPMSTMKu"
+            "DdipIQl8IA3UXl5WHYcIyF2tfwrri/Wd/oV3AAAAIKuzsywoer6Y7oYtLXse/TKj"
+            "VqqKjEpUq+4zMkQ9FEwJAAAABHNzaDoAAAAAAAAAAAAAAAEAAAARbWF4QHNjaHUg"
+            "dXNlciBrZXkAAAAHAAAAA21heAAAAABgGcIwAAAAAHLlxlwAAAAAAAAAggAAABVw"
+            "ZXJtaXQtWDExLWZvcndhcmRpbmcAAAAAAAAAF3Blcm1pdC1hZ2VudC1mb3J3YXJk"
+            "aW5nAAAAAAAAABZwZXJtaXQtcG9ydC1mb3J3YXJkaW5nAAAAAAAAAApwZXJtaXQt"
+            "cHR5AAAAAAAAAA5wZXJtaXQtdXNlci1yYwAAAAAAAAAAAAAAMwAAAAtzc2gtZWQy"
+            "NTUxOQAAACDI8h3vsne8ZtyH7JRHmkImHXQciefsH4e99ka3HJzKPQAAAFMAAAAL"
+            "c3NoLWVkMjU1MTkAAABAHzruY+hPXK2ONt9d2XFUttvdSR7dW9Yy7stru4zopgUb"
+            "o0CjTlKyogb7PiRryt5JExT1Wkux1q3oBtyvSdG+Cw=="
+        )
+        # we expect 'fail', but not 'Invalid public key'
+        self.assertEqual(
+            ssh.set_auth_key(
+                "user", valid_key, enc="sk-ssh-ed25519-cert-v01@openssh.com"
+            ),
+            "fail",
+        )
+
     def test_replace_auth_key(self):
         """
         Test the _replace_auth_key with some different authorized_keys examples
@@ -103,7 +116,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             _fh.write(comment_line)
             # Add empty line for #41335
             _fh.write(empty_line)
-            _fh.write("{0} {1} {2} {3}".format(options, enc, key, email))
+            _fh.write(f"{options} {enc} {key} {email}")
 
         with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
             with patch(
@@ -125,7 +138,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         key = "abcxyz"
 
         with salt.utils.files.fopen(temp_file.name, "a") as _fh:
-            _fh.write(salt.utils.stringutils.to_str("{0} {1}".format(enc, key)))
+            _fh.write(salt.utils.stringutils.to_str(f"{enc} {key}"))
 
         # Replace the simple key from before with the more complicated options + new email
         # Option example is taken from Pull Request #39855
@@ -133,7 +146,8 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             "no-port-forwarding",
             "no-agent-forwarding",
             "no-X11-forwarding",
-            'command="echo \'Please login as the user "ubuntu" rather than the user "root".\'',
+            'command="echo \'Please login as the user "ubuntu" rather than the user'
+            ' "root".\'',
         ]
         email = "foo@example.com"
 
@@ -156,7 +170,90 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             file_txt = salt.utils.stringutils.to_unicode(_fh.read())
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)
-            self.assertIn("{0} ".format(",".join(options)), file_txt)
+            self.assertIn("{} ".format(",".join(options)), file_txt)
             self.assertIn(email, file_txt)
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)
+
+        # Now test a another very simple key using sk-ed25519 instead of ssh-rsa and with
+        # multiple options
+        enc = "sk-ssh-ed25519-cert-v01@openssh.com"
+        key = "abcxyz"
+
+        with salt.utils.files.fopen(temp_file.name, "a") as _fh:
+            _fh.write(salt.utils.stringutils.to_str(f"{enc} {key}"))
+
+        # Replace the simple key from before with the more complicated options + new email
+        # Option example is taken from Pull Request #39855
+        options = [
+            "no-agent-forwarding",
+            'command="echo \'Please login as the user "debian" rather than the user'
+            ' "root".\'',
+        ]
+        email = "foobazbar@example.com"
+
+        with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
+            with patch(
+                "salt.modules.ssh._get_config_file",
+                MagicMock(return_value=temp_file.name),
+            ):
+                ssh._replace_auth_key(
+                    "foo",
+                    key,
+                    enc=enc,
+                    comment=email,
+                    options=options,
+                    config=temp_file.name,
+                )
+
+        with salt.utils.files.fopen(temp_file.name) as _fh:
+            file_txt = salt.utils.stringutils.to_unicode(_fh.read())
+            # the initial key must have been replaced and no longer present
+            self.assertNotIn(f"\n{enc} {key}\n", file_txt)
+            # the new key must be present
+            self.assertIn(
+                "{} {} {} {}".format(",".join(options), enc, key, email), file_txt
+            )
+            self.assertIn(empty_line, file_txt)
+            self.assertIn(comment_line, file_txt)
+
+    def test_rm_auth_key(self):
+        """
+        Test the rm_auth_key with some different authorized_keys examples
+        """
+
+        temp_file = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        temp_file.close()
+
+        options = 'command="echo command"'
+        enc = "sk-ssh-ed25519-cert-v01@openssh.com"
+        key = "abcxyz"
+        email = "foo@example.com"
+
+        with salt.utils.files.fopen(temp_file.name, "w") as _fh:
+            _fh.write(salt.utils.stringutils.to_str(f"{options} {enc} {key} {email}"))
+
+        with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
+            with patch(
+                "salt.modules.ssh._get_config_file",
+                MagicMock(return_value=temp_file.name),
+            ):
+                with patch(
+                    "salt.modules.ssh.auth_keys",
+                    MagicMock(
+                        return_value=salt.utils.files.fopen(temp_file.name, "r").read()
+                    ),
+                ):
+                    self.assertEqual(
+                        ssh.rm_auth_key(
+                            "foo",
+                            f"{key}",
+                            config=temp_file.name,
+                        ),
+                        "Key removed",
+                    )
+
+        # Assert that the key was removed
+        with salt.utils.files.fopen(temp_file.name) as _fh:
+            file_txt = salt.utils.stringutils.to_unicode(_fh.read())
+            self.assertNotIn(key, file_txt)

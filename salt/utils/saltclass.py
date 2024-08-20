@@ -3,9 +3,10 @@ import logging
 import os
 import re
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.path
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ def get_class_paths(_class, saltclass_path):
     :return: 3-tuple of possible file counterparts
     :rtype: tuple(str)
     """
-    straight = os.path.join(saltclass_path, "classes", "{}.yml".format(_class))
+    straight = os.path.join(saltclass_path, "classes", f"{_class}.yml")
     sub_straight = os.path.join(
         saltclass_path, "classes", "{}.yml".format(_class.replace(".", os.sep))
     )
@@ -137,7 +138,7 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in d.items():
+    for k, v in d.items():
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
 
@@ -205,7 +206,7 @@ def expand_variables(a, b, expanded, path=None):
         b = a.copy()
         path = []
 
-    for (k, v) in a.items():
+    for k, v in a.items():
         if isinstance(v, dict):
             expand_variables(v, b, expanded, path + [str(k)])
         else:
@@ -364,7 +365,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
         os.path.join(saltclass_path, "nodes"), followlinks=True
     ):
         for minion_file in files:
-            if minion_file == "{}.yml".format(minion_id):
+            if minion_file == f"{minion_id}.yml":
                 _file = os.path.join(root, minion_file)
 
     # Load the minion_id definition if existing, else an empty dict

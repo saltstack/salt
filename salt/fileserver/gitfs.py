@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Git Fileserver Backend
 
@@ -48,12 +47,8 @@ Walkthrough <tutorial-gitfs>`.
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
 

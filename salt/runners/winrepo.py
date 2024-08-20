@@ -31,6 +31,12 @@ PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
 GLOBAL_ONLY = ("branch",)
 
 
+def _legacy_git():
+    return not any(
+        (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
+    )
+
+
 def genrepo(opts=None, fire_event=True):
     """
     Generate winrepo_cachefile based on sls files in the winrepo_dir
@@ -154,9 +160,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
 
     ret = {}
     for remotes, base_dir in winrepo_cfg:
-        if not any(
-            (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
-        ):
+        if _legacy_git():
             # Use legacy code
             winrepo_result = {}
             for remote_info in remotes:
@@ -170,7 +174,11 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     rev, remote_url = remote_info.strip().split()
                 except ValueError:
                     remote_url = remote_info
-                gittarget = os.path.join(base_dir, targetname).replace(".", "_")
+                targetname = targetname.replace(".git", "")
+                # GitFS using pygit2 and gitpython place the repo in a
+                # subdirectory named `_`. We need to stay consistent when using
+                # the legacy method as well
+                gittarget = os.path.join(base_dir, targetname, "_")
                 if masterless:
                     result = __salt__["state.single"](
                         "git.latest",
@@ -195,14 +203,27 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         result = result[key]
                 else:
                     mminion = salt.minion.MasterMinion(opts)
-                    result = mminion.states["git.latest"](
-                        remote_url,
+                    result = mminion.functions["state.single"](
+                        "git.latest",
+                        name=remote_url,
                         rev=rev,
                         branch="winrepo",
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
                     )
+                    if isinstance(result, list):
+                        # Errors were detected
+                        raise CommandExecutionError(
+                            "Failed to update winrepo remotes: {}".format(
+                                "\n".join(result)
+                            )
+                        )
+                    if "name" not in result:
+                        # Highstate output dict, the results are actually nested
+                        # one level down.
+                        key = next(iter(result))
+                        result = result[key]
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)
         else:
@@ -224,7 +245,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     winrepo.clear_old_remotes()
                 winrepo.checkout()
             except Exception as exc:  # pylint: disable=broad-except
-                msg = "Failed to update winrepo_remotes: {}".format(exc)
+                msg = f"Failed to update winrepo_remotes: {exc}"
                 log.error(msg, exc_info_on_loglevel=logging.DEBUG)
                 return msg
             ret.update(winrepo.winrepo_dirs)

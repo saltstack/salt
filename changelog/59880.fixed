@@ -1,1 +1,0 @@
-Salt api verifies proper log file path when providing '--log-file' from the cli

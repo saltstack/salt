@@ -2,7 +2,6 @@
 exclude= """
 /(
     salt/ext
-  | tests/kitchen
   | templates
 )/
 """
@@ -14,13 +13,20 @@ force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
 ensure_newline_before_comments=true
-skip="salt/ext,tests/kitchen,templates"
+skip="salt/ext,templates"
+known_third_party = [
+  "pytest"
+]
 
 [tool.towncrier]
     package = "salt"
     filename = "CHANGELOG.md"
     directory = "changelog/"
+    template = "changelog/.template.jinja"
     start_string = "# Changelog\n"
+    underlines = ["", "", ""]
+    title_format = "## {version} ({project_date})"
+    issue_format = "[#{issue}](https://github.com/saltstack/salt/issues/{issue})"
 
     [[tool.towncrier.type]]
         directory = "removed"
@@ -45,4 +51,9 @@ skip="salt/ext,tests/kitchen,templates"
     [[tool.towncrier.type]]
         directory = "added"
         name = "Added"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "security"
+        name = "Security"
         showcontent = true

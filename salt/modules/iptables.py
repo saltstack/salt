@@ -25,11 +25,11 @@ master config. The configuration is read using :py:func:`config.get
         - "-A FORWARD"
 """
 
+import argparse
 import logging
 import os
 import re
 import string
-import sys
 import uuid
 
 import salt.utils.args
@@ -73,8 +73,8 @@ def _has_option(option, family="ipv4"):
         _has_option('--wait')
         _has_option('--check', family='ipv6')
     """
-    cmd = "{} --help".format(_iptables_cmd(family))
-    if option in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
+    cmd = f"{_iptables_cmd(family)} --help"
+    if option in __salt__["cmd.run_stdout"](cmd, output_loglevel="quiet"):
         return True
     return False
 
@@ -94,6 +94,7 @@ def _conf(family="ipv4"):
         else:
             return "/etc/iptables/iptables.rules"
     elif __grains__["os_family"] == "Debian":
+        # This assumes the iptables-persistent package is installed
         if family == "ipv6":
             return "/etc/iptables/rules.v6"
         else:
@@ -191,8 +192,8 @@ def version(family="ipv4"):
         IPv6:
         salt '*' iptables.version family=ipv6
     """
-    cmd = "{} --version".format(_iptables_cmd(family))
-    out = __salt__["cmd.run"](cmd).split()
+    cmd = f"{_iptables_cmd(family)} --version"
+    out = __salt__["cmd.run_stdout"](cmd).split()
     return out[1]
 
 
@@ -203,7 +204,7 @@ def build_rule(
     position="",
     full=None,
     family="ipv4",
-    **kwargs
+    **kwargs,
 ):
     """
     Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
@@ -315,7 +316,7 @@ def build_rule(
         if not isinstance(match_value, list):
             match_value = match_value.split(",")
         for match in match_value:
-            rule.append("-m {}".format(match))
+            rule.append(f"-m {match}")
             if "name_" in kwargs and match.strip() in ("pknock", "quota2", "recent"):
                 rule.append("--name {}".format(kwargs["name_"]))
                 del kwargs["name_"]
@@ -334,7 +335,7 @@ def build_rule(
             if match_set.startswith("!") or match_set.startswith("not"):
                 negative_match_set = "! "
                 match_set = re.sub(bang_not_pat, "", match_set)
-            rule.append("-m set {}--match-set {}".format(negative_match_set, match_set))
+            rule.append(f"-m set {negative_match_set}--match-set {match_set}")
         del kwargs["match-set"]
 
     if "connstate" in kwargs:
@@ -381,7 +382,7 @@ def build_rule(
                 else:
                     dports = mp_value
 
-            rule.append("--{} {}".format(multiport_arg, dports))
+            rule.append(f"--{multiport_arg} {dports}")
             del kwargs[multiport_arg]
 
     if "comment" in kwargs:
@@ -525,11 +526,11 @@ def build_rule(
         if after_jump_argument in kwargs:
             value = kwargs[after_jump_argument]
             if value in (None, ""):  # options without arguments
-                after_jump.append("--{}".format(after_jump_argument))
+                after_jump.append(f"--{after_jump_argument}")
             elif any(ws_char in str(value) for ws_char in string.whitespace):
-                after_jump.append('--{} "{}"'.format(after_jump_argument, value))
+                after_jump.append(f'--{after_jump_argument} "{value}"')
             else:
-                after_jump.append("--{} {}".format(after_jump_argument, value))
+                after_jump.append(f"--{after_jump_argument} {value}")
             del kwargs[after_jump_argument]
 
     for key in kwargs:
@@ -538,8 +539,8 @@ def build_rule(
         # the value in the kwargs, thus we need to fetch it after that has run
         value = kwargs[key]
         flag = "-" if len(key) == 1 else "--"
-        value = "" if value in (None, "") else " {}".format(value)
-        rule.append("{}{}{}{}".format(negation, flag, key, value))
+        value = "" if value in (None, "") else f" {value}"
+        rule.append(f"{negation}{flag}{key}{value}")
 
     rule += after_jump
 
@@ -678,7 +679,7 @@ def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
     cmd = "{} {} -t {} -P {} {}".format(
         _iptables_cmd(family), wait, table, chain, policy
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -703,8 +704,8 @@ def save(filename=None, family="ipv4"):
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
-    cmd = "{}-save".format(_iptables_cmd(family))
-    ipt = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)}-save"
+    ipt = __salt__["cmd.run_stdout"](cmd)
 
     # regex out the output if configured with filters
     if _conf_save_filters():
@@ -742,25 +743,24 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
     ipt_cmd = _iptables_cmd(family)
 
     if _has_option("--check", family):
-        cmd = "{} -t {} -C {} {}".format(ipt_cmd, table, chain, rule)
-        out = __salt__["cmd.run"](cmd, output_loglevel="quiet")
+        cmd = f"{ipt_cmd} -t {table} -C {chain} {rule}"
+        __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
+        return not __context__["retcode"]
     else:
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
-        __salt__["cmd.run"]("{} -t {} -N {}".format(ipt_cmd, table, _chain_name))
-        __salt__["cmd.run"](
-            "{} -t {} -A {} {}".format(ipt_cmd, table, _chain_name, rule)
-        )
+        __salt__["cmd.run"](f"{ipt_cmd} -t {table} -N {_chain_name}")
+        __salt__["cmd.run"](f"{ipt_cmd} -t {table} -A {_chain_name} {rule}")
 
-        out = __salt__["cmd.run"]("{}-save".format(ipt_cmd))
+        out = __salt__["cmd.run_stdout"](f"{ipt_cmd}-save")
 
         # Clean up temporary table
-        __salt__["cmd.run"]("{} -t {} -F {}".format(ipt_cmd, table, _chain_name))
-        __salt__["cmd.run"]("{} -t {} -X {}".format(ipt_cmd, table, _chain_name))
+        __salt__["cmd.run"](f"{ipt_cmd} -t {table} -F {_chain_name}")
+        __salt__["cmd.run"](f"{ipt_cmd} -t {table} -X {_chain_name}")
 
         for i in out.splitlines():
-            if i.startswith("-A {}".format(_chain_name)):
+            if i.startswith(f"-A {_chain_name}"):
                 if i.replace(_chain_name, chain) in out.splitlines():
                     return True
 
@@ -790,8 +790,8 @@ def check_chain(table="filter", chain=None, family="ipv4"):
     if not chain:
         return "Error: Chain needs to be specified"
 
-    cmd = "{}-save -t {}".format(_iptables_cmd(family), table)
-    out = __salt__["cmd.run"](cmd).find(":{} ".format(chain))
+    cmd = f"{_iptables_cmd(family)}-save -t {table}"
+    out = __salt__["cmd.run_stdout"](cmd).find(f":{chain} ")
 
     if out != -1:
         out = True
@@ -821,8 +821,8 @@ def new_chain(table="filter", chain=None, family="ipv4"):
         return "Error: Chain needs to be specified"
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{} {} -t {} -N {}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)} {wait} -t {table} -N {chain}"
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -849,8 +849,8 @@ def delete_chain(table="filter", chain=None, family="ipv4"):
         return "Error: Chain needs to be specified"
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{} {} -t {} -X {}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)} {wait} -t {table} -X {chain}"
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -887,8 +887,8 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     returnCheck = check(table, chain, rule, family)
     if isinstance(returnCheck, bool) and returnCheck:
         return False
-    cmd = "{} {} -t {} -A {} {}".format(_iptables_cmd(family), wait, table, chain, rule)
-    out = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)} {wait} -t {table} -A {chain} {rule}"
+    out = __salt__["cmd.run_stderr"](cmd)
     return not out
 
 
@@ -939,7 +939,7 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
     cmd = "{} {} -t {} -I {} {} {}".format(
         _iptables_cmd(family), wait, table, chain, position, rule
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -975,8 +975,8 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
         rule = position
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{} {} -t {} -D {} {}".format(_iptables_cmd(family), wait, table, chain, rule)
-    out = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)} {wait} -t {table} -D {chain} {rule}"
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -996,8 +996,8 @@ def flush(table="filter", chain="", family="ipv4"):
     """
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{} {} -t {} -F {}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = f"{_iptables_cmd(family)} {wait} -t {table} -F {chain}"
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -1014,8 +1014,8 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
         with salt.utils.files.fopen(conf_file, "r") as ifile:
             rules = ifile.read()
     elif in_mem:
-        cmd = "{}-save".format(_iptables_cmd(family))
-        rules = __salt__["cmd.run"](cmd)
+        cmd = f"{_iptables_cmd(family)}-save"
+        rules = __salt__["cmd.run_stdout"](cmd)
     else:
         raise SaltException("A file was not found to parse")
 
@@ -1055,7 +1055,7 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
                             and args[index + 1] != "!"
                             and not args[index + 1].startswith("-")
                         ):
-                            args[index] += " {}".format(args.pop(index + 1))
+                            args[index] += f" {args.pop(index + 1)}"
                 index += 1
             if args[-1].startswith("-"):
                 args.append("")
@@ -1080,17 +1080,8 @@ def _parser():
     iptables(8) and iptables-extensions(8) man pages.  They will not all be
     used by all parts of the module; use them intelligently and appropriately.
     """
-    add_arg = None
-    if sys.version.startswith("2.6"):
-        import optparse
-
-        parser = optparse.OptionParser()
-        add_arg = parser.add_option
-    else:
-        import argparse  # pylint: disable=minimum-python-version
-
-        parser = argparse.ArgumentParser()
-        add_arg = parser.add_argument
+    parser = argparse.ArgumentParser()
+    add_arg = parser.add_argument
 
     # COMMANDS
     add_arg("-A", "--append", dest="append", action="append")

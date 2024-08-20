@@ -1,32 +1,26 @@
-# -*- coding: utf-8 -*-
 """
 YAML Renderer for Salt
 
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python libs
 import logging
 import warnings
 
-# Import salt libs
-import salt.utils.url
-import salt.utils.yamlloader as yamlloader_new
-import salt.utils.yamlloader_old as yamlloader_old
-from salt.exceptions import SaltRenderError
-from salt.ext import six
-from salt.ext.six import string_types
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.parser import ParserError
 from yaml.scanner import ScannerError
 
+import salt.utils.url
+import salt.utils.yamlloader as yamlloader_new
+import salt.utils.yamlloader_old as yamlloader_old
+from salt.exceptions import SaltRenderError
+from salt.utils.odict import OrderedDict
+
 log = logging.getLogger(__name__)
 
 _ERROR_MAP = {
-    ("found character '\\t' that cannot " "start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 
@@ -61,7 +55,7 @@ def render(yaml_data, saltenv="base", sls="", argline="", **kws):
         yamlloader = yamlloader_old
     else:
         yamlloader = yamlloader_new
-    if not isinstance(yaml_data, string_types):
+    if not isinstance(yaml_data, str):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
         try:
@@ -82,7 +76,6 @@ def render(yaml_data, saltenv="base", sls="", argline="", **kws):
                 )
         if not data:
             data = {}
-        log.debug("Results of YAML rendering: \n%s", data)
 
         def _validate_data(data):
             """
@@ -92,7 +85,7 @@ def render(yaml_data, saltenv="base", sls="", argline="", **kws):
             sure they're not dicts.
             """
             if isinstance(data, dict):
-                for key, value in six.iteritems(data):
+                for key, value in data.items():
                     if isinstance(key, dict):
                         raise SaltRenderError(
                             "Invalid YAML, possible double curly-brace"

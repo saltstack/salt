@@ -4,9 +4,11 @@
 
     Memory usage beacon test cases
 """
+
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.memusage as memusage
 from tests.support.mock import MagicMock, patch
 
@@ -53,6 +55,15 @@ def test_memusage_match(stub_memory_usage):
     with patch("psutil.virtual_memory", MagicMock(return_value=stub_memory_usage)):
 
         config = [{"percent": "40%"}, {"interval": 30}]
+
+        ret = memusage.validate(config)
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = memusage.beacon(config)
+        assert ret == [{"memusage": 40.7}]
+
+        # Test without the percent
+        config = [{"percent": 40}, {"interval": 30}]
 
         ret = memusage.validate(config)
         assert ret == (True, "Valid beacon configuration")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt module to manage Unix cryptsetup jobs and the crypttab file
 
@@ -6,7 +5,6 @@ Salt module to manage Unix cryptsetup jobs and the crypttab file
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -17,9 +15,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -38,7 +33,7 @@ def __virtual__():
     return True
 
 
-class _crypttab_entry(object):
+class _crypttab_entry:
     """
     Utility class for manipulating crypttab entries. Primarily we're parsing,
     formatting, and comparing lines. Parsing emits dicts expected from
@@ -54,7 +49,7 @@ class _crypttab_entry(object):
     @classmethod
     def dict_from_line(cls, line, keys=crypttab_keys):
         if len(keys) != 4:
-            raise ValueError("Invalid key array: {0}".format(keys))
+            raise ValueError(f"Invalid key array: {keys}")
         if line.startswith("#"):
             raise cls.ParseError("Comment!")
 
@@ -66,7 +61,7 @@ class _crypttab_entry(object):
         if len(comps) != 4:
             raise cls.ParseError("Invalid Entry!")
 
-        return dict(six.moves.zip(keys, comps))
+        return dict(zip(keys, comps))
 
     @classmethod
     def from_line(cls, *args, **kwargs):
@@ -86,14 +81,14 @@ class _crypttab_entry(object):
 
     def pick(self, keys):
         """Returns an instance with just those keys"""
-        subset = dict([(key, self.criteria[key]) for key in keys])
+        subset = {key: self.criteria[key] for key in keys}
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
         """Store non-empty, non-null values to use as filter"""
         self.criteria = {
             key: salt.utils.stringutils.to_unicode(value)
-            for key, value in six.iteritems(criteria)
+            for key, value in criteria.items()
             if value is not None
         }
 
@@ -105,7 +100,7 @@ class _crypttab_entry(object):
     def match(self, line):
         """Compare potentially partial criteria against a complete line"""
         entry = self.dict_from_line(line)
-        for key, value in six.iteritems(self.criteria):
+        for key, value in self.criteria.items():
             if entry[key] != value:
                 return False
         return True
@@ -118,7 +113,7 @@ def active():
     ret = {}
     # TODO: This command should be extended to collect more information, such as UUID.
     devices = __salt__["cmd.run_stdout"]("dmsetup ls --target crypt")
-    out_regex = re.compile(r"(?P<devname>\w+)\W+\((?P<major>\d+), (?P<minor>\d+)\)")
+    out_regex = re.compile(r"(?P<devname>\S+)\s+\((?P<major>\d+), (?P<minor>\d+)\)")
 
     log.debug(devices)
     for line in devices.split("\n"):
@@ -195,17 +190,15 @@ def rm_crypttab(name, config="/etc/crypttab"):
                 except _crypttab_entry.ParseError:
                     lines.append(line)
 
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         msg = "Could not read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, exc))
 
     if modified:
         try:
             with salt.utils.files.fopen(config, "w+") as ofile:
-                ofile.writelines(
-                    (salt.utils.stringutils.to_str(line) for line in lines)
-                )
-        except (IOError, OSError) as exc:
+                ofile.writelines(salt.utils.stringutils.to_str(line) for line in lines)
+        except OSError as exc:
             msg = "Could not write to {0}: {1}"
             raise CommandExecutionError(msg.format(config, exc))
 
@@ -236,7 +229,7 @@ def set_crypttab(
     # Fix the options type if it is not a string
     if options is None:
         options = ""
-    elif isinstance(options, six.string_types):
+    elif isinstance(options, str):
         pass
     elif isinstance(options, list):
         options = ",".join(options)
@@ -258,7 +251,7 @@ def set_crypttab(
     # Transform match_on into list--items will be checked later
     if isinstance(match_on, list):
         pass
-    elif not isinstance(match_on, six.string_types):
+    elif not isinstance(match_on, str):
         msg = "match_on must be a string or list of strings"
         raise CommandExecutionError(msg)
     else:
@@ -270,15 +263,18 @@ def set_crypttab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _crypttab_entry.crypttab_keys
-        invalid_keys = six.moves.filter(filterFn, match_on)
 
-        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        def filterFn(key):
+            return key not in _crypttab_entry.crypttab_keys
+
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
         raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+        raise CommandExecutionError(f'Bad config file "{config}"')
 
     try:
         with salt.utils.files.fopen(config, "r") as ifile:
@@ -293,20 +289,20 @@ def set_crypttab(
                             lines.append(line)
                         else:
                             ret = "change"
-                            lines.append(six.text_type(entry))
+                            lines.append(str(entry))
                     else:
                         lines.append(line)
 
                 except _crypttab_entry.ParseError:
                     lines.append(line)
 
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         msg = "Couldn't read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
-        lines.append(six.text_type(entry))
+        lines.append(str(entry))
         ret = "new"
 
     if ret != "present":  # ret in ['new', 'change']:
@@ -315,9 +311,9 @@ def set_crypttab(
                 with salt.utils.files.fopen(config, "w+") as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(
-                        (salt.utils.stringutils.to_str(line) for line in lines)
+                        salt.utils.stringutils.to_str(line) for line in lines
                     )
-            except (IOError, OSError):
+            except OSError:
                 msg = "File not writable {0}"
                 raise CommandExecutionError(msg.format(config))
 
@@ -342,7 +338,7 @@ def open(name, device, keyfile):
         )
 
     code = __salt__["cmd.retcode"](
-        "cryptsetup open --key-file {0} {1} {2}".format(keyfile, device, name)
+        f"cryptsetup open --key-file {keyfile} {device} {name}"
     )
     return code == 0
 
@@ -357,5 +353,5 @@ def close(name):
 
         salt '*' cryptdev.close foo
     """
-    code = __salt__["cmd.retcode"]("cryptsetup close {0}".format(name))
+    code = __salt__["cmd.retcode"](f"cryptsetup close {name}")
     return code == 0

@@ -11,6 +11,7 @@ import time
 import types
 
 import pytest
+
 import salt.utils.event
 import salt.utils.reactor
 from salt.serializers import yaml
@@ -103,6 +104,7 @@ def test_reactor_reaction(
 
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.timeout_unless_on_windows(120)
 def test_reactor_is_leader(
     event_listener,
     salt_master,
@@ -118,21 +120,21 @@ def test_reactor_is_leader(
     When leader is set to false reactor should timeout/not do anything.
     """
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.exitcode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
     )
 
     ret = salt_run_cli.run("reactor.set_leader", value=True)
-    assert ret.exitcode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
     )
 
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.exitcode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
@@ -163,20 +165,20 @@ def test_reactor_is_leader(
     # Now, with the temp config in place, ensure the reactor engine is running
     with pytest.helpers.temp_file("reactor-test.conf", config_overrides, confd_dir):
         ret = salt_run_cli.run("reactor.set_leader", value=True)
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert (
             "CommandExecutionError" not in ret.stdout
         ), "reactor engine is not running"
 
         ret = salt_run_cli.run("reactor.is_leader")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert ret.stdout.rstrip().splitlines()[-1] == "true"
 
         ret = salt_run_cli.run("reactor.set_leader", value=False)
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         ret = salt_run_cli.run("reactor.is_leader")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert ret.stdout.rstrip().splitlines()[-1] == "false"
 
         start_time = time.time()
@@ -199,9 +201,9 @@ def test_reactor_is_leader(
 
         # make reactor the leader again; ensure reactor engine is available
         ret = salt_run_cli.run("reactor.set_leader", value=True)
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         ret = salt_run_cli.run("reactor.is_leader")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert ret.stdout.rstrip().splitlines()[-1] == "true"
 
         # trigger a reaction
@@ -219,7 +221,7 @@ def test_reactor_is_leader(
 
     # Let's just confirm the engine is not running once again(because the config file is deleted by now)
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.exitcode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout

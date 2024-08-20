@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL databases
 ==================================
@@ -11,7 +10,6 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -53,7 +51,12 @@ def present(
         Default tablespace for the database
 
     encoding
-        The character encoding scheme to be used in this database
+        The character encoding scheme to be used in this database. The encoding
+        has to be defined in the following format (without hyphen).
+
+        .. code-block:: yaml
+
+          - encoding: UTF8
 
     lc_collate
         The LC_COLLATE setting to be used in this database
@@ -91,7 +94,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {0} is already present".format(name),
+        "comment": f"Database {name} is already present",
     }
 
     db_args = {
@@ -121,16 +124,19 @@ def present(
         return ret
     elif name in dbs and any(
         (
-            db_params.get("Encoding").lower() != encoding.lower()
-            if encoding
-            else False,
+            (
+                db_params.get("Encoding").lower() != encoding.lower()
+                if encoding
+                else False
+            ),
             db_params.get("Collate") != lc_collate if lc_collate else False,
             db_params.get("Ctype") != lc_ctype if lc_ctype else False,
         )
     ):
         ret["comment"] = (
-            "Database {0} has wrong parameters "
-            "which couldn't be changed on fly.".format(name)
+            "Database {} has wrong parameters which couldn't be changed on fly.".format(
+                name
+            )
         )
         ret["result"] = False
         return ret
@@ -139,11 +145,11 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if name not in dbs:
-            ret["comment"] = "Database {0} is set to be created".format(name)
+            ret["comment"] = f"Database {name} is set to be created"
         else:
-            ret[
-                "comment"
-            ] = "Database {0} exists, but parameters " "need to be changed".format(name)
+            ret["comment"] = (
+                f"Database {name} exists, but parameters need to be changed"
+            )
         return ret
     if name not in dbs and __salt__["postgres.db_create"](
         name,
@@ -153,20 +159,20 @@ def present(
         lc_ctype=lc_ctype,
         owner=owner,
         template=template,
-        **db_args
+        **db_args,
     ):
-        ret["comment"] = "The database {0} has been created".format(name)
+        ret["comment"] = f"The database {name} has been created"
         ret["changes"][name] = "Present"
     elif name in dbs and __salt__["postgres.db_alter"](
         name, tablespace=tablespace, owner=owner, owner_recurse=owner_recurse, **db_args
     ):
-        ret["comment"] = ("Parameters for database {0} have been changed").format(name)
+        ret["comment"] = f"Parameters for database {name} have been changed"
         ret["changes"][name] = "Parameters changed"
     elif name in dbs:
-        ret["comment"] = ("Failed to change parameters for database {0}").format(name)
+        ret["comment"] = f"Failed to change parameters for database {name}"
         ret["result"] = False
     else:
-        ret["comment"] = "Failed to create database {0}".format(name)
+        ret["comment"] = f"Failed to create database {name}"
         ret["result"] = False
 
     return ret
@@ -218,15 +224,13 @@ def absent(
     if __salt__["postgres.db_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Database {0} is set to be removed".format(name)
+            ret["comment"] = f"Database {name} is set to be removed"
             return ret
         if __salt__["postgres.db_remove"](name, **db_args):
-            ret["comment"] = "Database {0} has been removed".format(name)
+            ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
 
     # fallback
-    ret["comment"] = "Database {0} is not present, so it cannot " "be removed".format(
-        name
-    )
+    ret["comment"] = f"Database {name} is not present, so it cannot be removed"
     return ret

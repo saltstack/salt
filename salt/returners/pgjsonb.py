@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
@@ -60,7 +59,7 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
-``keep_jobs`` to the number of hours for the jobs to live in the tables.
+``keep_jobs_seconds`` to the number of seconds for the jobs to live in the tables.
 Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
 
 Should you wish to archive jobs in a different table for later processing,
@@ -71,7 +70,7 @@ set ``archive_jobs`` to True.  Salt will create 3 archive tables;
 - ``salt_events_archive``
 
 and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
-more than ``keep_jobs`` hours old to these tables.
+more than ``keep_jobs_seconds`` seconds old to these tables.
 
 .. versionadded:: 2019.2.0
 
@@ -160,27 +159,17 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return pgjsonb --return_kwargs '{"db": "another-salt"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
 import time
-
-# Import python libs
 from contextlib import contextmanager
 
 import salt.exceptions
-
-# Import salt libs
 import salt.returners
-import salt.utils.jid
-from salt.ext import six
+import salt.utils.data
+import salt.utils.job
 
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
-
-
-# Import third party libs
 try:
     import psycopg2
     import psycopg2.extras
@@ -232,7 +221,7 @@ def _get_options(ret=None):
     }
 
     _options = salt.returners.get_returner_options(
-        "returner.{0}".format(__virtualname__),
+        f"returner.{__virtualname__}",
         ret,
         attrs,
         __salt__=__salt__,
@@ -256,7 +245,7 @@ def _get_serv(ret=None, commit=False):
         # effectively connect w/o SSL.
         ssl_options = {
             k: v
-            for k, v in six.iteritems(_options)
+            for k, v in _options.items()
             if k in ["sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl"]
         }
         conn = psycopg2.connect(
@@ -265,11 +254,11 @@ def _get_serv(ret=None, commit=False):
             dbname=_options.get("db"),
             user=_options.get("user"),
             password=_options.get("pass"),
-            **ssl_options
+            **ssl_options,
         )
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
-            "pgjsonb returner could not connect to database: {exc}".format(exc=exc)
+            f"pgjsonb returner could not connect to database: {exc}"
         )
 
     if conn.server_version is not None and conn.server_version >= 90500:
@@ -286,9 +275,9 @@ def _get_serv(ret=None, commit=False):
         yield cursor
     except psycopg2.DatabaseError as err:
         error = err.args
-        sys.stderr.write(six.text_type(error))
+        sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
-        six.reraise(*sys.exc_info())
+        raise
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -308,21 +297,23 @@ def returner(ret):
                     (fun, jid, return, id, success, full_ret, alter_time)
                     VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
 
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    psycopg2.extras.Json(ret["return"]),
+                    psycopg2.extras.Json(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    psycopg2.extras.Json(ret),
+                    psycopg2.extras.Json(cleaned_return),
                     time.time(),
                 ),
             )
     except salt.exceptions.SaltMasterError:
         log.critical(
-            "Could not store return with pgjsonb returner. PostgreSQL server unavailable."
+            "Could not store return with pgjsonb returner. PostgreSQL server"
+            " unavailable."
         )
 
 
@@ -349,6 +340,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
+        load = salt.utils.data.decode(load)
         try:
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
@@ -471,12 +463,15 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cursor:
         try:
-            sql = "delete from jids where jid in (select distinct jid from salt_returns where alter_time < %s)"
+            sql = (
+                "delete from jids where jid in (select distinct jid from salt_returns"
+                " where alter_time < %s)"
+            )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
 
@@ -486,7 +481,7 @@ def _purge_jobs(timestamp):
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
 
@@ -496,7 +491,7 @@ def _purge_jobs(timestamp):
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
 
@@ -516,7 +511,7 @@ def _archive_jobs(timestamp):
         for table_name in source_tables:
             try:
                 tmp_table_name = table_name + "_archive"
-                sql = "create table IF NOT exists {0} (LIKE {1})".format(
+                sql = "create table IF NOT exists {} (LIKE {})".format(
                     tmp_table_name, table_name
                 )
                 cursor.execute(sql)
@@ -524,19 +519,22 @@ def _archive_jobs(timestamp):
                 target_tables[table_name] = tmp_table_name
             except psycopg2.DatabaseError as err:
                 error = err.args
-                sys.stderr.write(six.text_type(error))
+                sys.stderr.write(str(error))
                 cursor.execute("ROLLBACK")
                 raise err
 
         try:
-            sql = "insert into {0} select * from {1} where jid in (select distinct jid from salt_returns where alter_time < %s)".format(
-                target_tables["jids"], "jids"
+            sql = (
+                "insert into {} select * from {} where jid in (select distinct jid from"
+                " salt_returns where alter_time < %s)".format(
+                    target_tables["jids"], "jids"
+                )
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
         except Exception as e:  # pylint: disable=broad-except
@@ -544,26 +542,26 @@ def _archive_jobs(timestamp):
             raise
 
         try:
-            sql = "insert into {0} select * from {1} where alter_time < %s".format(
+            sql = "insert into {} select * from {} where alter_time < %s".format(
                 target_tables["salt_returns"], "salt_returns"
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
 
         try:
-            sql = "insert into {0} select * from {1} where alter_time < %s".format(
+            sql = "insert into {} select * from {} where alter_time < %s".format(
                 target_tables["salt_events"], "salt_events"
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
             error = err.args
-            sys.stderr.write(six.text_type(error))
+            sys.stderr.write(str(error))
             cursor.execute("ROLLBACK")
             raise err
 
@@ -576,11 +574,12 @@ def clean_old_jobs():
     deletes the events and job details from the database.
     :return:
     """
-    if __opts__.get("keep_jobs", False) and int(__opts__.get("keep_jobs", 0)) > 0:
+    keep_jobs_seconds = int(salt.utils.job.get_keep_jobs_seconds(__opts__))
+    if keep_jobs_seconds > 0:
         try:
             with _get_serv() as cur:
-                sql = "select (NOW() -  interval '{0}' hour) as stamp;".format(
-                    __opts__["keep_jobs"]
+                sql = "select (NOW() -  interval '{}' second) as stamp;".format(
+                    keep_jobs_seconds
                 )
                 cur.execute(sql)
                 rows = cur.fetchall()

@@ -1,0 +1,35 @@
+<%- for type, display_name in (
+                                ("src", "Source"),
+                                ("deb", "DEB"),
+                                ("rpm", "RPM"),
+                                ("windows", "Windows"),
+                                ("macos", "macOS"),
+                                ("onedir", "Onedir"),
+                              ) %>
+
+  <%- set job_name = "build-{}-repo".format(type) %>
+    <%- do build_repo_needs.append(job_name) %>
+
+  <{ job_name }>:
+    name: Build Repository
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    env:
+      USE_S3_CACHE: 'true'
+    needs:
+      - prepare-workflow
+      <%- if type not in ("src", "onedir") %>
+      - build-pkgs-onedir
+      <%- elif type == 'onedir' %>
+      - build-salt-onedir
+      <%- elif type == 'src' %>
+      - build-source-tarball
+      - build-pkgs-src
+      <%- endif %>
+
+    <%- include "build-{}-repo.yml.jinja".format(type) %>
+
+<%- endfor %>

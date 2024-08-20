@@ -44,7 +44,7 @@ class TimedProc:
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError(
-                "Error: timeout {} must be a number".format(self.timeout)
+                f"Error: timeout {self.timeout} must be a number"
             )
         if kwargs.get("shell", False):
             args = salt.utils.data.decode(args, to_str=True)
@@ -108,7 +108,8 @@ class TimedProc:
                 threading.Timer(10, terminate).start()
                 raise salt.exceptions.TimedProcTimeoutError(
                     "{} : Timed out after {} seconds".format(
-                        self.command, str(self.timeout),
+                        self.command,
+                        str(self.timeout),
                     )
                 )
         return self.process.returncode

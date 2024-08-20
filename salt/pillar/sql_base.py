@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Retrieve Pillar data by doing a SQL query
 
@@ -137,6 +136,33 @@ These columns define list grouping
 The range for with_lists is 1 to number_of_fields, inclusive.
 Numbers outside this range are ignored.
 
+If you specify `as_json: True` in the mapping expression and query only for
+single value, returned data are considered in JSON format and will be merged
+directly.
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - sql_base:
+        - query: "SELECT json_pillar FROM pillars WHERE minion_id = %s"
+          as_json: True
+
+The processed JSON entries are recursively merged in a single dictionary.
+Additionnaly if `as_list` is set to `True` the lists will be merged in case of collision.
+
+For instance the following rows:
+
+    {"a": {"b": [1, 2]}, "c": 3}
+    {"a": {"b": [1, 3]}, "d": 4}
+
+will result in the following pillar with `as_list=False`
+
+    {"a": {"b": [1, 3], "c": 3, "d": 4}
+
+and in with `as_list=True`
+
+    {"a": {"b": [1, 2, 3], "c": 3, "d": 4}
+
 Finally, if you pass the queries in via a mapping, the key will be the
 first level name where as passing them in as a list will place them in the
 root.  This isolates the query results into their own subtrees.
@@ -147,6 +173,9 @@ could even do joins or subqueries in case your minion_id is stored elsewhere.
 It is capable of handling single rows or multiple rows per minion.
 
 Configuration of the connection depends on the adapter in use.
+
+.. versionadded:: 3005
+   The *as_json* parameter.
 
 More complete example for MySQL (to also show configuration)
 ============================================================
@@ -168,18 +197,14 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-import abc  # Added in python2.6 so always available
-
-# Import python libs
+import abc
 import logging
 
-from salt.ext import six
-from salt.ext.six.moves import range
-
-# Import Salt libs
+from salt.utils.dictupdate import update
 from salt.utils.odict import OrderedDict
+
+log = logging.getLogger(__name__)
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -187,16 +212,12 @@ from salt.utils.odict import OrderedDict
 # tests/unit/pillar/mysql_test.py may help understand this code.
 
 
-# Set up logging
-log = logging.getLogger(__name__)
-
-
 # This ext_pillar is abstract and cannot be used directory
 def __virtual__():
     return False
 
 
-class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
+class SqlBaseExtPillar(metaclass=abc.ABCMeta):
     """
     This class receives and processes the database rows in a database
     agnostic way.
@@ -208,6 +229,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
     num_fields = 0
     depth = 0
     as_list = False
+    as_json = False
     with_lists = None
     ignore_null = False
 
@@ -255,7 +277,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
             x
             for x in qbuffer
             if (
-                (isinstance(x[1], six.string_types) and len(x[1]))
+                (isinstance(x[1], str) and len(x[1]))
                 or (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or (isinstance(x[1], dict) and "query" in x[1] and len(x[1]["query"]))
             )
@@ -267,10 +289,11 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 "query": "",
                 "depth": 0,
                 "as_list": False,
+                "as_json": False,
                 "with_lists": None,
                 "ignore_null": False,
             }
-            if isinstance(qb[1], six.string_types):
+            if isinstance(qb[1], str):
                 defaults["query"] = qb[1]
             elif isinstance(qb[1], (list, tuple)):
                 defaults["query"] = qb[1][0]
@@ -279,9 +302,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults["with_lists"] and isinstance(
-                    defaults["with_lists"], six.string_types
-                ):
+                if defaults["with_lists"] and isinstance(defaults["with_lists"], str):
                     defaults["with_lists"] = [
                         int(i) for i in defaults["with_lists"].split(",")
                     ]
@@ -324,6 +345,13 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         for ret in rows:
             # crd is the Current Return Data level, to make this non-recursive.
             crd = self.focus
+
+            # We have just one field without any key, assume returned row is already a dict
+            # aka JSON storage
+            if self.as_json and self.num_fields == 1:
+                crd = update(crd, ret[0], merge_lists=self.as_list)
+                continue
+
             # Walk and create dicts above the final layer
             for i in range(0, self.depth - 1):
                 # At the end we'll use listify to find values to make a list of
@@ -443,6 +471,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 )
                 self.enter_root(root)
                 self.as_list = details["as_list"]
+                self.as_json = details["as_json"]
                 if details["with_lists"]:
                     self.with_lists = details["with_lists"]
                 else:

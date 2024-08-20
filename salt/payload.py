@@ -4,22 +4,17 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 """
 
-
 import collections.abc
 import datetime
 import gc
-
-# import sys  # Use if sys is commented out below
 import logging
 
-import salt.loader_context
-import salt.log
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
 import salt.utils.stringutils
+from salt.defaults import _Constant
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
-from salt.ext import six
 from salt.utils.data import CaseInsensitiveDict
 
 try:
@@ -59,189 +54,171 @@ def format_payload(enc, **kwargs):
     return package(payload)
 
 
-class Serial:
+def loads(msg, encoding=None, raw=False):
     """
-    Create a serialization object, this object manages all message
-    serialization in Salt
-    """
+    Run the correct loads serialization format
 
-    def __init__(self, opts):
-        if isinstance(opts, dict):
-            self.serial = opts.get("serial", "msgpack")
-        elif isinstance(opts, str):
-            self.serial = opts
+    :param encoding: Useful for Python 3 support. If the msgpack data
+                     was encoded using "use_bin_type=True", this will
+                     differentiate between the 'bytes' type and the
+                     'str' type by decoding contents with 'str' type
+                     to what the encoding was set as. Recommended
+                     encoding is 'utf-8' when using Python 3.
+                     If the msgpack data was not encoded using
+                     "use_bin_type=True", it will try to decode
+                     all 'bytes' and 'str' data (the distinction has
+                     been lost in this case) to what the encoding is
+                     set as. In this case, it will fail if any of
+                     the contents cannot be converted.
+    """
+    try:
+
+        def ext_type_decoder(code, data):
+            if code == 78:
+                data = salt.utils.stringutils.to_unicode(data)
+                return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
+            if code == 79:
+                name, value = salt.utils.msgpack.loads(data, raw=False)
+                return _Constant(name, value)
+            return data
+
+        gc.disable()  # performance optimization for msgpack
+        loads_kwargs = {"use_list": True, "ext_hook": ext_type_decoder}
+        if encoding is None:
+            loads_kwargs["raw"] = True
         else:
-            self.serial = "msgpack"
-
-    def loads(self, msg, encoding=None, raw=False):
-        """
-        Run the correct loads serialization format
-
-        :param encoding: Useful for Python 3 support. If the msgpack data
-                         was encoded using "use_bin_type=True", this will
-                         differentiate between the 'bytes' type and the
-                         'str' type by decoding contents with 'str' type
-                         to what the encoding was set as. Recommended
-                         encoding is 'utf-8' when using Python 3.
-                         If the msgpack data was not encoded using
-                         "use_bin_type=True", it will try to decode
-                         all 'bytes' and 'str' data (the distinction has
-                         been lost in this case) to what the encoding is
-                         set as. In this case, it will fail if any of
-                         the contents cannot be converted.
-        """
+            loads_kwargs["raw"] = False
         try:
+            ret = salt.utils.msgpack.unpackb(msg, **loads_kwargs)
+        except UnicodeDecodeError:
+            # msg contains binary data
+            loads_kwargs.pop("raw", None)
+            ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
+        if encoding is None and not raw:
+            ret = salt.transport.frame.decode_embedded_strs(ret)
+    except Exception as exc:  # pylint: disable=broad-except
+        log.critical(
+            "Could not deserialize msgpack message. This often happens "
+            "when trying to read a file not in binary mode. "
+            "To see message payload, enable debug logging and retry. "
+            "Exception: %s",
+            exc,
+        )
+        log.debug("Msgpack deserialization failure on message: %s", msg)
+        exc_msg = "Could not deserialize msgpack message. See log for more info."
+        raise SaltDeserializationError(exc_msg) from exc
+    finally:
+        gc.enable()
+    return ret
 
-            def ext_type_decoder(code, data):
-                if code == 78:
-                    data = salt.utils.stringutils.to_unicode(data)
-                    return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
-                return data
 
-            gc.disable()  # performance optimization for msgpack
-            loads_kwargs = {"use_list": True, "ext_hook": ext_type_decoder}
-            if salt.utils.msgpack.version >= (0, 4, 0):
-                # msgpack only supports 'encoding' starting in 0.4.0.
-                # Due to this, if we don't need it, don't pass it at all so
-                # that under Python 2 we can still work with older versions
-                # of msgpack.
-                if salt.utils.msgpack.version >= (0, 5, 2):
-                    if encoding is None:
-                        loads_kwargs["raw"] = True
-                    else:
-                        loads_kwargs["raw"] = False
-                else:
-                    loads_kwargs["encoding"] = encoding
-                try:
-                    ret = salt.utils.msgpack.unpackb(msg, **loads_kwargs)
-                except UnicodeDecodeError:
-                    # msg contains binary data
-                    loads_kwargs.pop("raw", None)
-                    loads_kwargs.pop("encoding", None)
-                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
-            else:
-                ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
-            if six.PY3 and encoding is None and not raw:
-                ret = salt.transport.frame.decode_embedded_strs(ret)
-        except Exception as exc:  # pylint: disable=broad-except
-            log.critical(
-                "Could not deserialize msgpack message. This often happens "
-                "when trying to read a file not in binary mode. "
-                "To see message payload, enable debug logging and retry. "
-                "Exception: %s",
-                exc,
+def dumps(msg, use_bin_type=False):
+    """
+    Run the correct dumps serialization format
+
+    :param use_bin_type: Useful for Python 3 support. Tells msgpack to
+                         differentiate between 'str' and 'bytes' types
+                         by encoding them differently.
+                         Since this changes the wire protocol, this
+                         option should not be used outside of IPC.
+    """
+
+    def ext_type_encoder(obj):
+        if isinstance(obj, int):
+            # msgpack can't handle the very long Python longs for jids
+            # Convert any very long longs to strings
+            return str(obj)
+        elif isinstance(obj, (datetime.datetime, datetime.date)):
+            # msgpack doesn't support datetime.datetime and datetime.date datatypes.
+            # So here we have converted these types to custom datatype
+            # This is msgpack Extended types numbered 78
+            return salt.utils.msgpack.ExtType(
+                78,
+                salt.utils.stringutils.to_bytes(obj.strftime("%Y%m%dT%H:%M:%S.%f")),
             )
-            log.debug("Msgpack deserialization failure on message: %s", msg)
-            gc.collect()
-            raise six.raise_from(
-                SaltDeserializationError(
-                    "Could not deserialize msgpack message." " See log for more info."
-                ),
-                exc,
+        elif isinstance(obj, _Constant):
+            # Special case our constants.
+            return salt.utils.msgpack.ExtType(
+                79,
+                salt.utils.msgpack.dumps((obj.name, obj.value), use_bin_type=True),
             )
-        finally:
-            gc.enable()
-        return ret
+        # The same for immutable types
+        elif isinstance(obj, immutabletypes.ImmutableDict):
+            return dict(obj)
+        elif isinstance(obj, immutabletypes.ImmutableList):
+            return list(obj)
+        elif isinstance(obj, (set, immutabletypes.ImmutableSet)):
+            # msgpack can't handle set so translate it to tuple
+            return tuple(obj)
+        elif isinstance(obj, CaseInsensitiveDict):
+            return dict(obj)
+        elif isinstance(obj, collections.abc.MutableMapping):
+            return dict(obj)
+        # Nothing known exceptions found. Let msgpack raise its own.
+        return obj
 
-    def load(self, fn_):
-        """
-        Run the correct serialization to load a file
-        """
-        data = fn_.read()
-        fn_.close()
-        if data:
-            return self.loads(data, encoding="utf-8")
-
-    def dumps(self, msg, use_bin_type=False):
-        """
-        Run the correct dumps serialization format
-
-        :param use_bin_type: Useful for Python 3 support. Tells msgpack to
-                             differentiate between 'str' and 'bytes' types
-                             by encoding them differently.
-                             Since this changes the wire protocol, this
-                             option should not be used outside of IPC.
-        """
-
-        def ext_type_encoder(obj):
-            if isinstance(obj, int):
-                # msgpack can't handle the very long Python longs for jids
-                # Convert any very long longs to strings
-                return str(obj)
-            elif isinstance(obj, (datetime.datetime, datetime.date)):
-                # msgpack doesn't support datetime.datetime and datetime.date datatypes.
-                # So here we have converted these types to custom datatype
-                # This is msgpack Extended types numbered 78
-                return salt.utils.msgpack.ExtType(
-                    78,
-                    salt.utils.stringutils.to_bytes(obj.strftime("%Y%m%dT%H:%M:%S.%f")),
+    try:
+        return salt.utils.msgpack.packb(
+            msg, default=ext_type_encoder, use_bin_type=use_bin_type
+        )
+    except (OverflowError, salt.utils.msgpack.exceptions.PackValueError):
+        # msgpack<=0.4.6 don't call ext encoder on very long integers raising the error instead.
+        # Convert any very long longs to strings and call dumps again.
+        def verylong_encoder(obj, context):
+            # Make sure we catch recursion here.
+            objid = id(obj)
+            # This instance list needs to correspond to the types recursed
+            # in the below if/elif chain. Also update
+            # tests/unit/test_payload.py
+            if objid in context and isinstance(obj, (dict, list, tuple)):
+                return "<Recursion on {} with id={}>".format(
+                    type(obj).__name__, id(obj)
                 )
-            # The same for immutable types
-            elif isinstance(obj, immutabletypes.ImmutableDict):
+            context.add(objid)
+
+            # The isinstance checks in this if/elif chain need to be
+            # kept in sync with the above recursion check.
+            if isinstance(obj, dict):
+                for key, value in obj.copy().items():
+                    obj[key] = verylong_encoder(value, context)
                 return dict(obj)
-            elif isinstance(obj, immutabletypes.ImmutableList):
-                return list(obj)
-            elif isinstance(obj, (set, immutabletypes.ImmutableSet)):
-                # msgpack can't handle set so translate it to tuple
-                return tuple(obj)
-            elif isinstance(obj, CaseInsensitiveDict):
-                return dict(obj)
-            elif isinstance(obj, collections.abc.MutableMapping):
-                return dict(obj)
-            # Nothing known exceptions found. Let msgpack raise its own.
-            return obj
+            elif isinstance(obj, (list, tuple)):
+                obj = list(obj)
+                for idx, entry in enumerate(obj):
+                    obj[idx] = verylong_encoder(entry, context)
+                return obj
+            # A value of an Integer object is limited from -(2^63) upto (2^64)-1 by MessagePack
+            # spec. Here we care only of JIDs that are positive integers.
+            if isinstance(obj, int) and obj >= pow(2, 64):
+                return str(obj)
+            else:
+                return obj
 
-        try:
-            return salt.utils.msgpack.packb(
-                msg, default=ext_type_encoder, use_bin_type=use_bin_type
-            )
-        except (OverflowError, salt.utils.msgpack.exceptions.PackValueError):
-            # msgpack<=0.4.6 don't call ext encoder on very long integers raising the error instead.
-            # Convert any very long longs to strings and call dumps again.
-            def verylong_encoder(obj, context):
-                # Make sure we catch recursion here.
-                objid = id(obj)
-                # This instance list needs to correspond to the types recursed
-                # in the below if/elif chain. Also update
-                # tests/unit/test_payload.py
-                if objid in context and isinstance(obj, (dict, list, tuple)):
-                    return "<Recursion on {} with id={}>".format(
-                        type(obj).__name__, id(obj)
-                    )
-                context.add(objid)
+        msg = verylong_encoder(msg, set())
+        return salt.utils.msgpack.packb(
+            msg, default=ext_type_encoder, use_bin_type=use_bin_type
+        )
 
-                # The isinstance checks in this if/elif chain need to be
-                # kept in sync with the above recursion check.
-                if isinstance(obj, dict):
-                    for key, value in obj.copy().items():
-                        obj[key] = verylong_encoder(value, context)
-                    return dict(obj)
-                elif isinstance(obj, (list, tuple)):
-                    obj = list(obj)
-                    for idx, entry in enumerate(obj):
-                        obj[idx] = verylong_encoder(entry, context)
-                    return obj
-                # A value of an Integer object is limited from -(2^63) upto (2^64)-1 by MessagePack
-                # spec. Here we care only of JIDs that are positive integers.
-                if isinstance(obj, int) and obj >= pow(2, 64):
-                    return str(obj)
-                else:
-                    return obj
 
-            msg = verylong_encoder(msg, set())
-            return salt.utils.msgpack.packb(
-                msg, default=ext_type_encoder, use_bin_type=use_bin_type
-            )
+def load(fn_):
+    """
+    Run the correct serialization to load a file
+    """
+    data = fn_.read()
+    fn_.close()
+    if data:
+        return loads(data, encoding="utf-8")
 
-    def dump(self, msg, fn_):
-        """
-        Serialize the correct data into the named file object
-        """
-        # When using Python 3, write files in such a way
-        # that the 'bytes' and 'str' types are distinguishable
-        # by using "use_bin_type=True".
-        fn_.write(self.dumps(msg, use_bin_type=True))
-        fn_.close()
+
+def dump(msg, fn_):
+    """
+    Serialize the correct data into the named file object
+    """
+    # When using Python 3, write files in such a way
+    # that the 'bytes' and 'str' types are distinguishable
+    # by using "use_bin_type=True".
+    fn_.write(dumps(msg, use_bin_type=True))
+    fn_.close()
 
 
 class SREQ:
@@ -252,7 +229,6 @@ class SREQ:
     def __init__(self, master, id_="", serial="msgpack", linger=0, opts=None):
         self.master = master
         self.id_ = id_
-        self.serial = Serial(serial)
         self.linger = linger
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -321,7 +297,7 @@ class SREQ:
         """
         payload = {"enc": enc}
         payload["load"] = load
-        pkg = self.serial.dumps(payload)
+        pkg = dumps(payload)
         self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
@@ -340,10 +316,11 @@ class SREQ:
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    "SaltReqTimeoutError: after {} seconds, ran {} "
-                    "tries".format(timeout * tried, tried)
+                    "SaltReqTimeoutError: after {} seconds, ran {} tries".format(
+                        timeout * tried, tried
+                    )
                 )
-        return self.serial.loads(self.socket.recv())
+        return loads(self.socket.recv())
 
     def send_auto(self, payload, tries=1, timeout=60):
         """

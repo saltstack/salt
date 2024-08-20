@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Create ssh executor system
 """
-from __future__ import absolute_import, print_function
 
-# Import python libs
 import logging
 import os
 import shutil
@@ -13,8 +10,6 @@ import tempfile
 from contextlib import closing
 
 import salt.client.ssh
-
-# Import salt libs
 import salt.client.ssh.shell
 import salt.loader
 import salt.minion
@@ -28,9 +23,6 @@ import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
 
-# Import 3rd-party libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 
@@ -39,9 +31,17 @@ class SSHState(salt.state.State):
     Create a State object which wraps the SSH functions for state operations
     """
 
-    def __init__(self, opts, pillar=None, wrapper=None):
+    def __init__(
+        self,
+        opts,
+        pillar_override=None,
+        wrapper=None,
+        context=None,
+        initial_pillar=None,
+    ):
         self.wrapper = wrapper
-        super(SSHState, self).__init__(opts, pillar)
+        self.context = context
+        super().__init__(opts, pillar_override, initial_pillar=initial_pillar)
 
     def load_modules(self, data=None, proxy=None):
         """
@@ -55,6 +55,28 @@ class SSHState(salt.state.State):
             self.opts, locals_, self.utils, self.serializers
         )
         self.rend = salt.loader.render(self.opts, self.functions)
+
+    def _gather_pillar(self):
+        """
+        The opts used during pillar rendering should contain the master
+        opts in the root namespace. self.opts is the modified minion opts,
+        containing the original master opts in __master_opts__.
+        """
+        _opts = self.opts
+        popts = {}
+        # Pillar compilation needs the master opts primarily,
+        # same as during regular operation.
+        popts.update(_opts)
+        popts.update(_opts.get("__master_opts__", {}))
+        # But, salt.state.State takes the parameters for get_pillar from
+        # the opts, so we need to ensure they are correct for the minion.
+        popts["id"] = _opts["id"]
+        popts["saltenv"] = _opts["saltenv"]
+        popts["pillarenv"] = _opts.get("pillarenv")
+        self.opts = popts
+        pillar = super()._gather_pillar()
+        self.opts = _opts
+        return pillar
 
     def check_refresh(self, data, ret):
         """
@@ -76,12 +98,25 @@ class SSHHighState(salt.state.BaseHighState):
 
     stack = []
 
-    def __init__(self, opts, pillar=None, wrapper=None, fsclient=None):
+    def __init__(
+        self,
+        opts,
+        pillar_override=None,
+        wrapper=None,
+        fsclient=None,
+        context=None,
+        initial_pillar=None,
+    ):
         self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
-        self.state = SSHState(opts, pillar, wrapper)
+        self.state = SSHState(
+            opts,
+            pillar_override,
+            wrapper,
+            context=context,
+            initial_pillar=initial_pillar,
+        )
         self.matchers = salt.loader.matchers(self.opts)
-        self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
         self._pydsl_render_stack = []
@@ -99,32 +134,17 @@ class SSHHighState(salt.state.BaseHighState):
         """
         Evaluate master_tops locally
         """
-        if "id" not in self.opts:
-            log.error("Received call for external nodes without an id")
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
-            return {}
-        # Evaluate all configured master_tops interfaces
+        return self._local_master_tops()
 
-        grains = {}
-        ret = {}
+    def destroy(self):
+        if self.client:
+            self.client.destroy()
 
-        if "grains" in self.opts:
-            grains = self.opts["grains"]
-        for fun in self.tops:
-            if fun not in self.opts.get("master_tops", {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:  # pylint: disable=broad-except
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    "Top function %s failed with error %s for minion %s",
-                    fun,
-                    exc,
-                    self.opts["id"],
-                )
-        return ret
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
 
 
 def lowstate_file_refs(chunks, extras=""):
@@ -163,7 +183,7 @@ def salt_refs(data, ret=None):
     proto = "salt://"
     if ret is None:
         ret = []
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         if data.startswith(proto) and data not in ret:
             ret.append(data)
     if isinstance(data, list):
@@ -211,7 +231,7 @@ def prep_trans_tar(
         cachedir = os.path.join("salt-ssh", id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join("salt-ssh", six.text_type(id_)).rstrip(os.sep)
+        cachedir = os.path.join("salt-ssh", str(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -226,7 +246,7 @@ def prep_trans_tar(
                 cache_dest = os.path.join(cache_dest_root, short)
                 try:
                     path = file_client.cache_file(name, saltenv, cachedir=cachedir)
-                except IOError:
+                except OSError:
                     path = ""
                 if path:
                     tgt = os.path.join(env_root, short)
@@ -237,14 +257,14 @@ def prep_trans_tar(
                     continue
                 try:
                     files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
-                except IOError:
+                except OSError:
                     files = ""
                 if files:
                     for filename in files:
                         fn = filename[
                             len(file_client.get_cachedir(cache_dest)) :
                         ].strip("/")
-                        tgt = os.path.join(env_root, short, fn,)
+                        tgt = os.path.join(env_root, short, fn)
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)

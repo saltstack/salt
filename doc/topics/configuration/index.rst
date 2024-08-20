@@ -9,9 +9,11 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     :maxdepth: 1
     :glob:
 
+    ../../ref/configuration/index
     ../../ref/configuration/master
     ../../ref/configuration/minion
     ../../ref/configuration/proxy
+    ../../ref/configuration/delta_proxy
     ../../ref/configuration/examples
     ../blackout/index
     ../eauth/access_control
@@ -29,7 +31,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     ../tutorials/cron
     ../hardening
     ../../security/index
+    ../channels/index
     ../transports/index
     ../master_tops/index
-    ../../ref/returners/index
     ../../ref/renderers/index

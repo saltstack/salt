@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module to integrate with the returner system and retrieve data sent to a salt returner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.loader
 
 
@@ -19,7 +16,7 @@ def get_jid(returner, jid):
         salt '*' ret.get_jid redis 20421104181954700505
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{0}.get_jid".format(returner)](jid)
+    return returners[f"{returner}.get_jid"](jid)
 
 
 def get_fun(returner, fun):
@@ -33,7 +30,7 @@ def get_fun(returner, fun):
         salt '*' ret.get_fun mysql network.interfaces
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{0}.get_fun".format(returner)](fun)
+    return returners[f"{returner}.get_fun"](fun)
 
 
 def get_jids(returner):
@@ -47,7 +44,7 @@ def get_jids(returner):
         salt '*' ret.get_jids mysql
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{0}.get_jids".format(returner)]()
+    return returners[f"{returner}.get_jids"]()
 
 
 def get_minions(returner):
@@ -61,4 +58,4 @@ def get_minions(returner):
         salt '*' ret.get_minions mysql
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{0}.get_minions".format(returner)]()
+    return returners[f"{returner}.get_minions"]()
