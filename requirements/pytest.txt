@@ -1,6 +1,7 @@
 mock >= 3.0.0
 # PyTest
-docker
+docker >= 7.1.0; python_version >= '3.8'
+docker < 7.1.0; python_version < '3.8'
 pytest >= 7.2.0
 pytest-salt-factories >= 1.0.0
 pytest-helpers-namespace >= 2019.1.8

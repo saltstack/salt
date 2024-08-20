@@ -93,8 +93,10 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
-croniter==1.3.15 ; sys_platform != "win32"
-    # via -r requirements/static/ci/common.in
+croniter==2.0.5 ; sys_platform != "win32"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
 cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
@@ -116,7 +118,7 @@ dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
@@ -284,7 +286,6 @@ packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -411,6 +412,7 @@ python-gnupg==0.5.2
 pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
+    #   croniter
     #   tempora
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
@@ -432,7 +434,7 @@ pyzmq==25.1.2
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
@@ -549,9 +551,7 @@ virtualenv==20.24.7
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
-    # via
-    #   docker
-    #   kubernetes
+    # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
 werkzeug==3.0.3
