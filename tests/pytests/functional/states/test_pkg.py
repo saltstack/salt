@@ -4,6 +4,7 @@ tests for pkg state
 
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -19,7 +20,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
-    pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.timeout_unless_on_windows(650),
 ]
 
 
@@ -36,6 +37,16 @@ def refresh_db(grains, modules):
                 time.sleep(5)
         else:
             pytest.fail("Package database locked after 60 seconds, bailing out")
+
+
+@pytest.fixture(scope="module", autouse=True)
+def refresh_keys(grains, modules):
+    if grains["os_family"] == "Arch":
+        # We should be running this periodically when building new test runner
+        # images, otherwise this could take several minuets to complete.
+        proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
+        if proc.returncode != 0:
+            pytest.fail("pacman-key --refresh-keys command failed.")
 
 
 @pytest.fixture
@@ -231,10 +242,13 @@ def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states):
+def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states, grains):
     """
     This is a destructive test as it installs and then removes two packages
     """
+    if grains["os_family"] == "Arch":
+        pytest.skip("Arch needs refresh_db logic added to golden image")
+
     version = modules.pkg.version(*PKG_TARGETS)
 
     # If this assert fails, we need to find new targets, this test needs to
@@ -256,10 +270,14 @@ def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states):
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_004_installed_multipkg_with_version(PKG_TARGETS, latest_version, states):
+def test_pkg_004_installed_multipkg_with_version(
+    PKG_TARGETS, latest_version, states, grains
+):
     """
     This is a destructive test as it installs and then removes two packages
     """
+    if grains["os_family"] == "Arch":
+        pytest.skip("Arch needs refresh_db logic added to golden image")
     version = latest_version(PKG_TARGETS[0])
 
     # If this assert fails, we need to find new targets, this test needs to
@@ -868,6 +886,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
     latest_version,
     modules,
     states,
+    grains,
 ):
     """
     This is a destructive test as it installs and then removes two packages

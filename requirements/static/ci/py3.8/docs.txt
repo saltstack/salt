@@ -128,7 +128,7 @@ pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   myst-docutils
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   sphinx

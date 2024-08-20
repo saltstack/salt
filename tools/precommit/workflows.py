@@ -52,7 +52,6 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 arch="arm64",
             ),
             Linux(slug="archlinux-lts", display_name="Arch Linux LTS", arch="x86_64"),
-            Linux(slug="centos-7", display_name="CentOS 7", arch="x86_64"),
             Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
             Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
             Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
@@ -246,12 +245,6 @@ def generate_workflows(ctx: Context):
                     pkg_type="rpm",
                 ),
                 Linux(
-                    slug="centos-7",
-                    display_name="CentOS 7",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
                     slug="debian-11",
                     display_name="Debian 11",
                     arch="x86_64",
@@ -425,9 +418,7 @@ def generate_workflows(ctx: Context):
     for slug in sorted(tools.utils.get_golden_images()):
         if slug.endswith("-arm64"):
             continue
-        if not slug.startswith(
-            ("amazonlinux", "rockylinux", "centos", "fedora", "photonos")
-        ):
+        if not slug.startswith(("amazonlinux", "rockylinux", "fedora", "photonos")):
             continue
         os_name, os_version = slug.split("-")
         if os_name == "amazonlinux":

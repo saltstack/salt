@@ -13,6 +13,7 @@ import salt.crypt
 import salt.master
 import salt.payload
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import dedent
 
 from . import PRIV_KEY, PRIV_KEY2, PUB_KEY, PUB_KEY2
@@ -70,6 +71,7 @@ def test_cryptical_dumps_invalid_nonce():
         assert master_crypt.loads(ret, nonce="abcde")
 
 
+@pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_verify_signature(tmp_path):
     tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
     tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())
@@ -80,6 +82,7 @@ def test_verify_signature(tmp_path):
     assert salt.crypt.verify_signature(str(tmp_path.joinpath("foo.pub")), msg, sig)
 
 
+@pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_verify_signature_bad_sig(tmp_path):
     tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
     tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())
@@ -152,7 +155,8 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
 
 def test_pwdata_decrypt():
     key_string = dedent(
-        """-----BEGIN RSA PRIVATE KEY-----
+        """
+        -----BEGIN RSA PRIVATE KEY-----
         MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
         Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
         ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
