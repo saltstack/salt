@@ -6,7 +6,7 @@ import pytest
 from pytestskipmarkers.utils import platform
 
 
-@pytest.mark.skip_on_windows
+# DGM @pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
@@ -35,6 +35,7 @@ def test_salt_version(version, install_salt):
 
 
 @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
@@ -52,7 +53,7 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
-@pytest.mark.skip_on_windows
+# DGM @pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
     """
     Test running test.versions_report on minion
@@ -104,7 +105,8 @@ def test_compare_versions(binary, install_salt):
         )
 
 
-@pytest.mark.skip_unless_on_darwin()
+# DGM
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize(
     "symlink",
     [
