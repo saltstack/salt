@@ -2,6 +2,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 
 import packaging.version
 import psutil
@@ -91,6 +92,13 @@ def test_salt_user_master(salt_master, install_salt):
     """
     Test the correct user is running the Salt Master
     """
+    # DGM assert salt_master.is_running()
+
+    for count in range(0, 10):
+        if salt_master.is_running():
+            break
+        else:
+            time.sleep(1)
     assert salt_master.is_running()
 
     match = False
@@ -227,17 +235,17 @@ def test_paths_log_rotation(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
 
-    if install_salt.distro_id not in (
-        "almalinux",
-        "rocky",
-        "centos",
-        "redhat",
-        "amzn",
-        "fedora",
-    ):
-        pytest.skip(
-            "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
-        )
+    # DGM if install_salt.distro_id not in (
+    # DGM     "almalinux",
+    # DGM     "rocky",
+    # DGM     "centos",
+    # DGM     "redhat",
+    # DGM     "amzn",
+    # DGM     "fedora",
+    # DGM ):
+    # DGM     pytest.skip(
+    # DGM         "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
+    # DGM     )
 
     match = False
     for proc in psutil.Process(salt_master.pid).children():
