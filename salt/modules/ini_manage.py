@@ -67,10 +67,10 @@ def set_option(file_name, sections=None, separator="=", encoding=None, no_spaces
             .. versionadded:: 3006.6
 
         no_spaces (bool):
-            A bool value that specifies if the separator will be wrapped with
-            spaces. This parameter was added to have the ability to not wrap the
-            separator with spaces. Default is ``False``, which maintains
-            backwards compatibility.
+            A bool value that specifies that the key/value separator will be
+            wrapped with spaces. This parameter was added to have the ability to
+            not wrap the separator with spaces. Default is ``False``, which
+            maintains backwards compatibility.
 
             .. warning::
                 This will affect all key/value pairs in the ini file, not just
