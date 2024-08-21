@@ -93,6 +93,8 @@ Master Config:
         cluster_pki_dir: /my/gluster/share/pki
         cachedir: /my/gluster/share/cache
         file_roots:
+          base:
             - /my/gluster/share/srv/salt
         pillar_roots:
+          base:
             - /my/gluster/share/srv/pillar
