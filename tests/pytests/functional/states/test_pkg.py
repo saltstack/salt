@@ -111,14 +111,14 @@ def PKG_CAP_TARGETS(grains):
 @pytest.fixture
 def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
-    if grains["os"] == "Windows":
-        _PKG_32_TARGETS = ["npp", "nsis"]
-    elif grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
+    if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["os"] == "CentOS":
             if grains["osmajorrelease"] == 5:
                 _PKG_32_TARGETS = ["xz-devel.i386"]
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
+    elif grains["os"] == "Windows":
+        _PKG_32_TARGETS = ["npp", "nsis"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
