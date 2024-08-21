@@ -2509,7 +2509,17 @@ def syndic_config(
         "sock_pool_size": master_opts["sock_pool_size"],
         "cachedir": master_opts["cachedir"],
     }
+
+    dgm_syndic_user = syndic_opts["user"]
+    print(f"DGM syndic_config, syndic_user '{dgm_syndic_user}'", flush=True)
     opts.update(syndic_opts)
+
+    dgm_syndic_user = opts["user"]
+    print(
+        f"DGM syndic_config, opts user after update from syndic_user '{dgm_syndic_user}'",
+        flush=True,
+    )
+
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         "pki_dir",

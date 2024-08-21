@@ -27,7 +27,7 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 ## DGM user: salt
-syndic_user: salt
+## DGM syndic_user: salt
 
 # Tell the master to also use salt-ssh when running commands against minions.
 #enable_ssh_minions: False
