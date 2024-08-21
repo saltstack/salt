@@ -1,2 +1,5 @@
 opt/saltstack/salt/salt-pip /usr/bin/salt-pip
 opt/saltstack/salt/salt-call /usr/bin/salt-call
+usr/share/bash-completion/completions/salt usr/share/bash-completion/completions/salt-call
+usr/share/bash-completion/completions/salt usr/share/bash-completion/completions/salt-cp
+usr/share/bash-completion/completions/salt usr/share/bash-completion/completions/salt-key
