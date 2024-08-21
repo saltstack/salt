@@ -72,6 +72,10 @@ def set_option(file_name, sections=None, separator="=", encoding=None, no_spaces
             separator with spaces. Default is ``False``, which maintains
             backwards compatibility.
 
+            .. warning::
+                This will affect all key/value pairs in the ini file, not just
+                the specific value being set.
+
             .. versionadded:: 3006.10
 
     Returns:
