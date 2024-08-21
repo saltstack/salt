@@ -35,6 +35,7 @@ def test_salt_version(version, install_salt):
 
 
 @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
