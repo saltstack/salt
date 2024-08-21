@@ -235,17 +235,17 @@ def test_paths_log_rotation(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
 
-    # DGM if install_salt.distro_id not in (
-    # DGM     "almalinux",
-    # DGM     "rocky",
-    # DGM     "centos",
-    # DGM     "redhat",
-    # DGM     "amzn",
-    # DGM     "fedora",
-    # DGM ):
-    # DGM     pytest.skip(
-    # DGM         "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
-    # DGM     )
+    if install_salt.distro_id not in (
+        "almalinux",
+        "rocky",
+        "centos",
+        "redhat",
+        "amzn",
+        "fedora",
+    ):
+        pytest.skip(
+            "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
+        )
 
     match = False
     for proc in psutil.Process(salt_master.pid).children():
