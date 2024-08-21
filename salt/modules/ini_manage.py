@@ -37,7 +37,7 @@ COM_REGX = re.compile(r"^\s*(#|;)\s*(.*)")
 INDENTED_REGX = re.compile(r"(\s+)(.*)")
 
 
-def set_option(file_name, sections=None, separator="=", encoding=None):
+def set_option(file_name, sections=None, separator="=", encoding=None, no_spaces=False):
     """
     Edit an ini file, replacing one or more sections. Returns a dictionary
     containing the changes made.
@@ -66,6 +66,14 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
 
             .. versionadded:: 3006.6
 
+        no_spaces (bool):
+            A bool value that specifies if the separator will be wrapped with
+            spaces. This parameter was added to have the ability to not wrap the
+            separator with spaces. Default is ``False``, which maintains
+            backwards compatibility.
+
+            .. versionadded:: 3006.10
+
     Returns:
         dict: A dictionary representing the changes made to the ini file
 
@@ -88,7 +96,9 @@ def set_option(file_name, sections=None, separator="=", encoding=None):
     """
 
     sections = sections or {}
-    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
+    inifile = _Ini.get_ini_file(
+        file_name, separator=separator, encoding=encoding, no_spaces=no_spaces
+    )
     changes = inifile.update(sections)
     inifile.flush()
     return changes
@@ -388,20 +398,19 @@ def get_ini(file_name, separator="=", encoding=None):
 
 
 class _Section(OrderedDict):
-    def __init__(self, name, inicontents="", separator="=", commenter="#", no_spaces=False):
+    def __init__(
+        self, name, inicontents="", separator="=", commenter="#", no_spaces=False
+    ):
         super().__init__(self)
         self.name = name
         self.inicontents = inicontents
         self.sep = separator
         self.com = commenter
-        if not no_spaces = 
-            self.sep = ' ' + self.sep + ' '
+        self.no_spaces = no_spaces
 
         opt_regx_prefix = r"(\s*)(.+?)\s*"
         opt_regx_suffix = r"\s*(.*)\s*"
-        self.opt_regx_str = r"{}(\{}){}".format(
-            opt_regx_prefix, self.sep, opt_regx_suffix
-        )
+        self.opt_regx_str = rf"{opt_regx_prefix}(\{self.sep}){opt_regx_suffix}"
         self.opt_regx = re.compile(self.opt_regx_str)
 
     def refresh(self, inicontents=None):
@@ -477,7 +486,11 @@ class _Section(OrderedDict):
             # Ensure the value is either a _Section or a string
             if isinstance(value, (dict, OrderedDict)):
                 sect = _Section(
-                    name=key, inicontents="", separator=self.sep, commenter=self.com
+                    name=key,
+                    inicontents="",
+                    separator=self.sep,
+                    commenter=self.com,
+                    no_spaces=self.no_spaces,
                 )
                 sect.update(value)
                 value = sect
@@ -509,7 +522,7 @@ class _Section(OrderedDict):
         return changes
 
     def gen_ini(self):
-        yield "{0}[{1}]{0}".format(os.linesep, self.name)
+        yield f"{os.linesep}[{self.name}]{os.linesep}"
         sections_dict = OrderedDict()
         for name, value in self.items():
             # Handle Comment Lines
@@ -520,12 +533,19 @@ class _Section(OrderedDict):
                 sections_dict.update({name: value})
             # Key / Value pairs
             else:
-                yield "{}{}{}{}".format(
-                    name,
-                    self.sep,
-                    value,
-                    os.linesep,
-                )
+                # multiple spaces will be a single space
+                if all(c == " " for c in self.sep):
+                    self.sep = " "
+                # Default is to add spaces
+                if self.no_spaces:
+                    if self.sep != " ":
+                        # We only strip whitespace if the delimiter is not a space
+                        self.sep = self.sep.strip()
+                else:
+                    if self.sep != " ":
+                        # We only add spaces if the delimiter itself is not a space
+                        self.sep = f" {self.sep.strip()} "
+                yield f"{name}{self.sep}{value}{os.linesep}"
         for name, value in sections_dict.items():
             yield from value.gen_ini()
 
@@ -558,15 +578,26 @@ class _Section(OrderedDict):
 
 class _Ini(_Section):
     def __init__(
-        self, name, inicontents="", separator="=", commenter="#", encoding=None
+        self,
+        name,
+        inicontents="",
+        separator="=",
+        commenter="#",
+        encoding=None,
+        no_spaces=False,
     ):
         super().__init__(
-            self, inicontents=inicontents, separator=separator, commenter=commenter
+            self,
+            inicontents=inicontents,
+            separator=separator,
+            commenter=commenter,
+            no_spaces=no_spaces,
         )
         self.name = name
         if encoding is None:
             encoding = __salt_system_encoding__
         self.encoding = encoding
+        self.no_spaces = no_spaces
 
     def refresh(self, inicontents=None):
         if inicontents is None:
@@ -613,7 +644,7 @@ class _Ini(_Section):
                 self.name, "w", encoding=self.encoding
             ) as outfile:
                 ini_gen = self.gen_ini()
-                next(ini_gen)
+                next(ini_gen)  # Next to skip the file name
                 ini_gen_list = list(ini_gen)
                 # Avoid writing an initial line separator.
                 if ini_gen_list:
@@ -625,8 +656,10 @@ class _Ini(_Section):
             )
 
     @staticmethod
-    def get_ini_file(file_name, separator="=", encoding=None):
-        inifile = _Ini(file_name, separator=separator, encoding=encoding)
+    def get_ini_file(file_name, separator="=", encoding=None, no_spaces=False):
+        inifile = _Ini(
+            file_name, separator=separator, encoding=encoding, no_spaces=no_spaces
+        )
         inifile.refresh()
         return inifile
 
