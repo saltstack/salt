@@ -18,6 +18,7 @@ def salt_minion_retry(salt_master, salt_minion_id):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "zmq_monitor": False,
     }
     factory = salt_master.salt_minion_daemon(
         random_string("retry-minion-"),
