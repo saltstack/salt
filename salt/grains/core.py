@@ -40,6 +40,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
@@ -3051,13 +3052,7 @@ def get_machine_id():
     if platform.system() == "AIX":
         return _aix_get_machine_id()
 
-    locations = ["/etc/machine-id", "/var/lib/dbus/machine-id"]
-    existing_locations = [loc for loc in locations if os.path.exists(loc)]
-    if not existing_locations:
-        return {}
-    else:
-        with salt.utils.files.fopen(existing_locations[0]) as machineid:
-            return {"machine_id": machineid.read().strip()}
+    return _get_machine_identifier()
 
 
 def cwd():

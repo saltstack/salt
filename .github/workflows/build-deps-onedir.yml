@@ -32,8 +32,9 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
@@ -98,6 +99,7 @@ jobs:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
     env:
       USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
     steps:
 
       - name: "Throttle Builds"
@@ -148,6 +150,7 @@ jobs:
     runs-on: windows-latest
     env:
       USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
     steps:
 
       - name: "Throttle Builds"
