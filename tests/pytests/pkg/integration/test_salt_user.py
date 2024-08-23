@@ -92,13 +92,13 @@ def test_salt_user_master(salt_master, install_salt):
     """
     Test the correct user is running the Salt Master
     """
-    # DGM assert salt_master.is_running()
-
-    for count in range(0, 10):
+    for count in range(0, 30):
         if salt_master.is_running():
             break
         else:
-            time.sleep(1)
+            time.sleep(2)
+
+    print(f"DGM test_salt_user_master, salt_master '{salt_master}'", flush=True)
     assert salt_master.is_running()
 
     match = False
