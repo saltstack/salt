@@ -2209,12 +2209,14 @@ class ClearFuncs(TransportMethods):
                 username = salt.utils.user.get_user()
 
         # Authorized. Do the job!
+        log.warning("MASTER RUNNER: %s", clear_load)
         try:
             fun = clear_load.pop("fun")
+            low = clear_load.get("kwarg", {})
+            if "metadata" in clear_load:
+                low["metadata"] = clear_load["metadata"]
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username, local=True
-            )
+            return runner_client.asynchronous(fun, low, username, local=True)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
             return {
@@ -2285,11 +2287,11 @@ class ClearFuncs(TransportMethods):
                 "user": username,
             }
 
-            self.event.fire_event(data, tagify([jid, "new"], "wheel"))
+            self.event.fire_event(data, tagify([jid, "new"], "wheel"))  # TODO ?
             ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
             data["return"] = ret["return"]
             data["success"] = ret["success"]
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
+            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))  # TODO ?
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2299,7 +2301,7 @@ class ClearFuncs(TransportMethods):
                 exc,
             )
             data["success"] = False
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
+            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))  # TODO ?
             return {"tag": tag, "data": data}
 
     def mk_token(self, clear_load):
@@ -2395,7 +2397,8 @@ class ClearFuncs(TransportMethods):
             }
             if "jid" in clear_load:
                 self.event.fire_event(
-                    {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
+                    {**clear_load, **err},
+                    tagify([clear_load["jid"], "error"], "job"),  # TODO ?
                 )
             return err
         # All Token, Eauth, and non-root users must pass the authorization check
@@ -2435,7 +2438,7 @@ class ClearFuncs(TransportMethods):
                 if "jid" in clear_load:
                     self.event.fire_event(
                         {**clear_load, **err},
-                        tagify([clear_load["jid"], "error"], "job"),
+                        tagify([clear_load["jid"], "error"], "job"),  # TODO ?
                     )
                 return err
 
@@ -2476,7 +2479,7 @@ class ClearFuncs(TransportMethods):
         # Send it!
         # Copy the payload when firing event for now since it's adding a
         # __pub_stamp field.
-        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))  # TODO ?
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
@@ -2564,6 +2567,7 @@ class ClearFuncs(TransportMethods):
         TODO: This is really only bound by temporal cohesion
         and thus should be refactored even further.
         """
+        log.warning("PREP_PUB: %s %s", clear_load, extra)
         clear_load["jid"] = jid
         delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
 
@@ -2579,6 +2583,8 @@ class ClearFuncs(TransportMethods):
             "minions": minions,
             "missing": missing,
         }
+        if "metadata" in extra:
+            new_job_load["metadata"] = extra["metadata"]
 
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, tagify([clear_load["jid"], "new"], "job"))

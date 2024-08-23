@@ -101,7 +101,6 @@ def orchestrate(
        salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
 
     """
-
     try:
         orig_user = __opts__["user"]
         __opts__["user"] = __user__
@@ -125,6 +124,11 @@ def orchestrate(
     if orchestration_jid is None:
         orchestration_jid = salt.utils.jid.gen_jid(__opts__)
 
+    try:
+        metadata = __job_metadata__
+    except NameError:
+        metadata = None
+    log.warning("ST.ORCH %s", metadata)
     running = minion.functions["state.sls"](
         mods,
         test,
@@ -135,6 +139,7 @@ def orchestrate(
         pillar_enc=pillar_enc,
         __pub_jid=orchestration_jid,
         orchestration_jid=orchestration_jid,
+        metadata=metadata,
     )
     ret = {"data": {minion.opts["id"]: running}, "outputter": "highstate"}
     res = __utils__["state.check_result"](ret["data"])

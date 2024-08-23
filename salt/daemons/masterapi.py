@@ -1134,6 +1134,7 @@ class LocalFuncs:
             return runner_check
 
         # Authorized. Do the job!
+        log.warning("MASTERAPI RUNNER: %s", load)
         try:
             fun = load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
@@ -1196,11 +1197,15 @@ class LocalFuncs:
             "user": username,
         }
         try:
-            self.event.fire_event(data, salt.utils.event.tagify([jid, "new"], "wheel"))
+            self.event.fire_event(
+                data, salt.utils.event.tagify([jid, "new"], "wheel")
+            )  # TODO ?
             ret = self.wheel_.call_func(fun, **load)
             data["return"] = ret
             data["success"] = True
-            self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))
+            self.event.fire_event(
+                data, salt.utils.event.tagify([jid, "ret"], "wheel")
+            )  # TODO ?
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception occurred while introspecting %s", fun)
@@ -1210,7 +1215,9 @@ class LocalFuncs:
                 exc,
             )
             data["success"] = False
-            self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))
+            self.event.fire_event(
+                data, salt.utils.event.tagify([jid, "ret"], "wheel")
+            )  # TODO ?
             return {"tag": tag, "data": data}
 
     def mk_token(self, load):
@@ -1237,6 +1244,7 @@ class LocalFuncs:
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         """
+        log.warning("PUBLISH: %s", load)
         extra = load.get("kwargs", {})
 
         publisher_acl = salt.acl.PublisherACL(self.opts["publisher_acl_blacklist"])
@@ -1344,6 +1352,8 @@ class LocalFuncs:
             ),
             "minions": minions,
         }
+        if "metadata" in extra:
+            new_job_load["metadata"] = extra["metadata"]
 
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, "new_job")  # old dup event

@@ -1863,6 +1863,7 @@ def runner(
         salt master_minion saltutil.runner jobs.list_jobs
         salt master_minion saltutil.runner test.arg arg="['baz']" kwarg="{'foo': 'bar'}"
     """
+    log.warning("SALTUTIL.RUNNER: %s %s %s", arg, kwarg, kwargs)
     if arg is None:
         arg = []
     if kwarg is None:
@@ -1871,6 +1872,9 @@ def runner(
     jid = kwargs.pop("__orchestration_jid__", jid)
     saltenv = kwargs.pop("__env__", saltenv)
     pub_data["user"] = kwargs.pop("__pub_user", "UNKNOWN")
+    metadata = kwargs.pop("__job_metadata__", None)  # TODO expicit?
+    if metadata:
+        pub_data["metadata"] = metadata
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         kwarg.update(kwargs)
@@ -1891,10 +1895,14 @@ def runner(
         kwarg["orchestration_jid"] = jid
 
     if jid:
+        # TODO: metadata
         salt.utils.event.fire_args(
             __opts__,
             jid,
-            {"type": "runner", "name": name, "args": arg, "kwargs": kwarg},
+            dict(
+                {"type": "runner", "name": name, "args": arg, "kwargs": kwarg},
+                **({"metadata": metadata} if metadata else {}),
+            ),
             prefix="run",
         )
 
@@ -1943,7 +1951,9 @@ def wheel(name, *args, **kwargs):
         their return data.
 
     """
+    # import traceback; traceback.print_stack()
     jid = kwargs.pop("__orchestration_jid__", None)
+    metadata = kwargs.pop("__job_metadata__", None)  # TODO expicit?
     saltenv = kwargs.pop("__env__", "base")
 
     if __opts__["__role"] == "minion":
@@ -1963,6 +1973,8 @@ def wheel(name, *args, **kwargs):
         else:
             valid_kwargs[key] = val
 
+    if metadata:
+        pub_data["metadata"] = metadata
     try:
         if name in wheel_client.functions:
             aspec = salt.utils.args.get_function_argspec(wheel_client.functions[name])
@@ -1970,10 +1982,14 @@ def wheel(name, *args, **kwargs):
                 valid_kwargs["saltenv"] = saltenv
 
         if jid:
+            # TODO: metadata
             salt.utils.event.fire_args(
                 __opts__,
                 jid,
-                {"type": "wheel", "name": name, "args": valid_kwargs},
+                dict(
+                    {"type": "wheel", "name": name, "args": valid_kwargs},
+                    **({"metadata": metadata} if metadata else {}),
+                ),
                 prefix="run",
             )
 

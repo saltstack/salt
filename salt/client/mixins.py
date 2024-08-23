@@ -155,6 +155,7 @@ class SyncClientMixin(ClientStateMixin):
         """
         Execute a function through the master network interface.
         """
+        log.warning("MASTER_CALL: %s", kwargs)
         load = kwargs
         load["cmd"] = self.client
 
@@ -183,6 +184,7 @@ class SyncClientMixin(ClientStateMixin):
                 'eauth': 'pam',
             })
         """
+        log.warning("CMD_SYNC: %s", low)
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=True
         ) as event:
@@ -214,6 +216,7 @@ class SyncClientMixin(ClientStateMixin):
         """
         Execute a function
         """
+        log.warning("CMD: %s %s %s %s", fun, arg, kwarg, pub_data)
         if arg is None:
             arg = tuple()
         if not isinstance(arg, list) and not isinstance(arg, tuple):
@@ -247,6 +250,8 @@ class SyncClientMixin(ClientStateMixin):
         low = {"fun": fun, "arg": args, "kwarg": kwargs}
         if "user" in pub_data:
             low["__user__"] = pub_data["user"]
+        if "metadata" in pub_data:
+            low["metadata"] = pub_data["metadata"]
         return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
@@ -294,15 +299,19 @@ class SyncClientMixin(ClientStateMixin):
         # fire the mminion loading (if not already done) here
         # this is not to clutter the output with the module loading
         # if we have a high debug level.
+        log.warning("LOW: %s %s", fun, low)
         self.mminion  # pylint: disable=W0104
         jid = low.get("__jid__", salt.utils.jid.gen_jid(self.opts))
         tag = low.get("__tag__", salt.utils.event.tagify(jid, prefix=self.tag_prefix))
+        metadata = low.pop("metadata", None)  # low.get("metadata")
 
         data = {
             "fun": f"{self.client}.{fun}",
             "jid": jid,
             "user": low.get("__user__", "UNKNOWN"),
         }
+        if metadata is not None:
+            data["metadata"] = metadata
 
         if print_event:
             print_func = (
@@ -334,6 +343,8 @@ class SyncClientMixin(ClientStateMixin):
                 # teardown of event
                 "__jid_event__": weakref.proxy(namespaced_event),
             }
+            if "metadata" in data:
+                func_globals["__job_metadata__"] = copy.deepcopy(data["metadata"])
 
             try:
                 self_functions = copy.copy(self.functions)
@@ -421,14 +432,18 @@ class SyncClientMixin(ClientStateMixin):
 
             if self.store_job:
                 try:
+                    # TODO
                     salt.utils.job.store_job(
                         self.opts,
-                        {
-                            "id": self.opts["id"],
-                            "tgt": self.opts["id"],
-                            "jid": data["jid"],
-                            "return": data,
-                        },
+                        dict(
+                            {
+                                "id": self.opts["id"],
+                                "tgt": self.opts["id"],
+                                "jid": data["jid"],
+                                "return": data,
+                            },
+                            **({"metadata": metadata} if metadata else {}),
+                        ),
                         event=None,
                         mminion=self.mminion,
                     )
@@ -492,6 +507,7 @@ class AsyncClientMixin(ClientStateMixin):
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
         """
+        log.warning("PROC_F_R: %s %s", fun, low)
         if daemonize and not salt.utils.platform.spawning_platform():
             # Shutdown logging before daemonizing
             salt._logging.shutdown_logging()
@@ -534,6 +550,7 @@ class AsyncClientMixin(ClientStateMixin):
         Run this method in a multiprocess target to execute the function
         locally and fire the return data on the event bus
         """
+        log.warning("PROC_F: %s %s", fun, low)
         if daemonize and not salt.utils.platform.spawning_platform():
             # Shutdown logging before daemonizing
             salt._logging.shutdown_logging()
@@ -573,6 +590,7 @@ class AsyncClientMixin(ClientStateMixin):
             })
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         """
+        log.warning("CMD_ASYNC: %s", low)
         return self.master_call(**low)
 
     def _gen_async_pub(self, jid=None):
@@ -586,6 +604,7 @@ class AsyncClientMixin(ClientStateMixin):
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         """
+        log.warning("ASYNCHRONOUS: %s %s", fun, low)
         if local:
             proc_func = self._proc_function
         else:
