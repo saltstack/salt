@@ -55,7 +55,7 @@ def test_salt_versions_report_master(install_salt):
 
 
 @pytest.mark.skip_on_windows
-def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
+def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion, salt_master):
     """
     Test running test.versions_report on minion
     """
@@ -66,13 +66,33 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
         else:
             time.sleep(2)
 
-    print(f"DGM test_salt_user_mnion, salt_minion '{salt_minion}'", flush=True)
+    print(
+        f"DGM test_salt_user_minion, salt_minion '{salt_minion}' and is_running '{salt_minion.is_running()}'",
+        flush=True,
+    )
     assert salt_minion.is_running()
+
+    # DGM
+    # Make sure the master is running
+    for count in range(0, 30):
+        if salt_master.is_running():
+            break
+        else:
+            time.sleep(2)
+
+    print(
+        f"DGM test_salt_user_minion, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
+        flush=True,
+    )
+    assert salt_master.is_running()
+    # DGM
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
         "--timeout=300", "test.ping", minion_tgt=salt_minion.id, _timeout=300
     )
+    print(f"DGM test_salt_user_minion, test.ping ret '{ret}'", flush=True)
+
     assert ret.returncode == 0
     assert ret.data is True
     ret = salt_cli.run(

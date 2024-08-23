@@ -2,7 +2,7 @@
 Description=The Salt API
 Documentation=man:salt-api(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltproject.io/en/latest/contents.html
 After=network.target
-PartOf=salt-master.service
+# DGM PartOf=salt-master.service
 
 [Service]
 Type=notify
