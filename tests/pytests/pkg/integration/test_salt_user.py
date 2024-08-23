@@ -98,7 +98,10 @@ def test_salt_user_master(salt_master, install_salt):
         else:
             time.sleep(2)
 
-    print(f"DGM test_salt_user_master, salt_master '{salt_master}'", flush=True)
+    print(
+        f"DGM test_salt_user_master, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
+        flush=True,
+    )
     assert salt_master.is_running()
 
     match = False
