@@ -1,12 +1,13 @@
 import os.path
 import pathlib
 import subprocess
+import time
 
 import pytest
 from pytestskipmarkers.utils import platform
 
 
-# DGM @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
@@ -53,12 +54,19 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
-# DGM @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
     """
     Test running test.versions_report on minion
     """
     # Make sure the minion is running
+    for count in range(0, 30):
+        if salt_minion.is_running():
+            break
+        else:
+            time.sleep(2)
+
+    print(f"DGM test_salt_user_mnion, salt_minion '{salt_minion}'", flush=True)
     assert salt_minion.is_running()
 
     # Make sure we can ping the minion ...
@@ -78,6 +86,8 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
 
 
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 @pytest.mark.parametrize(
     "binary", ["master", "cloud", "syndic", "minion", "call", "api"]
 )
@@ -105,8 +115,8 @@ def test_compare_versions(binary, install_salt):
         )
 
 
-# DGM
 @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 @pytest.mark.parametrize(
     "symlink",
     [
@@ -134,8 +144,7 @@ def test_symlinks_created(version, symlink, install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
-@pytest.mark.skip_on_windows
-@pytest.mark.skip_on_darwin
+@pytest.mark.skip_unless_on_linux
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included

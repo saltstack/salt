@@ -2505,8 +2505,8 @@ def syndic_config(
         # DGM conf/suse/master has syndic_user for running syndic as a different user
         # DGM use urrently set it to 'salt'
         # DGM testing getting the master_opts user, and run syndic as that
-        "user": opts.get("syndic_user", opts["user"]),
-        # DGM test revert "user": opts.get("syndic_user", master_opts["user"]),
+        # DGM "user": opts.get("syndic_user", opts["user"]),
+        "user": opts.get("syndic_user", master_opts["user"]),
         "sock_dir": os.path.join(
             opts["cachedir"], opts.get("syndic_sock_dir", opts["sock_dir"])
         ),
