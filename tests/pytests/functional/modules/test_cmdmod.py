@@ -106,6 +106,8 @@ def test_run(cmdmod, grains):
         == "func-tests-minion-opts"
     )
     assert cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
+    assert cmdmod.run("cat", stdin="one\\ntwo", stdin_raw_newlines=False) == "one\ntwo"
+    assert cmdmod.run("cat", stdin="one\\ntwo", stdin_raw_newlines=True) == "one\\ntwo"
     assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=True) == "a:b"
 
 
