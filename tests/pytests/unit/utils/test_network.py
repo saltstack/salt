@@ -11,7 +11,7 @@ from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.windows_whitelisted,
 ]
 
 
@@ -722,13 +722,13 @@ def test_netlink_tool_remote_on_a():
         with patch("salt.utils.platform.is_linux", return_value=True):
             with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
                 remotes = network._netlink_tool_remote_on("4506", "local_port")
-                assert remotes == {"192.168.122.177", "::ffff:127.0.0.1"}
+                assert remotes == {"192.168.122.177", "127.0.0.1"}
 
 
 def test_netlink_tool_remote_on_b():
     with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
         remotes = network._netlink_tool_remote_on("4505", "remote_port")
-        assert remotes == {"127.0.0.1", "::ffff:1.2.3.4"}
+        assert remotes == {"127.0.0.1", "1.2.3.4"}
 
 
 def test_openbsd_remotes_on():
@@ -1430,6 +1430,7 @@ def test_isportopen_false():
     assert ret is False
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_isportopen():
     ret = network.isportopen("127.0.0.1", "22")
     assert ret == 0
@@ -1445,6 +1446,7 @@ def test_get_socket():
     assert ret.type == socket.SOCK_STREAM
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_ip_to_host(grains):
     ret = network.ip_to_host("127.0.0.1")
     if grains["oscodename"] == "Photon":
@@ -1506,6 +1508,7 @@ def test_rpad_ipv4_network(addr, expected):
     assert network.rpad_ipv4_network(addr) == expected
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_hw_addr(linux_interfaces_dict, freebsd_interfaces_dict):
 
     with patch(
@@ -1531,6 +1534,7 @@ def test_hw_addr(linux_interfaces_dict, freebsd_interfaces_dict):
         )
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_interface_and_ip(linux_interfaces_dict):
 
     with patch(
@@ -1557,6 +1561,7 @@ def test_interface_and_ip(linux_interfaces_dict):
         assert ret == 'Interface "dog" not in available interfaces: "eth0", "lo"'
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_subnets(linux_interfaces_dict):
 
     with patch(
@@ -1581,6 +1586,7 @@ def test_in_subnet(caplog):
     assert not ret
 
 
+@pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_ip_addrs(linux_interfaces_dict):
     with patch(
         "salt.utils.network.linux_interfaces",
