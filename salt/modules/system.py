@@ -633,7 +633,7 @@ def get_computer_name():
 
     .. code-block:: bash
 
-        salt '*' network.get_hostname
+        salt '*' system.get_computer_name
     """
     return __salt__["network.get_hostname"]()
 
