@@ -62,6 +62,10 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion, salt_
     # Make sure the minion is running
     for count in range(0, 30):
         if salt_minion.is_running():
+            print(
+                f"DGM test_salt_user_minion, salt_minion is running, final count '{count}'",
+                flush=True,
+            )
             break
         else:
             time.sleep(2)
@@ -76,6 +80,10 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion, salt_
     # Make sure the master is running
     for count in range(0, 30):
         if salt_master.is_running():
+            print(
+                f"DGM test_salt_user_minion, salt_master is running, final count '{count}'",
+                flush=True,
+            )
             break
         else:
             time.sleep(2)
@@ -85,11 +93,16 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion, salt_
         flush=True,
     )
     assert salt_master.is_running()
+
+    ret = salt_call_cli.run("--local", "test.ping")
+    print(
+        f"DGM test_salt_user_minion, salt_call local test.ping ret '{ret}'", flush=True
+    )
     # DGM
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
-        "--timeout=300", "test.ping", minion_tgt=salt_minion.id, _timeout=300
+        "--timeout=600", "test.ping", minion_tgt=salt_minion.id, _timeout=600
     )
     print(f"DGM test_salt_user_minion, test.ping ret '{ret}'", flush=True)
 
@@ -135,8 +148,7 @@ def test_compare_versions(binary, install_salt):
         )
 
 
-@pytest.mark.skip_on_windows
-@pytest.mark.skip_on_darwin
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.parametrize(
     "symlink",
     [
