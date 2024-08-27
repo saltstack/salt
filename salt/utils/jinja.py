@@ -22,7 +22,6 @@ from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
-import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -93,6 +92,8 @@ class SaltCacheLoader(BaseLoader):
             or not hasattr(self._file_client, "opts")
             or self._file_client.opts["file_roots"] != self.opts["file_roots"]
         ):
+            import salt.fileclient
+
             self._file_client = salt.fileclient.get_file_client(
                 self.opts, self.pillar_rend
             )

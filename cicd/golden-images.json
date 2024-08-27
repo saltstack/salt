@@ -49,26 +49,6 @@
     "is_windows": "false",
     "ssh_username": "arch"
   },
-  "centos-7-arm64": {
-    "ami": "ami-0ef52419c91cb0169",
-    "ami_description": "CI Image of CentOS 7 arm64",
-    "ami_name": "salt-project/ci/centos/7/arm64/20240509.1530",
-    "arch": "arm64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "m6g.large",
-    "is_windows": "false",
-    "ssh_username": "centos"
-  },
-  "centos-7": {
-    "ami": "ami-0973c8d1b91dcba5c",
-    "ami_description": "CI Image of CentOS 7 x86_64",
-    "ami_name": "salt-project/ci/centos/7/x86_64/20240509.1530",
-    "arch": "x86_64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "t3a.large",
-    "is_windows": "false",
-    "ssh_username": "centos"
-  },
   "debian-11-arm64": {
     "ami": "ami-0eff227d9a94d8692",
     "ami_description": "CI Image of Debian 11 arm64",

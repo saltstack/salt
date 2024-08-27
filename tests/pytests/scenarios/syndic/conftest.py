@@ -2,6 +2,8 @@ import logging
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 log = logging.getLogger(__name__)
 
 
@@ -14,6 +16,10 @@ def master(request, salt_factories):
         "interface": "127.0.0.1",
         "auto_accept": True,
         "order_masters": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "master",
@@ -49,10 +55,17 @@ def syndic(master, salt_factories):
         "auto_accept": True,
         "syndic_master": f"{addr}",
         "syndic_master_port": f"{ret_port}",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     minion_overrides = {
         "master": "127.0.0.2",
         "publish_port": f"{port}",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = master.salt_syndic_daemon(
         "syndic",
@@ -74,6 +87,9 @@ def minion(syndic, salt_factories):
     addr = syndic.master.config["interface"]
     config_overrides = {
         "master": f"{addr}:{port}",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = syndic.master.salt_minion_daemon(
         "minion",

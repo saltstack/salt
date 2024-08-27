@@ -1,12 +1,20 @@
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @pytest.fixture(scope="package")
 def salt_master_factory(salt_factories):
     factory = salt_factories.salt_master_daemon(
         random_string("reauth-master-"),
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
     )
     return factory
 
@@ -22,6 +30,11 @@ def salt_minion_factory(salt_master):
     factory = salt_master.salt_minion_daemon(
         random_string("reauth-minion-"),
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     return factory
 

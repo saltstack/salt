@@ -43,44 +43,57 @@ from salt.exceptions import (
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
+    UnsupportedAlgorithm,
 )
 
 try:
-    from M2Crypto import BIO, EVP, RSA
+    import cryptography.exceptions
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-    HAS_M2 = True
+    HAS_CRYPTOGRAPHY = True
 except ImportError:
-    HAS_M2 = False
-
-if not HAS_M2:
-    try:
-        from Cryptodome import Random
-        from Cryptodome.Cipher import AES, PKCS1_OAEP
-        from Cryptodome.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER
-        from Cryptodome.Hash import SHA
-        from Cryptodome.PublicKey import RSA
-        from Cryptodome.Signature import PKCS1_v1_5
-
-        HAS_CRYPTO = True
-    except ImportError:
-        HAS_CRYPTO = False
-
-if not HAS_M2 and not HAS_CRYPTO:
-    try:
-        # let this be imported, if possible
-        from Crypto import Random  # nosec
-        from Crypto.Cipher import AES, PKCS1_OAEP  # nosec
-        from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER  # nosec
-        from Crypto.Hash import SHA  # nosec
-        from Crypto.PublicKey import RSA  # nosec
-        from Crypto.Signature import PKCS1_v1_5  # nosec
-
-        HAS_CRYPTO = True
-    except ImportError:
-        HAS_CRYPTO = False
+    HAS_CRYPTOGRAPHY = False
 
 
 log = logging.getLogger(__name__)
+
+OAEP = "OAEP"
+PKCS1v15 = "PKCS1v15"
+
+SHA1 = "SHA1"
+SHA224 = "SHA224"
+
+OAEP_SHA1 = f"{OAEP}-{SHA1}"
+OAEP_SHA224 = f"{OAEP}-{SHA224}"
+
+PKCS1v15_SHA1 = f"{PKCS1v15}-{SHA1}"
+PKCS1v15_SHA224 = f"{PKCS1v15}-{SHA224}"
+
+
+VALID_HASHES = (
+    SHA1,
+    SHA224,
+)
+
+VALID_PADDING_FOR_SIGNING = (PKCS1v15,)
+VALID_PADDING_FOR_ENCRYPTION = (OAEP,)
+VALID_ENCRYPTION_ALGORITHMS = (
+    OAEP_SHA1,
+    OAEP_SHA224,
+)
+VALID_SIGNING_ALGORITHMS = (
+    PKCS1v15_SHA1,
+    PKCS1v15_SHA224,
+)
+
+
+def fips_enabled():
+    if HAS_CRYPTOGRAPHY:
+        import cryptography.hazmat.backends.openssl.backend
+
+        return cryptography.hazmat.backends.openssl.backend._fips_enabled
 
 
 def clean_key(key):
@@ -128,7 +141,7 @@ def dropfile(cachedir, user=None, master_id=""):
         os.rename(dfn_next, dfn)
 
 
-def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
+def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
     """
     Generate a RSA public keypair for use with salt
 
@@ -145,11 +158,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     priv = f"{base}.pem"
     pub = f"{base}.pub"
 
-    if HAS_M2:
-        gen = RSA.gen_key(keysize, 65537, lambda: None)
-    else:
-        salt.utils.crypt.reinit_crypto()
-        gen = RSA.generate(bits=keysize, e=65537)
+    gen = rsa.generate_private_key(e, keysize)
+
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
         # a key! Use the winner's key
@@ -164,24 +174,30 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
         )
 
     with salt.utils.files.set_umask(0o277):
-        if HAS_M2:
-            # if passphrase is empty or None use no cipher
-            if not passphrase:
-                gen.save_pem(priv, cipher=None)
+        with salt.utils.files.fopen(priv, "wb+") as f:
+            if passphrase:
+                enc = serialization.BestAvailableEncryption(passphrase.encode())
+                _format = serialization.PrivateFormat.TraditionalOpenSSL
+                if fips_enabled():
+                    _format = serialization.PrivateFormat.PKCS8
             else:
-                gen.save_pem(
-                    priv,
-                    cipher="des_ede3_cbc",
-                    callback=lambda x: salt.utils.stringutils.to_bytes(passphrase),
-                )
-        else:
-            with salt.utils.files.fopen(priv, "wb+") as f:
-                f.write(gen.exportKey("PEM", passphrase))
-    if HAS_M2:
-        gen.save_pub_key(pub)
-    else:
-        with salt.utils.files.fopen(pub, "wb+") as f:
-            f.write(gen.publickey().exportKey("PEM"))
+                enc = serialization.NoEncryption()
+                _format = serialization.PrivateFormat.TraditionalOpenSSL
+            pem = gen.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=_format,
+                encryption_algorithm=enc,
+            )
+            f.write(pem)
+
+    pubkey = gen.public_key()
+    with salt.utils.files.fopen(pub, "wb+") as f:
+        pem = pubkey.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        f.write(pem)
+
     os.chmod(priv, 0o400)
     if user:
         try:
@@ -197,81 +213,120 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     return priv
 
 
-class PrivateKey:
+class BaseKey:
+
+    @staticmethod
+    def parse_padding_for_signing(algorithm):
+        if algorithm not in VALID_SIGNING_ALGORITHMS:
+            raise UnsupportedAlgorithm(f"Invalid signing algorithm: {algorithm}")
+        _pad, _hash = algorithm.split("-", 1)
+        if _pad not in VALID_PADDING_FOR_SIGNING:
+            raise UnsupportedAlgorithm(f"Invalid padding algorithm: {_pad}")
+        return getattr(padding, _pad)
+
+    @staticmethod
+    def parse_padding_for_encryption(algorithm):
+        if algorithm not in VALID_ENCRYPTION_ALGORITHMS:
+            raise UnsupportedAlgorithm(f"Invalid encryption algorithm: {algorithm}")
+        _pad, _hash = algorithm.split("-", 1)
+        if _pad not in VALID_PADDING_FOR_ENCRYPTION:
+            raise UnsupportedAlgorithm(f"Invalid padding algorithm: {_pad}")
+        return getattr(padding, _pad)
+
+    @staticmethod
+    def parse_hash(algorithm):
+        if "-" not in algorithm:
+            raise UnsupportedAlgorithm(f"Invalid encryption algorithm: {algorithm}")
+        _pad, _hash = algorithm.split("-", 1)
+        if _hash not in VALID_HASHES:
+            raise Exception("Invalid hashing algorithm")
+        return getattr(hashes, _hash)
+
+
+class PrivateKey(BaseKey):
+
     def __init__(self, path, passphrase=None):
-        if HAS_M2:
-            self.key = RSA.load_key(path, lambda x: bytes(passphrase))
-        else:
-            with salt.utils.files.fopen(path) as f:
-                self.key = RSA.importKey(f.read(), passphrase)
+        self.key = get_rsa_key(path, passphrase)
 
     def encrypt(self, data):
-        if HAS_M2:
-            return self.key.private_encrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
-        else:
-            return salt.utils.rsax931.RSAX931Signer(self.key.exportKey("PEM")).sign(
-                data
+        pem = self.key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        return salt.utils.rsax931.RSAX931Signer(pem).sign(data)
+
+    def sign(self, data, algorithm=PKCS1v15_SHA1):
+        _padding = self.parse_padding_for_signing(algorithm)
+        _hash = self.parse_hash(algorithm)
+        try:
+            return self.key.sign(
+                salt.utils.stringutils.to_bytes(data), _padding(), _hash()
             )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
-    def sign(self, data):
-        if HAS_M2:
-            md = EVP.MessageDigest("sha1")
-            md.update(salt.utils.stringutils.to_bytes(data))
-            digest = md.final()
-            return self.key.sign(digest)
-        else:
-            signer = PKCS1_v1_5.new(self.key)
-            return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(data)))
+    def decrypt(self, data, algorithm=OAEP_SHA1):
+        _padding = self.parse_padding_for_encryption(algorithm)
+        _hash = self.parse_hash(algorithm)
+        try:
+            return self.key.decrypt(
+                data,
+                _padding(
+                    mgf=padding.MGF1(algorithm=_hash()),
+                    algorithm=_hash(),
+                    label=None,
+                ),
+            )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
 
-class PublicKey:
-    def __init__(self, path, _HAS_M2=HAS_M2):
-        self._HAS_M2 = _HAS_M2
-        if self._HAS_M2:
-            with salt.utils.files.fopen(path, "rb") as f:
-                data = f.read().replace(b"RSA ", b"")
-            bio = BIO.MemoryBuffer(data)
+class PublicKey(BaseKey):
+    def __init__(self, path):
+        with salt.utils.files.fopen(path, "rb") as fp:
             try:
-                self.key = RSA.load_pub_key_bio(bio)
-            except RSA.RSAError:
-                raise InvalidKeyError("Encountered bad RSA public key")
-        else:
-            with salt.utils.files.fopen(path) as f:
-                try:
-                    self.key = RSA.importKey(f.read())
-                except (ValueError, IndexError, TypeError):
-                    raise InvalidKeyError("Encountered bad RSA public key")
+                self.key = serialization.load_pem_public_key(fp.read())
+            except ValueError as exc:
+                raise InvalidKeyError("Invalid key")
 
-    def encrypt(self, data):
+    def encrypt(self, data, algorithm=OAEP_SHA1):
+        _padding = self.parse_padding_for_encryption(algorithm)
+        _hash = self.parse_hash(algorithm)
         bdata = salt.utils.stringutils.to_bytes(data)
-        if self._HAS_M2:
-            return self.key.public_encrypt(bdata, salt.crypt.RSA.pkcs1_oaep_padding)
-        else:
-            return salt.crypt.PKCS1_OAEP.new(self.key).encrypt(bdata)
-
-    def verify(self, data, signature):
-        if self._HAS_M2:
-            md = EVP.MessageDigest("sha1")
-            md.update(salt.utils.stringutils.to_bytes(data))
-            digest = md.final()
-            try:
-                return self.key.verify(digest, signature)
-            except RSA.RSAError as exc:
-                log.debug("Signature verification failed: %s", exc.args[0])
-                return False
-        else:
-            verifier = PKCS1_v1_5.new(self.key)
-            return verifier.verify(
-                SHA.new(salt.utils.stringutils.to_bytes(data)), signature
+        try:
+            return self.key.encrypt(
+                bdata,
+                _padding(
+                    mgf=padding.MGF1(algorithm=_hash()),
+                    algorithm=_hash(),
+                    label=None,
+                ),
             )
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
+
+    def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
+        _padding = self.parse_padding_for_signing(algorithm)
+        _hash = self.parse_hash(algorithm)
+        try:
+            self.key.verify(
+                salt.utils.stringutils.to_bytes(signature),
+                salt.utils.stringutils.to_bytes(data),
+                _padding(),
+                _hash(),
+            )
+        except cryptography.exceptions.InvalidSignature:
+            return False
+        return True
 
     def decrypt(self, data):
-        data = salt.utils.stringutils.to_bytes(data)
-        if HAS_M2:
-            return self.key.public_decrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
-        else:
-            verifier = salt.utils.rsax931.RSAX931Verifier(self.key.exportKey("PEM"))
-            return verifier.verify(data)
+        pem = self.key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        verifier = salt.utils.rsax931.RSAX931Verifier(pem)
+        return verifier.verify(data)
 
 
 @salt.utils.decorators.memoize
@@ -284,12 +339,15 @@ def _get_key_with_evict(path, timestamp, passphrase):
     modified then the params are different and the key is loaded from disk.
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
-    if HAS_M2:
-        key = RSA.load_key(path, lambda x: bytes(passphrase))
+    if passphrase:
+        password = passphrase.encode()
     else:
-        with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read(), passphrase)
-    return key
+        password = None
+    with salt.utils.files.fopen(path, "rb") as f:
+        return serialization.load_pem_private_key(
+            f.read(),
+            password=password,
+        )
 
 
 def get_rsa_key(path, passphrase):
@@ -312,61 +370,29 @@ def get_rsa_pub_key(path):
     Read a public key off the disk.
     """
     log.debug("salt.crypt.get_rsa_pub_key: Loading public key")
-    if HAS_M2:
-        with salt.utils.files.fopen(path, "rb") as f:
-            data = f.read().replace(b"RSA ", b"")
-        bio = BIO.MemoryBuffer(data)
-        try:
-            key = RSA.load_pub_key_bio(bio)
-        except RSA.RSAError:
-            raise InvalidKeyError("Encountered bad RSA public key")
-    else:
-        with salt.utils.files.fopen(path) as f:
-            try:
-                key = RSA.importKey(f.read())
-            except (ValueError, IndexError, TypeError):
-                raise InvalidKeyError("Encountered bad RSA public key")
-    return key
+    try:
+        with salt.utils.files.fopen(path, "rb") as fp:
+            return serialization.load_pem_public_key(fp.read())
+    except ValueError:
+        raise InvalidKeyError("Encountered bad RSA public key")
+    except cryptography.exceptions.UnsupportedAlgorithm:
+        raise InvalidKeyError("Unsupported key algorithm")
 
 
-def sign_message(privkey_path, message, passphrase=None):
+def sign_message(privkey_path, message, passphrase=None, algorithm=PKCS1v15_SHA1):
     """
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     """
-    key = get_rsa_key(privkey_path, passphrase)
-    log.debug("salt.crypt.sign_message: Signing message.")
-    if HAS_M2:
-        md = EVP.MessageDigest("sha1")
-        md.update(salt.utils.stringutils.to_bytes(message))
-        digest = md.final()
-        return key.sign(digest)
-    else:
-        signer = PKCS1_v1_5.new(key)
-        return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(message)))
+    return PrivateKey(privkey_path, passphrase).sign(message, algorithm)
 
 
-def verify_signature(pubkey_path, message, signature):
+def verify_signature(pubkey_path, message, signature, algorithm=PKCS1v15_SHA1):
     """
     Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     """
     log.debug("salt.crypt.verify_signature: Loading public key")
-    pubkey = get_rsa_pub_key(pubkey_path)
-    log.debug("salt.crypt.verify_signature: Verifying signature")
-    if HAS_M2:
-        md = EVP.MessageDigest("sha1")
-        md.update(salt.utils.stringutils.to_bytes(message))
-        digest = md.final()
-        try:
-            return pubkey.verify(digest, signature)
-        except RSA.RSAError as exc:
-            log.debug("Signature verification failed: %s", exc.args[0])
-            return False
-    else:
-        verifier = PKCS1_v1_5.new(pubkey)
-        return verifier.verify(
-            SHA.new(salt.utils.stringutils.to_bytes(message)), signature
-        )
+    return PublicKey(pubkey_path).verify(message, signature, algorithm)
 
 
 def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
@@ -400,49 +426,12 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     return True
 
 
-def private_encrypt(key, message):
-    """
-    Generate an M2Crypto-compatible signature
-
-    :param Crypto.PublicKey.RSA._RSAobj key: The RSA key object
-    :param str message: The message to sign
-    :rtype: str
-    :return: The signature, or an empty string if the signature operation failed
-    """
-    if HAS_M2:
-        return key.private_encrypt(message, salt.utils.rsax931.RSA_X931_PADDING)
-    else:
-        signer = salt.utils.rsax931.RSAX931Signer(key.exportKey("PEM"))
-        return signer.sign(message)
-
-
-def public_decrypt(pub, message):
-    """
-    Verify an M2Crypto-compatible signature
-
-    :param Crypto.PublicKey.RSA._RSAobj key: The RSA public key object
-    :param str message: The signed message to verify
-    :rtype: str
-    :return: The message (or digest) recovered from the signature, or an
-        empty string if the verification failed
-    """
-    if HAS_M2:
-        return pub.public_decrypt(message, salt.utils.rsax931.RSA_X931_PADDING)
-    else:
-        verifier = salt.utils.rsax931.RSAX931Verifier(pub.exportKey("PEM"))
-        return verifier.verify(message)
-
-
 def pwdata_decrypt(rsa_key, pwdata):
-    if HAS_M2:
-        key = RSA.load_key_string(salt.utils.stringutils.to_bytes(rsa_key, "ascii"))
-        password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
-    else:
-        dsize = SHA.digest_size
-        sentinel = Random.new().read(15 + dsize)
-        key_obj = RSA.importKey(rsa_key)
-        key_obj = PKCS1_v1_5_CIPHER.new(key_obj)
-        password = key_obj.decrypt(pwdata, sentinel)
+    key = serialization.load_pem_private_key(rsa_key.encode(), password=None)
+    password = key.decrypt(
+        pwdata,
+        padding.PKCS1v15(),
+    )
     return salt.utils.stringutils.to_unicode(password)
 
 
@@ -580,18 +569,21 @@ class MasterKeys(dict):
                 self.opts.get("user"),
                 passphrase,
             )
-        if HAS_M2:
-            key_error = RSA.RSAError
-        else:
-            key_error = ValueError
         try:
-            key = get_rsa_key(path, passphrase)
-        except key_error as e:
+            key = PrivateKey(path, passphrase)
+        except ValueError as e:
+            message = f"Unable to read key: {path}; file may be corrupt"
+        except TypeError as e:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
-            log.error(message)
-            raise MasterExit(message)
-        log.debug("Loaded %s key: %s", name, path)
-        return key
+        except InvalidKeyError as e:
+            message = f"Unable to read key: {path}; key contains unsupported algorithm"
+        except cryptography.exceptions.UnsupportedAlgorithm as e:
+            message = f"Unable to read key: {path}; key contains unsupported algorithm"
+        else:
+            log.debug("Loaded %s key: %s", name, path)
+            return key
+        log.error(message)
+        raise MasterExit(message)
 
     def get_pub_str(self, name="master"):
         """
@@ -607,12 +599,14 @@ class MasterKeys(dict):
         # if not os.path.isfile(path):
         #     raise RuntimeError(f"The key {path} does not exist.")
         if not os.path.isfile(path):
-            key = self.__get_keys()
-            if HAS_M2:
-                key.save_pub_key(path)
-            else:
-                with salt.utils.files.fopen(path, "wb+") as wfh:
-                    wfh.write(key.publickey().exportKey("PEM"))
+            pubkey = self.key.public_key()
+            with salt.utils.files.fopen(path, "wb+") as f:
+                f.write(
+                    pubkey.public_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    )
+                )
         with salt.utils.files.fopen(path) as rfh:
             return clean_key(rfh.read())
 
@@ -653,13 +647,6 @@ class MasterKeys(dict):
             # permissions
             log.debug("Writing shared key %s", shared_pub)
             shared_pub.write_bytes(master_pub.read_bytes())
-
-    def master_private_decrypt(self, data):
-        if HAS_M2:
-            return self.master_key.private_decrypt(data, RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(self.master_key)
-            return cipher.decrypt(data)
 
 
 class AsyncAuth:
@@ -729,10 +716,7 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-
-        salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -864,6 +848,18 @@ class AsyncAuth:
                             "Authentication wait time is %s", acceptance_wait_time
                         )
                     continue
+                elif creds == "bad enc algo":
+                    log.error(
+                        "This minion is using a encryption algorithm that is "
+                        "not supported by it's Master. Please check your minion configutation."
+                    )
+                    break
+                elif creds == "bad sig algo":
+                    log.error(
+                        "This minion is using a signing algorithm that is "
+                        "not supported by it's Master. Please check your minion configutation."
+                    )
+                    break
                 break
             if not isinstance(creds, dict) or "aes" not in creds:
                 if self.opts.get("detect_mode") is True:
@@ -965,6 +961,13 @@ class AsyncAuth:
         if not isinstance(payload, dict) or "load" not in payload:
             log.error("Sign-in attempt failed: %s", payload)
             return False
+        elif isinstance(payload["load"], dict) and "ret" in payload["load"]:
+            if payload["load"]["ret"] == "bad enc algo":
+                log.error("Sign-in attempt failed: %s", payload)
+                return "bad enc algo"
+            elif payload["load"]["ret"] == "bad sig algo":
+                log.error("Sign-in attempt failed: %s", payload)
+                return "bad sig algo"
 
         clear_signed_data = payload["load"]
         clear_signature = payload["sig"]
@@ -991,7 +994,11 @@ class AsyncAuth:
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
         if os.path.exists(master_pubkey_path) and not PublicKey(
             master_pubkey_path
-        ).verify(clear_signed_data, clear_signature):
+        ).verify(
+            clear_signed_data,
+            clear_signature,
+            algorithm=self.opts["signing_algorithm"],
+        ):
             log.critical("The payload signature did not validate.")
             raise SaltClientError("Invalid signature")
 
@@ -1078,7 +1085,7 @@ class AsyncAuth:
                 self.opts["keysize"],
                 self.opts.get("user"),
             )
-        key = get_rsa_key(self.rsa_path, None)
+        key = PrivateKey(self.rsa_path, None)
         log.debug("Loaded minion key: %s", self.rsa_path)
         return key
 
@@ -1091,7 +1098,7 @@ class AsyncAuth:
         :return: Encrypted token
         :rtype: str
         """
-        return private_encrypt(self.get_keys(), clear_tok)
+        return self.get_keys().encrypt(clear_tok)
 
     def minion_sign_in_payload(self):
         """
@@ -1106,6 +1113,8 @@ class AsyncAuth:
         payload["cmd"] = "_auth"
         payload["id"] = self.opts["id"]
         payload["nonce"] = uuid.uuid4().hex
+        payload["enc_algo"] = self.opts["encryption_algorithm"]
+        payload["sig_algo"] = self.opts["signing_algorithm"]
         if "autosign_grains" in self.opts:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:
@@ -1113,16 +1122,14 @@ class AsyncAuth:
             payload["autosign_grains"] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-            pub = get_rsa_pub_key(pubkey_path)
-            if HAS_M2:
-                payload["token"] = pub.public_encrypt(
-                    self.token, RSA.pkcs1_oaep_padding
-                )
-            else:
-                cipher = PKCS1_OAEP.new(pub)
-                payload["token"] = cipher.encrypt(self.token)
-        except Exception:  # pylint: disable=broad-except
-            pass
+            pub = PublicKey(pubkey_path)
+            payload["token"] = pub.encrypt(
+                self.token, self.opts["encryption_algorithm"]
+            )
+        except FileNotFoundError:
+            log.debug("Master public key not found")
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("Exception while encrypting token %s", exc)
         with salt.utils.files.fopen(self.pub_path) as f:
             payload["pub"] = clean_key(f.read())
         return payload
@@ -1154,25 +1161,19 @@ class AsyncAuth:
             log.warning("Auth Called: %s", "".join(traceback.format_stack()))
         else:
             log.debug("Decrypting the current master AES key")
+
         key = self.get_keys()
-        if HAS_M2:
-            key_str = key.private_decrypt(payload["aes"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            key_str = cipher.decrypt(payload["aes"])
+        key_str = key.decrypt(payload["aes"], self.opts["encryption_algorithm"])
         if "sig" in payload:
             m_path = os.path.join(self.opts["pki_dir"], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    mkey = get_rsa_pub_key(m_path)
+                    mkey = PublicKey(m_path)
                 except Exception:  # pylint: disable=broad-except
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
                 digest = salt.utils.stringutils.to_bytes(digest)
-                if HAS_M2:
-                    m_digest = public_decrypt(mkey, payload["sig"])
-                else:
-                    m_digest = public_decrypt(mkey.publickey(), payload["sig"])
+                m_digest = mkey.decrypt(payload["sig"])
                 if m_digest != digest:
                     return "", ""
         else:
@@ -1184,12 +1185,7 @@ class AsyncAuth:
             return key_str.split("_|-")
         else:
             if "token" in payload:
-                if HAS_M2:
-                    token = key.private_decrypt(
-                        payload["token"], RSA.pkcs1_oaep_padding
-                    )
-                else:
-                    token = cipher.decrypt(payload["token"])
+                token = key.decrypt(payload["token"], self.opts["encryption_algorithm"])
                 return key_str, token
             elif not master_pub:
                 return key_str, ""
@@ -1209,7 +1205,12 @@ class AsyncAuth:
             )
 
             if os.path.isfile(path):
-                res = verify_signature(path, message, binascii.a2b_base64(sig))
+                res = verify_signature(
+                    path,
+                    message,
+                    binascii.a2b_base64(sig),
+                    algorithm=self.opts["signing_algorithm"],
+                )
             else:
                 log.error(
                     "Verification public key %s does not exist. You need to "
@@ -1657,15 +1658,10 @@ class Crypticle:
         pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
         data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
         iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
-        if HAS_M2:
-            cypher = EVP.Cipher(
-                alg="aes_192_cbc", key=aes_key, iv=iv_bytes, op=1, padding=False
-            )
-            encr = cypher.update(data)
-            encr += cypher.final()
-        else:
-            cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
-            encr = cypher.encrypt(data)
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
+        encryptor = cipher.encryptor()
+        encr = encryptor.update(data)
+        encr += encryptor.finalize()
         data = iv_bytes + encr
         sig = hmac.new(hmac_key, data, hashlib.sha256).digest()
         return data + sig
@@ -1684,7 +1680,6 @@ class Crypticle:
             log.debug("Failed to authenticate message")
             raise AuthenticationError("message authentication failed")
         result = 0
-
         for zipped_x, zipped_y in zip(mac_bytes, sig):
             result |= zipped_x ^ zipped_y
         if result != 0:
@@ -1692,15 +1687,9 @@ class Crypticle:
             raise AuthenticationError("message authentication failed")
         iv_bytes = data[: self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE :]
-        if HAS_M2:
-            cypher = EVP.Cipher(
-                alg="aes_192_cbc", key=aes_key, iv=iv_bytes, op=0, padding=False
-            )
-            encr = cypher.update(data)
-            data = encr + cypher.final()
-        else:
-            cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
-            data = cypher.decrypt(data)
+        cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv_bytes))
+        decryptor = cipher.decryptor()
+        data = decryptor.update(data) + decryptor.finalize()
         return data[: -data[-1]]
 
     def dumps(self, obj, nonce=None):

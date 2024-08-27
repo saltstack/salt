@@ -5,6 +5,8 @@ import subprocess
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 log = logging.getLogger(__name__)
 
 
@@ -20,6 +22,10 @@ def salt_mm_master_1(request, salt_factories):
     config_overrides = {
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "mm-master-1",
@@ -55,6 +61,10 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
     config_overrides = {
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -103,6 +113,9 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": True,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_mm_master_1.salt_minion_daemon(
         "mm-minion-1",

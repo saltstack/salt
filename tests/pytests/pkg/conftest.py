@@ -12,7 +12,7 @@ from saltfactories.utils import random_string
 
 import salt.config
 import salt.utils.files
-from tests.conftest import CODE_DIR
+from tests.conftest import CODE_DIR, FIPS_TESTRUN
 from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkgInstall
 
 log = logging.getLogger(__name__)
@@ -298,6 +298,9 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
             },
         },
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
         "open_mode": True,
     }
     salt_user_in_config_file = False
@@ -449,6 +452,8 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         "open_mode": True,
     }
     if platform.is_windows():

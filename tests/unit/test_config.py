@@ -9,6 +9,7 @@ import textwrap
 import pytest
 
 import salt.config
+import salt.crypt
 import salt.minion
 import salt.syspaths
 import salt.utils.files
@@ -1797,6 +1798,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "worker_threads": 5,
             "hash_type": "sha256",
             "log_file": "foo.log",
+            # Crypto config for minion
+            "encryption_algorithm": salt.crypt.OAEP_SHA1,
+            "signing_algorithm": salt.crypt.PKCS1v15_SHA1,
+            # Crypto config for master
+            "publish_signing_algorithm": salt.crypt.PKCS1v15_SHA1,
         }
         ret.update(kwargs)
         return ret

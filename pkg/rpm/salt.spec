@@ -10,8 +10,9 @@
 %define __brp_python_hardlink /usr/bin/true
 
 # Disable private libraries from showing in provides
-%global __provides_exclude_from ^lib/.*\\.so.*$
-%global __requires_exclude_from ^lib/.*\\.so.*$
+%global __to_exclude .*\\.so.*
+%global __provides_exclude_from ^.*$
+%global __requires_exclude_from ^.*$
 %define _source_payload w2.gzdio
 %define _binary_payload w2.gzdio
 %define _SALT_GROUP salt

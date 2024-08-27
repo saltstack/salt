@@ -5,6 +5,8 @@ import time
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.skip_on_freebsd(reason="Processes are not properly killed on FreeBSD"),
@@ -36,6 +38,9 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
         "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_mm_failover_master_1.salt_minion_daemon(
         "mm-failover-pki-minion-1",

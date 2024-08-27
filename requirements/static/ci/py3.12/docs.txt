@@ -53,6 +53,10 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
+croniter==2.0.5 ; sys_platform != "win32"
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 cryptography==42.0.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -195,6 +199,7 @@ python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
+    #   croniter
 python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -202,6 +207,7 @@ python-gnupg==0.5.2
 pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   croniter
     #   tempora
 pyyaml==6.0.1
     # via
@@ -212,7 +218,7 @@ pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

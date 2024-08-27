@@ -70,8 +70,9 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
@@ -97,6 +98,8 @@ jobs:
         uses: ./.github/actions/setup-python-tools-scripts
         with:
           cache-prefix: ${{ inputs.cache-prefix }}
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
 
       - name: Generate Test Matrix
         id: generate-matrix
@@ -159,7 +162,7 @@ jobs:
 
       - name: PyPi Proxy
         run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -308,6 +311,8 @@ jobs:
     needs:
       - test
       - generate-matrix
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
       - name: Checkout Source Code

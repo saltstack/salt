@@ -1,6 +1,8 @@
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @pytest.fixture(scope="package")
 def salt_master_factory(request, salt_factories):
@@ -10,6 +12,10 @@ def salt_master_factory(request, salt_factories):
     }
     config_overrides = {
         "interface": "127.0.0.1",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     return salt_factories.salt_master_daemon(

@@ -28,6 +28,8 @@ cherrypy==18.8.0
     # via -r requirements/base.txt
 contextvars==2.4
     # via -r requirements/base.txt
+croniter==2.0.5 ; sys_platform != "win32"
+    # via -r requirements/base.txt
 cryptography==42.0.5
     # via
     #   -r requirements/base.txt
@@ -98,16 +100,20 @@ pydantic==2.6.4
 pyopenssl==24.0.0
     # via -r requirements/base.txt
 python-dateutil==2.8.2
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   croniter
 python-gnupg==0.5.2
     # via -r requirements/base.txt
 pytz==2024.1
-    # via tempora
+    # via
+    #   croniter
+    #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via -r requirements/base.txt
 setproctitle==1.3.2
     # via -r requirements/base.txt

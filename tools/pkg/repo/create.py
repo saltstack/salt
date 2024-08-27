@@ -435,7 +435,7 @@ def rpm(
 
     createrepo = shutil.which("createrepo")
     if createrepo is None:
-        container = "ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9"
+        container = "ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9"
         ctx.info(f"Using docker container '{container}' to call 'createrepo'...")
         uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
         gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
@@ -493,7 +493,7 @@ def rpm(
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
-            distro_name = "RHEL/CentOS"
+            distro_name = "RHEL"
         else:
             distro_name = distro.capitalize()
 

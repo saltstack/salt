@@ -1602,10 +1602,12 @@ def _build_cert(
     ca_server=None, signing_policy=None, signing_private_key=None, **kwargs
 ):
     final_kwargs = copy.deepcopy(kwargs)
+    final_kwargs["signing_private_key"] = signing_private_key
     x509util.merge_signing_policy(
         __salt__["x509.get_signing_policy"](signing_policy, ca_server=ca_server),
         final_kwargs,
     )
+    signing_private_key = final_kwargs.pop("signing_private_key")
 
     builder, _, private_key_loaded, signing_cert = x509util.build_crt(
         signing_private_key,

@@ -17,6 +17,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import Version
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -236,6 +237,10 @@ def salt_secondary_master(request, salt_factories):
         "fileserver_followsymlinks": False,
         "publish_port": publish_port,
         "ret_port": ret_port,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -258,6 +263,9 @@ def salt_secondary_minion(salt_secondary_master):
     config_overrides = {
         "master": salt_secondary_master.config["interface"],
         "master_port": salt_secondary_master.config["ret_port"],
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_secondary_master.salt_minion_daemon(

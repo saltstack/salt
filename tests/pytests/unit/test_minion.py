@@ -740,38 +740,6 @@ def test_gen_modules_executors(minion_opts):
         minion.destroy()
 
 
-def test_reinit_crypto_on_fork(minion_opts):
-    """
-    Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
-    """
-    minion_opts["multiprocessing"] = True
-    with patch("salt.utils.process.default_signals"):
-
-        io_loop = tornado.ioloop.IOLoop()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
-
-        job_data = {"jid": "test-jid", "fun": "test.ping"}
-
-        def mock_start(self):
-            # pylint: disable=comparison-with-callable
-            assert (
-                len(
-                    [
-                        x
-                        for x in self._after_fork_methods
-                        if x[0] == salt.utils.crypt.reinit_crypto
-                    ]
-                )
-                == 1
-            )
-            # pylint: enable=comparison-with-callable
-
-        with patch.object(
-            salt.utils.process.SignalHandlingProcess, "start", mock_start
-        ):
-            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
-
-
 def test_minion_manage_schedule(minion_opts):
     """
     Tests that the manage_schedule will call the add function, adding
