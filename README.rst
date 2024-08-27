@@ -10,9 +10,9 @@
    :alt: PyPi Package Downloads
    :target: https://lgtm.com/projects/g/saltstack/salt/context:python
 
-.. image:: https://img.shields.io/badge/slack-SaltProject-blue.svg?logo=slack
+.. image:: https://img.shields.io/badge/discord-SaltProject-blue.svg?logo=discord
    :alt: Salt Project Discord Community
-   :target: https://discord.gg/hCysSRaV
+   :target: https://discord.com/invite/J7b7EscrAs
 
 .. image:: https://img.shields.io/twitch/status/saltprojectoss
    :alt: Salt Project Twitch Channel
@@ -179,7 +179,7 @@ used by external modules.
 A complete list of attributions and dependencies can be found here:
 `salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
-.. _Salt Project Community Discord: https://discord.gg/hCysSRaV
+.. _Salt Project Community Discord: https://discord.com/invite/J7b7EscrAs
 .. _VMware Aria Automation Config: https://www.vmware.com/products/vrealize-automation/saltstack-config.html
 .. _Latest Salt Documentation: https://docs.saltproject.io/en/latest/
 .. _Open an issue: https://github.com/saltstack/salt/issues/new/choose
