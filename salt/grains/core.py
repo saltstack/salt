@@ -1868,6 +1868,7 @@ _OS_FAMILY_MAP = {
     "SLES_SAP": "Suse",
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
+    "Manjaro ARM": "Arch",
     "Antergos": "Arch",
     "EndeavourOS": "Arch",
     "ALT": "RedHat",

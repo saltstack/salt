@@ -8,14 +8,11 @@ def install():
     pytest.helpers.clean_env()
     # Create an existing config
     pytest.helpers.existing_config()
-
     # Create a custom config
     pytest.helpers.custom_config()
-
-    pytest.helpers.run_command(
-        [pytest.INST_BIN, "/custom-config=custom_conf", "/minion-name=cli_minion"]
-    )
-    yield
+    args = ["/custom-config=custom_conf", "/minion-name=cli_minion"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 

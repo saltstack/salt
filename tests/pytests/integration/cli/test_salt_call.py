@@ -1,18 +1,24 @@
 import copy
 import logging
 import os
+import pathlib
 import pprint
 import re
+import shutil
 import sys
 
 import pytest
+from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
+import tests.conftest
+import tests.support.helpers
+from tests.conftest import FIPS_TESTRUN
+from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.core_test,
@@ -95,7 +101,7 @@ def test_local_salt_call(salt_call_cli):
         assert contents.count("foo") == 1, contents
 
 
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.skip_on_windows(reason=tests.support.helpers.PRE_PYTEST_SKIP_REASON)
 def test_user_delete_kw_output(salt_call_cli):
     ret = salt_call_cli.run("-d", "user.delete", _timeout=120)
     assert ret.returncode == 0
@@ -126,7 +132,7 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     assert expected_comment in ret.stdout
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 def test_issue_15074_output_file_append(salt_call_cli):
 
     with pytest.helpers.temp_file(name="issue-15074") as output_file_append:
@@ -154,7 +160,7 @@ def test_issue_15074_output_file_append(salt_call_cli):
         assert second_run_output == first_run_output + first_run_output
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 def test_issue_14979_output_file_permissions(salt_call_cli):
     with pytest.helpers.temp_file(name="issue-14979") as output_file:
         with salt.utils.files.set_umask(0o077):
@@ -307,7 +313,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
             assert "Failed to setup the Syslog logging handler" in ret.stderr
 
 
-@PRE_PYTEST_SKIP
+@tests.support.helpers.PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows
 def test_return(salt_call_cli, salt_run_cli):
     command = "echo returnTOmaster"
@@ -429,3 +435,99 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
     assert "test" in ret.data
     assert ret.data["test"] == "'test' is not available."
     assert "test.echo" in ret.data
+
+
+@pytest.fixture
+def master_id_alt():
+    master_id = random_string("master-")
+    yield master_id
+
+
+@pytest.fixture
+def minion_id_alt():
+    master_id = random_string("minion-")
+    yield master_id
+
+
+@pytest.fixture
+def salt_master_alt(salt_factories, tmp_path, master_id_alt):
+    """
+    A running salt-master fixture
+    """
+    root_dir = salt_factories.get_root_dir_for_daemon(master_id_alt)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
+    extension_modules_path = str(root_dir / "extension_modules")
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+    cache = pathlib.Path(extension_modules_path) / "cache"
+    cache.mkdir()
+    localfs = cache / "localfs.py"
+    localfs.write_text(
+        tests.support.helpers.dedent(
+            """
+        from salt.exceptions import SaltClientError
+        def store(bank, key, data): # , cachedir):
+            raise SaltClientError("TEST")
+        """
+        )
+    )
+    factory = salt_factories.salt_master_daemon(
+        master_id_alt,
+        defaults={
+            "root_dir": str(root_dir),
+            "extension_modules": extension_modules_path,
+            "auto_accept": True,
+        },
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    with factory.pillar_tree.base.temp_file("cve_2024_37088.sls", "foobar: bang"):
+        with factory.state_tree.base.temp_file(
+            "cve_2024_37088.sls",
+            """
+            # cvs_2024_37088.sls
+            {{%- set var = salt ['pillar.get']('foobar', 'state default') %}}
+
+            test:
+              file.managed:
+                - name: {0}
+                - contents: {{{{ var }}}}
+            """.format(
+                tmp_path / "cve_2024_37088.txt"
+            ),
+        ):
+            with factory.started():
+                yield factory
+
+
+@pytest.fixture
+def salt_call_alt(salt_master_alt, minion_id_alt):
+    minion_factory = salt_master_alt.salt_minion_daemon(
+        minion_id_alt,
+        overrides={
+            "fips_mode": tests.conftest.FIPS_TESTRUN,
+            "encryption_algorithm": (
+                "OAEP-SHA224" if tests.conftest.FIPS_TESTRUN else "OAEP-SHA1"
+            ),
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if tests.conftest.FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    return minion_factory.salt_call_cli()
+
+
+def test_cve_2024_37088(salt_master_alt, salt_call_alt, caplog):
+    with caplog.at_level(logging.ERROR):
+        ret = salt_call_alt.run("state.sls", "cve_2024_37088")
+        assert ret.returncode == 1
+        assert ret.data is None
+        assert "Got a bad pillar from master, type str, expecting dict" in caplog.text

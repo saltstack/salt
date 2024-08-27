@@ -1870,15 +1870,7 @@ def ci_test_onedir_pkgs(session):
             "--upgrade",
             "--no-uninstall",
         ],
-        "upgrade-classic": [
-            "--upgrade",
-            "--no-uninstall",
-        ],
         "downgrade": [
-            "--downgrade",
-            "--no-uninstall",
-        ],
-        "downgrade-classic": [
             "--downgrade",
             "--no-uninstall",
         ],
@@ -1911,9 +1903,6 @@ def ci_test_onedir_pkgs(session):
         "ONEDIR_TESTRUN": "1",
         "PKG_TEST_TYPE": chunk,
     }
-
-    if chunk in ("upgrade-classic", "downgrade-classic"):
-        cmd_args.append("--classic")
 
     pytest_args = (
         common_pytest_args[:]
@@ -1982,8 +1971,6 @@ def ci_test_onedir_pkgs(session):
         )
         if "downgrade" in chunk:
             pytest_args.append("--use-prev-version")
-        if chunk in ("upgrade-classic", "downgrade-classic"):
-            pytest_args.append("--classic")
         if append_tests_path:
             pytest_args.append("tests/pytests/pkg/")
         try:
@@ -2006,8 +1993,6 @@ def ci_test_onedir_pkgs(session):
             )
             if "downgrade" in chunk:
                 pytest_args.append("--use-prev-version")
-            if chunk in ("upgrade-classic", "downgrade-classic"):
-                pytest_args.append("--classic")
             if append_tests_path:
                 pytest_args.append("tests/pytests/pkg/")
             _pytest(

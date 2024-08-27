@@ -1231,6 +1231,39 @@ def test_Parrot_OS_grains():
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_manjaro_arm_grains():
+    """
+    Test if OS grains are parsed correctly in Manjaro ARM
+    """
+    # /etc/os-release data taken from ParrotOS 5.1
+    _os_release_data = {
+        "NAME": "Manjaro ARM",
+        "ID": "manjaro-arm",
+        "ID_LIKE": "manjaro arch",
+        "PRETTY_NAME": "Manjaro ARM",
+        "ANSI_COLOR": "1;32",
+        "HOME_URL": "https://www.manjaro.org/",
+        "SUPPORT_URL": "https://forum.manjaro.org/c/arm/",
+        "LOGO": "manjarolinux",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("Manjaro ARM", "24.03", "n/a"),
+    }
+
+    expectation = {
+        "os": "Manjaro ARM",
+        "os_family": "Arch",
+        "oscodename": "Manjaro ARM",
+        "osfullname": "Manjaro ARM",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "Manjaro ARM-24",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
     with patch("salt.grains.core.hostname"), patch(

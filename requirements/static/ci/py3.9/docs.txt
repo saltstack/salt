@@ -16,7 +16,7 @@ autocommand==2.2.2
     #   jaraco.text
 babel==2.12.1
     # via sphinx
-certifi==2023.07.22
+certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
@@ -123,7 +123,7 @@ pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx

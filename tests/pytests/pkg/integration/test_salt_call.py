@@ -13,10 +13,12 @@ def test_salt_call_local(salt_call_cli):
     assert ret.data is True
 
 
-def test_salt_call(salt_call_cli):
+def test_salt_call(salt_call_cli, salt_master):
     """
     Test salt-call test.ping
     """
+    assert salt_master.is_running()
+
     ret = salt_call_cli.run("test.ping")
     assert ret.returncode == 0
     assert ret.data is True
@@ -44,10 +46,12 @@ def state_name(salt_master):
         yield name
 
 
-def test_sls(salt_call_cli, state_name):
+def test_sls(salt_call_cli, salt_master, state_name):
     """
     Test calling a sls file
     """
+    assert salt_master.is_running()
+
     ret = salt_call_cli.run("state.apply", state_name)
     assert ret.returncode == 0
     assert ret.data

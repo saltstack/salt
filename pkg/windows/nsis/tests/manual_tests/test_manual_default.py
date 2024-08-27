@@ -6,8 +6,9 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-    pytest.helpers.run_command([pytest.INST_BIN])
-    yield
+    args = []
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
@@ -21,7 +22,7 @@ def test_config_present(install):
 
 def test_config_correct(install):
     # The config file should be the default, unchanged
-    with open(f"{pytest.REPO_DIR}\\tests\\_files\\minion") as f:
+    with open(rf"{pytest.SCRIPT_DIR}\_files\minion") as f:
         expected = f.readlines()
 
     with open(f"{pytest.DATA_DIR}\\conf\\minion") as f:

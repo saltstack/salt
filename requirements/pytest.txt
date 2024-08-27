@@ -13,3 +13,5 @@ flaky
 more-itertools
 pyfakefs
 trustme
+pytest-skip-markers >= 1.5.2 ; python_version >= '3.8'
+pytest-skip-markers <= 1.5.1 ; python_version < '3.8'

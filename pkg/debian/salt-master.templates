@@ -1,0 +1,17 @@
+Template: salt-master/user
+Type: string
+Default: salt
+Description: User for salt-master
+  User to run the salt-master process as
+
+Template: salt-master/enabled
+Type: string
+Default: enabled
+Description: Systemd enable state for salt-master
+ default enable state for salt-master systemd state
+
+Template: salt-master/active
+Type: string
+Default: active
+Description: Systemd active state for salt-master
+ default active state for salt-master systemd state
