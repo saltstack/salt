@@ -1,35 +1,89 @@
+"""
+Module for managing OS and software licenses on Windows,
+utilizing PowerShell and CIM methods.
+
+Invoke-CimMethod is supported in PowerShell 3.0, so
+the module can potentially work starting from Windows 7.
+
+Guaranteed tests were conducted on Windows 10.
+"""
+
 import logging
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "mslicense"
 
+
 def __virtual__():
     """
-    Only work on Windows
+    Only works on Windows
     """
     if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Only Windows OS supported")
 
 
-def installed(product_key: str):
+def install(key: str):
     """
-    Check to see if the product key is already installed.
+    Install the given product key.
 
-    Note: This is not 100% accurate as we can only see the last 5 digits of the mslicense.
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/installproductkey-softwarelicensingservice
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (True,)
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block:: powershell
+
+        salt '*' mslicense.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+    """
+
+    cmd = "Invoke-CimMethod -Query 'Select * From SoftwareLicensingService' -MethodName InstallProductKey -Arguments @{{ProductKey='{0}'}}".format(
+        key)
+
+    log.debug("product key installation command: {0}".format(cmd))
+
+    out = __salt__["cmd.powershell_all"](cmd)
+    if out["retcode"] != 0:
+        return (False, out["stderr"])
+
+    return (True,)
+
+
+def installed(key: str):
+    """
+    Check to see if the product key is already installed.
+
+    .. note::
+        This is not 100% accurate as we can only see the last 5 digits of the license.
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (None, "empty out")
+        (True,)
+
+    CLI Example:
+
+    .. code-block:: powershell
         salt '*' mslicense.installed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
         salt '*' mslicense.installed ZZZZZ
     """
 
     cmd = "Get-CimInstance -Query 'SELECT PartialProductKey FROM SoftwareLicensingProduct WHERE PartialProductKey = \"{0}\"'".format(
-        product_key[-5:]
+        key[-5:]
     )
-    log.debug("prepare cmd: {0}".format(cmd))
+    log.debug("product key check command: {0}".format(cmd))
 
     out = __salt__["cmd.powershell_all"](cmd)
 
@@ -39,32 +93,10 @@ def installed(product_key: str):
     if not "result" in out:
         return (None, "empty out")
 
-    if product_key[-5:] == out["result"]["PartialProductKey"]:
+    if key[-5:] == out["result"]["PartialProductKey"]:
         return (True,)
 
     return (None,)
-
-
-def install(product_key: str):
-    """
-    Install the given product key.
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' mslicense.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
-    """
-
-    cmd = "Invoke-CimMethod -Query 'Select * From SoftwareLicensingService' -MethodName InstallProductKey -Arguments @{{ProductKey='{0}'}}".format(
-        product_key
-    )
-    log.debug("prepare cmd: {0}".format(cmd))
-
-    out = __salt__["cmd.powershell_all"](cmd)
-    if out["retcode"] != 0:
-        return (False, out["stderr"])
-
-    return (True,)
 
 
 def uninstall(key=""):
@@ -79,25 +111,30 @@ def uninstall(key=""):
 
     https://learn.microsoft.com/en-us/deployoffice/vlactivation/tools-to-manage-volume-activation-of-office#slmgrvbs-command-options
 
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+        (False, "error message")
+        (True,)
+
     CLI Example:
 
-    .. code-block:: bash
-        salt '*' mslicense.uninstall
-        salt '*' mslicense.uninstall XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.uninstall ZZZZZ
+    .. code-block:: powershell
+        salt '*' mslicense.uninstall_key
+        salt '*' mslicense.uninstall_key XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.uninstall_key ZZZZZ
     """
 
-    cmd=""
-    if len(key) != 0:
+    cmd = ""
+    if key != "":
         cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey='{0}'\" -MethodName UninstallProductKey".format(
-            key[-5:]
-        )
-    elif len (key)==0:
-        cmd = 'Invoke-CimMethod -Query "SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey is not NULL" -MethodName UninstallProductKey'
-    else:
-        return (False, "Only one key is required, or nothing")
+            key[-5:])
 
-    log.debug("prepare cmd: {0}".format(cmd))
+    else:
+        cmd = 'Invoke-CimMethod -Query "SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey is not NULL" -MethodName UninstallProductKey'
+
+    log.debug("product key uninstall command: {0}".format(cmd))
 
     out = __salt__["cmd.powershell_all"](cmd)
 
@@ -107,13 +144,161 @@ def uninstall(key=""):
     return (True,)
 
 
-def install_kms_host(host: str, key=""):
+def licensed(key: str):
+    """
+    Returns the license status of a product key
+
+
+    Table of license status:
+    0       Unlicensed
+    1       Licensed
+    2       OOBGrace
+    3       OOTGrace
+    4       NonGenuineGrace
+    5       Notification
+    6       ExtendedGrace
+
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/softwarelicensingproduct#LicenseStatus
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (None, "empty out")
+        (True,)
+
+    CLI Example:
+
+    .. code-block:: powershell
+        salt '*' mslicense.licensed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.licensed ZZZZZ
+    """
+
+    cmd = "Get-CimInstance -Query 'SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'".format(
+        key[-5:]
+    )
+    log.debug("license status check command: {0}".format(cmd))
+
+    out = __salt__["cmd.powershell_all"](cmd)
+
+    if out["retcode"] != 0:
+        return (False, out["stderr"])
+
+    if not "result" in out:
+        return (None, "empty out")
+
+    return (True, out["result"]["LicenseStatus"])
+
+
+def activate(key: str):
+    """
+    Activates the specified product key.
+
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/activate-softwarelicensingproduct
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+        (False, "error message")
+        (True,)
+
+    CLI Example:
+
+    .. code-block:: powershell
+        salt '*' mslicense.activate XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.activate ZZZZZ
+    """
+
+    cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' -MethodName Activate".format(
+        key[-5:]
+    )
+    log.debug("product key activation command: {0}".format(cmd))
+
+    out = __salt__["cmd.powershell_all"](cmd)
+
+    if out["retcode"] != 0:
+        return (False, out["stderr"])
+
+    return (True,)
+
+
+def info(key=""):
+    """
+    Returns a summary of the licenses.
+    If a key is specified, returns a summary for the specified product only.
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (None,)
+        (True,[obj...])
+
+    CLI Example:
+
+    .. code-block:: powershell
+        salt '*' mslicense.info
+        salt '*' mslicense.info XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.info ZZZZZ
+
+        [{
+            "Name": AAAA,
+            "Description": BBBB,
+            "PartialProductKey": CCCC,
+            "LicenseStatus": 1,
+            "KeyManagementServiceMachine": DDDD,
+            "KeyManagementServicePort": 1688,
+        }]
+    """
+
+    cmd = ""
+    if key == "":
+        cmd = "Get-CimInstance -Query 'SELECT Name, Description, PartialProductKey, LicenseStatus, KeyManagementServiceMachine, KeyManagementServicePort FROM SoftwareLicensingProduct WHERE PartialProductKey is not NULL'"
+    else:
+        cmd = "Get-CimInstance -Query \"SELECT Name, Description, PartialProductKey, LicenseStatus, KeyManagementServiceMachine, KeyManagementServicePort FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' \"".format(
+            key[-5:]
+        )
+    log.debug("license information query command: {0}".format(cmd))
+
+    out = __salt__["cmd.powershell_all"](cmd)
+
+    if out["retcode"] != 0:
+        return (False, out["stderr"])
+
+    if not "result" in out:
+        return (None,)
+
+    if isinstance(out["result"], dict):
+        out["result"] = [out["result"]]
+
+    ret = []
+    for lic in out["result"]:
+        ret.append(
+            {
+                "Name": lic["Name"],
+                "Description": lic["Description"],
+                "PartialProductKey": lic["PartialProductKey"],
+                "LicenseStatus": lic["LicenseStatus"],
+                "KeyManagementServiceMachine": lic["KeyManagementServiceMachine"],
+                "KeyManagementServicePort": lic["KeyManagementServicePort"],
+            }
+        )
+
+    return (True, ret)
+
+
+def set_kms_host(host: str, key=""):
     """
     Install the kms-host for the specified product key
-    (using SoftwareLicensingProduct.SetKeyManagementServiceMachine).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/setkeymanagementservicemachine-softwarelicensingproduct
 
     If the key is not specified, installs global parameters for the entire system
-    (using SoftwareLicensingService.SetKeyManagementServiceMachine).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/setkeymanagementservicemachine-softwarelicensingservice
 
     The last five digits of the key are used.
 
@@ -126,12 +311,18 @@ def install_kms_host(host: str, key=""):
     host
         kms server host name or ip address
 
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+        (False, "error message")
+
     CLI Example:
 
-    .. code-block:: bash
-        salt '*' mslicense.install_kms_host kms.example.com
-        salt '*' mslicense.install_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.install_kms_host kms.example.com ZZZZZ
+    .. code-block:: powershell
+        salt '*' mslicense.set_kms_host kms.example.com
+        salt '*' mslicense.set_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.set_kms_host kms.example.com ZZZZZ
     """
 
     cmd = ""
@@ -144,8 +335,7 @@ def install_kms_host(host: str, key=""):
         cmd = "Invoke-CimMethod -Query 'SELECT * FROM SoftwareLicensingService' -MethodName SetKeyManagementServiceMachine -Arguments @{{MachineName='{0}'}}".format(
             host
         )
-
-    log.debug("prepare cmd: {0}".format(cmd))
+    log.debug("kms-host installation command: {0}".format(cmd))
 
     out = __salt__["cmd.powershell_all"](cmd)
 
@@ -155,13 +345,13 @@ def install_kms_host(host: str, key=""):
     return (True,)
 
 
-def install_kms_port(port: int, key=""):
+def set_kms_port(port: int, key=""):
     """
     Install the kms-port for the specified product key
-    (using SoftwareLicensingProduct.SetKeyManagementServicePort).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/setkeymanagementserviceport-softwarelicensingproduct
 
     If the key is not specified, installs global parameters for the entire system
-    (using SoftwareLicensingService.SetKeyManagementServicePort).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/setkeymanagementserviceport-softwarelicensingservice
 
     The last five digits of the key are used.
 
@@ -173,12 +363,20 @@ def install_kms_port(port: int, key=""):
     port
         kms server port
 
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (True,)
+
     CLI Example:
 
-    .. code-block:: bash
-        salt '*' mslicense.install_kms_port 1688
-        salt '*' mslicense.install_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.install_kms_port 1688 ZZZZZ
+    .. code-block:: powershell
+        salt '*' mslicense.set_kms_port 1688
+        salt '*' mslicense.set_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.set_kms_port 1688 ZZZZZ
     """
 
     cmd = ""
@@ -202,22 +400,30 @@ def install_kms_port(port: int, key=""):
     return (True,)
 
 
-def uninstall_kms_host(key=""):
+def clear_kms_host(key=""):
     """
     Uninstall the kms-host for the specified product key
-    (using SoftwareLicensingProduct.ClearKeyManagementServiceMachine).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/clearkeymanagementservicemachine-softwarelicensingproduct
 
     If the key is not specified, uninstalls global parameters for the entire system
-    (using SoftwareLicensingService.ClearKeyManagementServiceMachine).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/clearkeymanagementservicemachine-softwarelicensingservice
 
     The last five digits of the key are used.
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (True,)
 
     CLI Example:
 
     .. code-block:: bash
-        salt '*' mslicense.uninstall_kms_host
-        salt '*' mslicense.uninstall_kms_host XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.uninstall_kms_host ZZZZZ
+        salt '*' mslicense.clear_kms_host
+        salt '*' mslicense.clear_kms_host XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.clear_kms_host ZZZZZ
     """
 
     cmd = ""
@@ -239,22 +445,30 @@ def uninstall_kms_host(key=""):
     return (True,)
 
 
-def uninstall_kms_port(key=""):
+def clear_kms_port(key=""):
     """
     Uninstall the kms-port for the specified product key
-    (using SoftwareLicensingProduct.ClearKeyManagementServicePort).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/clearkeymanagementserviceport-softwarelicensingproduct
 
     If the key is not specified, uninstalls global parameters for the entire system
-    (using SoftwareLicensingService.ClearKeyManagementServicePort).
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/clearkeymanagementserviceport-softwarelicensingservice
 
     The last five digits of the key are used.
+
+    Returns:
+        tuple: tuple as operation status and payload
+
+    .. code-block:: cfg
+
+        (False, "error message")
+        (True,)
 
     CLI Example:
 
     .. code-block:: bash
-        salt '*' mslicense.uninstall_kms_port
-        salt '*' mslicense.uninstall_kms_port XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.uninstall_kms_port ZZZZZ
+        salt '*' mslicense.clear_kms_port
+        salt '*' mslicense.clear_kms_port XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.clear_kms_port ZZZZZ
     """
 
     cmd = ""
@@ -276,8 +490,9 @@ def uninstall_kms_port(key=""):
     return (True,)
 
 
-def installed_kms_host(host: str, key=""):
+def get_kms_host(key=""):
     """
+    TODO
     Checking that the specified kms-host matches the installed.
 
     If the key is not specified, the global parameter is checked.
@@ -286,20 +501,19 @@ def installed_kms_host(host: str, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' mslicense.installed_kms_host kms.example.com
-        salt '*' mslicense.installed_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.installed_kms_host kms.example.com ZZZZZ
+        salt '*' mslicense.get_kms_host kms.example.com
+        salt '*' mslicense.get_kms_host kms.example.com XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.get_kms_host kms.example.com ZZZZZ
     """
 
     cmd = ""
     if key:
-        cmd = "Get-CimInstance -Query \"SELECT KeyManagementServiceMachine FROM SoftwareLicensingProduct WHERE KeyManagementServiceMachine ='{0}' and PartialProductKey = '{1}'\"".format(
-            host, key[-5:]
-        )
+        # Если указан ключ продукта - ищу порт в перечне продуктов
+        cmd = "Get-CimInstance -Query \"SELECT KeyManagementServiceMachine FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'\"".format(
+            key[-5:])
     else:
-        cmd = "Get-CimInstance -Query \"SELECT KeyManagementServiceMachine FROM SoftwareLicensingService WHERE KeyManagementServiceMachine ='{0}'\"".format(
-            host
-        )
+        # Если ключ продукта не указан - возвращаю глобальный параметр
+        cmd = "Get-CimInstance -Query 'SELECT KeyManagementServiceMachine FROM SoftwareLicensingService'"
 
     log.debug("prepare cmd: {0}".format(cmd))
 
@@ -310,15 +524,15 @@ def installed_kms_host(host: str, key=""):
 
     if not "result" in out:
         return (None, "empty out")
+    if out["result"]["KeyManagementServiceMachine"] == "":
+        return (None, "empty out")
 
-    if host == out["result"]["KeyManagementServiceMachine"]:
-        return (True,)
-
-    return (None,)
+    return (True, out["result"]["KeyManagementServiceMachine"])
 
 
-def installed_kms_port(port: int, key=""):
+def get_kms_port(key=""):
     """
+    TODO
     Checking that the specified kms-port matches the installed.
 
     If the key is not specified, the global parameter is checked.
@@ -327,20 +541,19 @@ def installed_kms_port(port: int, key=""):
     CLI Example:
 
     .. code-block:: bash
-        salt '*' mslicense.installed_kms_port 1688
-        salt '*' mslicense.installed_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.installed_kms_port 1688 ZZZZZ
+        salt '*' mslicense.get_kms_port 1688
+        salt '*' mslicense.get_kms_port 1688 XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
+        salt '*' mslicense.get_kms_port 1688 ZZZZZ
     """
 
     cmd = ""
     if key:
-        cmd = "Get-CimInstance -Query \"SELECT KeyManagementServicePort FROM SoftwareLicensingProduct WHERE KeyManagementServicePort = {0} and PartialProductKey = '{1}'\"".format(
-            port, key[-5:]
-        )
+        # Если указан ключ продукта - ищу порт в перечне продуктов
+        cmd = "Get-CimInstance -Query \"SELECT KeyManagementServicePort FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'\"".format(
+            key[-5:])
     else:
-        cmd = 'Get-CimInstance -Query "SELECT KeyManagementServicePort FROM SoftwareLicensingService WHERE KeyManagementServicePort ={0}"'.format(
-            port
-        )
+        # Если ключ продукта не указан - возвращаю глобальный параметр
+        cmd = 'Get-CimInstance -Query "SELECT KeyManagementServicePort FROM SoftwareLicensingService"'
 
     log.debug("prepare cmd: {0}".format(cmd))
 
@@ -352,129 +565,4 @@ def installed_kms_port(port: int, key=""):
     if not "result" in out:
         return (None, "empty out")
 
-    if port == out["result"]["KeyManagementServicePort"]:
-        return (True,)
-
-    return (None,)
-
-
-def licensed(key: str):
-    """
-    Checking that the specified product is in the "Licensed" state (code 1)
-    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/softwarelicensingproduct#LicenseStatus
-
-    CLI Example:
-
-    .. code-block:: bash
-        salt '*' mslicense.licensed XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.licensed ZZZZZ
-    """
-
-    cmd = "Get-CimInstance -Query 'SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'".format(
-        key[-5:]
-    )
-
-    out = __salt__["cmd.powershell_all"](cmd)
-
-    if out["retcode"] != 0:
-        return (False, out["stderr"])
-
-    if not "result" in out:
-        return (None, "empty out")
-
-    if out["result"]["LicenseStatus"] != 1:
-        return (False, "LicenseStatus: {0}".format(out["result"]["LicenseStatus"]))
-
-    else:
-        return (True,)
-
-
-def activate(key: str):
-    """
-    Activates the specified product key.
-
-    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/sppwmi/activate-softwarelicensingproduct
-
-    CLI Example:
-
-    .. code-block:: bash
-        salt '*' mslicense.activate XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.activate ZZZZZ
-    """
-
-    cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' -MethodName Activate".format(
-        key[-5:]
-    )
-
-    out = __salt__["cmd.powershell_all"](cmd)
-
-    if out["retcode"] != 0:
-        return (False, out["stderr"])
-
-    return (True,)
-
-
-def info(key=""):
-    """
-    Returns a summary of the licenses.
-    If a key is specified, returns a summary for the specified product only.
-
-    If the product is not found, returns an object with empty values.
-    .. code-block:: bash
-        return [{
-                "Name": None,
-                "Description": None,
-                "PartialProductKey": None,
-                "LicenseStatus": None,
-                "KeyManagementServiceMachine": None,
-                "KeyManagementServicePort": None,
-            }]
-
-    CLI Example:
-
-    .. code-block:: bash
-        salt '*' mslicense.info
-        salt '*' mslicense.info XXXXX-XXXXX-XXXXX-XXXXX-ZZZZZ
-        salt '*' mslicense.info ZZZZZ
-    """
-
-    cmd = ""
-    if key == "":
-        cmd = "Get-CimInstance -Query 'SELECT Name, Description, PartialProductKey, LicenseStatus, KeyManagementServiceMachine, KeyManagementServicePort FROM SoftwareLicensingProduct WHERE PartialProductKey is not NULL'"
-    else:
-        cmd = "Get-CimInstance -Query \"SELECT Name, Description, PartialProductKey, LicenseStatus, KeyManagementServiceMachine, KeyManagementServicePort FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' \"".format(
-            key[-5:]
-        )
-
-    out = __salt__["cmd.powershell_all"](cmd)
-
-    if out["retcode"] != 0:
-        return (False, out["stderr"])
-
-    if not "result" in out:
-        out["result"] = {
-            "Name": None,
-            "Description": None,
-            "PartialProductKey": None,
-            "LicenseStatus": None,
-            "KeyManagementServiceMachine": None,
-            "KeyManagementServicePort": None,
-        }
-
-    if isinstance(out["result"], dict):
-        out["result"] = [out["result"]]
-
-    ret = []
-    for lic in out["result"]:
-        ret.append(
-            {
-                "Name": lic["Name"],
-                "Description": lic["Description"],
-                "PartialProductKey": lic["PartialProductKey"],
-                "LicenseStatus": lic["LicenseStatus"],
-                "KeyManagementServiceMachine": lic["KeyManagementServiceMachine"],
-                "KeyManagementServicePort": lic["KeyManagementServicePort"],
-            }
-        )
-
-    return (True, ret)
+    return (True, out["result"]["KeyManagementServicePort"])
