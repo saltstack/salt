@@ -16,8 +16,8 @@ pytestmark = [
 
 @pytest.fixture
 def salt_systemd_setup(
-    salt_call_cli,
     install_salt,
+    salt_call_cli,
 ):
     """
     Fixture to set systemd for salt packages to enabled and active
@@ -88,12 +88,16 @@ def pkg_paths_salt_user_exclusions():
     return paths
 
 
-def test_salt_user_master(salt_master, install_salt):
+def test_salt_user_master(install_salt, salt_master):
     """
     Test the correct user is running the Salt Master
     """
     for count in range(0, 30):
         if salt_master.is_running():
+            print(
+                f"DGM test_salt_user_master, salt_master is_running, count '{count}'",
+                flush=True,
+            )
             break
         else:
             time.sleep(2)
@@ -221,10 +225,10 @@ def test_pkg_paths(
 
 @pytest.mark.skip_if_binaries_missing("logrotate")
 def test_paths_log_rotation(
+    install_salt,
     salt_master,
     salt_minion,
     salt_call_cli,
-    install_salt,
     pkg_tests_account,
 ):
     """
