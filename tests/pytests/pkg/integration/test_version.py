@@ -55,7 +55,7 @@ def test_salt_versions_report_master(install_salt):
 
 
 @pytest.mark.skip_on_windows
-def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion, salt_master):
+def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_minion):
     """
     Test running test.versions_report on minion
     """
