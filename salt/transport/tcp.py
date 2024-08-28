@@ -1487,8 +1487,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             name=self.__class__.__name__,
         )
 
-    async def publish_payload(self, payload, *args):
-        return await self.pub_server.publish_payload(payload)
+    async def publish_payload(self, payload, topic_list=None):
+        return await self.pub_server.publish_payload(payload, topic_list)
 
     def connect(self, timeout=None):
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
