@@ -420,3 +420,7 @@ def test_paths_log_rotation(
 
                                 bkup_count += 1
                                 assert ret.returncode == 0
+
+    # ensure leave salt_master running
+    salt_master.start()
+    assert salt_master.is_running() is True
