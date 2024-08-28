@@ -2,6 +2,7 @@
 /var/log/salt
 /var/run/salt
 /usr/share/fish/vendor_completions.d
+/usr/share/zsh/vendor-completions
 /opt/saltstack/salt
 /etc/salt
 /etc/logrotate.d
