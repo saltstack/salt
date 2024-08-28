@@ -1,3 +1,6 @@
+#! /usr/bin/dh-exec
+
+usr/lib
 pkg/common/logrotate/salt-common /etc/logrotate.d
 pkg/common/fish-completions/salt-cp.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt-call.fish /usr/share/fish/vendor_completions.d
@@ -9,3 +12,4 @@ pkg/common/fish-completions/salt-master.fish /usr/share/fish/vendor_completions.
 pkg/common/fish-completions/salt-run.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt.fish /usr/share/fish/vendor_completions.d
 pkg/debian/salt-common.bash-completion /usr/share/bash-completion/completions/salt-common
+pkg/salt.zsh => usr/share/zsh/vendor-completions/_salt
