@@ -4668,12 +4668,16 @@ def recurse(
         name, source, keep_symlinks, include_pat, exclude_pat, maxdepth, include_empty
     )
 
+    for dirname in mng_dirs:
+        manage_directory(dirname)
+    for dest, src in mng_files:
+        manage_file(dest, src, replace)
     for srelpath, ltarget in mng_symlinks:
         _ret = symlink(
             os.path.join(name, srelpath),
             ltarget,
             makedirs=True,
-            force=force_symlinks,
+            force=force_symlinks or keep_symlinks,
             user=user,
             group=group,
             mode=sym_mode,
@@ -4681,10 +4685,6 @@ def recurse(
         if not _ret:
             continue
         merge_ret(os.path.join(name, srelpath), _ret)
-    for dirname in mng_dirs:
-        manage_directory(dirname)
-    for dest, src in mng_files:
-        manage_file(dest, src, replace)
 
     if clean:
         # TODO: Use directory(clean=True) instead
