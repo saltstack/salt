@@ -10,6 +10,7 @@ import asyncio.exceptions
 import errno
 import logging
 import multiprocessing
+import os
 import queue
 import select
 import socket
@@ -1327,6 +1328,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
         ssl=None,
     ):
         self.opts = opts
@@ -1337,6 +1340,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pull_path_perms = pull_path_perms
+        self.pub_path_perms = pub_path_perms
         self.ssl = ssl
 
     @property
@@ -1355,6 +1360,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_host": self.pull_host,
             "pull_port": self.pull_port,
             "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
         }
 
     def publish_daemon(
@@ -1406,7 +1413,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug(
                 "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
             )
-            sock = tornado.netutil.bind_unix_socket(self.pub_path)
+            with salt.utils.files.set_umask(0o177):
+                sock = tornado.netutil.bind_unix_socket(self.pub_path)
+                os.chmod(self.pub_path, self.pub_path_perms)
         else:
             log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
@@ -1446,6 +1455,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Securely create socket
         with salt.utils.files.set_umask(0o177):
             self.pull_sock.start()
+            os.chmod(self.pull_path, self.pull_path_perms)
 
     def pre_fork(self, process_manager):
         """

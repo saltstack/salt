@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+import os
 import socket
 import time
 import warnings
@@ -259,6 +260,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
         ssl=None,
     ):
         self.opts = opts
@@ -268,6 +271,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pull_path_perms = pull_path_perms
+        self.pub_path_perms = pub_path_perms
         self.ssl = ssl
         self.clients = set()
         self._run = None
@@ -291,6 +296,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_host": self.pull_host,
             "pull_port": self.pull_port,
             "pull_path": self.pull_path,
+            "pull_path_perms": self.pull_path_perms,
+            "pub_path_perms": self.pub_path_perms,
         }
 
     def publish_daemon(
@@ -338,8 +345,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             server = aiohttp.web.Server(self.handle_request)
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
-            site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
-            log.info("Publisher binding to socket %s", self.pub_path)
+            with salt.utils.files.set_umask(0o177):
+                log.info("Publisher binding to socket %s", self.pub_path)
+                site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
+                await site.start()
+                os.chmod(self.pub_path, self.pub_path_perms)
         else:
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -352,7 +362,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-        await site.start()
+            await site.start()
 
         self._pub_payload = publish_payload
         if self.pull_path:
@@ -360,6 +370,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.puller = await asyncio.start_unix_server(
                     self.pull_handler, self.pull_path
                 )
+                os.chmod(self.pull_path, self.pull_path_perms)
         else:
             self.puller = await asyncio.start_server(
                 self.pull_handler, self.pull_host, self.pull_port
