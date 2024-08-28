@@ -1,4 +1,3 @@
 opt/saltstack/salt/salt-minion /usr/bin/salt-minion
 opt/saltstack/salt/salt-proxy /usr/bin/salt-proxy
 usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-minion
-usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-proxy
