@@ -5,6 +5,8 @@ import shutil
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN  # pylint: disable=3rd-party-module-not-gated
+
 log = logging.getLogger(__name__)
 
 
@@ -68,6 +70,10 @@ def x509_master_config(ca_minion_id):
                 "match.compound",
             ],
         },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
 
@@ -202,9 +208,9 @@ def ca_minion_config(
                 "subjectKeyIdentifier": "hash",
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
 
