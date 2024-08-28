@@ -856,6 +856,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
+        ssl=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -968,7 +969,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 )
         return pull_sock, pub_sock, monitor
 
-    async def publisher(self, publish_payload, io_loop=None):
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
         if io_loop is None:
             io_loop = tornado.ioloop.IOLoop.current()
         self.daemon_context = zmq.asyncio.Context()

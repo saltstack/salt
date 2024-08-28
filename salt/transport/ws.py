@@ -434,7 +434,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             )
         self._connecting = None
 
-    def connect(self):
+    def connect(self, timeout=None):
         log.debug("Connect pusher %s", self.pull_path)
         if self._connecting is None:
             self._connecting = asyncio.create_task(self._connect())
@@ -451,8 +451,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
         await self.pub_writer.drain()
 
-    async def publish_payload(self, package, *args):
-        payload = salt.payload.dumps(package, use_bin_type=True)
+    async def publish_payload(self, payload, topic_list=None):
+        payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:
                 await ws.send_bytes(payload)
