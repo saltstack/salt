@@ -6,4 +6,3 @@ salt-common: manpage-has-errors-from-man
 
 opt/saltstack/salt/salt-pip /usr/bin/salt-pip
 opt/saltstack/salt/salt-call /usr/bin/salt-call
-usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-call
