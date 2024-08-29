@@ -222,7 +222,7 @@ repository in your own account on GitHub and notify a SaltStack employee when
 it is ready. We will add you to the Contributors team on the
 `saltstack-formulas`_ organization and help you transfer the repository over.
 Ping a SaltStack employee on IRC (`#salt`_ on LiberaChat), join the
-``#formulas`` channel on the `salt-slack`_ (bridged to ``#saltstack-formulas``
+``#formulas`` channel on the `salt-discord`_ (bridged to ``#saltstack-formulas``
 on LiberaChat) or send an email to the `salt-users`_ mailing list.  Note that
 IRC logs are available at http://ngxbot.nginx.org/logs/%23salt/ and archives
 for FreeNode (up to mid-June 2021) https://logbot-archive.s3.amazonaws.com/freenode/salt.gz

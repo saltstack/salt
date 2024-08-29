@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Salt Community Slack
-    url: https://saltstackcommunity.slack.com/
+  - name: Salt Community Discord
+    url: https://discord.com/invite/J7b7EscrAs
     about: Please ask and answer questions here.
   - name: Salt-Users Forum
     url: https://groups.google.com/forum/#!forum/salt-users
