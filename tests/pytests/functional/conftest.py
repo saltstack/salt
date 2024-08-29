@@ -1,10 +1,9 @@
 import logging
 import shutil
+import sys
 
 import pytest
 from saltfactories.utils.functional import Loaders
-
-import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -73,8 +72,8 @@ def minion_opts(
         }
     )
 
-    if salt.utils.platform.is_windows():
-        # We need to setup winrepo on Windows
+    if sys.platform.startswith("win"):
+        # We need to set up winrepo on Windows
         minion_config_overrides.update(
             {
                 "winrepo_source_dir": "salt://winrepo_ng",
