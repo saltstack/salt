@@ -96,7 +96,7 @@ def installed(key: str):
     if key[-5:] == out["result"]["PartialProductKey"]:
         return (True,)
 
-    return (None,)
+    return (None, "not found")
 
 
 def uninstall(key=""):
@@ -236,7 +236,7 @@ def info(key=""):
     .. code-block:: cfg
 
         (False, "error message")
-        (None,)
+        (None, "empty out")
         (True,[obj...])
 
     CLI Example:
@@ -271,7 +271,7 @@ def info(key=""):
         return (False, out["stderr"])
 
     if not "result" in out:
-        return (None,)
+        return (None, "empty out")
 
     if isinstance(out["result"], dict):
         out["result"] = [out["result"]]
@@ -503,7 +503,7 @@ def get_kms_host(key=""):
     .. code-block: cfg
 
         (False, "error message")
-        (None,"empty out")
+        (None, "empty out")
         (True, "kms-host DNS or ip")
 
     CLI Example:
@@ -549,7 +549,7 @@ def get_kms_port(key=""):
     .. code-block: cfg
 
         (False, "error message")
-        (None,"empty out")
+        (None, "empty out")
         (True, <kms-port-integer>)
 
     CLI Example:
