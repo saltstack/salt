@@ -46,7 +46,7 @@ example):
 #. Publish the docs.
 #. Create release at `github`_
 #. Update win-repo-ng with new salt versions.
-#. Announce release is live to irc, salt-users, salt-announce and release slack
+#. Announce release is live to irc, salt-users, salt-announce and release discord
    community channel.
 
 
@@ -79,7 +79,7 @@ for a bugfix release.
 #. Publish the docs.
 #. Create release at `github`_
 #. Update win-repo-ng with new salt versions.
-#. Announce release is live to irc, salt-users, salt-announce and release slack channel.
+#. Announce release is live to irc, salt-users, salt-announce and release discord channel.
 
 .. _`github`: https://github.com/saltstack/salt/releases
 .. _`repo.saltproject.io`: https://repo.saltproject.io

@@ -8,10 +8,10 @@ it may take a few moments for someone to reply.
 
 `<https://web.libera.chat/#salt>`_
 
-**SaltStack Slack** - Alongside IRC is our SaltStack Community Slack for the
+**SaltStack Slack** - Alongside IRC is our SaltStack Community Discord for the
 SaltStack Working groups. Use the following link to request an invitation.
 
-`<https://via.vmw.com/salt-slack>`_
+`<https://discord.com/invite/J7b7EscrAs>`_
 
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and

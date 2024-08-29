@@ -7,4 +7,4 @@ following the instructions in the
     The Salt Project community can help offer advice and help troubleshoot
     technical issues as you're learning about Salt. One of the best places to
     talk to the community is on the
-    `Salt Project Slack workspace <https://saltstackcommunity.slack.com/>`_.
+    `Salt Project Discord Community <https://discord.com/invite/J7b7EscrAs>`_.
