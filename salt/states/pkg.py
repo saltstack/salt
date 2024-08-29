@@ -2883,14 +2883,9 @@ def _uninstall(
         }
 
     try:
-        if salt.utils.platform.is_windows():
-            pkg_params = __salt__["pkg_resource.parse_targets"](
-                name, pkgs, normalize=normalize, version=version, **kwargs
-            )[0]
-        else:
-            pkg_params = __salt__["pkg_resource.parse_targets"](
-                name, pkgs, normalize=normalize
-            )[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](
+            name, pkgs, normalize=normalize, version=version, **kwargs
+        )[0]
     except MinionError as exc:
         return {
             "name": name,
