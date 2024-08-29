@@ -1,10 +1,11 @@
 import os.path
 import pathlib
 import subprocess
-import time
 
 import pytest
 from pytestskipmarkers.utils import platform
+
+## DGM import time
 
 
 @pytest.mark.skip_on_windows
@@ -60,38 +61,38 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_
     Test running test.versions_report on minion
     """
     # Make sure the minion is running
-    for count in range(0, 30):
-        if salt_minion.is_running():
-            print(
-                f"DGM test_salt_user_minion, salt_minion is running, final count '{count}'",
-                flush=True,
-            )
-            break
-        else:
-            time.sleep(2)
+    ## DGM for count in range(0, 30):
+    ## DGM     if salt_minion.is_running():
+    ## DGM         print(
+    ## DGM             f"DGM test_salt_user_minion, salt_minion is running, final count '{count}'",
+    ## DGM             flush=True,
+    ## DGM         )
+    ## DGM         break
+    ## DGM     else:
+    ## DGM         time.sleep(2)
 
-    print(
-        f"DGM test_salt_user_minion, salt_minion '{salt_minion}' and is_running '{salt_minion.is_running()}'",
-        flush=True,
-    )
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_minion, salt_minion '{salt_minion}' and is_running '{salt_minion.is_running()}'",
+    ## DGM     flush=True,
+    ## DGM )
     assert salt_minion.is_running()
 
     # DGM
     # Make sure the master is running
-    for count in range(0, 30):
-        if salt_master.is_running():
-            print(
-                f"DGM test_salt_user_minion, salt_master is running, final count '{count}'",
-                flush=True,
-            )
-            break
-        else:
-            time.sleep(2)
+    ## DGM for count in range(0, 30):
+    ## DGM     if salt_master.is_running():
+    ## DGM         print(
+    ## DGM             f"DGM test_salt_user_minion, salt_master is running, final count '{count}'",
+    ## DGM             flush=True,
+    ## DGM         )
+    ## DGM         break
+    ## DGM     else:
+    ## DGM         time.sleep(2)
 
-    print(
-        f"DGM test_salt_user_minion, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
-        flush=True,
-    )
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_minion, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
+    ## DGM     flush=True,
+    ## DGM )
     assert salt_master.is_running()
 
     ret = salt_call_cli.run("--local", "test.ping")

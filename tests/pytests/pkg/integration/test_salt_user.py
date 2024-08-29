@@ -2,12 +2,14 @@ import os
 import pathlib
 import subprocess
 import sys
-import time
 
 import packaging.version
 import psutil
 import pytest
 from saltfactories.utils.tempfiles import temp_directory
+
+## DGM import time
+
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
@@ -92,20 +94,20 @@ def test_salt_user_master(install_salt, salt_master):
     """
     Test the correct user is running the Salt Master
     """
-    for count in range(0, 30):
-        if salt_master.is_running():
-            print(
-                f"DGM test_salt_user_master, salt_master is_running, count '{count}'",
-                flush=True,
-            )
-            break
-        else:
-            time.sleep(2)
+    ## DGM for count in range(0, 30):
+    ## DGM     if salt_master.is_running():
+    ## DGM         print(
+    ## DGM             f"DGM test_salt_user_master, salt_master is_running, count '{count}'",
+    ## DGM             flush=True,
+    ## DGM         )
+    ## DGM         break
+    ## DGM     else:
+    ## DGM         time.sleep(2)
 
-    print(
-        f"DGM test_salt_user_master, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
-        flush=True,
-    )
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_master, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
+    ## DGM     flush=True,
+    ## DGM )
     assert salt_master.is_running()
 
     match = False
@@ -193,6 +195,12 @@ def test_pkg_paths(
         assert pkg_path.exists()
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
+
+            print(
+                f"DGM test_pkg_paths,  dirpath '{str(dirpath)}', path '{str(path)}', path owner '{path.owner()}', path group '{path.group()}'",
+                flush=True,
+            )
+
             # Directories owned by salt:salt or their subdirs/files
             if (
                 str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
@@ -206,6 +214,10 @@ def test_pkg_paths(
                 for file in files:
                     file_path = path.joinpath(file)
                     if str(file_path) not in pkg_paths_salt_user_exclusions:
+                        print(
+                            f"DGM test_pkg_paths,  salt:salt file_path '{str(file_path)}', file_path owner '{file_path.owner()}', file_path group '{file_path.group()}'",
+                            flush=True,
+                        )
                         assert file_path.owner() == "salt"
             # Directories owned by root:root
             else:
@@ -216,6 +228,10 @@ def test_pkg_paths(
                         continue
                     file_path = path.joinpath(file)
                     # Individual files owned by salt user
+                    print(
+                        f"DGM test_pkg_paths, root:root file_path '{str(file_path)}', file_path owner '{file_path.owner()}', file_path group '{file_path.group()}'",
+                        flush=True,
+                    )
                     if str(file_path) in pkg_paths_salt_user:
                         assert file_path.owner() == "salt"
                     else:
