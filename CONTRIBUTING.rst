@@ -8,7 +8,7 @@ in a number of ways:
 -  Use Salt and open well-written bug reports.
 -  Join a `working group <https://github.com/saltstack/community>`__.
 -  Answer questions on `irc <https://web.libera.chat/#salt>`__,
-   the `community Slack <https://via.vmw.com/salt-slack>`__,
+   the `community Discord <https://discord.com/invite/J7b7EscrAs>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
    `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
@@ -109,7 +109,7 @@ Then activate it:
 
 Sweet! Now you're ready to clone Salt so you can start hacking away! If
 you get stuck at any point, check out the resources at the beginning of
-this guide. IRC and Slack are particularly helpful places to go.
+this guide. IRC and Discord are particularly helpful places to go.
 
 
 Get the source!
@@ -605,7 +605,7 @@ your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we're not in a code freeze, ideally your code will be merged
 that week or month. If you haven't heard from your assigned reviewer, ping them
-on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
+on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Discord.
 
 It's likely that your reviewer will leave some comments that need
 addressing - it may be a style change, or you forgot a changelog entry,
