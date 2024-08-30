@@ -7,6 +7,19 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module")
+def symlink(state_tree):
+    # Create directory structure
+    source_dir = state_tree / "test_symlink"
+    if not source_dir.is_dir():
+        source_dir.mkdir()
+    source_file = source_dir / "source_file.txt"
+    source_file.write_text("This is the source file...")
+    symlink_file = source_dir / "symlink"
+    symlink_file.symlink_to(source_file)
+    yield
+
+
 @pytest.mark.parametrize("test", (False, True))
 def test_recurse(file, tmp_path, grail, test):
     """
@@ -249,3 +262,79 @@ def test_issue_2726_mode_kwarg(modules, tmp_path, state_tree):
         ret = modules.state.template_str("\n".join(good_template))
         for state_run in ret:
             assert state_run.result is True
+
+
+def test_issue_64630_keep_symlinks_true(file, symlink, tmp_path):
+    """
+    Make sure that symlinks are created and that there isn't an error
+    """
+    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=True
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_symlink()
+
+
+def test_issue_64630_keep_symlinks_false(file, symlink, tmp_path):
+    """
+    Make sure that symlinks are created and that there isn't an error
+    """
+    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=False
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_file()
+    assert target_file.read_text() == target_symlink.read_text()
+
+
+def test_issue_64630_force_symlinks_true(file, symlink, tmp_path):
+    """
+    Make sure that symlinks are created and that there isn't an error
+    """
+    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", force_symlinks=True
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_file()
+
+
+def test_issue_64630_force_symlinks_keep_symlinks_true(file, symlink, tmp_path):
+    """
+    Make sure that symlinks are created and that there isn't an error
+    """
+    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir),
+        source=f"salt://{target_dir.name}",
+        force_symlinks=True,
+        keep_symlinks=True,
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_symlink()
