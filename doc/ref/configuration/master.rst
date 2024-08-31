@@ -2395,7 +2395,11 @@ This option has no default value. Set it to an environment name to ensure that
 :ref:`highstate <running-highstate>`.
 
 .. note::
-    Using this value does not change the merging strategy. For instance, if
+    Minions which have an explicit :conf_minion:`saltenv` set will use that
+    environment's top file, ignoring this master config option.
+
+.. note::
+    Using this option does not change the merging strategy. For instance, if
     :conf_master:`top_file_merging_strategy` is set to ``merge``, and
     :conf_master:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
