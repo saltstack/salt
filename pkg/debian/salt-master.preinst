@@ -31,16 +31,16 @@ case "$1" in
     db_set salt-master/user $CUR_USER
     chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master \
         /var/log/salt/key /var/cache/salt/master /var/run/salt/master
-    if command -v systemctl; then
-        SM_ENABLED=$(systemctl show -p UnitFileState salt-master | cut -d '=' -f 2)
-        db_set salt-master/enabled $SM_ENABLED
-        SM_ACTIVE=$(systemctl is-active salt-master)
-        db_set salt-master/active $SM_ACTIVE
-    else
-        db_set salt-master/enabled enabled
-        db_set salt-master/active active
+    ## DGM if command -v systemctl; then
+    ## DGM     SM_ENABLED=$(systemctl show -p UnitFileState salt-master | cut -d '=' -f 2)
+    ## DGM     db_set salt-master/enabled $SM_ENABLED
+    ## DGM     SM_ACTIVE=$(systemctl is-active salt-master)
+    ## DGM     db_set salt-master/active $SM_ACTIVE
+    ## DGM else
+    ## DGM     db_set salt-master/enabled enabled
+    ## DGM     db_set salt-master/active active
 
-    fi
+    ## DGM fi
     ;;
 esac
 

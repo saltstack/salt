@@ -16,26 +16,26 @@ case "$1" in
       fi
       chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     fi
-    if command -v systemctl; then
-        db_get salt-master/active
-        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-        if [ "$RESLT" != 10 ]; then
-            systemctl daemon-reload
-            if [ "$RESLT" = "active" ]; then
-                systemctl restart salt-master
-            fi
-            db_get salt-master/enabled
-            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-            if [ "$RESLT" = "disabled" ]; then
-                systemctl disable salt-master
-            else
-                systemctl enable salt-master
-            fi
-        else
-            systemctl daemon-reload
-            systemctl restart salt-master
-            systemctl enable salt-master
-        fi
-    fi
+    ## DGM if command -v systemctl; then
+    ## DGM     db_get salt-master/active
+    ## DGM     RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+    ## DGM     if [ "$RESLT" != 10 ]; then
+    ## DGM         systemctl daemon-reload
+    ## DGM         if [ "$RESLT" = "active" ]; then
+    ## DGM             systemctl restart salt-master
+    ## DGM         fi
+    ## DGM         db_get salt-master/enabled
+    ## DGM         RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+    ## DGM         if [ "$RESLT" = "disabled" ]; then
+    ## DGM             systemctl disable salt-master
+    ## DGM         else
+    ## DGM             systemctl enable salt-master
+    ## DGM         fi
+    ## DGM     else
+    ## DGM         systemctl daemon-reload
+    ## DGM         systemctl restart salt-master
+    ## DGM         systemctl enable salt-master
+    ## DGM     fi
+    ## DGM fi
   ;;
 esac
