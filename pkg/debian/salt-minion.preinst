@@ -16,15 +16,15 @@ case "$1" in
     db_set salt-minion/user $CUR_USER
     chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion \
         /var/cache/salt/minion /var/run/salt/minion
-    if command -v systemctl; then
-        SM_ENABLED=$(systemctl show -p UnitFileState salt-minion | cut -d '=' -f 2)
-        db_set salt-minion/enabled $SM_ENABLED
-        SM_ACTIVE=$(systemctl is-active salt-minion)
-        db_set salt-minion/active $SM_ACTIVE
-    else
-        db_set salt-minion/enabled enabled
-        db_set salt-minion/active active
+    ## DGM if command -v systemctl; then
+    ## DGM     SM_ENABLED=$(systemctl show -p UnitFileState salt-minion | cut -d '=' -f 2)
+    ## DGM     db_set salt-minion/enabled $SM_ENABLED
+    ## DGM     SM_ACTIVE=$(systemctl is-active salt-minion)
+    ## DGM     db_set salt-minion/active $SM_ACTIVE
+    ## DGM else
+    ## DGM     db_set salt-minion/enabled enabled
+    ## DGM     db_set salt-minion/active active
 
-    fi
+    ## DGM fi
     ;;
 esac
