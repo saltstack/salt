@@ -1222,25 +1222,6 @@ class TCPPuller:
         See https://tornado.readthedocs.io/en/latest/iostream.html#tornado.iostream.IOStream
         for additional details.
         """
-
-        async def _null(msg):
-            return
-
-        def write_callback(stream, header):
-            if header.get("mid"):
-
-                async def return_message(msg):
-                    pack = salt.transport.frame.frame_msg_ipc(
-                        msg,
-                        header={"mid": header["mid"]},
-                        raw_body=True,
-                    )
-                    await stream.write(pack)
-
-                return return_message
-            else:
-                return _null
-
         unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not stream.closed():
             try:
@@ -1251,7 +1232,6 @@ class TCPPuller:
                     self.io_loop.spawn_callback(
                         self.payload_handler,
                         body,
-                        write_callback(stream, framed_msg["head"]),
                     )
             except tornado.iostream.StreamClosedError:
                 if self.path:
