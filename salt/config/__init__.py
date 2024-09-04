@@ -2514,9 +2514,9 @@ def syndic_config(
         "cachedir": master_opts["cachedir"],
     }
     opts.update(syndic_opts)
-    log.warning("DGM syndic_config, user is set to '%s'", opts["user"])
-    dgm_user = opts["user"]
-    print(f"DGM syndic_config, user is set to '{dgm_user}'", flush=True)
+    ## DGM log.warning("DGM syndic_config, user is set to '%s'", opts["user"])
+    ## DGM dgm_user = opts["user"]
+    ## DGM print(f"DGM syndic_config, user is set to '{dgm_user}'", flush=True)
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
