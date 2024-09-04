@@ -14,6 +14,7 @@ jobs:
     name: Logic Tests
     runs-on:
       - windows-latest
+    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
 
     steps:
 
