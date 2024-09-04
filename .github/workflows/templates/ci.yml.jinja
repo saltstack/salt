@@ -39,13 +39,13 @@
 
   <%- endif %>
 
-  <%- set job_name = "test-windows-installer" %>
+  <%- set job_name = "nsis-tests" %>
   <%- if includes.get(job_name, True) %>
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
-    name: Installer
+    name: NSIS Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    uses: ./.github/workflows/test-installer-action-windows.yml
+    uses: ./.github/workflows/nsis-tests.yml
     needs:
       - prepare-workflow
     with:

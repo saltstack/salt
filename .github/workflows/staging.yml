@@ -157,6 +157,9 @@ jobs:
                 - pkg/**
                 - *pkg_requirements
                 - *salt_added_modified
+            nsis_tests:
+              - added|modified: &nsis_tests
+                - pkg/windows/nsis/**
             testrun:
               - added|modified:
                 - *pkg_requirements
@@ -289,6 +292,14 @@ jobs:
     name: Lint
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/lint-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+  nsis-tests:
+    name: NSIS Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/nsis-tests.yml
     needs:
       - prepare-workflow
     with:
@@ -3023,6 +3034,7 @@ jobs:
       - prepare-workflow
       - pre-commit
       - lint
+      - nsis-tests
       - build-docs
       - build-deps-onedir
       - build-salt-onedir
