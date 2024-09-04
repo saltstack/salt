@@ -62,49 +62,49 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_
     # Make sure the minion is running
     for count in range(0, 30):
         if salt_minion.is_running():
-            print(
-                f"DGM test_salt_user_minion, salt_minion is running, final count '{count}'",
-                flush=True,
-            )
+            ## DGM print(
+            ## DGM     f"DGM test_salt_user_minion, salt_minion is running, final count '{count}'",
+            ## DGM     flush=True,
+            ## DGM )
             break
         else:
             time.sleep(2)
 
-    print(
-        f"DGM test_salt_user_minion, salt_minion '{salt_minion}' and is_running '{salt_minion.is_running()}'",
-        flush=True,
-    )
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_minion, salt_minion '{salt_minion}' and is_running '{salt_minion.is_running()}'",
+    ## DGM     flush=True,
+    ## DGM )
     assert salt_minion.is_running()
 
     # DGM
     # Make sure the master is running
     for count in range(0, 30):
         if salt_master.is_running():
-            print(
-                f"DGM test_salt_user_minion, salt_master is running, final count '{count}'",
-                flush=True,
-            )
+            ## DGM print(
+            ## DGM     f"DGM test_salt_user_minion, salt_master is running, final count '{count}'",
+            ## DGM     flush=True,
+            ## DGM )
             break
         else:
             time.sleep(2)
 
-    print(
-        f"DGM test_salt_user_minion, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
-        flush=True,
-    )
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_minion, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
+    ## DGM     flush=True,
+    ## DGM )
     assert salt_master.is_running()
 
-    ret = salt_call_cli.run("--local", "test.ping")
-    print(
-        f"DGM test_salt_user_minion, salt_call local test.ping ret '{ret}'", flush=True
-    )
-    # DGM
+    ## DGM ret = salt_call_cli.run("--local", "test.ping")
+    ## DGM print(
+    ## DGM     f"DGM test_salt_user_minion, salt_call local test.ping ret '{ret}'", flush=True
+    ## DGM )
+    ## DGM # DGM
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
         "--timeout=600", "test.ping", minion_tgt=salt_minion.id, _timeout=600
     )
-    print(f"DGM test_salt_user_minion, test.ping ret '{ret}'", flush=True)
+    ## DGM print(f"DGM test_salt_user_minion, test.ping ret '{ret}'", flush=True)
 
     assert ret.returncode == 0
     assert ret.data is True
