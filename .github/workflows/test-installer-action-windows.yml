@@ -1,13 +1,17 @@
 ---
 name: Test Windows Installer
 
-on: pull_request
-
-permissions:
-  contents: read
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
 
 jobs:
   Test-Windows-Installer:
+    name: Test Windows Installer logic
     runs-on:
       - windows-latest
 
