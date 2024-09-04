@@ -1381,9 +1381,7 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "X11DisplayOffset": "10",
         "PrintMotd": "no",
         "PrintLastLog": "yes",
-        # https://unix.stackexchange.com/a/616355
-        "ServerAliveInterval": "20",
-        "TCPKeepAlive": "no",
+        "TCPKeepAlive": "yes",
         "AcceptEnv": "LANG LC_*",
         "UsePAM": "yes",
     }
