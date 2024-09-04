@@ -16,26 +16,26 @@ case "$1" in
       fi
       chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
     fi
-    ## DGM if command -v systemctl; then
-    ## DGM     db_get salt-minion/active
-    ## DGM     RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-    ## DGM     if [ "$RESLT" != 10 ]; then
-    ## DGM         systemctl daemon-reload
-    ## DGM         if [ "$RESLT" = "active" ]; then
-    ## DGM             systemctl restart salt-minion
-    ## DGM         fi
-    ## DGM         db_get salt-minion/enabled
-    ## DGM         RESLT=$(echo "$RET" | cut -d ' ' -f 1)
-    ## DGM         if [ "$RESLT" = "disabled" ]; then
-    ## DGM             systemctl disable salt-minion
-    ## DGM         else
-    ## DGM             systemctl enable salt-minion
-    ## DGM         fi
-    ## DGM     else
-    ## DGM         systemctl daemon-reload
-    ## DGM         systemctl restart salt-minion
-    ## DGM         systemctl enable salt-minion
-    ## DGM     fi
-    ## DGM fi
+    if command -v systemctl; then
+        db_get salt-minion/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
+            if [ "$RESLT" = "active" ]; then
+                systemctl restart salt-minion
+            fi
+            db_get salt-minion/enabled
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
+                systemctl disable salt-minion
+            else
+                systemctl enable salt-minion
+            fi
+        else
+            systemctl daemon-reload
+            systemctl restart salt-minion
+            systemctl enable salt-minion
+        fi
+    fi
   ;;
 esac
