@@ -195,21 +195,21 @@ def test_pkg_paths(
     )
 
     dgm_cmd = "ps -ef"
-    ret = salt_call_cli("--local", "cmd.run", dgm_cmd)
+    ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
     print(
         f"DGM test_pkg_paths, test ps -ef, ret '{ret}'",
         flush=True,
     )
 
     dgm_cmd = "ls -al /var/log/"
-    ret = salt_call_cli("--local", "cmd.run", dgm_cmd)
+    ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
     print(
         f"DGM test_pkg_paths, test ls -al /var/log/, ret '{ret}'",
         flush=True,
     )
 
     dgm_cmd = "ls -al /var/log/salt"
-    ret = salt_call_cli("--local", "cmd.run", dgm_cmd)
+    ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
     print(
         f"DGM test_pkg_paths, test ls -al /var/log/salt, ret '{ret}'",
         flush=True,
