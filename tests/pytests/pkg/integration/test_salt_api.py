@@ -9,7 +9,6 @@ def test_salt_api(api_request, install_salt, salt_master):
     """
     Test running a command against the salt api
     """
-    # DGM TBD 66672 is merged, need to remove this check and see if test passes
     if install_salt.distro_id in ("ubuntu", "debian"):
         pytest.skip(
             "Package test are getting reworked in https://github.com/saltstack/salt/issues/66672"

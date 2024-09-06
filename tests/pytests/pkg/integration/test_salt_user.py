@@ -94,18 +94,10 @@ def test_salt_user_master(install_salt, salt_master):
     """
     for count in range(0, 30):
         if salt_master.is_running():
-            ## DGM print(
-            ## DGM     f"DGM test_salt_user_master, salt_master is_running, count '{count}'",
-            ## DGM     flush=True,
-            ## DGM )
             break
         else:
             time.sleep(2)
 
-    ## DGM print(
-    ## DGM     f"DGM test_salt_user_master, salt_master '{salt_master}' and is_running '{salt_master.is_running()}'",
-    ## DGM     flush=True,
-    ## DGM )
     assert salt_master.is_running()
 
     match = False
@@ -189,42 +181,11 @@ def test_pkg_paths(
 
     salt_user_subdirs = []
 
-    ## DGM print(
-    ## DGM     f"DGM test_pkg_paths,  pkg_paths '{pkg_paths}', pkg_paths_salt_user '{pkg_paths_salt_user}', exclusions '{pkg_paths_salt_user_exclusions}'",
-    ## DGM     flush=True,
-    ## DGM )
-
-    ## DGM dgm_cmd = "ps -ef"
-    ## DGM ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
-    ## DGM print(
-    ## DGM     f"DGM test_pkg_paths, test ps -ef, ret '{ret}'",
-    ## DGM     flush=True,
-    ## DGM )
-
-    ## DGM dgm_cmd = "ls -al /var/log/"
-    ## DGM ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
-    ## DGM print(
-    ## DGM     f"DGM test_pkg_paths, test ls -al /var/log/, ret '{ret}'",
-    ## DGM     flush=True,
-    ## DGM )
-
-    ## DGM dgm_cmd = "ls -al /var/log/salt"
-    ## DGM ret = salt_call_cli.run("--local", "cmd.run", dgm_cmd)
-    ## DGM print(
-    ## DGM     f"DGM test_pkg_paths, test ls -al /var/log/salt, ret '{ret}'",
-    ## DGM     flush=True,
-    ## DGM )
-
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
         assert pkg_path.exists()
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
-
-            ## DGM print(
-            ## DGM     f"DGM test_pkg_paths,  dirpath '{str(dirpath)}', path '{str(path)}', path owner '{path.owner()}', path group '{path.group()}',  salt_user_subdirs '{salt_user_subdirs}', sub_dirs '{sub_dirs}', files '{files}'",
-            ## DGM     flush=True,
-            ## DGM )
 
             # Directories owned by salt:salt or their subdirs/files
             if (
@@ -238,10 +199,6 @@ def test_pkg_paths(
                 # Individual files owned by salt user
                 for file in files:
                     file_path = path.joinpath(file)
-                    ## DGM print(
-                    ## DGM     f"DGM test_pkg_paths, salt:salt file_path '{str(file_path)}', file_path owner '{file_path.owner()}', file_path group '{file_path.group()}'",
-                    ## DGM     flush=True,
-                    ## DGM )
                     if str(file_path) not in pkg_paths_salt_user_exclusions:
                         assert file_path.owner() == "salt"
             # Directories owned by root:root
@@ -253,10 +210,6 @@ def test_pkg_paths(
                         continue
                     file_path = path.joinpath(file)
                     # Individual files owned by salt user
-                    ## DGM print(
-                    ## DGM     f"DGM test_pkg_paths, root:root file_path '{str(file_path)}', file_path owner '{file_path.owner()}', file_path group '{file_path.group()}'",
-                    ## DGM     flush=True,
-                    ## DGM )
                     if str(file_path) in pkg_paths_salt_user:
                         assert file_path.owner() == "salt"
                     else:
