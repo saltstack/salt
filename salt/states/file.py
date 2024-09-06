@@ -557,7 +557,18 @@ def _gen_recurse_managed_files(
             managed_directories.add(mdest)
             keep.add(mdest)
 
-    return managed_files, managed_directories, managed_symlinks, keep
+    # Sets are randomly ordered. We need to make sure symlinks are always at the
+    # end, so we need to use a list
+    new_managed_files = list(managed_files)
+    # Now let's move all the symlinks to the end
+    for symlink in managed_symlinks:
+        for file in managed_files:
+            if file[0].endswith(symlink[0]):
+                new_managed_files.append(
+                    new_managed_files.pop(new_managed_files.index(file))
+                )
+
+    return new_managed_files, managed_directories, managed_symlinks, keep
 
 
 def _gen_keep_files(name, require, walk_d=None):
@@ -4668,16 +4679,12 @@ def recurse(
         name, source, keep_symlinks, include_pat, exclude_pat, maxdepth, include_empty
     )
 
-    for dirname in mng_dirs:
-        manage_directory(dirname)
-    for dest, src in mng_files:
-        manage_file(dest, src, replace)
     for srelpath, ltarget in mng_symlinks:
         _ret = symlink(
             os.path.join(name, srelpath),
             ltarget,
             makedirs=True,
-            force=force_symlinks or keep_symlinks,
+            force=force_symlinks,
             user=user,
             group=group,
             mode=sym_mode,
@@ -4685,6 +4692,10 @@ def recurse(
         if not _ret:
             continue
         merge_ret(os.path.join(name, srelpath), _ret)
+    for dirname in mng_dirs:
+        manage_directory(dirname)
+    for dest, src in mng_files:
+        manage_file(dest, src, replace)
 
     if clean:
         # TODO: Use directory(clean=True) instead

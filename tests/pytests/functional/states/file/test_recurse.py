@@ -8,16 +8,35 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def symlink(state_tree):
+def symlink_scenario_1(state_tree):
     # Create directory structure
-    source_dir = state_tree / "test_symlink"
+    dir_name = "symlink_scenario_1"
+    source_dir = state_tree / dir_name
     if not source_dir.is_dir():
         source_dir.mkdir()
     source_file = source_dir / "source_file.txt"
     source_file.write_text("This is the source file...")
     symlink_file = source_dir / "symlink"
     symlink_file.symlink_to(source_file)
-    yield
+    yield dir_name
+
+
+@pytest.fixture(scope="module")
+def symlink_scenario_2(state_tree):
+    # Create directory structure
+    dir_name = "symlink_scenario_2"
+    source_dir = state_tree / dir_name / "test"
+    if not source_dir.is_dir():
+        source_dir.mkdir(parents=True)
+    test1 = source_dir / "test1"
+    test2 = source_dir / "test2"
+    test3 = source_dir / "test3"
+    test_link = source_dir / "test"
+    test1.touch()
+    test2.touch()
+    test3.touch()
+    test_link.symlink_to(test3)
+    yield dir_name
 
 
 @pytest.mark.parametrize("test", (False, True))
@@ -264,11 +283,11 @@ def test_issue_2726_mode_kwarg(modules, tmp_path, state_tree):
             assert state_run.result is True
 
 
-def test_issue_64630_keep_symlinks_true(file, symlink, tmp_path):
+def test_issue_64630_keep_symlinks_true(file, symlink_scenario_1, tmp_path):
     """
     Make sure that symlinks are created and that there isn't an error
     """
-    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
     target_file = target_dir / "source_file.txt"
     target_symlink = target_dir / "symlink"
 
@@ -282,11 +301,11 @@ def test_issue_64630_keep_symlinks_true(file, symlink, tmp_path):
     assert target_symlink.is_symlink()
 
 
-def test_issue_64630_keep_symlinks_false(file, symlink, tmp_path):
+def test_issue_64630_keep_symlinks_false(file, symlink_scenario_1, tmp_path):
     """
     Make sure that symlinks are created and that there isn't an error
     """
-    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
     target_file = target_dir / "source_file.txt"
     target_symlink = target_dir / "symlink"
 
@@ -301,11 +320,11 @@ def test_issue_64630_keep_symlinks_false(file, symlink, tmp_path):
     assert target_file.read_text() == target_symlink.read_text()
 
 
-def test_issue_64630_force_symlinks_true(file, symlink, tmp_path):
+def test_issue_64630_force_symlinks_true(file, symlink_scenario_1, tmp_path):
     """
     Make sure that symlinks are created and that there isn't an error
     """
-    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
     target_file = target_dir / "source_file.txt"
     target_symlink = target_dir / "symlink"
 
@@ -319,11 +338,13 @@ def test_issue_64630_force_symlinks_true(file, symlink, tmp_path):
     assert target_symlink.is_file()
 
 
-def test_issue_64630_force_symlinks_keep_symlinks_true(file, symlink, tmp_path):
+def test_issue_64630_force_symlinks_keep_symlinks_true(
+    file, symlink_scenario_1, tmp_path
+):
     """
     Make sure that symlinks are created and that there isn't an error
     """
-    target_dir = tmp_path / "test_symlink"  # Target for the file.recurse state
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
     target_file = target_dir / "source_file.txt"
     target_symlink = target_dir / "symlink"
 
@@ -337,4 +358,26 @@ def test_issue_64630_force_symlinks_keep_symlinks_true(file, symlink, tmp_path):
 
     assert target_dir.exists()
     assert target_file.is_file()
+    assert target_symlink.is_symlink()
+
+
+def test_issue_62117(file, symlink_scenario_2, tmp_path):
+    target_dir = tmp_path / symlink_scenario_2 / "test"
+    target_file_1 = target_dir / "test1"
+    target_file_2 = target_dir / "test2"
+    target_file_3 = target_dir / "test3"
+    target_symlink = target_dir / "test"
+
+    ret = file.recurse(
+        name=str(target_dir),
+        source=f"salt://{target_dir.parent.name}/test",
+        clean=True,
+        keep_symlinks=True,
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file_1.is_file()
+    assert target_file_2.is_file()
+    assert target_file_3.is_file()
     assert target_symlink.is_symlink()
