@@ -2502,6 +2502,7 @@ def syndic_config(
                 ),
             )
         ),
+        ## DGM line to force rebuild
         # DGM conf/suse/master has syndic_user for running syndic as a different user
         # DGM use urrently set it to 'salt'
         # DGM testing getting the master_opts user, and run syndic as that
