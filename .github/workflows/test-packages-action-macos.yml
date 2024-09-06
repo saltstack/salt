@@ -239,7 +239,8 @@ jobs:
 
       - name: Merge Test Run Artifacts
         continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
+        ## DGM uses: actions/upload-artifact/merge@v4
+        uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
           pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
