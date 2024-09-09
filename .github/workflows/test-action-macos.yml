@@ -358,8 +358,8 @@ jobs:
       - name: Merge JUnit XML Test Run Artifacts
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
-        ## DGM uses: actions/upload-artifact/merge@v4
-        uses: actions/upload-artifact/merge@v4.3.6
+        uses: actions/upload-artifact/merge@v4
+        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -369,22 +369,24 @@ jobs:
       - name: Merge Log Test Run Artifacts
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
-        ## DGM uses: actions/upload-artifact/merge@v4
-        uses: actions/upload-artifact/merge@v4.3.6
+        uses: actions/upload-artifact/merge@v4
+        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          ## DGM pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
 
       - name: Merge Code Coverage Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
-        ## DGM uses: actions/upload-artifact/merge@v4
-        uses: actions/upload-artifact/merge@v4.3.6
+        uses: actions/upload-artifact/merge@v4
+        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          ## DGM pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
 
