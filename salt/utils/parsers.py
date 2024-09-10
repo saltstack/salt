@@ -3228,6 +3228,16 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--relenv",
+            dest="relenv",
+            default=False,
+            action="store_true",
+            help=(
+                "Deploy and use a relenv (Salt+Python bundled) environment on the "
+                "SSH target."
+            ),
+        ),
+        self.add_option(
             "--python2-bin",
             default="python2",
             help="Path to a python2 binary which has salt installed.",
@@ -3409,6 +3419,9 @@ class SaltSSHOptionParser(
                     if option.dest == "ssh_passwd":
                         option.explicit = True
                         break
+
+        if self.options.regen_thin and self.options.relenv:
+            self.error("--thin and --relenv are mutually exclusive")
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())

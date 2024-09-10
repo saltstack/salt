@@ -13,6 +13,7 @@ import os
 import pathlib
 import queue
 import re
+import requests
 import shlex
 import shutil
 import subprocess
@@ -59,7 +60,7 @@ try:
 except ImportError:
     HAS_WINSHELL = False
 
-# The directory where salt thin is deployed
+# The directory where salt thin/relenv is deployed
 DEFAULT_THIN_DIR = "/var/tmp/.%%USER%%_%%FQDNUUID%%_salt"
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
@@ -1141,14 +1142,130 @@ class Single:
             return False
         return True
 
+    def detect_os_arch(self):
+        """
+        Detect the OS and architecture of the target machine.
+        Returns a tuple of (kernel, architecture) or raises an error if detection fails.
+        """
+        os_arch_cmd = 'echo "$OSTYPE|$MACHTYPE|$env:PROCESSOR_ARCHITECTURE"'
+
+        # Execute the command on the target
+        stdout, stderr, retcode = self.shell.exec_cmd(os_arch_cmd)
+
+        if retcode != 0:
+            log.error(f"Failed to detect OS and architecture on target: {stderr}")
+            raise ValueError("OS and architecture detection failed")
+
+        # Parse the output
+        try:
+            kernel, arch, winarch = stdout.lower().strip().split("|", maxsplit=2)
+        except ValueError as e:
+            log.error(f"Error parsing OS/arch detection result: {e}")
+            raise ValueError("Failed to parse OS and architecture data")
+
+        # Set architecture
+        if "64" in winarch or "64" in arch:
+            os_arch = "amd64"
+        else:
+            os_arch = "i386"
+
+        # Set kernel based on OS type
+        if "linux" in kernel:
+            kernel = "linux"
+        elif "darwin" in kernel:
+            kernel = "macos"
+        elif "processor_architecture" not in winarch:
+            kernel = "windows"
+        else:
+            log.error(f"Could not determine OS from kernel: {kernel}, arch: {arch}, winarch: {winarch}")
+
+        log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
+
+        return kernel, os_arch
+
+
+    def get_relenv_tarball(self, kernel, arch):
+        """
+        Get the latest Salt onedir tarball URL for the specified kernel and architecture.
+
+        :param kernel: The detected OS (e.g., 'linux', 'darwin', 'windows')
+        :param arch: The detected architecture (e.g., 'amd64', 'x86_64', 'arm64')
+        :return: The URL of the latest tarball
+        """
+        # TODO actually add this as an option
+        base_url = self.opts.get("salt_repo_url", "https://repo.saltproject.io/salt/py3/onedir/latest/")
+
+        try:
+            # Request the page listing
+            response = requests.get(base_url)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            log.error(f"Failed to retrieve tarball listing: {e}")
+            raise ValueError("Unable to fetch tarball list from repository")
+
+        # Search for tarball filenames that match the kernel and arch
+        pattern = re.compile(rf'href="(salt-.*-onedir-{kernel}-{arch}\.tar\.xz)"')
+
+        # Find all matches in the HTML content
+        matches = pattern.findall(response.text)
+
+        if not matches:
+            log.error(f"No tarballs found for {kernel} and {arch}")
+            raise ValueError(f"No tarball found for {kernel} {arch}")
+
+        # Assume that the latest tarball is the last one in the sorted list
+        matches.sort()
+        latest_tarball = matches[-1]
+
+        # Construct the full URL
+        latest_url = base_url + latest_tarball
+        log.info(f"Latest relenv tarball URL: {latest_url}")
+
+        return latest_url
+
+
+    def relenv(self):
+        """
+        Deploy salt-relenv
+        """
+        try:
+            # Detect OS and architecture
+            kernel, os_arch = self.detect_os_arch()
+        except ValueError as e:
+            log.error(f"Error in OS and architecture detection: {e}")
+            return False
+
+        # Construct the relenv URL based on the detected OS and architecture
+        relenv_url = self.get_relenv_tarball(kernel, os_arch)
+
+        # Path to cache the downloaded relenv tarball
+        tarball_path = os.path.join(self.opts["cachedir"], f"salt-relenv-{kernel}-{os_arch}.tgz")
+
+        # Download the relenv tarball if not already cached
+        if not os.path.exists(tarball_path):
+            log.info(f"Downloading relenv tarball from {relenv_url} to {tarball_path}")
+            result = salt.utils.http.query(relenv_url, stream=True, local_file=tarball_path)
+
+            if result.get("status") != 200:
+                log.error(f"Failed to download relenv tarball from {relenv_url}")
+                return False
+
+        # Send the tarball to the target machine
+        self.shell.send(tarball_path, os.path.join(self.thin_dir, "salt-relenv.tar.xz"))
+        return True
+
+
     def deploy(self):
         """
-        Deploy salt-thin
+        Deploy salt-thin/relenv
         """
-        self.shell.send(
-            self.thin,
-            os.path.join(self.thin_dir, "salt-thin.tgz"),
-        )
+        if self.opts.get("relenv"):
+            self.relenv()
+        else:
+            self.shell.send(
+                self.thin,
+                os.path.join(self.thin_dir, "salt-thin.tgz"),
+            )
         self.deploy_ext()
         return True
 
