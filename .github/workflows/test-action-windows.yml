@@ -330,7 +330,6 @@ jobs:
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
-        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           ## DGM pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -342,7 +341,6 @@ jobs:
         if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
-        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           ## DGM pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
@@ -354,7 +352,6 @@ jobs:
         if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
-        ## DGM uses: actions/upload-artifact/merge@v4.3.6
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           ## DGM pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
