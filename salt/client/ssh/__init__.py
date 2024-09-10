@@ -1144,7 +1144,7 @@ class Single:
 
     def detect_os_arch(self):
         """
-        Detect the OS and architecture of the target machine.
+        Detect the OS and architecture of the target machine for the purpose of identifying the right relenv tarball.
         Returns a tuple of (kernel, architecture) or raises an error if detection fails.
         """
         os_arch_cmd = 'echo "$OSTYPE|$MACHTYPE|$env:PROCESSOR_ARCHITECTURE"'
@@ -1164,10 +1164,10 @@ class Single:
             raise ValueError("Failed to parse OS and architecture data")
 
         # Set architecture
-        if "64" in winarch or "64" in arch:
-            os_arch = "amd64"
+        if "arm" in arch:
+            os_arch = "arm64"
         else:
-            os_arch = "i386"
+            os_arch = "x86_64"
 
         # Set kernel based on OS type
         if "linux" in kernel:
@@ -1176,8 +1176,12 @@ class Single:
             kernel = "macos"
         elif "processor_architecture" not in winarch:
             kernel = "windows"
+            if "64" in arch:
+                os_arch = "amd64"
+            else:
+                os_arch = "x86"
         else:
-            log.error(f"Could not determine OS from kernel: {kernel}, arch: {arch}, winarch: {winarch}")
+            raise ValueError(f"Could not determine OS from kernel: {kernel}, arch: {arch}, winarch: {winarch}")
 
         log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
 
@@ -1203,8 +1207,14 @@ class Single:
             log.error(f"Failed to retrieve tarball listing: {e}")
             raise ValueError("Unable to fetch tarball list from repository")
 
+        # Determine the correct file extension based on the OS
+        if kernel == "windows":
+            file_extension = "zip"
+        else:
+            file_extension = "tar.xz"
+
         # Search for tarball filenames that match the kernel and arch
-        pattern = re.compile(rf'href="(salt-.*-onedir-{kernel}-{arch}\.tar\.xz)"')
+        pattern = re.compile(rf'href="(salt-.*-onedir-{kernel}-{arch}\.{file_extension})"')
 
         # Find all matches in the HTML content
         matches = pattern.findall(response.text)
