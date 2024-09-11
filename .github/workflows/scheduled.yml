@@ -2058,7 +2058,8 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
+          ## DGM pattern: all-testrun-coverage-artifacts-*
+          pattern: all-testrun-coverage-artifacts*
           separate-directories: false
           delete-merged: true
 
