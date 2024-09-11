@@ -1144,49 +1144,60 @@ class Single:
 
     def detect_os_arch(self):
         """
-        Detect the OS and architecture of the target machine for the purpose of identifying the right relenv tarball.
+        Detect the OS and architecture of the target machine.
+        This is specifically for the purpose of downloading the latest onedir tarball from the Salt repos.
         Returns a tuple of (kernel, architecture) or raises an error if detection fails.
         """
-        os_arch_cmd = 'echo "$OSTYPE|$MACHTYPE|$env:PROCESSOR_ARCHITECTURE"'
+        # Unified command for Unix-based systems (including fallback to OSTYPE and MACHTYPE)
+        unix_cmd = 'uname -s -m || echo "$OSTYPE $MACHTYPE"'
 
-        # Execute the command on the target
-        stdout, stderr, retcode = self.shell.exec_cmd(os_arch_cmd)
+        # Command for Windows systems (PowerShell)
+        windows_cmd = 'echo "$env:PROCESSOR_ARCHITECTURE"'
 
-        if retcode != 0:
-            log.error(f"Failed to detect OS and architecture on target: {stderr}")
-            raise ValueError("OS and architecture detection failed")
+        # Try Unix command first
+        stdout, stderr, retcode = self.shell.exec_cmd(unix_cmd)
 
-        # Parse the output
-        try:
-            kernel, arch, winarch = stdout.lower().strip().split("|", maxsplit=2)
-        except ValueError as e:
-            log.error(f"Error parsing OS/arch detection result: {e}")
-            raise ValueError("Failed to parse OS and architecture data")
+        if retcode == 0 and stdout:
+            # Unix-based detection succeeded
+            stdout = stdout.lower().strip()
 
-        # Set architecture
-        if "arm" in arch:
-            os_arch = "arm64"
-        else:
-            os_arch = "x86_64"
-
-        # Set kernel based on OS type
-        if "linux" in kernel:
-            kernel = "linux"
-        elif "darwin" in kernel:
-            kernel = "macos"
-        elif "processor_architecture" not in winarch:
-            kernel = "windows"
-            if "64" in arch:
-                os_arch = "amd64"
+            # Determine OS and architecture for Unix
+            if "linux" in stdout:
+                kernel = "linux"
+            elif "darwin" in stdout or "macos" in stdout:
+                kernel = "macos"
             else:
-                os_arch = "x86"
+                raise ValueError(f"Unsupported Unix-based kernel: {stdout}")
+
+            # Set architecture
+            if "x86" in stdout:
+                os_arch = "x86_64"
+            else:
+                os_arch = "arm64"
         else:
-            raise ValueError(f"Could not determine OS from kernel: {kernel}, arch: {arch}, winarch: {winarch}")
+            # If Unix detection fails, check for Windows-specific detection
+            stdout, stderr, retcode = self.shell.exec_cmd(windows_cmd)
+
+            if retcode == 0 and stdout:
+                # Windows detection
+                stdout = stdout.lower().strip()
+
+                # Set Windows architecture based on environment variable
+                if "64" in stdout:
+                    os_arch = "amd64"
+                elif "x86" in stdout:
+                    os_arch = "x86"
+                else:
+                    raise ValueError(f"Unsupported architecture for Windows: {stdout}")
+
+                kernel = "windows"
+            else:
+                # Neither Unix nor Windows detection succeeded
+                raise ValueError(f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}")
 
         log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
 
         return kernel, os_arch
-
 
     def get_relenv_tarball(self, kernel, arch):
         """
