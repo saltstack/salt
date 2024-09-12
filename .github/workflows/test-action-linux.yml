@@ -354,6 +354,7 @@ jobs:
       - name: Merge Code Coverage Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
+        needs: upload
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
@@ -361,14 +362,22 @@ jobs:
           pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}*
           separate-directories: false
           delete-merged: true
+          # DGM
+          overwrite: true
 
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v4
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
+          ## DGM name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}*
+          merge-multiple: true
+
+      - name: DGM Show Downloaded Test Run Artifacts
+        run: |
+          tree -a artifacts
 
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
