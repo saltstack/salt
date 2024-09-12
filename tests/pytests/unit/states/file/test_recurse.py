@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 
 import pytest
@@ -18,7 +19,7 @@ def test__gen_recurse_managed_files():
     """
     Test _gen_recurse_managed_files to make sure it puts symlinks at the end of the list of files.
     """
-    target_dir = pathlib.Path("\\some\\path\\target")
+    target_dir = pathlib.Path(f"{os.sep}some{os.sep}path{os.sep}target")
     cp_list_master = MagicMock(
         return_value=[
             "target/symlink",
@@ -28,7 +29,9 @@ def test__gen_recurse_managed_files():
         ],
     )
     cp_list_master_symlinks = MagicMock(
-        return_value={"target/symlink": f"{target_dir}\\not_a_symlink\\symlink"}
+        return_value={
+            "target/symlink": f"{target_dir}{os.sep}not_a_symlink{os.sep}symlink"
+        }
     )
     patch_salt = {
         "cp.list_master": cp_list_master,
@@ -38,5 +41,8 @@ def test__gen_recurse_managed_files():
         files, dirs, links, keep = filestate._gen_recurse_managed_files(
             name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=True
         )
-    expected = ("\\some\\path\\target\\symlink", "salt://target/symlink?saltenv=base")
+    expected = (
+        f"{os.sep}some{os.sep}path{os.sep}target{os.sep}symlink",
+        "salt://target/symlink?saltenv=base",
+    )
     assert files[-1] == expected

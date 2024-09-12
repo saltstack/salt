@@ -568,7 +568,7 @@ def _gen_recurse_managed_files(
         for file_dest, file_src in managed_files:
             # We need to convert relpath to fullpath. We're using pathlib to
             # be platform-agnostic
-            symlink_full_path = pathlib.Path(f"{name}\\{link_src_relpath}")
+            symlink_full_path = pathlib.Path(f"{name}{os.sep}{link_src_relpath}")
             file_dest_full_path = pathlib.Path(file_dest)
             if symlink_full_path == file_dest_full_path:
                 new_managed_files.append(
