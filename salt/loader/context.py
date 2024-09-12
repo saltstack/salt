@@ -5,6 +5,8 @@ Manage the context a module loaded by Salt's loader
 import collections.abc
 import contextlib
 import copy
+import logging
+import traceback
 
 try:
     # Try the stdlib C extension first
@@ -14,6 +16,8 @@ except ImportError:
     import contextvars
 
 import salt.exceptions
+
+log = logging.getLogger(__name__)
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
@@ -71,20 +75,12 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         loader = self.loader()
         if loader is None:
             return self.default
+        if self.name == loader.pack_self:
+            return loader
         elif self.name == "__context__":
             return loader.pack[self.name]
         elif self.name == "__opts__":
-            # XXX: This behaviour tires to mimick what the loader does when
-            # __opts__ was not imported from dunder. It would be nice to just
-            # pass the value of __opts__ here. However, un-winding this
-            # behavior will be tricky.
-            opts = {}
-            if self.default:
-                opts.update(copy.deepcopy(self.default))
-            opts.update(copy.deepcopy(loader.opts))
-            return opts
-        elif self.name == loader.pack_self:
-            return loader
+            return loader.pack[self.name]
         try:
             return loader.pack[self.name]
         except KeyError:
