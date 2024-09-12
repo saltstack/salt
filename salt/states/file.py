@@ -282,6 +282,7 @@ import difflib
 import itertools
 import logging
 import os
+import pathlib
 import posixpath
 import re
 import shutil
@@ -557,15 +558,23 @@ def _gen_recurse_managed_files(
             managed_directories.add(mdest)
             keep.add(mdest)
 
-    # Sets are randomly ordered. We need to make sure symlinks are always at the
-    # end, so we need to use a list
+    # Sets are randomly ordered. We need to use a list so we can make sure
+    # symlinks are always at the end. This is necessary because the file must
+    # exist before we can create a symlink to it. See issue:
+    # https://github.com/saltstack/salt/issues/64630
     new_managed_files = list(managed_files)
     # Now let's move all the symlinks to the end
-    for symlink in managed_symlinks:
-        for file in managed_files:
-            if file[0].endswith(os.sep + symlink[0]):
+    for link_src_relpath, _ in managed_symlinks:
+        for file_dest, file_src in managed_files:
+            # We need to convert relpath to fullpath. We're using pathlib to
+            # be platform-agnostic
+            symlink_full_path = pathlib.Path(f"{name}\\{link_src_relpath}")
+            file_dest_full_path = pathlib.Path(file_dest)
+            if symlink_full_path == file_dest_full_path:
                 new_managed_files.append(
-                    new_managed_files.pop(new_managed_files.index(file))
+                    new_managed_files.pop(
+                        new_managed_files.index((file_dest, file_src))
+                    )
                 )
 
     return new_managed_files, managed_directories, managed_symlinks, keep
