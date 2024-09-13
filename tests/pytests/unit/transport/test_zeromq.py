@@ -408,7 +408,9 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
     ioloop = tornado.ioloop.IOLoop()
-    transport = salt.transport.zeromq.PublishClient(opts, ioloop)
+    transport = salt.transport.zeromq.PublishClient(
+        opts, ioloop, host=opts["interface"], port=opts["publish_port"]
+    )
     with transport:
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
@@ -450,7 +452,9 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
     ioloop = tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
+    channel = salt.transport.zeromq.PublishClient(
+        opts, ioloop, host=opts["interface"], port=opts["publish_port"]
+    )
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
@@ -497,7 +501,9 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
     ioloop = tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
+    channel = salt.transport.zeromq.PublishClient(
+        opts, ioloop, host=opts["interface"], port=opts["publish_port"]
+    )
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
