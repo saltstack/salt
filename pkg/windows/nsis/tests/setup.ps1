@@ -82,7 +82,7 @@ $directories | ForEach-Object {
 #-------------------------------------------------------------------------------
 
 $prereq_files = "vcredist_x86_2022.exe",
-                "vcredist_x64_2022.exe",
+                "vcredist_x64_2022.exe"
 $prereq_files | ForEach-Object {
     Write-Host "Creating $_`: " -NoNewline
     Set-Content -Path "$PREREQS_DIR\$_" -Value "binary"
