@@ -354,7 +354,6 @@ jobs:
       - name: Merge Code Coverage Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
-        needs: upload
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
