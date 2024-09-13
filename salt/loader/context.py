@@ -5,8 +5,6 @@ Manage the context a module loaded by Salt's loader
 import collections.abc
 import contextlib
 import copy
-import logging
-import traceback
 
 try:
     # Try the stdlib C extension first
@@ -16,8 +14,6 @@ except ImportError:
     import contextvars
 
 import salt.exceptions
-
-log = logging.getLogger(__name__)
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
