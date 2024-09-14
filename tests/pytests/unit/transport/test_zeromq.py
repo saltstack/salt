@@ -389,7 +389,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
             assert ret == "Server-side exception handling payload"
 
 
-def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
+async def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
     """
     test when connecting that we use the publish_port set in opts when its not 4506
     """
@@ -415,7 +415,7 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
         with patch.object(transport, "_socket", patch_socket):
-            transport.connect(455505)
+            await transport.connect(455505)
     assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
 
@@ -461,7 +461,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
             MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
         ):
             res = channel._decode_messages(message)
-    assert res.result() is None
+    assert res is None
 
 
 def test_zeromq_async_pub_channel_filtering_decode_message(
@@ -511,7 +511,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
         ) as mock_test:
             res = channel._decode_messages(message)
 
-    assert res.result()["enc"] == "aes"
+    assert res["enc"] == "aes"
 
 
 def test_req_server_chan_encrypt_v2(
