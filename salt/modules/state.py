@@ -2126,7 +2126,7 @@ def show_sls(mods, test=None, queue=None, **kwargs):
 
 def sls_exists(mods, test=None, queue=None, **kwargs):
     """
-    Tests for the existence the of a specific SLS or list of SLS files on the
+    Tests for the existence of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
