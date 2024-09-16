@@ -1265,16 +1265,35 @@ class Single:
         # Download the relenv tarball if not already cached
         if not os.path.exists(tarball_path):
             log.info(f"Downloading relenv tarball from {relenv_url} to {tarball_path}")
-            result = salt.utils.http.query(relenv_url, stream=True, local_file=tarball_path)
 
-            if result.get("status") != 200:
-                log.error(f"Failed to download relenv tarball from {relenv_url}")
+            try:
+                with salt.utils.files.fopen(tarball_path, 'wb') as tarball_file:
+                    # Define streaming callback to write data chunks to the file
+                    def stream_callback(chunk):
+                        tarball_file.write(chunk)
+
+                    # Download the file using salt.utils.http.query
+                    result = salt.utils.http.query(
+                        url=relenv_url,
+                        method='GET',
+                        stream=True,
+                        streaming_callback=stream_callback,
+                        raise_error=True
+                    )
+
+                # Check if the download was successful
+                if result.get("status") != 200:
+                    log.error(f"Failed to download relenv tarball from {relenv_url}")
+                    return False
+
+            except Exception as e:
+                log.error(f"Error during relenv tarball download: {e}")
                 return False
 
         # Send the tarball to the target machine
-        self.shell.send(tarball_path, os.path.join(self.thin_dir, "salt-relenv.tar.xz"))
-        return True
-
+        stdout, stderr, retcode = self.shell.send(tarball_path, os.path.join(self.thin_dir, "salt-relenv.tar.xz"))
+        log.info(stdout.strip())
+        return retcode == 0
 
     def deploy(self):
         """
