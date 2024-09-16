@@ -1242,8 +1242,7 @@ class Single:
         latest_url = base_url + latest_tarball
         log.info(f"Latest relenv tarball URL: {latest_url}")
 
-        return latest_url
-
+        return latest_url, file_extension
 
     def relenv(self):
         """
@@ -1256,44 +1255,54 @@ class Single:
             log.error(f"Error in OS and architecture detection: {e}")
             return False
 
-        # Construct the relenv URL based on the detected OS and architecture
-        relenv_url = self.get_relenv_tarball(kernel, os_arch)
+        hash_ext = ".sha512"
 
-        # Path to cache the downloaded relenv tarball
-        tarball_path = os.path.join(self.opts["cachedir"], f"salt-relenv-{kernel}-{os_arch}.tgz")
+        # Construct the relenv URL based on the detected OS and architecture
+        relenv_url, ext = self.get_relenv_tarball(kernel, os_arch)
+
+        # Define the URLs for the sha512 and sha512.asc files
+        codesum_url = relenv_url + hash_ext
+
+        # Path to cache the downloaded files
+        tarball_path = os.path.join(self.opts["cachedir"], f"salt-relenv-{kernel}-{os_arch}.{ext}")
+        codesum_path = tarball_path + hash_ext
+
+        # Function to download a file if it doesn't exist in the cache
+        def download_file(url, destination):
+            if not os.path.exists(destination):
+                log.info(f"Downloading from {url} to {destination}")
+                try:
+                    with salt.utils.files.fopen(destination, 'wb+') as dest_file:
+                        salt.utils.http.query(
+                            url=url,
+                            method='GET',
+                            stream=True,
+                            streaming_callback=dest_file.write,
+                            raise_error=True
+                        )
+
+                except Exception as e:
+                    log.error(f"Error during file download: {e}")
+                    return False
+            return True
 
         # Download the relenv tarball if not already cached
-        if not os.path.exists(tarball_path):
-            log.info(f"Downloading relenv tarball from {relenv_url} to {tarball_path}")
+        if not download_file(relenv_url, tarball_path):
+            return False
 
-            try:
-                with salt.utils.files.fopen(tarball_path, 'wb') as tarball_file:
-                    # Define streaming callback to write data chunks to the file
-                    def stream_callback(chunk):
-                        tarball_file.write(chunk)
-
-                    # Download the file using salt.utils.http.query
-                    result = salt.utils.http.query(
-                        url=relenv_url,
-                        method='GET',
-                        stream=True,
-                        streaming_callback=stream_callback,
-                        raise_error=True
-                    )
-
-                # Check if the download was successful
-                if result.get("status") != 200:
-                    log.error(f"Failed to download relenv tarball from {relenv_url}")
-                    return False
-
-            except Exception as e:
-                log.error(f"Error during relenv tarball download: {e}")
-                return False
+        # Download the .sha512 file
+        if not download_file(codesum_url, codesum_path):
+            return False
 
         # Send the tarball to the target machine
-        stdout, stderr, retcode = self.shell.send(tarball_path, os.path.join(self.thin_dir, "salt-relenv.tar.xz"))
+        result = True
+        stdout, _, retcode = self.shell.send(tarball_path, os.path.join(self.thin_dir, f"salt-relenv.{ext}"))
         log.info(stdout.strip())
-        return retcode == 0
+        result &= (retcode == 0)
+        stdout, _, retcode = self.shell.send(codesum_path, os.path.join(self.thin_dir, "code-checksum"))
+        log.info(stdout.strip())
+        result &= (retcode == 0)
+        return result
 
     def deploy(self):
         """
