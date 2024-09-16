@@ -276,6 +276,8 @@ jobs:
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}
           fi
+          # DGM
+          tree -a artifacts
 
       - name: Destroy VM
         if: always()
@@ -366,8 +368,15 @@ jobs:
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          ## DGM name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          merge-multiple: true
+
+      # DGM
+      - name: DGM Show Downloaded Test Run Artifacts
+        run: |
+          tree -a artifacts
 
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
