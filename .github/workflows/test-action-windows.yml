@@ -276,8 +276,6 @@ jobs:
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}
           fi
-          # DGM
-          tree -a artifacts
 
       - name: Destroy VM
         if: always()
@@ -291,7 +289,6 @@ jobs:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
-          # DGM
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -336,8 +333,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          ## DGM pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
-          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -347,8 +343,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          ## DGM pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
-          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -358,8 +353,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
-          ## DGM pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -368,15 +362,9 @@ jobs:
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          ## DGM name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
           pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           merge-multiple: true
-
-      # DGM
-      - name: DGM Show Downloaded Test Run Artifacts
-        run: |
-          tree -a artifacts
 
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
