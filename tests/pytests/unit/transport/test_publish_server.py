@@ -23,6 +23,7 @@ def test_transport_publishserver_has_abstractmethods(kind):
             implemented.append(methodname)
     assert implemented == abstractmethods
 
+
 @pytest.mark.parametrize("kind", salt.transport.base.TRANSPORTS)
 @pytest.mark.parametrize(
     "method", salt.transport.base.DaemonizedPublishServer.__abstractmethods__
