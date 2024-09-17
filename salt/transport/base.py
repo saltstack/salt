@@ -419,7 +419,7 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
-    def publisher(
+    async def publisher(
         self,
         publish_payload,
         presence_callback=None,
@@ -429,7 +429,7 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
-    def publish_payload(self, payload, topic_list=None):
+    async def publish_payload(self, payload, topic_list=None):
         raise NotImplementedError
 
     @abstractmethod
