@@ -10,4 +10,3 @@ pkg/common/fish-completions/salt-key.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt-master.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt-run.fish /usr/share/fish/vendor_completions.d
 pkg/common/fish-completions/salt.fish /usr/share/fish/vendor_completions.d
-pkg/debian/salt-common.bash-completion /usr/share/bash-completion/completions/salt-common
