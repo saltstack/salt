@@ -9,8 +9,8 @@ pytestmark = [
 
 @pytest.fixture
 def salt_systemd_setup(
-    salt_call_cli,
     install_salt,
+    salt_call_cli,
 ):
     """
     Fixture to set systemd for salt packages to enabled and active
@@ -31,7 +31,7 @@ def salt_systemd_setup(
 
 
 @pytest.mark.skip_if_binaries_missing("ufw")
-def test_salt_ufw(salt_systemd_setup, salt_call_cli, install_salt):
+def test_salt_ufw(salt_systemd_setup, install_salt, salt_call_cli):
     """
     Test salt.ufw for Debian/Ubuntu salt-master
     """
