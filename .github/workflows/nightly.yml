@@ -1589,27 +1589,6 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  archlinux-lts:
-    name: Arch Linux LTS Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: archlinux-lts
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
-      skip-code-coverage: false
-      workflow-slug: nightly
-      default-timeout: 360
-
   debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2057,7 +2036,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2964,7 +2942,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
