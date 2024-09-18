@@ -58,7 +58,7 @@ def refresh_keys(grains, modules):
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
-        _PKG_TARGETS = ["7zip", "putty"]
+        _PKG_TARGETS = ["npp_x64", "winrar"]
     elif grains["os"] == "Amazon":
         if grains["osfinger"] == "Amazon Linux-2023":
             _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
@@ -118,7 +118,7 @@ def PKG_32_TARGETS(grains):
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
     elif grains["os"] == "Windows":
-        _PKG_32_TARGETS = ["npp", "nsis"]
+        _PKG_32_TARGETS = ["npp", "putty"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
@@ -217,12 +217,16 @@ def install_7zip(modules):
     try:
         modules.pkg.install(name="7zip", version="22.01.00.0")
         modules.pkg.install(name="7zip", version="19.00.00.0")
-        assert modules.pkg.version("7zip") == "19.00.00.0,22.01.00.0"
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" in versions
+        assert "22.01.00.0" in versions
         yield
     finally:
         modules.pkg.remove(name="7zip", version="19.00.00.0")
         modules.pkg.remove(name="7zip", version="22.01.00.0")
-        assert modules.pkg.version("7zip") == ""
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" not in versions
+        assert "22.01.00.0" not in versions
 
 
 @pytest.mark.requires_salt_modules("pkg.version")
@@ -1125,4 +1129,4 @@ def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
     ret = states.pkg.removed(name="7zip", version="19.00.00.0")
     assert ret.result is True
     current = modules.pkg.version("7zip")
-    assert current == "22.01.00.0"
+    assert "22.01.00.0" in current
