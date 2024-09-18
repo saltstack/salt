@@ -47,7 +47,7 @@ def create(path, saltenv=None):
 
     query = f"saltenv={saltenv}" if saltenv else ""
     url = salt.utils.data.decode(urlunparse(("file", "", path, "", query, "")))
-    return "salt://{}".format(url[len("file:///") :])
+    return f'salt://{re.sub(r"^file:/*", "", url)}'
 
 
 def is_escaped(url):
