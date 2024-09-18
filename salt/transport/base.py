@@ -4,8 +4,7 @@ import os
 import ssl
 import traceback
 import warnings
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import salt.utils.stringutils
 
