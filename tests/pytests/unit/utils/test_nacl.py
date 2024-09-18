@@ -2,8 +2,10 @@
     Unit tests for the salt.utils.nacl module
 """
 
+import base64
 import os
 
+import nacl as pynacl
 import pytest
 
 import salt.modules.config as config
@@ -59,7 +61,18 @@ def test_keygen_sk_file(test_keygen):
         # test sk_file
         ret = nacl.keygen(sk_file=fpath)
         assert f"saved pk_file: {fpath}.pub" == ret
-        salt.utils.files.remove(str(fpath) + ".pub")
+
+    # test pk_file content with the value of PyNaCl lib
+    with salt.utils.files.fopen(f"{fpath}.pub", "r") as pkf:
+        pk = pkf.read()
+        assert pk != test_keygen["sk"]
+
+        sk = base64.b64decode(test_keygen["sk"])
+        pk_from_pynacl = pynacl.public.PrivateKey(sk)
+        pk_from_pynacl = base64.b64encode(pk_from_pynacl.public_key.encode())
+        assert pk.encode() == pk_from_pynacl
+
+    salt.utils.files.remove(str(fpath) + ".pub")
 
 
 def test_keygen_keyfile(test_keygen):
