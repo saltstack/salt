@@ -157,6 +157,9 @@ LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
+
+    ONCECACHE = set()
+
     def __new__(cls, *args):
         """
         We override `__new__` in our logging logger class in order to provide
@@ -233,9 +236,15 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         stack_info=False,
         stacklevel=1,
         exc_info_on_loglevel=None,
+        once=False,
     ):
         if extra is None:
             extra = {}
+
+        if once:
+            if str(args) in self.ONCECACHE:
+                return
+            self.ONCECACHE.add(str(args))
 
         # pylint: disable=no-member
         current_jid = RequestContext.current.get("data", {}).get("jid", None)
@@ -265,6 +274,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                         exc_info_on_loglevel
                     )
                 )
+        # XXX: extra is never None
         if extra is None:
             extra = {"exc_info_on_loglevel": exc_info_on_loglevel}
         else:
