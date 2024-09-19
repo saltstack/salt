@@ -440,3 +440,4 @@ jobs:
         with:
           name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}.${{ inputs.nox-session }}
           path: artifacts/coverage
+          include-hidden-files: true
