@@ -360,6 +360,7 @@ jobs:
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
+          run-id: ${{ github.event.workflow_run.id }}
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
 
