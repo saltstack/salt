@@ -162,9 +162,8 @@ class ReqServerChannel:
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
             log.error(
-                "payload and load must be a dict. Payload was: %s and load was %s",
+                "payload and load must be a dict. Payload was: %s",
                 payload,
-                payload.get("load"),
             )
             return "payload and load must be a dict"
 
@@ -180,11 +179,6 @@ class ReqServerChannel:
         sign_messages = False
         if version > 1:
             sign_messages = True
-
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            return self._auth(payload["load"], sign_messages, version)
 
         if payload["enc"] == "aes":
             nonce = None
@@ -225,37 +219,45 @@ class ReqServerChannel:
 
         # TODO: test
         try:
+            # intercept the "_auth" commands, since the main daemon shouldn't know
+            # anything about our key auth
+            if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
+                return self._auth(payload["load"], sign_messages, version)
+
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
+
             ret, req_opts = await self.payload_handler(payload)
+
+            req_fun = req_opts.get("fun", "send")
+            if req_fun == "send_clear":
+                return ret
+            elif req_fun == "send":
+                if version > 2:
+                    return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
+                        ret, nonce
+                    )
+                else:
+                    return self.crypticle.dumps(ret, nonce)
+            elif req_fun == "send_private":
+                return self._encrypt_private(
+                    ret,
+                    req_opts["key"],
+                    req_opts["tgt"],
+                    nonce,
+                    sign_messages,
+                    payload.get("enc_algo", salt.crypt.OAEP_SHA1),
+                    payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
+                )
+            log.error("Unknown req_fun %s", req_fun)
+            # always attempt to return an error to the minion
+            return "Server-side exception handling payload"
+
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
             return "Some exception handling minion payload"
 
-        req_fun = req_opts.get("fun", "send")
-        if req_fun == "send_clear":
-            return ret
-        elif req_fun == "send":
-            if version > 2:
-                return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
-                    ret, nonce
-                )
-            else:
-                return self.crypticle.dumps(ret, nonce)
-        elif req_fun == "send_private":
-            return self._encrypt_private(
-                ret,
-                req_opts["key"],
-                req_opts["tgt"],
-                nonce,
-                sign_messages,
-                payload.get("enc_algo", salt.crypt.OAEP_SHA1),
-                payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
-            )
-        log.error("Unknown req_fun %s", req_fun)
-        # always attempt to return an error to the minion
-        return "Server-side exception handling payload"
 
     def _encrypt_private(
         self,
