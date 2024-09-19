@@ -405,3 +405,4 @@ jobs:
         with:
           name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
           path: artifacts/coverage
+          include-hidden-files: true
