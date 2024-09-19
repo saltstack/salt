@@ -528,14 +528,18 @@ class WindowsUpdateAgent:
         found = updates.updates
 
         for update in self._updates:
+            # Some update objects seem to be empty or undefined. Those will be
+            # exposed here if they are missing these attributes
+            try:
+                if salt.utils.data.is_true(update.IsHidden) and skip_hidden:
+                    continue
 
-            if salt.utils.data.is_true(update.IsHidden) and skip_hidden:
-                continue
+                if salt.utils.data.is_true(update.IsInstalled) and skip_installed:
+                    continue
 
-            if salt.utils.data.is_true(update.IsInstalled) and skip_installed:
-                continue
-
-            if salt.utils.data.is_true(update.IsMandatory) and skip_mandatory:
+                if salt.utils.data.is_true(update.IsMandatory) and skip_mandatory:
+                    continue
+            except AttributeError:
                 continue
 
             # Windows 10 build 2004 introduced some problems with the

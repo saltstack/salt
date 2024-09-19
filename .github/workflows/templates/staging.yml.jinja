@@ -124,12 +124,6 @@ concurrency:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
           path: artifacts/release
 
-      - name: Download Release Documentation (ePub)
-        uses: actions/download-artifact@v4
-        with:
-          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
-          path: artifacts/release
-
       - name: Show Release Artifacts
         run: |
           tree -a artifacts/release

@@ -137,8 +137,8 @@ def managed(
     Current versions of Salt use onedir packages and will use onedir python
     interpreter by default. If you've installed Salt via out package
     repository. You will likely want to provide the path to the interpreter
-    with wich you would like to be used to create the virtual envrionment. The
-    interperter can be specified by providing the `python` option.
+    with which you would like to be used to create the virtual environment. The
+    interpreter can be specified by providing the `python` option.
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 

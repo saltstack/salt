@@ -224,8 +224,8 @@ salt/config/*:
   - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
-  - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
+  - pytests.integration.loader.test_ext_grains
   - pytests.functional.loader.test_loader
   - pytests.functional.loader.test_loaded_base_name
 

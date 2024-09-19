@@ -20,12 +20,14 @@ jobs:
       github.event.pull_request.merged == true
       && (
         contains(github.event.pull_request.labels.*.name, 'backport:master') ||
+        contains(github.event.pull_request.labels.*.name, 'backport:3007.x') ||
         contains(github.event.pull_request.labels.*.name, 'backport:3006.x') ||
         contains(github.event.pull_request.labels.*.name, 'backport:3005.x')
       )
       && (
         (github.event.action == 'labeled' && (
           contains(github.event.pull_request.labels.*.name, 'backport:master') ||
+          contains(github.event.pull_request.labels.*.name, 'backport:3007.x') ||
           contains(github.event.pull_request.labels.*.name, 'backport:3006.x') ||
           contains(github.event.pull_request.labels.*.name, 'backport:3005.x')
         ))

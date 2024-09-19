@@ -2641,7 +2641,7 @@ def replace(
                 r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
             except (ValueError, OSError):
                 # size of file in /proc is 0, but contains data
-                r_data = salt.utils.stringutils.to_bytes("".join(r_file))
+                r_data = b"".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):

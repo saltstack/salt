@@ -690,7 +690,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
         "cmd": "_pillar",
     }
     try:
-        ret = await client.crypted_transfer_decode_dictentry(
+        ret = await client.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
             load,
             dictkey="pillar",
         )
@@ -774,7 +774,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
 
     try:
         with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-            ret = await client.crypted_transfer_decode_dictentry(
+            ret = await client.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
                 load,
                 dictkey="pillar",
             )
@@ -866,7 +866,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
 
     try:
         with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-            ret = await client.crypted_transfer_decode_dictentry(
+            ret = await client.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
                 load,
                 dictkey="pillar",
             )
@@ -960,7 +960,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     }
     try:
         with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-            await client.crypted_transfer_decode_dictentry(
+            await client.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
                 load,
                 dictkey="pillar",
             )

@@ -383,19 +383,6 @@ man_pages = [
 ]
 
 
-### epub options
-epub_title = "Salt Documentation"
-epub_author = "VMware, Inc."
-epub_publisher = epub_author
-epub_copyright = copyright
-
-epub_scheme = "URL"
-epub_identifier = "http://saltproject.io/"
-
-epub_tocdup = False
-# epub_tocdepth = 3
-
-
 def skip_mod_init_member(app, what, name, obj, skip, options):
     # pylint: disable=too-many-arguments,unused-argument
     if name.startswith("_"):

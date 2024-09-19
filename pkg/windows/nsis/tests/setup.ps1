@@ -9,6 +9,12 @@ installer for testing
 .EXAMPLE
 setup.ps1
 #>
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+# Don't pretify the output of the Write-Result
+    [Switch] $CICD
+)
 
 #-------------------------------------------------------------------------------
 # Script Preferences
@@ -22,8 +28,12 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -37,6 +47,7 @@ $NSIS_DIR      = "$WINDOWS_DIR\nsis"
 $BUILDENV_DIR  = "$WINDOWS_DIR\buildenv"
 $PREREQS_DIR   = "$WINDOWS_DIR\prereqs"
 $NSIS_BIN      = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
+$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/64"
 
 #-------------------------------------------------------------------------------
 # Script Start
@@ -71,7 +82,7 @@ $directories | ForEach-Object {
 #-------------------------------------------------------------------------------
 
 $prereq_files = "vcredist_x86_2022.exe",
-                "vcredist_x64_2022.exe",
+                "vcredist_x64_2022.exe"
 $prereq_files | ForEach-Object {
     Write-Host "Creating $_`: " -NoNewline
     Set-Content -Path "$PREREQS_DIR\$_" -Value "binary"
@@ -83,8 +94,8 @@ $prereq_files | ForEach-Object {
     }
 }
 
-$binary_files = "ssm.exe",
-                "python.exe"
+$binary_files = @("python.exe", "ssm.exe")
+
 $binary_files | ForEach-Object {
     Write-Host "Creating $_`: " -NoNewline
     Set-Content -Path "$BUILDENV_DIR\$_" -Value "binary"
@@ -96,11 +107,23 @@ $binary_files | ForEach-Object {
     }
 }
 
+# Make sure ssm.exe is present. This is needed for VMtools
+if ( ! (Test-Path -Path "$BUILDENV_DIR\ssm.exe") ) {
+    Write-Host "Copying SSM to Build Env: " -NoNewline
+    Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILDENV_DIR\ssm.exe"
+    if ( Test-Path -Path "$BUILDENV_DIR\ssm.exe" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
 #-------------------------------------------------------------------------------
 # Copy Configs
 #-------------------------------------------------------------------------------
 
-Write-Host "Copy minion config: " -NoNewline
+Write-Host "Copy testing minion config: " -NoNewline
 Copy-Item -Path "$NSIS_DIR\tests\_files\minion" `
           -Destination "$BUILDENV_DIR\configs\"
 if ( Test-Path -Path "$BUILDENV_DIR\configs\minion" ) {
@@ -124,6 +147,7 @@ if ( Test-Path -Path "$installer" ) {
     Write-Result "Success"
 } else {
     Write-Result "Failed" -ForegroundColor Red
+    Write-Host "$NSIS_BIN /DSaltVersion=test /DPythonArchitecture=AMD64 $NSIS_DIR\installer\Salt-Minion-Setup.nsi"
     exit 1
 }
 
@@ -142,7 +166,7 @@ if ( Test-Path -Path "$test_installer" ) {
 #-------------------------------------------------------------------------------
 
 Write-Host "Setting up venv: " -NoNewline
-python.exe -m venv venv
+python.exe -m venv "$SCRIPT_DIR\venv"
 if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
     Write-Result "Success"
 } else {
@@ -151,7 +175,7 @@ if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
 }
 
 Write-Host "Activating venv: " -NoNewline
-.\venv\Scripts\activate
+& $SCRIPT_DIR\venv\Scripts\activate.ps1
 if ( "$env:VIRTUAL_ENV" ) {
     Write-Result "Success"
 } else {

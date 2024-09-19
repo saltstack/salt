@@ -52,13 +52,14 @@ def state_name(files, salt_master):
         yield name
 
 
-def test_salt_state_file(salt_cli, salt_minion, state_name, files):
+def test_salt_state_file(salt_cli, salt_minion, salt_master, state_name, files):
     """
     Test state file
     """
     assert files.fpath_1.exists() is False
     assert files.fpath_2.exists() is False
     assert files.fpath_3.exists() is False
+    assert salt_master.is_running()
 
     ret = salt_cli.run("state.apply", state_name, minion_tgt=salt_minion.id)
     assert ret.returncode == 0
