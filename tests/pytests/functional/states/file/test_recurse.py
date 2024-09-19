@@ -7,6 +7,60 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module")
+def symlink_scenario_1(state_tree):
+    # Create directory structure
+    dir_name = "symlink_scenario_1"
+    source_dir = state_tree / dir_name
+    if not source_dir.is_dir():
+        source_dir.mkdir()
+    source_file = source_dir / "source_file.txt"
+    source_file.write_text("This is the source file...")
+    symlink_file = source_dir / "symlink"
+    symlink_file.symlink_to(source_file)
+    yield dir_name
+
+
+@pytest.fixture(scope="module")
+def symlink_scenario_2(state_tree):
+    # Create directory structure
+    dir_name = "symlink_scenario_2"
+    source_dir = state_tree / dir_name / "test"
+    if not source_dir.is_dir():
+        source_dir.mkdir(parents=True)
+    test1 = source_dir / "test1"
+    test2 = source_dir / "test2"
+    test3 = source_dir / "test3"
+    test_link = source_dir / "test"
+    test1.touch()
+    test2.touch()
+    test3.touch()
+    test_link.symlink_to(test3)
+    yield dir_name
+
+
+@pytest.fixture(scope="module")
+def symlink_scenario_3(state_tree):
+    # Create directory structure
+    dir_name = "symlink_scenario_3"
+    source_dir = state_tree / dir_name
+    if not source_dir.is_dir():
+        source_dir.mkdir(parents=True)
+    # Create a file with the same name but is not a symlink
+    source_file = source_dir / "not_a_symlink" / "symlink"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text("This is the source file...")
+    # Create other fluff files
+    just_a_file = source_dir / "just_a_file.txt"
+    just_a_file.touch()
+    dummy_file = source_dir / "notasymlink"
+    dummy_file.touch()
+    # Create symlink to source with the same name
+    symlink_file = source_dir / "symlink"
+    symlink_file.symlink_to(source_file)
+    yield dir_name
+
+
 @pytest.mark.parametrize("test", (False, True))
 def test_recurse(file, tmp_path, grail, test):
     """
@@ -249,3 +303,148 @@ def test_issue_2726_mode_kwarg(modules, tmp_path, state_tree):
         ret = modules.state.template_str("\n".join(good_template))
         for state_run in ret:
             assert state_run.result is True
+
+
+def test_issue_64630_keep_symlinks_true(file, symlink_scenario_1, tmp_path):
+    """
+    Make sure that symlinks are created and that there isn't an error when there
+    are no conflicting target files
+    """
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=True
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_symlink()
+
+
+def test_issue_64630_keep_symlinks_false(file, symlink_scenario_1, tmp_path):
+    """
+    Make sure that symlinks are created as files and that there isn't an error
+    """
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=False
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_file()
+    assert target_file.read_text() == target_symlink.read_text()
+
+
+def test_issue_64630_keep_symlinks_conflicting_force_symlinks_false(
+    file, symlink_scenario_1, tmp_path
+):
+    """
+    Make sure that symlinks are not created when there is a conflict. The state
+    should return False
+    """
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    # Create the conflicting file
+    target_symlink.parent.mkdir(parents=True)
+    target_symlink.touch()
+    assert target_symlink.is_file()
+
+    ret = file.recurse(
+        name=str(target_dir),
+        source=f"salt://{target_dir.name}",
+        keep_symlinks=True,
+        force_symlinks=False,
+    )
+    # We expect it to fail
+    assert ret.result is False
+
+    # And files not to be created properly
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_file()
+
+
+def test_issue_64630_keep_symlinks_conflicting_force_symlinks_true(
+    file, symlink_scenario_1, tmp_path
+):
+    """
+    Make sure that symlinks are created when there is a conflict with an
+    existing file.
+    """
+    target_dir = tmp_path / symlink_scenario_1  # Target for the file.recurse state
+    target_file = target_dir / "source_file.txt"
+    target_symlink = target_dir / "symlink"
+
+    # Create the conflicting file
+    target_symlink.parent.mkdir(parents=True)
+    target_symlink.touch()
+    assert target_symlink.is_file()
+
+    ret = file.recurse(
+        name=str(target_dir),
+        source=f"salt://{target_dir.name}",
+        force_symlinks=True,
+        keep_symlinks=True,
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file.is_file()
+    assert target_symlink.is_symlink()
+
+
+def test_issue_64630_keep_symlinks_similar_names(file, symlink_scenario_3, tmp_path):
+    """
+    Make sure that symlinks are created when there is a file that shares part
+    of the name of the actual symlink file. I'm not sure what I'm testing here
+    as I couldn't really get this to fail either way
+    """
+    target_dir = tmp_path / symlink_scenario_3  # Target for the file.recurse state
+    # symlink target, but has the same name as the symlink itself
+    target_source = target_dir / "not_a_symlink" / "symlink"
+    target_symlink = target_dir / "symlink"
+    decoy_file = target_dir / "notasymlink"
+    just_a_file = target_dir / "just_a_file.txt"
+
+    ret = file.recurse(
+        name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=True
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_source.is_file()
+    assert decoy_file.is_file()
+    assert just_a_file.is_file()
+    assert target_symlink.is_symlink()
+
+
+def test_issue_62117(file, symlink_scenario_2, tmp_path):
+    target_dir = tmp_path / symlink_scenario_2 / "test"
+    target_file_1 = target_dir / "test1"
+    target_file_2 = target_dir / "test2"
+    target_file_3 = target_dir / "test3"
+    target_symlink = target_dir / "test"
+
+    ret = file.recurse(
+        name=str(target_dir),
+        source=f"salt://{target_dir.parent.name}/test",
+        clean=True,
+        keep_symlinks=True,
+    )
+    assert ret.result is True
+
+    assert target_dir.exists()
+    assert target_file_1.is_file()
+    assert target_file_2.is_file()
+    assert target_file_3.is_file()
+    assert target_symlink.is_symlink()
