@@ -701,7 +701,8 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
                 return pk, "pem", None
             return pk
         except ValueError as err:
-            if "Bad decrypt" in str(err):
+            str_err = str(err)
+            if "Bad decrypt" in str_err or "Could not deserialize key data" in str_err:
                 raise SaltInvocationError(
                     "Bad decrypt - is the password correct?"
                 ) from err
