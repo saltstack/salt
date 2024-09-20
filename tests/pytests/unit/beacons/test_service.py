@@ -195,3 +195,37 @@ def test_service_not_running():
                 "salt-master": {"running": False},
             }
         ]
+
+
+def test_service_matching_is_running_state():
+    with patch.dict(
+        service_beacon.__salt__, {"service.status": MagicMock(return_value=False)}
+    ):
+        config = [{"services": {"salt-master": {"is_running_state": True}}}]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = service_beacon.beacon(config)
+
+        assert ret == []
+
+        config = [
+            {
+                "services": {
+                    "salt-master": {"is_running_state": False},
+                    "salt-minion": {"is_running_state": True},
+                }
+            }
+        ]
+
+        ret = service_beacon.beacon(config)
+
+        assert ret == [
+            {
+                "service_name": "salt-master",
+                "tag": "salt-master",
+                "salt-master": {"running": False},
+            }
+        ]
