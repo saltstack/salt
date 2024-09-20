@@ -209,7 +209,7 @@ def runas(cmdLine, username, password=None, cwd=None):
             int(user_token),
             logonflags=1,
             applicationname=None,
-            commandline=cmdLine,
+            commandline=f'cmd /c "{cmdLine}"',
             currentdirectory=cwd,
             creationflags=creationflags,
             startupinfo=startup_info,
@@ -310,7 +310,7 @@ def runas_unpriv(cmd, username, password, cwd=None):
             domain=domain,
             password=password,
             logonflags=salt.platform.win.LOGON_WITH_PROFILE,
-            commandline=cmd,
+            commandline=f'cmd /c "{cmd}"',
             startupinfo=startup_info,
             currentdirectory=cwd,
         )
