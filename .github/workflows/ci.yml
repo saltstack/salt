@@ -2027,7 +2027,6 @@ jobs:
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          ## name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
           pattern: all-testrun-coverage-artifacts*
           merge-multiple: true
