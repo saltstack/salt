@@ -1,13 +1,16 @@
-import os
 import logging
+import os
 import re
+
 import requests
+
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.thin
-import salt.utils.hashutils
 
 log = logging.getLogger(__name__)
+
 
 def gen_relenv(
     cachedir,
@@ -38,6 +41,7 @@ def gen_relenv(
 
     return tarball_path
 
+
 def get_tarball(kernel, arch):
     """
     Get the latest Salt onedir tarball URL for the specified kernel and architecture.
@@ -66,19 +70,22 @@ def get_tarball(kernel, arch):
     latest_tarball = matches[-1]
     return base_url + latest_tarball
 
+
 def download(cachedir, url, destination):
     if not os.path.exists(destination):
         log.info(f"Downloading from {url} to {destination}")
         try:
-            with salt.utils.files.fopen(destination, 'wb+') as dest_file:
+            with salt.utils.files.fopen(destination, "wb+") as dest_file:
+
                 def stream_callback(chunk):
                     dest_file.write(chunk)
+
                 result = salt.utils.http.query(
                     url=url,
-                    method='GET',
+                    method="GET",
                     stream=True,
                     streaming_callback=stream_callback,
-                    raise_error=True
+                    raise_error=True,
                 )
                 if result.get("status") != 200:
                     log.error(f"Failed to download file from {url}")

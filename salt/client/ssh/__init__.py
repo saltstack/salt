@@ -1,5 +1,4 @@
 """
-
 Create ssh executor system
 """
 
@@ -196,7 +195,7 @@ EOF'''.format(
 SSH_SH_SHIM_RELENV = "\n".join(
     [
         s.strip()
-        for s in '''
+        for s in """
 /bin/sh << 'EOF'
 set -e
 set -u
@@ -240,7 +239,9 @@ echo "{RSTR}" >&2
 
 exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "$RELENV_DIR" {ARGS}
 EOF
-'''.split("\n")
+""".split(
+            "\n"
+        )
     ]
 )
 
@@ -1131,7 +1132,9 @@ class Single:
 
         if self.opts.get("relenv"):
             kernel, os_arch = self.detect_os_arch()
-            self.thin = salt.utils.relenv.gen_relenv(opts["cachedir"], kernel=kernel, os_arch=os_arch)
+            self.thin = salt.utils.relenv.gen_relenv(
+                opts["cachedir"], kernel=kernel, os_arch=os_arch
+            )
         else:
             self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
 
@@ -1186,12 +1189,13 @@ class Single:
                 kernel = "windows"
             else:
                 # Neither Unix nor Windows detection succeeded
-                raise ValueError(f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}")
+                raise ValueError(
+                    f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}"
+                )
 
         log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
 
         return kernel, os_arch
-
 
     def __arg_comps(self):
         """
@@ -1618,7 +1622,6 @@ ARGS = {arguments}\n'''.format(
         )
         py_code = SSH_PY_SHIM.replace("#%%OPTS", arg_str)
         py_code_enc = base64.encodebytes(py_code.encode("utf-8")).decode("utf-8")
-
 
         if not self.winrm:
             cmd = SSH_SH_SHIM.format(
