@@ -325,7 +325,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     """
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, empty dirs and symlinks
     """
     if "env" in load:
         # "env" is not supported; Use "saltenv".

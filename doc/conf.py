@@ -181,7 +181,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://via.vmw.com/salt-slack
+.. _`salt-discord`: https://discord.com/invite/J7b7EscrAs
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a

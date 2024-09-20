@@ -10,9 +10,9 @@
    :alt: PyPi Package Downloads
    :target: https://lgtm.com/projects/g/saltstack/salt/context:python
 
-.. image:: https://img.shields.io/badge/slack-SaltProject-blue.svg?logo=slack
-   :alt: Salt Project Slack Community
-   :target: https://via.vmw.com/salt-slack
+.. image:: https://img.shields.io/badge/discord-SaltProject-blue.svg?logo=discord
+   :alt: Salt Project Discord Community
+   :target: https://discord.com/invite/J7b7EscrAs
 
 .. image:: https://img.shields.io/twitch/status/saltprojectoss
    :alt: Salt Project Twitch Channel
@@ -103,7 +103,8 @@ Report bugs or problems using Salt by opening an issue: `<https://github.com/sal
 
 To join our community forum where you can exchange ideas, best practices,
 discuss technical support questions, and talk to project maintainers, join our
-Slack workspace: `Salt Project Community Slack`_
+Discord server: `Salt Project Community Discord`_
+
 
 
 Salt Project documentation
@@ -127,7 +128,7 @@ announcements.
 
 Other channels to receive security announcements include the
 `Salt Community mailing list <https://groups.google.com/forum/#!forum/salt-users>`_
-and the `Salt Project Community Slack`_.
+and the `Salt Project Community Discord`_.
 
 
 Responsibly reporting security vulnerabilities
@@ -153,7 +154,7 @@ Please be sure to review our
 Also, check out some of our community resources including:
 
 * `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
-* `Salt Project Community Slack`_
+* `Salt Project Community Discord`_
 * `Salt Project: IRC on LiberaChat <https://web.libera.chat/#salt>`_
 * `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
 * `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
@@ -165,8 +166,7 @@ to the **Salt Project Community Events Calendar** on the main
 `<https://saltproject.io>`_ website.
 
 If you have additional questions, email us at saltproject@vmware.com or reach out
-directly to the Community Manager, Jimmy Chunga via Slack. We'd be glad to
-have you join our community!
+directly to the Community Discord. We'd be glad to have you join our community!
 
 
 License
@@ -180,7 +180,7 @@ used by external modules.
 A complete list of attributions and dependencies can be found here:
 `salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
-.. _Salt Project Community Slack: https://via.vmw.com/salt-slack
+.. _Salt Project Community Discord: https://discord.com/invite/J7b7EscrAs
 .. _VMware Aria Automation Config: https://www.vmware.com/products/vrealize-automation/saltstack-config.html
 .. _Latest Salt Documentation: https://docs.saltproject.io/en/latest/
 .. _Open an issue: https://github.com/saltstack/salt/issues/new/choose

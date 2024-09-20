@@ -1,30 +1,56 @@
-============
-Contributing
-============
+==============================================
+Contributing to Salt: A Guide for Contributors
+==============================================
 
-So you want to contribute to the Salt project? Excellent! You can help
-in a number of ways:
+So, you want to contribute to the Salt project? That's fantastic! There are many
+ways you can help improve Salt:
 
--  Use Salt and open well-written bug reports.
--  Join a `working group <https://github.com/saltstack/community>`__.
--  Answer questions on `irc <https://web.libera.chat/#salt>`__,
-   the `community Slack <https://via.vmw.com/salt-slack>`__,
-   the `salt-users mailing
-   list <https://groups.google.com/forum/#!forum/salt-users>`__,
-   `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
-   or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
--  Fix bugs.
--  `Improve the documentation <https://saltstack.gitlab.io/open/docs/docs-hub/topics/contributing.html>`__.
-- Provide workarounds, patches, or other code without tests.
-- Tell other people about problems you solved using Salt.
+- Use Salt and report bugs with clear, detailed descriptions.
+- Join a `working group <https://github.com/saltstack/community>`__ to
+  collaborate with other contributors.
+- Answer questions on platforms like `IRC <https://web.libera.chat/#salt>`__,
+  the `community Discord <https://discord.com/invite/J7b7EscrAs>`__,
+  the `salt-users mailing list <https://groups.google.com/forum/#!forum/salt-users>`__,
+  `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
+  or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
+- Fix bugs or contribute to the `documentation <https://saltstack.gitlab.io/open/docs/docs-hub/topics/contributing.html>`__.
+- Submit workarounds, patches, or code (even without tests).
+- Share your experiences and solutions to problems you've solved using Salt.
 
-If you'd like to update docs or fix an issue, you're going to need the
-Salt repo. The best way to contribute is using
-`Git <https://git-scm.com/>`__.
+Choosing the Right Branch for Your Pull Request
+===============================================
 
+We appreciate your contributions to the project! To ensure a smooth and
+efficient workflow, please follow these guidelines when submitting a Pull
+Request. Each type of contribution—whether it's fixing a bug, adding a feature,
+updating documentation, or fixing tests—should be targeted at the appropriate
+branch. This helps us manage changes effectively and maintain stability across
+versions.
 
-Environment setup
-=================
+- **Bug Fixes:**
+
+  Create your Pull Request against the oldest supported branch where the bug
+  exists. This ensures that the fix can be applied to all relevant versions.
+
+- **New Features**:
+
+  For new features or enhancements, create your Pull Request against the master
+  branch.
+
+- **Documentation Updates:**
+
+  Documentation changes should be made against the master branch, unless they
+  are related to a bug fix, in which case they should follow the same branch as
+  the bug fix.
+
+- **Test Fixes:**
+
+  Pull Requests that fix broken or failing tests should be created against the
+  oldest supported branch where the issue occurs.
+
+Setting Up Your Salt Development Environment
+============================================
+
 To hack on Salt or the docs you're going to need to set up your
 development environment. If you already have a workflow that you're
 comfortable with, you can use that, but otherwise this is an opinionated
@@ -109,7 +135,7 @@ Then activate it:
 
 Sweet! Now you're ready to clone Salt so you can start hacking away! If
 you get stuck at any point, check out the resources at the beginning of
-this guide. IRC and Slack are particularly helpful places to go.
+this guide. IRC and Discord are particularly helpful places to go.
 
 
 Get the source!
@@ -605,7 +631,7 @@ your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we're not in a code freeze, ideally your code will be merged
 that week or month. If you haven't heard from your assigned reviewer, ping them
-on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
+on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Discord.
 
 It's likely that your reviewer will leave some comments that need
 addressing - it may be a style change, or you forgot a changelog entry,

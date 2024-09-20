@@ -39,6 +39,19 @@
 
   <%- endif %>
 
+  <%- set job_name = "nsis-tests" %>
+  <%- if includes.get(job_name, True) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: NSIS Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/nsis-tests.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+
+  <%- endif %>
 
   <%- set job_name = "prepare-release" %>
   <%- if includes.get(job_name, True) %>
@@ -362,8 +375,9 @@
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/

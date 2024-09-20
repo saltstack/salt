@@ -1011,7 +1011,6 @@ def get_pkg_downloads_matrix(ctx: Context):
         "photon",
     )
     linux_skip_pkg_download_tests = (
-        "archlinux-lts",
         "opensuse-15",
         "windows",
     )

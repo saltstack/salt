@@ -51,7 +51,6 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 display_name="Amazon Linux 2023 Arm64",
                 arch="arm64",
             ),
-            Linux(slug="archlinux-lts", display_name="Arch Linux LTS", arch="x86_64"),
             Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
             Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
             Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
