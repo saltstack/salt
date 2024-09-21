@@ -47,6 +47,9 @@ def create(path, saltenv=None):
 
     query = f"saltenv={saltenv}" if saltenv else ""
     url = salt.utils.data.decode(urlunparse(("file", "", path, "", query, "")))
+    if url.startswith("file:") and not url.startswith("file:/"):
+        # Workaround for urlunparse not returning a full file:/// in Python 3.12.
+        url = "file:///" + url[len("file:") :]
     return "salt://{}".format(url[len("file:///") :])
 
 
