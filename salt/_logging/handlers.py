@@ -65,7 +65,11 @@ class DeferredStreamHandler(StreamHandler):
                 super().handle(record)
             finally:
                 self.__emitting = False
-        super().flush()
+        # Seeing an exception from calling flush on a closed file in the test
+        # suite. Handling this condition for now but this seems to be
+        # indicitive of an un-clean teardown at some point.
+        if not self.stream.closed:
+            super().flush()
 
     def sync_with_handlers(self, handlers=()):
         """
