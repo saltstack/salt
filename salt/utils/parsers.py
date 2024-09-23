@@ -3227,7 +3227,7 @@ class SaltSSHOptionParser(
                 "custom grains/modules/states have been added or updated."
             ),
         )
-        _ = self.add_option(
+        self.add_option(
             "--relenv",
             dest="relenv",
             default=False,

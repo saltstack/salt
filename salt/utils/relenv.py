@@ -55,15 +55,15 @@ def get_tarball(kernel, arch):
         response = requests.get(base_url, timeout=60)
         response.raise_for_status()
     except requests.RequestException as e:
-        log.error("Failed to retrieve tarball listing: {}".format(e))
+        log.error(f"Failed to retrieve tarball listing: {e}")
         raise ValueError("Unable to fetch tarball list from repository")
 
     # Search for tarball filenames that match the kernel and arch
     pattern = re.compile(rf'href="(salt-.*-onedir-{kernel}-{arch}\.tar\.xz)"')
     matches = pattern.findall(response.text)
     if not matches:
-        log.error("No tarballs found for {} and {}".format(kernel, arch))
-        raise ValueError("No tarball found for {} {}".format(kernel, arch))
+        log.error(f"No tarballs found for {kernel} and {arch}")
+        raise ValueError(f"No tarball found for {kernel} {arch}")
 
     # Return the latest tarball URL
     matches.sort()
@@ -76,7 +76,7 @@ def download(cachedir, url, destination):
     Download the salt artifact from the given destination to the cache.
     """
     if not os.path.exists(destination):
-        log.info("Downloading from {} to {}".format(url, destination))
+        log.info(f"Downloading from {url} to {destination}")
         with salt.utils.files.fopen(destination, "wb+") as dest_file:
             result = salt.utils.http.query(
                 url=url,
@@ -86,6 +86,6 @@ def download(cachedir, url, destination):
                 raise_error=True,
             )
             if result.get("status") != 200:
-                log.error("Failed to download file from {}".format(url))
+                log.error(f"Failed to download file from {url}")
                 return False
     return True

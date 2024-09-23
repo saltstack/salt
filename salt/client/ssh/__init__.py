@@ -1192,7 +1192,7 @@ class Single:
                     f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}"
                 )
 
-        log.info('Detected kernel "{}" and architecture "{}" on target'.format(kernel, os_arch))
+        log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
 
         return kernel, os_arch
 
@@ -1572,7 +1572,6 @@ class Single:
             cachedir = self.opts["_caller_cachedir"]
         else:
             cachedir = self.opts["cachedir"]
-
         debug = ""
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
@@ -1622,7 +1621,6 @@ ARGS = {arguments}\n'''.format(
         )
         py_code = SSH_PY_SHIM.replace("#%%OPTS", arg_str)
         py_code_enc = base64.encodebytes(py_code.encode("utf-8")).decode("utf-8")
-
         if not self.winrm:
             cmd = SSH_SH_SHIM.format(
                 DEBUG=debug,
