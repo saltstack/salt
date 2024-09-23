@@ -212,9 +212,8 @@ SUDO_USER="{SUDO_USER}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]; then SUDO="$SUDO -u $SUDO_USER"; fi
 
 RELENV_TAR="{THIN_DIR}/salt-relenv.tar.xz"
-RELENV_DIR="{THIN_DIR}/salt"
 mkdir -p "{THIN_DIR}"
-SALT_CALL_BIN="$RELENV_DIR/salt-call"
+SALT_CALL_BIN="{THIN_DIR}/salt-call"
 
 # Extract relenv tarball if not already extracted
 if [ ! -x "$SALT_CALL_BIN" ]; then
@@ -225,7 +224,7 @@ if [ ! -x "$SALT_CALL_BIN" ]; then
     fi
 
     # Create directory if not exists and extract the tarball
-    tar -xf "$RELENV_TAR" -C "{THIN_DIR}"
+    tar --strip-components=1 -xf "$RELENV_TAR" -C "{THIN_DIR}"
 fi
 
 # Check if Python binary is executable
@@ -237,7 +236,7 @@ fi
 echo "{RSTR}"
 echo "{RSTR}" >&2
 
-exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "$RELENV_DIR" {ARGS}
+exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "{THIN_DIR}" {ARGS}
 EOF
 """.split(
             "\n"

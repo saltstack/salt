@@ -163,7 +163,7 @@ def test_thin_dir(salt_ssh_cli):
     assert thin_dir.joinpath("running_data").exists()
 
 
-def test_relenv(salt_ssh_cli):
+def test_relenv_dir(salt_ssh_cli):
     """
     test to make sure thin_dir is created
     and salt-call file is included
