@@ -72,6 +72,9 @@ def get_tarball(kernel, arch):
 
 
 def download(cachedir, url, destination):
+    """
+    Download the salt artifact from the given destination to the cache.
+    """
     if not os.path.exists(destination):
         log.info(f"Downloading from {url} to {destination}")
         try:
