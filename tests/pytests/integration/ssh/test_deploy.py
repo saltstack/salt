@@ -182,7 +182,7 @@ def test_relenv_ping(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("--relenv", "test.ping")
     assert ret.returncode == 0
-    assert ret.data is True.joinpath("salt-call").exists()
+    assert ret.data is True
 
 
 def test_wipe(salt_ssh_cli):
