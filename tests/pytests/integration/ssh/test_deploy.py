@@ -172,7 +172,17 @@ def test_relenv_dir(salt_ssh_cli):
     assert ret.returncode == 0
     thin_dir = pathlib.Path(ret.data)
     assert thin_dir.is_dir()
+    assert thin_dir
     assert thin_dir.joinpath("salt-call").exists()
+
+
+def test_relenv_ping(salt_ssh_cli):
+    """
+    Test a simple ping
+    """
+    ret = salt_ssh_cli.run("--relenv", "test.ping")
+    assert ret.returncode == 0
+    assert ret.data is True.joinpath("salt-call").exists()
 
 
 def test_wipe(salt_ssh_cli):
