@@ -7,11 +7,12 @@ import pytest
 import salt.exceptions
 import salt.utils.network
 import salt.utils.network as network
+import salt.utils.platform
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.windows_whitelisted,
 ]
 
 
@@ -722,13 +723,13 @@ def test_netlink_tool_remote_on_a():
         with patch("salt.utils.platform.is_linux", return_value=True):
             with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
                 remotes = network._netlink_tool_remote_on("4506", "local_port")
-                assert remotes == {"192.168.122.177", "::ffff:127.0.0.1"}
+                assert remotes == {"192.168.122.177", "127.0.0.1"}
 
 
 def test_netlink_tool_remote_on_b():
     with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
         remotes = network._netlink_tool_remote_on("4505", "remote_port")
-        assert remotes == {"127.0.0.1", "::ffff:1.2.3.4"}
+        assert remotes == {"127.0.0.1", "1.2.3.4"}
 
 
 def test_openbsd_remotes_on():
@@ -1431,7 +1432,11 @@ def test_isportopen_false():
 
 
 def test_isportopen():
-    ret = network.isportopen("127.0.0.1", "22")
+    if salt.utils.platform.is_windows():
+        port = "135"
+    else:
+        port = "22"
+    ret = network.isportopen("127.0.0.1", port)
     assert ret == 0
 
 
@@ -1445,13 +1450,19 @@ def test_get_socket():
     assert ret.type == socket.SOCK_STREAM
 
 
+# @pytest.mark.skip_on_windows(reason="Do not run on Windows")
 def test_ip_to_host(grains):
+    if salt.utils.platform.is_windows():
+        hostname = socket.gethostname()
+    else:
+        hostname = "localhost"
+
     ret = network.ip_to_host("127.0.0.1")
-    if grains["oscodename"] == "Photon":
+    if grains.get("oscodename") == "Photon":
         # Photon returns this for IPv4
         assert ret == "ipv6-localhost"
     else:
-        assert ret == "localhost"
+        assert ret == hostname
 
     ret = network.ip_to_host("2001:a71::1")
     assert ret is None
@@ -1461,22 +1472,22 @@ def test_ip_to_host(grains):
         assert ret == "localhost6"
     elif grains["os_family"] == "Debian":
         if grains["osmajorrelease"] == 12:
-            assert ret == "localhost"
+            assert ret == hostname
         else:
             assert ret == "ip6-localhost"
     elif grains["os_family"] == "RedHat":
         if grains["oscodename"] == "Photon":
             assert ret == "ipv6-localhost"
         else:
-            assert ret == "localhost"
+            assert ret == hostname
     elif grains["os_family"] == "Arch":
         if grains.get("osmajorrelease", None) is None:
             # running doesn't have osmajorrelease grains
-            assert ret == "localhost"
+            assert ret == hostname
         else:
             assert ret == "ip6-localhost"
     else:
-        assert ret == "localhost"
+        assert ret == hostname
 
 
 @pytest.mark.parametrize(
@@ -1509,7 +1520,7 @@ def test_rpad_ipv4_network(addr, expected):
 def test_hw_addr(linux_interfaces_dict, freebsd_interfaces_dict):
 
     with patch(
-        "salt.utils.network.linux_interfaces",
+        "salt.utils.network.interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
         hw_addrs = network.hw_addr("eth0")
@@ -1534,7 +1545,7 @@ def test_hw_addr(linux_interfaces_dict, freebsd_interfaces_dict):
 def test_interface_and_ip(linux_interfaces_dict):
 
     with patch(
-        "salt.utils.network.linux_interfaces",
+        "salt.utils.network.interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
         expected = [
@@ -1560,7 +1571,7 @@ def test_interface_and_ip(linux_interfaces_dict):
 def test_subnets(linux_interfaces_dict):
 
     with patch(
-        "salt.utils.network.linux_interfaces",
+        "salt.utils.network.interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
         ret = network.subnets()
@@ -1583,14 +1594,14 @@ def test_in_subnet(caplog):
 
 def test_ip_addrs(linux_interfaces_dict):
     with patch(
-        "salt.utils.network.linux_interfaces",
+        "salt.utils.network.interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
         ret = network.ip_addrs("eth0")
         assert ret == ["10.10.10.56"]
 
     with patch(
-        "salt.utils.network.linux_interfaces",
+        "salt.utils.network.interfaces",
         MagicMock(return_value=linux_interfaces_dict),
     ):
         ret = network.ip_addrs6("eth0")

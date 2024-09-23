@@ -283,7 +283,7 @@ install -p -m 0644 %{_salt_src}/pkg/common/logrotate/salt-common %{buildroot}%{_
 
 # Bash completion
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
-install -p -m 0644 %{_salt_src}/pkg/common/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
+install -p -m 0644 %{_salt_src}/pkg/rpm/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
 
 # Fish completion (TBD remove -v)
 mkdir -p %{buildroot}%{fish_dir}
@@ -441,6 +441,15 @@ if [ $1 -gt 1 ] ; then
     %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
 fi
 
+%pre syndic
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    %global _MS_CUR_USER  %{_MS_LCUR_USER}
+    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
+fi
+
 %pre minion
 if [ $1 -gt 1 ] ; then
     # Reset permissions to match previous installs - performing upgrade
@@ -463,6 +472,14 @@ if [ $1 -eq 0 ] ; then
   /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
 fi
 
+%preun syndic
+# %%systemd_preun salt-syndic.service
+if [ $1 -eq 0 ] ; then
+  # Package removal, not upgrade
+  /bin/systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
+  /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
+fi
+
 %preun minion
 # %%systemd_preun salt-minion.service
 if [ $1 -eq 0 ] ; then
@@ -470,7 +487,6 @@ if [ $1 -eq 0 ] ; then
   /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
   /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
 fi
-
 
 %preun api
 # %%systemd_preun salt-api.service
@@ -599,6 +615,19 @@ if [ $1 -gt 1 ] ; then
     chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+fi
+
+
+%posttrans syndic
+if [ ! -e "/var/log/salt/syndic" ]; then
+  touch /var/log/salt/syndic
+  chmod 640 /var/log/salt/syndic
+fi
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /var/log/salt/syndic
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic
 fi
 
 

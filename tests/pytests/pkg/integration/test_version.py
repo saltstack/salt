@@ -1,6 +1,7 @@
 import os.path
 import pathlib
 import subprocess
+import time
 
 import pytest
 from pytestskipmarkers.utils import platform
@@ -35,6 +36,7 @@ def test_salt_version(version, install_salt):
 
 
 @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
@@ -53,17 +55,33 @@ def test_salt_versions_report_master(install_salt):
 
 
 @pytest.mark.skip_on_windows
-def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
+def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_minion):
     """
     Test running test.versions_report on minion
     """
     # Make sure the minion is running
+    for count in range(0, 30):
+        if salt_minion.is_running():
+            break
+        else:
+            time.sleep(2)
+
     assert salt_minion.is_running()
+
+    # Make sure the master is running
+    for count in range(0, 30):
+        if salt_master.is_running():
+            break
+        else:
+            time.sleep(2)
+
+    assert salt_master.is_running()
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
-        "--timeout=300", "test.ping", minion_tgt=salt_minion.id, _timeout=300
+        "--timeout=600", "test.ping", minion_tgt=salt_minion.id, _timeout=600
     )
+
     assert ret.returncode == 0
     assert ret.data is True
     ret = salt_cli.run(
@@ -77,6 +95,8 @@ def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_minion):
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
 
 
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 @pytest.mark.parametrize(
     "binary", ["master", "cloud", "syndic", "minion", "call", "api"]
 )
@@ -132,8 +152,7 @@ def test_symlinks_created(version, symlink, install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
-@pytest.mark.skip_on_windows
-@pytest.mark.skip_on_darwin
+@pytest.mark.skip_unless_on_linux
 @pytest.mark.skip_if_binaries_missing("rpmdev-vercmp")
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """

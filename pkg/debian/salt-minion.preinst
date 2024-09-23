@@ -24,7 +24,6 @@ case "$1" in
     else
         db_set salt-minion/enabled enabled
         db_set salt-minion/active active
-
     fi
     ;;
 esac

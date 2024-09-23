@@ -22,7 +22,6 @@ case "$1" in
     else
         db_set salt-api/enabled enabled
         db_set salt-api/active active
-
     fi
     ;;
 esac

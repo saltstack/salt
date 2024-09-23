@@ -123,4 +123,4 @@ In addition to the mailing lists, SaltStack also provides the following resource
 
 * `SaltStack Security Announcements <https://www.saltstack.com/security-announcements/>`__ landing page
 * `SaltStack Security RSS Feed <http://www.saltstack.com/feed/?post_type=security>`__
-* `SaltStack Community Slack Workspace <http://saltstackcommunity.slack.com/>`__
+* `Salt Project Discord Community <https://discord.com/invite/J7b7EscrAs>`__

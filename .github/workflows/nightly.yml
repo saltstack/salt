@@ -185,6 +185,9 @@ jobs:
                 - pkg/**
                 - *pkg_requirements
                 - *salt_added_modified
+            nsis_tests:
+              - added|modified: &nsis_tests
+                - pkg/windows/nsis/**
             testrun:
               - added|modified:
                 - *pkg_requirements
@@ -313,6 +316,14 @@ jobs:
     name: Lint
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/lint-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+  nsis-tests:
+    name: NSIS Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/nsis-tests.yml
     needs:
       - prepare-workflow
     with:
@@ -1602,27 +1613,6 @@ jobs:
       workflow-slug: nightly
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  archlinux-lts:
-    name: Arch Linux LTS Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: archlinux-lts
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
-      skip-code-coverage: false
-      workflow-slug: nightly
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
   debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2070,7 +2060,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2124,8 +2113,9 @@ jobs:
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/
@@ -2977,7 +2967,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -3050,6 +3039,7 @@ jobs:
       - prepare-workflow
       - pre-commit
       - lint
+      - nsis-tests
       - build-docs
       - build-deps-onedir
       - build-salt-onedir

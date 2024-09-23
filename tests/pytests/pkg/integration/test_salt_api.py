@@ -5,7 +5,7 @@ pytestmark = [
 ]
 
 
-def test_salt_api(api_request, salt_master, install_salt):
+def test_salt_api(api_request, install_salt, salt_master):
     """
     Test running a command against the salt api
     """
