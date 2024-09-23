@@ -1192,7 +1192,7 @@ class Single:
                     f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}"
                 )
 
-        log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
+        log.info('Detected kernel "{}" and architecture "{}" on target'.format(kernel, os_arch))
 
         return kernel, os_arch
 
@@ -1510,6 +1510,7 @@ class Single:
                 self.args = mine_args
                 self.kwargs = {}
 
+        retcode = 0
         try:
             if self.mine:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)
