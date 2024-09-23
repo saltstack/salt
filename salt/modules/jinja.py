@@ -100,7 +100,7 @@ def import_json(path):
 
     .. code-block:: bash
 
-        salt myminion jinja.import_JSON myformula/foo.json
+        salt myminion jinja.import_json myformula/foo.json
     """
     tmplstr = textwrap.dedent(
         """\
