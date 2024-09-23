@@ -3094,6 +3094,7 @@ class SaltSSHOptionParser(
     ]
 
     def _mixin_setup(self):
+        # pylint: disable=W0106
         self.add_option(
             "-r",
             "--raw",
