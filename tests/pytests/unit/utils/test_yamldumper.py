@@ -61,7 +61,11 @@ def test_yaml_indent_safe_ordered_dump():
     Test yaml.dump with IndentedSafeOrderedDumper
     """
     data = OrderedDict([("foo", ["bar", "baz"]), ("qux", "quux")])
-    exp_yaml = "foo:\n- bar\n- baz\nqux: quux\n"
+    # Account for difference in SafeDumper vs CSafeDumper
+    if salt.utils.yamldumper.SafeDumper.__name__ == "SafeDumper":
+        exp_yaml = "foo:\n  - bar\n  - baz\nqux: quux\n"
+    else:
+        exp_yaml = "foo:\n- bar\n- baz\nqux: quux\n"
     assert (
         salt.utils.yamldumper.dump(
             data,
