@@ -223,7 +223,7 @@ jobs:
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
-            artifacts
+            artifacts/
             !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
@@ -259,7 +259,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
-          path: artifacts
+          path: artifacts/
 
       - name: Show Test Run Artifacts
         if: always() && steps.download-test-run-artifacts.outcome == 'success'
