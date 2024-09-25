@@ -20,7 +20,7 @@ def _get_running_named_salt_pid(process_name):
     for proc in psutil.process_iter():
         try:
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess):
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
@@ -30,7 +30,7 @@ def _get_running_named_salt_pid(process_name):
 
 def test_salt_downgrade_minion(salt_call_cli, install_salt):
     """
-    Test an downgrade of Salt Minion.
+    Test a downgrade of Salt Minion.
     """
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
