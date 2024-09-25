@@ -245,6 +245,10 @@ jobs:
         run: |
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
+      - name: Wait For Artifacts
+        run: |
+          sleep 30
+
       - name: Merge Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
         continue-on-error: true
