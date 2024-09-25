@@ -51,7 +51,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeo
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
-from salt.utils.odict import DefaultOrderedDict, OrderedDict
+from salt.utils.odict import DefaultOrderedDict, HashableOrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -125,11 +125,6 @@ STATE_RUNTIME_KEYWORDS = frozenset(
 STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(
     STATE_REQUISITE_IN_KEYWORDS
 ).union(STATE_RUNTIME_KEYWORDS)
-
-
-class HashableOrderedDict(OrderedDict):
-    def __hash__(self):
-        return id(self)
 
 
 def split_low_tag(tag):

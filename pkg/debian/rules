@@ -4,7 +4,7 @@ DH_VERBOSE = 1
 .PHONY: override_dh_strip
 
 %:
-	dh $@
+	dh $@ --with bash-completion,systemd
 
 # dh_auto_clean tries to invoke distutils causing failures.
 override_dh_auto_clean:

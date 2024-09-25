@@ -481,7 +481,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.17.0"
+      relenv-version: "0.17.2"
       python-version: "3.10.14"
 
   build-salt-onedir:
@@ -497,7 +497,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.17.0"
+      relenv-version: "0.17.2"
       python-version: "3.10.14"
 
   build-pkgs-onedir:
@@ -510,7 +510,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.17.0"
+      relenv-version: "0.17.2"
       python-version: "3.10.14"
       source: "onedir"
       environment: nightly
@@ -528,7 +528,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.17.0"
+      relenv-version: "0.17.2"
       python-version: "3.10.14"
       source: "src"
       environment: nightly
@@ -1589,27 +1589,6 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  archlinux-lts:
-    name: Arch Linux LTS Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: archlinux-lts
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
-      skip-code-coverage: false
-      workflow-slug: nightly
-      default-timeout: 360
-
   debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2057,7 +2036,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2111,8 +2089,9 @@ jobs:
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/
@@ -2964,7 +2943,6 @@ jobs:
       - amazonlinux-2-arm64
       - amazonlinux-2023
       - amazonlinux-2023-arm64
-      - archlinux-lts
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -3083,65 +3061,6 @@ jobs:
       - name: Get workflow information
         id: get-workflow-info
         uses: im-open/workflow-conclusion@v2
-
-      - name: Notify Slack
-        id: slack
-        if: always()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "attachments": [
-                {
-                  "fallback": "${{ github.workflow }} Workflow build result for the `${{ github.ref_name }}` branch(attempt: ${{ github.run_attempt }}): `${{ steps.get-workflow-info.outputs.conclusion }}`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                  "color": "${{ steps.get-workflow-info.outputs.conclusion != 'success' && 'ff3d00' || '00e676' }}",
-                  "fields": [
-                    {
-                      "title": "Workflow",
-                      "short": true,
-                      "value": "${{ github.workflow }}",
-                      "type": "mrkdwn"
-                    },
-                    {
-                      "title": "Workflow Run",
-                      "short": true,
-                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>",
-                      "type": "mrkdwn"
-                    },
-                    {
-                      "title": "Branch",
-                      "short": true,
-                      "value": "${{ github.ref_name }}",
-                      "type": "mrkdwn"
-                    },
-                    {
-                      "title": "Commit",
-                      "short": true,
-                      "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>",
-                      "type": "mrkdwn"
-                    },
-                    {
-                      "title": "Attempt",
-                      "short": true,
-                      "value": "${{ github.run_attempt }}",
-                      "type": "mrkdwn"
-                    },
-                    {
-                      "title": "Status",
-                      "short": true,
-                      "value": "${{ steps.get-workflow-info.outputs.conclusion }}",
-                      "type": "mrkdwn"
-                    }
-                  ],
-                  "author_name": "${{ github.event.sender.login }}",
-                  "author_link": "${{ github.event.sender.html_url }}",
-                  "author_icon": "${{ github.event.sender.avatar_url }}"
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
       - name: Set Pipeline Exit Status
         shell: bash

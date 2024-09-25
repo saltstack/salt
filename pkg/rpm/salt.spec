@@ -283,7 +283,7 @@ install -p -m 0644 %{_salt_src}/pkg/common/logrotate/salt-common %{buildroot}%{_
 
 # Bash completion
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
-install -p -m 0644 %{_salt_src}/pkg/common/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
+install -p -m 0644 %{_salt_src}/pkg/rpm/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
 
 # Fish completion (TBD remove -v)
 mkdir -p %{buildroot}%{fish_dir}
