@@ -776,7 +776,7 @@ class ZeroMQSocketMonitor:
     async def consume(self):
         while self._running.is_set():
             try:
-                if self._monitor_socket.poll():
+                if await self._monitor_socket.poll():
                     msg = await self._monitor_socket.recv_multipart()
                     self.monitor_callback(msg)
                 else:
