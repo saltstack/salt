@@ -228,6 +228,7 @@ jobs:
             !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
+          include-hidden-files: true
 
   report:
     name: Report
@@ -263,8 +264,10 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
           path: artifacts/
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}*
+          merge-multiple: true
+
 
       - name: Show Test Run Artifacts
         if: always() && steps.download-test-run-artifacts.outcome == 'success'
