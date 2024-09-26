@@ -81,13 +81,19 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
 
     time.sleep(10)  # give it some time
     # downgrade install will stop services on Debian/Ubuntu
-    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
-    # want to ensure our tests start with the config settings we have set,
+    # This is due to RedHat systems are not active after an install, but
+    # Debian/Ubuntu are active after an install
+    # Want to ensure our tests start with the config settings we have set,
     # trying restart for Debian/Ubuntu to see the outcome
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
 
-    time.sleep(60)  # give it some time
+    # Give it some time
+    if platform.is_windows():
+        # Windows needs more time
+        time.sleep(300)
+    else:
+        time.sleep(60)
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
@@ -102,6 +108,10 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         else:
             bin_file = install_salt.install_dir / "salt-call.exe"
 
+        # Is the binary present
+        assert bin_file.is_file()
+
+    # Is it the right version
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
     assert packaging.version.parse(

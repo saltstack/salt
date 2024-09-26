@@ -419,6 +419,7 @@ class SaltPkgInstall:
         if system_service is False:
             return None
         if platform.is_windows():
+            # TODO: This needs to be C:\ProgramData\Salt Project\Salt
             return pathlib.Path("C:\\salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
@@ -449,9 +450,7 @@ class SaltPkgInstall:
                 log.debug("Installing: %s", str(pkg))
                 # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
                 batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(f'start /wait "" "{str(pkg)}" /start-minion=0 /S')
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
