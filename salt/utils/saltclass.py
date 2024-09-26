@@ -1,3 +1,4 @@
+import copy
 import glob
 import logging
 import os
@@ -362,7 +363,9 @@ def expanded_dict_from_minion(minion_id, salt_data):
         node_dict[minion_id] = {}
 
     # Merge newly found pillars into existing ones
-    dict_merge(salt_data["__pillar__"], node_dict[minion_id].get("pillars", {}))
+    dict_merge(
+        salt_data["__pillar__"], copy.deepcopy(node_dict[minion_id]).get("pillars", {})
+    )
 
     # Get 2 ordered lists:
     # expanded_classes: A list of all the dicts
