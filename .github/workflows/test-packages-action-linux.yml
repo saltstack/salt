@@ -248,7 +248,7 @@ jobs:
 
       - name: Wait For Artifacts
         run: |
-          sleep 30
+          sleep 60
 
       - name: Merge Test Run Artifacts
         continue-on-error: true
