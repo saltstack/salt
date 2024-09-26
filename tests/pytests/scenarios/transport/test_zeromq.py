@@ -79,4 +79,4 @@ def test_issue_regression_65265():
             total = recieved.value
         assert total == 3000
     finally:
-        process_manager.terminate()
+        process_manager.kill_children(9)
