@@ -122,6 +122,16 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
+    def test_state_sls_exists(self):
+        """
+        test state.sls_exists with salt-ssh
+        """
+        ret = self.run_function("state.sls_exists", [SSH_SLS])
+        self.assertTrue(ret)
+
+        check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
+        self.assertFalse(check_file)
+
     def test_state_show_top(self):
         """
         test state.show_top with salt-ssh
