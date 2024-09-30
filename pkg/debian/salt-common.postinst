@@ -3,7 +3,7 @@
 #
 # See: dh_installdeb(1).
 
-set -e
+set -e -x
 
 # Summary of how this script can be called:
 #        * <postinst> 'configure' <most-recently-configured-version>
