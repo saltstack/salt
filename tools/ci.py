@@ -859,9 +859,11 @@ def pkg_matrix(
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
         key_filter = f"Contents[?contains(Key, '{version}')][]"
         if pkg_type == "MSI":
-            key_filter = (
-                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
-            )
+            # TODO: Add this back when we add MSI upgrade and downgrade tests
+            # key_filter = (
+            #     f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            # )
+            continue
         elif pkg_type == "NSIS":
             key_filter = (
                 f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
