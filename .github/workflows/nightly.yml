@@ -2144,6 +2144,7 @@ jobs:
           path: artifacts/coverage/html/salt
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Report Combined Code Coverage
         run: |
@@ -2160,6 +2161,7 @@ jobs:
           path: artifacts/coverage/coverage.json
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Create Combined Code Coverage HTML Report
         run: |
@@ -2172,6 +2174,7 @@ jobs:
           path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
   build-src-repo:
     name: Build Repository

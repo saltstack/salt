@@ -2082,6 +2082,7 @@ jobs:
           path: artifacts/coverage/html/salt
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Report Combined Code Coverage
         run: |
@@ -2098,6 +2099,7 @@ jobs:
           path: artifacts/coverage/coverage.json
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Create Combined Code Coverage HTML Report
         run: |
@@ -2110,6 +2112,7 @@ jobs:
           path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
