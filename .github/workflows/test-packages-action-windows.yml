@@ -259,6 +259,10 @@ jobs:
           separate-directories: true
           delete-merged: true
 
+      - name: Wait For Artifacts 2
+        run: |
+          sleep 60
+
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
