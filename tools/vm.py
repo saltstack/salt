@@ -309,7 +309,7 @@ def test(
     print_tests_selection: bool = False,
     print_system_info: bool = False,
     print_system_info_only: bool = False,
-    skip_code_coverage: bool = False,
+    skip_code_coverage: bool = True,
     envvars: list[str] = None,
     fips: bool = False,
 ):
