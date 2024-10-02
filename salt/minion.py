@@ -1146,7 +1146,7 @@ class MinionManager(MinionBase):
                     minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
                     await minion.connect_master(failed=failed)
-                minion.tune_in(start=False)
+                await minion.tune_in(start=False)
                 self.minions.append(minion)
                 break
             except SaltClientError as exc:
@@ -2407,7 +2407,7 @@ class Minion(MinionBase):
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
         return ret_val
 
-    def _state_run(self):
+    async def _state_run(self):
         """
         Execute a state run based on information set in the minion config file
         """
@@ -2432,7 +2432,7 @@ class Minion(MinionBase):
                 else:
                     data["fun"] = "state.highstate"
                     data["arg"] = []
-                self._handle_decoded_payload(data)
+                await self._handle_decoded_payload(data)
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         """
@@ -3111,7 +3111,7 @@ class Minion(MinionBase):
         return True
 
     # Main Minion Tune In
-    def tune_in(self, start=True):
+    async def tune_in(self, start=True):
         """
         Lock onto the publisher. This is the main event loop for the minion
         :rtype : None
@@ -3138,7 +3138,7 @@ class Minion(MinionBase):
             salt.utils.win_functions.enable_ctrl_logoff_handler()
 
         # On first startup execute a state run if configured to do so
-        self._state_run()
+        await self._state_run()
 
         self.setup_beacons()
         self.setup_scheduler()
