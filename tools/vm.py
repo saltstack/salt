@@ -309,7 +309,7 @@ def test(
     print_tests_selection: bool = False,
     print_system_info: bool = False,
     print_system_info_only: bool = False,
-    skip_code_coverage: bool = True,
+    skip_code_coverage: bool = False,
     envvars: list[str] = None,
     fips: bool = False,
 ):
@@ -331,10 +331,14 @@ def test(
         env["PRINT_TEST_SELECTION"] = "1"
     else:
         env["PRINT_TEST_SELECTION"] = "0"
-    if skip_code_coverage:
-        env["SKIP_CODE_COVERAGE"] = "1"
-    else:
-        env["SKIP_CODE_COVERAGE"] = "0"
+
+    # skip running code coverage for now
+    ## if skip_code_coverage:
+    ##     env["SKIP_CODE_COVERAGE"] = "1"
+    ## else:
+    ##     env["SKIP_CODE_COVERAGE"] = "0"
+    env["SKIP_CODE_COVERAGE"] = "1"
+
     if print_system_info:
         env["PRINT_SYSTEM_INFO"] = "1"
     else:
