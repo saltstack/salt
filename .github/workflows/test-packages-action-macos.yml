@@ -243,7 +243,6 @@ jobs:
           sleep 60
 
       - name: Show Test Run Artifacts 1
-        if: always() && steps.download-test-run-artifacts.outcome == 'success'
         run: |
           tree -a artifacts
 
@@ -257,7 +256,6 @@ jobs:
           delete-merged: true
 
       - name: Show Test Run Artifacts 2
-        if: always() && steps.download-test-run-artifacts.outcome == 'success'
         run: |
           tree -a artifacts
 
@@ -266,7 +264,6 @@ jobs:
           sleep 60
 
       - name: Show Test Run Artifacts 3
-        if: always() && steps.download-test-run-artifacts.outcome == 'success'
         run: |
           tree -a artifacts
 
