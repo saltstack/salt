@@ -250,6 +250,11 @@ jobs:
         run: |
           sleep 60
 
+      - name: Show Test Run Artifacts 1
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        run: |
+          tree -a artifacts
+
       - name: Merge Test Run Artifacts
         uses: actions/upload-artifact/merge@v4
         continue-on-error: true
@@ -259,9 +264,19 @@ jobs:
           separate-directories: true
           delete-merged: true
 
+      - name: Show Test Run Artifacts 2
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        run: |
+          tree -a artifacts
+
       - name: Wait For Artifacts 2
         run: |
           sleep 60
+
+      - name: Show Test Run Artifacts 3
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        run: |
+          tree -a artifacts
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
