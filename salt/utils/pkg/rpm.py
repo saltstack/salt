@@ -130,7 +130,10 @@ def parse_pkginfo(line, osarch=None):
 
     if install_time not in ("(none)", "0"):
         install_date = (
-            datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+            datetime.datetime.fromtimestamp(
+                int(install_time), datetime.timezone.utc
+            ).isoformat()
+            + "Z"
         )
         install_date_time_t = int(install_time)
     else:
