@@ -493,8 +493,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
     if "test:coverage" in labels:
         ctx.info("Writing 'testrun' to the github outputs file")
-        # skip running code coverage for now, was False
-        testrun = TestRun(type="full", skip_code_coverage=True)
+        testrun = TestRun(type="full", skip_code_coverage=False)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
@@ -505,8 +504,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     elif event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        # skip running code coverage for now, was False
-        testrun = TestRun(type="full", skip_code_coverage=True)
+        testrun = TestRun(type="full", skip_code_coverage=False)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
