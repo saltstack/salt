@@ -252,6 +252,7 @@ jobs:
           sleep 60
 
       - name: Show Test Run Artifacts 1
+        continue-on-error: true
         run: |
           tree -a artifacts
 
@@ -265,6 +266,7 @@ jobs:
           delete-merged: true
 
       - name: Show Test Run Artifacts 2
+        continue-on-error: true
         run: |
           tree -a artifacts
 
@@ -273,6 +275,7 @@ jobs:
           sleep 60
 
       - name: Show Test Run Artifacts 3
+        continue-on-error: true
         run: |
           tree -a artifacts
 
