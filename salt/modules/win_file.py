@@ -1366,9 +1366,13 @@ def remove(path, force=False):
             # If it's a symlink directory, use the rmdir command
             os.rmdir(path)
         else:
+            # Twangboy: This is for troubleshooting
+            is_dir = os.path.isdir(path)
+            exists = os.path.exists(path)
+            # This is a directory, list its contents and remove them recursively
             for name in os.listdir(path):
                 item = f"{path}\\{name}"
-                # If its a normal directory, recurse to remove it's contents
+                # If it's a normal directory, recurse to remove its contents
                 remove(item, force)
 
             # rmdir will work now because the directory is empty
