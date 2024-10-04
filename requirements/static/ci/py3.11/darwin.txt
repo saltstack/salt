@@ -275,8 +275,9 @@ netmiko==4.2.0
     # via napalm
 netutils==1.6.0
     # via napalm
-networkx==3.2.1
+networkx==3.1
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
 ntc-templates==4.0.1

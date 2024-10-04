@@ -13,7 +13,7 @@ from collections.abc import Generator, Iterable, Sequence
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
 
-import networkx as nx  # pylint: disable=3rd-party-module-not-gated
+import networkx as nx
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +95,8 @@ class DependencyGraph:
     can be depended on and edges represent the types of requisites
     between the states.
     """
+
+    __slots__ = ("dag", "nodes_lookup_map", "sls_to_nodes")
 
     def __init__(self) -> None:
         self.dag = nx.MultiDiGraph()
@@ -245,7 +247,6 @@ class DependencyGraph:
         self, low: LowChunk, req_type: RequisiteType, req_key: str, req_val: str
     ) -> bool:
         found = False
-        prereq_tag = None
         has_prereq_node = low.get("__prereq__", False)
         if req_key == "sls":
             # Allow requisite tracking of entire sls files
