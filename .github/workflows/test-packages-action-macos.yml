@@ -146,7 +146,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/
+          path: artifacts
 
       - name: Decompress Onedir Tarball
         shell: bash
@@ -245,7 +245,7 @@ jobs:
       - name: Show Test Run Artifacts 1
         continue-on-error: true
         run: |
-          tree -a artifacts
+          tree -a
 
       - name: Merge Test Run Artifacts
         continue-on-error: true
@@ -259,7 +259,7 @@ jobs:
       - name: Show Test Run Artifacts 2
         continue-on-error: true
         run: |
-          tree -a artifacts
+          tree -a
 
       - name: Wait For Artifacts 2
         run: |
@@ -268,13 +268,13 @@ jobs:
       - name: Show Test Run Artifacts 3
         continue-on-error: true
         run: |
-          tree -a artifacts
+          tree -a
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/
+          path: artifacts
           pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}*
           merge-multiple: true
 
