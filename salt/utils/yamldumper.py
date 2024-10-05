@@ -32,17 +32,6 @@ __all__ = [
 ]
 
 
-class IndentMixin(Dumper):
-    """
-    Mixin that improves YAML dumped list readability
-    by indenting them by two spaces,
-    instead of being flush with the key they are under.
-    """
-
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
-
-
 class OrderedDumper(Dumper):
     """
     A YAML dumper that represents python OrderedDict as simple YAML map.
@@ -55,11 +44,11 @@ class SafeOrderedDumper(SafeDumper):
     """
 
 
-class IndentedSafeOrderedDumper(IndentMixin, SafeOrderedDumper):
-    """
-    A YAML safe dumper that represents python OrderedDict as simple YAML map,
-    and also indents lists by two spaces.
-    """
+class IndentedSafeOrderedDumper(SafeOrderedDumper):
+    """Like ``SafeOrderedDumper``, except it indents lists for readability."""
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
 
 
 def represent_ordereddict(dumper, data):
@@ -70,31 +59,26 @@ def represent_undefined(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:null", "NULL")
 
 
-OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
-SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
-SafeOrderedDumper.add_representer(None, represent_undefined)
-
-OrderedDumper.add_representer(
-    collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
-)
-SafeOrderedDumper.add_representer(
-    collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
-)
-OrderedDumper.add_representer(
-    salt.utils.context.NamespacedDictWrapper,
-    yaml.representer.SafeRepresenter.represent_dict,
-)
-SafeOrderedDumper.add_representer(
-    salt.utils.context.NamespacedDictWrapper,
-    yaml.representer.SafeRepresenter.represent_dict,
-)
-
-OrderedDumper.add_representer(
-    "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar
-)
-SafeOrderedDumper.add_representer(
-    "tag:yaml.org,2002:timestamp", SafeOrderedDumper.represent_scalar
-)
+# OrderedDumper does not inherit from SafeOrderedDumper, so any applicable
+# representers added to SafeOrderedDumper must also be explicitly added to
+# OrderedDumper.
+for D in (SafeOrderedDumper, OrderedDumper):
+    # This default registration matches types that don't match any other
+    # registration, overriding PyYAML's default behavior of raising an
+    # exception.  This representer instead produces null nodes.
+    #
+    # TODO: Why does this registration exist?  Isn't it better to raise an
+    # exception for unsupported types?
+    D.add_representer(None, represent_undefined)
+    D.add_representer(OrderedDict, represent_ordereddict)
+    D.add_representer(
+        collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
+    )
+    D.add_representer(
+        salt.utils.context.NamespacedDictWrapper,
+        yaml.representer.SafeRepresenter.represent_dict,
+    )
+del D
 
 
 def get_dumper(dumper_name):
@@ -112,8 +96,7 @@ def dump(data, stream=None, **kwargs):
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.
     """
-    if "allow_unicode" not in kwargs:
-        kwargs["allow_unicode"] = True
+    kwargs.setdefault("allow_unicode", True)
     kwargs.setdefault("default_flow_style", None)
     return yaml.dump(data, stream, **kwargs)
 
@@ -124,7 +107,4 @@ def safe_dump(data, stream=None, **kwargs):
     represented properly. Ensure that unicode strings are encoded unless
     explicitly told not to.
     """
-    if "allow_unicode" not in kwargs:
-        kwargs["allow_unicode"] = True
-    kwargs.setdefault("default_flow_style", None)
-    return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
+    return dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
