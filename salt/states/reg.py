@@ -437,6 +437,7 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {"reg": {"Will add": add_change}}
+        ret["comment"] = rf"Will add {vname} to {hive}\{key}"
         return ret
 
     # Configure the value
@@ -533,6 +534,7 @@ def absent(name, vname=None, use_32bit_registry=False):
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {"reg": {"Will remove": remove_change}}
+        ret["comment"] = rf"Will remove {key} from {hive}"
         return ret
 
     # Delete the value
@@ -606,6 +608,8 @@ def key_absent(name, use_32bit_registry=False):
     # Check for test option
     if __opts__["test"]:
         ret["result"] = None
+        ret["changes"] = {"reg": {"Will remove": {"Key": rf"{hive}\{key}"}}}
+        ret["comment"] = rf"Will remove {hive}\{key}"
         return ret
 
     # Delete the value
