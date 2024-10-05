@@ -1,0 +1,1 @@
+Fix regression that prevented salt-minion from running interval-based jobs on startup by default.
