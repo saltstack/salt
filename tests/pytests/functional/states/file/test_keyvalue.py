@@ -58,3 +58,93 @@ def test_keyvalue(file, tmp_path):
         assert "#PermitRootLogin" not in changed_contents
         assert "prohibit-password" not in changed_contents
         assert "PermitRootLogin no" in changed_contents
+
+def test_keyvalue_multiple(file, tmp_path):
+    """
+    file.keyvalue
+    """
+    contents = """
+        #LoginGraceTime 2m
+        #PermitRootLogin prohibit-password
+        #StrictModes yes
+        #MaxAuthTries 6
+        #MaxSessions 10
+        """
+    with pytest.helpers.temp_file(
+        "sshd_config", contents=contents, directory=tmp_path
+    ) as name:
+        ret = file.keyvalue(
+            name=str(name),
+            separator=" ",
+            uncomment=" #",
+            key_ignore_case=True,
+            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1}
+        )
+        assert ret.result is True
+        changed_contents = name.read_text()
+        assert "prohibit-password" not in changed_contents
+        assert "PermitRootLogin no" in changed_contents
+        assert "MaxAuthTries 2" in changed_contents
+        assert "MaxSessions 1" in changed_contents
+        assert "#MaxAuthTries 6" not in changed_contents
+        assert "#MaxSessions 10" not in changed_contents
+        # ensure no out of scope lines were deleted
+        assert "#LoginGraceTime 2m" in changed_contents
+        assert "#StrictModes yes" in changed_contents
+
+def test_keyvalue_prune(file, tmp_path):
+    """
+    file.keyvalue
+    """
+    contents = """
+        #StrictModes yes
+        PermitRootLogin prohibit-password
+        #MaxAuthTries 6
+        #MaxSessions 10
+        """
+    with pytest.helpers.temp_file(
+        "sshd_config", contents=contents, directory=tmp_path
+    ) as name:
+        ret = file.keyvalue(
+            name=str(name),
+            key="PermitRootLogin",
+            value="no",
+            separator=" ",
+            prune=True,
+        )
+        assert ret.result is True
+        changed_contents = name.read_text()
+        for line in contents.strip().split("\n"):
+          assert line not in changed_contents
+        assert "prohibit-password" not in changed_contents
+        assert "PermitRootLogin no" in changed_contents
+
+def test_keyvalue_multiple_prune(file, tmp_path):
+    """
+    file.keyvalue
+    """
+    contents = """
+        #StrictModes yes
+        PermitRootLogin prohibit-password
+        #MaxAuthTries 6
+        #MaxSessions 10
+        """
+    with pytest.helpers.temp_file(
+        "sshd_config", contents=contents, directory=tmp_path
+    ) as name:
+        ret = file.keyvalue(
+            name=str(name),
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+            prune=True,
+            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1}
+        )
+        assert ret.result is True
+        changed_contents = name.read_text()
+        for line in contents.strip().split("\n"):
+          assert line not in changed_contents
+        assert "prohibit-password" not in changed_contents
+        assert "PermitRootLogin no" in changed_contents
+        assert "MaxAuthTries 2" in changed_contents
+        assert "MaxSessions 1" in changed_contents
