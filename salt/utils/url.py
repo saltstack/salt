@@ -47,7 +47,14 @@ def create(path, saltenv=None):
 
     query = f"saltenv={saltenv}" if saltenv else ""
     url = salt.utils.data.decode(urlunparse(("file", "", path, "", query, "")))
-    return "salt://{}".format(url[len("file:///") :])
+    # urllib returns `file:` or `file:///` but salt wants `salt://` so normalize here
+    if url.startswith(f"file:{path}"):
+        return f"salt://{url.split('file:')[1]}"
+    if url.startswith(f"file://{path}"):
+        return f"salt://{url.split('file://')[1]}"
+    if url.startswith(f"file:///:{path}"):
+        return f"salt://{url.split('file:///')[1]}"
+    raise ValueError(f"Cannot interpret {url!r} as a 'salt://' URL")
 
 
 def is_escaped(url):
