@@ -1446,6 +1446,7 @@ OPTIONS.wipe = {wipe}
 OPTIONS.tty = {tty}
 OPTIONS.cmd_umask = {cmd_umask}
 OPTIONS.code_checksum = {code_checksum}
+OPTIONS.log_level = '{log_level}'
 ARGS = {arguments}\n'''.format(
             config=self.minion_config,
             delimeter=RSTR,
@@ -1459,6 +1460,7 @@ ARGS = {arguments}\n'''.format(
             cmd_umask=self.cmd_umask,
             code_checksum=thin_code_digest,
             arguments=self.argv,
+            log_level=self.opts["log_level"],
         )
         py_code = SSH_PY_SHIM.replace("#%%OPTS", arg_str)
         py_code_enc = base64.encodebytes(py_code.encode("utf-8")).decode("utf-8")
@@ -1501,7 +1503,7 @@ ARGS = {arguments}\n'''.format(
 
         return ret
 
-    def shim_cmd(self, cmd_str, extension="py"):
+    def shim_cmd(self, cmd_str, extension="py", print_output=False):
         """
         Run a shim command.
 
@@ -1509,7 +1511,7 @@ ARGS = {arguments}\n'''.format(
         execute it there
         """
         if not self.tty and not self.winrm:
-            return self.shell.exec_cmd(cmd_str)
+            return self.shell.exec_cmd(cmd_str, print_output=print_output)
 
         # Write the shim to a temporary file in the default temp directory
         with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as shim_tmp_file:
@@ -1537,7 +1539,7 @@ ARGS = {arguments}\n'''.format(
 
         return ret
 
-    def cmd_block(self, is_retry=False):
+    def cmd_block(self, is_retry=False, print_output=False):
         """
         Prepare the pre-check command to send to the subsystem
 
@@ -1554,7 +1556,7 @@ ARGS = {arguments}\n'''.format(
             " ".join([str(arg) for arg in self.argv]),
         )
         cmd_str = self._cmd_str()
-        stdout, stderr, retcode = self.shim_cmd(cmd_str)
+        stdout, stderr, retcode = self.shim_cmd(cmd_str, print_output=print_output)
 
         log.trace("STDOUT %s\n%s", self.target["host"], stdout)
         log.trace("STDERR %s\n%s", self.target["host"], stderr)
@@ -1564,14 +1566,18 @@ ARGS = {arguments}\n'''.format(
         if error:
             if error == "Python environment not found on Windows system":
                 saltwinshell.deploy_python(self)
-                stdout, stderr, retcode = self.shim_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(
+                    cmd_str, print_output=print_output
+                )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif error == "Undefined SHIM state":
                 self.deploy()
-                stdout, stderr, retcode = self.shim_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(
+                    cmd_str, print_output=print_output
+                )
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
@@ -1610,7 +1616,9 @@ ARGS = {arguments}\n'''.format(
                 and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY
             ):
                 self.deploy()
-                stdout, stderr, retcode = self.shim_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(
+                    cmd_str, print_output=print_output
+                )
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
@@ -1622,7 +1630,7 @@ ARGS = {arguments}\n'''.format(
                             stderr,
                             retcode,
                         )
-                        return self.cmd_block()
+                        return self.cmd_block(print_output=print_output)
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
@@ -1642,7 +1650,9 @@ ARGS = {arguments}\n'''.format(
                         stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif "ext_mods" == shim_command:
                 self.deploy_ext()
-                stdout, stderr, retcode = self.shim_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(
+                    cmd_str, print_output=print_output
+                )
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
