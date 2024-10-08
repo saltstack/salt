@@ -272,7 +272,8 @@ jobs:
       - name: Wait For Artifacts 2
         run: |
           # sleep for 2 1/2 hours
-          sleep 9000
+          ## sleep 9000
+          sleep 1800
 
       - name: Show Test Run Artifacts 3
         continue-on-error: true
