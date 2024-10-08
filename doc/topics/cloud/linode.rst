@@ -105,7 +105,31 @@ Configuration Options
     ``swap``
         **(optional)** The amount of disk space to allocate for the swap partition. Defaults to ``256``.
 
+    ``interfaces``
+        **(Optional)** A list of networking interfaces to be attached to the Linode instance.
+        attribute of each interface includes ``purpose``, ``ipam_address``, ``label``, ``ipv4``, ``primary``,
+        and ``subnet_id``.
+
+        ``purpose`` is required for all types of interface, allowed values: ``public``, ``vlan``, and ``vpc``.
+
+        ``primary`` is a boolean that whether the interface is configured as the default route to the Linode.
+        Can't be ``true`` for VLAN interface
+
+        ``ipam_address`` and ``label`` are only allowed for a VLAN interface, and ``label`` is required for a
+        VLAN interface.
+
+        ``subnet_id`` and ``ipv4`` are only allowed for a VPC interface, and ``subnet_id`` is required for a
+        VPC interface.
+
+        ``ipv4`` is an object with two attributes, ``nat_1_1`` and ``vpc``; ``vpc`` is the VPC Subnet IPv4
+        address for this Interface, and ``nat_1_1`` is the 1:1 NAT IPv4 address, used to associate a public
+        IPv4 address with the VPC Subnet IPv4 address assigned to this Interface.
+
+        You can check out the `interfaces schema on Linode API documentation`_ for details on the behaviors of
+        the attributes of an interface object.
+
 .. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper/#what-is-network-helper
+.. _interfaces schema on Linode API documentation: https://www.linode.com/docs/api/linode-instances/#linode-create__request-samples
 
 Example Configuration
 ---------------------
@@ -141,15 +165,24 @@ A more advanced configuration utlizing all of the configuration options might lo
 .. code-block:: yaml
 
     my-linode-profile-advanced:
-        provider: my-linode-provider
-        size: g6-standard-1
-        image: linode/ubuntu22.04
-        location: us-central
-        password: iamaverylongp@ssword
-        assign_private_ip: true
-        ssh_interface: private_ips
-        ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...
-        swap_size: 512
+      provider: my-linode-provider
+      size: g6-standard-1
+      image: linode/ubuntu22.04
+      location: us-central
+      password: iamaverylongp@ssword
+      assign_private_ip: true
+      ssh_interface: private_ips
+      ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...
+      swap_size: 512
+      interfaces:
+        - purpose: public
+        - purpose: vlan
+          label: cool-vlan
+          ipam_address: 10.0.0.1/24
+        - purpose: vpc
+          subnet_id: 20222
+          ipv4:
+            vpc: 10.0.4.10
 
 Migrating to APIv4
 ==================
