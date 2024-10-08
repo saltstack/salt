@@ -1108,8 +1108,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Create a salt master worker process
 
         :param dict opts: The salt options
-        :param dict mkey: The user running the salt master and the AES key
-        :param dict key: The user running the salt master and the RSA key
+        :param dict mkey: The user running the salt master and the RSA key
+        :param dict key: The user running the salt master and the AES key
 
         :rtype: MWorker
         :return: Master worker

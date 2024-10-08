@@ -211,7 +211,7 @@ can be found on GitHub in the `saltstack-formulas`_ collection of repositories.
 If you have any questions, suggestions, or just want to chat with other people
 who are using Salt, we have a very active community and we'd love to hear from
 you. One of the best places to talk to the community is on the
-`Salt Project Slack workspace <https://saltstackcommunity.slack.com/>`_.
+`Salt Project Discord Community <https://discord.com/invite/J7b7EscrAs>`_.
 
 In addition, by continuing to the :ref:`Orchestrate Runner <orchestrate-runner>` docs,
 you can learn about the powerful orchestration of which Salt is capable.

@@ -1259,3 +1259,43 @@ def test_compile_pillar_disk_cache(master_opts, grains):
                 "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
             }
             assert pillar.cache._dict == expected_cache
+
+
+def test_remote_pillar_bad_return(grains, tmp_pki):
+    opts = {
+        "pki_dir": tmp_pki,
+        "id": "minion",
+        "master_uri": "tcp://127.0.0.1:4505",
+        "__role": "minion",
+        "keysize": 2048,
+        "saltenv": "base",
+        "pillarenv": "base",
+    }
+    pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
+
+    async def crypted_transfer_mock():
+        return ""
+
+    pillar.channel.crypted_transfer_decode_dictentry = crypted_transfer_mock
+    with pytest.raises(salt.exceptions.SaltClientError):
+        pillar.compile_pillar()
+
+
+async def test_async_remote_pillar_bad_return(grains, tmp_pki):
+    opts = {
+        "pki_dir": tmp_pki,
+        "id": "minion",
+        "master_uri": "tcp://127.0.0.1:4505",
+        "__role": "minion",
+        "keysize": 2048,
+        "saltenv": "base",
+        "pillarenv": "base",
+    }
+    pillar = salt.pillar.AsyncRemotePillar(opts, grains, "mocked-minion", "dev")
+
+    async def crypted_transfer_mock():
+        return ""
+
+    pillar.channel.crypted_transfer_decode_dictentry = crypted_transfer_mock
+    with pytest.raises(salt.exceptions.SaltClientError):
+        await pillar.compile_pillar()

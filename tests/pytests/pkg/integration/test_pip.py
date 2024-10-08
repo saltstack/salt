@@ -74,8 +74,6 @@ def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
     """
     Test salt-pip installs into the correct directory
     """
-    if not install_salt.relenv:
-        pytest.skip("The extras directory is only in relenv versions")
     dep = "pep8"
     extras_keyword = "extras-3"
     if platform.is_windows():
@@ -125,11 +123,7 @@ def test_pip_non_root(
     pypath,
     pkg_tests_account_environ,
 ):
-    if install_salt.classic:
-        pytest.skip("We can install non-root for classic packages")
     check_path = extras_pypath_bin / "pep8"
-    if not install_salt.relenv and not install_salt.classic:
-        check_path = pypath / "pep8"
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
@@ -179,8 +173,6 @@ def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell
     Test salt-pip installs into the correct directory and the salt extension
     is properly loaded.
     """
-    if not install_salt.relenv:
-        pytest.skip("The extras directory is only in relenv versions")
     dep = "salt-analytics-framework"
     dep_version = "0.1.0"
 

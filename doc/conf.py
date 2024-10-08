@@ -181,7 +181,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://via.vmw.com/salt-slack
+.. _`salt-discord`: https://discord.com/invite/J7b7EscrAs
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a
@@ -381,19 +381,6 @@ man_pages = [
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
-
-
-### epub options
-epub_title = "Salt Documentation"
-epub_author = "VMware, Inc."
-epub_publisher = epub_author
-epub_copyright = copyright
-
-epub_scheme = "URL"
-epub_identifier = "http://saltproject.io/"
-
-epub_tocdup = False
-# epub_tocdepth = 3
 
 
 def skip_mod_init_member(app, what, name, obj, skip, options):

@@ -1231,6 +1231,39 @@ def test_Parrot_OS_grains():
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_manjaro_arm_grains():
+    """
+    Test if OS grains are parsed correctly in Manjaro ARM
+    """
+    # /etc/os-release data taken from ParrotOS 5.1
+    _os_release_data = {
+        "NAME": "Manjaro ARM",
+        "ID": "manjaro-arm",
+        "ID_LIKE": "manjaro arch",
+        "PRETTY_NAME": "Manjaro ARM",
+        "ANSI_COLOR": "1;32",
+        "HOME_URL": "https://www.manjaro.org/",
+        "SUPPORT_URL": "https://forum.manjaro.org/c/arm/",
+        "LOGO": "manjarolinux",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("Manjaro ARM", "24.03", "n/a"),
+    }
+
+    expectation = {
+        "os": "Manjaro ARM",
+        "os_family": "Arch",
+        "oscodename": "Manjaro ARM",
+        "osfullname": "Manjaro ARM",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "Manjaro ARM-24",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
     with patch("salt.grains.core.hostname"), patch(
@@ -4155,34 +4188,93 @@ def test__selinux():
         assert ret == {"enabled": True, "enforced": "Disabled"}
 
 
-def test__systemd():
+@pytest.mark.parametrize(
+    "systemd_data,expected",
+    (
+        (
+            {
+                "pid": 1234,
+                "retcode": 0,
+                "stdout": "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
+                "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
+                "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
+                "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
+                "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+                "stderr": "",
+            },
+            {
+                "version": "254",
+                "features": "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
+                "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
+                "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
+                "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+            },
+        ),
+        (
+            {
+                "pid": 2345,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "some garbage in the output",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 3456,
+                "retcode": 0,
+                "stdout": "unexpected stdout\none more line",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 4567,
+                "retcode": 0,
+                "stdout": "",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            Exception("Some exception on calling `systemctl --version`"),
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+    ),
+)
+def test__systemd(systemd_data, expected):
     """
     test _systemd
     """
+
+    def mock_run_all_systemd(_):
+        if isinstance(systemd_data, Exception):
+            raise systemd_data
+        return systemd_data
+
     with patch.dict(
         core.__salt__,
         {
-            "cmd.run": MagicMock(
-                return_value=(
-                    "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
-                    "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
-                    "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
-                    "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
-                    "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-                )
-            ),
+            "cmd.run_all": mock_run_all_systemd,
         },
     ):
         ret = core._systemd()
         assert "version" in ret
         assert "features" in ret
-        assert ret["version"] == "254"
-        assert ret["features"] == (
-            "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
-            "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
-            "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
-            "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-        )
+        assert ret == expected
 
 
 def test__clean_value_uuid(caplog):

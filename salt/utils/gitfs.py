@@ -1804,7 +1804,7 @@ class Pygit2(GitProvider):
                     # remote ref.
                     self.repo.checkout(checkout_ref)
                     if branch:
-                        self.repo.reset(oid, pygit2.GIT_RESET_HARD)
+                        self.repo.reset(pygit2_id, pygit2.GIT_RESET_HARD)
                 return True
             except GitLockError as exc:
                 if exc.errno == errno.EEXIST:
@@ -1833,11 +1833,11 @@ class Pygit2(GitProvider):
                 tag_ref = "refs/tags/" + tgt_ref
             if remote_ref in refs:
                 # Get commit id for the remote ref
-                oid = self.peel(self.repo.lookup_reference(remote_ref)).id
+                pygit2_id = self.peel(self.repo.lookup_reference(remote_ref)).id
                 if local_ref not in refs:
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
-                    self.repo.create_reference(local_ref, oid)
+                    self.repo.create_reference(local_ref, pygit2_id)
 
                 try:
                     target_sha = self.peel(self.repo.lookup_reference(remote_ref)).hex
@@ -1868,7 +1868,8 @@ class Pygit2(GitProvider):
                     # cachedir).
                     head_ref = local_head.target
                     # If head_ref is not a string, it will point to a
-                    # pygit2.Oid object and we are in detached HEAD mode.
+                    # pygit2.id object (oid is deprecated and removed) and
+                    # we are in detached HEAD mode.
                     # Therefore, there is no need to add a local reference. If
                     # head_ref == local_ref, then the local reference for HEAD
                     # in refs/heads/ already exists and again, no need to add.
@@ -2037,10 +2038,10 @@ class Pygit2(GitProvider):
             the empty directories within it in the "blobs" list
             """
             for entry in iter(tree):
-                if entry.oid not in self.repo:
+                if entry.id not in self.repo:
                     # Entry is a submodule, skip it
                     continue
-                blob = self.repo[entry.oid]
+                blob = self.repo[entry.id]
                 if not isinstance(blob, pygit2.Tree):
                     continue
                 blobs.append(
@@ -2059,8 +2060,8 @@ class Pygit2(GitProvider):
             return ret
         if self.root(tgt_env):
             try:
-                oid = tree[self.root(tgt_env)].oid
-                tree = self.repo[oid]
+                pygit2_id = tree[self.root(tgt_env)].id
+                tree = self.repo[pygit2_id]
             except KeyError:
                 return ret
             if not isinstance(tree, pygit2.Tree):
@@ -2180,17 +2181,17 @@ class Pygit2(GitProvider):
             the file paths and symlink info in the "blobs" dict
             """
             for entry in iter(tree):
-                if entry.oid not in self.repo:
+                if entry.id not in self.repo:
                     # Entry is a submodule, skip it
                     continue
-                obj = self.repo[entry.oid]
+                obj = self.repo[entry.id]
                 if isinstance(obj, pygit2.Blob):
                     repo_path = salt.utils.path.join(
                         prefix, entry.name, use_posixpath=True
                     )
                     blobs.setdefault("files", []).append(repo_path)
                     if stat.S_ISLNK(tree[entry.name].filemode):
-                        link_tgt = self.repo[tree[entry.name].oid].data
+                        link_tgt = self.repo[tree[entry.name].id].data
                         blobs.setdefault("symlinks", {})[repo_path] = link_tgt
                 elif isinstance(obj, pygit2.Tree):
                     _traverse(
@@ -2209,8 +2210,8 @@ class Pygit2(GitProvider):
             try:
                 # This might need to be changed to account for a root that
                 # spans more than one directory
-                oid = tree[self.root(tgt_env)].oid
-                tree = self.repo[oid]
+                pygit2_id = tree[self.root(tgt_env)].id
+                tree = self.repo[pygit2_id]
             except KeyError:
                 return files, symlinks
             if not isinstance(tree, pygit2.Tree):
@@ -2263,12 +2264,12 @@ class Pygit2(GitProvider):
                     # path's object ID will be the target of the symlink. Follow
                     # the symlink and set path to the location indicated
                     # in the blob data.
-                    link_tgt = self.repo[entry.oid].data
+                    link_tgt = self.repo[entry.id].data
                     path = salt.utils.path.join(
                         os.path.dirname(path), link_tgt, use_posixpath=True
                     )
                 else:
-                    blob = self.repo[entry.oid]
+                    blob = self.repo[entry.id]
                     if isinstance(blob, pygit2.Tree):
                         # Path is a directory, not a file.
                         blob = None

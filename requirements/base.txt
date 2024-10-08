@@ -5,8 +5,10 @@ jmespath
 msgpack>=1.0.0
 PyYAML
 MarkupSafe
-requests>=2.31.0 ; python_version < '3.8'
-requests>=2.32.0 ; python_version >= '3.8'
+requests<2.32.0 ; python_version < '3.10'
+requests>=2.32.3 ; python_version >= '3.10'
+certifi==2023.07.22; python_version < '3.10'
+certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
@@ -34,7 +36,7 @@ rpm-vercmp; sys_platform == 'linux'
 # From old windows.txt requirements file
 gitpython>=3.1.37; sys_platform == 'win32'
 lxml>=4.6.3; sys_platform == 'win32'
-pymssql>=2.2.1; sys_platform == 'win32'
+pymssql>=2.2.11; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
 pythonnet>=3.0.1; sys_platform == 'win32'
 pywin32>=305; sys_platform == 'win32'

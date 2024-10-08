@@ -771,13 +771,19 @@ def pkg_matrix(
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
         ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
-    else:
-        try:
-            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
-            )
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event is not None
 
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
@@ -786,28 +792,9 @@ def pkg_matrix(
     if TYPE_CHECKING:
         assert testing_releases
 
-    still_testing_3005 = False
-    for release_version in testing_releases:
-        if still_testing_3005:
-            break
-        if release_version < tools.utils.Version("3006.0"):
-            still_testing_3005 = True
-
-    if still_testing_3005 is False:
-        ctx.error(
-            f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error. There may "
-            "be other places that need code removed as well."
-        )
-        ctx.exit(1)
-
     adjusted_versions = []
     for ver in testing_releases:
-        if ver < tools.utils.Version("3006.0"):
-            adjusted_versions.append((ver, "classic"))
-            adjusted_versions.append((ver, "tiamat"))
-        else:
-            adjusted_versions.append((ver, "relenv"))
+        adjusted_versions.append((ver, "relenv"))
     ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
     # Filter out the prefixes to look under
@@ -860,16 +847,6 @@ def pkg_matrix(
     ]
 
     for version, backend in adjusted_versions:
-        if (
-            distro_slug.startswith(("macos-", "debian-", "ubuntu-"))
-            or version.major < 3006
-        ):
-            # XXX: Temporarily skip problematic tests
-            ctx.warn(
-                f"Temporary skip builds on {distro_slug} for version {version} with backend {backend}"
-            )
-            continue
-
         prefix = prefixes[backend]
         # TODO: Remove this after 3009.0
         if backend == "relenv" and version >= tools.utils.Version("3006.5"):
@@ -886,10 +863,9 @@ def pkg_matrix(
             # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
             continue
         elif pkg_type == "NSIS":
-            # XXX: Temporarily skip problematic tests
-            # key_filter = (
-            #    f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
-            # )
+            key_filter = (
+                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
+            )
             continue
         objects = list(page_iterator.search(key_filter))
         # Testing using `any` because sometimes the paginator returns `[None]`
@@ -917,8 +893,7 @@ def pkg_matrix(
             ctx.print(" * ", entry, soft_wrap=True)
 
     if (
-        gh_event is not None
-        and gh_event["repository"]["fork"] is True
+        gh_event["repository"]["fork"] is True
         and "macos" in distro_slug
         and "arm64" in distro_slug
     ):
@@ -1036,7 +1011,6 @@ def get_pkg_downloads_matrix(ctx: Context):
         "photon",
     )
     linux_skip_pkg_download_tests = (
-        "archlinux-lts",
         "opensuse-15",
         "windows",
     )
@@ -1393,13 +1367,11 @@ def get_testing_releases(
     majors = sorted(
         list(
             {
+                # We aren't testing upgrades from anything before 3006.0
+                # and we don't want to test 3007.? on the 3006.x branch
                 version.major
                 for version in releases
-                # We aren't testing upgrades from anything before
-                # 3006.0 except the latest 3005.x
-                if version.major >= 3005
-                # We don't want to test 3007.? on the 3006.x branch
-                and version.major <= parsed_salt_version.major
+                if version.major > 3005 and version.major <= parsed_salt_version.major
             }
         )
     )[-num_major_versions:]

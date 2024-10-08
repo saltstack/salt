@@ -1,10 +1,37 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
 case "$1" in
   configure)
-    if [ ! -e "/var/log/salt/api" ]; then
-      touch /var/log/salt/api
-      chmod 640 /var/log/salt/api
+    db_get salt-api/user
+    if [ "$RET" != "root" ]; then
+      if [ ! -e "/var/log/salt/api" ]; then
+        touch /var/log/salt/api
+        chmod 640 /var/log/salt/api
+      fi
+      chown $RET:$RET /var/log/salt/api
     fi
-    chown salt:salt /var/log/salt/api
-    if command -v systemctl; then systemctl enable salt-api; fi
+    if command -v systemctl; then
+        db_get salt-api/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
+            if [ "$RESLT" = "active" ]; then
+                systemctl restart salt-api
+            fi
+            db_get salt-api/enabled
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
+                systemctl disable salt-api
+            else
+                systemctl enable salt-api
+            fi
+        else
+            systemctl daemon-reload
+            systemctl restart salt-api
+            systemctl enable salt-api
+        fi
+    fi
   ;;
 esac

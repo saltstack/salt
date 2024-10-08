@@ -1711,10 +1711,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._tcp_client = TCPClientKeepAlive(opts)
         self.source_ip = opts.get("source_ip")
         self.source_port = opts.get("source_ret_port")
-        self._mid = 1
-        self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
         # TODO: max queue size
-        self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
 
         self._read_until_future = None
@@ -1836,18 +1833,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._stream_return_running = False
 
     def _message_id(self):
-        wrap = False
-        while self._mid in self.send_future_map:
-            if self._mid >= self._max_messages:
-                if wrap:
-                    # this shouldn't ever happen, but just in case
-                    raise Exception("Unable to find available messageid")
-                self._mid = 1
-                wrap = True
-            else:
-                self._mid += 1
-
-        return self._mid
+        return str(uuid.uuid4())
 
     def timeout_message(self, message_id, msg):
         if message_id not in self.send_future_map:

@@ -176,6 +176,9 @@ jobs:
                 - pkg/**
                 - *pkg_requirements
                 - *salt_added_modified
+            nsis_tests:
+              - added|modified: &nsis_tests
+                - pkg/windows/nsis/**
             testrun:
               - added|modified:
                 - *pkg_requirements

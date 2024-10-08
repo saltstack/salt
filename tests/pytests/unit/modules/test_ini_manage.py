@@ -94,24 +94,22 @@ def test_get_option(encoding, linesep, ini_file, ini_content):
     )
     ini_file.write_bytes(content)
 
-    assert (
-        ini.get_option(str(ini_file), "main", "test1", encoding=encoding) == "value 1"
+    option = ini.get_option(str(ini_file), "main", "test1", encoding=encoding)
+    assert option == "value 1"
+
+    option = ini.get_option(str(ini_file), "main", "test2", encoding=encoding)
+    assert option == "value 2"
+
+    option = ini.get_option(str(ini_file), "SectionB", "test1", encoding=encoding)
+    assert option == "value 1B"
+
+    option = ini.get_option(str(ini_file), "SectionB", "test3", encoding=encoding)
+    assert option == "value 3B"
+
+    option = ini.get_option(
+        str(ini_file), "SectionC", "empty_option", encoding=encoding
     )
-    assert (
-        ini.get_option(str(ini_file), "main", "test2", encoding=encoding) == "value 2"
-    )
-    assert (
-        ini.get_option(str(ini_file), "SectionB", "test1", encoding=encoding)
-        == "value 1B"
-    )
-    assert (
-        ini.get_option(str(ini_file), "SectionB", "test3", encoding=encoding)
-        == "value 3B"
-    )
-    assert (
-        ini.get_option(str(ini_file), "SectionC", "empty_option", encoding=encoding)
-        == ""
-    )
+    assert option == ""
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
@@ -249,11 +247,12 @@ def test_set_option(encoding, linesep, ini_file, ini_content):
     )
 
 
+@pytest.mark.parametrize("no_spaces", [True, False])
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
 @pytest.mark.parametrize(
     "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
 )
-def test_empty_value(encoding, linesep, ini_file, ini_content):
+def test_empty_value(encoding, linesep, no_spaces, ini_file, ini_content):
     """
     Test empty value preserved after edit
     """
@@ -263,19 +262,23 @@ def test_empty_value(encoding, linesep, ini_file, ini_content):
     ini_file.write_bytes(content)
 
     ini.set_option(
-        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+        str(ini_file),
+        {"SectionB": {"test3": "new value 3B"}},
+        encoding=encoding,
+        no_spaces=no_spaces,
     )
     with salt.utils.files.fopen(str(ini_file), "r") as fp_:
         file_content = salt.utils.stringutils.to_unicode(fp_.read(), encoding=encoding)
-    expected = "{0}{1}{0}".format(os.linesep, "empty_option = ")
+    expected = f"{os.linesep}empty_option{'=' if no_spaces else ' = '}{os.linesep}"
     assert expected in file_content, "empty_option was not preserved"
 
 
+@pytest.mark.parametrize("no_spaces", [True, False])
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
 @pytest.mark.parametrize(
     "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
 )
-def test_empty_lines(encoding, linesep, ini_file, ini_content):
+def test_empty_lines(encoding, linesep, no_spaces, ini_file, ini_content):
     """
     Test empty lines preserved after edit
     """
@@ -289,42 +292,48 @@ def test_empty_lines(encoding, linesep, ini_file, ini_content):
             "# Comment on the first line",
             "",
             "# First main option",
-            "option1 = main1",
+            f"option1{'=' if no_spaces else ' = '}main1",
             "",
             "# Second main option",
-            "option2 = main2",
+            f"option2{'=' if no_spaces else ' = '}main2",
             "",
             "[main]",
             "# Another comment",
-            "test1 = value 1",
+            f"test1{'=' if no_spaces else ' = '}value 1",
             "",
-            "test2 = value 2",
+            f"test2{'=' if no_spaces else ' = '}value 2",
             "",
             "[SectionB]",
-            "test1 = value 1B",
+            f"test1{'=' if no_spaces else ' = '}value 1B",
             "",
             "# Blank line should be above",
-            "test3 = new value 3B",
+            f"test3{'=' if no_spaces else ' = '}new value 3B",
             "",
             "[SectionC]",
             "# The following option is empty",
-            "empty_option = ",
+            f"empty_option{'=' if no_spaces else ' = '}",
             "",
         ]
     )
     ini.set_option(
-        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+        str(ini_file),
+        {"SectionB": {"test3": "new value 3B"}},
+        encoding=encoding,
+        no_spaces=no_spaces,
     )
     with salt.utils.files.fopen(str(ini_file), "r") as fp_:
         file_content = fp_.read()
     assert expected == file_content
 
 
+@pytest.mark.parametrize("no_spaces", [True, False])
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
 @pytest.mark.parametrize(
     "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
 )
-def test_empty_lines_multiple_edits(encoding, linesep, ini_file, ini_content):
+def test_empty_lines_multiple_edits(
+    encoding, linesep, no_spaces, ini_file, ini_content
+):
     """
     Test empty lines preserved after multiple edits
     """
@@ -337,6 +346,7 @@ def test_empty_lines_multiple_edits(encoding, linesep, ini_file, ini_content):
         str(ini_file),
         {"SectionB": {"test3": "this value will be edited two times"}},
         encoding=encoding,
+        no_spaces=no_spaces,
     )
 
     expected = os.linesep.join(
@@ -344,31 +354,34 @@ def test_empty_lines_multiple_edits(encoding, linesep, ini_file, ini_content):
             "# Comment on the first line",
             "",
             "# First main option",
-            "option1 = main1",
+            f"option1{'=' if no_spaces else ' = '}main1",
             "",
             "# Second main option",
-            "option2 = main2",
+            f"option2{'=' if no_spaces else ' = '}main2",
             "",
             "[main]",
             "# Another comment",
-            "test1 = value 1",
+            f"test1{'=' if no_spaces else ' = '}value 1",
             "",
-            "test2 = value 2",
+            f"test2{'=' if no_spaces else ' = '}value 2",
             "",
             "[SectionB]",
-            "test1 = value 1B",
+            f"test1{'=' if no_spaces else ' = '}value 1B",
             "",
             "# Blank line should be above",
-            "test3 = new value 3B",
+            f"test3{'=' if no_spaces else ' = '}new value 3B",
             "",
             "[SectionC]",
             "# The following option is empty",
-            "empty_option = ",
+            f"empty_option{'=' if no_spaces else ' = '}",
             "",
         ]
     )
     ini.set_option(
-        str(ini_file), {"SectionB": {"test3": "new value 3B"}}, encoding=encoding
+        str(ini_file),
+        {"SectionB": {"test3": "new value 3B"}},
+        encoding=encoding,
+        no_spaces=no_spaces,
     )
     with salt.utils.files.fopen(str(ini_file), "r") as fp_:
         file_content = fp_.read()

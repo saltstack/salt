@@ -193,10 +193,8 @@
 
                                     {% if not (build_type == repo_primary_branch or build_type == "next") and on_saltstack %}
                                     <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
-                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                     {% elif build_type == repo_primary_branch and on_saltstack %}
                                     <li><a class="icon-dl" href="/en/pdf/Salt-{{ repo_primary_branch }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
-                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ repo_primary_branch }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                     {% endif %}
                                 </ul>
                             </nav>

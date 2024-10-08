@@ -368,7 +368,7 @@ class AsyncPubChannel:
 
     async_methods = [
         "connect",
-        "_decode_messages",
+        "_decode_payload",
     ]
     close_methods = [
         "close",

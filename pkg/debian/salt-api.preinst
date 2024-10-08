@@ -1,0 +1,27 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+  upgrade)
+    [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
+    [ -z "$SALT_USER" ] && SALT_USER=salt
+    [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
+    [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
+
+    # Reset permissions to fix previous installs
+    CUR_USER=$(ls -dl /run/salt-api.pid | cut -d ' ' -f 3)
+    CUR_GROUP=$(ls -dl /run/salt-api.pid | cut -d ' ' -f 4)
+    db_set salt-api/user $CUR_USER
+    chown -R $CUR_USER:$CUR_GROUP /var/log/salt/api
+    if command -v systemctl; then
+        SM_ENABLED=$(systemctl show -p UnitFileState salt-api | cut -d '=' -f 2)
+        db_set salt-api/enabled $SM_ENABLED
+        SM_ACTIVE=$(systemctl is-active salt-api)
+        db_set salt-api/active $SM_ACTIVE
+    else
+        db_set salt-api/enabled enabled
+        db_set salt-api/active active
+    fi
+    ;;
+esac

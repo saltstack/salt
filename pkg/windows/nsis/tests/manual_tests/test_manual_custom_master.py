@@ -6,14 +6,11 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create a custom config
     pytest.helpers.custom_config()
-
-    pytest.helpers.run_command(
-        [pytest.INST_BIN, "/custom-config=custom_conf", "/master=cli_master"]
-    )
-    yield
+    args = ["/custom-config=custom_conf", "/master=cli_master"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 

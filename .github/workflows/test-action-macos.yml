@@ -316,6 +316,7 @@ jobs:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
+          include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
@@ -387,8 +388,9 @@ jobs:
         if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts/coverage/
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
+          merge-multiple: true
 
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
@@ -435,3 +437,4 @@ jobs:
         with:
           name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}.${{ inputs.nox-session }}
           path: artifacts/coverage
+          include-hidden-files: true

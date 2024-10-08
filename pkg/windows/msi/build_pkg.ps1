@@ -90,6 +90,11 @@ $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").Direct
 $RUNTIME_DIR    = [System.Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
 $CSC_BIN        = "$RUNTIME_DIR\csc.exe"
 
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$TIME_STAMP     = $origin.AddSeconds($hash_time)
+
+
 if ( $BUILD_ARCH -eq "64bit" ) {
     $BUILD_ARCH    = "AMD64"
 } else {
@@ -515,34 +520,23 @@ $remove | ForEach-Object {
 #-------------------------------------------------------------------------------
 # Set timestamps on Files
 #-------------------------------------------------------------------------------
-# We're doing this on the dlls that were created abive
-
-Write-Host "Getting commit time stamp: " -NoNewline
-[DateTime]$origin = "1970-01-01 00:00:00"
-$hash_time = $(git show -s --format=%at)
-$time_stamp = $origin.AddSeconds($hash_time)
-if ( $hash_time ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
+# We're doing this on the dlls that were created above
 
 Write-Host "Setting time stamp on all files: " -NoNewline
 $found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
 $found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
+    $_.CreationTime = $TIME_STAMP
+    $_.LastAccessTime = $TIME_STAMP
+    $_.LastWriteTime = $TIME_STAMP
 }
 Write-Result "Success" -ForegroundColor Green
 
 Write-Host "Setting time stamp on installer dlls: " -NoNewline
 $found = Get-ChildItem -Path $SCRIPT_DIR -Filter "*.dll" -Recurse
 $found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
+    $_.CreationTime = $TIME_STAMP
+    $_.LastAccessTime = $TIME_STAMP
+    $_.LastWriteTime = $TIME_STAMP
 }
 Write-Result "Success" -ForegroundColor Green
 
