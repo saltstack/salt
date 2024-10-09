@@ -1891,12 +1891,12 @@ def test_list(python_binary):
                 python_shell=False,
             )
             assert ret == {
-                "MarkupSafe": "2.1.1",
+                "markupsafe": "2.1.1",
                 "idemenv": "0.2.0",
                 "pip": "22.3.1",
                 "pop": "23.0.0",
                 "salt": "3006.0+0na.5b18e86",
-                "typing_extensions": "4.4.0",
+                "typing-extensions": "4.4.0",
                 "unattended-upgrades": "0.1",
                 "yarl": "1.8.2",
             }

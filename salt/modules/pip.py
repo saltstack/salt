@@ -1379,12 +1379,14 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
+    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
+        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if pkg["name"].lower().startswith(prefix.lower()):
-                packages[pkg["name"]] = pkg["version"]
+            if normal_pkg_name.startswith(normal_prefix):
+                packages[normal_pkg_name] = pkg["version"]
         else:
-            packages[pkg["name"]] = pkg["version"]
+            packages[normal_pkg_name] = pkg["version"]
 
     return packages
 
