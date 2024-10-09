@@ -414,6 +414,19 @@ def _format_env_vars(env_vars):
     return ret
 
 
+def normalize(name):
+    """Normalize a package name according to the recommendations in PEP 503.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.normalize requests_ntlm
+
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
 def install(
     pkgs=None,  # pylint: disable=R0912,R0913,R0914
     requirements=None,
