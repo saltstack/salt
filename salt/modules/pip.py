@@ -414,6 +414,10 @@ def _format_env_vars(env_vars):
     return ret
 
 
+def normalize(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
 def install(
     pkgs=None,  # pylint: disable=R0912,R0913,R0914
     requirements=None,
