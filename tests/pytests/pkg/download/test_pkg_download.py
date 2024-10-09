@@ -514,6 +514,7 @@ def setup_windows(
                     try:
                         if proc in (p.name() for p in psutil.process_iter()):
                             proc_name = proc
+                            break
                     except psutil.NoSuchProcess:
                         continue
 

@@ -243,8 +243,8 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        state_tree = "C:/salt/srv/salt"
-        pillar_tree = "C:/salt/srv/pillar"
+        state_tree = f'{os.getenv("ProgramData")}/Salt Project/Salt/srv/salt'
+        pillar_tree = f'{os.getenv("ProgramData")}/Salt/srv/pillar'
     elif platform.is_darwin():
         state_tree = "/opt/srv/salt"
         pillar_tree = "/opt/srv/pillar"

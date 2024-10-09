@@ -204,7 +204,9 @@ class SaltPkgInstall:
         Default location for salt configurations
         """
         if platform.is_windows():
-            config_path = pathlib.Path("C:\\salt", "etc", "salt")
+            config_path = pathlib.Path(
+                os.getenv("ProgramData"), "Salt Project", "Salt"
+            ).resolve()
         else:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
@@ -419,8 +421,9 @@ class SaltPkgInstall:
         if system_service is False:
             return None
         if platform.is_windows():
-            # TODO: This needs to be C:\ProgramData\Salt Project\Salt
-            return pathlib.Path("C:\\salt")
+            return pathlib.Path(
+                os.getenv("ProgramData"), "Salt Project", "Salt"
+            ).resolve()
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
@@ -448,7 +451,6 @@ class SaltPkgInstall:
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
                 batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
                 batch_file.write_text(f'start /wait "" "{str(pkg)}" /start-minion=0 /S')
                 # Now run the batch file
@@ -461,9 +463,7 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n')
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
@@ -824,18 +824,17 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(
+                    f'msiexec /qn /i "{str(pkg_path)}" START_MINION=""'
+                )
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
                 batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(
+                    f'start /wait "" "{str(pkg_path)}" /start-minion=0 /S'
+                )
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
@@ -885,6 +884,45 @@ class SaltPkgInstall:
                 uninst = self.install_dir / "uninst.exe"
                 ret = self.proc.run(uninst, "/S")
                 self._check_retcode(ret)
+                # The NSIS uninstaller launches a 2nd binary (Un.exe or Un_*.exe)
+                # and immediately returns. We need to make sure the 2nd binary
+                # finishes before continuing
+                processes = [
+                    "uninst.exe",
+                    "Un.exe",
+                    "Un_A.exe",
+                    "Un_B.exe",
+                    "Un_C.exe",
+                    "Un_D.exe",
+                    "Un_D.exe",
+                    "Un_F.exe",
+                    "Un_G.exe",
+                ]
+                proc_name = ""
+                for proc in processes:
+                    try:
+                        if proc in (p.name() for p in psutil.process_iter()):
+                            proc_name = proc
+                            break
+                    except psutil.NoSuchProcess:
+                        continue
+
+                # We need to give the process time to exit. We'll timeout after
+                # 5 minutes or whatever timeout is set to
+                timeout = 300
+                if proc_name:
+                    elapsed_time = 0
+                    while elapsed_time < timeout:
+                        try:
+                            if proc_name not in (
+                                p.name() for p in psutil.process_iter()
+                            ):
+                                break
+                        except psutil.NoSuchProcess:
+                            continue
+                        elapsed_time += 1
+                        time.sleep(1)
+
             elif pkg.endswith("msi"):
                 ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
                 self._check_retcode(ret)
