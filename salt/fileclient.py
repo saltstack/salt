@@ -307,19 +307,19 @@ class Client:
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return {}
+        return {}  # pragma: no cover
 
     def is_cached(self, path, saltenv="base", cachedir=None):
         """
