@@ -705,6 +705,106 @@ class Compiler:
         return _apply_exclude(high)
 
 
+class ParallelState:
+    """
+    Utility class that wraps parallel state instantiation.
+    Intentionally not picklable since performing the check for picklability
+    of inject_globals, specifically the context dict, would need to happen
+    eagerly for that guarantee to hold.
+    """
+
+    name: str
+    parent: State
+    cdata: dict[str, Any]
+    low: LowChunk
+    inject_globals: dict[Any, Any] | None
+    proc: salt.utils.Process | None
+
+    def __init__(
+        self,
+        parent: State,
+        cdata: dict[str, Any],
+        low: LowChunk,
+        inject_globals: dict[Any, Any] | None,
+    ):
+        # There are a number of possibilities to not have the cdata
+        # populated with what we might have expected, so just be smart
+        # enough to not raise another KeyError as the name is easily
+        # guessable and fallback in all cases to present the real
+        # exception to the user
+        name = (cdata.get("args") or [None])[0] or cdata["kwargs"].get("name")
+        if not name:
+            name = low.get("name", low.get("__id__"))
+        self.name = name
+        self.tag = _gen_tag(low)
+        self.parent = parent
+        self.cdata = cdata
+        self.low = low
+        self.inject_globals = inject_globals
+        self.proc = None
+
+    def __bool__(self):
+        return self.proc is not None and self.proc.is_alive()
+
+    def start(self):
+        if self.proc is not None:
+            raise RuntimeError("Parallel state is already running")
+
+        inject_globals = self.inject_globals
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self.parent
+            inject_globals = None
+
+        proc = salt.utils.process.Process(
+            target=self.parent._call_parallel_target,
+            args=(
+                instance,
+                self.parent._init_kwargs,
+                self.name,
+                self.cdata,
+                self.low,
+                inject_globals,
+            ),
+            name=f"ParallelState({self.name})",
+        )
+
+        try:
+            proc.start()
+        except TypeError as err:
+            # Some modules use the context to cache unpicklable objects like
+            # database connections or loader instances.
+            # Ensure we don't crash because of that on spawning platforms.
+            if "cannot pickle" not in str(err):
+                raise
+            clean_context = {}
+            for var, val in self.parent._init_kwargs.get("context", {}).items():
+                try:
+                    pickle.dumps(val)
+                except TypeError:
+                    pass
+                else:
+                    clean_context[var] = val
+            init_kwargs = self.parent._init_kwargs.copy()
+            init_kwargs["context"] = clean_context
+            proc = salt.utils.process.Process(
+                target=self.parent._call_parallel_target,
+                args=(
+                    instance,
+                    init_kwargs,
+                    self.name,
+                    self.cdata,
+                    self.low,
+                    inject_globals,
+                ),
+                name=f"ParallelState({self.name})",
+            )
+            proc.start()
+
+        self.proc = proc
+
+
 class State:
     """
     Class used to execute salt states
@@ -801,6 +901,10 @@ class State:
         self.dependency_dag = DependencyGraph()
         # a mapping of state tag (unique id) to the return result dict
         self.disabled_states: dict[str, dict[str, Any]] | None = None
+        # Keep track of running/scheduled parallel state runs. We need to keep those out of the
+        # running dict because the ParallelState objects, which filter unpicklable objects
+        # out of the context dict when necessary, are not picklable themselves.
+        self.procs = {}
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -2029,56 +2133,19 @@ class State:
         """
         Call the state defined in the given cdata in parallel
         """
-        # There are a number of possibilities to not have the cdata
-        # populated with what we might have expected, so just be smart
-        # enough to not raise another KeyError as the name is easily
-        # guessable and fallback in all cases to present the real
-        # exception to the user
-        name = (cdata.get("args") or [None])[0] or cdata["kwargs"].get("name")
-        if not name:
-            name = low.get("name", low.get("__id__"))
+        parallel = ParallelState(self, cdata, low, inject_globals)
+        self.procs[parallel.tag] = parallel
 
-        if salt.utils.platform.spawning_platform():
-            instance = None
+        if self.check_max_parallel():
+            parallel.start()
+            comment = "Started in a separate process"
         else:
-            instance = self
-            inject_globals = None
-
-        proc = salt.utils.process.Process(
-            target=self._call_parallel_target,
-            args=(instance, self._init_kwargs, name, cdata, low, inject_globals),
-            name=f"ParallelState({name})",
-        )
-        try:
-            proc.start()
-        except TypeError as err:
-            # Some modules use the context to cache unpicklable objects like
-            # database connections or loader instances.
-            # Ensure we don't crash because of that on spawning platforms.
-            if "cannot pickle" not in str(err):
-                raise
-            clean_context = {}
-            for var, val in self._init_kwargs["context"].items():
-                try:
-                    pickle.dumps(val)
-                except TypeError:
-                    pass
-                else:
-                    clean_context[var] = val
-            init_kwargs = self._init_kwargs.copy()
-            init_kwargs["context"] = clean_context
-            proc = salt.utils.process.Process(
-                target=self._call_parallel_target,
-                args=(instance, init_kwargs, name, cdata, low, inject_globals),
-                name=f"ParallelState({name})",
-            )
-            proc.start()
+            comment = "Waiting to be started in a separate process, max_parallel hit"
         ret = {
-            "name": name,
+            "name": parallel.name,
             "result": None,
             "changes": {},
-            "comment": "Started in a separate process",
-            "proc": proc,
+            "comment": comment,
         }
         return ret
 
@@ -2224,7 +2291,11 @@ class State:
                         )
                     elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
-                        ret = self.call_parallel(cdata, low, inject_globals)
+                        ret = self.call_parallel(
+                            cdata,
+                            low,
+                            inject_globals,
+                        )
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
@@ -2559,6 +2630,9 @@ class State:
             if "__FAILHARD__" in running:
                 running.pop("__FAILHARD__")
                 return running
+            # Start any queued states when state_max_parallel has been hit previously
+            self.reconcile_procs(running)
+
             tag = _gen_tag(low)
             if tag not in running:
                 # Check if this low chunk is paused
@@ -2642,41 +2716,59 @@ class State:
                 return "run"
         return "run"
 
+    def check_max_parallel(self) -> bool:
+        """
+        Check whether an additional ``parallel`` state can be started.
+        """
+        if not (allowed := self.opts.get("state_max_parallel")):
+            return True
+        cnt = sum(bool(parallel) is True for parallel in self.procs.values())
+        return cnt < allowed
+
     def reconcile_procs(self, running: dict) -> bool:
         """
         Check the running dict for processes and resolve them
         """
         retset = set()
-        for tag in running:
-            proc = running[tag].get("proc")
-            if proc:
-                if not proc.is_alive():
-                    ret_cache = os.path.join(
-                        self.opts["cachedir"],
-                        self.invocation_id,
-                        salt.utils.hashutils.sha1_digest(tag),
-                    )
-                    if not os.path.isfile(ret_cache):
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel process failed to return",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    try:
-                        with salt.utils.files.fopen(ret_cache, "rb") as fp_:
-                            ret = msgpack_deserialize(fp_.read())
-                    except OSError:
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel cache failure",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    running[tag].update(ret)
-                    running[tag].pop("proc")
-                else:
-                    retset.add(False)
+        # Cannot iterate over the dict itself, need to pop items from the dictionary later
+        for tag in list(self.procs):
+            if tag not in running:
+                # When checking requisites, this function is called with a filtered
+                # running dict. This tag is not part of the requisites, so skip it.
+                continue
+            parallel = self.procs[tag]
+            if parallel.proc is None:
+                if self.check_max_parallel():
+                    parallel.start()
+                    running[tag]["comment"] = "Started in a separate process"
+                retset.add(False)
+            elif not parallel.proc.is_alive():
+                ret_cache = os.path.join(
+                    self.opts["cachedir"],
+                    self.invocation_id,
+                    salt.utils.hashutils.sha1_digest(tag),
+                )
+                if not os.path.isfile(ret_cache):
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel process failed to return",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                try:
+                    with salt.utils.files.fopen(ret_cache, "rb") as fp_:
+                        ret = msgpack_deserialize(fp_.read())
+                except OSError:
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel cache failure",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                running[tag].update(ret)
+                self.procs.pop(tag)
+            else:
+                retset.add(False)
         return False not in retset
 
     def _check_requisites(self, low: LowChunk, running: dict[str, dict[str, Any]]):
