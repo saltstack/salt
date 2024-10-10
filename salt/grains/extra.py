@@ -66,7 +66,10 @@ def config():
 def __secure_boot(efivars_dir):
     """Detect if secure-boot is enabled."""
     enabled = False
-    sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*/data"))
+    if "efivars" == os.path.basename(efivars_dir):
+        sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*"))
+    else:
+        sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*/data"))
     if len(sboot) == 1:
         # The minion is usually running as a privileged user, but is
         # not the case for the master.  Seems that the master can also
