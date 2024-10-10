@@ -853,7 +853,7 @@ def test_call_chunk_sub_state_run(minion_opts):
         with patch("salt.state.State.call", return_value=mock_call_return):
             minion_opts["disabled_requisites"] = ["require"]
             state_obj = salt.state.State(minion_opts)
-            ret = state_obj.call_chunk(low_data, {}, [])
+            ret, _ = state_obj.call_chunk(low_data, {}, [])
             sub_state = ret.get(expected_sub_state_tag)
             assert sub_state
             assert sub_state["__run_num__"] == 1
