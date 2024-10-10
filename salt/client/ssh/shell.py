@@ -321,7 +321,7 @@ class Shell:
             yield None, None, None
         yield "".join(r_out), "".join(r_err), rcode
 
-    def exec_cmd(self, cmd):
+    def exec_cmd(self, cmd, print_output=False):
         """
         Execute a remote command
         """
@@ -336,7 +336,7 @@ class Shell:
         else:
             log.debug(logmsg)
 
-        ret = self._run_cmd(cmd)
+        ret = self._run_cmd(cmd, print_output=print_output)
         return ret
 
     def send(self, local, remote, makedirs=False):
@@ -384,7 +384,7 @@ class Shell:
             cmd_lst.append(f"/bin/sh {cmd_part}")
         return cmd_lst
 
-    def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
+    def _run_cmd(self, cmd, key_accept=False, passwd_retries=3, print_output=False):
         """
         Execute a shell command via VT. This is blocking and assumes that ssh
         is being run
@@ -419,12 +419,16 @@ class Shell:
                         stdout = stdout.replace(self.passwd, ("*" * 6))
                     ret_stdout += stdout
                     buff = old_stdout + stdout
+                    if print_output:
+                        print(stdout, file=sys.stdout, end="")
                 else:
                     buff = stdout
                 if stderr:
                     if self.passwd:
                         stderr = stderr.replace(self.passwd, ("*" * 6))
                     ret_stderr += stderr
+                    if print_output:
+                        print(stderr, file=sys.stderr, end="")
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
                     send_password = False
