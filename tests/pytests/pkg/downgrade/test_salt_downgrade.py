@@ -91,8 +91,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
 
-    # Give it some time
-    time.sleep(60)
+    time.sleep(60)  # give it some time
 
     files = os.listdir(install_salt.install_dir)
 

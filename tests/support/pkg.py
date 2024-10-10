@@ -272,29 +272,12 @@ class SaltPkgInstall:
                 self.file_ext = os.path.splitext(f_path)[1].strip(".")
                 self.pkgs.append(f_path)
                 if platform.is_windows():
-                    self.root = pathlib.Path(os.getenv("LocalAppData")).resolve()
                     if self.file_ext in ["exe", "msi"]:
                         self.root = self.install_dir.parent
-                        self.bin_dir = self.install_dir
+                        self.bin_dir = self.install_dir / "Scripts"
                         self.ssm_bin = self.install_dir / "ssm.exe"
-                        self.run_root = self.bin_dir / "bin" / "salt.exe"
-                        if not self.relenv and not self.classic:
-                            self.ssm_bin = self.bin_dir / "bin" / "ssm.exe"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
-                    if self.use_prev_version:
-                        self.bin_dir = self.install_dir / "bin"
-                        self.run_root = self.bin_dir / "salt.exe"
-                        self.ssm_bin = self.bin_dir / "ssm.exe"
-                        if self.file_ext == "msi" or self.relenv:
-                            self.ssm_bin = self.install_dir / "ssm.exe"
-                        if (
-                            self.install_dir / "salt-minion.exe"
-                        ).exists() and not self.relenv:
-                            log.debug(
-                                "Removing %s", self.install_dir / "salt-minion.exe"
-                            )
-                            (self.install_dir / "salt-minion.exe").unlink()
 
                 elif platform.is_darwin():
                     self.root = pathlib.Path("/opt")
@@ -313,31 +296,14 @@ class SaltPkgInstall:
 
         python_bin = self.install_dir / "bin" / "python3"
         if platform.is_windows():
-            python_bin = self.install_dir / "Scripts" / "python.exe"
-            if self.relenv:
-                self.binary_paths = {
-                    "call": ["salt-call.exe"],
-                    "cp": ["salt-cp.exe"],
-                    "minion": ["salt-minion.exe"],
-                    "pip": ["salt-pip.exe"],
-                    "python": [python_bin],
-                }
-            elif self.classic:
-                self.binary_paths = {
-                    "call": [self.install_dir / "salt-call.bat"],
-                    "cp": [self.install_dir / "salt-cp.bat"],
-                    "minion": [self.install_dir / "salt-minion.bat"],
-                    "python": [self.bin_dir / "python.exe"],
-                }
-                self.binary_paths["pip"] = self.binary_paths["python"] + ["-m", "pip"]
-            else:
-                self.binary_paths = {
-                    "call": [str(self.run_root), "call"],
-                    "cp": [str(self.run_root), "cp"],
-                    "minion": [str(self.run_root), "minion"],
-                    "pip": [str(self.run_root), "pip"],
-                    "python": [str(self.run_root), "shell"],
-                }
+            python_bin = self.bin_dir / "python.exe"
+            self.binary_paths = {
+                "call": ["salt-call.exe"],
+                "cp": ["salt-cp.exe"],
+                "minion": ["salt-minion.exe"],
+                "pip": ["salt-pip.exe"],
+                "python": [python_bin],
+            }
 
         else:
             if os.path.exists(self.install_dir / "bin" / "salt"):
@@ -446,7 +412,7 @@ class SaltPkgInstall:
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
-                self.bin_dir = self.install_dir
+                self.bin_dir = self.install_dir / "Scripts"
                 self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
@@ -788,33 +754,19 @@ class SaltPkgInstall:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
-            self.bin_dir = self.install_dir / "bin"
-            self.run_root = self.bin_dir / "salt.exe"
-            self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi" or relenv:
-                self.ssm_bin = self.install_dir / "ssm.exe"
+            self.bin_dir = self.install_dir / "Scripts"
+            self.ssm_bin = self.install_dir / "ssm.exe"
+            if self.file_ext == "msi":
+                win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
+            elif self.file_ext == "exe":
+                win_pkg = (
+                    f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
+                )
+            win_pkg_url = (
+                f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
+            )
 
-            if not self.classic:
-                if not relenv:
-                    win_pkg = (
-                        f"salt-{self.prev_version}-1-windows-amd64.{self.file_ext}"
-                    )
-                else:
-                    if self.file_ext == "msi":
-                        win_pkg = (
-                            f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                        )
-                    elif self.file_ext == "exe":
-                        win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
-            else:
-                if self.file_ext == "msi":
-                    win_pkg = (
-                        f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                    )
-                elif self.file_ext == "exe":
-                    win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
+            # Download package to C:\TEMP
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
             download_file(win_pkg_url, pkg_path)
