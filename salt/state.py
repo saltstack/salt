@@ -2002,7 +2002,9 @@ class State:
         with salt.utils.files.fopen(tfile, "wb+") as fp_:
             fp_.write(msgpack_serialize(ret))
 
-    def call_parallel(self, cdata: dict[str, Any], low: LowChunk):
+    def call_parallel(
+        self, cdata: dict[str, Any], low: LowChunk, running: dict[str, dict]
+    ):
         """
         Call the state defined in the given cdata in parallel
         """
@@ -2025,13 +2027,19 @@ class State:
             args=(instance, self._init_kwargs, name, cdata, low),
             name=f"ParallelState({name})",
         )
-        proc.start()
+        if "__procs__" not in running:
+            running["__procs__"] = {}
+        running["__procs__"][_gen_tag(low)] = proc
+        if self.check_max_parallel(running):
+            proc.start()
+            comment = "Started in a separate process"
+        else:
+            comment = "Waiting to be started in a separate process, max_parallel hit"
         ret = {
             "name": name,
             "result": None,
             "changes": {},
-            "comment": "Started in a separate process",
-            "proc": proc,
+            "comment": comment,
         }
         return ret
 
@@ -2177,7 +2185,9 @@ class State:
                         )
                     elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
-                        ret = self.call_parallel(cdata, low)
+                        ret = self.call_parallel(
+                            cdata, low, running if running is not None else {}
+                        )
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
@@ -2489,7 +2499,9 @@ class State:
                 self._check_disabled(chunk, disabled)
         else:
             disabled = disabled_states
-        running = {}
+        # Pre-populate the __procs__ key to always allow implicit
+        # propagation of terminated procs from within _check_requisites.
+        running = {"__procs__": {}}
         pending_chunks = {}
         for low in chunks:
             pending_chunks, running, failhard = _call_pending(pending_chunks, running)
@@ -2498,6 +2510,9 @@ class State:
             if "__FAILHARD__" in running:
                 running.pop("__FAILHARD__")
                 return running
+            # Start any queued states when state_max_parallel has been hit previously
+            self.reconcile_procs(running)
+
             tag = _gen_tag(low)
             if tag not in running:
                 # Check if this low chunk is paused
@@ -2518,6 +2533,7 @@ class State:
             if self.reconcile_procs(running):
                 break
             time.sleep(0.01)
+        running.pop("__procs__", None)
         ret = {**disabled, **running}
         return ret
 
@@ -2581,41 +2597,62 @@ class State:
                 return "run"
         return "run"
 
+    def check_max_parallel(self, running: dict) -> bool:
+        """
+        Check whether an additional ``parallel`` state can be started.
+        """
+        if not (allowed := self.opts.get("state_max_parallel")):
+            return True
+        cnt = sum(
+            int(proc.ident is not None and proc.is_alive())
+            for proc in running.get("__procs__", {}).values()
+        )
+        return cnt < allowed
+
     def reconcile_procs(self, running: dict) -> bool:
         """
         Check the running dict for processes and resolve them
         """
         retset = set()
-        for tag in running:
-            proc = running[tag].get("proc")
-            if proc:
-                if not proc.is_alive():
-                    ret_cache = os.path.join(
-                        self.opts["cachedir"],
-                        self.jid,
-                        salt.utils.hashutils.sha1_digest(tag),
-                    )
-                    if not os.path.isfile(ret_cache):
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel process failed to return",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    try:
-                        with salt.utils.files.fopen(ret_cache, "rb") as fp_:
-                            ret = msgpack_deserialize(fp_.read())
-                    except OSError:
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel cache failure",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    running[tag].update(ret)
-                    running[tag].pop("proc")
-                else:
-                    retset.add(False)
+        # Cannot iterate over the dict itself, need to pop items from the dictionary later
+        for tag in list(running.get("__procs__", {})):
+            if tag not in running:
+                # When checking requisites, this function is called with a filtered
+                # running dict. This tag is not part of the requisites, so skip it.
+                continue
+            proc = running["__procs__"][tag]
+            if proc.ident is None:
+                if self.check_max_parallel(running):
+                    proc.start()
+                    running[tag]["comment"] = "Started in a separate process"
+                retset.add(False)
+            elif not proc.is_alive():
+                ret_cache = os.path.join(
+                    self.opts["cachedir"],
+                    self.jid,
+                    salt.utils.hashutils.sha1_digest(tag),
+                )
+                if not os.path.isfile(ret_cache):
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel process failed to return",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                try:
+                    with salt.utils.files.fopen(ret_cache, "rb") as fp_:
+                        ret = msgpack_deserialize(fp_.read())
+                except OSError:
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel cache failure",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                running[tag].update(ret)
+                running["__procs__"].pop(tag)
+            else:
+                retset.add(False)
         return False not in retset
 
     def _check_requisites(self, low: LowChunk, running: dict[str, dict[str, Any]]):
@@ -2636,7 +2673,7 @@ class State:
             else:
                 run_dict = running
 
-            filtered_run_dict = {}
+            filtered_run_dict = {"__procs__": run_dict.get("__procs__", {})}
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 run_dict_chunk = run_dict.get(tag)
