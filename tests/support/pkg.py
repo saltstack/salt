@@ -205,7 +205,7 @@ class SaltPkgInstall:
         """
         if platform.is_windows():
             config_path = pathlib.Path(
-                os.getenv("ProgramData"), "Salt Project", "Salt"
+                os.getenv("ProgramData"), "Salt Project", "Salt", "conf"
             ).resolve()
         else:
             config_path = pathlib.Path("/etc", "salt")
