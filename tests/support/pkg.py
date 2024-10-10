@@ -204,7 +204,9 @@ class SaltPkgInstall:
         Default location for salt configurations
         """
         if platform.is_windows():
-            config_path = pathlib.Path("C:\\salt", "etc", "salt")
+            config_path = pathlib.Path(
+                os.getenv("ProgramData"), "Salt Project", "Salt", "conf"
+            ).resolve()
         else:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
@@ -270,29 +272,12 @@ class SaltPkgInstall:
                 self.file_ext = os.path.splitext(f_path)[1].strip(".")
                 self.pkgs.append(f_path)
                 if platform.is_windows():
-                    self.root = pathlib.Path(os.getenv("LocalAppData")).resolve()
                     if self.file_ext in ["exe", "msi"]:
                         self.root = self.install_dir.parent
-                        self.bin_dir = self.install_dir
+                        self.bin_dir = self.install_dir / "Scripts"
                         self.ssm_bin = self.install_dir / "ssm.exe"
-                        self.run_root = self.bin_dir / "bin" / "salt.exe"
-                        if not self.relenv and not self.classic:
-                            self.ssm_bin = self.bin_dir / "bin" / "ssm.exe"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
-                    if self.use_prev_version:
-                        self.bin_dir = self.install_dir / "bin"
-                        self.run_root = self.bin_dir / "salt.exe"
-                        self.ssm_bin = self.bin_dir / "ssm.exe"
-                        if self.file_ext == "msi" or self.relenv:
-                            self.ssm_bin = self.install_dir / "ssm.exe"
-                        if (
-                            self.install_dir / "salt-minion.exe"
-                        ).exists() and not self.relenv:
-                            log.debug(
-                                "Removing %s", self.install_dir / "salt-minion.exe"
-                            )
-                            (self.install_dir / "salt-minion.exe").unlink()
 
                 elif platform.is_darwin():
                     self.root = pathlib.Path("/opt")
@@ -311,31 +296,14 @@ class SaltPkgInstall:
 
         python_bin = self.install_dir / "bin" / "python3"
         if platform.is_windows():
-            python_bin = self.install_dir / "Scripts" / "python.exe"
-            if self.relenv:
-                self.binary_paths = {
-                    "call": ["salt-call.exe"],
-                    "cp": ["salt-cp.exe"],
-                    "minion": ["salt-minion.exe"],
-                    "pip": ["salt-pip.exe"],
-                    "python": [python_bin],
-                }
-            elif self.classic:
-                self.binary_paths = {
-                    "call": [self.install_dir / "salt-call.bat"],
-                    "cp": [self.install_dir / "salt-cp.bat"],
-                    "minion": [self.install_dir / "salt-minion.bat"],
-                    "python": [self.bin_dir / "python.exe"],
-                }
-                self.binary_paths["pip"] = self.binary_paths["python"] + ["-m", "pip"]
-            else:
-                self.binary_paths = {
-                    "call": [str(self.run_root), "call"],
-                    "cp": [str(self.run_root), "cp"],
-                    "minion": [str(self.run_root), "minion"],
-                    "pip": [str(self.run_root), "pip"],
-                    "python": [str(self.run_root), "shell"],
-                }
+            python_bin = self.bin_dir / "python.exe"
+            self.binary_paths = {
+                "call": ["salt-call.exe"],
+                "cp": ["salt-cp.exe"],
+                "minion": ["salt-minion.exe"],
+                "pip": ["salt-pip.exe"],
+                "python": [python_bin],
+            }
 
         else:
             if os.path.exists(self.install_dir / "bin" / "salt"):
@@ -419,7 +387,9 @@ class SaltPkgInstall:
         if system_service is False:
             return None
         if platform.is_windows():
-            return pathlib.Path("C:\\salt")
+            return pathlib.Path(
+                os.getenv("ProgramData"), "Salt Project", "Salt"
+            ).resolve()
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
@@ -442,16 +412,13 @@ class SaltPkgInstall:
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
-                self.bin_dir = self.install_dir
+                self.bin_dir = self.install_dir / "Scripts"
                 self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
                 batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(f'start /wait "" "{str(pkg)}" /start-minion=0 /S')
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
@@ -462,9 +429,7 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n')
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
@@ -789,33 +754,17 @@ class SaltPkgInstall:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
-            self.bin_dir = self.install_dir / "bin"
-            self.run_root = self.bin_dir / "salt.exe"
-            self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi" or relenv:
-                self.ssm_bin = self.install_dir / "ssm.exe"
+            self.bin_dir = self.install_dir / "Scripts"
+            self.ssm_bin = self.install_dir / "ssm.exe"
+            if self.file_ext == "msi":
+                win_pkg = (
+                    f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
+                )
+            elif self.file_ext == "exe":
+                win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
+            win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
 
-            if not self.classic:
-                if not relenv:
-                    win_pkg = (
-                        f"salt-{self.prev_version}-1-windows-amd64.{self.file_ext}"
-                    )
-                else:
-                    if self.file_ext == "msi":
-                        win_pkg = (
-                            f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                        )
-                    elif self.file_ext == "exe":
-                        win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
-            else:
-                if self.file_ext == "msi":
-                    win_pkg = (
-                        f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                    )
-                elif self.file_ext == "exe":
-                    win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
+            # Download package to C:\TEMP
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
             download_file(win_pkg_url, pkg_path)
@@ -825,18 +774,17 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(
+                    f'msiexec /qn /i "{str(pkg_path)}" START_MINION=""'
+                )
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
                 batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
+                batch_file.write_text(
+                    f'start /wait "" "{str(pkg_path)}" /start-minion=0 /S'
+                )
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
@@ -886,6 +834,45 @@ class SaltPkgInstall:
                 uninst = self.install_dir / "uninst.exe"
                 ret = self.proc.run(uninst, "/S")
                 self._check_retcode(ret)
+                # The NSIS uninstaller launches a 2nd binary (Un.exe or Un_*.exe)
+                # and immediately returns. We need to make sure the 2nd binary
+                # finishes before continuing
+                processes = [
+                    "uninst.exe",
+                    "Un.exe",
+                    "Un_A.exe",
+                    "Un_B.exe",
+                    "Un_C.exe",
+                    "Un_D.exe",
+                    "Un_D.exe",
+                    "Un_F.exe",
+                    "Un_G.exe",
+                ]
+                proc_name = ""
+                for proc in processes:
+                    try:
+                        if proc in (p.name() for p in psutil.process_iter()):
+                            proc_name = proc
+                            break
+                    except psutil.NoSuchProcess:
+                        continue
+
+                # We need to give the process time to exit. We'll timeout after
+                # 5 minutes or whatever timeout is set to
+                timeout = 300
+                if proc_name:
+                    elapsed_time = 0
+                    while elapsed_time < timeout:
+                        try:
+                            if proc_name not in (
+                                p.name() for p in psutil.process_iter()
+                            ):
+                                break
+                        except psutil.NoSuchProcess:
+                            continue
+                        elapsed_time += 1
+                        time.sleep(1)
+
             elif pkg.endswith("msi"):
                 ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
                 self._check_retcode(ret)

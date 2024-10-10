@@ -1,3 +1,4 @@
+import os
 import time
 
 import packaging.version
@@ -20,7 +21,9 @@ def _get_running_named_salt_pid(process_name):
     for proc in psutil.process_iter():
         try:
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess):
+            print(f"{proc.name}: {proc.pid}")
+            print(cmdl_strg)
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
@@ -30,7 +33,7 @@ def _get_running_named_salt_pid(process_name):
 
 def test_salt_downgrade_minion(salt_call_cli, install_salt):
     """
-    Test an downgrade of Salt Minion.
+    Test a downgrade of Salt Minion.
     """
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
@@ -81,19 +84,17 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
 
     time.sleep(10)  # give it some time
     # downgrade install will stop services on Debian/Ubuntu
-    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
-    # want to ensure our tests start with the config settings we have set,
+    # This is due to RedHat systems are not active after an install, but
+    # Debian/Ubuntu are active after an install
+    # Want to ensure our tests start with the config settings we have set,
     # trying restart for Debian/Ubuntu to see the outcome
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
 
-    time.sleep(60)  # give it some time
+    # Give it some time
+    time.sleep(60)
 
-    # Verify there is a new running minion by getting its PID and comparing it
-    # with the PID from before the upgrade
-    new_minion_pids = _get_running_named_salt_pid(process_name)
-    assert new_minion_pids
-    assert new_minion_pids != old_minion_pids
+    files = os.listdir(install_salt.install_dir)
 
     bin_file = "salt"
     if platform.is_windows():
@@ -102,6 +103,10 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         else:
             bin_file = install_salt.install_dir / "salt-call.exe"
 
+        # Is the binary present
+        assert bin_file.is_file()
+
+    # Is it the right version
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
     assert packaging.version.parse(
@@ -114,3 +119,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
             # test pip install after a downgrade
             use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
             assert "Authentication information could" in use_lib.stderr
+
+    # Verify there is a new running minion by getting its PID and comparing it
+    # with the PID from before the upgrade
+    new_minion_pids = _get_running_named_salt_pid(process_name)
+    assert new_minion_pids
+    assert new_minion_pids != old_minion_pids
