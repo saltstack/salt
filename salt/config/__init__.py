@@ -409,6 +409,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
         "state_events": bool,
+        # Limit the number of states that can be running in parallel
+        "state_max_parallel": int,
         # The number of seconds a minion should wait before retry when attempting authentication
         "acceptance_wait_time": float,
         # The number of seconds a minion should wait before giving up during authentication
@@ -1244,6 +1246,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_events": False,
         "state_aggregate": False,
         "state_queue": False,
+        "state_max_parallel": 0,
         "snapper_states": False,
         "snapper_states_config": "root",
         "acceptance_wait_time": 10,
@@ -1590,6 +1593,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
+        "state_max_parallel": 0,
         "search": "",
         "loop_interval": 60,
         "nodegroups": {},
