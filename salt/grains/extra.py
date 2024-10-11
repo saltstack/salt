@@ -82,12 +82,20 @@ def __secure_boot(efivars_dir):
     return enabled
 
 
-def uefi():
-    """Populate UEFI grains."""
-    efivars_dir = next(
+def get_secure_boot_path():
+    """
+    Provide paths for secure boot directories and files
+    """
+    efivars_path = next(
         filter(os.path.exists, ["/sys/firmware/efi/efivars", "/sys/firmware/efi/vars"]),
         None,
     )
+    return efivars_path
+
+
+def uefi():
+    """Populate UEFI grains."""
+    efivars_dir = get_secure_boot_path()
     grains = {
         "efi": bool(efivars_dir),
         "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
