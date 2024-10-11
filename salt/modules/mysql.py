@@ -2033,14 +2033,17 @@ def _mariadb_user_chpass(
                 qry = False
             else:
                 args["unix_socket"] = "unix_socket"
-                qry = (
-                    "UPDATE mysql.user SET "
-                    + password_column
-                    + "="
-                    + password_sql
-                    + ", plugin=%(unix_socket)s"
-                    + " WHERE User=%(user)s AND Host = %(host)s;"
-                )
+                if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+                    qry = "ALTER USER %(user)s@%(host)s IDENTIFIED VIA %(unix_socket)s;"
+                else:
+                    qry = (
+                        "UPDATE mysql.user SET "
+                        + password_column
+                        + "="
+                        + password_sql
+                        + ", plugin=%(unix_socket)s"
+                        + " WHERE User=%(user)s AND Host = %(host)s;"
+                    )
         else:
             log.error("Auth via unix_socket can be set only for host=localhost")
 
