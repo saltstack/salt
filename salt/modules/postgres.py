@@ -96,6 +96,7 @@ _PRIVILEGES_MAP = {
     "X": "EXECUTE",
     "x": "REFERENCES",
     "d": "DELETE",
+    "m": "MAINTAIN",
     "*": "GRANT",
 }
 _PRIVILEGES_OBJECTS = frozenset(
@@ -111,7 +112,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     )
 )
 _PRIVILEGE_TYPE_MAP = {
-    "table": "arwdDxt",
+    "table": "arwdDxtm",
     "tablespace": "C",
     "language": "U",
     "sequence": "rwU",
