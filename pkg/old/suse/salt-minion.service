@@ -10,6 +10,7 @@ ExecStart=/usr/bin/salt-minion
 KillMode=process
 Restart=on-failure
 RestartSec=15
+SELinuxContext=system_u:system_r:unconfined_t:s0
 
 [Install]
 WantedBy=multi-user.target
