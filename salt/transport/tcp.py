@@ -1455,7 +1455,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Securely create socket
         with salt.utils.files.set_umask(0o177):
             self.pull_sock.start()
-            os.chmod(self.pull_path, self.pull_path_perms)
+            if self.pull_path:
+                os.chmod(self.pull_path, self.pull_path_perms)
 
     def pre_fork(self, process_manager):
         """
