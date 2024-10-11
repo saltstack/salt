@@ -97,8 +97,8 @@ options found in the xmpp_state_run section.
             test: True
         - hours: 1
         - skip_during_range:
-            - start: 2pm
-            - end: 3pm
+            start: 2pm
+            end: 3pm
         - run_after_skip_range: True
 
 This will schedule the command: state.sls httpd test=True at 5pm on Monday,
