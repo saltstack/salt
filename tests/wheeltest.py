@@ -17,7 +17,11 @@ def parse():
     """
     parser = optparse.OptionParser()
     parser.add_option(
-        "-f", "--fun", "--function", dest="fun", help="The wheel function to execute"
+        "-f",
+        "--fun",
+        "--function",
+        dest="fun",
+        help="The wheel function to execute",
     )
     parser.add_option(
         "-a",
@@ -34,6 +38,11 @@ def parse():
         if "=" in arg:
             comps = arg.split("=")
             cli[comps[0]] = comps[1]
+
+    # Correct the spelling of the `eauth` variable in the `parse()` function.
+
+    cli["eauth"] = cli.pop("eauth")
+
     return cli
 
 
@@ -55,6 +64,9 @@ class Wheeler:
         if self.opts["eauth"]:
             resolver = salt.auth.Resolver(self.opts)
             res = resolver.cli(self.opts["eauth"])
+        else:
+            res = {}
+
         self.opts.update(res)
 
     def run(self):
