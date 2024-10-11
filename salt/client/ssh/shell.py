@@ -19,7 +19,7 @@ import salt.utils.vt
 log = logging.getLogger(__name__)
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\s*$", re.M)
-KEY_VALID_RE = re.compile(r".*\(yes\/no\).*")
+KEY_VALID_RE = re.compile(r".*\(yes\/no(/\[fingerprint\])?\).*")
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.M)
 
 # sudo prompt is used to recognize sudo prompting for a password and should
