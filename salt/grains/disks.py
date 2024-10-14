@@ -19,8 +19,6 @@ __salt__ = {
     "cmd.powershell": salt.modules.cmdmod.powershell,
 }
 
-from salt.exceptions import CommandExecutionError
-
 log = logging.getLogger(__name__)
 
 
