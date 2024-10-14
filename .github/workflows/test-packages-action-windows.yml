@@ -70,6 +70,7 @@ env:
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  USE_S3_CACHE: 'true'
 
 jobs:
 
@@ -102,7 +103,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
+          tools ci pkg-matrix ${{ inputs.distro-slug }} \
             ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
 
@@ -198,7 +199,7 @@ jobs:
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ matrix.fips && '--fips ' || '' }}\
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -246,8 +247,8 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Merge Test Run Artifacts
-        uses: actions/upload-artifact/merge@v4
         continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
           pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
