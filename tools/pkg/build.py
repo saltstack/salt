@@ -10,7 +10,6 @@ import logging
 import os
 import pathlib
 import shutil
-import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
