@@ -83,6 +83,9 @@ jobs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
       build-reports: ${{ steps.generate-matrix.outputs.build-reports }}
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: "Throttle Builds"
         shell: bash
