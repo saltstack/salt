@@ -41,7 +41,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "macos", "windows"),
+            "choices": ("linux", "windows"),
             "required": True,
         },
         "arch": {

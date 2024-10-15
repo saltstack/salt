@@ -241,7 +241,7 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
         * `*.pyc` files
         * `*.pyo` files
 
-    When running on Windows and macOS, some additional cleanup is also done.
+    When running on Windows, some additional cleanup is also done.
     """
     with open(
         str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml"),

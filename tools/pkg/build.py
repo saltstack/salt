@@ -174,106 +174,6 @@ def rpm(
 
 
 @build.command(
-    name="macos",
-    arguments={
-        "onedir": {
-            "help": "The name of the onedir artifact, if given it should be under artifacts/",
-        },
-        "salt_version": {
-            "help": (
-                "The salt version for which to build the repository configuration files. "
-                "If not passed, it will be discovered by running 'python3 salt/version.py'."
-            ),
-            "required": True,
-        },
-        "sign": {
-            "help": "Sign and notorize built package",
-        },
-        "relenv_version": {
-            "help": "The version of relenv to use",
-        },
-        "python_version": {
-            "help": "The version of python to build with using relenv",
-        },
-    },
-)
-def macos(
-    ctx: Context,
-    onedir: str = None,
-    salt_version: str = None,
-    sign: bool = False,
-    relenv_version: str = None,
-    python_version: str = None,
-):
-    """
-    Build the macOS package.
-    """
-    if TYPE_CHECKING:
-        assert onedir is not None
-        assert salt_version is not None
-
-    checkout = pathlib.Path.cwd()
-    if onedir:
-        onedir_artifact = checkout / "artifacts" / onedir
-        ctx.info(f"Building package from existing onedir: {str(onedir_artifact)}")
-        _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
-
-        build_root = checkout / "pkg" / "macos" / "build" / "opt"
-        build_root.mkdir(parents=True, exist_ok=True)
-        ctx.info(f"Extracting the onedir artifact to {build_root}")
-        with tarfile.open(str(onedir_artifact)) as tarball:
-            with ctx.chdir(onedir_artifact.parent):
-                tarball.extractall(path=build_root)  # nosec
-    else:
-        ctx.info("Building package without an existing onedir")
-
-    if not onedir:
-        # Prep the salt onedir if not building from an existing one
-        shared_constants = tools.utils.get_cicd_shared_context()
-        if not python_version:
-            python_version = shared_constants["python_version"]
-        if not relenv_version:
-            relenv_version = shared_constants["relenv_version"]
-        if TYPE_CHECKING:
-            assert python_version
-            assert relenv_version
-        os.environ["RELENV_FETCH_VERSION"] = relenv_version
-        with ctx.chdir(checkout / "pkg" / "macos"):
-            ctx.info("Fetching relenv python")
-            ctx.run(
-                "./build_python.sh",
-                "--version",
-                python_version,
-                "--relenv-version",
-                relenv_version,
-            )
-
-            ctx.info("Installing salt into the relenv python")
-            ctx.run("./install_salt.sh")
-
-    if sign:
-        ctx.info("Signing binaries")
-        with ctx.chdir(checkout / "pkg" / "macos"):
-            ctx.run("./sign_binaries.sh")
-    ctx.info("Building the macos package")
-    with ctx.chdir(checkout / "pkg" / "macos"):
-        ctx.run("./prep_salt.sh")
-        if sign:
-            package_args = ["--sign", salt_version]
-        else:
-            package_args = [salt_version]
-        ctx.run("./package.sh", *package_args)
-    if sign:
-        ctx.info("Notarizing package")
-        ret = ctx.run("uname", "-m", capture=True)
-        cpu_arch = ret.stdout.strip().decode()
-        with ctx.chdir(checkout / "pkg" / "macos"):
-            ctx.run("./notarize.sh", f"salt-{salt_version}-py3-{cpu_arch}.pkg")
-
-    ctx.info("Done")
-
-
-@build.command(
     name="windows",
     arguments={
         "onedir": {
@@ -479,10 +379,7 @@ def onedir_dependencies(
         assert package_name is not None
         assert platform is not None
 
-    if platform == "darwin":
-        platform = "macos"
-
-    if platform != "macos" and arch == "arm64":
+    if arch == "arm64":
         arch = "aarch64"
 
     shared_constants = tools.utils.get_cicd_shared_context()
@@ -621,9 +518,6 @@ def salt_onedir(
         assert platform is not None
         assert package_name is not None
 
-    if platform == "darwin":
-        platform = "macos"
-
     shared_constants = tools.utils.get_cicd_shared_context()
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
@@ -705,15 +599,6 @@ def salt_onedir(
             str(salt_archive),
             env=env,
         )
-        if platform == "macos":
-
-            def errfn(fn, path, err):
-                ctx.info(f"Removing {path} failed: {err}")
-
-            for subdir in ("opt", "etc", "Library"):
-                path = onedir_env / subdir
-                if path.exists():
-                    shutil.rmtree(path, onerror=errfn)
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(

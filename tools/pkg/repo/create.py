@@ -607,62 +607,6 @@ def windows(
 
 
 @create.command(
-    name="macos",
-    arguments={
-        "salt_version": {
-            "help": "The salt version for which to build the repository",
-            "required": True,
-        },
-        "repo_path": {
-            "help": "Path where the repository shall be created.",
-            "required": True,
-        },
-        "key_id": {
-            "help": "The GnuPG key ID used to sign.",
-            "required": True,
-        },
-        "incoming": {
-            "help": (
-                "The path to the directory containing the files that should added to "
-                "the repository."
-            ),
-            "required": True,
-        },
-        "nightly_build_from": {
-            "help": "Developement repository target",
-        },
-    },
-)
-def macos(
-    ctx: Context,
-    salt_version: str = None,
-    incoming: pathlib.Path = None,
-    repo_path: pathlib.Path = None,
-    key_id: str = None,
-    nightly_build_from: str = None,
-):
-    """
-    Create the windows repository.
-    """
-    if TYPE_CHECKING:
-        assert salt_version is not None
-        assert incoming is not None
-        assert repo_path is not None
-        assert key_id is not None
-    _create_onedir_based_repo(
-        ctx,
-        salt_version=salt_version,
-        nightly_build_from=nightly_build_from,
-        repo_path=repo_path,
-        incoming=incoming,
-        key_id=key_id,
-        distro="macos",
-        pkg_suffixes=(".pkg",),
-    )
-    ctx.info("Done")
-
-
-@create.command(
     name="onedir",
     arguments={
         "salt_version": {
@@ -906,8 +850,6 @@ def _create_onedir_based_repo(
         if distro == "onedir":
             if "-onedir-linux-" in dpath.name.lower():
                 release_os = "linux"
-            elif "-onedir-macos-" in dpath.name.lower():
-                release_os = "macos"
             elif "-onedir-windows-" in dpath.name.lower():
                 release_os = "windows"
             else:

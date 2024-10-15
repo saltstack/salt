@@ -93,61 +93,6 @@ jobs:
           python-version: "${{ inputs.python-version }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
-  build-salt-macos:
-    name: macOS
-    if: ${{ inputs.github-hosted-runners }}
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
-    runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
-    env:
-      PIP_INDEX_URL: https://pypi.org/simple
-
-    steps:
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
-
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Setup Relenv
-        id: setup-relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: macos
-          arch: ${{ matrix.arch }}
-          version: ${{ inputs.relenv-version }}
-          cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|macos
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ inputs.salt-version }}"
-
-      - name: Install Salt into Relenv Onedir
-        uses: ./.github/actions/build-onedir-salt
-        with:
-          platform: macos
-          arch: ${{ matrix.arch }}
-          salt-version: "${{ inputs.salt-version }}"
-          python-version: "${{ inputs.python-version }}"
-          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
-
   build-salt-windows:
     name: Windows
     if: ${{ inputs.github-hosted-runners }}

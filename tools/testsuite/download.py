@@ -35,7 +35,7 @@ download = command_group(
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "macos", "windows"),
+            "choices": ("linux", "windows"),
             "required": True,
         },
         "arch": {
@@ -76,7 +76,7 @@ def download_onedir_artifact(
         },
         "platform": {
             "help": "The onedir platform artifact to download",
-            "choices": ("linux", "macos", "windows"),
+            "choices": ("linux", "windows"),
             "required": True,
         },
         "arch": {

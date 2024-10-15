@@ -70,16 +70,6 @@ class Linux(OS):
 
 
 @attr.s(frozen=True, slots=True)
-class MacOS(OS):
-    runner: str = attr.ib()
-    platform: str = attr.ib(default="macos")
-
-    @runner.default
-    def _default_runner(self):
-        return self.slug
-
-
-@attr.s(frozen=True, slots=True)
 class Windows(OS):
     platform: str = attr.ib(default="windows")
 
@@ -89,7 +79,6 @@ class Windows(OS):
 
 class PlatformDefinitions(TypedDict):
     linux: list[Linux]
-    macos: list[MacOS]
     windows: list[Windows]
 
 
@@ -320,12 +309,6 @@ def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
     if "windows" in slug:
         platform = "windows"
         arch = "amd64"
-    elif "macos" in slug:
-        platform = "macos"
-        if "macos-13" in slug and "xlarge" in slug:
-            arch = "arm64"
-        else:
-            arch = "x86_64"
     else:
         platform = "linux"
         if "arm64" in slug:
