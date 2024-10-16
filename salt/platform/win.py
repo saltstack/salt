@@ -187,7 +187,7 @@ class HANDLE(wintypes.HANDLE):
         if self and not getattr(self, "closed", False):
             try:
                 CloseHandle(self.Detach())
-            except Exception:
+            except OSError:
                 # Suppress the error when there is no handle (WinError 6)
                 if ctypes.get_last_error() == 6:
                     pass
