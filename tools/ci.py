@@ -698,8 +698,6 @@ def matrix(
                 # Only integration and scenarios shall be tested under TCP,
                 # the rest would be repeating tests
                 continue
-            if "macos" in distro_slug and chunk == "scenarios":
-                continue
             splits = _splits.get(chunk) or 1
             if full and splits > 1:
                 for split in range(1, splits + 1):
@@ -720,14 +718,6 @@ def matrix(
     else:
         for entry in _matrix:
             ctx.print(" * ", entry, soft_wrap=True)
-
-    if (
-        gh_event["repository"]["fork"] is True
-        and "macos" in distro_slug
-        and "arm64" in distro_slug
-    ):
-        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
-        _matrix.clear()
 
     if not _matrix:
         build_reports = False
@@ -798,45 +788,36 @@ def pkg_matrix(
         adjusted_versions.append((ver, "relenv"))
     ctx.info(f"Will look for the following versions: {adjusted_versions}")
 
-    # Filter out the prefixes to look under
-    if "macos-" in distro_slug:
-        # We don't have golden images for macos, handle these separately
+    parts = distro_slug.split("-")
+    name = parts[0]
+    version = parts[1]
+
+    if len(parts) > 2:
+        arch = parts[2]
+    elif name in ("debian", "ubuntu"):
+        arch = "amd64"
+    else:
+        arch = "x86_64"
+
+    if name == "amazonlinux":
+        name = "amazon"
+    elif name == "rockylinux":
+        name = "redhat"
+    elif "photon" in name:
+        name = "photon"
+
+    if name == "windows":
         prefixes = {
-            "classic": "osx/",
-            "tiamat": "salt/py3/macos/minor/",
-            "relenv": "salt/py3/macos/minor/",
+            "classic": "windows/",
+            "tiamat": "salt/py3/windows/minor",
+            "relenv": "salt/py3/windows/minor",
         }
     else:
-        parts = distro_slug.split("-")
-        name = parts[0]
-        version = parts[1]
-
-        if len(parts) > 2:
-            arch = parts[2]
-        elif name in ("debian", "ubuntu"):
-            arch = "amd64"
-        else:
-            arch = "x86_64"
-
-        if name == "amazonlinux":
-            name = "amazon"
-        elif name == "rockylinux":
-            name = "redhat"
-        elif "photon" in name:
-            name = "photon"
-
-        if name == "windows":
-            prefixes = {
-                "classic": "windows/",
-                "tiamat": "salt/py3/windows/minor",
-                "relenv": "salt/py3/windows/minor",
-            }
-        else:
-            prefixes = {
-                "classic": f"py3/{name}/{version}/{arch}/",
-                "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
-                "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
-            }
+        prefixes = {
+            "classic": f"py3/{name}/{version}/{arch}/",
+            "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
+            "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
+        }
 
     s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
@@ -893,14 +874,6 @@ def pkg_matrix(
         for entry in _matrix:
             ctx.print(" * ", entry, soft_wrap=True)
 
-    if (
-        gh_event["repository"]["fork"] is True
-        and "macos" in distro_slug
-        and "arm64" in distro_slug
-    ):
-        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
-        _matrix.clear()
-
     if not _matrix:
         build_reports = False
         ctx.info("Not building reports because the matrix is empty")
@@ -947,20 +920,10 @@ def get_ci_deps_matrix(ctx: Context):
             {"distro-slug": "amazonlinux-2", "arch": "x86_64"},
             {"distro-slug": "amazonlinux-2-arm64", "arch": "arm64"},
         ],
-        "macos": [
-            {"distro-slug": "macos-12", "arch": "x86_64"},
-        ],
         "windows": [
             {"distro-slug": "windows-2022", "arch": "amd64"},
         ],
     }
-    if gh_event["repository"]["fork"] is not True:
-        _matrix["macos"].append(
-            {
-                "distro-slug": "macos-13-arm64",
-                "arch": "arm64",
-            }
-        )
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
@@ -1001,7 +964,6 @@ def get_pkg_downloads_matrix(ctx: Context):
 
     _matrix: dict[str, list[dict[str, str]]] = {
         "linux": [],
-        "macos": [],
         "windows": [],
     }
 
@@ -1034,24 +996,6 @@ def get_pkg_downloads_matrix(ctx: Context):
             _matrix["linux"].append(
                 {"distro-slug": slug, "arch": arch, "pkg-type": "onedir"}
             )
-    for mac in TEST_SALT_LISTING["macos"]:
-        if gh_event["repository"]["fork"] is True and mac.arch == "arm64":
-            continue
-        _matrix["macos"].append(
-            {"distro-slug": mac.slug, "arch": mac.arch, "pkg-type": "package"}
-        )
-
-    if gh_event["repository"]["fork"] is True:
-        macos_idx = 0  # macos-12
-    else:
-        macos_idx = 1  # macos-13
-    _matrix["macos"].append(
-        {
-            "distro-slug": TEST_SALT_LISTING["macos"][macos_idx].slug,
-            "arch": TEST_SALT_LISTING["macos"][macos_idx].arch,
-            "pkg-type": "onedir",
-        }
-    )
 
     for win in TEST_SALT_LISTING["windows"][-1:]:
         for pkg_type in ("nsis", "msi", "onedir"):
@@ -1142,8 +1086,6 @@ def get_pr_test_labels(
     shared_context = tools.utils.get_cicd_shared_context()
     mandatory_os_slugs = set(shared_context["mandatory_os_slugs"])
     available = set(tools.utils.get_golden_images())
-    # Add MacOS provided by GitHub
-    available.update({"macos-12", "macos-13", "macos-13-arm64"})
     # Remove mandatory OS'ss
     available.difference_update(mandatory_os_slugs)
     select_all = set(available)

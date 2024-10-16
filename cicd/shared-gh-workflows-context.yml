@@ -5,6 +5,5 @@ mandatory_os_slugs:
   - rockylinux-9
   - amazonlinux-2023-arm64
   - photonos-5-arm64
-  - macos-12
   - ubuntu-24.04-arm64
   - windows-2022

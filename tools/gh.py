@@ -46,21 +46,6 @@ def sync_os_labels(
             "color": color,
             "description": f"{description_prefix} ALL OS'es",
         },
-        "test:os:macos-12": {
-            "name": "test:os:macos-12",
-            "color": color,
-            "description": f"{description_prefix} MacOS 12",
-        },
-        "test:os:macos-13": {
-            "name": "test:os:macos-13",
-            "color": color,
-            "description": f"{description_prefix} MacOS 13",
-        },
-        "test:os:macos-13-arm64": {
-            "name": "test:os:macos-13-arm64",
-            "color": color,
-            "description": f"{description_prefix} MacOS 13 Arm64",
-        },
     }
     for slug, details in tools.utils.get_golden_images().items():
         name = f"test:os:{slug}"

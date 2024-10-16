@@ -117,7 +117,7 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
         "platform": {
             "help": "The onedir platform archive to download.",
             "required": True,
-            "choices": ("linux", "windows", "darwin", "macos"),
+            "choices": ("linux", "windows", "darwin"),
         },
         "arch": {
             "help": "The onedir arch archive to download.",
@@ -132,13 +132,11 @@ def download_onedir_artifact(
     Download onedir artifact from staging bucket.
     """
     s3 = boto3.client("s3")
-    if platform == "darwin":
-        platform = "macos"
     if arch == "aarch64":
         arch = "arm64"
     arch = arch.lower()
     platform = platform.lower()
-    if platform in ("linux", "macos") and arch not in ("x86_64", "arm64"):
+    if platform in ("linux") and arch not in ("x86_64", "arm64"):
         ctx.error(
             f"The 'arch' value for {platform} must be one of: 'x86_64', 'aarch64', 'aarch64'"
         )

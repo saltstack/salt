@@ -223,7 +223,7 @@ def release(ctx: Context, salt_version: str):
     major_version = packaging.version.parse(salt_version).major
     with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
         repo_path = pathlib.Path(tsd)
-        for distro in ("windows", "macos", "onedir"):
+        for distro in ("windows", "onedir"):
 
             create_repo_path = create_full_repo_path(
                 ctx,

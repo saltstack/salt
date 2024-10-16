@@ -13,7 +13,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
-from tools.utils import Linux, MacOS, PlatformDefinitions, Windows
+from tools.utils import Linux, PlatformDefinitions, Windows
 
 log = logging.getLogger(__name__)
 
@@ -106,16 +106,6 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 slug="ubuntu-24.04-arm64",
                 display_name="Ubuntu 24.04 Arm64",
                 arch="arm64",
-            ),
-        ],
-        "macos": [
-            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-            MacOS(
-                slug="macos-13-arm64",
-                display_name="macOS 13 Arm64",
-                arch="arm64",
-                runner="macos-13-xlarge",
             ),
         ],
         "windows": [
@@ -354,16 +344,6 @@ def generate_workflows(ctx: Context):
                     display_name="Ubuntu 24.04 Arm64",
                     arch="arm64",
                     pkg_type="deb",
-                ),
-            ],
-            "macos": [
-                MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-                MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-                MacOS(
-                    slug="macos-13-arm64",
-                    display_name="macOS 13 Arm64",
-                    arch="arm64",
-                    runner="macos-13-xlarge",
                 ),
             ],
             "windows": [
