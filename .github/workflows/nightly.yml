@@ -538,7 +538,7 @@ jobs:
       python-version: "3.10.15"
       source: "onedir"
       environment: nightly
-      sign-macos-packages: true
+      sign-macos-packages: false
       sign-windows-packages: false
     secrets: inherit
 
@@ -556,7 +556,7 @@ jobs:
       python-version: "3.10.15"
       source: "src"
       environment: nightly
-      sign-macos-packages: true
+      sign-macos-packages: false
       sign-windows-packages: false
     secrets: inherit
   build-ci-deps:
