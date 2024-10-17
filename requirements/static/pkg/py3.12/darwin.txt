@@ -24,6 +24,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.5
     # via
+    #   -r requirements/base.txt
     #   -r requirements/darwin.txt
     #   pyopenssl
 distro==1.5.0
