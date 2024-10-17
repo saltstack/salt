@@ -4,6 +4,8 @@ Test the win_runas util
 
 import pytest
 
+import salt.modules.win_useradd as win_user
+import salt.utils.win_functions as win_functions
 import salt.utils.win_runas as win_runas
 
 pytestmark = [
@@ -30,7 +32,8 @@ def test_compound_runas(user):
 
 def test_compound_runas_unpriv(user):
     cmd = "hostname && whoami"
-    print(user.username)
+    is_admin = win_functions.is_admin(user.username)
+    user_info = win_user.info(user.username)
     result = win_runas.runas_unpriv(
         cmd=cmd,
         username=user.username,
