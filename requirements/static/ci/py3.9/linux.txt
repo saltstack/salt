@@ -100,6 +100,7 @@ croniter==2.0.5 ; sys_platform != "win32"
 cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
     #   moto
