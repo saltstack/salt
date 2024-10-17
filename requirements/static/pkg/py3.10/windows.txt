@@ -25,6 +25,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 cryptography==42.0.5
     # via
+    #   -r requirements/base.txt
     #   -r requirements/windows.txt
     #   pyopenssl
 distro==1.5.0
