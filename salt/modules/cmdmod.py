@@ -293,7 +293,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
 
         # Commands that are a specific keyword behave differently. They fail if
         # you add a "&" to the front. Add those here as we find them:
-        keywords = ["$", "&", ".", "Configuration"]
+        keywords = ["$", "&", ".", "Configuration", "try"]
 
         for keyword in keywords:
             if cmd.startswith(keyword):
