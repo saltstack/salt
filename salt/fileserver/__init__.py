@@ -517,7 +517,7 @@ class Fileserver:
         if load is None:
             load = {}
         load.pop("cmd", None)
-        return self.envs(**load)
+        return self.envs(back=load.get("back", None), sources=load.get("sources", None))
 
     def init(self, back=None):
         """
