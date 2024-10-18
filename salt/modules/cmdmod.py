@@ -296,7 +296,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         keywords = ["$", "&", ".", "Configuration", "try"]
 
         for keyword in keywords:
-            if cmd.startswith(keyword):
+            if cmd.lower().startswith(keyword.lower()):
                 new_cmd.extend(["-Command", f"{cmd.strip()}"])
                 break
         else:
@@ -4093,16 +4093,16 @@ def powershell(
     # ConvertTo-JSON is only available on PowerShell 3.0 and later
     psversion = shell_info("powershell")["psversion"]
     if salt.utils.versions.version_cmp(psversion, "2.0") == 1:
-        cmd += " | ConvertTo-JSON"
+        cmd += " | ConvertTo-JSON "
         if depth is not None:
-            cmd += f" -Depth {depth}"
+            cmd += f"-Depth {depth} "
 
     # Put the whole command inside a try / catch block
     # Some errors in PowerShell are not "Terminating Errors" and will not be
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = "try {" + cmd + '} catch { "{}" }'
+    cmd = "try { " + cmd + ' } catch { "{}" }'
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -4114,7 +4114,7 @@ def powershell(
         cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
-        cmd = f"{{{cmd}}}"
+        cmd = f"{{ {cmd} }}"
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
