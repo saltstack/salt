@@ -903,7 +903,6 @@ class AsyncAuth:
         clear_signed_data = payload["load"]
         clear_signature = payload["sig"]
         payload = salt.payload.loads(clear_signed_data)
-
         if "pub_key" in payload:
             auth["aes"] = self.verify_master(
                 payload, master_pub="token" in sign_in_payload
@@ -922,10 +921,10 @@ class AsyncAuth:
                 )
                 raise SaltClientError("Invalid master key")
 
-        key = self.get_keys()
-        auth["session"] = key.decrypt(
-            payload["session"], self.opts["encryption_algorithm"]
-        )
+            key = self.get_keys()
+            auth["session"] = key.decrypt(
+                payload["session"], self.opts["encryption_algorithm"]
+            )
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
         if os.path.exists(master_pubkey_path) and not verify_signature(

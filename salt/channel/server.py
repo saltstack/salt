@@ -246,8 +246,6 @@ class ReqServerChannel:
                     ret,
                     req_opts["key"],
                     req_opts["tgt"],
-                    id_,
-                    version,
                     nonce,
                     sign_messages,
                     payload.get("enc_algo", salt.crypt.OAEP_SHA1),
@@ -263,8 +261,6 @@ class ReqServerChannel:
         ret,
         dictkey,
         target,
-        id_,
-        version,
         nonce=None,
         sign_messages=True,
         encryption_algorithm=salt.crypt.OAEP_SHA1,
@@ -280,12 +276,8 @@ class ReqServerChannel:
         try:
             pub = salt.crypt.PublicKey(pubfn)
         except (ValueError, IndexError, TypeError):
-            if version > 2:
-                return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
-                    {}, nonce
-                )
-            else:
-                return self.crypticle.dumps(ret, nonce)
+            log.error("Bad load from minion")
+            return {"error": "bad load"}
         except OSError:
             log.error("AES key not found")
             return {"error": "AES key not found"}
