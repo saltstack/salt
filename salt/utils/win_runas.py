@@ -199,6 +199,9 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Create the environment for the user
     env = create_env(user_token, False)
 
+    if "&&" in cmdLine:
+        cmdLine = f'cmd /c "{cmdLine}"'
+
     hProcess = None
     try:
         # Start the process in a suspended state.
@@ -206,7 +209,7 @@ def runas(cmdLine, username, password=None, cwd=None):
             int(user_token),
             logonflags=1,
             applicationname=None,
-            commandline=f'cmd /c "{cmdLine}"',
+            commandline=cmdLine,
             currentdirectory=cwd,
             creationflags=creationflags,
             startupinfo=startup_info,
@@ -297,6 +300,9 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdError=errwrite,
     )
 
+    if "&&" in cmd:
+        cmd = f'cmd /c "{cmd}"'
+
     try:
         # Run command and return process info structure
         process_info = salt.platform.win.CreateProcessWithLogonW(
@@ -304,7 +310,7 @@ def runas_unpriv(cmd, username, password, cwd=None):
             domain=domain,
             password=password,
             logonflags=salt.platform.win.LOGON_WITH_PROFILE,
-            commandline=f'cmd /c "{cmd}"',
+            commandline=cmd,
             startupinfo=startup_info,
             currentdirectory=cwd,
         )
