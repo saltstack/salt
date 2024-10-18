@@ -280,6 +280,24 @@ def test_vault_client_unwrap_should_default_to_token_header_before_payload(
         assert headers.get("X-Vault-Token") == token
 
 
+@pytest.mark.usefixtures("server_config")
+@pytest.mark.parametrize(
+    "server_config",
+    ({"verify": "/usr/local/share/ca-certificates/my-ca.crt"},),
+    indirect=True,
+)
+def test_vault_client_unwrap_respects_verify_option(role_id_response, client, req):
+    """
+    As unwrap is special call which can be done both authenticated and unauthenticated
+    we need to ensure that in both cases it respects verify option.
+    """
+    token = "test-wrapping-token"
+    req.return_value = _mock_json_response(role_id_response)
+    client.unwrap(token)
+    verify = req.call_args.kwargs.get("verify", None)
+    assert verify == client.get_config()["verify"]
+
+
 @pytest.mark.parametrize("func", ["unwrap", "token_lookup"])
 @pytest.mark.parametrize(
     "req_failed,expected",
