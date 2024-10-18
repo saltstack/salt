@@ -4,8 +4,6 @@ Test the win_runas util
 
 import pytest
 
-import salt.modules.win_useradd as win_user
-import salt.utils.win_functions as win_functions
 import salt.utils.win_runas as win_runas
 
 pytestmark = [
