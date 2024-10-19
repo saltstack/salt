@@ -295,6 +295,7 @@ class AsyncReqChannel:
                 data = self.auth.session_crypticle.loads(data, raw, nonce=nonce)
             if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
+
             raise salt.ext.tornado.gen.Return(data)
 
         if not self.auth.authenticated:
