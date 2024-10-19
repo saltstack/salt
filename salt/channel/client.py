@@ -162,10 +162,19 @@ class AsyncReqChannel:
         if self.crypt == "aes":
             if nonce is None:
                 nonce = uuid.uuid4().hex
-            load["nonce"] = nonce
-            load["ts"] = int(time.time())
-            load["tok"] = self.auth.gen_token(b"salt")
-            load["id"] = self.opts["id"]
+            try:
+                load["nonce"] = nonce
+                load["ts"] = int(time.time())
+                load["tok"] = self.auth.gen_token(b"salt")
+                load["id"] = self.opts["id"]
+            except TypeError:
+                # Backwards compatability for non dict loads, let the load get
+                # sent and fail to authenticate.
+                log.warning(
+                    "Invalid load passed to request channel. Type is %s should be dict.",
+                    type(load),
+                )
+
             load = self.auth.session_crypticle.dumps(load)
 
         ret = {
