@@ -62,6 +62,12 @@ address. A more elaborate roster can be created:
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
     ``fred ALL=(ALL) NOPASSWD: ALL``
 
+.. warning::
+    Salt will mask any text matching ``passwd`` in the output to avoid leaking
+    passwords in the log or stdout. Using a simple password like ``password``
+    will cause any text in the output matching ``password`` to be replaced with
+    asterisks (``*``).
+
 Deploy ssh key for salt-ssh
 ===========================
 
