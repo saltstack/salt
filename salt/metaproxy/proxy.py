@@ -50,6 +50,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.minion import ProxyMinion
+from salt.utils.decorators.start_event import fire_started_event_job_wrapper
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
@@ -393,6 +394,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
             ProxyMinion._thread_return(minion_instance, opts, data)
 
 
+@fire_started_event_job_wrapper
 def thread_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
@@ -628,6 +630,7 @@ def thread_return(cls, minion_instance, opts, data):
                 log.exception("The return failed for job %s: %s", data["jid"], exc)
 
 
+@fire_started_event_job_wrapper
 def thread_multi_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
