@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 
 import pytest
-from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 import salt.channel.client
