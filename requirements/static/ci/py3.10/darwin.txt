@@ -310,7 +310,7 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   cherrypy
-psutil==5.9.6
+psutil==6.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
