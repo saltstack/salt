@@ -10,7 +10,7 @@ requests>=2.32.3 ; python_version >= '3.10'
 certifi==2023.07.22; python_version < '3.10'
 certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
-psutil>=5.0.0
+psutil>=6.0.0
 packaging>=21.3
 looseversion
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'

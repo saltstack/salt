@@ -68,7 +68,7 @@ packaging==22.0
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
-psutil==5.8.0
+psutil==6.1.0
     # via -r requirements/base.txt
 pycparser==2.21 ; python_version >= "3.9"
     # via
