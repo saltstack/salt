@@ -76,7 +76,7 @@ packaging==22.0
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
-psutil==6.1.0
+psutil==5.8.0 ; python_version <= "3.9"
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/darwin.txt
