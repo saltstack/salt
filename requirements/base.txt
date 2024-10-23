@@ -17,3 +17,5 @@ croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 # We need contextvars for salt-ssh
 contextvars
 cryptography>=42.0.0
+
+# force rebuild
