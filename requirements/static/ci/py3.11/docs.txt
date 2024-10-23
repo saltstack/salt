@@ -126,7 +126,7 @@ portend==2.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cherrypy
-psutil==6.1.0
+psutil==5.8.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
