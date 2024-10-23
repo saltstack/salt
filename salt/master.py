@@ -1560,11 +1560,10 @@ class AESFuncs(TransportMethods):
             # Can overwrite master files!!
             return False
 
-        cpath = os.path.join(
-            self.opts["cachedir"], "minions", load["id"], "files", normpath
-        )
+        rpath = os.path.join(self.opts["cachedir"], "minions", load["id"], "files")
+        cpath = os.path.join(rpath, normpath)
         # One last safety check here
-        if not os.path.normpath(cpath).startswith(self.opts["cachedir"]):
+        if not salt.utils.verify.clean_path(rpath, cpath):
             log.warning(
                 "Attempt to write received file outside of master cache "
                 "directory! Requested path: %s. Access denied.",
