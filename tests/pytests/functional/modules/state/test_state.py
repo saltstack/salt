@@ -1126,3 +1126,53 @@ def test_state_apply_parallel_spawning_with_global_dunders(state, _state_require
         ]["result"]
         is True
     )
+
+
+@pytest.fixture
+def _state_unpicklable_ctx(loaders, state_tree):
+    mod_contents = dedent(
+        r"""
+        import threading
+
+        class Unpicklable:
+            def __init__(self):
+                self._lock = threading.RLock()
+
+        def test_it():
+            __context__["booh"] = Unpicklable()
+        """
+    )
+    sls = "test_spawning_unpicklable"
+    sls_contents = dedent(
+        r"""
+        {%- do salt["unpicklable.test_it"]() %}
+
+        This should not fail on spawning platforms:
+          test.nop:
+            - name: foo
+            - parallel: true
+        """
+    )
+    with pytest.helpers.temp_file(
+        f"{sls}.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("_modules/unpicklable.py", mod_contents, state_tree):
+        res = loaders.modules.saltutil.sync_modules()
+        assert "modules.unpicklable" in res
+        yield sls
+
+
+@pytest.mark.skip_unless_on_spawning_platform(
+    reason="Pickling is only relevant on spawning platforms"
+)
+def test_state_apply_parallel_spawning_with_unpicklable_context(
+    state, _state_unpicklable_ctx
+):
+    """
+    Ensure that if the __context__ dictionary contains unpicklable objects,
+    they are filtered out instead of causing a crash.
+    """
+    ret = state.apply(_state_unpicklable_ctx)
+    assert (
+        ret["test_|-This should not fail on spawning platforms_|-foo_|-nop"]["result"]
+        is True
+    )
