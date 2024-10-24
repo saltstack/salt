@@ -813,6 +813,10 @@ class Master(SMaster):
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
+                if not chan.transport.started.wait(30):
+                    raise salt.exceptions.SaltMasterError(
+                        "Publish server did not start within 30 seconds. Something went wrong."
+                    )
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
@@ -820,6 +824,10 @@ class Master(SMaster):
                 self.opts
             )
             ipc_publisher.pre_fork(self.process_manager)
+            if not ipc_publisher.transport.started.wait(30):
+                raise salt.exceptions.SaltMasterError(
+                    "IPC publish server did not start within 30 seconds. Something went wrong."
+                )
             self.process_manager.add_process(
                 EventMonitor,
                 args=[self.opts, ipc_publisher],
