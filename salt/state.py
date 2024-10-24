@@ -18,6 +18,7 @@ import importlib
 import inspect
 import logging
 import os
+import pickle
 import random
 import re
 import site
@@ -2288,7 +2289,30 @@ class State:
             args=(instance, self._init_kwargs, name, cdata, low, inject_globals),
             name=f"ParallelState({name})",
         )
-        proc.start()
+        try:
+            proc.start()
+        except TypeError as err:
+            # Some modules use the context to cache unpicklable objects like
+            # database connections or loader instances.
+            # Ensure we don't crash because of that on spawning platforms.
+            if "cannot pickle" not in str(err):
+                raise
+            clean_context = {}
+            for var, val in self._init_kwargs["context"].items():
+                try:
+                    pickle.dumps(val)
+                except TypeError:
+                    pass
+                else:
+                    clean_context[var] = val
+            init_kwargs = self._init_kwargs.copy()
+            init_kwargs["context"] = clean_context
+            proc = salt.utils.process.Process(
+                target=self._call_parallel_target,
+                args=(instance, init_kwargs, name, cdata, low, inject_globals),
+                name=f"ParallelState({name})",
+            )
+            proc.start()
         ret = {
             "name": name,
             "result": None,
