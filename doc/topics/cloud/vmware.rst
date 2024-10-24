@@ -23,7 +23,7 @@ This python module can be installed in the onedir package:
 
 .. code-block:: bash
 
-    salt-pip install pyVmomi
+    salt-pip install pyvmomi
 
 .. note::
 
