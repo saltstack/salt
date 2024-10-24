@@ -1331,6 +1331,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         ssl=None,
+        started=None,
     ):
         self.opts = opts
         self.pub_sock = None
@@ -1343,6 +1344,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_path_perms = pull_path_perms
         self.pub_path_perms = pub_path_perms
         self.ssl = ssl
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     @property
     def topic_support(self):
@@ -1362,6 +1367,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_path": self.pull_path,
             "pub_path_perms": self.pub_path_perms,
             "pull_path_perms": self.pull_path_perms,
+            "ssl": self.ssl,
+            "started": self.started,
         }
 
     def publish_daemon(
@@ -1456,6 +1463,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         with salt.utils.files.set_umask(0o177):
             self.pull_sock.start()
             os.chmod(self.pull_path, self.pull_path_perms)
+        self.started.set()
 
     def pre_fork(self, process_manager):
         """
