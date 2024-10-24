@@ -1859,12 +1859,12 @@ def test_list(python_binary):
 
 @pytest.mark.parametrize(
     ("name", "expected"),
-        [
-            ("pytest", "pytest"),
-            ("utf8-locale", "utf8-locale"),
-            ("utf8_locale", "utf8-locale"),
-            ("Typing__-__ExtensionS", "typing-extensions"),
-        ],
-    )
+    [
+        ("pytest", "pytest"),
+        ("utf8-locale", "utf8-locale"),
+        ("utf8_locale", "utf8-locale"),
+        ("Typing__-__ExtensionS", "typing-extensions"),
+    ],
+)
 def test_normalize(name, expected):
     assert pip.normalize(name) == expected
