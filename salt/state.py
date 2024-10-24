@@ -753,21 +753,21 @@ class State:
         loader="states",
         initial_pillar=None,
         file_client=None,
-        __invocation_id=None,
+        _invocation_id=None,
     ):
         """
         When instantiating an object of this class, do not pass
-        ``__invocation_id``. It is an internal field for tracking
+        ``_invocation_id``. It is an internal field for tracking
         parallel executions where no jid is available (Salt-SSH) and
         only exposed as an init argument to work on spawning platforms.
         """
         if jid is not None:
-            __invocation_id = jid
-        if __invocation_id is None:
+            _invocation_id = jid
+        if _invocation_id is None:
             # For salt-ssh parallel states, we need a unique identifier
             # for a single execution. self.jid should not be set there
             # since it's used for other purposes as well.
-            __invocation_id = salt.utils.jid.gen_jid(opts)
+            _invocation_id = salt.utils.jid.gen_jid(opts)
         self._init_kwargs = {
             "opts": opts,
             "pillar_override": pillar_override,
@@ -778,7 +778,7 @@ class State:
             "mocked": mocked,
             "loader": loader,
             "initial_pillar": initial_pillar,
-            "__invocation_id": __invocation_id,
+            "_invocation_id": _invocation_id,
         }
         self.states_loader = loader
         if "grains" not in opts:
@@ -825,7 +825,7 @@ class State:
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
-        self.invocation_id = __invocation_id
+        self.invocation_id = _invocation_id
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
