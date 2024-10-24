@@ -9,6 +9,8 @@ This will ensure that Salt uses the correct path for the ``brew`` binary.
 Typically, this is set to ``/usr/local`` for Intel Macs and ``/opt/homebrew``
 for Apple Silicon Macs.
 
+For Linux systems, the default prefix is: ``/home/linuxbrew/.linuxbrew``.
+
 .. important::
     If you feel that Salt should be using this module to manage packages on a
     minion, and it is using a different module (or gives an error similar to
@@ -25,6 +27,7 @@ import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
@@ -36,11 +39,11 @@ __virtualname__ = "pkg"
 
 def __virtual__():
     """
-    Confine this module to macOS with Homebrew.
+    Confine this module to systems with Homebrew.
     """
-    if __grains__["os"] != "MacOS":
-        return False, "brew module is macos specific"
-    if not _homebrew_bin():
+    if salt.utils.platform.is_windows():
+        return False, "Homebrew does not support Windows"
+    if not _homebrew_bin(quiet=True):
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -109,10 +112,10 @@ def _homebrew_os_bin():
 
     original_path = os.environ.get("PATH")
     try:
-        # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
-        # the PATH does not include "/opt/homebrew"
+        # Temporary add the default Homebrew's prefix to PATH
+        # if prefix is not contained yet.
         current_path = original_path or ""
-        homebrew_path = "/opt/homebrew/bin"
+        homebrew_path = _homebrew_default_prefix() + "/bin"
         if homebrew_path not in current_path.split(os.path.pathsep):
             extended_path = os.path.pathsep.join([current_path, homebrew_path])
             os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
@@ -129,14 +132,14 @@ def _homebrew_os_bin():
     return brew
 
 
-def _homebrew_bin():
+def _homebrew_bin(quiet=False):
     """
     Returns the full path to the homebrew binary in the homebrew installation folder
     """
     ret = homebrew_prefix()
     if ret is not None:
         ret += "/bin/brew"
-    else:
+    elif not quiet:
         log.warning("Failed to find homebrew prefix")
 
     return ret
@@ -178,6 +181,18 @@ def _list_pkgs_from_context(versions_as_list):
         ret = copy.deepcopy(__context__["pkg.list_pkgs"])
         __salt__["pkg_resource.stringify"](ret)
         return ret
+
+
+def _homebrew_default_prefix():
+    """
+    Returns the default homebrew prefix based on the OS and CPU architecture.
+    """
+    if salt.utils.platform.is_darwin():
+        if salt.utils.platform.is_arm64():
+            return "/opt/homebrew"
+        return "/usr/local"
+
+    return "/home/linuxbrew/.linuxbrew"
 
 
 def homebrew_prefix():
