@@ -263,6 +263,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         ssl=None,
+        started=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -279,6 +280,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_writer = None
         self.pub_reader = None
         self._connecting = None
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     @property
     def topic_support(self):
@@ -298,6 +303,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_path": self.pull_path,
             "pull_path_perms": self.pull_path_perms,
             "pub_path_perms": self.pub_path_perms,
+            "ssl": self.ssl,
+            "started": self.started,
         }
 
     def publish_daemon(
@@ -305,6 +312,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        event=None,
     ):
         """
         Bind to the interface specified in the configuration file
@@ -375,6 +383,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.puller = await asyncio.start_server(
                 self.pull_handler, self.pull_host, self.pull_port
             )
+        self.started.set()
         while self._run.is_set():
             await asyncio.sleep(0.3)
         await self.server.stop()
