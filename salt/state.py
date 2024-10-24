@@ -2151,12 +2151,15 @@ class State:
         return req_in_high, errors
 
     @classmethod
-    def _call_parallel_target(cls, instance, init_kwargs, name, cdata, low):
+    def _call_parallel_target(
+        cls, instance, init_kwargs, name, cdata, low, inject_globals
+    ):
         """
         The target function to call that will create the parallel thread/process
         """
         if instance is None:
             instance = cls(**init_kwargs)
+            instance.states.inject_globals = inject_globals
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
@@ -2261,7 +2264,7 @@ class State:
         with salt.utils.files.fopen(tfile, "wb+") as fp_:
             fp_.write(msgpack_serialize(ret))
 
-    def call_parallel(self, cdata, low):
+    def call_parallel(self, cdata, low, inject_globals):
         """
         Call the state defined in the given cdata in parallel
         """
@@ -2278,10 +2281,11 @@ class State:
             instance = None
         else:
             instance = self
+            inject_globals = None
 
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
-            args=(instance, self._init_kwargs, name, cdata, low),
+            args=(instance, self._init_kwargs, name, cdata, low, inject_globals),
             name=f"ParallelState({name})",
         )
         proc.start()
@@ -2428,7 +2432,7 @@ class State:
                         )
                     elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
-                        ret = self.call_parallel(cdata, low)
+                        ret = self.call_parallel(cdata, low, inject_globals)
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
