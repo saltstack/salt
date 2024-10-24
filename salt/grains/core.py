@@ -2533,7 +2533,15 @@ def _osrelease_data(os, osfullname, osrelease):
             grains["osrelease_info"],
         )
 
-    if os in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian", "AlmaLinux",):
+    if os in (
+        "Debian",
+        "FreeBSD",
+        "OpenBSD",
+        "NetBSD",
+        "Mac",
+        "Raspbian",
+        "AlmaLinux",
+    ):
         os_name = os
     else:
         os_name = osfullname

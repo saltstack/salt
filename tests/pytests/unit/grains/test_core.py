@@ -1197,6 +1197,48 @@ def test_almalinux_8_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_almalinux_kitten_os_grains():
+    """
+    Test that 'os' grain will properly detect AlmaLinux Kitten
+    """
+    # /etc/os-release data taken from an AlmaLinux Kitten VM, install ISO
+    # AlmaLinux-Kitten-10-20241018.0-x86_64_v2-minimal.iso. At the time of
+    # writting, there was no docker image for Kitten
+    _os_release_data = {
+        "NAME": "AlmaLinux Kitten",
+        "VERSION": "10 (Lion Cub)",
+        "ID": "almalinux",
+        "ID_LIKE": "rhel centos fedora",
+        "VERSION_ID": "10",
+        "PLATFORM_ID": "platform:el10",
+        "PRETTY_NAME": "AlmaLinux Kitten 10 (Lion Cub)",
+        "ANSI_COLOR": "0;34",
+        "LOGO": "fedora-logo-icon",
+        "CPE_NAME": "cpe:/o:almalinux:almalinux:10::baseos",
+        "HOME_URL": "https://almalinux.org/",
+        "DOCUMENTATION_URL": "https://wiki.almalinux.org/",
+        "VENDOR_NAME": "AlmaLinux",
+        "VENDOR_URL": "https://almalinux.org/",
+        "BUG_REPORT_URL": "https://bugs.almalinux.org/",
+        "ALMALINUX_MANTISBT_PROJECT": "AlmaLinux-10",
+        "ALMALINUX_MANTISBT_PROJECT_VERSION": "10",
+        "REDHAT_SUPPORT_PRODUCT": "AlmaLinux",
+        "REDHAT_SUPPORT_PRODUCT_VERSION": "10",
+    }
+    expectation = {
+        "os": "AlmaLinux",
+        "os_family": "RedHat",
+        "oscodename": "Lion Cub",
+        "osfullname": "AlmaLinux Kitten",
+        "osrelease": "10",
+        "osrelease_info": (10,),
+        "osmajorrelease": 10,
+        "osfinger": "AlmaLinux-10",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_virtuozzo_7_os_grains():
     """
     Test if OS grains are parsed correctly in Virtuozzo 7
