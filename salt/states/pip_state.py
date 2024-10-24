@@ -19,7 +19,6 @@ requisite to a pkg.installed state for the package which provides pip
 """
 
 import logging
-import re
 import sys
 import types
 
