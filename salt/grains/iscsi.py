@@ -85,28 +85,25 @@ def _aix_iqn():
 
 def _windows_iqn():
     """
-    Return iSCSI IQN from a Windows host.
+    Return iSCSI nodes from a Windows host.
     """
+    cmd = "Get-InitiatorPort | Select NodeAddress"
     ret = []
 
-    wmic = salt.utils.path.which("wmic")
+    nodes = salt.modules.cmdmod.powershell(cmd)
 
-    if not wmic:
+    if not nodes:
+        log.trace("No iSCSI nodes found")
         return ret
 
-    namespace = r"\\root\WMI"
-    path = "MSiSCSIInitiator_MethodClass"
-    get = "iSCSINodeName"
+    # A single node will return a dictionary with a single entry
+    # {"NodeAddress": "iqn.1991-05.com.microsoft:johnj99-pc2.contoso.com"}
+    # Multiple nodes will return a list of single entry dicts
+    # We need a list of dict
+    if isinstance(nodes, dict):
+        nodes = [nodes]
 
-    cmd_ret = salt.modules.cmdmod.run_all(
-        "{} /namespace:{} path {} get {} /format:table".format(
-            wmic, namespace, path, get
-        )
-    )
-
-    for line in cmd_ret["stdout"].splitlines():
-        if line.startswith("iqn."):
-            line = line.rstrip()
-            ret.append(line.rstrip())
+    for node in nodes:
+        ret.append(node["NodeAddress"])
 
     return ret
