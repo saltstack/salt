@@ -312,7 +312,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        event=None,
     ):
         """
         Bind to the interface specified in the configuration file
