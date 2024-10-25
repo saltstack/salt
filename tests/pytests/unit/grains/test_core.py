@@ -490,10 +490,10 @@ def test_gnu_slash_linux_in_os_name():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     # - Skip the first if statement
     # - Skip the selinux/systemd stuff (not pertinent)
@@ -567,10 +567,10 @@ def test_suse_os_from_cpe_data():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     distro_mock = MagicMock(
         return_value=("SUSE Linux Enterprise Server ", "12", "x86_64")
@@ -636,10 +636,10 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     suse_release_file = os_release_map.get("suse_release_file")
 
