@@ -813,9 +813,9 @@ class Master(SMaster):
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
-                if not chan.transport.started.wait(30):
+                if not chan.transport.started.wait(60):
                     raise salt.exceptions.SaltMasterError(
-                        "Publish server did not start within 30 seconds. Something went wrong."
+                        "Publish server did not start within 60 seconds. Something went wrong.",
                     )
                 pub_channels.append(chan)
 
