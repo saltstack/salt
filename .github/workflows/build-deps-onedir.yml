@@ -49,9 +49,7 @@ jobs:
           - x86_64
           - arm64
     runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+      - linux-${{ matrix.arch }}
     env:
       USE_S3_CACHE: 'true'
     steps:
