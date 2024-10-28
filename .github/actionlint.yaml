@@ -12,3 +12,5 @@ self-hosted-runner:
     - medium
     - large
     - macos-13-xlarge
+    - linux-x86_64
+    - linux-arm64
