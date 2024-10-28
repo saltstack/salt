@@ -9,16 +9,39 @@ import salt.grains.iscsi as iscsi
 from tests.support.mock import MagicMock, mock_open, patch
 
 
-def test_windows_iscsi_iqn_grains():
-    cmd_run_mock = MagicMock(
-        return_value={"stdout": "iSCSINodeName\niqn.1991-05.com.microsoft:simon-x1\n"}
-    )
-    _grains = {}
-    with patch("salt.utils.path.which", MagicMock(return_value=True)):
-        with patch("salt.modules.cmdmod.run_all", cmd_run_mock):
-            _grains["iscsi_iqn"] = iscsi._windows_iqn()
+def test_windows_iscsi_iqn_grains_empty():
+    nodes_dict = {}
+    cmd_powershell_mock = MagicMock(return_value=nodes_dict)
+    with patch("salt.modules.cmdmod.powershell", cmd_powershell_mock):
+        result = iscsi._windows_iqn()
+    expected = []
+    assert result == expected
 
-    assert _grains.get("iscsi_iqn") == ["iqn.1991-05.com.microsoft:simon-x1"]
+
+def test_windows_iscsi_iqn_grains_single():
+    nodes_dict = {"NodeAddress": "iqn.1991-05.com.microsoft:simon-x1"}
+    cmd_powershell_mock = MagicMock(return_value=nodes_dict)
+    with patch("salt.modules.cmdmod.powershell", cmd_powershell_mock):
+        result = iscsi._windows_iqn()
+    expected = ["iqn.1991-05.com.microsoft:simon-x1"]
+    assert result == expected
+
+
+def test_windows_iscsi_iqn_grains_multiple():
+    nodes_list = [
+        {"NodeAddress": "iqn.1991-05.com.microsoft:simon-x1"},
+        {"NodeAddress": "iqn.1991-05.com.microsoft:simon-x2"},
+        {"NodeAddress": "iqn.1991-05.com.microsoft:simon-x3"},
+    ]
+    cmd_powershell_mock = MagicMock(return_value=nodes_list)
+    with patch("salt.modules.cmdmod.powershell", cmd_powershell_mock):
+        result = iscsi._windows_iqn()
+    expected = [
+        "iqn.1991-05.com.microsoft:simon-x1",
+        "iqn.1991-05.com.microsoft:simon-x2",
+        "iqn.1991-05.com.microsoft:simon-x3",
+    ]
+    assert result == expected
 
 
 def test_aix_iscsi_iqn_grains():
