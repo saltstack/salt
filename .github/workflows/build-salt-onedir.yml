@@ -51,9 +51,7 @@ jobs:
           - x86_64
           - arm64
     runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+      - linux-${{ matrix.arch }}
     steps:
 
       - name: "Throttle Builds"

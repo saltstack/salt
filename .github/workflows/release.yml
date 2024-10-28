@@ -49,9 +49,7 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     environment: release
@@ -124,9 +122,7 @@ jobs:
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     environment: release
@@ -190,9 +186,7 @@ jobs:
   backup:
     name: Backup
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux-x86_64
     needs:
       - prepare-workflow
     env:
@@ -223,9 +217,7 @@ jobs:
   publish-repositories:
     name: Publish Repositories
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux_x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -279,9 +271,7 @@ jobs:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -395,9 +385,7 @@ jobs:
       - release
     environment: release
     runs-on:
-      - self-hosted
-      - linux
-      - repo-release
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     steps:

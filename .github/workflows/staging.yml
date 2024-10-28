@@ -309,10 +309,7 @@ jobs:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
+      - linux-x86_64
     needs:
       - prepare-workflow
     steps:
@@ -2002,9 +1999,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2105,9 +2100,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2236,9 +2229,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2416,9 +2407,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2520,9 +2509,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2613,9 +2600,7 @@ jobs:
     name: Build Repository
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2742,9 +2727,7 @@ jobs:
     name: Publish Repositories
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     environment: staging
     needs:
       - prepare-workflow
@@ -2802,9 +2785,7 @@ jobs:
       - build-src-repo
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     steps:
       - uses: actions/checkout@v4
 
@@ -2954,9 +2935,7 @@ jobs:
       - pkg-download-tests
     environment: staging
     runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
+      - linux-x86_64
     steps:
       - uses: actions/checkout@v4
 

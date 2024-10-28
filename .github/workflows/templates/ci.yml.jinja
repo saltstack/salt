@@ -61,10 +61,7 @@
     <%- if prepare_actual_release %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
+      - linux-x86_64
     <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     runs-on: ubuntu-latest

@@ -65,9 +65,7 @@ concurrency:
     name: Publish Repositories
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     environment: <{ gh_environment }>
     needs:
       - prepare-workflow

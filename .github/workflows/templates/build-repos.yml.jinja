@@ -14,9 +14,7 @@
     name: Build Repository
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
