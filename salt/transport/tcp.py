@@ -10,7 +10,6 @@ import asyncio.exceptions
 import errno
 import logging
 import multiprocessing
-import os
 import queue
 import select
 import socket
@@ -1150,7 +1149,13 @@ class TCPPuller:
     """
 
     def __init__(
-        self, host=None, port=None, path=None, io_loop=None, payload_handler=None
+        self,
+        host=None,
+        port=None,
+        path=None,
+        mode=0o600,
+        io_loop=None,
+        payload_handler=None,
     ):
         """
         Create a new Tornado IPC server
@@ -1170,6 +1175,7 @@ class TCPPuller:
         self.host = host
         self.port = port
         self.path = path
+        self.mode = mode
         self._started = False
         self.payload_handler = payload_handler
 
@@ -1187,7 +1193,7 @@ class TCPPuller:
         # Start up the ioloop
         if self.path:
             log.trace("IPCServer: binding to socket: %s", self.path)
-            self.sock = tornado.netutil.bind_unix_socket(self.path)
+            self.sock = tornado.netutil.bind_unix_socket(self.path, self.mode)
         else:
             log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1421,8 +1427,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
             )
             with salt.utils.files.set_umask(0o177):
-                sock = tornado.netutil.bind_unix_socket(self.pub_path)
-                os.chmod(self.pub_path, self.pub_path_perms)
+                sock = tornado.netutil.bind_unix_socket(
+                    self.pub_path, self.pub_path_perms
+                )
         else:
             log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
@@ -1451,18 +1458,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pull_host = self.pull_host
             pull_port = self.pull_port
 
-        self.pull_sock = TCPPuller(
-            host=self.pull_host,
-            port=self.pull_port,
-            path=self.pull_path,
-            io_loop=io_loop,
-            payload_handler=publish_payload,
-        )
-
-        # Securely create socket
         with salt.utils.files.set_umask(0o177):
+            self.pull_sock = TCPPuller(
+                host=self.pull_host,
+                port=self.pull_port,
+                path=self.pull_path,
+                mode=self.pull_path_perms,
+                io_loop=io_loop,
+                payload_handler=publish_payload,
+            )
+            # Securely create socket
             self.pull_sock.start()
-            os.chmod(self.pull_path, self.pull_path_perms)
         self.started.set()
 
     def pre_fork(self, process_manager):
