@@ -89,9 +89,7 @@ concurrency:
       - build-src-repo
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     steps:
       - uses: actions/checkout@v4
 
@@ -174,9 +172,7 @@ concurrency:
       <%- endfor %>
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     steps:
       - uses: actions/checkout@v4
 

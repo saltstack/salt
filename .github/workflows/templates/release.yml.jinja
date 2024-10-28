@@ -71,9 +71,7 @@ permissions:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
@@ -156,9 +154,7 @@ permissions:
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
@@ -211,9 +207,7 @@ permissions:
   backup:
     name: Backup
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     needs:
       - prepare-workflow
     env:
@@ -245,9 +239,7 @@ permissions:
     <%- do conclusion_needs.append('publish-repositories') %>
     name: Publish Repositories
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux_x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -286,9 +278,7 @@ permissions:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -402,9 +392,7 @@ permissions:
     name: Restore Release Bucket From Backup
     if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -445,9 +433,7 @@ permissions:
       - restore #}
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     steps:

@@ -2017,9 +2017,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2120,9 +2118,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2251,9 +2247,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2429,9 +2423,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2533,9 +2525,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2626,9 +2616,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -2755,9 +2743,7 @@ jobs:
     name: Publish Repositories
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-nightly
+      - linux-x86_64
     environment: nightly
     needs:
       - prepare-workflow
