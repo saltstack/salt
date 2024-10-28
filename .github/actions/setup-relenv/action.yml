@@ -37,6 +37,7 @@ runs:
         python3 -m pip install relenv==${{ inputs.version }}
 
     - name: Cache Relenv Data Directory
+      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       with:
         path: ${{ github.workspace }}/.relenv
