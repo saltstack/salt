@@ -217,7 +217,7 @@ jobs:
   publish-repositories:
     name: Publish Repositories
     runs-on:
-      - linux_x86_64
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
