@@ -1797,7 +1797,11 @@ def show_states(queue=None, **kwargs):
                 if not isinstance(s, dict):
                     _set_retcode(result)
                     return result
-                states[s["__sls__"]] = True
+                # The isinstance check ensures s is a dict,
+                # so disable the error pylint incorrectly gives:
+                #   [E1126(invalid-sequence-index), show_states]
+                #   Sequence index is not an int, slice, or instance with __index__
+                states[s["__sls__"]] = True  # pylint: disable=E1126
         finally:
             st_.pop_active()
 
@@ -1915,7 +1919,10 @@ def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        chunks = st_.state.compile_high_data(high_)
+        chunks, errors = st_.state.compile_high_data(high_)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
         ret = {}
         for chunk in chunks:
             if chunk.get("__id__", "") == id_:
@@ -2023,7 +2030,10 @@ def show_low_sls(mods, test=None, queue=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        ret = st_.state.compile_high_data(high_)
+        ret, errors = st_.state.compile_high_data(high_)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
         # Work around Windows multiprocessing bug, set __opts__['test'] back to
         # value from before this function was run.
         __opts__["test"] = orig_test
@@ -2126,7 +2136,7 @@ def show_sls(mods, test=None, queue=None, **kwargs):
 
 def sls_exists(mods, test=None, queue=None, **kwargs):
     """
-    Tests for the existence the of a specific SLS or list of SLS files on the
+    Tests for the existence of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
@@ -2378,15 +2388,19 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             continue
         popts["file_roots"][fn_] = [full]
     st_ = salt.state.State(popts, pillar_override=pillar_override)
-    snapper_pre = _snapper_pre(popts, kwargs.get("__pub_jid", "called localy"))
-    ret = st_.call_chunks(lowstate)
-    ret = st_.call_listen(lowstate, ret)
+    snapper_pre = _snapper_pre(popts, kwargs.get("__pub_jid", "called locally"))
+    chunks, errors = st_.order_chunks(lowstate)
+    if errors:
+        ret = errors
+    else:
+        ret = st_.call_chunks(chunks)
+        ret = st_.call_listen(chunks, ret)
     try:
         shutil.rmtree(root)
     except OSError:
         pass
     _set_retcode(ret)
-    _snapper_post(popts, kwargs.get("__pub_jid", "called localy"), snapper_pre)
+    _snapper_post(popts, kwargs.get("__pub_jid", "called locally"), snapper_pre)
     return ret
 
 

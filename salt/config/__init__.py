@@ -3899,6 +3899,11 @@ def apply_minion_config(
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
         )
 
+    # Store original `cachedir` value, before overriding,
+    # to make overriding more accurate.
+    if "__cachedir" not in opts:
+        opts["__cachedir"] = opts["cachedir"]
+
     return opts
 
 

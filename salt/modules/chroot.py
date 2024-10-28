@@ -337,17 +337,22 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
 
         high_data, req_in_errors = st_.state.requisite_in(high_data)
         errors += req_in_errors
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
 
         high_data = st_.state.apply_exclude(high_data)
 
         # Compile and verify the raw chunks
-        chunks = st_.state.compile_high_data(high_data)
+        chunks, errors = st_.state.compile_high_data(high_data)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
     file_refs = salt.client.ssh.state.lowstate_file_refs(
         chunks,
         salt.client.ssh.wrapper.state._merge_extra_filerefs(

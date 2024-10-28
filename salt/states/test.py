@@ -352,7 +352,7 @@ def mod_watch(name, sfun=None, **kwargs):
     """
     has_changes = []
     if "__reqs__" in __low__:
-        for req in __low__["__reqs__"]["watch"]:
+        for req in __low__["__reqs__"].get("watch", []):
             tag = _gen_tag(req)
             if __running__[tag]["changes"]:
                 has_changes.append("{state}: {__id__}".format(**req))
