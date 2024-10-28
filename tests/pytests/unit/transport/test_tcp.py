@@ -685,3 +685,62 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     server.clients = {client}
     await server.publish_payload(package, topic_list)
     assert server.clients == set()
+
+
+async def test_pub_server_pull_path_no_perms(master_opts, io_loop):
+    def publish_payload(payload):
+        return payload
+
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 0
+
+
+async def test_pub_server_publisher_pull_path_perms(master_opts, io_loop, tmp_path):
+    def publish_payload(payload):
+        return payload
+
+    pull_path = tmp_path / "pull.ipc"
+    pull_path_perms = 0o664
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host=None,
+        pull_port=None,
+        pull_path=str(pull_path),
+        pull_path_perms=pull_path_perms,
+    )
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 1
+        assert p.call_args.args == (pubserv.pull_path, pubserv.pull_path_perms)
+
+
+async def test_pub_server_publisher_pub_path_perms(master_opts, io_loop, tmp_path):
+    def publish_payload(payload):
+        return payload
+
+    pub_path = tmp_path / "pub.ipc"
+    pub_path_perms = 0o664
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=str(pub_path),
+        pub_path_perms=pub_path_perms,
+        pull_host="127.0.0.1",
+        pull_port=5151,
+        pull_path=None,
+    )
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 1
+        assert p.call_args.args == (pubserv.pub_path, pubserv.pub_path_perms)
