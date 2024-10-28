@@ -175,6 +175,10 @@ jobs:
         run: |
           nox --force-color -e decompress-dependencies -- macos ${{ inputs.arch }}
 
+      - name: Disable Gatekeeper
+        run: |
+          sudo -E spctl --master-disable
+
       - name: Show System Info
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
