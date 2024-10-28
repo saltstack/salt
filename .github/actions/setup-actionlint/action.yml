@@ -16,6 +16,7 @@ runs:
   steps:
 
     - name: Cache actionlint Binary
+      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       with:
         path: /usr/local/bin/actionlint
