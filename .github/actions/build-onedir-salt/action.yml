@@ -31,7 +31,6 @@ runs:
 
     - name: Download Cached Deps Onedir Package Directory
       id: onedir-bare-cache
-      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
@@ -50,7 +49,6 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
-        path: ./artifacts/
 
     - name: Install Salt Into Onedir
       shell: bash

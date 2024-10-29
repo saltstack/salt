@@ -27,7 +27,6 @@ runs:
   steps:
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
-      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
