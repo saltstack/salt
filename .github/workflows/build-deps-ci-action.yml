@@ -94,6 +94,9 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: "Throttle Builds"
         shell: bash
@@ -143,46 +146,33 @@ jobs:
           SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
-      - name: Start VM
+      - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        id: spin-up-vm
         run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
+          echo true
 
-      - name: List Free Space
+      - name: Install Nox
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PRINT_TEST_SELECTION: "0"
+          PRINT_SYSTEM_INFO: "0"
         run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ matrix.distro-slug }}
+          nox --install-only -e ${{ inputs.nox-session }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm pre-archive-cleanup ${{ matrix.distro-slug }}
+          nox --force-color -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm compress-dependencies ${{ matrix.distro-slug }}
-
-      - name: Download Compressed .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm download-dependencies ${{ matrix.distro-slug }}
-
-      - name: Destroy VM
-        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
+          nox --force-color -e compress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v4
