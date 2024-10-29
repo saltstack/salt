@@ -87,7 +87,7 @@ jobs:
     runs-on:
       - linux-${{ matrix.arch }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     timeout-minutes: 90
     strategy:
       fail-fast: false
