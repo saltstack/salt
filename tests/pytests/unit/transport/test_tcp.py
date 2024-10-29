@@ -705,6 +705,7 @@ async def test_pub_server_paths_no_perms(master_opts, io_loop):
         assert p.call_count == 0
 
 
+@pytest.mark.skip_on_windows()
 async def test_pub_server_publisher_pull_path_perms(master_opts, io_loop, tmp_path):
     def publish_payload(payload):
         return payload
@@ -730,6 +731,7 @@ async def test_pub_server_publisher_pull_path_perms(master_opts, io_loop, tmp_pa
         assert p.call_args.args == (pubserv.pull_path, pubserv.pull_path_perms)
 
 
+@pytest.mark.skip_on_windows()
 async def test_pub_server_publisher_pub_path_perms(master_opts, io_loop, tmp_path):
     def publish_payload(payload):
         return payload
