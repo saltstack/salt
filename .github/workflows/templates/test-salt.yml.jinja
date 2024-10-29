@@ -80,7 +80,7 @@
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-gh.yml
     with:
       distro-slug: <{ os.slug }>
       nox-session: ci-test-onedir
