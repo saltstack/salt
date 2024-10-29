@@ -165,9 +165,7 @@ jobs:
   build-deb-packages:
     name: DEB
     runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+      - linux-${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
@@ -263,9 +261,7 @@ jobs:
   build-rpm-packages:
     name: RPM
     runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+      - linux-${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
