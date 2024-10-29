@@ -43,7 +43,7 @@ jobs:
     name: Linux
     if: ${{ inputs.self-hosted-runners }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     strategy:
       fail-fast: false
       matrix:

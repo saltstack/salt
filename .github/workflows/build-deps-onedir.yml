@@ -51,7 +51,7 @@ jobs:
     runs-on:
       - linux-${{ matrix.arch }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"
