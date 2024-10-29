@@ -1365,7 +1365,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: rockylinux-8
       nox-session: ci-test-onedir
@@ -1386,7 +1386,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: rockylinux-8-arm64
       nox-session: ci-test-onedir
@@ -1407,7 +1407,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: rockylinux-9
       nox-session: ci-test-onedir
@@ -1428,7 +1428,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: rockylinux-9-arm64
       nox-session: ci-test-onedir
@@ -1449,7 +1449,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: amazonlinux-2
       nox-session: ci-test-onedir
@@ -1470,7 +1470,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: amazonlinux-2-arm64
       nox-session: ci-test-onedir
@@ -1491,7 +1491,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: amazonlinux-2023
       nox-session: ci-test-onedir
@@ -1512,7 +1512,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: amazonlinux-2023-arm64
       nox-session: ci-test-onedir
@@ -1533,7 +1533,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: debian-11
       nox-session: ci-test-onedir
@@ -1554,7 +1554,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: debian-11-arm64
       nox-session: ci-test-onedir
@@ -1575,7 +1575,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: debian-12
       nox-session: ci-test-onedir
@@ -1596,7 +1596,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: debian-12-arm64
       nox-session: ci-test-onedir
@@ -1617,7 +1617,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: fedora-40
       nox-session: ci-test-onedir
@@ -1638,7 +1638,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: opensuse-15
       nox-session: ci-test-onedir
@@ -1659,7 +1659,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-4
       nox-session: ci-test-onedir
@@ -1680,7 +1680,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-4-arm64
       nox-session: ci-test-onedir
@@ -1701,7 +1701,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-4
       nox-session: ci-test-onedir
@@ -1723,7 +1723,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-4-arm64
       nox-session: ci-test-onedir
@@ -1745,7 +1745,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
@@ -1766,7 +1766,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
@@ -1787,7 +1787,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
@@ -1809,7 +1809,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
@@ -1831,7 +1831,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-20.04
       nox-session: ci-test-onedir
@@ -1852,7 +1852,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-20.04-arm64
       nox-session: ci-test-onedir
@@ -1873,7 +1873,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-22.04
       nox-session: ci-test-onedir
@@ -1894,7 +1894,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test-onedir
@@ -1915,7 +1915,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-24.04
       nox-session: ci-test-onedir
@@ -1936,7 +1936,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
+    uses: ./.github/workflows/test-action-linux-ng.yml
     with:
       distro-slug: ubuntu-24.04-arm64
       nox-session: ci-test-onedir
