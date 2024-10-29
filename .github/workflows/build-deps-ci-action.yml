@@ -85,9 +85,7 @@ jobs:
     needs:
       - generate-matrix
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - linux-${{ matrix.arch }}
     env:
       USE_S3_CACHE: 'true'
     timeout-minutes: 90
