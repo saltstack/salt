@@ -51,7 +51,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     environment: release
     needs:
       - check-requirements
