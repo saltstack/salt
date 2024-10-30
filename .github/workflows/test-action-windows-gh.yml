@@ -106,13 +106,11 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
+          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }}
 
   test:
     name: Test
-    runs-on: linux-${{ inputs.arch }}
-    container:
-      image: ubuntu:20.04
+    runs-on: windows-latest
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}

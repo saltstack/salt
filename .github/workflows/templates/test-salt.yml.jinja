@@ -17,7 +17,7 @@
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-windows.yml
+    uses: ./.github/workflows/test-action-windows-gh.yml
     with:
       distro-slug: <{ os.slug }>
       nox-session: ci-test-onedir
