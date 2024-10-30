@@ -130,6 +130,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Check python
+        run: |
+          which python3
+
+
       - name: "Throttle Builds"
         shell: bash
         run: |
