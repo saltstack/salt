@@ -862,13 +862,14 @@ def pkg_matrix(
         key_filter = f"Contents[?contains(Key, '{version}')][]"
         if pkg_type == "MSI":
             # TODO: Add this back when we add MSI upgrade and downgrade tests
-            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            # key_filter = (
+            #     f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+            # )
             continue
         elif pkg_type == "NSIS":
             key_filter = (
                 f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
-            continue
         objects = list(page_iterator.search(key_filter))
         # Testing using `any` because sometimes the paginator returns `[None]`
         if any(objects):
@@ -899,7 +900,7 @@ def pkg_matrix(
         and "macos" in distro_slug
         and "arm64" in distro_slug
     ):
-        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
+        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearing the matrix.")
         _matrix.clear()
 
     if not _matrix:

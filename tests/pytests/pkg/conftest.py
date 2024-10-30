@@ -12,6 +12,7 @@ from saltfactories.utils import random_string
 
 import salt.config
 import salt.utils.files
+from salt.utils.platform import is_windows
 from tests.conftest import CODE_DIR, FIPS_TESTRUN
 from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkgInstall
 
@@ -218,8 +219,13 @@ def salt_factories_config(salt_factories_root_dir):
 
 @pytest.fixture(scope="session")
 def install_salt(request, salt_factories_root_dir):
+    if is_windows():
+        conf_dir = salt_factories_root_dir / "conf"
+    else:
+        conf_dir = salt_factories_root_dir / "etc" / "salt"
+
     with SaltPkgInstall(
-        conf_dir=salt_factories_root_dir / "etc" / "salt",
+        conf_dir=conf_dir,
         pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
@@ -243,8 +249,8 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        state_tree = "C:/salt/srv/salt"
-        pillar_tree = "C:/salt/srv/pillar"
+        state_tree = f'{os.getenv("ProgramData")}/Salt Project/Salt/srv/salt'
+        pillar_tree = f'{os.getenv("ProgramData")}/Salt Project/Salt/srv/pillar'
     elif platform.is_darwin():
         state_tree = "/opt/srv/salt"
         pillar_tree = "/opt/srv/pillar"

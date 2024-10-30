@@ -514,6 +514,7 @@ def setup_windows(
                     try:
                         if proc in (p.name() for p in psutil.process_iter()):
                             proc_name = proc
+                            break
                     except psutil.NoSuchProcess:
                         continue
 
@@ -598,7 +599,6 @@ def salt_test_command(request, install_dir):
     return command
 
 
-@pytest.mark.skip_on_windows(reason="This is flaky on Windows")
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands(), indirect=True)
 def test_download(shell, salt_test_command):
     """
