@@ -73,7 +73,7 @@ permissions:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     environment: <{ gh_environment }>
     <%- if prepare_workflow_needs %>
     needs:

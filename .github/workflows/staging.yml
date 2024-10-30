@@ -2001,7 +2001,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -2102,7 +2102,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2231,7 +2231,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2409,7 +2409,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2511,7 +2511,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-pkgs-onedir
@@ -2602,7 +2602,7 @@ jobs:
     runs-on:
       - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
       - build-salt-onedir
