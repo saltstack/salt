@@ -160,7 +160,7 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          brew install tree
+          echo true
 
       - name: Download nox.linux.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
