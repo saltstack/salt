@@ -1,4 +1,9 @@
-  <%- for backend in ("onedir", "src") %>
+<%- if gh_environment != "ci" -%>
+<%- set pkg_types = ("onedir", "src") %>
+<%- else -%>
+<%- set pkg_types = ("onedir",) %>
+<%- endif -%>
+  <%- for backend in pkg_types %>
   <%- set job_name = "build-pkgs-{}".format(backend) %>
   <%- if backend == "src" %>
     <%- do conclusion_needs.append(job_name) %>
