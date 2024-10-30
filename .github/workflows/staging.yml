@@ -1280,7 +1280,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-windows.yml
+    uses: ./.github/workflows/test-action-windows-gh.yml
     with:
       distro-slug: windows-2016
       nox-session: ci-test-onedir
@@ -1301,7 +1301,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-windows.yml
+    uses: ./.github/workflows/test-action-windows-gh.yml
     with:
       distro-slug: windows-2019
       nox-session: ci-test-onedir
@@ -1322,7 +1322,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-ci-deps
-    uses: ./.github/workflows/test-action-windows.yml
+    uses: ./.github/workflows/test-action-windows-gh.yml
     with:
       distro-slug: windows-2022
       nox-session: ci-test-onedir
