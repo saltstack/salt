@@ -98,8 +98,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
+        #with:
+        #  cache-prefix: ${{ inputs.cache-prefix }}
         env:
           PIP_INDEX_URL: https://pypi.org/simple
 
@@ -111,8 +111,8 @@ jobs:
   test:
     name: Test
     runs-on: linux-${{ inputs.arch }}
-    container:
-      image: ubuntu:20.04
+    #container:
+    #  image: ubuntu:20.04
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
