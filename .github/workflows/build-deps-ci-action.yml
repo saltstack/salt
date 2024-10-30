@@ -172,7 +172,7 @@ jobs:
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e compress-dependencies -- macos ${{ matrix.arch }}
+          nox --force-color -e compress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v4
