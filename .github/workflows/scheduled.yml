@@ -498,20 +498,6 @@ jobs:
       relenv-version: "0.17.3"
       python-version: "3.10.15"
       source: "onedir"
-
-  build-pkgs-src:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.17.3"
-      python-version: "3.10.15"
-      source: "src"
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2006,7 +1992,6 @@ jobs:
       - build-docs
       - build-deps-onedir
       - build-salt-onedir
-      - build-pkgs-src
       - build-ci-deps
       - windows-2016
       - windows-2019
