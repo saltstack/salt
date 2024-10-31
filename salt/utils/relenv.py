@@ -76,6 +76,7 @@ def get_tarball(base_url, kernel, arch):
     latest_tarball = matches[-1]
     return base_url + latest_tarball
 
+
 def get_latest_version(base_url):
     try:
         response = requests.get(base_url, timeout=60)
@@ -83,7 +84,7 @@ def get_latest_version(base_url):
     except requests.RequestException as e:
         log.error(f"Failed to retrieve directory listing: {e}")
         raise ValueError("Unable to fetch directory list from repository")
-    
+
     # Extract version numbers from hrefs
     pattern = re.compile(r'href="(\d+\.\d+)/"')
     versions = pattern.findall(response.text)
@@ -93,8 +94,9 @@ def get_latest_version(base_url):
         raise ValueError("No versions found in directory listing")
 
     # Sort versions numerically and return the latest one
-    versions.sort(key=lambda s: list(map(int, s.split('.'))), reverse=True)
+    versions.sort(key=lambda s: list(map(int, s.split("."))), reverse=True)
     return versions[0]
+
 
 def download(cachedir, url, destination):
     """
