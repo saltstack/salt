@@ -19,7 +19,7 @@
       source: "<{ backend }>"
     <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
-      sign-macos-packages: true
+      sign-macos-packages: false
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
     secrets: inherit
     <%- endif %>

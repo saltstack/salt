@@ -1,3 +1,4 @@
+import copy
 import glob
 import logging
 import os
@@ -5,6 +6,7 @@ import re
 
 from jinja2 import Environment, FileSystemLoader
 
+import salt.utils.odict
 import salt.utils.path
 import salt.utils.yaml
 
@@ -277,9 +279,27 @@ def expand_classes_glob(classes, salt_data):
     return expanded_classes
 
 
-def expand_classes_in_order(
-    minion_dict, salt_data, seen_classes, expanded_classes, classes_to_expand
-):
+def expand_classes_in_order(minion_dict, salt_data, seen_classes, classes_to_expand):
+    """
+    Expand the list of `classes_to_expand` and return them in the order found
+
+    The return order is `[C, B, A, M, B, L, MINION_ID]` when:
+
+    - minion node include classes `A` and `L`
+    - `A` include class `B`
+    - `B` include class `C`
+    - `L` include class `M` and `B`
+
+    :param dict minion_dict: definition of minion node
+    :param dict salt_data: configuration data
+    :param iterable(str) seen_classes: classes already processed
+    :param iterable(str) classes_to_expand: classes to recursivly expand
+    :return: Expanded classes in proper order
+    :rtype: salt.utils.odict.OrderedDict
+    """
+
+    expanded_classes = salt.utils.odict.OrderedDict()
+
     # Get classes to expand from minion dictionary
     if not classes_to_expand and "classes" in minion_dict:
         classes_to_expand = minion_dict["classes"]
@@ -290,71 +310,37 @@ def expand_classes_in_order(
     for klass in classes_to_expand:
         if klass not in seen_classes:
             seen_classes.append(klass)
-            expanded_classes[klass] = get_class(klass, salt_data)
+            klass_dict = salt.utils.odict.OrderedDict(
+                {klass: get_class(klass, salt_data)}
+            )
             # Fix corner case where class is loaded but doesn't contain anything
-            if expanded_classes[klass] is None:
-                expanded_classes[klass] = {}
+            if klass_dict[klass] is None:
+                klass_dict[klass] = {}
 
             # Merge newly found pillars into existing ones
-            new_pillars = expanded_classes[klass].get("pillars", {})
+            new_pillars = klass_dict[klass].get("pillars", {})
             if new_pillars:
                 dict_merge(salt_data["__pillar__"], new_pillars)
 
-            # Now replace class element in classes_to_expand by expansion
-            if expanded_classes[klass].get("classes"):
-                l_id = classes_to_expand.index(klass)
-                classes_to_expand[l_id:l_id] = expanded_classes[klass]["classes"]
-                expand_classes_in_order(
-                    minion_dict,
+            if "classes" in klass_dict[klass]:
+                nested_classes = expand_classes_in_order(
+                    {},
                     salt_data,
                     seen_classes,
-                    expanded_classes,
-                    classes_to_expand,
-                )
-            else:
-                expand_classes_in_order(
-                    minion_dict,
-                    salt_data,
-                    seen_classes,
-                    expanded_classes,
-                    classes_to_expand,
+                    klass_dict[klass].get("classes", {}),
                 )
 
-    # We may have duplicates here and we want to remove them
-    tmp = []
-    for t_element in classes_to_expand:
-        if t_element not in tmp:
-            tmp.append(t_element)
+                # Put current class after nested classes
+                klass_dict.update(nested_classes)
+                klass_dict.move_to_end(klass)
 
-    classes_to_expand = tmp
+            expanded_classes.update(klass_dict)
 
-    # Now that we've retrieved every class in order,
-    # let's return an ordered list of dicts
-    ord_expanded_classes = []
-    ord_expanded_states = []
-    for ord_klass in classes_to_expand:
-        ord_expanded_classes.append(expanded_classes[ord_klass])
-        # And be smart and sort out states list
-        # Address the corner case where states is empty in a class definition
-        if (
-            "states" in expanded_classes[ord_klass]
-            and expanded_classes[ord_klass]["states"] is None
-        ):
-            expanded_classes[ord_klass]["states"] = {}
+    # Minion dict must be at the end
+    if minion_dict:
+        expanded_classes.update({salt_data["minion_id"]: minion_dict})
 
-        if "states" in expanded_classes[ord_klass]:
-            ord_expanded_states.extend(expanded_classes[ord_klass]["states"])
-
-    # Add our minion dict as final element but check if we have states to process
-    if "states" in minion_dict and minion_dict["states"] is None:
-        minion_dict["states"] = []
-
-    if "states" in minion_dict:
-        ord_expanded_states.extend(minion_dict["states"])
-
-    ord_expanded_classes.append(minion_dict)
-
-    return ord_expanded_classes, classes_to_expand, ord_expanded_states
+    return expanded_classes
 
 
 def expanded_dict_from_minion(minion_id, salt_data):
@@ -377,22 +363,35 @@ def expanded_dict_from_minion(minion_id, salt_data):
         node_dict[minion_id] = {}
 
     # Merge newly found pillars into existing ones
-    dict_merge(salt_data["__pillar__"], node_dict[minion_id].get("pillars", {}))
+    dict_merge(
+        salt_data["__pillar__"], copy.deepcopy(node_dict[minion_id]).get("pillars", {})
+    )
 
     # Get 2 ordered lists:
     # expanded_classes: A list of all the dicts
     # classes_list: List of all the classes
-    expanded_classes, classes_list, states_list = expand_classes_in_order(
-        node_dict[minion_id], salt_data, [], {}, []
-    )
+    expanded_classes = expand_classes_in_order(node_dict[minion_id], salt_data, [], [])
 
     # Here merge the pillars together
     pillars_dict = {}
-    for exp_dict in expanded_classes:
+    states_list = []
+    classes_list = list(expanded_classes.keys())[:-1]
+    classes_values = list(expanded_classes.values())
+    for exp_dict in classes_values:
         if "pillars" in exp_dict:
             dict_merge(pillars_dict, exp_dict)
+        if "states" in exp_dict:
+            states_list.extend(exp_dict["states"])
 
-    return expanded_classes, pillars_dict, classes_list, states_list
+    # Avoid duplicates, keep first
+    state_seen = set()
+    states_list = [
+        state
+        for state in states_list
+        if not (state in state_seen or state_seen.add(state))
+    ]
+
+    return classes_values, pillars_dict, classes_list, states_list
 
 
 def get_pillars(minion_id, salt_data):

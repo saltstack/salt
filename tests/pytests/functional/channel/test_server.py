@@ -59,6 +59,8 @@ def transport_ids(value):
 @pytest.fixture(
     params=[
         "ws",
+        "tcp",
+        "zeromq",
     ],
     ids=transport_ids,
 )
@@ -173,6 +175,8 @@ def test_pub_server_channel(
         master_config,
     )
     server_channel.pre_fork(process_manager)
+    if not server_channel.transport.started.wait(30):
+        pytest.fail("Server channel did not start within 30 seconds.")
     req_server_channel = salt.channel.server.ReqServerChannel.factory(master_config)
     req_server_channel.pre_fork(process_manager)
 

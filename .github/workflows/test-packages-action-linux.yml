@@ -224,10 +224,11 @@ jobs:
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
-            artifacts
+            artifacts/
             !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
+          include-hidden-files: true
 
   report:
     name: Report
@@ -246,6 +247,10 @@ jobs:
         run: |
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
+      - name: Wait For Artifacts
+        run: |
+          sleep 60
+
       - name: Merge Test Run Artifacts
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
@@ -255,12 +260,18 @@ jobs:
           separate-directories: true
           delete-merged: true
 
+      - name: Wait For Artifacts 2
+        run: |
+          sleep 60
+
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
         uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}
-          path: artifacts
+          path: artifacts/
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}*
+          merge-multiple: true
+
 
       - name: Show Test Run Artifacts
         if: always() && steps.download-test-run-artifacts.outcome == 'success'

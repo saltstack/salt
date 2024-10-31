@@ -1366,10 +1366,13 @@ def remove(path, force=False):
             # A file and a symlinked file are removed the same way
             path.unlink()
         else:
+            # Twangboy: This is for troubleshooting
+            is_dir = os.path.isdir(path)
+            exists = os.path.exists(path)
+            # This is a directory, list its contents and remove them recursively
             for child in path.iterdir():
                 # If it's a normal directory, recurse to remove its contents
                 remove(str(child), force)
-
             # rmdir will work now because the directory is empty
             path.rmdir()
     except OSError as exc:

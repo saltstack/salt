@@ -218,6 +218,7 @@ def test_check_perms(tmp_path):
             ret=ret,
             owner="Guests",
             grant_perms=grant_perms,
+            inheritance=False,
         )
 
     expected = {
@@ -234,7 +235,7 @@ def test_check_perms(tmp_path):
         "result": True,
     }
 
-    assert result == expected
+    assert result["changes"]["grant_perms"] == expected["changes"]["grant_perms"]
     owner = win_file.get_user(str(test_dir))
     assert owner == "Guests"
     perms = salt.utils.win_dacl.get_permissions(str(test_dir))

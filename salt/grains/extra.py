@@ -66,7 +66,10 @@ def config():
 def __secure_boot(efivars_dir):
     """Detect if secure-boot is enabled."""
     enabled = False
-    sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*/data"))
+    if "efivars" == os.path.basename(efivars_dir):
+        sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*"))
+    else:
+        sboot = glob.glob(os.path.join(efivars_dir, "SecureBoot-*/data"))
     if len(sboot) == 1:
         # The minion is usually running as a privileged user, but is
         # not the case for the master.  Seems that the master can also
@@ -79,6 +82,17 @@ def __secure_boot(efivars_dir):
     return enabled
 
 
+def get_secure_boot_path():
+    """
+    Provide paths for secure boot directories and files
+    """
+    efivars_path = next(
+        filter(os.path.exists, ["/sys/firmware/efi/efivars", "/sys/firmware/efi/vars"]),
+        None,
+    )
+    return efivars_path
+
+
 def uefi():
     """Populate UEFI grains."""
     if salt.utils.platform.is_freebsd():
@@ -89,18 +103,11 @@ def uefi():
             "efi-secure-boot": False,
         }
     else:
-        # Works on Linux and Apple ?
-        efivars_dir = next(
-            filter(
-                os.path.exists, ["/sys/firmware/efi/efivars", "/sys/firmware/efi/vars"]
-            ),
-            None,
-        )
+        efivars_dir = get_secure_boot_path()
         grains = {
             "efi": bool(efivars_dir),
             "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
         }
-
     return grains
 
 

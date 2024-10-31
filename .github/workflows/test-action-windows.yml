@@ -85,6 +85,9 @@ jobs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
       build-reports: ${{ steps.generate-matrix.outputs.build-reports }}
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: "Throttle Builds"
         shell: bash
@@ -295,6 +298,7 @@ jobs:
           name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/xml-unittests-output/
+          include-hidden-files: true
 
       - name: Upload Test Run Log Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
@@ -303,6 +307,7 @@ jobs:
           name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
+          include-hidden-files: true
 
 
   report:
@@ -318,6 +323,10 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: "Throttle Builds"
         shell: bash
