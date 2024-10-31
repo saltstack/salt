@@ -162,10 +162,10 @@ jobs:
         run: |
           echo true
 
-      - name: Download nox.linux.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+      - name: Download nox.windows.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
         with:
-          name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
+          name: nox-windows-${{ inputs.arch }}-${{ inputs.nox-session }}
 
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
         uses: actions/setup-python@v5
