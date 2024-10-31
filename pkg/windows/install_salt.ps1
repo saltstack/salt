@@ -81,11 +81,6 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
 $SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.txt"
-if ( $ARCH -eq "64bit" ) {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
-} else {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
-}
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
