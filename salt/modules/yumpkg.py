@@ -318,7 +318,8 @@ def _get_options(**kwargs):
         ret.append(f"--branch={branch}")
 
     for item in setopt:
-        ret.extend(["--setopt", str(item)])
+        log.info("Adding configuration option '%s'", item)
+        ret.extend([f"--setopt={item}"])
 
     if get_extra_options:
         # sorting here to make order uniform, makes unit testing more reliable

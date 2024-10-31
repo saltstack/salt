@@ -18,6 +18,7 @@ import importlib
 import inspect
 import logging
 import os
+import pickle
 import random
 import re
 import site
@@ -757,21 +758,21 @@ class State:
         loader="states",
         initial_pillar=None,
         file_client=None,
-        __invocation_id=None,
+        _invocation_id=None,
     ):
         """
         When instantiating an object of this class, do not pass
-        ``__invocation_id``. It is an internal field for tracking
+        ``_invocation_id``. It is an internal field for tracking
         parallel executions where no jid is available (Salt-SSH) and
         only exposed as an init argument to work on spawning platforms.
         """
         if jid is not None:
-            __invocation_id = jid
-        if __invocation_id is None:
+            _invocation_id = jid
+        if _invocation_id is None:
             # For salt-ssh parallel states, we need a unique identifier
             # for a single execution. self.jid should not be set there
             # since it's used for other purposes as well.
-            __invocation_id = salt.utils.jid.gen_jid(opts)
+            _invocation_id = salt.utils.jid.gen_jid(opts)
         self._init_kwargs = {
             "opts": opts,
             "pillar_override": pillar_override,
@@ -782,7 +783,7 @@ class State:
             "mocked": mocked,
             "loader": loader,
             "initial_pillar": initial_pillar,
-            "__invocation_id": __invocation_id,
+            "_invocation_id": _invocation_id,
         }
         self.states_loader = loader
         if "grains" not in opts:
@@ -829,7 +830,7 @@ class State:
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
-        self.invocation_id = __invocation_id
+        self.invocation_id = _invocation_id
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
@@ -2157,12 +2158,15 @@ class State:
         return req_in_high, errors
 
     @classmethod
-    def _call_parallel_target(cls, instance, init_kwargs, name, cdata, low):
+    def _call_parallel_target(
+        cls, instance, init_kwargs, name, cdata, low, inject_globals
+    ):
         """
         The target function to call that will create the parallel thread/process
         """
         if instance is None:
             instance = cls(**init_kwargs)
+            instance.states.inject_globals = inject_globals
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
@@ -2267,7 +2271,7 @@ class State:
         with salt.utils.files.fopen(tfile, "wb+") as fp_:
             fp_.write(msgpack_serialize(ret))
 
-    def call_parallel(self, cdata, low):
+    def call_parallel(self, cdata, low, inject_globals):
         """
         Call the state defined in the given cdata in parallel
         """
@@ -2284,13 +2288,37 @@ class State:
             instance = None
         else:
             instance = self
+            inject_globals = None
 
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
-            args=(instance, self._init_kwargs, name, cdata, low),
+            args=(instance, self._init_kwargs, name, cdata, low, inject_globals),
             name=f"ParallelState({name})",
         )
-        proc.start()
+        try:
+            proc.start()
+        except TypeError as err:
+            # Some modules use the context to cache unpicklable objects like
+            # database connections or loader instances.
+            # Ensure we don't crash because of that on spawning platforms.
+            if "cannot pickle" not in str(err):
+                raise
+            clean_context = {}
+            for var, val in self._init_kwargs["context"].items():
+                try:
+                    pickle.dumps(val)
+                except TypeError:
+                    pass
+                else:
+                    clean_context[var] = val
+            init_kwargs = self._init_kwargs.copy()
+            init_kwargs["context"] = clean_context
+            proc = salt.utils.process.Process(
+                target=self._call_parallel_target,
+                args=(instance, init_kwargs, name, cdata, low, inject_globals),
+                name=f"ParallelState({name})",
+            )
+            proc.start()
         ret = {
             "name": name,
             "result": None,
@@ -2434,7 +2462,7 @@ class State:
                         )
                     elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
-                        ret = self.call_parallel(cdata, low)
+                        ret = self.call_parallel(cdata, low, inject_globals)
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
