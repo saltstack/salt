@@ -162,6 +162,7 @@ Package: salt-cloud
 Architecture: amd64 arm64
 Breaks: salt-common (<= 3006.4)
 Depends: salt-common (= ${source:Version}),
+         salt-master (= ${source:Version}),
          ${misc:Depends}
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly
