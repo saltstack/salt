@@ -94,7 +94,9 @@ for more information.
 
 To download and install Salt, see:
 * `The Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/index.html>`_
-* `Salt Project repository <https://repo.saltproject.io/>`_
+* `Salt Project repository <https://packages.broadcom.com/artifactory/saltproject-generic/>`_
+* `Salt Project debian repository <https://packages.broadcom.com/artifactory/saltproject-deb/>`_
+* `Salt Project redhat repository <https://packages.broadcom.com/artifactory/saltproject-rpm/>`_
 
 
 Technical support

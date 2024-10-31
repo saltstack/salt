@@ -769,7 +769,7 @@ def bootstrap_psexec(
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        https://repo.saltproject.io/windows/
+        https://packages.broadcom.com/artifactory/saltproject-generic/windows/
 
     username
         Optional user name for login on remote computer.
@@ -787,6 +787,9 @@ def bootstrap_psexec(
         salt-run manage.bootstrap_psexec hosts='host1,host2' installer_url='http://exampledomain/salt-installer.exe'
     """
 
+    # TODO: Need to make this gets the latest version from the new repo location
+    # TODO: Similar to tests/support/win_installer.py
+    # TODO: Maybe need to move that ^^^^ to a salt util
     if not installer_url:
         base_url = "https://repo.saltproject.io/windows/"
         source = urllib.request.urlopen(base_url).read()

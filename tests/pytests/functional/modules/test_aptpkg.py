@@ -104,7 +104,7 @@ def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
         test_repos = [
-            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ jammy main",
             "deb http://dist.list stable/all/",
         ]
         with salt.utils.files.fopen(source_path, "w+") as fp:
