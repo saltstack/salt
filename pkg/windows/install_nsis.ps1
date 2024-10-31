@@ -46,7 +46,7 @@ $NSIS_DIR     = "${env:ProgramFiles(x86)}\NSIS"
 $NSIS_PLUG_A  = "$NSIS_DIR\Plugins\x86-ansi"
 $NSIS_PLUG_U  = "$NSIS_DIR\Plugins\x86-unicode"
 $NSIS_LIB_DIR = "$NSIS_DIR\Include"
-$DEPS_URL = "https://repo.saltproject.io/windows/dependencies"
+$DEPS_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/nsis"
 
 #-------------------------------------------------------------------------------
 # Start the Script
