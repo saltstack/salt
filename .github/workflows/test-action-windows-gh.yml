@@ -180,7 +180,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- windows ${{ inputs.arch }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
