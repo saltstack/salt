@@ -1064,6 +1064,7 @@ def test_prep_powershell_cmd_no_powershell():
     [
         ("Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
+        ("try {this} catch {that}", "try {this} catch {that}"),
     ],
 )
 def test_prep_powershell_cmd(cmd, parsed):
