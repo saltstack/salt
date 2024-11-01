@@ -41,7 +41,7 @@ def gen_relenv(
 
     # Download the tarball if it doesn't exist or overwrite is True
     if overwrite or not os.path.exists(tarball_path):
-        if not download(cachedir, relenv_url, tarball_path):
+        if not download(relenv_url, tarball_path):
             return False
 
     return tarball_path
@@ -78,6 +78,11 @@ def get_tarball(base_url, kernel, arch):
 
 
 def get_latest_version(base_url):
+    """
+    Retrieve the latest version from the base artifactory directory
+    :param base_url: The artifactory location
+    :return: The version number of the latest artifact
+    """
     try:
         response = requests.get(base_url, timeout=60)
         response.raise_for_status()
@@ -98,9 +103,12 @@ def get_latest_version(base_url):
     return versions[0]
 
 
-def download(cachedir, url, destination):
+def download(url, destination):
     """
     Download the salt artifact from the given destination to the cache.
+    :param url: The artifact location
+    :param destination: Path to the downloaded file
+    :return: True if the download was successful, else False
     """
     if not os.path.exists(destination):
         log.info(f"Downloading from {url} to {destination}")
