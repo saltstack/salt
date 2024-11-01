@@ -161,7 +161,7 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.15
+immutables==0.20
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   contextvars
