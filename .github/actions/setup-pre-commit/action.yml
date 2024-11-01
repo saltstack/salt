@@ -30,7 +30,6 @@ runs:
         ${{ steps.pre-commit-virtualenv.outputs.python-executable }} -m pip install pre-commit==${{ inputs.version }}
 
     - name: Cache Pre-Commit Hooks
-      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       id: pre-commit-hooks-cache
       with:
