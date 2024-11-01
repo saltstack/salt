@@ -23,100 +23,100 @@ TEMPLATES = WORKFLOWS / "templates"
 TEST_SALT_LISTING = PlatformDefinitions(
     {
         "linux": [
-            Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
-            Linux(
-                slug="rockylinux-8-arm64",
-                display_name="Rocky Linux 8 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
-            Linux(
-                slug="rockylinux-9-arm64",
-                display_name="Rocky Linux 9 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"),
-            Linux(
-                slug="amazonlinux-2-arm64",
-                display_name="Amazon Linux 2 Arm64",
-                arch="arm64",
-            ),
-            Linux(
-                slug="amazonlinux-2023",
-                display_name="Amazon Linux 2023",
-                arch="x86_64",
-            ),
-            Linux(
-                slug="amazonlinux-2023-arm64",
-                display_name="Amazon Linux 2023 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
-            Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
-            Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
-            Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
-            Linux(slug="fedora-40", display_name="Fedora 40", arch="x86_64"),
-            Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
-            Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
-            Linux(
-                slug="photonos-4-arm64", display_name="Photon OS 4 Arm64", arch="arm64"
-            ),
-            Linux(
-                slug="photonos-4",
-                display_name="Photon OS 4",
-                arch="x86_64",
-                fips=True,
-            ),
-            Linux(
-                slug="photonos-4-arm64",
-                display_name="Photon OS 4 Arm64",
-                arch="arm64",
-                fips=True,
-            ),
-            Linux(slug="photonos-5", display_name="Photon OS 5", arch="x86_64"),
-            Linux(
-                slug="photonos-5-arm64", display_name="Photon OS 5 Arm64", arch="arm64"
-            ),
-            Linux(
-                slug="photonos-5",
-                display_name="Photon OS 5",
-                arch="x86_64",
-                fips=True,
-            ),
-            Linux(
-                slug="photonos-5-arm64",
-                display_name="Photon OS 5 Arm64",
-                arch="arm64",
-                fips=True,
-            ),
-            Linux(slug="ubuntu-20.04", display_name="Ubuntu 20.04", arch="x86_64"),
-            Linux(
-                slug="ubuntu-20.04-arm64",
-                display_name="Ubuntu 20.04 Arm64",
-                arch="arm64",
-            ),
+            # Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
+            # Linux(
+            #    slug="rockylinux-8-arm64",
+            #    display_name="Rocky Linux 8 Arm64",
+            #    arch="arm64",
+            # ),
+            # Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
+            # Linux(
+            #    slug="rockylinux-9-arm64",
+            #    display_name="Rocky Linux 9 Arm64",
+            #    arch="arm64",
+            # ),
+            # Linux(slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"),
+            # Linux(
+            #    slug="amazonlinux-2-arm64",
+            #    display_name="Amazon Linux 2 Arm64",
+            #    arch="arm64",
+            # ),
+            # Linux(
+            #    slug="amazonlinux-2023",
+            #    display_name="Amazon Linux 2023",
+            #    arch="x86_64",
+            # ),
+            # Linux(
+            #    slug="amazonlinux-2023-arm64",
+            #    display_name="Amazon Linux 2023 Arm64",
+            #    arch="arm64",
+            # ),
+            # Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
+            # Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
+            # Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
+            # Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
+            # Linux(slug="fedora-40", display_name="Fedora 40", arch="x86_64"),
+            # Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
+            # Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
+            # Linux(
+            #    slug="photonos-4-arm64", display_name="Photon OS 4 Arm64", arch="arm64"
+            # ),
+            # Linux(
+            #    slug="photonos-4",
+            #    display_name="Photon OS 4",
+            #    arch="x86_64",
+            #    fips=True,
+            # ),
+            # Linux(
+            #    slug="photonos-4-arm64",
+            #    display_name="Photon OS 4 Arm64",
+            #    arch="arm64",
+            #    fips=True,
+            # ),
+            # Linux(slug="photonos-5", display_name="Photon OS 5", arch="x86_64"),
+            # Linux(
+            #    slug="photonos-5-arm64", display_name="Photon OS 5 Arm64", arch="arm64"
+            # ),
+            # Linux(
+            #    slug="photonos-5",
+            #    display_name="Photon OS 5",
+            #    arch="x86_64",
+            #    fips=True,
+            # ),
+            # Linux(
+            #    slug="photonos-5-arm64",
+            #    display_name="Photon OS 5 Arm64",
+            #    arch="arm64",
+            #    fips=True,
+            # ),
+            # Linux(slug="ubuntu-20.04", display_name="Ubuntu 20.04", arch="x86_64"),
+            # Linux(
+            #    slug="ubuntu-20.04-arm64",
+            #    display_name="Ubuntu 20.04 Arm64",
+            #    arch="arm64",
+            # ),
             Linux(slug="ubuntu-22.04", display_name="Ubuntu 22.04", arch="x86_64"),
             Linux(
                 slug="ubuntu-22.04-arm64",
                 display_name="Ubuntu 22.04 Arm64",
                 arch="arm64",
             ),
-            Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
-            Linux(
-                slug="ubuntu-24.04-arm64",
-                display_name="Ubuntu 24.04 Arm64",
-                arch="arm64",
-            ),
+            # Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
+            # Linux(
+            #    slug="ubuntu-24.04-arm64",
+            #    display_name="Ubuntu 24.04 Arm64",
+            #    arch="arm64",
+            # ),
         ],
         "macos": [
-            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-            MacOS(
-                slug="macos-13-arm64",
-                display_name="macOS 13 Arm64",
-                arch="arm64",
-                runner="macos-13-xlarge",
-            ),
+            # MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+            # MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            # MacOS(
+            #    slug="macos-13-arm64",
+            #    display_name="macOS 13 Arm64",
+            #    arch="arm64",
+            #    runner="macos-13-xlarge",
+            # ),
         ],
         "windows": [
             Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),

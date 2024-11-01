@@ -44,7 +44,6 @@ runs:
         cache-seed: tools|${{ steps.venv-hash.outputs.venv-hash }}
 
     - name: Restore Python Tools Virtualenvs Cache
-      if: false  # Disable cache since aws is going away.
       uses: ./.github/actions/cache
       with:
         path: ${{ inputs.cwd }}/.tools-venvs
