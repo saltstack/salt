@@ -43,3 +43,18 @@ def test_system_config(grains):
             "systemctl show -p ${config} salt-minion.service", shell=True
         )
         assert ret == expected_retcode
+
+
+@pytest.mark.usefixtures("salt_minion")
+def test_systemd_selinux_config(grains):
+    """
+    Test systemd selinux config
+    """
+    if grains["init"] == "systemd":
+        ret = subprocess.run(
+            "systemctl show -p SELinuxContext salt-minion.service",
+            shell=True,
+            check=False,
+            capture_output=True,
+        )
+        assert "system_u:system_r:unconfined_t:s0" in ret.stdout.decode()
