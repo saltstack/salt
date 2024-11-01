@@ -111,8 +111,8 @@ jobs:
   test:
     name: Test
     runs-on: linux-${{ inputs.arch }}
-    #container:
-    #  image: ubuntu:20.04
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -201,6 +201,10 @@ jobs:
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
+
+      - name: Current Directory
+        run: |
+          echo $(pwd)
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
