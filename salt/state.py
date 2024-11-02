@@ -2688,7 +2688,14 @@ class State:
                 if run_dict_chunk:
                     filtered_run_dict[tag] = run_dict_chunk
             run_dict = filtered_run_dict
-            pending = bool(not self.reconcile_procs(run_dict) and low.get("parallel"))
+
+            if low.get("parallel"):
+                pending = not self.reconcile_procs(run_dict)
+            else:
+                while True:
+                    if self.reconcile_procs(run_dict):
+                        break
+                    time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
