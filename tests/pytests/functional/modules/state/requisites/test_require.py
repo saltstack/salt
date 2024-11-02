@@ -601,6 +601,41 @@ def test_parallel_state_with_requires_on_parallel(state, state_tree):
             assert "__parallel__" in state_ret
 
 
+@pytest.mark.skip_on_windows
+def test_regular_state_requires_parallel(state, state_tree, tmp_path):
+    """
+    Regular states requiring parallel states should block until all
+    requisites are executed.
+    """
+    tmpfile = tmp_path / "foo"
+    sls_contents = f"""
+        service_a:
+          cmd.run:
+              - name: sleep 3
+              - parallel: True
+
+        service_b:
+          cmd.run:
+              - name: 'touch {tmpfile}'
+              - parallel: True
+              - require:
+                  - service_a
+
+        service_c:
+          cmd.run:
+              - name: 'test -f {tmpfile}'
+              - require:
+                  - service_b
+    """
+
+    with pytest.helpers.temp_file("requisite_parallel_2.sls", sls_contents, state_tree):
+        ret = state.sls(
+            "requisite_parallel_2",
+            __pub_jid="1",  # Because these run in parallel we need a fake JID)
+        )
+        assert ret[f"cmd_|-service_c_|-test -f {tmpfile}_|-run"]["result"] is True
+
+
 def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
     """
     Make sure that state_type is always honored while compiling down require_in to
