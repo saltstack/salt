@@ -119,7 +119,7 @@ TEST_SALT_LISTING = PlatformDefinitions(
             # ),
         ],
         "windows": [
-            Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
+            # Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
             Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
             Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
         ],
@@ -367,18 +367,18 @@ def generate_workflows(ctx: Context):
                 # ),
             ],
             "windows": [
-                Windows(
-                    slug="windows-2016",
-                    display_name="Windows 2016",
-                    arch="amd64",
-                    pkg_type="NSIS",
-                ),
-                Windows(
-                    slug="windows-2016",
-                    display_name="Windows 2016",
-                    arch="amd64",
-                    pkg_type="MSI",
-                ),
+                # Windows(
+                #    slug="windows-2016",
+                #    display_name="Windows 2016",
+                #    arch="amd64",
+                #    pkg_type="NSIS",
+                # ),
+                # Windows(
+                #    slug="windows-2016",
+                #    display_name="Windows 2016",
+                #    arch="amd64",
+                #    pkg_type="MSI",
+                # ),
                 Windows(
                     slug="windows-2019",
                     display_name="Windows 2019",
