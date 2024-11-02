@@ -24,6 +24,10 @@ on:
         required: true
         type: string
         description: Nox Tarball Cache Hash
+      kind:
+        required: true
+        type: string
+        description: Kine of dependencies to build; linux, macos, windows
       python-version:
         required: false
         type: string
@@ -86,6 +90,7 @@ jobs:
       - generate-matrix
     runs-on:
       - linux-${{ matrix.arch }}
+    if: ${{ inputs.kind  == 'linux' }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
@@ -178,6 +183,7 @@ jobs:
     needs:
       - generate-matrix
     runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
+    if: ${{ inputs.kind  == 'macos' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -261,11 +267,13 @@ jobs:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.macos.${{ matrix.arch }}.tar.*
 
+
   windows-dependencies:
     needs:
       - generate-matrix
     name: Windows
     runs-on: windows-latest
+    if: ${{ inputs.kind  == 'windows' }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
