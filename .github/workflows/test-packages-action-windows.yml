@@ -78,9 +78,7 @@ jobs:
     runs-on:
       # We need to run on our self-hosted runners because we need proper credentials
       # for boto3 to scan through our repositories.
-      - self-hosted
-      - linux
-      - x86_64
+      - ubuntu-latest
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
       build-reports: ${{ steps.generate-pkg-matrix.outputs.build-reports }}
@@ -108,10 +106,7 @@ jobs:
 
   test:
     name: Test
-    runs-on:
-      - self-hosted
-      - linux
-      - bastion
+    runs-on: windows-latest
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - generate-matrix
@@ -168,28 +163,9 @@ jobs:
         with:
           cache-prefix: ${{ inputs.cache-prefix }}
 
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
-      - name: Start VM
-        id: spin-up-vm
-        run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
-
-      - name: List Free Space
-        run: |
-          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        run: |
-          tools --timestamps vm rsync ${{ inputs.distro-slug }}
-
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- windows ${{ inputs.arch }}
 
       - name: Show System Info
         run: |

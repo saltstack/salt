@@ -1054,7 +1054,9 @@ jobs:
     needs:
       - prepare-workflow
       - build-source-tarball
-      - build-pkgs-src
+      - build-pkgs-src-linux
+      - build-pkgs-src-macos
+      - build-pkgs-src-windows
     strategy:
       fail-fast: false
       matrix:
@@ -1652,7 +1654,9 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-salt-onedir-linux
+      - build-salt-onedir-macos
+      - build-salt-onedir-windows
     strategy:
       fail-fast: false
       matrix:

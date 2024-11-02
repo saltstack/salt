@@ -399,6 +399,9 @@ def define_jobs(
         changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
+    if any([_.startswith("test:os:macos") for _ in labels]):
+        jobs["build-deps-onedir-macos"] = True
+        jobs["build-salt-onedir-macos"] = True
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
         if "test:pkg" in labels:
             with open(github_step_summary, "a", encoding="utf-8") as wfh:

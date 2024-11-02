@@ -70,7 +70,7 @@ env:
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
-  USE_S3_CACHE: 'true'
+  USE_S3_CACHE: 'false'
 
 jobs:
 
@@ -208,7 +208,7 @@ jobs:
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Upload Test Run Artifacts
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
@@ -263,6 +263,6 @@ jobs:
 
 
       - name: Show Test Run Artifacts
-        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        if: always()
         run: |
           tree -a artifacts

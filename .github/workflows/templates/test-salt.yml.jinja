@@ -12,7 +12,7 @@
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- endif %>
     needs:
       - prepare-workflow

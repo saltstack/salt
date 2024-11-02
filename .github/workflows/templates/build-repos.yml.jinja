@@ -26,10 +26,14 @@
       - build-pkgs-onedir-<{ type }>
         <%- endif %>
       <%- elif type == 'onedir' %>
-      - build-salt-onedir
+      - build-salt-onedir-linux
+      - build-salt-onedir-macos
+      - build-salt-onedir-windows
       <%- elif type == 'src' %>
       - build-source-tarball
-      - build-pkgs-src
+      - build-pkgs-src-linux
+      - build-pkgs-src-macos
+      - build-pkgs-src-windows
       <%- endif %>
 
     <%- include "build-{}-repo.yml.jinja".format(type) %>
