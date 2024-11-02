@@ -26,16 +26,16 @@ if sys.version_info < (3, 11):
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
-try:
-    import boto3
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
+# try:
+#     import boto3
+# except ImportError:
+#     print(
+#         "\nPlease run 'python -m pip install -r "
+#         "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+#         file=sys.stderr,
+#         flush=True,
+#     )
+#     raise
 
 log = logging.getLogger(__name__)
 
@@ -879,23 +879,22 @@ def pkg_matrix(
             )
             continue
         # objects = list(page_iterator.search(key_filter))
-        objects = []
         # Testing using `any` because sometimes the paginator returns `[None]`
-        if any(objects):
-            ctx.info(
-                f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
-            )
-            for session in ("upgrade", "downgrade"):
-                if backend == "classic":
-                    session += "-classic"
-                _matrix.append(
-                    {
-                        "tests-chunk": session,
-                        "version": str(version),
-                    }
-                )
-        else:
-            ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
+        # if any(objects):
+        #     ctx.info(
+        #         f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
+        #     )
+        #     for session in ("upgrade", "downgrade"):
+        #         if backend == "classic":
+        #             session += "-classic"
+        #         _matrix.append(
+        #             {
+        #                 "tests-chunk": session,
+        #                 "version": str(version),
+        #             }
+        #         )
+        # else:
+        #     ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
 
     ctx.info("Generated matrix:")
     if not _matrix:
