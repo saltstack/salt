@@ -11,6 +11,7 @@ self-hosted-runner:
     - repo-release
     - medium
     - large
+    - macos-13-arm64
     - macos-13-xlarge
     - linux-x86_64
     - linux-arm64
