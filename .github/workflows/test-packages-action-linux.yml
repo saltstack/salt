@@ -189,7 +189,7 @@ jobs:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       #- name: Run Package Tests
       #  run: |
@@ -207,7 +207,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Upload Test Run Artifacts
