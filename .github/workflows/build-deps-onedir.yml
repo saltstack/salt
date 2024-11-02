@@ -97,11 +97,15 @@ jobs:
       matrix:
         arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
     env:
       USE_S3_CACHE: 'false'
       PIP_INDEX_URL: https://pypi.org/simple
     steps:
+
+      - name: "Check cores"
+        shell: bash
+        run: sysctl -n hw.ncpu
 
       - name: "Throttle Builds"
         shell: bash
