@@ -182,7 +182,6 @@ jobs:
           SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "1"
-          PYTHONUTF8: "1"
           OUTPUT_COLUMNS: "190"
           GITHUB_ACTIONS_PIPELINE: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -198,10 +197,12 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
+          OUTPUT_COLUMNS: "190"
         run: |
-          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          env PYTHONUTF8=1 nox --force-color -f noxfile.py -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Prepare Test Run Artifacts

@@ -847,8 +847,9 @@ def pkg_matrix(
                 "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
             }
 
-    s3 = boto3.client("s3")
-    paginator = s3.get_paginator("list_objects_v2")
+    # XXX: fetch versions
+    # s3 = boto3.client("s3")
+    # paginator = s3.get_paginator("list_objects_v2")
     _matrix = [
         {
             "tests-chunk": "install",
@@ -862,10 +863,10 @@ def pkg_matrix(
         if backend == "relenv" and version >= tools.utils.Version("3006.5"):
             prefix.replace("/arm64/", "/aarch64/")
         # Using a paginator allows us to list recursively and avoid the item limit
-        page_iterator = paginator.paginate(
-            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
-            Prefix=prefix,
-        )
+        # page_iterator = paginator.paginate(
+        #    Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
+        #    Prefix=prefix,
+        # )
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
         key_filter = f"Contents[?contains(Key, '{version}')][]"
         if pkg_type == "MSI":
@@ -877,7 +878,8 @@ def pkg_matrix(
                 f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
             )
             continue
-        objects = list(page_iterator.search(key_filter))
+        # objects = list(page_iterator.search(key_filter))
+        objects = []
         # Testing using `any` because sometimes the paginator returns `[None]`
         if any(objects):
             ctx.info(
