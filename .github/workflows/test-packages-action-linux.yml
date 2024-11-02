@@ -171,6 +171,10 @@ jobs:
         with:
           name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
 
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- linux ${{ inputs.arch }}
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
@@ -180,14 +184,13 @@ jobs:
         run: |
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
-      - name: Decompress .nox Directory
-        run: |
-          nox --force-color -e decompress-dependencies -- macos ${{ inputs.arch }}
-
       - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
-            --nox-session=${{ inputs.nox-session }}-pkgs ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }}
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+
       #- name: Run Package Tests
       #  run: |
       #    tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ inputs.fips && '--fips ' || '' }}\
