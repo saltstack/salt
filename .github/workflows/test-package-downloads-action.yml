@@ -296,7 +296,7 @@ jobs:
     name: MacOS
     needs:
       - generate-matrix
-    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-arm64' || matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     env:
       USE_S3_CACHE: 'false'
       PIP_INDEX_URL: https://pypi.org/simple
