@@ -26,6 +26,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      kind:
+        type: string
+        required: true
+        description: The kind of tests to run windows, macos, or linux
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -41,7 +45,7 @@ jobs:
 
   build-salt-linux:
     name: Linux
-    if: ${{ inputs.self-hosted-runners }}
+    if: ${{ inputs.self-hosted-runners && inputs.kind  == 'linux' }}
     env:
       USE_S3_CACHE: 'false'
     strategy:
@@ -93,7 +97,7 @@ jobs:
 
   build-salt-macos:
     name: macOS
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ inputs.self-hosted-runners && inputs.kind  == 'macos' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -148,7 +152,7 @@ jobs:
 
   build-salt-windows:
     name: Windows
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ inputs.self-hosted-runners && inputs.kind  == 'windows' }}
     strategy:
       fail-fast: false
       max-parallel: 2

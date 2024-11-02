@@ -13,9 +13,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
-
-# from tools.utils import Linux, MacOS, PlatformDefinitions, Windows
-from tools.utils import Linux, PlatformDefinitions, Windows
+from tools.utils import Linux, MacOS, PlatformDefinitions, Windows
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +109,7 @@ TEST_SALT_LISTING = PlatformDefinitions(
             # ),
         ],
         "macos": [
-            # MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
             # MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
             # MacOS(
             #    slug="macos-13-arm64",
@@ -197,29 +195,29 @@ def generate_workflows(ctx: Context):
     test_salt_pkg_listing = PlatformDefinitions(
         {
             "linux": [
-                # jLinux(
-                # j    slug="rockylinux-8",
-                # j    display_name="Rocky Linux 8",
-                # j    arch="x86_64",
-                # j    pkg_type="rpm",
-                # j),
-                # jLinux(
-                # j    slug="rockylinux-8-arm64",
-                # j    display_name="Rocky Linux 8 Arm64",
-                # j    arch="arm64",
-                # j    pkg_type="rpm",
-                # j),
-                # jLinux(
-                # j    slug="rockylinux-9",
-                # j    display_name="Rocky Linux 9",
-                # j    arch="x86_64",
-                # j    pkg_type="rpm",
-                # j),
-                # jLinux(
-                # j    slug="rockylinux-9-arm64",
-                # j    display_name="Rocky Linux 9 Arm64",
-                # j    arch="arm64",
-                # j    pkg_type="rpm",
+                # Linux(
+                #     slug="rockylinux-8",
+                #     display_name="Rocky Linux 8",
+                #     arch="x86_64",
+                #     pkg_type="rpm",
+                # ),
+                # Linux(
+                #     slug="rockylinux-8-arm64",
+                #     display_name="Rocky Linux 8 Arm64",
+                #     arch="arm64",
+                #     pkg_type="rpm",
+                # ),
+                # Linux(
+                #     slug="rockylinux-9",
+                #     display_name="Rocky Linux 9",
+                #     arch="x86_64",
+                #     pkg_type="rpm",
+                # ),
+                # Linux(
+                #     slug="rockylinux-9-arm64",
+                #     display_name="Rocky Linux 9 Arm64",
+                #     arch="arm64",
+                #     pkg_type="rpm",
                 # ),
                 # Linux(
                 #    slug="amazonlinux-2",
@@ -359,7 +357,7 @@ def generate_workflows(ctx: Context):
                 # ),
             ],
             "macos": [
-                # MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+                MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
                 # MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
                 # MacOS(
                 #    slug="macos-13-arm64",
@@ -476,6 +474,9 @@ def generate_workflows(ctx: Context):
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "test_salt_linux_needs": NeedsTracker(),
+            "test_salt_macos_needs": NeedsTracker(),
+            "test_salt_windows_needs": NeedsTracker(),
             "test_salt_pkg_needs": NeedsTracker(),
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),

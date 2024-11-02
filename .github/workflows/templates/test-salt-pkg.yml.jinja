@@ -11,8 +11,8 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
+      - build-pkgs-onedir-linux
+      - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: <{ os.slug }>
@@ -47,8 +47,8 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
+      - build-pkgs-onedir-macos
+      - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ os.slug }>
@@ -80,8 +80,8 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
+      - build-pkgs-onedir-windows
+      - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: <{ os.slug }>

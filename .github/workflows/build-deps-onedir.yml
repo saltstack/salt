@@ -26,6 +26,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      kind:
+        type: string
+        required: true
+        description: The kind of tests to run windows, macos, or linux
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -41,7 +45,7 @@ jobs:
 
   build-deps-linux:
     name: Linux
-    if: ${{ inputs.self-hosted-runners }}
+    if: ${{ inputs.self-hosted-runners && inputs.kind  == 'linux' }}
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +90,7 @@ jobs:
 
   build-deps-macos:
     name: macOS
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ inputs.github-hosted-runners && inputs.kind  == 'macOS' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -136,7 +140,7 @@ jobs:
 
   build-deps-windows:
     name: Windows
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ inputs.github-hosted-runners && inputs.kind  == 'windows' }}
     strategy:
       fail-fast: false
       max-parallel: 2

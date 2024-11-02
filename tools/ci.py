@@ -298,7 +298,13 @@ def define_jobs(
         "build-docs": True,
         "build-source-tarball": True,
         "build-deps-onedir": True,
+        "build-deps-onedir-linux": True,
+        "build-deps-onedir-macos": True,
+        "build-deps-onedir-windows": True,
         "build-salt-onedir": True,
+        "build-salt-onedir-linux": True,
+        "build-salt-onedir-macos": True,
+        "build-salt-onedir-windows": True,
         "build-pkgs": True,
         "build-deps-ci": True,
     }

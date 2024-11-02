@@ -16,7 +16,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-ci-deps
+      - build-ci-deps-windows
     uses: ./.github/workflows/test-action-windows-gh.yml
     with:
       distro-slug: <{ os.slug }>
@@ -47,7 +47,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-ci-deps
+      - build-ci-deps-macos
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: <{ os.slug }>
@@ -79,7 +79,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-ci-deps
+      - build-ci-deps-linux
     uses: ./.github/workflows/test-action-linux-gh.yml
     with:
       distro-slug: <{ os.slug }>
