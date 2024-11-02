@@ -184,6 +184,12 @@ jobs:
         run: |
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
+      - name: Mock systemd
+        run: |
+          wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py
+          cp systemctl3.py /usr/bin/systemctl
+          chmod +x /usr/bin/systemctl
+
       - name: Show System Info
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"

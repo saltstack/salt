@@ -187,7 +187,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           TOOLS_DISTRO_SLUG: "${{ inputs.distro-slug }}"
         run: |
-          env PYTHONUTF8=1 nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- ${{ matrix.tests-chunk }}
+          env PYTHONUTF8=1 nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- '${{ matrix.tests-chunk }}'
 
       - name: Run Package Tests
         env:
