@@ -176,9 +176,19 @@ jobs:
       - name: Show System Info
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO_ONLY: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "1"
+          PYTHONUTF8: "1"
+          OUTPUT_COLUMNS: "190"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          TOOLS_DISTRO_SLUG: "${{ inputs.distro-slug }}"
         run: |
-          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          env PYTHONUTF8=1 nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         env:
@@ -200,7 +210,7 @@ jobs:
         run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
-          rm -rf artifacts/salt*
+          deltree artifacts/salt
           tree -a artifacts
 
       - name: Upload Test Run Artifacts

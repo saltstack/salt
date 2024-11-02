@@ -1,5 +1,5 @@
 ---
-name: Test Artifact
+name: Test Artifact(macOS)
 
 on:
   workflow_call:
@@ -16,6 +16,11 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
+      gh-actions-python-version:
+        required: false
+        type: string
+        description: The python version to run tests with
+        default: "3.11"
       salt-version:
         type: string
         required: true
@@ -32,20 +37,15 @@ on:
         required: true
         type: string
         description: The platform arch being tested
-      nox-version:
-        required: true
-        type: string
-        description: The nox version to install
-      gh-actions-python-version:
-        required: false
-        type: string
-        description: The python version to run tests with
-        default: "3.10"
       fips:
         required: false
         type: boolean
         default: false
         description: Test run with FIPS enabled
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
@@ -69,8 +69,6 @@ on:
 
 env:
   COLUMNS: 190
-  AWS_MAX_ATTEMPTS: "10"
-  AWS_RETRY_MODE: "adaptive"
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
@@ -88,7 +86,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: 3.10.14
 
       - name: "Throttle Builds"
         shell: bash
@@ -108,14 +106,13 @@ jobs:
       - name: Generate Test Matrix
         id: generate-matrix
         run: |
-          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ fromJSON(inputs.testrun)['type'] == 'full' && '--full ' || '' }}${{ inputs.distro-slug }}
+          tools ci matrix --workflow=${{ inputs.workflow-slug }} ${{ inputs.distro-slug }}
 
   test:
     name: Test
-    runs-on:
-      - self-hosted
-      - linux
-      - bastion
+    runs-on: linux-${{ inputs.arch }}
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -127,9 +124,16 @@ jobs:
         include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
-      TEST_GROUP: ${{ matrix.test-group || 1 }}
 
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Check python
+        run: |
+          which python3
+
 
       - name: "Throttle Builds"
         shell: bash
@@ -161,19 +165,29 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
+      - name: Install System Dependencies
+        run: |
+          echo true
+
       - name: Download nox.linux.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
         with:
           name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
 
-      - name: PyPi Proxy
-        run: |
-          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
+      - name: Set up Python ${{ inputs.gh-actions-python-version }}
+        uses: actions/setup-python@v5
         with:
-          cache-prefix: ${{ inputs.cache-prefix }}
+          python-version: "${{ inputs.gh-actions-python-version }}"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- linux ${{ inputs.arch }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -181,115 +195,146 @@ jobs:
         with:
           name: testrun-changed-files.txt
 
-      - name: Get Salt Project GitHub Actions Bot Environment
+      - name: Current Directory
         run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
-      - name: Start VM
-        id: spin-up-vm
-        env:
-          TESTS_CHUNK: ${{ matrix.tests-chunk }}
-        run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
-
-      - name: List Free Space
-        run: |
-          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        run: |
-          tools --timestamps vm rsync ${{ inputs.distro-slug }}
-
-      - name: Decompress .nox Directory
-        run: |
-          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+          pwd
 
       - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          tools --timestamps --timeout-secs=1800 vm test --skip-requirements-install --print-system-information-only \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }}
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --core-tests --slow-tests --suppress-no-test-exit-code \
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code
 
       - name: Run Slow Tests
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
         id: run-core-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures -E SALT_TRANSPORT ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            -E TEST_GROUP ${{ inputs.fips && '--fips ' || '' }}${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests \
-            --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            --slow-tests --core-tests -k "mac or darwin"
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
 
       - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false
         run: |
-          tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
+          nox --force-color -e combine-coverage
 
-      - name: Download Test Run Artifacts
+      - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && steps.spin-up-vm.outcome == 'success'
+        if: always()
         run: |
-          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}${{ inputs.fips && '.fips' || '' }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}.grp${{ matrix.test-group || '1' }}
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
           fi
-
-      - name: Destroy VM
-        if: always()
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
@@ -298,7 +343,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/xml-unittests-output/
           include-hidden-files: true
@@ -307,7 +352,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-log-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-grp${{ matrix.test-group || '1' }}-${{ env.TIMESTAMP }}
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -340,8 +385,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
-          name: testrun-junit-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
-          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-*
+          name: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-junit-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -350,8 +395,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
-          name: testrun-log-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
-          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-*
+          name: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-log-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -360,8 +405,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
-          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}-*
+          name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-*
           separate-directories: false
           delete-merged: true
 
@@ -371,13 +416,18 @@ jobs:
         id: download-coverage-artifacts
         with:
           path: artifacts/coverage/
-          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}*
+          pattern: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}*
           merge-multiple: true
 
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         run: |
           tree -a artifacts
+
+      - name: Set up Python ${{ inputs.gh-actions-python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.gh-actions-python-version }}"
 
       - name: Install Nox
         run: |
@@ -387,8 +437,8 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
         run: |
           nox --force-color -e create-xml-coverage-reports
-          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ inputs.distro-slug }}${{ inputs.fips && '..fips' || '' }}..${{ inputs.nox-session }}.xml
-          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ inputs.distro-slug }}${{ inputs.fips && '..fips' || '' }}..${{ inputs.nox-session }}.xml
+          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
+          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ inputs.distro-slug }}..${{ inputs.nox-session }}.xml
 
       - name: Report Salt Code Coverage
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
@@ -406,12 +456,12 @@ jobs:
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}${{ inputs.fips && '.fips' || '' }}.${{ inputs.nox-session }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}
 
       - name: Upload Code Coverage DB
         if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}${{ inputs.fips && '-fips' || '' }}-${{ inputs.nox-session }}
+          name: all-testrun-coverage-artifacts-${{ inputs.distro-slug }}.${{ inputs.nox-session }}
           path: artifacts/coverage
           include-hidden-files: true

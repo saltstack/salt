@@ -75,9 +75,7 @@ jobs:
     runs-on:
       # We need to run on our self-hosted runners because we need proper credentials
       # for boto3 to scan through our repositories.
-      - self-hosted
-      - linux
-      - x86_64
+      - ubuntu-latest
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
       build-reports: ${{ steps.generate-pkg-matrix.outputs.build-reports }}
