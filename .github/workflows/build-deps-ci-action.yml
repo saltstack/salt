@@ -182,7 +182,7 @@ jobs:
     name: MacOS
     needs:
       - generate-matrix
-    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-arm64' || matrix.distro-slug }}
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     if: ${{ inputs.kind  == 'macos' }}
     timeout-minutes: 90
     strategy:
