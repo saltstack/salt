@@ -276,6 +276,7 @@ jobs:
     if: ${{ inputs.kind  == 'windows' }}
     env:
       USE_S3_CACHE: 'false'
+      GITHUB_WORKSPACE: 'C:\Windows\Temp\testing'
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -312,6 +313,7 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
+
       - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
