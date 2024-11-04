@@ -1277,7 +1277,10 @@ def decompress_dependencies(session):
                 if not os.path.isabs(resolved_link):
                     # Relative symlinks, resolve them
                     resolved_link = os.path.join(scan_path, resolved_link)
-                if not os.path.exists(resolved_link):
+                prefix_check = False
+                if platform == "windows":
+                    prefix_check = resolved_link.startswith("\\\\?")
+                if not os.path.exists(resolved_link) or prefix_check:
                     session.log("The symlink %r looks to be broken", resolved_link)
                     # This is a broken link, fix it
                     resolved_link_suffix = resolved_link.split(

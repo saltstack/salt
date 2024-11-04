@@ -162,11 +162,6 @@ jobs:
         run: |
           echo true
 
-      - name: Download nox.windows.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
-        uses: actions/download-artifact@v4
-        with:
-          name: nox-windows-${{ inputs.arch }}-${{ inputs.nox-session }}
-
       - name: Set up Python ${{ inputs.gh-actions-python-version }}
         uses: actions/setup-python@v5
         with:
@@ -178,6 +173,11 @@ jobs:
         env:
           PIP_INDEX_URL: https://pypi.org/simple
 
+      - name: Download nox.windows.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-windows-${{ inputs.arch }}-${{ inputs.nox-session }}
+
       - name: Decompress .nox Directory
         run: |
           nox --force-color -e decompress-dependencies -- windows ${{ inputs.arch }}
@@ -187,6 +187,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: testrun-changed-files.txt
+
+      - name: Check nox python
+        continue-on-error: true
+        run: |
+          .nox/ci-test-onedir/Scripts/python.exe --version
 
       - name: Show System Info
         env:
@@ -208,10 +213,10 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code \
-            --from-filenames=testrun-changed-files.txt
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code
+          "--from-filenames=testrun-changed-files.txt"
 
       - name: Run Fast Tests
         id: run-fast-tests
@@ -226,9 +231,9 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          -k "mac or darwin" --suppress-no-test-exit-code
 
       - name: Run Slow Tests
         id: run-slow-tests
@@ -243,9 +248,9 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
         id: run-core-tests
@@ -260,9 +265,9 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
@@ -277,9 +282,9 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -294,9 +299,9 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests -k "mac or darwin"
+        run: >
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
+          --slow-tests --core-tests -k "mac or darwin"
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false
@@ -306,11 +311,11 @@ jobs:
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
+        shell: bash
         run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
-          tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
           fi
