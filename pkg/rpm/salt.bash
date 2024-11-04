@@ -1,6 +1,3 @@
-# written by David Pravec
-#   - feel free to /msg alekibango on IRC if you want to talk about this file
-
 # TODO: check if --config|-c was used and use configured config file for queries
 # TODO: solve somehow completion for  salt -G pythonversion:[tab]
 #       (not sure what to do with lists)

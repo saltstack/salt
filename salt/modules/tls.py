@@ -1982,7 +1982,7 @@ if __name__ == "__main__":
         L="Centerville",
         O="SaltStack",
         OU=None,
-        emailAddress="test_system@saltstack.org",
+        emailAddress="test_system@saltproject.io",
     )
     create_ca_signed_cert("koji", "test_system")
     create_pkcs12("koji", "test_system", passphrase="test")

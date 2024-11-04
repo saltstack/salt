@@ -41,7 +41,7 @@ Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
 Group:          System/Monitoring
-Url:            http://saltstack.org/
+Url:            http://saltproject.io/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1:        README.SUSE
 Source2:        salt-tmpfiles.d
