@@ -36,7 +36,7 @@ def gen_relenv(
     if not os.path.isdir(relenv_dir):
         os.makedirs(relenv_dir)
 
-    relenv_url = get_tarball(f"{base_url}/{version}", kernel, os_arch)
+    relenv_url = get_tarball(f"{base_url}/{version}/", kernel, os_arch)
     tarball_path = os.path.join(relenv_dir, "salt-relenv.tar.xz")
 
     # Download the tarball if it doesn't exist or overwrite is True
