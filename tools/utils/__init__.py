@@ -67,6 +67,7 @@ class OS:
 class Linux(OS):
     platform: str = attr.ib(default="linux")
     fips: bool = attr.ib(default=False)
+    container: str = attr.ib(default=None)
 
 
 @attr.s(frozen=True, slots=True)

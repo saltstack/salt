@@ -12,6 +12,10 @@ on:
         required: true
         type: string
         description: The nox session to run
+      container:
+        required: true
+        type: string
+        description: The container image to run tests on
       testrun:
         required: true
         type: string
@@ -112,7 +116,7 @@ jobs:
     name: Test
     runs-on: linux-${{ inputs.arch }}
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
+      image: ${{ inputs.container }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
