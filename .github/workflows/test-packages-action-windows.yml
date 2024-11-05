@@ -106,7 +106,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: windows-latest
+    runs-on: ${{ inputs.distro-slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - generate-matrix

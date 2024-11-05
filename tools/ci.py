@@ -1172,7 +1172,7 @@ def get_pr_test_labels(
                         f"The '{slug}' slug exists as a label but not as an available OS."
                     )
                 selected.add(slug)
-                if slug != "all":
+                if slug != "all" and slug in available:
                     available.remove(slug)
                 continue
             test_labels.append(name)
