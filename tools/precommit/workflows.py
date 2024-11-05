@@ -29,12 +29,18 @@ TEST_SALT_LISTING = PlatformDefinitions(
             #    display_name="Rocky Linux 8 Arm64",
             #    arch="arm64",
             # ),
-            # Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
-            # Linux(
-            #    slug="rockylinux-9-arm64",
-            #    display_name="Rocky Linux 9 Arm64",
-            #    arch="arm64",
-            # ),
+            Linux(
+                slug="rockylinux-9",
+                display_name="Rocky Linux 9",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            Linux(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
             # Linux(slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"),
             # Linux(
             #    slug="amazonlinux-2-arm64",
@@ -95,11 +101,17 @@ TEST_SALT_LISTING = PlatformDefinitions(
             #    display_name="Ubuntu 20.04 Arm64",
             #    arch="arm64",
             # ),
-            Linux(slug="ubuntu-22.04", display_name="Ubuntu 22.04", arch="x86_64"),
+            Linux(
+                slug="ubuntu-22.04",
+                display_name="Ubuntu 22.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
             Linux(
                 slug="ubuntu-22.04-arm64",
                 display_name="Ubuntu 22.04 Arm64",
                 arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
             ),
             # Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
             # Linux(
@@ -207,18 +219,20 @@ def generate_workflows(ctx: Context):
                 #     arch="arm64",
                 #     pkg_type="rpm",
                 # ),
-                # Linux(
-                #     slug="rockylinux-9",
-                #     display_name="Rocky Linux 9",
-                #     arch="x86_64",
-                #     pkg_type="rpm",
-                # ),
-                # Linux(
-                #     slug="rockylinux-9-arm64",
-                #     display_name="Rocky Linux 9 Arm64",
-                #     arch="arm64",
-                #     pkg_type="rpm",
-                # ),
+                Linux(
+                    slug="rockylinux-9",
+                    display_name="Rocky Linux 9",
+                    arch="x86_64",
+                    pkg_type="rpm",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+                ),
+                Linux(
+                    slug="rockylinux-9-arm64",
+                    display_name="Rocky Linux 9 Arm64",
+                    arch="arm64",
+                    pkg_type="rpm",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+                ),
                 # Linux(
                 #    slug="amazonlinux-2",
                 #    display_name="Amazon Linux 2",
@@ -336,12 +350,14 @@ def generate_workflows(ctx: Context):
                     display_name="Ubuntu 22.04",
                     arch="x86_64",
                     pkg_type="deb",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
                 ),
                 Linux(
                     slug="ubuntu-22.04-arm64",
                     display_name="Ubuntu 22.04 Arm64",
                     arch="arm64",
                     pkg_type="deb",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
                 ),
                 # Linux(
                 #    slug="ubuntu-24.04",

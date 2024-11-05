@@ -18,6 +18,7 @@
       distro-slug: <{ os.slug }>
       nox-session: ci-test-onedir
       platform: linux
+      container: <{ os.container }>
       arch: <{ os.arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: <{ os.pkg_type }>
