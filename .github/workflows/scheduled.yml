@@ -1198,7 +1198,7 @@ jobs:
       distro-slug: photonos-4
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1220,7 +1220,7 @@ jobs:
       distro-slug: photonos-4-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4
       arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1242,7 +1242,7 @@ jobs:
       distro-slug: photonos-4
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1265,7 +1265,7 @@ jobs:
       distro-slug: photonos-4-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-4
       arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1288,7 +1288,7 @@ jobs:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1310,7 +1310,7 @@ jobs:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
       arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1332,7 +1332,7 @@ jobs:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
       arch: x86_64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
@@ -1355,7 +1355,7 @@ jobs:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5.0
+      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
       arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
