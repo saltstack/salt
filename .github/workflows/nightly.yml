@@ -985,6 +985,50 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
+  rockylinux-8:
+    name: Rocky Linux 8 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps-linux
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: rockylinux-8
+      nox-session: ci-test-onedir
+      platform: linux
+      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      workflow-slug: nightly
+      default-timeout: 360
+
+  rockylinux-8-arm64:
+    name: Rocky Linux 8 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps-linux
+    uses: ./.github/workflows/test-action-linux.yml
+    with:
+      distro-slug: rockylinux-8-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      workflow-slug: nightly
+      default-timeout: 360
+
   rockylinux-9:
     name: Rocky Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1824,6 +1868,8 @@ jobs:
       - windows-2019
       - windows-2022
       - macos-12
+      - rockylinux-8
+      - rockylinux-8-arm64
       - rockylinux-9
       - rockylinux-9-arm64
       - ubuntu-2204

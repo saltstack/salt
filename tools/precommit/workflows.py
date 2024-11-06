@@ -23,12 +23,18 @@ TEMPLATES = WORKFLOWS / "templates"
 TEST_SALT_LISTING = PlatformDefinitions(
     {
         "linux": [
-            # Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
-            # Linux(
-            #    slug="rockylinux-8-arm64",
-            #    display_name="Rocky Linux 8 Arm64",
-            #    arch="arm64",
-            # ),
+            Linux(
+                slug="rockylinux-8",
+                display_name="Rocky Linux 8",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            Linux(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
             Linux(
                 slug="rockylinux-9",
                 display_name="Rocky Linux 9",
