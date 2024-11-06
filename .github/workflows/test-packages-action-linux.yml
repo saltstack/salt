@@ -112,6 +112,10 @@ jobs:
       - linux-${{ inputs.arch }}
     container:
       image: ${{ inputs.container }}
+      options: --privileged
+      volumes:
+        - /run/systemd/system:/run/systemd/system
+        - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
 
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
@@ -188,11 +192,13 @@ jobs:
         run: |
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
-      - name: Mock systemd
-        run: |
-          wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py
-          cp systemctl3.py /usr/bin/systemctl
-          chmod +x /usr/bin/systemctl
+      - name: check systemd
+        run: systemctl
+      #- name: Mock systemd
+      #  run: |
+      #    wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py
+      #    cp systemctl3.py /usr/bin/systemctl
+      #    chmod +x /usr/bin/systemctl
 
       - name: Show System Info
         env:
