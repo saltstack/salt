@@ -27,7 +27,7 @@ on:
       kind:
         required: true
         type: string
-        description: Kine of dependencies to build; linux, macos, windows
+        description: Kind of dependencies to build; linux, macos, windows
       python-version:
         required: false
         type: string
