@@ -176,7 +176,7 @@ def license(key: str):
         salt '*' mslicense.license ZZZZZ
     """
 
-    cmd = "Get-CimInstance -Query 'SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'".format(
+    cmd = "Get-CimInstance -Query \"SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'\"".format(
         key[-5:]
     )
     log.debug("prepare cmd: {0}".format(cmd))
@@ -212,7 +212,7 @@ def activate(key: str):
         salt '*' mslicense.activate ZZZZZ
     """
 
-    cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}' -MethodName Activate".format(
+    cmd = "Invoke-CimMethod -Query \"SELECT ID FROM SoftwareLicensingProduct WHERE PartialProductKey = '{0}'\" -MethodName Activate".format(
         key[-5:]
     )
     log.debug("prepare cmd: {0}".format(cmd))
