@@ -32,7 +32,9 @@ def test_store_is_constrained_to_cachedir(cache, tmp_path):
     assert (Path(cache.cachedir) / str(tmp_path)[1:]).exists()
 
 
-@pytest.mark.parametrize("full_path,in_key", ((False, False), (False, True), (True, False)))
+@pytest.mark.parametrize(
+    "full_path,in_key", ((False, False), (False, True), (True, False))
+)
 def test_fetch_is_constrained_to_cachedir(cache, tmp_path, full_path, in_key):
     fake_data = b"\xa1a"
     if full_path:
