@@ -1,3 +1,5 @@
 setuptools >= 65.6.3,< 69.0
 setuptools-scm < 8.0.0
 pip >= 23.3,< 24.0
+# Restrict to a version that works on all supported python versions so salt-ssh can run on older targets
+networkx >= 3.0,< 3.2

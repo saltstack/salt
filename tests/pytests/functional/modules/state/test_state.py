@@ -130,7 +130,11 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+            "Recursive requisites were found: "
+            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
+            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
             in ret.errors
         )
 

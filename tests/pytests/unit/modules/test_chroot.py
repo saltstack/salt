@@ -289,6 +289,7 @@ def test_sls():
                 ) as _create_and_execute_salt_state:
                     SSHHighState.return_value = SSHHighState
                     SSHHighState.render_highstate.return_value = (None, [])
+                    SSHHighState.state.compile_high_data.return_value = ([], [])
                     SSHHighState.state.reconcile_extend.return_value = (None, [])
                     SSHHighState.state.requisite_in.return_value = (None, [])
                     SSHHighState.state.verify_high.return_value = []

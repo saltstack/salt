@@ -165,7 +165,8 @@ def test_query_error_handling():
     ret = http.query("http://127.0.0.1:0")
     assert isinstance(ret, dict)
     assert isinstance(ret.get("error", None), str)
-    ret = http.query("http://myfoobardomainthatnotexist")
+    # use RFC6761 invalid domain that does not exist
+    ret = http.query("http://myfoobardomainthatnotexist.invalid")
     assert isinstance(ret, dict)
     assert isinstance(ret.get("error", None), str)
 
