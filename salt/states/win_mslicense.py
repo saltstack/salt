@@ -470,10 +470,12 @@ def present_kms(name: str, kms_port=0, key=""):
 
 def absent_kms(name="", host=False, port=False):
     """
-    kms_host
+    Removing KMS host and port.
 
+    kms_host
+        KMS host to remove.
     kms_port
-        порт  удаляемого KMS-хоста
+        KMS port to removeg.
     """
     if not host and not port:
         log.error("требуется указать хоть одну цель для очистки - хост или порт")
