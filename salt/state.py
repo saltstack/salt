@@ -2731,10 +2731,13 @@ class State:
                         ]
                 else:
                     validated_retry_data[expected_key] = retry_defaults[expected_key]
+
+        elif isinstance(retry_data, bool) and retry_data:
+            validated_retry_data = retry_defaults
         else:
             log.warning(
-                "State is set to retry, but a valid dict for retry "
-                "configuration was not found.  Using retry defaults"
+                "State is set to retry, but retry: True or a valid dict for "
+                "retry configuration was not found.  Using retry defaults"
             )
             validated_retry_data = retry_defaults
         return validated_retry_data
