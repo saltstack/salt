@@ -858,6 +858,7 @@ def pkg_matrix(
     ]
 
     for version, backend in adjusted_versions:
+        print(f"WTF {version} {backend}")
         prefix = prefixes[backend]
         # TODO: Remove this after 3009.0
         if backend == "relenv" and version >= tools.utils.Version("3006.5"):
@@ -868,16 +869,16 @@ def pkg_matrix(
         #    Prefix=prefix,
         # )
         # Uses a jmespath expression to test if the wanted version is in any of the filenames
-        key_filter = f"Contents[?contains(Key, '{version}')][]"
-        if pkg_type == "MSI":
-            # TODO: Add this back when we add MSI upgrade and downgrade tests
-            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
-            continue
-        elif pkg_type == "NSIS":
-            key_filter = (
-                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
-            )
-            continue
+        # key_filter = f"Contents[?contains(Key, '{version}')][]"
+        # if pkg_type == "MSI":
+        #    # TODO: Add this back when we add MSI upgrade and downgrade tests
+        #    # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
+        #    continue
+        # elif pkg_type == "NSIS":
+        #    key_filter = (
+        #        f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
+        #    )
+        #    continue
         # objects = list(page_iterator.search(key_filter))
         # Testing using `any` because sometimes the paginator returns `[None]`
         # if any(objects):
@@ -895,6 +896,13 @@ def pkg_matrix(
         #         )
         # else:
         #     ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
+        for session in ("upgrade", "downgrade"):
+            _matrix.append(
+                {
+                    "tests-chunk": session,
+                    "version": str(version),
+                }
+            )
 
     ctx.info("Generated matrix:")
     if not _matrix:
