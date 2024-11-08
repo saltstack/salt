@@ -441,14 +441,14 @@ def generate_workflows(ctx: Context):
                     display_name="Ubuntu 22.04",
                     arch="x86_64",
                     pkg_type="deb",
-                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04-systemd",
                 ),
                 Linux(
                     slug="ubuntu-22.04-arm64",
                     display_name="Ubuntu 22.04 Arm64",
                     arch="arm64",
                     pkg_type="deb",
-                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+                    container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04-systemd",
                 ),
                 Linux(
                     slug="ubuntu-24.04",
