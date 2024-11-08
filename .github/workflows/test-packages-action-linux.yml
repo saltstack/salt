@@ -200,7 +200,7 @@ jobs:
       #    chmod +x /usr/bin/systemctl
       - name: install pkg test
         run: |
-          dpkg -i ./artifacts/pkg/salt-common-${{ inputs.salt-version}}_${{ inputs.arch }}.deb ./artifacts/pkg/salt-master-${{ inputs.salt-version}}_${{ inputs.arch }}.deb
+          dpkg -i ./artifacts/pkg/salt-common_${{ inputs.salt-version}}_${{ inputs.arch == 'x86_64' && 'amd64' || 'arm64' }}.deb ./artifacts/pkg/salt-master_${{ inputs.salt-version}}_${{ inputs.arch == 'x86_64' && 'amd64' || 'arm64' }}.deb
 
       - name: Show System Info
         env:
