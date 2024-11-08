@@ -1143,7 +1143,7 @@ jobs:
       distro-slug: ubuntu-22.04
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
+      container: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04-systemd
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
@@ -1165,7 +1165,7 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
+      container: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04-systemd
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
