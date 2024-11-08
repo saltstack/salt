@@ -113,7 +113,9 @@ jobs:
     container:
       image: ${{ inputs.container }}
       options: --privileged
-
+      volumes:
+        - /run/systemd/system:/run/systemd/system
+        - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - generate-matrix
@@ -196,6 +198,9 @@ jobs:
       #    wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py
       #    cp systemctl3.py /usr/bin/systemctl
       #    chmod +x /usr/bin/systemctl
+      - name: install pkg test
+        run: |
+          dpkg -i ./artifacts/pkg/salt-common-${{ inputs.salt-version}}_${{ inputs.arch }}.deb ./artifacts/pkg/salt-master-${{ inputs.salt-version}}_${{ inputs.arch }}.deb
 
       - name: Show System Info
         env:
