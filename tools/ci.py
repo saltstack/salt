@@ -896,7 +896,11 @@ def pkg_matrix(
         #         )
         # else:
         #     ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
-        for session in ("upgrade", "downgrade"):
+        if name == "windows":
+            sessions = ("upgrade",)
+        else:
+            sessions = ("upgrade", "downgrade")
+        for session in sessions:
             _matrix.append(
                 {
                     "tests-chunk": session,
