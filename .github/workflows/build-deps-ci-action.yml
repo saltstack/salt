@@ -89,7 +89,7 @@ jobs:
     needs:
       - generate-matrix
     runs-on:
-      - linux-${{ matrix.arch }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
     if: ${{ inputs.kind  == 'linux' }}
     env:
       USE_S3_CACHE: 'false'

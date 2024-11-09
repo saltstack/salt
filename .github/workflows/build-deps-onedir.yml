@@ -53,7 +53,7 @@ jobs:
           - x86_64
           - arm64
     runs-on:
-      - linux-${{ matrix.arch }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
     env:
       USE_S3_CACHE: 'false'
     steps:
