@@ -109,13 +109,13 @@ jobs:
   test:
     name: Test
     runs-on:
-      - ${{ inputs.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+      - ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
       image: ${{ inputs.container }}
       options: --privileged
-      volumes:
-        - /run/systemd/system:/run/systemd/system
-        - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      #volumes:
+      #  - /run/systemd/system:/run/systemd/system
+      #  - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - generate-matrix
