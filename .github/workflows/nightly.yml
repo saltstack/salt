@@ -90,7 +90,6 @@ jobs:
       - workflow-requirements
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
-      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
       pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
@@ -245,11 +244,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Runner Types
-        id: runner-types
-        run: |
-          tools ci runner-types ${{ github.event_name }}
-
       - name: Define Jobs To Run
         id: define-jobs
         run: |
@@ -289,7 +283,6 @@ jobs:
 
   pre-commit:
     name: Pre-Commit
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/pre-commit-action.yml
     needs:
       - prepare-workflow
@@ -300,7 +293,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -308,7 +301,6 @@ jobs:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
   nsis-tests:
     name: NSIS Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/nsis-tests.yml
     needs:
       - prepare-workflow
@@ -317,7 +309,7 @@ jobs:
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
     runs-on: ubuntu-latest
     needs:
       - prepare-workflow
@@ -430,7 +422,7 @@ jobs:
 
   build-docs:
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-docs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-docs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -441,7 +433,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -472,45 +464,39 @@ jobs:
 
   build-deps-onedir-linux:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-linux'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-linux'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: linux
 
   build-deps-onedir-macos:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-macos'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-macos'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: macos
 
   build-deps-onedir-windows:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-windows'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-windows'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: windows
@@ -526,8 +512,6 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: linux
@@ -543,8 +527,6 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: macos
@@ -560,15 +542,13 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       kind: windows
 
   build-pkgs-onedir-linux:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -587,7 +567,7 @@ jobs:
 
   build-pkgs-src-linux:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -606,7 +586,7 @@ jobs:
 
   build-pkgs-onedir-macos:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-macos
@@ -625,7 +605,7 @@ jobs:
 
   build-pkgs-src-macos:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-macos
@@ -644,7 +624,7 @@ jobs:
 
   build-pkgs-onedir-windows:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -663,7 +643,7 @@ jobs:
 
   build-pkgs-src-windows:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -681,7 +661,7 @@ jobs:
     secrets: inherit
   build-ci-deps-linux:
     name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-linux
@@ -697,7 +677,7 @@ jobs:
 
   build-ci-deps-macos:
     name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-macos
@@ -713,7 +693,7 @@ jobs:
 
   build-ci-deps-windows:
     name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir-windows
@@ -729,7 +709,7 @@ jobs:
 
   rockylinux-8-pkg-tests:
     name: Rocky Linux 8 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -751,7 +731,7 @@ jobs:
 
   rockylinux-8-arm64-pkg-tests:
     name: Rocky Linux 8 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -773,7 +753,7 @@ jobs:
 
   rockylinux-9-pkg-tests:
     name: Rocky Linux 9 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -795,7 +775,7 @@ jobs:
 
   rockylinux-9-arm64-pkg-tests:
     name: Rocky Linux 9 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -817,7 +797,7 @@ jobs:
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -839,7 +819,7 @@ jobs:
 
   amazonlinux-2-arm64-pkg-tests:
     name: Amazon Linux 2 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -861,7 +841,7 @@ jobs:
 
   amazonlinux-2023-pkg-tests:
     name: Amazon Linux 2023 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -883,7 +863,7 @@ jobs:
 
   amazonlinux-2023-arm64-pkg-tests:
     name: Amazon Linux 2023 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -905,7 +885,7 @@ jobs:
 
   debian-11-pkg-tests:
     name: Debian 11 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -927,7 +907,7 @@ jobs:
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -949,7 +929,7 @@ jobs:
 
   debian-12-pkg-tests:
     name: Debian 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -971,7 +951,7 @@ jobs:
 
   debian-12-arm64-pkg-tests:
     name: Debian 12 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -993,7 +973,7 @@ jobs:
 
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1015,7 +995,7 @@ jobs:
 
   photonos-4-arm64-pkg-tests:
     name: Photon OS 4 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1037,7 +1017,7 @@ jobs:
 
   photonos-4-pkg-tests-fips:
     name: Photon OS 4 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1060,7 +1040,7 @@ jobs:
 
   photonos-4-arm64-pkg-tests-fips:
     name: Photon OS 4 Arm64 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1083,7 +1063,7 @@ jobs:
 
   photonos-5-pkg-tests:
     name: Photon OS 5 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1105,7 +1085,7 @@ jobs:
 
   photonos-5-arm64-pkg-tests:
     name: Photon OS 5 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1127,7 +1107,7 @@ jobs:
 
   photonos-5-pkg-tests-fips:
     name: Photon OS 5 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1150,7 +1130,7 @@ jobs:
 
   photonos-5-arm64-pkg-tests-fips:
     name: Photon OS 5 Arm64 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1173,7 +1153,7 @@ jobs:
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1195,7 +1175,7 @@ jobs:
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1217,7 +1197,7 @@ jobs:
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1239,7 +1219,7 @@ jobs:
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1261,7 +1241,7 @@ jobs:
 
   ubuntu-2404-pkg-tests:
     name: Ubuntu 24.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1283,7 +1263,7 @@ jobs:
 
   ubuntu-2404-arm64-pkg-tests:
     name: Ubuntu 24.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1305,7 +1285,7 @@ jobs:
 
   macos-12-pkg-tests:
     name: macOS 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1327,7 +1307,7 @@ jobs:
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1348,7 +1328,7 @@ jobs:
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1369,7 +1349,7 @@ jobs:
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1390,7 +1370,7 @@ jobs:
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1411,7 +1391,7 @@ jobs:
 
   windows-2019:
     name: Windows 2019 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-windows
@@ -1432,7 +1412,7 @@ jobs:
 
   windows-2022:
     name: Windows 2022 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-windows
@@ -1453,7 +1433,7 @@ jobs:
 
   macos-12:
     name: macOS 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
@@ -1475,7 +1455,7 @@ jobs:
 
   rockylinux-8:
     name: Rocky Linux 8 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1497,7 +1477,7 @@ jobs:
 
   rockylinux-8-arm64:
     name: Rocky Linux 8 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1519,7 +1499,7 @@ jobs:
 
   rockylinux-9:
     name: Rocky Linux 9 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1541,7 +1521,7 @@ jobs:
 
   rockylinux-9-arm64:
     name: Rocky Linux 9 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1563,7 +1543,7 @@ jobs:
 
   amazonlinux-2:
     name: Amazon Linux 2 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1585,7 +1565,7 @@ jobs:
 
   amazonlinux-2-arm64:
     name: Amazon Linux 2 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1607,7 +1587,7 @@ jobs:
 
   amazonlinux-2023:
     name: Amazon Linux 2023 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1629,7 +1609,7 @@ jobs:
 
   amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1651,7 +1631,7 @@ jobs:
 
   debian-11:
     name: Debian 11 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1673,7 +1653,7 @@ jobs:
 
   debian-11-arm64:
     name: Debian 11 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1695,7 +1675,7 @@ jobs:
 
   debian-12:
     name: Debian 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1717,7 +1697,7 @@ jobs:
 
   debian-12-arm64:
     name: Debian 12 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1739,7 +1719,7 @@ jobs:
 
   fedora-40:
     name: Fedora 40 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1761,7 +1741,7 @@ jobs:
 
   photonos-4:
     name: Photon OS 4 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1783,7 +1763,7 @@ jobs:
 
   photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1805,7 +1785,7 @@ jobs:
 
   photonos-4-fips:
     name: Photon OS 4 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1828,7 +1808,7 @@ jobs:
 
   photonos-4-arm64-fips:
     name: Photon OS 4 Arm64 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1851,7 +1831,7 @@ jobs:
 
   photonos-5:
     name: Photon OS 5 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1873,7 +1853,7 @@ jobs:
 
   photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1895,7 +1875,7 @@ jobs:
 
   photonos-5-fips:
     name: Photon OS 5 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1918,7 +1898,7 @@ jobs:
 
   photonos-5-arm64-fips:
     name: Photon OS 5 Arm64 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1941,7 +1921,7 @@ jobs:
 
   ubuntu-2004:
     name: Ubuntu 20.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1963,7 +1943,7 @@ jobs:
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1985,7 +1965,7 @@ jobs:
 
   ubuntu-2204:
     name: Ubuntu 22.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -2007,7 +1987,7 @@ jobs:
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -2029,7 +2009,7 @@ jobs:
 
   ubuntu-2404:
     name: Ubuntu 24.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -2051,7 +2031,7 @@ jobs:
 
   ubuntu-2404-arm64:
     name: Ubuntu 24.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux

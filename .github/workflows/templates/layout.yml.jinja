@@ -89,7 +89,6 @@ jobs:
     <%- endif %>
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
-      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
       pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
@@ -257,11 +256,6 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
-
-      - name: Define Runner Types
-        id: runner-types
-        run: |
-          tools ci runner-types ${{ github.event_name }}
 
       - name: Define Jobs To Run
         id: define-jobs

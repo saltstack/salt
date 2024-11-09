@@ -647,6 +647,39 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
 
 @ci.command(
+    name="build-matrix",
+    arguments={
+        "kind": {
+            "help": "kind of build; linux, windows, mac",
+        },
+    },
+)
+def build_matrix(
+    ctx: Context,
+    kind: str,
+):
+    """
+    Generate the test matrix.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+    _matrix = [{"arch": "x86_64"}]
+    if (
+        kind == "linux"
+        and "LINUX_ARM_RUNNER" in os.environ
+        and os.environ["LINUX_ARM_RUNNER"] != "0"
+    ):
+        _matrix.append({"arch": "arm64"})
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    else:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+    ctx.exit(0)
+
+
+@ci.command(
     arguments={
         "distro_slug": {
             "help": "The distribution slug to generate the matrix for",
@@ -971,8 +1004,7 @@ def get_ci_deps_matrix(ctx: Context):
 
     _matrix = {
         "linux": [
-            {"distro-slug": "amazonlinux-2", "arch": "x86_64"},
-            {"distro-slug": "amazonlinux-2-arm64", "arch": "arm64"},
+            {"arch": "x86_64"},
         ],
         "macos": [
             {"distro-slug": "macos-12", "arch": "x86_64"},
@@ -981,6 +1013,9 @@ def get_ci_deps_matrix(ctx: Context):
             {"distro-slug": "windows-2022", "arch": "amd64"},
         ],
     }
+    if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
+        _matrix["linux"].append({"arch": "arm64"})
+
     if gh_event["repository"]["fork"] is not True:
         _matrix["macos"].append(
             {
