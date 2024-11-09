@@ -10,9 +10,9 @@
     <%- do test_salt_needs.append(os.slug.replace(".", "")) %>
     name: <{ os.display_name }> Test
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -41,9 +41,9 @@
     <%- do test_salt_needs.append(os.slug.replace(".", "")) %>
     name: <{ os.display_name }> Test
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -73,9 +73,9 @@
     <%- do test_salt_needs.append(job_name) %>
     name: <{ os.display_name }> Test<%- if os.fips %> (fips)<%- endif %>
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
     <%- endif %>
     needs:
       - prepare-workflow

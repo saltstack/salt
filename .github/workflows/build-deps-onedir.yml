@@ -8,12 +8,6 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      github-hosted-runners:
-        type: boolean
-        required: true
-      self-hosted-runners:
-        type: boolean
-        required: true
       cache-seed:
         required: true
         type: string
@@ -43,17 +37,47 @@ env:
 
 jobs:
 
+  generate-matrix:
+    name: Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.14"
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: tools ci build-matrix ${{ inputs.kind }}
+
+
   build-deps-linux:
     name: Linux
-    if: ${{ inputs.self-hosted-runners && inputs.kind  == 'linux' }}
+    if: ${{ inputs.kind  == 'linux' }}
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+    needs:
+      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - arm64
-    runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
     env:
       USE_S3_CACHE: 'false'
     steps:
@@ -90,12 +114,14 @@ jobs:
 
   build-deps-macos:
     name: macOS
-    if: ${{ inputs.github-hosted-runners && inputs.kind  == 'macOS' }}
+    if: ${{ inputs.kind  == 'macOS' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
         arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+    needs:
+      - generate-matrix
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
     env:
@@ -144,7 +170,7 @@ jobs:
 
   build-deps-windows:
     name: Windows
-    if: ${{ inputs.github-hosted-runners && inputs.kind  == 'windows' }}
+    if: ${{ inputs.kind  == 'windows' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -152,6 +178,8 @@ jobs:
         arch:
           - x86
           - amd64
+    needs:
+      - generate-matrix
     runs-on: windows-latest
     env:
       USE_S3_CACHE: 'false'
