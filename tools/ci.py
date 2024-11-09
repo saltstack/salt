@@ -796,6 +796,7 @@ def pkg_matrix(
                 "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
                 "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
             }
+    _matrix = []
 
     # XXX: fetch versions
     # s3 = boto3.client("s3")
@@ -871,7 +872,16 @@ def pkg_matrix(
         and "macos" in distro_slug
         and "arm64" in distro_slug
     ):
+        # XXX: This should work now
         ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
+        _matrix.clear()
+
+    if (
+        name not in ["windows", "macos"]
+        and "LINUX_ARM_RUNNER" not in os.environ
+        or os.environ["LINUX_ARM_RUNNER"] != 0
+    ):
+        ctx.warn("This fork does not have a linux arm64 runner configured.")
         _matrix.clear()
 
     if not _matrix:
