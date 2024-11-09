@@ -192,7 +192,9 @@ def runner_types(ctx: Context, event_name: str):
     time.sleep(1)
 
     ctx.info("Selecting which type of runners(self hosted runners or not) to run")
-    runners = {"github-hosted": False, "self-hosted": False}
+    runners = {"github-hosted": False, "self-hosted": False, "linux-arm64": False}
+    if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
+        runners["linux-arm64"] = True
     if event_name == "pull_request":
         ctx.info("Running from a pull request event")
         pr_event_data = gh_event["pull_request"]
@@ -224,12 +226,13 @@ def runner_types(ctx: Context, event_name: str):
     ):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
-        runners["github-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file:\n", runners)
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"runners={json.dumps(runners)}\n")
-        ctx.exit(0)
-
+        if os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1":
+            # This is running on a forked repository, don't run tests
+            runners["github-hosted"] = runners["self-hosted"] = True
+            ctx.info("Writing 'runners' to the github outputs file:\n", runners)
+            with open(github_output, "a", encoding="utf-8") as wfh:
+                wfh.write(f"runners={json.dumps(runners)}\n")
+            ctx.exit(0)
     # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
