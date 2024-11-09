@@ -153,96 +153,6 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
 
 
 @ci.command(
-    name="runner-types",
-    arguments={
-        "event_name": {
-            "help": "The name of the GitHub event being processed.",
-        },
-    },
-)
-def runner_types(ctx: Context, event_name: str):
-    """
-    Set GH Actions 'runners' output to know what can run where.
-    """
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert gh_event_path is not None
-
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    try:
-        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
-    except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
-        ctx.exit(1)
-
-    ctx.info("GH Event Payload:")
-    ctx.print(gh_event, soft_wrap=True)
-    # Let's it print until the end
-    time.sleep(1)
-
-    ctx.info("Selecting which type of runners(self hosted runners or not) to run")
-    runners = {"github-hosted": False, "self-hosted": False, "linux-arm64": False}
-    if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
-        runners["linux-arm64"] = True
-    if event_name == "pull_request":
-        ctx.info("Running from a pull request event")
-        pr_event_data = gh_event["pull_request"]
-        if (
-            pr_event_data["head"]["repo"]["full_name"]
-            == pr_event_data["base"]["repo"]["full_name"]
-        ):
-            # If this is a pull request coming from the same repository, don't run anything
-            ctx.info("Pull request is coming from the same repository.")
-            ctx.info("Not running any jobs since they will run against the branch")
-            ctx.info("Writing 'runners' to the github outputs file:\n", runners)
-            with open(github_output, "a", encoding="utf-8") as wfh:
-                wfh.write(f"runners={json.dumps(runners)}\n")
-            ctx.exit(0)
-
-        # This is a PR from a forked repository
-        ctx.info("Pull request is not comming from the same repository")
-        runners["github-hosted"] = runners["self-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file:\n", runners)
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"runners={json.dumps(runners)}\n")
-        ctx.exit(0)
-
-    # This is a push or a scheduled event
-    ctx.info(f"Running from a {event_name!r} event")
-    if (
-        gh_event["repository"]["fork"] is True
-        and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
-    ):
-        # This is running on a forked repository, don't run tests
-        ctx.info("The push event is on a forked repository")
-        if os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1":
-            # This is running on a forked repository, don't run tests
-            runners["github-hosted"] = runners["self-hosted"] = True
-            ctx.info("Writing 'runners' to the github outputs file:\n", runners)
-            with open(github_output, "a", encoding="utf-8") as wfh:
-                wfh.write(f"runners={json.dumps(runners)}\n")
-            ctx.exit(0)
-    # Not running on a fork, or the fork has self hosted runners, run everything
-    ctx.info(f"The {event_name!r} event is from the main repository")
-    runners["github-hosted"] = runners["self-hosted"] = True
-    ctx.info("Writing 'runners' to the github outputs file:\n", runners)
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"runners={json.dumps(runners)}")
-    ctx.exit(0)
-
-
-@ci.command(
     name="define-jobs",
     arguments={
         "event_name": {
@@ -659,7 +569,9 @@ def build_matrix(
     kind: str,
 ):
     """
-    Generate the test matrix.
+    Generate matrix for onedir workflows.
+
+    The build-onedir-deps and build-salt-onedir workflows call this method.
     """
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
@@ -862,6 +774,8 @@ def pkg_matrix(
             arch = "amd64"
         else:
             arch = "x86_64"
+
+        ctx.info(f"Parsed linux slug parts {name} {version} {arch}")
 
         if name == "amazonlinux":
             name = "amazon"
