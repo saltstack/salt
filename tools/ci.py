@@ -894,7 +894,6 @@ def pkg_matrix(
     ]
 
     for version, backend in adjusted_versions:
-        print(f"WTF {version} {backend}")
         prefix = prefixes[backend]
         # TODO: Remove this after 3009.0
         if backend == "relenv" and version >= tools.utils.Version("3006.5"):

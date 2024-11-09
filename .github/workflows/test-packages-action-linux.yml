@@ -109,7 +109,7 @@ jobs:
   test:
     name: Test
     runs-on:
-      - linux-${{ inputs.arch }}
+      - ${{ inputs.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
     container:
       image: ${{ inputs.container }}
       options: --privileged

@@ -4,7 +4,7 @@
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
     name: <{ os.display_name }> Package Test<%- if os.fips %> (fips)<%- endif %>
-    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs or True %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
