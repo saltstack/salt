@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
+      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
 
     env:
       PRE_COMMIT_COLOR: always
