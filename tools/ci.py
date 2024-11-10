@@ -19,7 +19,7 @@ from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.gh
-from tools.precommit.workflows import TEST_SALT_LISTING
+from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -880,7 +880,7 @@ def pkg_matrix(
         arch == "arm64"
         and name not in ["windows", "macos"]
         and "LINUX_ARM_RUNNER" not in os.environ
-        and os.environ["LINUX_ARM_RUNNER"] != "0"
+        or os.environ["LINUX_ARM_RUNNER"] != "0"
     ):
         ctx.warn("This fork does not have a linux arm64 runner configured.")
         _matrix.clear()
@@ -1564,7 +1564,12 @@ def workflow_config(
         "build-pkgs": True,
         "build-deps-ci": True,
     }
-    from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
+    if skip_tests:
+        jobs["test"] = False
+    if skip_pkg_tests:
+        jobs["test-pkg"] = False
+    if skip_pkg_download_tests:
+        jobs["test-pkg-download"] = False
 
     jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["linux"]})
     jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["windows"]})
