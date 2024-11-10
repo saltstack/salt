@@ -1,5 +1,5 @@
 ---
-name: Test Artifact(macOS)
+name: Test Artifact(Windows)
 
 on:
   workflow_call:
@@ -215,7 +215,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code
+          -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
           "--from-filenames=testrun-changed-files.txt"
 
       - name: Run Fast Tests
@@ -233,7 +233,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          -k "mac or darwin" --suppress-no-test-exit-code
+          -k "win" --suppress-no-test-exit-code
 
       - name: Run Slow Tests
         id: run-slow-tests
@@ -250,7 +250,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
+          -k "win" --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
         id: run-core-tests
@@ -267,7 +267,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
+          -k "win" --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
@@ -284,7 +284,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
+          -k "win" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -301,7 +301,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          --slow-tests --core-tests -k "mac or darwin"
+          --slow-tests --core-tests -k "win"
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false
