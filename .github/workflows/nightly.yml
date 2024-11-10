@@ -1283,7 +1283,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  macos-12-pkg-tests:
+  test-pkg-macos-12:
     name: macOS 12 Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
@@ -1305,7 +1305,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  windows-2019-nsis-pkg-tests:
+  test-pkg-windows-2019-nsis:
     name: Windows 2019 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
@@ -1326,7 +1326,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  windows-2019-msi-pkg-tests:
+  test-pkg-windows-2019-msi:
     name: Windows 2019 MSI Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
@@ -1347,7 +1347,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  windows-2022-nsis-pkg-tests:
+  test-pkg-windows-2022-nsis:
     name: Windows 2022 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
@@ -1368,7 +1368,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  windows-2022-msi-pkg-tests:
+  test-pkg-windows-2022-msi:
     name: Windows 2022 MSI Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
     needs:
@@ -1389,7 +1389,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
-  windows-2019:
+  test-windows-2019:
     name: Windows 2019 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1410,7 +1410,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  windows-2022:
+  test-windows-2022:
     name: Windows 2022 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1431,7 +1431,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  macos-12:
+  test-macos-12:
     name: macOS 12 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1453,7 +1453,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  rockylinux-8:
+  test-rockylinux-8:
     name: Rocky Linux 8 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1475,7 +1475,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  rockylinux-8-arm64:
+  test-rockylinux-8-arm64:
     name: Rocky Linux 8 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1497,7 +1497,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  rockylinux-9:
+  test-rockylinux-9:
     name: Rocky Linux 9 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1519,7 +1519,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  rockylinux-9-arm64:
+  test-rockylinux-9-arm64:
     name: Rocky Linux 9 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1541,7 +1541,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  amazonlinux-2:
+  test-amazonlinux-2:
     name: Amazon Linux 2 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1563,7 +1563,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  amazonlinux-2-arm64:
+  test-amazonlinux-2-arm64:
     name: Amazon Linux 2 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1585,7 +1585,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  amazonlinux-2023:
+  test-amazonlinux-2023:
     name: Amazon Linux 2023 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1607,7 +1607,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  amazonlinux-2023-arm64:
+  test-amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1629,7 +1629,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  debian-11:
+  test-debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1651,7 +1651,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  debian-11-arm64:
+  test-debian-11-arm64:
     name: Debian 11 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1673,7 +1673,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  debian-12:
+  test-debian-12:
     name: Debian 12 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1695,7 +1695,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  debian-12-arm64:
+  test-debian-12-arm64:
     name: Debian 12 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1717,7 +1717,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  fedora-40:
+  test-fedora-40:
     name: Fedora 40 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1739,7 +1739,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  photonos-4:
+  test-photonos-4:
     name: Photon OS 4 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1761,7 +1761,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  photonos-4-arm64:
+  test-photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1783,7 +1783,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  photonos-4-fips:
+  test-photonos-4-fips:
     name: Photon OS 4 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1806,7 +1806,7 @@ jobs:
       default-timeout: 360
       fips: true
 
-  photonos-4-arm64-fips:
+  test-photonos-4-arm64-fips:
     name: Photon OS 4 Arm64 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1829,7 +1829,7 @@ jobs:
       default-timeout: 360
       fips: true
 
-  photonos-5:
+  test-photonos-5:
     name: Photon OS 5 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1851,7 +1851,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  photonos-5-arm64:
+  test-photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1873,7 +1873,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  photonos-5-fips:
+  test-photonos-5-fips:
     name: Photon OS 5 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1896,7 +1896,7 @@ jobs:
       default-timeout: 360
       fips: true
 
-  photonos-5-arm64-fips:
+  test-photonos-5-arm64-fips:
     name: Photon OS 5 Arm64 Test (fips)
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1919,7 +1919,7 @@ jobs:
       default-timeout: 360
       fips: true
 
-  ubuntu-2004:
+  test-ubuntu-2004:
     name: Ubuntu 20.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1941,7 +1941,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  ubuntu-2004-arm64:
+  test-ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1963,7 +1963,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  ubuntu-2204:
+  test-ubuntu-2204:
     name: Ubuntu 22.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -1985,7 +1985,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  ubuntu-2204-arm64:
+  test-ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -2007,7 +2007,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  ubuntu-2404:
+  test-ubuntu-2404:
     name: Ubuntu 24.04 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -2029,7 +2029,7 @@ jobs:
       workflow-slug: nightly
       default-timeout: 360
 
-  ubuntu-2404-arm64:
+  test-ubuntu-2404-arm64:
     name: Ubuntu 24.04 Arm64 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
     needs:
@@ -2799,36 +2799,36 @@ jobs:
       - build-ci-deps-linux
       - build-ci-deps-macos
       - build-ci-deps-windows
-      - windows-2019
-      - windows-2022
-      - macos-12
-      - rockylinux-8
-      - rockylinux-8-arm64
-      - rockylinux-9
-      - rockylinux-9-arm64
-      - amazonlinux-2
-      - amazonlinux-2-arm64
-      - amazonlinux-2023
-      - amazonlinux-2023-arm64
-      - debian-11
-      - debian-11-arm64
-      - debian-12
-      - debian-12-arm64
-      - fedora-40
-      - photonos-4
-      - photonos-4-arm64
-      - photonos-4-fips
-      - photonos-4-arm64-fips
-      - photonos-5
-      - photonos-5-arm64
-      - photonos-5-fips
-      - photonos-5-arm64-fips
-      - ubuntu-2004
-      - ubuntu-2004-arm64
-      - ubuntu-2204
-      - ubuntu-2204-arm64
-      - ubuntu-2404
-      - ubuntu-2404-arm64
+      - test-windows-2019
+      - test-windows-2022
+      - test-macos-12
+      - test-rockylinux-8
+      - test-rockylinux-8-arm64
+      - test-rockylinux-9
+      - test-rockylinux-9-arm64
+      - test-amazonlinux-2
+      - test-amazonlinux-2-arm64
+      - test-amazonlinux-2023
+      - test-amazonlinux-2023-arm64
+      - test-debian-11
+      - test-debian-11-arm64
+      - test-debian-12
+      - test-debian-12-arm64
+      - test-fedora-40
+      - test-photonos-4
+      - test-photonos-4-arm64
+      - test-photonos-4-fips
+      - test-photonos-4-arm64-fips
+      - test-photonos-5
+      - test-photonos-5-arm64
+      - test-photonos-5-fips
+      - test-photonos-5-arm64-fips
+      - test-ubuntu-2004
+      - test-ubuntu-2004-arm64
+      - test-ubuntu-2204
+      - test-ubuntu-2204-arm64
+      - test-ubuntu-2404
+      - test-ubuntu-2404-arm64
 
     steps:
 
@@ -2919,11 +2919,11 @@ jobs:
       - ubuntu-2204-arm64-pkg-tests
       - ubuntu-2404-pkg-tests
       - ubuntu-2404-arm64-pkg-tests
-      - macos-12-pkg-tests
-      - windows-2019-nsis-pkg-tests
-      - windows-2019-msi-pkg-tests
-      - windows-2022-nsis-pkg-tests
-      - windows-2022-msi-pkg-tests
+      - test-pkg-macos-12
+      - test-pkg-windows-2019-nsis
+      - test-pkg-windows-2019-msi
+      - test-pkg-windows-2022-nsis
+      - test-pkg-windows-2022-msi
     steps:
       - name: Get workflow information
         id: get-workflow-info

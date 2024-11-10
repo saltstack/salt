@@ -69,6 +69,20 @@ class Linux(OS):
     fips: bool = attr.ib(default=False)
     container: str = attr.ib(default=None)
 
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }{'-fips' if self.fips else ''}"
+
+
+@attr.s(frozen=True, slots=True)
+class LinuxPkg(Linux):
+
+    @property
+    def job_name(self):
+        return (
+            f"{ self.slug.replace('.', '') }-pkg-tests{ '-fips' if self.fips else ''}"
+        )
+
 
 @attr.s(frozen=True, slots=True)
 class MacOS(OS):
@@ -79,6 +93,18 @@ class MacOS(OS):
     def _default_runner(self):
         return self.slug
 
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }"
+
+
+@attr.s(frozen=True, slots=True)
+class MacOSPkg(MacOS):
+
+    @property
+    def job_name(self):
+        return f"test-pkg-{ self.slug.replace('.', '') }"
+
 
 @attr.s(frozen=True, slots=True)
 class Windows(OS):
@@ -86,6 +112,18 @@ class Windows(OS):
 
     def _get_default_arch(self):
         return "amd64"
+
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }"
+
+
+@attr.s(frozen=True, slots=True)
+class WindowsPkg(Windows):
+
+    @property
+    def job_name(self):
+        return f"test-pkg-{ self.slug.replace('.', '') }-{ self.pkg_type.lower() }"
 
 
 class PlatformDefinitions(TypedDict):
