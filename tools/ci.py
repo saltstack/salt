@@ -877,7 +877,8 @@ def pkg_matrix(
         _matrix.clear()
 
     if (
-        arch == "arm64" and name not in ["windows", "macos"]
+        arch == "arm64"
+        and name not in ["windows", "macos"]
         and "LINUX_ARM_RUNNER" not in os.environ
         and os.environ["LINUX_ARM_RUNNER"] != "0"
     ):
@@ -1509,4 +1510,76 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
             ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
             time.sleep(sleep_time)
 
+    ctx.exit(0)
+
+
+@ci.command(
+    name="workflow-config",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
+        "skip_pkg_tests": {
+            "help": "Skip running the Salt Package tests",
+        },
+        "skip_pkg_download_tests": {
+            "help": "Skip running the Salt Package download tests",
+        },
+        "changed_files": {
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
+        },
+    },
+)
+def workflow_config(
+    ctx: Context,
+    event_name: str,
+    changed_files: pathlib.Path,
+    skip_tests: bool = False,
+    skip_pkg_tests: bool = False,
+    skip_pkg_download_tests: bool = False,
+):
+    config = {}
+    jobs = {
+        "lint": True,
+        "test": True,
+        "test-pkg": True,
+        "test-pkg-download": True,
+        "prepare-release": True,
+        "build-docs": True,
+        "build-source-tarball": True,
+        "build-deps-onedir": True,
+        "build-deps-onedir-linux": True,
+        "build-deps-onedir-macos": False,
+        "build-deps-onedir-windows": True,
+        "build-salt-onedir": True,
+        "build-salt-onedir-linux": True,
+        "build-salt-onedir-macos": False,
+        "build-salt-onedir-windows": True,
+        "build-pkgs": True,
+        "build-deps-ci": True,
+    }
+    from tools.precommit.workflows import TEST_SALT_PKG_LISTING
+
+    test_salt_pkg_listing = list(TEST_SALT_PKG_LISTING)
+    jobs.update({_.slug: True for _ in test_salt_pkg_listing})
+    config["jobs"] = jobs
+    ctx.info("Jobs selected are")
+    for x, y in jobs.items():
+        ctx.info(f"{x} = {y}")
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is not None:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Selected Jobs:\n")
+            for name, value in sorted(jobs.items()):
+                wfh.write(f" - `{name}`: {value}\n")
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"config={json.dumps(config)}\n")
     ctx.exit(0)
