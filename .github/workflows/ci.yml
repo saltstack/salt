@@ -51,6 +51,7 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -230,6 +231,12 @@ jobs:
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
+
+      - name: Generate Workflow Config
+        id: workflow-config
+        run: |
+          tools ci workflow-config ${{ github.event_name }} changed-files.json
+
 
 
   pre-commit:
