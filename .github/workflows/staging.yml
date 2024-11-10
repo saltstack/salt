@@ -691,7 +691,7 @@ jobs:
 
   rockylinux-8-pkg-tests:
     name: Rocky Linux 8 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['rockylinux-8-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -713,7 +713,7 @@ jobs:
 
   rockylinux-8-arm64-pkg-tests:
     name: Rocky Linux 8 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['rockylinux-8-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -735,7 +735,7 @@ jobs:
 
   rockylinux-9-pkg-tests:
     name: Rocky Linux 9 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['rockylinux-9-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -757,7 +757,7 @@ jobs:
 
   rockylinux-9-arm64-pkg-tests:
     name: Rocky Linux 9 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['rockylinux-9-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -779,7 +779,7 @@ jobs:
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['amazonlinux-2-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -801,7 +801,7 @@ jobs:
 
   amazonlinux-2-arm64-pkg-tests:
     name: Amazon Linux 2 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['amazonlinux-2-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -823,7 +823,7 @@ jobs:
 
   amazonlinux-2023-pkg-tests:
     name: Amazon Linux 2023 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['amazonlinux-2023-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -845,7 +845,7 @@ jobs:
 
   amazonlinux-2023-arm64-pkg-tests:
     name: Amazon Linux 2023 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['amazonlinux-2023-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -867,7 +867,7 @@ jobs:
 
   debian-11-pkg-tests:
     name: Debian 11 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['debian-11-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -889,7 +889,7 @@ jobs:
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['debian-11-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -911,7 +911,7 @@ jobs:
 
   debian-12-pkg-tests:
     name: Debian 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['debian-12-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -933,7 +933,7 @@ jobs:
 
   debian-12-arm64-pkg-tests:
     name: Debian 12 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['debian-12-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -955,7 +955,7 @@ jobs:
 
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-4-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -977,7 +977,7 @@ jobs:
 
   photonos-4-arm64-pkg-tests:
     name: Photon OS 4 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-4-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -999,7 +999,7 @@ jobs:
 
   photonos-4-pkg-tests-fips:
     name: Photon OS 4 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-4-pkg-tests-fips'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1022,7 +1022,7 @@ jobs:
 
   photonos-4-arm64-pkg-tests-fips:
     name: Photon OS 4 Arm64 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-4-arm64-pkg-tests-fips'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1045,7 +1045,7 @@ jobs:
 
   photonos-5-pkg-tests:
     name: Photon OS 5 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-5-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1067,7 +1067,7 @@ jobs:
 
   photonos-5-arm64-pkg-tests:
     name: Photon OS 5 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-5-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1089,7 +1089,7 @@ jobs:
 
   photonos-5-pkg-tests-fips:
     name: Photon OS 5 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-5-pkg-tests-fips'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1112,7 +1112,7 @@ jobs:
 
   photonos-5-arm64-pkg-tests-fips:
     name: Photon OS 5 Arm64 Package Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['photonos-5-arm64-pkg-tests-fips'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1135,7 +1135,7 @@ jobs:
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2004-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1157,7 +1157,7 @@ jobs:
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2004-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1179,7 +1179,7 @@ jobs:
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2204-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1201,7 +1201,7 @@ jobs:
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2204-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1223,7 +1223,7 @@ jobs:
 
   ubuntu-2404-pkg-tests:
     name: Ubuntu 24.04 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2404-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1245,7 +1245,7 @@ jobs:
 
   ubuntu-2404-arm64-pkg-tests:
     name: Ubuntu 24.04 Arm64 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['ubuntu-2404-arm64-pkg-tests'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-linux
@@ -1267,7 +1267,7 @@ jobs:
 
   test-pkg-macos-12:
     name: macOS 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-12'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1289,7 +1289,7 @@ jobs:
 
   test-pkg-windows-2019-nsis:
     name: Windows 2019 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-nsis'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1310,7 +1310,7 @@ jobs:
 
   test-pkg-windows-2019-msi:
     name: Windows 2019 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-msi'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1331,7 +1331,7 @@ jobs:
 
   test-pkg-windows-2022-nsis:
     name: Windows 2022 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-nsis'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1352,7 +1352,7 @@ jobs:
 
   test-pkg-windows-2022-msi:
     name: Windows 2022 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-msi'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1373,7 +1373,7 @@ jobs:
 
   test-windows-2019:
     name: Windows 2019 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-windows-2019'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-windows
@@ -1394,7 +1394,7 @@ jobs:
 
   test-windows-2022:
     name: Windows 2022 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-windows-2022'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-windows
@@ -1415,7 +1415,7 @@ jobs:
 
   test-macos-12:
     name: macOS 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-12'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
@@ -1437,7 +1437,7 @@ jobs:
 
   test-rockylinux-8:
     name: Rocky Linux 8 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-8'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1459,7 +1459,7 @@ jobs:
 
   test-rockylinux-8-arm64:
     name: Rocky Linux 8 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-8-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1481,7 +1481,7 @@ jobs:
 
   test-rockylinux-9:
     name: Rocky Linux 9 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-9'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1503,7 +1503,7 @@ jobs:
 
   test-rockylinux-9-arm64:
     name: Rocky Linux 9 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-9-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1525,7 +1525,7 @@ jobs:
 
   test-amazonlinux-2:
     name: Amazon Linux 2 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1547,7 +1547,7 @@ jobs:
 
   test-amazonlinux-2-arm64:
     name: Amazon Linux 2 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1569,7 +1569,7 @@ jobs:
 
   test-amazonlinux-2023:
     name: Amazon Linux 2023 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2023'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1591,7 +1591,7 @@ jobs:
 
   test-amazonlinux-2023-arm64:
     name: Amazon Linux 2023 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2023-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1613,7 +1613,7 @@ jobs:
 
   test-debian-11:
     name: Debian 11 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-11'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1635,7 +1635,7 @@ jobs:
 
   test-debian-11-arm64:
     name: Debian 11 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-11-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1657,7 +1657,7 @@ jobs:
 
   test-debian-12:
     name: Debian 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-12'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1679,7 +1679,7 @@ jobs:
 
   test-debian-12-arm64:
     name: Debian 12 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-12-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1701,7 +1701,7 @@ jobs:
 
   test-fedora-40:
     name: Fedora 40 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-fedora-40'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1723,7 +1723,7 @@ jobs:
 
   test-photonos-4:
     name: Photon OS 4 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1745,7 +1745,7 @@ jobs:
 
   test-photonos-4-arm64:
     name: Photon OS 4 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1767,7 +1767,7 @@ jobs:
 
   test-photonos-4-fips:
     name: Photon OS 4 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-fips'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1790,7 +1790,7 @@ jobs:
 
   test-photonos-4-arm64-fips:
     name: Photon OS 4 Arm64 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-arm64-fips'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1813,7 +1813,7 @@ jobs:
 
   test-photonos-5:
     name: Photon OS 5 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1835,7 +1835,7 @@ jobs:
 
   test-photonos-5-arm64:
     name: Photon OS 5 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1857,7 +1857,7 @@ jobs:
 
   test-photonos-5-fips:
     name: Photon OS 5 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-fips'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1880,7 +1880,7 @@ jobs:
 
   test-photonos-5-arm64-fips:
     name: Photon OS 5 Arm64 Test (fips)
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-arm64-fips'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1903,7 +1903,7 @@ jobs:
 
   test-ubuntu-2004:
     name: Ubuntu 20.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2004'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1925,7 +1925,7 @@ jobs:
 
   test-ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2004-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1947,7 +1947,7 @@ jobs:
 
   test-ubuntu-2204:
     name: Ubuntu 22.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2204'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1969,7 +1969,7 @@ jobs:
 
   test-ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2204-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -1991,7 +1991,7 @@ jobs:
 
   test-ubuntu-2404:
     name: Ubuntu 24.04 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2404'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux
@@ -2013,7 +2013,7 @@ jobs:
 
   test-ubuntu-2404-arm64:
     name: Ubuntu 24.04 Arm64 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2404-arm64'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-linux

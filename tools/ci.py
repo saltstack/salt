@@ -1563,20 +1563,44 @@ def workflow_config(
         "build-pkgs": True,
         "build-deps-ci": True,
     }
+
+    kinds = ["linux", "windows", "macos"]
+
+    for kind in kinds:
+        jobs.update({_.job_name: True for _ in TEST_SALT_LISTING[kind]})  # type: ignore
+
     if skip_tests:
         jobs["test"] = False
+        for kind in kinds:
+            jobs.update({_.job_name: False for _ in TEST_SALT_LISTING[kind]})  # type: ignore
+
+    for kind in kinds:
+        jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
+
     if skip_pkg_tests:
         jobs["test-pkg"] = False
+        for kind in kinds:
+            jobs.update({_.job_name: False for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
+
+    # If there is no arm runner disable arm64
+    if os.environ.get("LINUX_ARM_RUNNER", "0") != "0":
+        for kind in kinds:
+            jobs.update(
+                {
+                    _.job_name: True if _.arch != "arm64" else False
+                    for _ in TEST_SALT_LISTING[kind]  # type: ignore
+                }
+            )
+            jobs.update(
+                {
+                    _.job_name: True if _.arch != "arm64" else False
+                    for _ in TEST_SALT_PKG_LISTING[kind]  # type: ignore
+                }
+            )
+
     if skip_pkg_download_tests:
         jobs["test-pkg-download"] = False
 
-    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["linux"]})
-    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["windows"]})
-    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["macos"]})
-
-    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["linux"]})
-    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["windows"]})
-    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["macos"]})
     config["jobs"] = jobs
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
