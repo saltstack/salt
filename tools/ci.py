@@ -1564,9 +1564,15 @@ def workflow_config(
         "build-pkgs": True,
         "build-deps-ci": True,
     }
-    from tools.precommit.workflows import TEST_SALT_PKG_LISTING
+    from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
 
-    jobs.update({_.slug: True for _ in TEST_SALT_PKG_LISTING["linux"]})
+    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["linux"]})
+    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["windows"]})
+    jobs.update({_.job_name: True for _ in TEST_SALT_LISTING["macos"]})
+
+    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["linux"]})
+    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["windows"]})
+    jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING["macos"]})
     config["jobs"] = jobs
     ctx.info("Jobs selected are")
     for x, y in jobs.items():

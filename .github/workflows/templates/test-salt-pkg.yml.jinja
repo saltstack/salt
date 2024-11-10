@@ -1,5 +1,5 @@
   <%- for os in test_salt_pkg_listing["linux"] %>
-    <%- set job_name = "{}-pkg-tests{}".format(os.slug.replace(".", ""), os.fips and '-fips' or '') %>
+    <%- set job_name = os.job_name %>
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
@@ -36,7 +36,7 @@
 
 
   <%- for os in test_salt_pkg_listing["macos"] %>
-    <%- set job_name = "{}-pkg-tests".format(os.slug.replace(".", "")) %>
+    <%- set job_name = os.job_name %>
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
@@ -69,7 +69,7 @@
 
 
   <%- for os in test_salt_pkg_listing["windows"] %>
-    <%- set job_name = "{}-{}-pkg-tests".format(os.slug.replace(".", ""), os.pkg_type.lower()) %>
+    <%- set job_name = os.job_name %>
 
   <{ job_name }>:
     <%- do test_salt_pkg_needs.append(job_name) %>
