@@ -877,7 +877,7 @@ def pkg_matrix(
         _matrix.clear()
 
     if (
-        name not in ["windows", "macos"]
+        arch == "arm64" and name not in ["windows", "macos"]
         and "LINUX_ARM_RUNNER" not in os.environ
         or os.environ["LINUX_ARM_RUNNER"] != 0
     ):
