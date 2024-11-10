@@ -114,7 +114,8 @@ jobs:
 
   test:
     name: Test
-    runs-on: linux-${{ inputs.arch }}
+    runs-on:
+      - ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
       image: ${{ inputs.container }}
     # Full test runs. Each chunk should never take more than 2 hours.
