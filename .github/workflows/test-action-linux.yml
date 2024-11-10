@@ -131,9 +131,9 @@ jobs:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
     steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.10'
 
       - name: Check python
         run: |
