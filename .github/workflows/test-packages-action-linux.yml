@@ -165,7 +165,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+          python3 -m pip install --break-system-packages 'nox==${{ inputs.nox-version }}'
         env:
           PIP_INDEX_URL: https://pypi.org/simple
 
