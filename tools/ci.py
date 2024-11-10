@@ -1567,7 +1567,7 @@ def workflow_config(
     from tools.precommit.workflows import TEST_SALT_PKG_LISTING
 
     test_salt_pkg_listing = list(TEST_SALT_PKG_LISTING)
-    jobs.update({_.slug: True for _ in test_salt_pkg_listing})
+    jobs.update({_.slug: True for _ in test_salt_pkg_listing["linux"]})
     config["jobs"] = jobs
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
