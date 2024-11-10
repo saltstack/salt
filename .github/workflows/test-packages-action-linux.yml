@@ -112,7 +112,7 @@ jobs:
       - ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
       image: ${{ inputs.container }}
-      options: --privileged
+      options: --privileged --entrypoing="/usr/bin/python3 /entrypoint.py"
       #volumes:
       #  - /run/systemd/system:/run/systemd/system
       #  - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
