@@ -99,6 +99,7 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -282,6 +283,13 @@ jobs:
         id: define-testrun
         run: |
           tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Define workflow config
+        id: workflow-config
+        run: |
+          tools ci workflow-config<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
