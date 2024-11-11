@@ -179,11 +179,6 @@ jobs:
         with:
           name: nox-linux-${{ inputs.arch }}-${{ inputs.nox-session }}
 
-      - name: Set up Python ${{ inputs.gh-actions-python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.gh-actions-python-version }}"
-
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
