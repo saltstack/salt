@@ -72,7 +72,7 @@
   <{ job_name }>:
     <%- do test_salt_needs.append(job_name) %>
     name: <{ os.display_name }> Test<%- if os.fips %> (fips)<%- endif %>
-    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs or True%>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}

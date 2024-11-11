@@ -1570,6 +1570,7 @@ def workflow_config(
         jobs.update({_.job_name: True for _ in TEST_SALT_LISTING[kind]})  # type: ignore
 
     if skip_tests:
+        ctx.print("Skipping test jobs")
         jobs["test"] = False
         for kind in kinds:
             jobs.update({_.job_name: False for _ in TEST_SALT_LISTING[kind]})  # type: ignore
@@ -1578,6 +1579,7 @@ def workflow_config(
         jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
 
     if skip_pkg_tests:
+        ctx.print("Skipping package test jobs")
         jobs["test-pkg"] = False
         for kind in kinds:
             jobs.update({_.job_name: False for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
