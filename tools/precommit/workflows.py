@@ -210,13 +210,9 @@ TEST_SALT_LISTING = PlatformDefinitions(
         ],
         "macos": [
             MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-            # MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-            # MacOS(
-            #    slug="macos-13-arm64",
-            #    display_name="macOS 13 Arm64",
-            #    arch="arm64",
-            #    runner="macos-13-xlarge",
-            # ),
+            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOS(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOS(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [
             # Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
@@ -417,13 +413,9 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
         ],
         "macos": [
             MacOSPkg(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-            # MacOSPkg(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-            # MacOSPkg(
-            #    slug="macos-13-arm64",
-            #    display_name="macOS 13 Arm64",
-            #    arch="arm64",
-            #    runner="macos-13-xlarge",
-            # ),
+            MacOSPkg(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOSPkg(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOSPkg(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [
             WindowsPkg(

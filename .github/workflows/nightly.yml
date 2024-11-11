@@ -1311,6 +1311,72 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
+  test-pkg-macos-13:
+    name: macOS 13 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-13'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir-macos
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-13
+      runner: macos-13
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  test-pkg-macos-14:
+    name: macOS 14 (M1) Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-14'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir-macos
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-14
+      runner: macos-14
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  test-pkg-macos-15:
+    name: macOS 15 (M1) Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-15'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir-macos
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-15
+      runner: macos-15
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: arm64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
   test-pkg-windows-2019-nsis:
     name: Windows 2019 NSIS Package Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-nsis'] }}
@@ -1450,6 +1516,72 @@ jobs:
       nox-session: ci-test-onedir
       platform: macos
       arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      workflow-slug: nightly
+      default-timeout: 360
+
+  test-macos-13:
+    name: macOS 13 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-13'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-13
+      runner: macos-13
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: x86_64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      workflow-slug: nightly
+      default-timeout: 360
+
+  test-macos-14:
+    name: macOS 14 (M1) Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-14'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-14
+      runner: macos-14
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: arm64
+      nox-version: 2022.8.7
+      gh-actions-python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: true
+      workflow-slug: nightly
+      default-timeout: 360
+
+  test-macos-15:
+    name: macOS 15 (M1) Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-15'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps-macos
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-15
+      runner: macos-15
+      nox-session: ci-test-onedir
+      platform: macos
+      arch: arm64
       nox-version: 2022.8.7
       gh-actions-python-version: "3.10"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
@@ -2808,6 +2940,9 @@ jobs:
       - test-windows-2019
       - test-windows-2022
       - test-macos-12
+      - test-macos-13
+      - test-macos-14
+      - test-macos-15
       - test-rockylinux-8
       - test-rockylinux-8-arm64
       - test-rockylinux-9
@@ -2926,6 +3061,9 @@ jobs:
       - test-pkg-ubuntu-2404
       - test-pkg-ubuntu-2404-arm64
       - test-pkg-macos-12
+      - test-pkg-macos-13
+      - test-pkg-macos-14
+      - test-pkg-macos-15
       - test-pkg-windows-2019-nsis
       - test-pkg-windows-2019-msi
       - test-pkg-windows-2022-nsis
