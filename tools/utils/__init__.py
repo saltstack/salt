@@ -79,9 +79,7 @@ class LinuxPkg(Linux):
 
     @property
     def job_name(self):
-        return (
-            f"{ self.slug.replace('.', '') }-pkg-tests{ '-fips' if self.fips else ''}"
-        )
+        return f"test-pkg-{ self.slug.replace('.', '') }{ '-fips' if self.fips else ''}"
 
 
 @attr.s(frozen=True, slots=True)
