@@ -452,7 +452,7 @@ jobs:
 
   build-deps-onedir-linux:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-linux'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-linux'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -465,7 +465,7 @@ jobs:
 
   build-deps-onedir-macos:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-macos'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-macos'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -478,7 +478,7 @@ jobs:
 
   build-deps-onedir-windows:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir-windows'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-windows'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -491,7 +491,7 @@ jobs:
 
   build-salt-onedir-linux:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir-linux'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-linux'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-linux
@@ -506,7 +506,7 @@ jobs:
 
   build-salt-onedir-macos:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir-macos'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-macos'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-macos
@@ -521,7 +521,7 @@ jobs:
 
   build-salt-onedir-windows:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir-windows'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-windows'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-windows

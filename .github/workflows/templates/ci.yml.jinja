@@ -249,7 +249,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -268,7 +268,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -287,7 +287,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -307,7 +307,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-linux
@@ -327,7 +327,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-macos
@@ -347,7 +347,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir-windows
