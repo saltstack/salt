@@ -7,7 +7,7 @@
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs or True %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -44,7 +44,7 @@
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -77,7 +77,7 @@
     <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     <%- endif %>
     needs:
       - prepare-workflow
