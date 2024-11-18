@@ -641,7 +641,7 @@ jobs:
       distro-slug: rockylinux-8
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-rockylinux-8
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -663,7 +663,7 @@ jobs:
       distro-slug: rockylinux-8-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-rockylinux-8
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -685,7 +685,7 @@ jobs:
       distro-slug: rockylinux-9
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-rockylinux-9
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -707,7 +707,7 @@ jobs:
       distro-slug: rockylinux-9-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-rockylinux-9
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -995,7 +995,7 @@ jobs:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-photon-5
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -1017,7 +1017,7 @@ jobs:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-photon-5
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -1039,7 +1039,7 @@ jobs:
       distro-slug: photonos-5
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-photon-5
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
@@ -1062,7 +1062,7 @@ jobs:
       distro-slug: photonos-5-arm64
       nox-session: ci-test-onedir
       platform: linux
-      container: ghcr.io/saltstack/salt-ci-containers/testing:photon-5
+      container: ghcr.io/saltstack/salt-ci-containers/testing:systemd-photon-5
       arch: arm64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
