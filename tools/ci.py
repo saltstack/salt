@@ -930,7 +930,8 @@ def get_ci_deps_matrix(ctx: Context):
             {"arch": "x86_64"},
         ],
         "macos": [
-            {"distro-slug": "macos-12", "arch": "x86_64"},
+            {"distro-slug": "macos-13", "arch": "x86_64"},
+            {"distro-slug": "macos-14", "arch": "arm64"},
         ],
         "windows": [
             {"distro-slug": "windows-2022", "arch": "amd64"},
@@ -938,14 +939,6 @@ def get_ci_deps_matrix(ctx: Context):
     }
     if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
         _matrix["linux"].append({"arch": "arm64"})
-
-    if gh_event["repository"]["fork"] is not True:
-        _matrix["macos"].append(
-            {
-                "distro-slug": "macos-13-arm64",
-                "arch": "arm64",
-            }
-        )
 
     ctx.info("Generated matrix:")
     ctx.print(_matrix, soft_wrap=True)
