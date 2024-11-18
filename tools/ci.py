@@ -577,7 +577,9 @@ def build_matrix(
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
     _matrix = [{"arch": "x86_64"}]
-    if (
+    if kind == "macos":
+        _matrix.append({"arch": "arm64"})
+    elif (
         kind == "linux"
         and "LINUX_ARM_RUNNER" in os.environ
         and os.environ["LINUX_ARM_RUNNER"] != "0"
