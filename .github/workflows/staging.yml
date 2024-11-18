@@ -72,8 +72,6 @@ jobs:
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
@@ -193,14 +191,6 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
-
-      - name: Get Pull Request Test Labels
-        id: get-pull-labels
-        if: ${{ github.event_name == 'pull_request'}}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools ci get-pr-test-labels --repository ${{ github.repository }}
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash

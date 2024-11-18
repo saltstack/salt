@@ -42,8 +42,6 @@ jobs:
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
@@ -163,14 +161,6 @@ jobs:
         with:
           salt-version: ""
           validate-version: true
-
-      - name: Get Pull Request Test Labels
-        id: get-pull-labels
-        if: ${{ github.event_name == 'pull_request'}}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools ci get-pr-test-labels --repository ${{ github.repository }}
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
@@ -1168,7 +1158,7 @@ jobs:
 
   test-pkg-macos-12:
     name: macOS 12 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-12'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-12') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-12'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1190,7 +1180,7 @@ jobs:
 
   test-pkg-macos-13:
     name: macOS 13 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-13'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-13') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-13'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1212,7 +1202,7 @@ jobs:
 
   test-pkg-macos-14:
     name: macOS 14 (M1) Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-14'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-14') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-14'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1234,7 +1224,7 @@ jobs:
 
   test-pkg-macos-15:
     name: macOS 15 (M1) Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-15'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-15') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-15'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-macos
@@ -1256,7 +1246,7 @@ jobs:
 
   test-pkg-windows-2019-nsis:
     name: Windows 2019 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-nsis'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'windows-2019') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-nsis'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1277,7 +1267,7 @@ jobs:
 
   test-pkg-windows-2019-msi:
     name: Windows 2019 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-msi'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'windows-2019') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-msi'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1298,7 +1288,7 @@ jobs:
 
   test-pkg-windows-2022-nsis:
     name: Windows 2022 NSIS Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-nsis'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'windows-2022') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-nsis'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1319,7 +1309,7 @@ jobs:
 
   test-pkg-windows-2022-msi:
     name: Windows 2022 MSI Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-msi'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'windows-2022') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-msi'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir-windows
@@ -1382,7 +1372,7 @@ jobs:
 
   test-macos-12:
     name: macOS 12 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-12'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-12') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-12'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
@@ -1404,7 +1394,7 @@ jobs:
 
   test-macos-13:
     name: macOS 13 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-13'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-13') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-13'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
@@ -1426,7 +1416,7 @@ jobs:
 
   test-macos-14:
     name: macOS 14 (M1) Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-14'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-14') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-14'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
@@ -1448,7 +1438,7 @@ jobs:
 
   test-macos-15:
     name: macOS 15 (M1) Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-15'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), 'macos-15') }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-15'] }}
     needs:
       - prepare-workflow
       - build-ci-deps-macos
