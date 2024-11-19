@@ -765,6 +765,7 @@ def pkg_matrix(
             "tiamat": "salt/py3/macos/minor/",
             "relenv": "salt/py3/macos/minor/",
         }
+        name = "macos"
     else:
         parts = distro_slug.split("-")
         name = parts[0]
