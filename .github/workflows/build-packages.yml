@@ -266,9 +266,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
         source:
           - ${{ inputs.source }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
