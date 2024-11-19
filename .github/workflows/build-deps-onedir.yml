@@ -119,7 +119,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
     needs:
       - generate-matrix
     runs-on:
