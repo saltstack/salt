@@ -870,14 +870,14 @@ def pkg_matrix(
         for entry in _matrix:
             ctx.print(" * ", entry, soft_wrap=True)
 
-    if (
-        gh_event["repository"]["fork"] is True
-        and "macos" in distro_slug
-        and "arm64" in distro_slug
-    ):
-        # XXX: This should work now
-        ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
-        _matrix.clear()
+    #if (
+    #    gh_event["repository"]["fork"] is True
+    #    and "macos" in distro_slug
+    #    and "arm64" in distro_slug
+    #):
+    #    # XXX: This should work now
+    #    ctx.warn("Forks don't have access to MacOS 13 Arm64. Clearning the matrix.")
+    #    _matrix.clear()
 
     if (
         arch == "arm64"
