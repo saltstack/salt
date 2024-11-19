@@ -122,6 +122,8 @@ jobs:
   build-salt-macos:
     name: macOS
     if: ${{ inputs.kind  == 'macos' }}
+    needs:
+      - generate-matrix
     strategy:
       fail-fast: false
       max-parallel: 2
