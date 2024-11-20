@@ -576,8 +576,23 @@ def build_matrix(
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+    _matrix = _build_matrix(kind)
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    else:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+    ctx.exit(0)
+
+
+def _build_matrix(kind):
     _matrix = [{"arch": "x86_64"}]
-    if kind == "macos":
+    if kind == "windows":
+        _matrix = [
+            {"arch": "amd64"},
+            {"arch": "x86"},
+        ]
+    elif kind == "macos":
         _matrix.append({"arch": "arm64"})
     elif (
         kind == "linux"
@@ -585,12 +600,7 @@ def build_matrix(
         and os.environ["LINUX_ARM_RUNNER"] != "0"
     ):
         _matrix.append({"arch": "arm64"})
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
-    else:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-    ctx.exit(0)
+    return _matrix
 
 
 @ci.command(
@@ -1599,6 +1609,9 @@ def workflow_config(
         jobs["test-pkg-download"] = False
 
     config["jobs"] = jobs
+    config["build-matrix"] = {
+        kind: _build_matrix(kind) for kind in ["linux", "macos", "windows"]  # type: ignore
+    }
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
         ctx.info(f"{x} = {y}")

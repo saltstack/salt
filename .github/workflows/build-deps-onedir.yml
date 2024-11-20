@@ -20,10 +20,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
-      kind:
-        type: string
+      matrix:
         required: true
-        description: The kind of tests to run windows, macos, or linux
+        type: string
+        description: Json job matrix config
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -37,47 +37,14 @@ env:
 
 jobs:
 
-  generate-matrix:
-    name: Test Matrix (${{ inputs.kind }})
-    runs-on: ubuntu-latest
-    outputs:
-      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10.14"
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-seed }}
-        env:
-          PIP_INDEX_URL: https://pypi.org/simple
-
-      - name: Generate Test Matrix
-        id: generate-matrix
-        run: tools ci build-matrix ${{ inputs.kind }}
-
-
   build-deps-linux:
     name: Linux
-    if: ${{ inputs.kind  == 'linux' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       USE_S3_CACHE: 'false'
     steps:
@@ -114,14 +81,11 @@ jobs:
 
   build-deps-macos:
     name: macOS
-    if: ${{ inputs.kind  == 'macOS' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
-    needs:
-      - generate-matrix
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
     env:
@@ -170,16 +134,11 @@ jobs:
 
   build-deps-windows:
     name: Windows
-    if: ${{ inputs.kind  == 'windows' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86
-          - amd64
-    needs:
-      - generate-matrix
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on: windows-latest
     env:
       USE_S3_CACHE: 'false'

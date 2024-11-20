@@ -443,9 +443,9 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-  build-deps-onedir-linux:
+  build-deps-onedir:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-linux'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -454,40 +454,14 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "0.18.0"
       python-version: "3.10.15"
-      kind: linux
-
-  build-deps-onedir-macos:
-    name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-macos'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: macos
-
-  build-deps-onedir-windows:
-    name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir-windows'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: windows
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
   build-salt-onedir-linux:
     name: Build Salt Onedir
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-linux'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-linux
+      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
@@ -502,7 +476,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-macos'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-macos
+      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
@@ -517,7 +491,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-windows'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir-windows
+      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
@@ -2109,9 +2083,7 @@ jobs:
       - lint
       - nsis-tests
       - build-docs
-      - build-deps-onedir-linux
-      - build-deps-onedir-macos
-      - build-deps-onedir-windows
+      - build-deps-onedir
       - build-salt-onedir-linux
       - build-salt-onedir-macos
       - build-salt-onedir-windows
