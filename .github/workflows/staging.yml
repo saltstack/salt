@@ -2414,7 +2414,7 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2516,7 +2516,7 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:

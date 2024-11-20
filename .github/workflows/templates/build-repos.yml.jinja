@@ -20,11 +20,7 @@
     needs:
       - prepare-workflow
       <%- if type not in ("src", "onedir") %>
-	<%- if type in ("deb", "rpm") %>
       - build-pkgs-onedir
-        <%- else %>
-      - build-pkgs-onedir-<{ type }>
-        <%- endif %>
       <%- elif type == 'onedir' %>
       - build-salt-onedir
       <%- elif type == 'src' %>
