@@ -9,7 +9,7 @@
     needs:
       - prepare-workflow
     <%- if workflow_slug != 'release' %>
-      - build-salt-onedir-linux
+      - build-salt-onedir
     <%- else %>
       - download-onedir-artifact
     <%- endif %>
@@ -33,7 +33,7 @@
     needs:
       - prepare-workflow
     <%- if workflow_slug != 'release' %>
-      - build-salt-onedir-macos
+      - build-salt-onedir
     <%- else %>
       - download-onedir-artifact
     <%- endif %>
@@ -57,7 +57,7 @@
     needs:
       - prepare-workflow
     <%- if workflow_slug != 'release' %>
-      - build-salt-onedir-windows
+      - build-salt-onedir
     <%- else %>
       - download-onedir-artifact
     <%- endif %>

@@ -14,7 +14,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -42,7 +42,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-macos
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -70,7 +70,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
