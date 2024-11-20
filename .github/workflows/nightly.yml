@@ -471,9 +471,9 @@ jobs:
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
-  build-salt-onedir-linux:
+  build-salt-onedir:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-linux'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir
@@ -484,44 +484,14 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "0.18.0"
       python-version: "3.10.15"
-      kind: linux
-
-  build-salt-onedir-macos:
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-macos'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: macos
-
-  build-salt-onedir-windows:
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir-windows'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: windows
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
   build-pkgs-onedir-linux:
     name: Build Packages
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -540,7 +510,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -559,7 +529,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-macos
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -578,7 +548,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-macos
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -597,7 +567,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -616,7 +586,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -634,7 +604,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
+      - build-salt-onedir
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       nox-session: ci-test-onedir
@@ -650,7 +620,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-macos
+      - build-salt-onedir
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       nox-session: ci-test-onedir
@@ -666,7 +636,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-windows
+      - build-salt-onedir
     uses: ./.github/workflows/build-deps-ci-action.yml
     with:
       nox-session: ci-test-onedir
@@ -2763,9 +2733,9 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-salt-onedir-linux
-      - build-salt-onedir-macos
-      - build-salt-onedir-windows
+      - build-salt-onedir
+      - build-salt-onedir
+      - build-salt-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2989,9 +2959,7 @@ jobs:
       - nsis-tests
       - build-docs
       - build-deps-onedir
-      - build-salt-onedir-linux
-      - build-salt-onedir-macos
-      - build-salt-onedir-windows
+      - build-salt-onedir
       - build-pkgs-src-linux
       - build-pkgs-src-macos
       - build-pkgs-src-windows

@@ -262,7 +262,7 @@
 
   <%- endif %>
 
-  <%- set job_name = "build-salt-onedir-linux" %>
+  <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
 
   <{ job_name }>:
@@ -279,50 +279,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
-      kind: linux
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
   <%- endif %>
-  <%- set job_name = "build-salt-onedir-macos" %>
-  <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "<{ relenv_version }>"
-      python-version: "<{ python_version }>"
-      kind: macos
-
-  <%- endif %>
-  <%- set job_name = "build-salt-onedir-windows" %>
-  <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
-    needs:
-      - prepare-workflow
-      - build-deps-onedir
-      - build-source-tarball
-    uses: ./.github/workflows/build-salt-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "<{ relenv_version }>"
-      python-version: "<{ python_version }>"
-      kind: windows
-
-  <%- endif %>
-
 
   <%- set job_name = "build-pkgs" %>
   <%- if includes.get(job_name, True) %>
