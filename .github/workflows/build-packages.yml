@@ -16,10 +16,6 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
-      kind:
-        type: string
-        required: true
-        description: The kind of tests to run windows, macos, or linux
       sign-macos-packages:
         type: boolean
         default: false
@@ -40,6 +36,10 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -50,50 +50,16 @@ env:
 
 jobs:
 
-  generate-matrix:
-    name: Test Matrix ${{ inputs.kind }}
-    runs-on: ubuntu-latest
-    outputs:
-      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10.14"
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-        env:
-          PIP_INDEX_URL: https://pypi.org/simple
-
-      - name: Generate Test Matrix
-        id: generate-matrix
-        run: tools ci build-matrix ${{ inputs.kind }}
-
-
-
   build-deb-packages:
     name: DEB
-    if: ${{ inputs.kind  == 'linux' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
         source:
           - ${{ inputs.source }}
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
@@ -180,17 +146,14 @@ jobs:
 
   build-rpm-packages:
     name: RPM
-    if: ${{ inputs.kind  == 'linux' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
         source:
           - ${{ inputs.source }}
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
@@ -259,16 +222,13 @@ jobs:
 
   build-macos-pkgs:
     name: macOS
-    needs:
-      - generate-matrix
     environment: ${{ inputs.environment }}
-    if: ${{ inputs.kind  == 'macos' }}
     strategy:
       fail-fast: false
       matrix:
         source:
           - ${{ inputs.source }}
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
@@ -379,19 +339,13 @@ jobs:
   build-windows-pkgs:
     name: Windows
     environment: ${{ inputs.environment }}
-    needs:
-      - generate-matrix
-    if: ${{ inputs.kind  == 'windows' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86
-          - amd64
         source:
           - ${{ inputs.source }}
-
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on:
       - windows-latest
     env:
