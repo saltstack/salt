@@ -279,7 +279,7 @@ jobs:
         run: |
           tools ci workflow-config<{ prepare_workflow_skip_test_suite }><{
             prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
-          }> ${{ github.event_name }} changed-files.json
+          }> ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}

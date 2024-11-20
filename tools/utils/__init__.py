@@ -220,7 +220,9 @@ class Version(packaging.version.Version):
         return hash(str(self))
 
 
-def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
+def get_salt_releases(
+    ctx: Context, repository: str = "saltstack/salt"
+) -> list[Version]:
     """
     Return a list of salt versions
     """

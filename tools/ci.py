@@ -1489,6 +1489,9 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
 @ci.command(
     name="workflow-config",
     arguments={
+        "salt_version": {
+            "help": "The version of salt being tested against",
+        },
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
@@ -1511,6 +1514,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
 )
 def workflow_config(
     ctx: Context,
+    salt_version: str,
     event_name: str,
     changed_files: pathlib.Path,
     skip_tests: bool = False,
@@ -1574,6 +1578,36 @@ def workflow_config(
     config["build-matrix"] = {
         kind: _build_matrix(kind) for kind in ["linux", "macos", "windows"]  # type: ignore
     }
+
+    # Get salt releases.
+    releases = tools.utils.get_salt_releases(ctx)
+    str_releases = [str(version) for version in releases]
+    latest = str_releases[-1]
+
+    # Get testing releases.
+    parsed_salt_version = tools.utils.Version(salt_version)
+    # We want the latest 4 major versions, removing the oldest if this version is a new major
+    num_major_versions = 4
+    if parsed_salt_version.minor == 0:
+        num_major_versions = 3
+    majors = sorted(
+        list(
+            {
+                # We aren't testing upgrades from anything before 3006.0
+                # and we don't want to test 3007.? on the 3006.x branch
+                version.major
+                for version in releases
+                if version.major > 3005 and version.major <= parsed_salt_version.major
+            }
+        )
+    )[-num_major_versions:]
+    testing_releases = []
+    # Append the latest minor for each major
+    for major in majors:
+        minors_of_major = [version for version in releases if version.major == major]
+        testing_releases.append(minors_of_major[-1])
+    str_releases = [str(version) for version in testing_releases]
+
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
         ctx.info(f"{x} = {y}")
