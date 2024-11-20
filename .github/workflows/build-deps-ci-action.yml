@@ -24,10 +24,6 @@ on:
         required: true
         type: string
         description: Nox Tarball Cache Hash
-      kind:
-        required: true
-        type: string
-        description: Kind of dependencies to build; linux, macos, windows
       python-version:
         required: false
         type: string
@@ -38,6 +34,10 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
 
 
 env:
@@ -52,52 +52,17 @@ env:
 
 jobs:
 
-  generate-matrix:
-    name: Generate Matrix
-    runs-on: ubuntu-latest
-    outputs:
-      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
-    env:
-      PIP_INDEX_URL: https://pypi.org/simple
-    steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-        env:
-          PIP_INDEX_URL: https://pypi.org/simple
-
-      - name: Generate Test Matrix
-        id: generate-matrix
-        run: |
-          tools ci deps-matrix
-
-
   linux-dependencies:
     name: Linux
-    needs:
-      - generate-matrix
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
-    if: ${{ inputs.kind  == 'linux' }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
       - uses: actions/setup-python@v5
         with:
@@ -180,15 +145,12 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    needs:
-      - generate-matrix
     runs-on: ${{ matrix.distro-slug }}
-    if: ${{ inputs.kind  == 'macos' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     steps:
@@ -269,11 +231,8 @@ jobs:
 
 
   windows-dependencies:
-    needs:
-      - generate-matrix
     name: Windows
     runs-on: windows-latest
-    if: ${{ inputs.kind  == 'windows' }}
     env:
       USE_S3_CACHE: 'false'
       GITHUB_WORKSPACE: 'C:\Windows\Temp\testing'
@@ -281,7 +240,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
 
       - name: "Throttle Builds"
