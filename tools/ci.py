@@ -556,46 +556,20 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         wfh.write(f"testrun={json.dumps(testrun)}\n")
 
 
-@ci.command(
-    name="build-matrix",
-    arguments={
-        "kind": {
-            "help": "kind of build; linux, windows, mac",
-        },
-    },
-)
-def build_matrix(
-    ctx: Context,
-    kind: str,
-):
+def _build_matrix(os_kind):
     """
-    Generate matrix for onedir workflows.
-
-    The build-onedir-deps and build-salt-onedir workflows call this method.
+    Generate matrix for build ci/cd steps.
     """
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-    _matrix = _build_matrix(kind)
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
-    else:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-    ctx.exit(0)
-
-
-def _build_matrix(kind):
     _matrix = [{"arch": "x86_64"}]
-    if kind == "windows":
+    if os_kind == "windows":
         _matrix = [
             {"arch": "amd64"},
             {"arch": "x86"},
         ]
-    elif kind == "macos":
+    elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
     elif (
-        kind == "linux"
+        os_kind == "linux"
         and "LINUX_ARM_RUNNER" in os.environ
         and os.environ["LINUX_ARM_RUNNER"] != "0"
     ):
