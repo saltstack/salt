@@ -57,8 +57,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source:
-          - ${{ inputs.source }}
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
@@ -226,8 +224,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source:
-          - ${{ inputs.source }}
         include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
@@ -343,8 +339,6 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        source:
-          - ${{ inputs.source }}
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on:
       - windows-latest
