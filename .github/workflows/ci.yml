@@ -446,7 +446,7 @@ jobs:
       python-version: "3.10.15"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
-  build-ci-deps-linux:
+  build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
     needs:
@@ -460,39 +460,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: linux
-
-  build-ci-deps-macos:
-    name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-deps-ci-action.yml
-    with:
-      nox-session: ci-test-onedir
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: macos
-
-  build-ci-deps-windows:
-    name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-deps-ci-action.yml
-    with:
-      nox-session: ci-test-onedir
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: windows
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
   test-pkg-rockylinux-8:
     name: Rocky Linux 8 Package Test
@@ -500,7 +468,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: rockylinux-8
@@ -522,7 +490,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: rockylinux-8-arm64
@@ -544,7 +512,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: rockylinux-9
@@ -566,7 +534,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: rockylinux-9-arm64
@@ -588,7 +556,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2
@@ -610,7 +578,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2-arm64
@@ -632,7 +600,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2023
@@ -654,7 +622,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: amazonlinux-2023-arm64
@@ -676,7 +644,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-11
@@ -698,7 +666,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-11-arm64
@@ -720,7 +688,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-12
@@ -742,7 +710,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: debian-12-arm64
@@ -764,7 +732,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -786,7 +754,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -808,7 +776,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -831,7 +799,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -854,7 +822,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -876,7 +844,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -898,7 +866,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -921,7 +889,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -944,7 +912,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-20.04
@@ -966,7 +934,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -988,7 +956,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
@@ -1010,7 +978,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -1032,7 +1000,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-24.04
@@ -1054,7 +1022,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
       distro-slug: ubuntu-24.04-arm64
@@ -1076,7 +1044,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
@@ -1098,7 +1066,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-13
@@ -1120,7 +1088,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-14
@@ -1142,7 +1110,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-15
@@ -1164,7 +1132,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1185,7 +1153,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1206,7 +1174,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1227,7 +1195,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-pkgs-onedir
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1247,7 +1215,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-windows-2019'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: windows-2019
@@ -1268,7 +1236,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-windows-2022'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-windows
+      - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
       distro-slug: windows-2022
@@ -1289,7 +1257,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-12'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
@@ -1311,7 +1279,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-13'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-13
@@ -1333,7 +1301,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-14'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-14
@@ -1355,7 +1323,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-macos-15'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-macos
+      - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-15
@@ -1377,7 +1345,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-8'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: rockylinux-8
@@ -1399,7 +1367,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-8-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: rockylinux-8-arm64
@@ -1421,7 +1389,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-9'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: rockylinux-9
@@ -1443,7 +1411,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-rockylinux-9-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: rockylinux-9-arm64
@@ -1465,7 +1433,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2
@@ -1487,7 +1455,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2-arm64
@@ -1509,7 +1477,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2023'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2023
@@ -1531,7 +1499,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-amazonlinux-2023-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: amazonlinux-2023-arm64
@@ -1553,7 +1521,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-11'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-11
@@ -1575,7 +1543,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-11-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-11-arm64
@@ -1597,7 +1565,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-12'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-12
@@ -1619,7 +1587,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-debian-12-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: debian-12-arm64
@@ -1641,7 +1609,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-fedora-40'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: fedora-40
@@ -1663,7 +1631,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -1685,7 +1653,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -1707,7 +1675,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-fips'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4
@@ -1730,7 +1698,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-4-arm64-fips'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-4-arm64
@@ -1753,7 +1721,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -1775,7 +1743,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -1797,7 +1765,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-fips'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5
@@ -1820,7 +1788,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-photonos-5-arm64-fips'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: photonos-5-arm64
@@ -1843,7 +1811,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2004'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-20.04
@@ -1865,7 +1833,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2004-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -1887,7 +1855,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2204'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-22.04
@@ -1909,7 +1877,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2204-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -1931,7 +1899,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2404'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-24.04
@@ -1953,7 +1921,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-ubuntu-2404-arm64'] }}
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
+      - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
       distro-slug: ubuntu-24.04-arm64
@@ -1978,9 +1946,7 @@ jobs:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
-      - build-ci-deps-linux
-      - build-ci-deps-macos
-      - build-ci-deps-windows
+      - build-ci-deps
       - test-windows-2019
       - test-windows-2022
       - test-macos-12
@@ -2149,9 +2115,7 @@ jobs:
       - build-deps-onedir
       - build-salt-onedir
       - combine-all-code-coverage
-      - build-ci-deps-linux
-      - build-ci-deps-macos
-      - build-ci-deps-windows
+      - build-ci-deps
       - test-windows-2019
       - test-windows-2022
       - test-macos-12

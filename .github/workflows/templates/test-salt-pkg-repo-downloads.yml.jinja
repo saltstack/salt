@@ -13,15 +13,11 @@
     needs:
       - prepare-workflow
       - publish-repositories
-      - build-ci-deps-linux
-      - build-ci-deps-macos
-      - build-ci-deps-windows
+      - build-ci-deps
     <%- if gh_environment == "release" %>
       - download-onedir-artifact
     <%- else %>
-      - build-salt-onedir-linux
-      - build-salt-onedir-macos
-      - build-salt-onedir-windows
+      - build-salt-onedir
     <%- endif %>
     uses: ./.github/workflows/test-package-downloads-action.yml
     with:

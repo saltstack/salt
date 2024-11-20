@@ -169,7 +169,7 @@ jobs:
           path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
           retention-days: 7
           if-no-files-found: error
-  build-ci-deps-linux:
+  build-ci-deps:
     name: CI Deps
     needs:
       - prepare-workflow
@@ -182,37 +182,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: linux
-
-  build-ci-deps-macos:
-    name: CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action.yml
-    with:
-      nox-session: ci-test-onedir
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: macos
-
-  build-ci-deps-windows:
-    name: CI Deps
-    needs:
-      - prepare-workflow
-      - download-onedir-artifact
-    uses: ./.github/workflows/build-deps-ci-action.yml
-    with:
-      nox-session: ci-test-onedir
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
-      kind: windows
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
   backup:
     name: Backup
@@ -284,9 +254,7 @@ jobs:
     needs:
       - prepare-workflow
       - publish-repositories
-      - build-ci-deps-linux
-      - build-ci-deps-macos
-      - build-ci-deps-windows
+      - build-ci-deps
       - download-onedir-artifact
     uses: ./.github/workflows/test-package-downloads-action.yml
     with:
@@ -478,9 +446,7 @@ jobs:
       - pkg-download-tests
       - release
       - publish-pypi
-      - build-ci-deps-linux
-      - build-ci-deps-macos
-      - build-ci-deps-windows
+      - build-ci-deps
     steps:
       - name: Get workflow information
         id: get-workflow-info
