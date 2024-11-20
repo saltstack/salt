@@ -252,7 +252,7 @@ jobs:
       - name: Define workflow config
         id: workflow-config
         run: |
-          tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ github.event_name }} changed-files.json
+          tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
