@@ -145,7 +145,7 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'macos-13' || 'macos-14' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
