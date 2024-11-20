@@ -21,19 +21,15 @@
       - prepare-workflow
       <%- if type not in ("src", "onedir") %>
 	<%- if type in ("deb", "rpm") %>
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
         <%- else %>
       - build-pkgs-onedir-<{ type }>
         <%- endif %>
       <%- elif type == 'onedir' %>
       - build-salt-onedir
-      - build-salt-onedir
-      - build-salt-onedir
       <%- elif type == 'src' %>
       - build-source-tarball
-      - build-pkgs-src-linux
-      - build-pkgs-src-macos
-      - build-pkgs-src-windows
+      - build-pkgs-src
       <%- endif %>
 
     <%- include "build-{}-repo.yml.jinja".format(type) %>

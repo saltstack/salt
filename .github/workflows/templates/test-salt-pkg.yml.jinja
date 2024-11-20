@@ -11,7 +11,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -48,7 +48,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
       - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
@@ -81,7 +81,7 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
       - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:

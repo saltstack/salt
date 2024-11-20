@@ -468,45 +468,7 @@ jobs:
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
-  build-pkgs-onedir-linux:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: linux
-      source: "onedir"
-      environment: staging
-      sign-macos-packages: false
-      sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
-
-  build-pkgs-src-linux:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      kind: linux
-      source: "src"
-      environment: staging
-      sign-macos-packages: false
-      sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
-
-  build-pkgs-onedir-macos:
+  build-pkgs-onedir:
     name: Build Packages
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
@@ -519,13 +481,13 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       source: "onedir"
-      kind: macos
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       environment: staging
       sign-macos-packages: false
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
     secrets: inherit
 
-  build-pkgs-src-macos:
+  build-pkgs-src:
     name: Build Packages
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
@@ -538,45 +500,7 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       source: "src"
-      kind: macos
-      environment: staging
-      sign-macos-packages: false
-      sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
-
-  build-pkgs-onedir-windows:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      source: "onedir"
-      kind: windows
-      environment: staging
-      sign-macos-packages: false
-      sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
-
-  build-pkgs-src-windows:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      source: "src"
-      kind: windows
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       environment: staging
       sign-macos-packages: false
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
@@ -634,7 +558,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-rockylinux-8'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -656,7 +580,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-rockylinux-8-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -678,7 +602,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-rockylinux-9'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -700,7 +624,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-rockylinux-9-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -722,7 +646,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-amazonlinux-2'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -744,7 +668,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-amazonlinux-2-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -766,7 +690,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-amazonlinux-2023'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -788,7 +712,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-amazonlinux-2023-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -810,7 +734,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-debian-11'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -832,7 +756,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-debian-11-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -854,7 +778,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-debian-12'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -876,7 +800,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-debian-12-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -898,7 +822,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-4'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -920,7 +844,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-4-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -942,7 +866,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-4-fips'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -965,7 +889,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-4-arm64-fips'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -988,7 +912,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-5'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1010,7 +934,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-5-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1032,7 +956,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-5-fips'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1055,7 +979,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-photonos-5-arm64-fips'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1078,7 +1002,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2004'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1100,7 +1024,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2004-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1122,7 +1046,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2204'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1144,7 +1068,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2204-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1166,7 +1090,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2404'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1188,7 +1112,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-ubuntu-2404-arm64'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
       - build-ci-deps-linux
     uses: ./.github/workflows/test-packages-action-linux.yml
     with:
@@ -1210,7 +1134,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-12'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
       - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
@@ -1232,7 +1156,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-13'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
       - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
@@ -1254,7 +1178,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-14'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
       - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
@@ -1276,7 +1200,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-macos-15'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-macos
+      - build-pkgs-onedir
       - build-ci-deps-macos
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
@@ -1298,7 +1222,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-nsis'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
       - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
@@ -1319,7 +1243,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2019-msi'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
       - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
@@ -1340,7 +1264,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-nsis'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
       - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
@@ -1361,7 +1285,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-windows-2022-msi'] }}
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-windows
+      - build-pkgs-onedir
       - build-ci-deps-windows
     uses: ./.github/workflows/test-packages-action-windows.yml
     with:
@@ -2115,9 +2039,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-source-tarball
-      - build-pkgs-src-linux
-      - build-pkgs-src-macos
-      - build-pkgs-src-windows
+      - build-pkgs-src
     strategy:
       fail-fast: false
       matrix:
@@ -2217,7 +2139,7 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2346,7 +2268,7 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-pkgs-onedir-linux
+      - build-pkgs-onedir
     strategy:
       fail-fast: false
       matrix:
@@ -2717,8 +2639,6 @@ jobs:
       USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
-      - build-salt-onedir
-      - build-salt-onedir
       - build-salt-onedir
     strategy:
       fail-fast: false
@@ -3113,9 +3033,8 @@ jobs:
       - build-docs
       - build-deps-onedir
       - build-salt-onedir
-      - build-pkgs-src-linux
+      - build-pkgs-src
       - build-pkgs-src-macos
-      - build-pkgs-src-windows
       - publish-repositories
       - upload-release-artifacts
       - pkg-download-tests
