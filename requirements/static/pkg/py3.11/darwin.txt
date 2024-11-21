@@ -24,6 +24,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.5
     # via
+    #   -r requirements/base.txt
     #   -r requirements/darwin.txt
     #   pyopenssl
 distro==1.5.0
@@ -75,7 +76,7 @@ packaging==22.0
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
-psutil==5.8.0
+psutil==5.8.0 ; python_version >= "3.10"
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/darwin.txt

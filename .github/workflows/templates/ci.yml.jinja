@@ -370,8 +370,9 @@
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/
@@ -424,6 +425,7 @@
           path: artifacts/coverage/html/salt
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Report Combined Code Coverage
         run: |
@@ -440,6 +442,7 @@
           path: artifacts/coverage/coverage.json
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Create Combined Code Coverage HTML Report
         run: |
@@ -452,6 +455,7 @@
           path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
   <%- endif %>
 
 <%- endblock jobs %>

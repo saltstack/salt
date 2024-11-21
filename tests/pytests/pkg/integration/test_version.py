@@ -29,7 +29,7 @@ def test_salt_version(version, install_salt):
             actual.append(actual_ver[0])
             actual.append(actual_ver_salt_stripped)
         else:
-            pytest.skip("Not testing a non-release build artifact, do not run")
+            pytest.skip("We don't run this test on release builds")
 
     expected = ["salt", version]
     assert actual == expected
@@ -128,7 +128,6 @@ def test_compare_versions(binary, install_salt):
 @pytest.mark.parametrize(
     "symlink",
     [
-        # We can't create a salt symlink because there is a salt directory
         "salt",
         "salt-api",
         "salt-call",
@@ -149,6 +148,8 @@ def test_symlinks_created(version, symlink, install_salt):
     Test symlinks created
     """
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
+    install_log_file = pathlib.Path("/tmp") / "postinstall.txt"
+    install_log_content = install_log_file.read_text()
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 

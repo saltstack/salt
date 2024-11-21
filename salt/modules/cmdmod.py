@@ -266,7 +266,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     win_shell = salt.utils.path.which(win_shell)
 
     if not win_shell:
-        raise CommandExecutionError("PowerShell binary not found")
+        raise CommandExecutionError(f"PowerShell binary not found: {win_shell}")
 
     new_cmd = [win_shell, "-NonInteractive", "-NoProfile", "-ExecutionPolicy", "Bypass"]
 

@@ -4194,34 +4194,93 @@ def test__selinux():
         assert ret == {"enabled": True, "enforced": "Disabled"}
 
 
-def test__systemd():
+@pytest.mark.parametrize(
+    "systemd_data,expected",
+    (
+        (
+            {
+                "pid": 1234,
+                "retcode": 0,
+                "stdout": "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
+                "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
+                "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
+                "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
+                "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+                "stderr": "",
+            },
+            {
+                "version": "254",
+                "features": "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
+                "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
+                "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
+                "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+            },
+        ),
+        (
+            {
+                "pid": 2345,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "some garbage in the output",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 3456,
+                "retcode": 0,
+                "stdout": "unexpected stdout\none more line",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 4567,
+                "retcode": 0,
+                "stdout": "",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            Exception("Some exception on calling `systemctl --version`"),
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+    ),
+)
+def test__systemd(systemd_data, expected):
     """
     test _systemd
     """
+
+    def mock_run_all_systemd(_):
+        if isinstance(systemd_data, Exception):
+            raise systemd_data
+        return systemd_data
+
     with patch.dict(
         core.__salt__,
         {
-            "cmd.run": MagicMock(
-                return_value=(
-                    "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
-                    "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
-                    "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
-                    "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
-                    "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-                )
-            ),
+            "cmd.run_all": mock_run_all_systemd,
         },
     ):
         ret = core._systemd()
         assert "version" in ret
         assert "features" in ret
-        assert ret["version"] == "254"
-        assert ret["features"] == (
-            "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
-            "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
-            "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
-            "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-        )
+        assert ret == expected
 
 
 def test__clean_value_uuid(caplog):

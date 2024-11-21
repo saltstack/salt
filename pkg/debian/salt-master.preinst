@@ -39,7 +39,6 @@ case "$1" in
     else
         db_set salt-master/enabled enabled
         db_set salt-master/active active
-
     fi
     ;;
 esac

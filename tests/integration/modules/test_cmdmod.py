@@ -80,6 +80,18 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertEqual(
             self.run_function(
+                "cmd.run", ["cat"], stdin="one\\ntwo", stdin_raw_newlines=False
+            ),
+            "one\ntwo",
+        )
+        self.assertEqual(
+            self.run_function(
+                "cmd.run", ["cat"], stdin="one\\ntwo", stdin_raw_newlines=True
+            ),
+            "one\\ntwo",
+        )
+        self.assertEqual(
+            self.run_function(
                 "cmd.run", ['echo "a=b" | sed -e s/=/:/g'], python_shell=True
             ),
             "a:b",
