@@ -3380,6 +3380,12 @@ def test_linux_gpus(caplog):
             "amd",
         ],  # AMD
         [
+            "Processing accelerators",
+            "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "Device X",
+            "amd",
+        ],  # AMD
+        [
             "Audio device",
             "Advanced Micro Devices, Inc. [AMD/ATI]",
             "Device aaf8",
