@@ -61,6 +61,7 @@ jobs:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,6 +119,11 @@ jobs:
         id: nox-archive-hash
         run: |
           echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Define workflow config
+        id: workflow-config
+        run: |
+          tools ci workflow-config${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
