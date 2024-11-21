@@ -295,8 +295,9 @@ jobs:
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
+    runs-on:
+      - ubuntu-latest
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
-    runs-on: ubuntu-latest
     needs:
       - prepare-workflow
     steps:
