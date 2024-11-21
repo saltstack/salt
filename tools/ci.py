@@ -1607,6 +1607,18 @@ def workflow_config(
         minors_of_major = [version for version in releases if version.major == major]
         testing_releases.append(minors_of_major[-1])
     str_releases = [str(version) for version in testing_releases]
+    ctx.info(f"str_releases {str_releases}")
+
+    pkg_matrix = [
+        dict(
+            {
+                "tests-chunk": "install",
+                "version": None,
+            },
+            **_,
+        )
+        for _ in TEST_SALT_PKG_LISTING["linux"]  # type: ignore
+    ]
 
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
