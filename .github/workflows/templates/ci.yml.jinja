@@ -56,27 +56,18 @@
 
   <{ job_name }>:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
-    <%- if prepare_actual_release %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     runs-on:
       - ubuntu-latest
-    <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
-    runs-on: ubuntu-latest
-    <%- endif %>
     needs:
       - prepare-workflow
     steps:
       - uses: actions/checkout@v4
 
-    <%- if not prepare_actual_release %>
-
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
-    <%- endif %>
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
