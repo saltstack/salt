@@ -2847,7 +2847,6 @@ jobs:
       - build-deps-onedir
       - build-salt-onedir
       - build-pkgs-src
-      - build-pkgs-src-macos
       - publish-repositories
       - test-pkg-rockylinux-8
       - test-pkg-rockylinux-8-arm64
