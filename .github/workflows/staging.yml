@@ -2996,7 +2996,6 @@ jobs:
       - build-deps-onedir
       - build-salt-onedir
       - build-pkgs-src
-      - build-pkgs-src-macos
       - publish-repositories
       - upload-release-artifacts
       - pkg-download-tests

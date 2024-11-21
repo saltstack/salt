@@ -32,10 +32,3 @@
     <%- endif %>
 
   <%- endfor %>
-  <%- for backend in pkg_types %>
-  <%- set job_name = "build-pkgs-{}-macos".format(backend) %>
-  <%- if backend == "src" %>
-    <%- do conclusion_needs.append(job_name) %>
-  <%- endif %>
-
-  <%- endfor %>
