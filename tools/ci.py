@@ -1615,10 +1615,13 @@ def workflow_config(
                 "tests-chunk": "install",
                 "version": None,
             },
-            **_,
+            **_.as_dict(),
         )
         for _ in TEST_SALT_PKG_LISTING["linux"]  # type: ignore
     ]
+    import pprint
+
+    ctx.info(f"{pprint.pformat(pkg_matrix)}")
 
     ctx.info("Jobs selected are")
     for x, y in jobs.items():

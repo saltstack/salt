@@ -73,6 +73,18 @@ class Linux(OS):
     def job_name(self):
         return f"test-{ self.slug.replace('.', '') }{'-fips' if self.fips else ''}"
 
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "fips": self.fips,
+            "container": self.container,
+            "job_name": self.job_name,
+        }
+
 
 @attr.s(frozen=True, slots=True)
 class LinuxPkg(Linux):
@@ -95,6 +107,16 @@ class MacOS(OS):
     def job_name(self):
         return f"test-{ self.slug.replace('.', '') }"
 
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "runner": self.runner,
+            "job_name": self.job_name,
+        }
 
 @attr.s(frozen=True, slots=True)
 class MacOSPkg(MacOS):
@@ -114,6 +136,16 @@ class Windows(OS):
     @property
     def job_name(self):
         return f"test-{ self.slug.replace('.', '') }"
+
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "job_name": self.job_name,
+        }
 
 
 @attr.s(frozen=True, slots=True)
