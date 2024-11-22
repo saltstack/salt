@@ -15,7 +15,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
-
+{#
   <%- for os in test_salt_pkg_listing["linux"] %>
     <%- set job_name = os.job_name %>
 
@@ -116,3 +116,4 @@
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   <%- endfor %>
+#}
