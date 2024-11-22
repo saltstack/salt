@@ -2036,7 +2036,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
@@ -2137,7 +2137,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
@@ -2266,7 +2266,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
@@ -2442,7 +2442,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
@@ -2544,7 +2544,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
@@ -2635,7 +2635,7 @@ jobs:
     name: Build Repository
     environment: nightly
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'false'
     needs:
