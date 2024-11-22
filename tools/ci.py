@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import pathlib
+import pprint
 import random
 import shutil
 import sys
@@ -1609,19 +1610,47 @@ def workflow_config(
     str_releases = [str(version) for version in testing_releases]
     ctx.info(f"str_releases {str_releases}")
 
-    pkg_matrix = [
-        dict(
-            {
-                "tests-chunk": "install",
-                "version": None,
-            },
-            **_.as_dict(),
-        )
-        for _ in TEST_SALT_PKG_LISTING["linux"]  # type: ignore
-    ]
-    import pprint
+    platforms = ["linux", "macos", "windows"]
+    pkg_test_matrix = {}
+    for platform in platforms:
+        pkg_test_matrix[platform] = [
+            dict(
+                {
+                    "tests-chunk": "install",
+                    "version": None,
+                },
+                **_.as_dict(),
+            )
+            for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+        ]
+    for version in str_releases:
+        for platform in platforms:
+            pkg_test_matrix[platform] += [
+                dict(
+                    {
+                        "tests-chunk": "upgrade",
+                        "version": version,
+                    },
+                    **_.as_dict(),
+                )
+                for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+            ]
+            pkg_test_matrix[platform] += [
+                dict(
+                    {
+                        "tests-chunk": "downgrade",
+                        "version": version,
+                    },
+                    **_.as_dict(),
+                )
+                for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+            ]
 
-    ctx.info(f"{pprint.pformat(pkg_matrix)}")
+    ctx.info(f"{'==== pkg test matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
+    ctx.info(f"{'==== end pkg test matrix ====':^80s}")
+
+    config["pkg-test-matrix"] = pkg_test_matrix  # type: ignore
 
     ctx.info("Jobs selected are")
     for x, y in jobs.items():

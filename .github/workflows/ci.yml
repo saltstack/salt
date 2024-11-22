@@ -462,6 +462,22 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+  test-packages:
+    name: Package Test
+    needs:
+      - prepare-workflow
+      - build-pkgs-onedir
+      - build-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      nox-session: ci-test-onedir
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
 
   test-pkg-rockylinux-8:
     name: Rocky Linux 8 Package Test

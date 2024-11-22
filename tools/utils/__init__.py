@@ -118,6 +118,7 @@ class MacOS(OS):
             "job_name": self.job_name,
         }
 
+
 @attr.s(frozen=True, slots=True)
 class MacOSPkg(MacOS):
 
