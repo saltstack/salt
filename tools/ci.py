@@ -1522,6 +1522,22 @@ def workflow_config(
     skip_pkg_tests: bool = False,
     skip_pkg_download_tests: bool = False,
 ):
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    gh_event = None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+    ctx.info(f"{'==== github event ====':^80s}")
+    ctx.info(f"{pprint.pformat(gh_event)}")
+    ctx.info(f"{'==== end github event ====':^80s}")
+
+
     config = {}
     jobs = {
         "lint": True,
