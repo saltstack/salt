@@ -1627,6 +1627,11 @@ def workflow_config(
 
     platforms = ["linux", "macos", "windows"]
     pkg_test_matrix = {}
+
+    if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+        TEST_SALT_LISTING["linux"] = list(
+            filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
+        )
     if not skip_pkg_tests:
         for platform in platforms:
             pkg_test_matrix[platform] = [
