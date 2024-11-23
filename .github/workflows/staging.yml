@@ -1276,7 +1276,6 @@ jobs:
     needs:
       - prepare-workflow
       - build-docs
-      - build-src-repo
     environment: staging
     runs-on:
       - linux-x86_64
@@ -1335,7 +1334,6 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] }}
     needs:
       - prepare-workflow
-      - publish-repositories
       - build-ci-deps
       - build-salt-onedir
     uses: ./.github/workflows/test-package-downloads-action.yml
