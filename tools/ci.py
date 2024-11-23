@@ -1537,7 +1537,6 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(gh_event)}")
     ctx.info(f"{'==== end github event ====':^80s}")
 
-
     config = {}
     jobs = {
         "lint": True,
@@ -1628,40 +1627,40 @@ def workflow_config(
 
     platforms = ["linux", "macos", "windows"]
     pkg_test_matrix = {}
-    for platform in platforms:
-        pkg_test_matrix[platform] = [
-            dict(
-                {
-                    "tests-chunk": "install",
-                    "version": None,
-                },
-                **_.as_dict(),
-            )
-            for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
-        ]
-    for version in str_releases:
+    if not skip_pkg_tests:
         for platform in platforms:
-            pkg_test_matrix[platform] += [
+            pkg_test_matrix[platform] = [
                 dict(
                     {
-                        "tests-chunk": "upgrade",
-                        "version": version,
+                        "tests-chunk": "install",
+                        "version": None,
                     },
                     **_.as_dict(),
                 )
                 for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
             ]
-            pkg_test_matrix[platform] += [
-                dict(
-                    {
-                        "tests-chunk": "downgrade",
-                        "version": version,
-                    },
-                    **_.as_dict(),
-                )
-                for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
-            ]
-
+        for version in str_releases:
+            for platform in platforms:
+                pkg_test_matrix[platform] += [
+                    dict(
+                        {
+                            "tests-chunk": "upgrade",
+                            "version": version,
+                        },
+                        **_.as_dict(),
+                    )
+                    for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+                ]
+                pkg_test_matrix[platform] += [
+                    dict(
+                        {
+                            "tests-chunk": "downgrade",
+                            "version": version,
+                        },
+                        **_.as_dict(),
+                    )
+                    for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+                ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")

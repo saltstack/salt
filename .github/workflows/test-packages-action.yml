@@ -58,7 +58,7 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.slug }}
+    name: ${{ matrix.test-chunk }} ${{ matrix.slug }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
@@ -190,7 +190,7 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.slug }}
+    name: ${{ matrix.test-chunk }} ${{ matrix.slug }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
     strategy:
@@ -308,7 +308,7 @@ jobs:
 
 
   test-windows:
-    name: ${{ matrix.slug }}
+    name: ${{ matrix.test-chunk }} ${{ matrix.slug }}
     runs-on: ${{ matrix.distro-slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
