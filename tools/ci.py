@@ -1522,6 +1522,7 @@ def workflow_config(
     skip_pkg_tests: bool = False,
     skip_pkg_download_tests: bool = False,
 ):
+    full = False
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
     if gh_event_path is not None:
@@ -1632,6 +1633,9 @@ def workflow_config(
         TEST_SALT_LISTING["linux"] = list(
             filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
         )
+        TEST_SALT_PKG_LISTING["linux"] = list(
+            filter(lambda x: x.arch != "arm64", TEST_SALT_PKG_LISTING["linux"])
+        )
     if not skip_pkg_tests:
         for platform in platforms:
             pkg_test_matrix[platform] = [
@@ -1670,7 +1674,63 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")
 
+    _splits = {
+        "functional": 4,
+        "integration": 7,
+        "scenarios": 1,
+        "unit": 4,
+    }
+
+    test_matrix: dict[str, list] = {_: [] for _ in platforms}
+    if not skip_tests:
+        for transport in ("zeromq", "tcp"):
+            # if transport == "tcp" and distro_slug not in (
+            #     "rockylinux-9",
+            #     "rockylinux-9-arm64",
+            #     "photonos-5",
+            #     "photonos-5-arm64",
+            #     "ubuntu-22.04",
+            #     "ubuntu-22.04-arm64",
+            # ):
+            #     # Only run TCP transport tests on these distributions
+            #     continue
+            for chunk in ("unit", "functional", "integration", "scenarios"):
+                if transport == "tcp" and chunk in ("unit", "functional"):
+                    # Only integration and scenarios shall be tested under TCP,
+                    # the rest would be repeating tests
+                    continue
+                # if "macos" in distro_slug and chunk == "scenarios":
+                #     continue
+                splits = _splits.get(chunk) or 1
+                if full and splits > 1:
+                    for split in range(1, splits + 1):
+                        for platform in platforms:
+                            test_matrix[platform] += [
+                                dict(
+                                    {
+                                        "transport": transport,
+                                        "tests-chunk": chunk,
+                                        "test-group": split,
+                                        "test-group-count": splits,
+                                    },
+                                    **_.as_dict(),
+                                )
+                                for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                            ]
+                else:
+                    test_matrix[platform] += [
+                        dict(
+                            {"transport": transport, "tests-chunk": chunk},
+                            **_.as_dict(),
+                        )
+                        for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                    ]
+    ctx.info(f"{'==== test matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(test_matrix)}")
+    ctx.info(f"{'==== end test matrix ====':^80s}")
+
     config["pkg-test-matrix"] = pkg_test_matrix  # type: ignore
+    config["test-matrix"] = test_matrix  # type: ignore
 
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
