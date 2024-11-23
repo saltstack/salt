@@ -259,7 +259,6 @@ jobs:
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
-      - publish-repositories
       - build-ci-deps
       - download-onedir-artifact
     uses: ./.github/workflows/test-package-downloads-action.yml

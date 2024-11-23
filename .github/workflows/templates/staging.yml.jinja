@@ -86,7 +86,6 @@ concurrency:
     needs:
       - prepare-workflow
       - build-docs
-      - build-src-repo
     environment: <{ gh_environment }>
     runs-on:
       - linux-x86_64

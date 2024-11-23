@@ -12,7 +12,6 @@
     <%- endif %>
     needs:
       - prepare-workflow
-      - publish-repositories
       - build-ci-deps
     <%- if gh_environment == "release" %>
       - download-onedir-artifact
