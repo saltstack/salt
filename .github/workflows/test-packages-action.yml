@@ -453,7 +453,7 @@ jobs:
   report:
     name: Report
     runs-on: ubuntu-latest
-    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always()
     needs:
       - test-linux
       - test-macos
