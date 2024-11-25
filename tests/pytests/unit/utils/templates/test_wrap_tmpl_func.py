@@ -216,3 +216,45 @@ def test_generate_sls_context__backslash_in_path():
         sls_path="foo",
         slspath="foo",
     )
+
+
+def test_generate_sls_context__non_sls_root():
+    """generate_sls_context - Non-SLS template in the root directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "jinja.yaml",
+        "jinja.yaml",
+        tplpath="jinja.yaml",
+        tplfile="jinja.yaml",
+        tpldir=".",
+    )
+
+
+def test_generate_sls_context__non_sls_one_level():
+    """generate_sls_context - Non-SLS template with one-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/jinja.yaml",
+        "one/jinja.yaml",
+        tplpath="one/jinja.yaml",
+        tplfile="one/jinja.yaml",
+        tpldir="one",
+    )
+
+
+def test_generate_sls_context__non_sls_two_level():
+    """generate_sls_context - Non-SLS template with two-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/two/jinja.yaml",
+        "one/two/jinja.yaml",
+        tplpath="one/two/jinja.yaml",
+        tplfile="one/two/jinja.yaml",
+        tpldir="one/two",
+    )
