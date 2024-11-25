@@ -30,7 +30,7 @@ def _test_generated_sls_context(tmplpath, sls, **expected):
         tmplpath = f"C:{tmplpath}"
     expected["tplpath"] = tmplpath
     actual = generate_sls_context(tmplpath, sls)
-    assert {key: actual[key] for key in expected if key in actual} == actual
+    assert {key: expected[key] for key in expected if key in actual} == actual
 
 
 def test_sls_context_call(tmp_path):
