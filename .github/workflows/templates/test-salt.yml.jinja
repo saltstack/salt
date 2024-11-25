@@ -4,6 +4,26 @@
   <%- set timeout_value = 180 %>
 <%- endif %>
 
+  test:
+    name: Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      nox-session: ci-test-onedir
+      nox-version: <{ nox_version  }>
+      gh-actions-python-version: "<{ gh_actions_workflows_python_version }>"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      skip-code-coverage: <{ skip_test_coverage_check }>
+      workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
+
+{#
   <%- for os in test_salt_listing["windows"] %>
 
   <{ os.job_name }>:
@@ -100,3 +120,4 @@
     <%- endif %>
 
   <%- endfor %>
+#}
