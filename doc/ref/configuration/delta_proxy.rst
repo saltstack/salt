@@ -146,8 +146,8 @@ Before installing the delta proxy minion, ensure that:
 Install or upgrade Salt
 -----------------------
 Ensure your Salt masters are running at least Salt version 3004. For instructions
-on installing or upgrading Salt, see the `Salt install guide
-<https://docs.saltproject.io/salt/install-guide>`_.
+on installing or upgrading Salt, see the
+`Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`__.
 
 
 .. _delta-proxy-install:

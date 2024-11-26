@@ -6,17 +6,9 @@
    :alt: PyPi Package Downloads
    :target: https://pypi.org/project/salt
 
-.. image:: https://img.shields.io/lgtm/grade/python/github/saltstack/salt
-   :alt: PyPi Package Downloads
-   :target: https://lgtm.com/projects/g/saltstack/salt/context:python
-
 .. image:: https://img.shields.io/badge/discord-SaltProject-blue.svg?logo=discord
    :alt: Salt Project Discord Community
    :target: https://discord.com/invite/J7b7EscrAs
-
-.. image:: https://img.shields.io/twitch/status/saltprojectoss
-   :alt: Salt Project Twitch Channel
-   :target: https://www.twitch.tv/saltprojectoss
 
 .. image:: https://img.shields.io/reddit/subreddit-subscribers/saltstack?style=social
    :alt: Salt Project subreddit
@@ -71,19 +63,20 @@ In addition to configuration management Salt can also:
 
 About our sponsors
 ==================
-Salt powers VMware's `VMware Aria Automation Config`_
-(previously vRealize Automation SaltStack Config / SaltStack Enterprise), and can be found
+
+Salt powers VMware by Broadcom's `Tanzu Salt`_
+(previously Aria Automation Config / vRealize Automation SaltStack Config / SaltStack Enterprise), and can be found
 under the hood of products from Juniper, Cisco, Cloudflare, Nutanix, SUSE, and
 Tieto, to name a few.
 
-The original sponsor of our community, SaltStack, was `acquired by VMware in 2020 <https://www.vmware.com/company/acquisitions/saltstack.html>`_.
-The Salt Project remains an open source ecosystem that VMware supports and
-contributes to. VMware ensures the code integrity and quality of the Salt
+The original sponsor of our community, SaltStack, was acquired by VMware in 2020.
+`VMware was later acquired by Broadcom in 2023 <https://investors.broadcom.com/news-releases/news-release-details/broadcom-completes-acquisition-vmware>`__.
+The Salt Project remains an open source ecosystem that Broadcom supports and
+contributes to. Broadcom ensures the code integrity and quality of the Salt
 modules by acting as the official sponsor and manager of the Salt project. Many
-of the core Salt Project contributors are also VMware employees. This team
+of the core Salt Project contributors are also Broadcom employees. This team
 carefully reviews and enhances the Salt modules to ensure speed, quality, and
 security.
-
 
 Download and install Salt
 =========================
@@ -93,11 +86,11 @@ Windows, and more. Download Salt and get started now. See
 for more information.
 
 To download and install Salt, see:
-* `The Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/index.html>`_
-* `Salt Project repository <https://packages.broadcom.com/artifactory/saltproject-generic/>`_
-* `Salt Project debian repository <https://packages.broadcom.com/artifactory/saltproject-deb/>`_
-* `Salt Project redhat repository <https://packages.broadcom.com/artifactory/saltproject-rpm/>`_
 
+* `The Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/index.html>`_
+    * `Salt Project Repository: Linux (RPM) <https://packages.broadcom.com/artifactory/saltproject-rpm>`__ - Where Salt ``rpm`` packages are officially stored and distributed.
+    * `Salt Project Repository: Linux (DEB) <https://packages.broadcom.com/artifactory/saltproject-deb>`__ - Where Salt ``deb`` packages are officially stored and distributed.
+    * `Salt Project Repository: GENERIC <https://packages.broadcom.com/artifactory/saltproject-generic>`__ - Where Salt Windows, macOS, etc. (non-rpm, non-deb) packages are officially stored and distributed.
 
 Technical support
 =================
@@ -155,11 +148,9 @@ Please be sure to review our
 `Code of Conduct <https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md>`_.
 Also, check out some of our community resources including:
 
-* `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
 * `Salt Project Community Discord`_
-* `Salt Project: IRC on LiberaChat <https://web.libera.chat/#salt>`_
 * `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
-* `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
+* `Salt Project Community Notes and Wiki <https://github.com/saltstack/community/>`_
 
 There are lots of ways to get involved in our community. Every month, there are
 around a dozen opportunities to meet with other contributors and the Salt Core
@@ -167,9 +158,8 @@ team and collaborate in real time. The best way to keep track is by subscribing
 to the **Salt Project Community Events Calendar** on the main
 `<https://saltproject.io>`_ website.
 
-If you have additional questions, email us at saltproject@vmware.com or reach out
+If you have additional questions, email us at saltproject.pdl@broadcom.com or reach out
 directly to the Community Discord. We'd be glad to have you join our community!
-
 
 License
 =======
@@ -183,9 +173,7 @@ A complete list of attributions and dependencies can be found here:
 `salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
 .. _Salt Project Community Discord: https://discord.com/invite/J7b7EscrAs
-.. _VMware Aria Automation Config: https://www.vmware.com/products/vrealize-automation/saltstack-config.html
+.. _Tanzu Salt: https://www.vmware.com/products/app-platform/tanzu-salt
 .. _Latest Salt Documentation: https://docs.saltproject.io/en/latest/
 .. _Open an issue: https://github.com/saltstack/salt/issues/new/choose
 .. _SECURITY.md: https://github.com/saltstack/salt/blob/master/SECURITY.md
-.. _Calendar html: https://outlook.office365.com/owa/calendar/105f69bacd4541baa849529aed37eb2d@vmware.com/434ec2155b2b4cce90144c87f0dd03d56626754050155294962/calendar.html
-.. _Calendar ics: https://outlook.office365.com/owa/calendar/105f69bacd4541baa849529aed37eb2d@vmware.com/434ec2155b2b4cce90144c87f0dd03d56626754050155294962/calendar.ics
