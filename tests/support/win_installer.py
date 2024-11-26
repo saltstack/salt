@@ -26,7 +26,7 @@ def latest_installer_name(arch="AMD64", **kwargs):
     # This is where windows packages are found
     # Each version is in its own directory, so we need to list the directories
     # and use the last one as the latest
-    html_response = requests.get(REPO)
+    html_response = requests.get(REPO, timeout=60)
 
     versions = []
 

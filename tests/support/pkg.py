@@ -783,7 +783,7 @@ class SaltPkgInstall:
             elif self.file_ext == "msi":
                 win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
             else:
-                log.debug(f"Unknown windows file extension: {self.file_ext}")
+                log.debug("Unknown windows file extension: %s", self.file_ext)
 
             win_pkg_url = (
                 f"{root_url}/saltproject-generic/windows/{major_ver}/{win_pkg}"
