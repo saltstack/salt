@@ -58,7 +58,7 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.test-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
