@@ -198,7 +198,7 @@ def setup_redhat_family(
     # It contains the gpg key url so we don't need to download it here
     salt_repo_url = "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo"
     repo_file = pytest.helpers.download_file(
-        salt_repo_url, downloads_path / f"salt.repo"
+        salt_repo_url, downloads_path / "salt.repo"
     )
 
     commands = [
