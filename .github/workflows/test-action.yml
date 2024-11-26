@@ -1,5 +1,5 @@
 ---
-name: Test Artifact (Linux)
+name: Test Artifact
 
 on:
   workflow_call:
@@ -66,11 +66,11 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
     container:
-      image: ${{ inputs.container }}
+      image: ${{ matrix.container }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -85,11 +85,14 @@ jobs:
       # - uses: actions/setup-python@v5
       #   with:
       #     python-version: '3.10'
+      #
+      - name: Test Matrix
+        run: |
+          echo ${{ toJSON(matrix) }}
 
       - name: Check python
         run: |
           which python3
-
 
       - name: "Throttle Builds"
         shell: bash
@@ -125,7 +128,7 @@ jobs:
         run: |
           echo true
 
-      - name: Download nox.linux.${{ inputs.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+      - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
@@ -310,10 +313,13 @@ jobs:
 
   report:
     name: Test Reports
-    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
       - test-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
 
@@ -331,7 +337,6 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Merge JUnit XML Test Run Artifacts
-        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
@@ -341,7 +346,6 @@ jobs:
           delete-merged: true
 
       - name: Merge Log Test Run Artifacts
-        if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:

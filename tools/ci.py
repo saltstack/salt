@@ -1683,28 +1683,28 @@ def workflow_config(
 
     test_matrix: dict[str, list] = {_: [] for _ in platforms}
     if not skip_tests:
-        for transport in ("zeromq", "tcp"):
-            # if transport == "tcp" and distro_slug not in (
-            #     "rockylinux-9",
-            #     "rockylinux-9-arm64",
-            #     "photonos-5",
-            #     "photonos-5-arm64",
-            #     "ubuntu-22.04",
-            #     "ubuntu-22.04-arm64",
-            # ):
-            #     # Only run TCP transport tests on these distributions
-            #     continue
-            for chunk in ("unit", "functional", "integration", "scenarios"):
-                if transport == "tcp" and chunk in ("unit", "functional"):
-                    # Only integration and scenarios shall be tested under TCP,
-                    # the rest would be repeating tests
-                    continue
-                # if "macos" in distro_slug and chunk == "scenarios":
+        for platform in platforms:
+            for transport in ("zeromq", "tcp"):
+                # if transport == "tcp" and distro_slug not in (
+                #     "rockylinux-9",
+                #     "rockylinux-9-arm64",
+                #     "photonos-5",
+                #     "photonos-5-arm64",
+                #     "ubuntu-22.04",
+                #     "ubuntu-22.04-arm64",
+                # ):
+                #     # Only run TCP transport tests on these distributions
                 #     continue
-                splits = _splits.get(chunk) or 1
-                if full and splits > 1:
-                    for split in range(1, splits + 1):
-                        for platform in platforms:
+                for chunk in ("unit", "functional", "integration", "scenarios"):
+                    if transport == "tcp" and chunk in ("unit", "functional"):
+                        # Only integration and scenarios shall be tested under TCP,
+                        # the rest would be repeating tests
+                        continue
+                    # if "macos" in distro_slug and chunk == "scenarios":
+                    #     continue
+                    splits = _splits.get(chunk) or 1
+                    if full and splits > 1:
+                        for split in range(1, splits + 1):
                             test_matrix[platform] += [
                                 dict(
                                     {
@@ -1717,14 +1717,14 @@ def workflow_config(
                                 )
                                 for _ in TEST_SALT_LISTING[platform]  # type: ignore
                             ]
-                else:
-                    test_matrix[platform] += [
-                        dict(
-                            {"transport": transport, "tests-chunk": chunk},
-                            **_.as_dict(),
-                        )
-                        for _ in TEST_SALT_LISTING[platform]  # type: ignore
-                    ]
+                    else:
+                        test_matrix[platform] += [
+                            dict(
+                                {"transport": transport, "tests-chunk": chunk},
+                                **_.as_dict(),
+                            )
+                            for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                        ]
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")
