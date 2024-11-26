@@ -479,10 +479,8 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
 
-
   test:
     name: Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -498,8 +496,6 @@ jobs:
       workflow-slug: ci
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
-
-
 
   combine-all-code-coverage:
     name: Combine Code Coverage

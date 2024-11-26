@@ -3,10 +3,9 @@
 <%- else %>
   <%- set timeout_value = 180 %>
 <%- endif %>
-
   test:
     name: Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
+    {#- if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }} #}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -22,8 +21,7 @@
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
-
-{#
+{#-
   <%- for os in test_salt_listing["windows"] %>
 
   <{ os.job_name }>:

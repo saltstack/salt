@@ -542,10 +542,8 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
 
-
   test:
     name: Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -561,8 +559,6 @@ jobs:
       workflow-slug: staging
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
-
-
 
   upload-release-artifacts:
     name: Upload Release Artifacts
