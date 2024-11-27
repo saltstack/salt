@@ -294,6 +294,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
 from itertools import zip_longest
+from pathlib import Path
 
 import salt.loader
 import salt.payload
@@ -430,134 +431,226 @@ def _salt_to_os_path(path):
     return os.path.normpath(path.replace(posixpath.sep, os.path.sep))
 
 
+def _filter_recurse_sources(sources):
+    """
+    Adaptation of ``file.source_list`` for file.recurse. Returns a list
+    of all ``salt://`` scheme sources that represent exisiting directories.
+    """
+    source_list = _validate_str_list(sources)
+
+    for idx, val in enumerate(source_list):
+        source_list[idx] = val.rstrip("/")
+
+    for precheck in source_list:
+        if not precheck.startswith("salt://"):
+            raise CommandExecutionError(
+                f"Invalid source '{precheck}' (must be a salt:// URI)"
+            )
+
+    contextkey = f"recurse__|-{source_list}__|-{__env__}"
+    if contextkey in __context__:
+        return __context__[contextkey]
+    mdirs = {}
+    ret = []
+    for single in source_list:
+        path, senv = salt.utils.url.parse(single)
+        if not senv:
+            senv = __env__
+        if senv not in mdirs:
+            mdirs[senv] = __salt__["cp.list_master_dirs"](senv)
+        if path in mdirs[senv]:
+            ret.append(single)
+    if not ret:
+        raise CommandExecutionError("none of the specified sources were found")
+    __context__[contextkey] = ret
+    return __context__[contextkey]
+
+
 def _gen_recurse_managed_files(
     name,
-    source,
+    sources,
     keep_symlinks=False,
     include_pat=None,
     exclude_pat=None,
     maxdepth=None,
     include_empty=False,
+    merge=False,
     **kwargs,
 ):
     """
     Generate the list of files managed by a recurse state
     """
+    managed_files = {}
+    managed_directories = set()
+    managed_symlinks = {}
+    keep = set()
+    all_directories = set()
+    ignored_directories = set()
+
+    if not merge:
+        try:
+            sources = [sources[0]]
+        except KeyError:
+            sources = []
 
     # Convert a relative path generated from salt master paths to an OS path
     # using "name" as the base directory
     def full_path(master_relpath):
         return os.path.join(name, _salt_to_os_path(master_relpath))
 
-    # Process symlinks and return the updated filenames list
-    def process_symlinks(filenames, symlinks):
-        for lname, ltarget in symlinks.items():
-            srelpath = posixpath.relpath(lname, srcpath)
-            if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
-                continue
-            if not salt.utils.stringutils.check_include_exclude(
-                srelpath, include_pat, exclude_pat
-            ):
-                continue
-            # Check for all paths that begin with the symlink
-            # and axe it leaving only the dirs/files below it.
-            # This needs to use list() otherwise they reference
-            # the same list.
-            _filenames = list(filenames)
-            for filename in _filenames:
-                if filename.startswith(lname + os.sep):
-                    log.debug(
-                        "** skipping file ** %s, it intersects a symlink", filename
-                    )
-                    filenames.remove(filename)
-            # Create the symlink along with the necessary dirs.
-            # The dir perms/ownership will be adjusted later
-            # if needed
-            managed_symlinks.add((srelpath, ltarget))
-
-            # Add the path to the keep set in case clean is set to True
-            keep.add(full_path(srelpath))
-        vdir.update(keep)
-        return filenames
-
-    managed_files = set()
-    managed_directories = set()
-    managed_symlinks = set()
-    keep = set()
-    vdir = set()
-
-    srcpath, senv = salt.utils.url.parse(source)
-    if senv is None:
-        senv = __env__
-    if not srcpath.endswith(posixpath.sep):
-        # we're searching for things that start with this *directory*.
-        srcpath = srcpath + posixpath.sep
-    fns_ = __salt__["cp.list_master"](senv, srcpath)
-
-    # If we are instructed to keep symlinks, then process them.
-    if keep_symlinks:
-        # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__["cp.list_master_symlinks"](senv, srcpath)
-        fns_ = process_symlinks(fns_, symlinks)
-
-    for fn_ in fns_:
-        if not fn_.strip():
-            continue
-
-        # fn_ here is the absolute (from file_roots) source path of
-        # the file to copy from; it is either a normal file or an
-        # empty dir(if include_empty==true).
-
-        relname = salt.utils.data.decode(posixpath.relpath(fn_, srcpath))
-        if not _is_valid_relpath(relname, maxdepth=maxdepth):
-            continue
+    def check_relative_path(fileserver_path, fs_recurse_base_dir):
+        if not fileserver_path.strip():
+            return False
+        # Render the file path relative to the source (== target) dir
+        relative_path = salt.utils.data.decode(
+            posixpath.relpath(fileserver_path, fs_recurse_base_dir)
+        )
+        if not _is_valid_relpath(relative_path, maxdepth=maxdepth):
+            return False
 
         # Check if it is to be excluded. Match only part of the path
-        # relative to the target directory
+        # relative to the target directory.
         if not salt.utils.stringutils.check_include_exclude(
-            relname, include_pat, exclude_pat
+            relative_path, include_pat, exclude_pat
         ):
-            continue
-        dest = full_path(relname)
-        dirname = os.path.dirname(dest)
-        keep.add(dest)
+            return False
+        return relative_path
 
-        if dirname not in vdir:
-            # verify the directory perms if they are set
-            managed_directories.add(dirname)
-            vdir.add(dirname)
+    # Check whether an absolute destination path is already occupied.
+    def is_occupied(dest):
+        dpath = Path(dest)
+        return (
+            any(
+                path in aggr
+                for path in [str(dest), *(str(parent) for parent in dpath.parents)]
+                for aggr in (managed_files, managed_symlinks)
+            )
+            or str(dest) in all_directories
+        )
 
-        src = salt.utils.url.create(fn_, saltenv=senv)
-        managed_files.add((dest, src))
-
-    if include_empty:
-        mdirs = __salt__["cp.list_master_dirs"](senv, srcpath)
-        for mdir in mdirs:
-            relname = posixpath.relpath(mdir, srcpath)
-            if not _is_valid_relpath(relname, maxdepth=maxdepth):
+    # Process symlinks and return the updated filenames list
+    def process_symlinks(filenames):
+        symlinks = __salt__["cp.list_master_symlinks"](senv, recurse_root)
+        for lname, ltarget in symlinks.items():
+            relative_path = check_relative_path(lname, recurse_root)
+            if relative_path is False:
                 continue
-            if not salt.utils.stringutils.check_include_exclude(
-                relname, include_pat, exclude_pat
-            ):
-                continue
-            mdest = full_path(relname)
-            # Check for symlinks that happen to point to an empty dir.
-            if keep_symlinks:
-                islink = False
-                for link in symlinks:
-                    if mdir.startswith(link + os.sep, 0):
+
+            # The fileclient (usually) follows symlinks when listing paths.
+            # We need to remove the symlink and (if it points to a directory)
+            # paths below it from the regular files list.
+            target_was_dir = False
+            for filename in list(filenames):
+                if filename == lname or filename.startswith(lname + os.sep):
+                    filenames.remove(filename)
+                    if filename != lname:
                         log.debug(
-                            "** skipping empty dir ** %s, it intersects a symlink", mdir
+                            "** skipping file ** %s, it intersects a symlink", filename
                         )
-                        islink = True
-                        break
-                if islink:
+                        target_was_dir = True
+            dest = full_path(relative_path)
+            if is_occupied(dest):
+                continue
+            tdest = full_path(ltarget)
+            # Ensure symlink targets don't change type because of merging,
+            # otherwise drop the symlink.
+            if target_was_dir and tdest in managed_files:
+                # We need to ignore it explicitly (when include_empty is true),
+                # otherwise the directory would be detected as an empty one.
+                ignored_directories.add(dest)
+                continue
+            if not target_was_dir and tdest in managed_directories:
+                continue
+            managed_symlinks[dest] = ltarget
+
+            # Add the path to the keep set in case clean is set to True
+            keep.add(dest)
+        return filenames
+
+    for source in sources:
+        recurse_root, senv = salt.utils.url.parse(source)
+        if senv is None:
+            senv = __env__
+        if not recurse_root.endswith(posixpath.sep):
+            # we're searching for things that start with this *directory*.
+            recurse_root += posixpath.sep
+
+        # Fetch a list of all files in the current source.
+        # Includes resolved symlinks.
+        fns_ = __salt__["cp.list_master"](senv, recurse_root)
+
+        # If we are instructed to keep symlinks, then process them.
+        if keep_symlinks:
+            fns_ = process_symlinks(fns_)
+
+        for fn_ in fns_:
+            relative_path = check_relative_path(fn_, recurse_root)
+            if relative_path is False:
+                continue
+
+            dest = full_path(relative_path)
+            dpath = Path(dest)
+            if is_occupied(dpath):
+                # We're merging multiple sources and a higher-priority one
+                # provides the same path or a parent one that's not a directory.
+                continue
+            keep.add(dest)
+
+            managed_directories.add(str(dpath.parent))
+            all_directories.update(str(par) for par in dpath.parents)
+
+            salt_uri_with_senv = salt.utils.url.create(fn_, saltenv=senv)
+            managed_files[dest] = salt_uri_with_senv
+
+        if include_empty:
+            mdirs = __salt__["cp.list_master_dirs"](senv, recurse_root)
+            for mdir in mdirs:
+                relative_path = check_relative_path(mdir, recurse_root)
+                if relative_path is False:
                     continue
+                dest = full_path(relative_path)
+                if dest in all_directories:
+                    # Early check to avoid some unnecessary work.
+                    continue
+                if dest in ignored_directories or is_occupied(dest):
+                    # In addition to the usual checks, don't try to create
+                    # directories that served as symlink targets in the current
+                    # source layer and were overridden with a file in a higher
+                    # priority one.
+                    continue
+                managed_directories.add(dest)
+                all_directories.add(dest)
+                keep.add(dest)
 
-            managed_directories.add(mdest)
-            keep.add(mdest)
+        elif keep_symlinks:
+            # Filter invalid symlinks caused by pointing to an empty directory
+            # and include_empty being false. This needs to happen recursively
+            # because symlinks can point to other symlinks.
+            removed_links = None
+            mdirs = __salt__["cp.list_master_dirs"](senv, recurse_root)
+            while removed_links is None or removed_links:
+                removed_links = 0
+                for lnk in list(managed_symlinks):
+                    relative_target = managed_symlinks[lnk]
+                    if recurse_root + relative_target not in mdirs:
+                        # The symlink never pointed to a directory in the first place
+                        continue
+                    full_tgt = full_path(relative_target)
+                    if any(
+                        full_tgt in aggr
+                        for aggr in (managed_files, all_directories, managed_symlinks)
+                    ):
+                        # The target exists in some way
+                        continue
+                    managed_symlinks.pop(lnk)
+                    removed_links += 1
 
-    return managed_files, managed_directories, managed_symlinks, keep
+    return (
+        set(managed_files.items()),
+        managed_directories,
+        set(managed_symlinks.items()),
+        keep,
+    )
 
 
 def _gen_keep_files(name, require, walk_d=None):
@@ -623,9 +716,21 @@ def _gen_keep_files(name, require, walk_d=None):
                     if os.path.isdir(fn):
                         if _is_child(fn, name):
                             if fun == "recurse":
-                                fkeep = _gen_recurse_managed_files(**low)[3]
-                                log.debug("Keep from %s: %s", fn, fkeep)
-                                keep.update(fkeep)
+                                try:
+                                    sources = _filter_recurse_sources(
+                                        low.get("source", [])
+                                    )
+                                except CommandExecutionError:
+                                    pass
+                                else:
+                                    recurse_kwargs = low.copy()
+                                    recurse_kwargs.pop("source", None)
+                                    recurse_kwargs["sources"] = sources
+                                    fkeep = _gen_recurse_managed_files(
+                                        **recurse_kwargs
+                                    )[3]
+                                    log.debug("Keep from %s: %s", fn, fkeep)
+                                    keep.update(fkeep)
                             elif walk_d:
                                 walk_ret = set()
                                 _process_by_walk_d(fn, walk_ret)
@@ -4474,6 +4579,7 @@ def recurse(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=True,
+    merge=False,
     **kwargs,
 ):
     """
@@ -4680,6 +4786,23 @@ def recurse(
 
         .. versionadded:: 2017.7.7
 
+    merge
+        When ``source`` is a list, instead of choosing the first existing
+        source as the single source directory, merge paths in all existing
+        sources. When the same path exists in several sources, the earliest
+        source has priority. Defaults to false.
+
+        .. versionadded:: 3008.0
+
+        .. note::
+            When ``keep_symlinks`` is true, symlinks are treated like files,
+            i.e. override lower priority files, directories and symlinks completely.
+            When a higher priority source overrides the symlink target with the
+            same type (file -> file/dir -> dir), they are kept as expected.
+            Special handling is given to symlinks whose target type changes
+            because of the override (file -> dir/dir -> file), where the
+            (lower priority) symlink is dropped, even if it is not overridden
+            by a higher priority source.
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -4737,39 +4860,12 @@ def recurse(
     if not os.path.isabs(name):
         return _error(ret, f"Specified file {name} is not an absolute path")
 
-    # expand source into source_list
-    source_list = _validate_str_list(source)
-
-    for idx, val in enumerate(source_list):
-        source_list[idx] = val.rstrip("/")
-
-    for precheck in source_list:
-        if not precheck.startswith("salt://"):
-            return _error(
-                ret,
-                f"Invalid source '{precheck}' (must be a salt:// URI)",
-            )
-
-    # Select the first source in source_list that exists
+    # Validate the sources and ensure that at least one exists.
     try:
-        source, source_hash = __salt__["file.source_list"](source_list, "", __env__)
+        sources = _filter_recurse_sources(source)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = f"Recurse failed: {exc}"
-        return ret
-
-    # Check source path relative to fileserver root, make sure it is a
-    # directory
-    srcpath, senv = salt.utils.url.parse(source)
-    if senv is None:
-        senv = __env__
-    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv, prefix=srcpath + "/")
-    if srcpath not in master_dirs:
-        ret["result"] = False
-        ret["comment"] = (
-            "The directory '{}' does not exist on the salt fileserver "
-            "in saltenv '{}'".format(srcpath, senv)
-        )
         return ret
 
     # Verify the target directory
@@ -4878,12 +4974,19 @@ def recurse(
         merge_ret(path, _ret)
 
     mng_files, mng_dirs, mng_symlinks, keep = _gen_recurse_managed_files(
-        name, source, keep_symlinks, include_pat, exclude_pat, maxdepth, include_empty
+        name,
+        sources,
+        keep_symlinks=keep_symlinks,
+        include_pat=include_pat,
+        exclude_pat=exclude_pat,
+        maxdepth=maxdepth,
+        include_empty=include_empty,
+        merge=merge,
     )
 
-    for srelpath, ltarget in mng_symlinks:
+    for sdest, ltarget in mng_symlinks:
         _ret = symlink(
-            os.path.join(name, srelpath),
+            sdest,
             ltarget,
             makedirs=True,
             force=force_symlinks,
@@ -4893,7 +4996,7 @@ def recurse(
         )
         if not _ret:
             continue
-        merge_ret(os.path.join(name, srelpath), _ret)
+        merge_ret(sdest, _ret)
     for dirname in mng_dirs:
         manage_directory(dirname)
     for dest, src in mng_files:
