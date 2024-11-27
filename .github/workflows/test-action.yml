@@ -88,7 +88,7 @@ jobs:
       #
       - name: Test Matrix
         run: |
-          echo ${{ toJSON(matrix) }}
+          "${{ toJSON(matrix) }}"
 
       - name: Check python
         run: |
@@ -317,8 +317,6 @@ jobs:
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
@@ -552,8 +550,6 @@ jobs:
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
-    needs:
-      - generate-matrix
     strategy:
       fail-fast: false
       matrix:
@@ -792,6 +788,7 @@ jobs:
     needs:
       - test-linux
       - test-macos
+      - test-windows
     strategy:
       fail-fast: false
       matrix:
