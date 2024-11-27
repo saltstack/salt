@@ -1,4 +1,8 @@
+import contextlib
+import copy
+import shutil
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -206,6 +210,388 @@ def test_recurse_clean_specific_env(file, tmp_path):
     assert scene_32_dst.is_file() is False
     assert scene_32_dst.is_dir()
     assert scene_32_dst.joinpath("scene").is_file() is True
+
+
+@contextlib.contextmanager
+def create_file_tree(base, tree):
+    """
+    Helper to quickly create trees of directories, files and symlinks
+    inside a base directory.
+    """
+    temp_files = []
+    symlinks = {}
+    empty_dirs = []
+
+    def _create_tmp_files(tree, prefix):
+        for name, val in tree.items():
+            if isinstance(val, dict):
+                if not val:
+                    empty_dirs.append(base / prefix / name)
+                    continue
+                _create_tmp_files(val, prefix + f"/{name}")
+                continue
+            if isinstance(val, tuple):
+                symlinks[base / prefix / name] = val[0]
+                continue
+            temp_files.append(pytest.helpers.temp_file(name, val, base / prefix))
+
+    for first_level_name, first_level_contents in tree.items():
+        _create_tmp_files(first_level_contents, first_level_name)
+
+    with contextlib.ExitStack() as stack:
+        for file in temp_files:
+            stack.enter_context(file)
+        try:
+            created_dirs = []
+            for empty_dir in empty_dirs:
+                for par in empty_dir.parents[::-1]:
+                    if not par.exists():
+                        created_dirs.append(par)
+                        break
+                empty_dir.mkdir(parents=True)
+            for symlink, target in symlinks.items():
+                for par in symlink.parents[::-1]:
+                    if not par.exists():
+                        created_dirs.append(par)
+                        break
+                symlink.parent.mkdir(parents=True, exist_ok=True)
+                is_dir = target.endswith("/")
+                symlink.symlink_to(Path(target.rstrip("/")), target_is_directory=is_dir)
+                if is_dir:
+                    assert symlink.is_symlink()
+                    assert symlink.is_dir()
+            yield
+        finally:
+            for symlink in symlinks:
+                symlink.unlink(missing_ok=True)
+            for created_dir in created_dirs + empty_dirs:
+                shutil.rmtree(created_dir, ignore_errors=True)
+
+
+@pytest.fixture
+def _recurse_merge_dirs(state_tree, state_tree_prod):
+    tree_base = {
+        "file_from_base": "base",
+        "overridden_file": "foo",
+        "common": {
+            "file_from_base": "base",
+            "overridden_file": "foo",
+        },
+        "base": {
+            "present": "",
+        },
+        "empty": {
+            "in_base": {},
+            "common": {},
+            "override": {},
+            "override_file": "",
+            "nested_in_base_only": {
+                "worked": {},
+                "nonempty": {
+                    "file": "",
+                },
+            },
+        },
+        "deeply": "not_rendered",
+        "file_overridden_by_dir": "file",
+        "dir_overridden_by_file": {
+            "file_in_dir": "",
+        },
+        "symlinked_dir": ("symlink_target_dir/",),
+        "symlinked_file": ("symlink_target_file",),
+        "symlink_target_dir": {
+            "file_in_symlink_target": "",
+        },
+        "symlink_target_file": "",
+        "symlink_dir_overridden_by_file": ("symlink_target_dir/",),
+        "symlink_dir_overridden_by_dir": ("symlink_target_dir/",),
+        "symlink_file_overridden_by_dir": ("symlink_target_file",),
+        "symlink_file_overridden_by_file": ("symlink_target_file",),
+        "dir_overridden_by_symlink_dir": {
+            "file_in_dir_overridden_by_symlink_dir": "",
+        },
+        "dir_overridden_by_symlink_file": {
+            "file_in_dir_overridden_by_symlink_file": "",
+        },
+        "file_overridden_by_symlink_dir": "",
+        "file_overridden_by_symlink_file": "",
+        "symlink_file_overridden_by_symlink_file": ("symlink_target_file",),
+        "symlink_file_overridden_by_symlink_dir": ("symlink_target_file",),
+        "symlink_dir_overridden_by_symlink_file": ("symlink_target_dir/",),
+        "symlink_dir_overridden_by_symlink_dir": ("symlink_target_dir/",),
+        "symlink_target_dir_overridden_by_file": ("starget_dir_overridden_by_file/",),
+        "starget_dir_overridden_by_file": {
+            "file_in_starget_dir_overridden_by_file": "",
+        },
+        "symlink_target_dir_overridden_by_dir": ("starget_dir_overridden_by_dir/",),
+        "starget_dir_overridden_by_dir": {
+            "file_in_starget_dir_overridden_by_dir": "",
+        },
+        "symlink_target_file_overridden_by_dir": ("starget_file_overridden_by_dir",),
+        "starget_file_overridden_by_dir": "",
+        "symlink_target_file_overridden_by_file": ("starget_file_overridden_by_file",),
+        "starget_file_overridden_by_file": "",
+    }
+    tree_base["nested"] = copy.deepcopy(tree_base)
+    tree_override = {
+        "file_from_override": "override",
+        "overridden_file": "quux",
+        "common": {
+            "file_from_override": "override",
+            "overridden_file": "quux",
+        },
+        "empty": {
+            "in_override": {},
+            "common": {},
+            "override_dir": "",
+            "override_file": {},
+            "nested_in_base_only": {},
+            "symlinked": {
+                "dir": {},
+            },
+        },
+        "empty_symlinked_dir": ("empty/symlinked/",),
+        "empty_symlinked_dir_2": ("empty_symlinked_dir/",),
+        "deeply": {
+            "nested": {
+                "path": {
+                    "overrides_file": "success",
+                },
+            },
+        },
+        "override": {
+            "present": "",
+        },
+        "file_overridden_by_dir": {
+            "file_in_overriding_dir": "success",
+        },
+        "dir_overridden_by_file": "success",
+        "symlink_dir_overridden_by_dir": {
+            "file_in_dir_overriding_symlink_dir": "success",
+        },
+        "symlink_dir_overridden_by_file": "success",
+        "symlink_file_overridden_by_file": "success",
+        "symlink_file_overridden_by_dir": {
+            "file_in_dir_overriding_symlink_file": "success",
+        },
+        "other_symlink_target_dir": {
+            "other_file_in_symlink_target": "success",
+        },
+        "other_symlink_target_file": "success",
+        "dir_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
+        "dir_overridden_by_symlink_file": ("other_symlink_target_file",),
+        "file_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
+        "file_overridden_by_symlink_file": ("other_symlink_target_file",),
+        "symlink_file_overridden_by_symlink_file": ("other_symlink_target_file",),
+        "symlink_file_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
+        "symlink_dir_overridden_by_symlink_file": ("other_symlink_target_file",),
+        "symlink_dir_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
+        "starget_dir_overridden_by_file": "success",
+        "starget_dir_overridden_by_dir": {
+            "other_file_in_starget_dir_overridden_by_dir": "",
+        },
+        "starget_file_overridden_by_dir": {
+            "file_in_starget_file_overridden_by_dir": "success",
+        },
+        "starget_file_overridden_by_file": "success",
+        "symlink_to_parent": {
+            "dir": ("../other_symlink_target_dir/",),
+            "file": ("../file_from_override",),
+        },
+    }
+    tree_override["nested"] = copy.deepcopy(tree_override)
+
+    with create_file_tree(state_tree, {"base": tree_base}):
+        with create_file_tree(state_tree_prod, {"override": tree_override}):
+            yield
+
+
+@pytest.mark.usefixtures("_recurse_merge_dirs")
+@pytest.mark.parametrize("keep_symlinks", (False, True))
+@pytest.mark.parametrize("include_empty", (False, True))
+def test_recurse_merge(file, tmp_path, keep_symlinks, include_empty):
+    tgt = tmp_path / "target"
+    dirs = ("override", "base")
+    sources = [
+        f"salt://{src}" + ("?saltenv=prod" if src == "override" else "") for src in dirs
+    ]
+    ret = file.recurse(
+        name=str(tgt),
+        source=sources,
+        merge=True,
+        keep_symlinks=keep_symlinks,
+        include_empty=include_empty,
+    )
+    assert ret.result is True
+    assert tgt.is_dir()
+
+    # Run the same assertions for both the root path and a nested dir
+    for base in (tgt, tgt / "nested"):
+        # Ensure unique dirs are all merged
+        for tgt_dir in dirs:
+            assert (base / tgt_dir / "present").exists()
+        for shared_dir in (base, base / "common"):
+            # Ensure unique files in shared dir are all merged
+            for suffix in dirs:
+                assert (shared_dir / f"file_from_{suffix}").is_file()
+                assert (shared_dir / f"file_from_{suffix}").read_text() == suffix
+            # Ensure shared files are overridden by first source
+            assert (shared_dir / "overridden_file").is_file()
+            assert (shared_dir / "overridden_file").read_text() == "quux"
+        # Ensure dir <-> file overrides work
+        for path in (
+            ("file_overridden_by_dir", "file_in_overriding_dir"),
+            ("dir_overridden_by_file",),
+        ):
+            assert base.joinpath(*path).is_file()
+            assert base.joinpath(*path).read_text() == "success"
+        assert (base / "deeply" / "nested" / "path" / "overrides_file").exists()
+
+        # Sanity check include_empty
+        for empty_dir in ("in_base", "in_override", "common"):
+            assert ((base / "empty" / empty_dir).is_dir()) is include_empty
+        # Ensure empty dirs can be overridden by files
+        assert (base / "empty" / "override_dir").is_file()
+        # Ensure empty dirs can override files when include_empty is set
+        assert ((base / "empty" / "override_file").is_dir()) is include_empty
+        # Ensure empty dirs in overrides don't block nested dirs/files
+        assert (
+            (base / "empty" / "nested_in_base_only" / "worked").is_dir()
+        ) is include_empty
+        assert (base / "empty" / "nested_in_base_only" / "nonempty" / "file").is_file()
+
+        # Sanity check symlinks
+        assert ((base / "symlinked_dir").is_symlink()) is keep_symlinks
+        assert (base / "symlinked_dir").is_dir()
+        assert (base / "symlink_target_dir").is_dir()
+        for empty_symlink in ("empty_symlinked_dir", "empty_symlinked_dir_2"):
+            assert ((base / empty_symlink).exists()) is include_empty
+            assert ((base / empty_symlink).is_dir()) is include_empty
+            assert ((base / empty_symlink).is_symlink()) is (
+                include_empty and keep_symlinks
+            )
+
+        # Ensure symlinks can be overridden
+        for symlink_overridden in (
+            "symlink_dir_overridden_by_file",
+            "symlink_dir_overridden_by_dir",
+            "symlink_file_overridden_by_file",
+            "symlink_file_overridden_by_dir",
+        ):
+            assert not (base / symlink_overridden).is_symlink()
+            if symlink_overridden.endswith("file"):
+                assert (base / symlink_overridden).read_text() == "success"
+            else:
+                assert (
+                    base
+                    / symlink_overridden
+                    / (
+                        "file_in_dir_overriding_"
+                        + symlink_overridden.split("_overridden", maxsplit=1)[0]
+                    )
+                ).read_text() == "success"
+
+        # Ensure symlinks can override files/directories and other symlinks
+        for symlink in (
+            "dir_overridden_by_symlink_dir",
+            "dir_overridden_by_symlink_file",
+            "file_overridden_by_symlink_dir",
+            "file_overridden_by_symlink_file",
+            "symlink_dir_overridden_by_symlink_dir",
+            "symlink_dir_overridden_by_symlink_file",
+            "symlink_file_overridden_by_symlink_dir",
+            "symlink_file_overridden_by_symlink_file",
+        ):
+            assert ((base / symlink).is_symlink()) is keep_symlinks
+            if symlink.endswith("file"):
+                assert (base / symlink).read_text() == "success"
+            else:
+                assert (
+                    base / symlink / "other_file_in_symlink_target"
+                ).read_text() == "success"
+
+        # Ensure symlinked dirs are merged when not preserving symlinks
+        assert (
+            base / "symlink_dir_overridden_by_dir" / "file_in_symlink_target"
+        ).exists() is not keep_symlinks
+        assert (
+            base / "symlink_dir_overridden_by_symlink_dir" / "file_in_symlink_target"
+        ).exists() is not keep_symlinks
+        assert (
+            base
+            / "dir_overridden_by_symlink_dir"
+            / "file_in_dir_overridden_by_symlink_dir"
+        ).exists() is not keep_symlinks
+
+        # Ensure overridden symlink targets don't cause surprises
+        assert (base / "symlink_target_file_overridden_by_file").exists()
+        assert (
+            (base / "symlink_target_file_overridden_by_file").is_symlink()
+        ) is keep_symlinks
+        assert (
+            (base / "symlink_target_file_overridden_by_file").read_text() == "success"
+        ) is keep_symlinks
+        assert (
+            (base / "symlink_target_dir_overridden_by_dir").is_symlink()
+        ) is keep_symlinks
+        assert (base / "symlink_target_dir_overridden_by_dir").is_dir()
+
+        assert not (base / "symlink_target_dir_overridden_by_file").is_symlink()
+        assert (
+            (base / "symlink_target_dir_overridden_by_file").exists()
+        ) is not keep_symlinks
+        assert (
+            (base / "symlink_target_dir_overridden_by_file").is_dir()
+        ) is not keep_symlinks
+
+        assert not (base / "symlink_target_file_overridden_by_dir").is_symlink()
+        assert (
+            (base / "symlink_target_file_overridden_by_dir").exists()
+        ) is not keep_symlinks
+        assert (
+            (base / "symlink_target_file_overridden_by_dir").is_file()
+        ) is not keep_symlinks
+
+        # Ensure symlinks to parent paths works
+        assert (base / "symlink_to_parent/dir").exists()
+        assert (base / "symlink_to_parent/dir").is_symlink() is keep_symlinks
+        assert (base / "symlink_to_parent/dir").is_dir()
+        assert (base / "symlink_to_parent/dir/other_file_in_symlink_target").exists()
+        assert (base / "symlink_to_parent/file").exists()
+        assert (base / "symlink_to_parent/file").is_symlink() is keep_symlinks
+        assert (base / "symlink_to_parent/file").is_file()
+
+
+@pytest.mark.parametrize("include_empty", (False, True))
+def test_recurse_merge_keep_symlinks_broken_symlinks_are_kept(
+    file, state_tree, tmp_path, include_empty
+):
+    """
+    When ``keep_symlinks`` is set, broken symlinks should be kept.
+    They cause an exception when keep_symlinks is false
+    (and the fileserver follows them, ``fileserver_followsymlinks``).
+
+    This is not specific to ``merge=True``, but should be tested regardless.
+    """
+    tree = {
+        "base": {"foo": {"random_file": "", "broken_link": ("../nonexistent",)}},
+        "override": {"other_broken_link": ("42",)},
+    }
+    with create_file_tree(state_tree, tree):
+        tgt = tmp_path / "target"
+        dirs = ("override", "base")
+        sources = [f"salt://{src}" for src in dirs]
+        ret = file.recurse(
+            name=str(tgt),
+            source=sources,
+            merge=True,
+            keep_symlinks=True,
+            include_empty=include_empty,
+        )
+        assert ret.result is True
+        assert (tgt / "foo" / "broken_link").is_symlink()
+        assert (tgt / "foo" / "random_file").is_file()
+        assert (tgt / "other_broken_link").is_symlink()
 
 
 @pytest.mark.skip_on_windows(reason="'dir_mode' is not supported on Windows")
