@@ -101,7 +101,7 @@ def test_render():
     ):
         salt.loader.render(opts, minion_mods)
 
-        
+
 def test_return_named_context_from_loaded_func(tmp_path):
     opts = {
         "optimization_order": [0],
