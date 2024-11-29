@@ -203,7 +203,7 @@ def which(exe=None):
 
     # now to search through our system_path
     for path in system_path:
-        p = join(path, exe)
+        p = join(os.path.expandvars(path), exe)
 
         # iterate through all extensions to see which one is executable
         for ext in pathext:
