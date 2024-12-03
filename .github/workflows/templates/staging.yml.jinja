@@ -88,7 +88,7 @@ concurrency:
       - build-docs
     environment: <{ gh_environment }>
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -133,11 +133,12 @@ concurrency:
           name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.pdf
           path: artifacts/release
 
-      #}
 
       - name: Upload Release Artifacts
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
+
+      #}
 
       - name: Upload PyPi Artifacts
         uses: actions/upload-artifact@v4
@@ -171,7 +172,7 @@ concurrency:
       <%- endfor %>
     environment: <{ gh_environment }>
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

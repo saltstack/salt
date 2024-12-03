@@ -27,17 +27,6 @@ if sys.version_info < (3, 11):
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
-# try:
-#     import boto3
-# except ImportError:
-#     print(
-#         "\nPlease run 'python -m pip install -r "
-#         "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-#         file=sys.stderr,
-#         flush=True,
-#     )
-#     raise
-
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -1716,6 +1705,8 @@ def workflow_config(
                                     **_.as_dict(),
                                 )
                                 for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                                if _.arch != "arm64"
+                                or os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
                             ]
                     else:
                         test_matrix[platform] += [
@@ -1724,6 +1715,8 @@ def workflow_config(
                                 **_.as_dict(),
                             )
                             for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                            if _.arch != "arm64"
+                            or os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
                         ]
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
