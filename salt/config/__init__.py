@@ -790,6 +790,8 @@ VALID_OPTS = immutabletypes.freeze(
         "jinja_trim_blocks": bool,
         # Cache minion ID to file
         "minion_id_caching": bool,
+        # Allow duplicate includes
+        "allow_duplicate_includes": bool,
         # Always generate minion id in lowercase.
         "minion_id_lowercase": bool,
         # Remove either a single domain (foo.org), or all (True) from a generated minion id.
@@ -1271,6 +1273,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "grains_refresh_every": 0,
         "minion_id_caching": True,
         "minion_id_lowercase": False,
+        "allow_duplicate_includes": False,
         "minion_id_remove_domain": False,
         "keysize": 2048,
         "transport": "zeromq",

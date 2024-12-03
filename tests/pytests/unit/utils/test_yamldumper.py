@@ -2,11 +2,15 @@
     Unit tests for salt.utils.yamldumper
 """
 
+import pytest
+
 from collections import OrderedDict, defaultdict
 
 import salt.utils.yamldumper
 from salt.utils.context import NamespacedDictWrapper
 from salt.utils.odict import HashableOrderedDict
+
+from yaml.constructor import ConstructorError
 
 
 def test_yaml_dump():
@@ -121,3 +125,43 @@ def test_yaml_hashable_ordered_dict_dump():
         salt.utils.yamldumper.dump(data, Dumper=salt.utils.yamldumper.OrderedDumper)
         == exp_yaml
     )
+
+
+def test_allow_duplicate_includes():
+    """
+    Test allow_duplicate_includes=True
+    """
+    yaml_data = """
+    include:
+      - foo
+      - bar
+    include:
+      - foo
+      - bar
+    """
+    opts = {"allow_duplicate_includes": True}
+    loader = salt.utils.yamlloader.SaltYamlSafeLoader(yaml_data, opts=opts)
+    data = loader.get_single_data()
+
+    assert data == {
+        "include": ["foo", "bar"],
+    }
+
+
+def test_allow_duplicate_includes_false():
+    """
+    Test allow_duplicate_includes=False
+    """
+    yaml_data = """
+    include:
+      - foo
+      - bar
+    include:
+      - foo
+      - bar
+    """
+    opts = {"allow_duplicate_includes": False}
+
+    with pytest.raises(ConstructorError, match="found conflicting ID 'include'"):
+        loader = salt.utils.yamlloader.SaltYamlSafeLoader(yaml_data, opts=opts)
+        loader.get_single_data()

@@ -34,7 +34,9 @@ def get_yaml_loader(argline):
             yamlloader = yamlloader_old
         else:
             yamlloader = yamlloader_new
-        return yamlloader.SaltYamlSafeLoader(*args, dictclass=OrderedDict)
+        return yamlloader.SaltYamlSafeLoader(
+            *args, dictclass=OrderedDict, opts=__opts__
+        )
 
     return yaml_loader
 
