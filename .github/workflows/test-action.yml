@@ -68,7 +68,7 @@ jobs:
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     container:
       image: ${{ matrix.container }}
     # Full test runs. Each chunk should never take more than 2 hours.
@@ -320,7 +320,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -553,7 +553,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
