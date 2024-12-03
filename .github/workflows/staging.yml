@@ -567,7 +567,7 @@ jobs:
       - build-docs
     environment: staging
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -603,10 +603,6 @@ jobs:
       - name: Show Release Artifacts
         run: |
           tree -a artifacts/release
-
-      - name: Upload Release Artifacts
-        run: |
-          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
       - name: Upload PyPi Artifacts
         uses: actions/upload-artifact@v4
@@ -647,7 +643,7 @@ jobs:
       - pkg-download-tests
     environment: staging
     runs-on:
-      - linux-x86_64
+      - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
