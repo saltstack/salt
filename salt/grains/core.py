@@ -1105,9 +1105,14 @@ def _virtual(osdata):
                     if os.path.isdir("/sys/bus/xen/drivers/xenconsole"):
                         # An actual DomU will have the xenconsole driver
                         grains["virtual_subtype"] = "Xen PV DomU"
-                    elif "xen:" in __salt__["cmd.run"]("dmesg").lower():
-                        # Fallback to parsing dmesg, might not be successful
-                        grains["virtual_subtype"] = "Xen PV DomU"
+                    else:
+                        try:
+                            if "xen:" in __salt__["cmd.run"]("dmesg").lower():
+                                # Fallback to parsing dmesg, might not be successful
+                                grains["virtual_subtype"] = "Xen PV DomU"
+                        except salt.exceptions.CommandExecutionError as e:
+                            msg = f"Could not detect virtual_subtype with dmesg: {e}"
+                            log.debug(msg)
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
                 grains["virtual"] = "xen"
