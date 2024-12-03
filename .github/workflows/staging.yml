@@ -571,12 +571,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
