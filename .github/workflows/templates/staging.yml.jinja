@@ -141,7 +141,6 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
-      #}
 
       - name: Upload PyPi Artifacts
         uses: actions/upload-artifact@v4
@@ -152,6 +151,7 @@ concurrency:
             artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
           retention-days: 7
           if-no-files-found: error
+      #}
 
   <%- if includes.get("test-pkg-downloads", True) %>
   <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
