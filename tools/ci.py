@@ -1515,6 +1515,10 @@ def workflow_config(
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
     ctx.info(f"Github event path is {gh_event_path}")
+
+    if event_name != "pull_request":
+        full = True
+
     if gh_event_path is None:
         labels = []
     else:
@@ -1532,6 +1536,7 @@ def workflow_config(
         else:
             labels = []
             ctx.warn("The 'pull_request' key was not found on the event payload.")
+
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
     ctx.info(f"{'==== end labels ====':^80s}")
