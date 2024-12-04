@@ -1544,24 +1544,6 @@ def workflow_config(
 
     kinds = ["linux", "windows", "macos"]
 
-    for kind in kinds:
-        jobs.update({_.job_name: True for _ in TEST_SALT_LISTING[kind]})  # type: ignore
-
-    if skip_tests:
-        ctx.print("Skipping test jobs")
-        jobs["test"] = False
-        for kind in kinds:
-            jobs.update({_.job_name: False for _ in TEST_SALT_LISTING[kind]})  # type: ignore
-
-    for kind in kinds:
-        jobs.update({_.job_name: True for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
-
-    if skip_pkg_tests:
-        ctx.print("Skipping package test jobs")
-        jobs["test-pkg"] = False
-        for kind in kinds:
-            jobs.update({_.job_name: False for _ in TEST_SALT_PKG_LISTING[kind]})  # type: ignore
-
     # If there is no arm runner disable arm64
     if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
         jobs.update(
