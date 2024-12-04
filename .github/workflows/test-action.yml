@@ -346,7 +346,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -354,7 +354,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ matrix.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
       - name: Install System Dependencies
         run: |
@@ -582,7 +582,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -590,7 +590,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ matrix.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
       - name: Install System Dependencies
         run: |
