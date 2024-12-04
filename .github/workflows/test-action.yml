@@ -787,7 +787,7 @@ jobs:
 
   report:
     name: Test Reports
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - test-linux
       - test-macos

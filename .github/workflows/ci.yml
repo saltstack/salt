@@ -38,7 +38,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
@@ -257,7 +257,7 @@ jobs:
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
     needs:
       - prepare-workflow
@@ -380,7 +380,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -500,7 +500,7 @@ jobs:
   combine-all-code-coverage:
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
@@ -631,7 +631,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - prepare-workflow
       - pre-commit

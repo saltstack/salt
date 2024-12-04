@@ -55,7 +55,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: staging-check
     steps:
       - name: Check For Admin Permission
@@ -66,7 +66,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - check-requirements
     outputs:
@@ -296,7 +296,7 @@ jobs:
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
     needs:
       - prepare-workflow
@@ -420,7 +420,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -567,7 +567,7 @@ jobs:
       - build-docs
     environment: staging
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -620,7 +620,7 @@ jobs:
       - pkg-download-tests
     environment: staging
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -670,7 +670,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - check-requirements
       - prepare-workflow

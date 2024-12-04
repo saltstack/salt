@@ -65,7 +65,7 @@ concurrency:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -88,7 +88,7 @@ concurrency:
       - build-docs
     environment: <{ gh_environment }>
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
      {#-
@@ -175,7 +175,7 @@ concurrency:
       <%- endfor %>
     environment: <{ gh_environment }>
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 

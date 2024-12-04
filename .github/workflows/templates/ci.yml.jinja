@@ -57,7 +57,7 @@
   <{ job_name }>:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
     needs:
       - prepare-workflow
@@ -206,7 +206,7 @@
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -300,7 +300,7 @@
     <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:

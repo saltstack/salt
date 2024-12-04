@@ -4,7 +4,7 @@
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Workflow Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:

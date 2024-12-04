@@ -37,7 +37,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: release-check
     steps:
       - name: Check For Admin Permission
@@ -443,7 +443,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - check-requirements
       - prepare-workflow
