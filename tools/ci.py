@@ -1526,13 +1526,12 @@ def workflow_config(
             )
             ctx.exit(1)
 
-        if "pull_request" not in gh_event:
+        if "pull_request" in gh_event:
+            pr = gh_event["pull_request"]["number"]
+            labels = _get_pr_test_labels_from_event_payload(gh_event)
+        else:
+            labels = []
             ctx.warn("The 'pull_request' key was not found on the event payload.")
-            ctx.exit(1)
-
-        pr = gh_event["pull_request"]["number"]
-        labels = _get_pr_test_labels_from_event_payload(gh_event)
-
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
     ctx.info(f"{'==== end labels ====':^80s}")
