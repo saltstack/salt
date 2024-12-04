@@ -40,7 +40,7 @@ jobs:
 
   workflow-requirements:
     name: Check Workflow Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
@@ -72,7 +72,7 @@ jobs:
   trigger-branch-nightly-builds:
     name: Trigger Branch Workflows
     if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - workflow-requirements
     steps:
@@ -84,7 +84,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
       - workflow-requirements
@@ -306,7 +306,7 @@ jobs:
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
     needs:
       - prepare-workflow
@@ -434,7 +434,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -579,7 +579,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: nightly
     needs:
       - workflow-requirements
