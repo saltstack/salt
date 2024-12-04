@@ -1514,7 +1514,10 @@ def workflow_config(
     full = False
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
-    if gh_event_path is not None:
+    ctx.info(f"Github event path is {gh_event_path}")
+    if gh_event_path is None:
+        labels = []
+    else:
         try:
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
@@ -1522,6 +1525,17 @@ def workflow_config(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
             )
             ctx.exit(1)
+
+        if "pull_request" not in gh_event:
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
+            ctx.exit(1)
+
+        pr = gh_event["pull_request"]["number"]
+        labels = _get_pr_test_labels_from_event_payload(gh_event)
+
+    ctx.info(f"{'==== labels ====':^80s}")
+    ctx.info(f"{pprint.pformat(labels)}")
+    ctx.info(f"{'==== end labels ====':^80s}")
 
     ctx.info(f"{'==== github event ====':^80s}")
     ctx.info(f"{pprint.pformat(gh_event)}")
@@ -1543,21 +1557,6 @@ def workflow_config(
     }
 
     kinds = ["linux", "windows", "macos"]
-
-    # If there is no arm runner disable arm64
-    if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
-        jobs.update(
-            {
-                _.job_name: (True if _.arch != "arm64" else False)
-                for _ in TEST_SALT_LISTING["linux"]  # type: ignore
-            }
-        )
-        jobs.update(
-            {
-                _.job_name: (True if _.arch != "arm64" else False)
-                for _ in TEST_SALT_PKG_LISTING["linux"]  # type: ignore
-            }
-        )
 
     if skip_pkg_download_tests:
         jobs["test-pkg-download"] = False
