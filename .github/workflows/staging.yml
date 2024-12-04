@@ -581,13 +581,6 @@ jobs:
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: artifacts/release
-
-      - name: Download Source Repository
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-src-repo
-          path: artifacts/release
-
       - name: Download Release Documentation (HTML)
         uses: actions/download-artifact@v4
         with:
