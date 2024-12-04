@@ -591,16 +591,6 @@ jobs:
         run: |
           tree -a artifacts/release
 
-      - name: Upload PyPi Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pypi-artifacts
-          path: |
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
-          retention-days: 7
-          if-no-files-found: error
-
   pkg-download-tests:
     name: Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] }}
