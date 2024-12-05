@@ -1707,8 +1707,15 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")
 
-    config["pkg-test-matrix"] = pkg_test_matrix  # type: ignore
-    config["test-matrix"] = test_matrix  # type: ignore
+    config["pkg-test-matrix"] = {}
+    config["test-matrix"] = {}
+    for platform in platforms:
+        config["pkg-test-matrix"][platform] = {}  # type: ignore
+        if pkg_test_matrix.get(platform, {}):
+            config["pkg-test-matrix"][platform]["include"] = pkg_test_matrix[platform]  # type: ignore
+        config["test-matrix"][platform] = {}  # type: ignore
+        if test_matrix.get(platform, {}):
+            config["test-matrix"][platform]["include"] = test_matrix[platform]  # type: ignore
 
     ctx.info("Jobs selected are")
     for x, y in jobs.items():

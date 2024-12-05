@@ -791,8 +791,7 @@ jobs:
       - test-windows
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
 
