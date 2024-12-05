@@ -66,7 +66,7 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }} ${{ matrix.fips && '--fips ' || '' }}
     if: ${{ fromJSON(inputs.matrix)['linux'] != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
@@ -77,8 +77,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -176,7 +175,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code \
+            --core-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
@@ -194,7 +193,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code
+            --suppress-no-test-exit-code
 
       - name: Run Slow Tests
         id: run-slow-tests
@@ -211,7 +210,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
+            --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
         id: run-core-tests
@@ -228,7 +227,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
+            --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
@@ -245,7 +244,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
+            --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -262,7 +261,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests -k "mac or darwin"
+            --slow-tests --core-tests
 
       - name: Fix file ownership
         run: |
@@ -321,8 +320,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['macos'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -555,8 +553,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['windows'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['windows'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
