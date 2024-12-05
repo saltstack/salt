@@ -450,8 +450,7 @@ jobs:
       - test-macos
       - test-windows
     strategy:
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     steps:
       - name: Checkout Source Code
