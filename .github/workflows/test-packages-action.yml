@@ -61,9 +61,9 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
-    container:
-      image: ${{ matrix.container }}
-      options: --privileged
+  #  container:
+  #    image: ${{ matrix.container }}
+  #    options: --privileged
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
@@ -133,22 +133,17 @@ jobs:
         with:
           cache-prefix: ${{ inputs.cache-prefix }}
 
+      - name: "Pull container ${{ matrix.container }}"
+        run: |
+          docker pull ${{ matrix.container }}
+
+      - name: "Start container ${{ matrix.container }}"
+        run: |
+          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --network github_network_4aec5d26a4974877b66c415bffa9ce54 --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+
       - name: List Free Space
         run: |
           df -h || true
-
-#      - name: check systemd
-#        run: systemctl
-#
-      #- name: Mock systemd
-      #  run: |
-      #    wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py
-      #    cp systemctl3.py /usr/bin/systemctl
-      #    chmod +x /usr/bin/systemctl
-      #
-      #- name: install pkg test
-      #  run: |
-      #    dpkg -i ./artifacts/pkg/salt-common_${{ inputs.salt-version}}_${{ inputs.arch == 'x86_64' && 'amd64' || 'arm64' }}.deb ./artifacts/pkg/salt-master_${{ inputs.salt-version}}_${{ inputs.arch == 'x86_64' && 'amd64' || 'arm64' }}.deb
 
       - name: Show System Info
         env:
@@ -165,6 +160,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
         run: |
+          /usr/bin/docker exec --name ${{ github.run_id }}_salt-test \
           nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
