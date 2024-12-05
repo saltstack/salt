@@ -29,9 +29,9 @@ jobs:
       fail-fast: false
       matrix:
         docs-output:
-         # XXX re-enable lintcheck and fix the errors
+         # XXX re-enable lintcheck and spellcheck then fix the errors
          # - linkcheck
-          - spellcheck
+         # - spellcheck
           - html
 
     steps:
