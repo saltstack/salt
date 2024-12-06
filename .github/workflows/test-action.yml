@@ -77,8 +77,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -318,8 +317,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['macos'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -552,8 +550,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.matrix)['windows'] }}
+      matrix: ${{ fromJSON(inputs.matrix)['windows'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
     steps:
