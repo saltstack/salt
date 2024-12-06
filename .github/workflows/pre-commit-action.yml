@@ -21,7 +21,7 @@ jobs:
   Pre-Commit:
     name: Run Pre-Commit Against Salt
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
