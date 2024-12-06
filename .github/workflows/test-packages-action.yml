@@ -135,9 +135,13 @@ jobs:
         run: |
           docker pull ${{ matrix.container }}
 
-      - name: "Start container ${{ matrix.container }}"
+      - name: "Create container ${{ matrix.container }}"
         run: |
           /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --network github_network_4aec5d26a4974877b66c415bffa9ce54 --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+
+      - name: "Start container ${{ matrix.container }}"
+        run: |
+          /usr/bin/docker start ${{ github.run_id }}_salt-test
 
       - name: List Free Space
         run: |
