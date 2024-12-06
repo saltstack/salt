@@ -53,7 +53,7 @@ jobs:
   build-deb-packages:
     name: DEB
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
       fail-fast: false
       matrix:
@@ -145,7 +145,7 @@ jobs:
   build-rpm-packages:
     name: RPM
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
       fail-fast: false
       matrix:

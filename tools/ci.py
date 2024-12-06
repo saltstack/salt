@@ -1601,7 +1601,7 @@ def workflow_config(
     ctx.info(f"str_releases {str_releases}")
 
     platforms = ["linux", "macos", "windows"]
-    pkg_test_matrix = {}
+    pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
 
     if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
         TEST_SALT_LISTING["linux"] = list(

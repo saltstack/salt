@@ -87,9 +87,6 @@ jobs:
       #   with:
       #     python-version: '3.10'
       #
-      - name: Test Matrix
-        run: |
-          "${{ toJSON(matrix) }}"
 
       - name: Check python
         run: |
@@ -555,7 +552,8 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['windows'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
     steps:

@@ -18,7 +18,7 @@ env:
 jobs:
   Salt:
     name: Lint Salt's Source Code
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
@@ -58,7 +58,7 @@ jobs:
 
   Tests:
     name: Lint Salt's Test Suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
