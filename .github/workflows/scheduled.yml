@@ -502,7 +502,7 @@ jobs:
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
   test-packages:
-    name: Package Test
+    name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
     needs:
       - prepare-workflow
@@ -519,7 +519,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
   test:
-    name: Test
+    name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow

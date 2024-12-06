@@ -4,7 +4,7 @@
   <%- set timeout_value = 180 %>
 <%- endif %>
   test:
-    name: Test
+    name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow

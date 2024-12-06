@@ -1,4 +1,5 @@
-name: Test Artifact
+---
+name: Test Packages
 
 on:
   workflow_call:
