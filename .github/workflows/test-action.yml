@@ -67,7 +67,7 @@ jobs:
 
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }} ${{ matrix.fips && '--fips ' || '' }}
-    if: ${{ fromJSON(inputs.matrix)['linux'] != '[]' }}
+    if: ${{ fromJSON(inputs.matrix)['linux'] != '[ ]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     container:
@@ -77,7 +77,8 @@ jobs:
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -316,11 +317,12 @@ jobs:
     runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
-    if: ${{ fromJSON(inputs.matrix)['macos'] != '[]' }}
+    if: ${{ fromJSON(inputs.matrix)['macos'] != '[ ]' }}
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['macos'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
@@ -546,7 +548,7 @@ jobs:
 
   test-windows:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
-    if: ${{ fromJSON(inputs.matrix)['windows'] != '[]' }}
+    if: ${{ fromJSON(inputs.matrix)['windows'] != '[ ]' }}
     runs-on: ${{ matrix.slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
@@ -556,7 +558,6 @@ jobs:
       matrix: ${{ fromJSON(inputs.matrix)['windows'] }}
     env:
       SALT_TRANSPORT: ${{ matrix.transport }}
-
     steps:
       - uses: actions/setup-python@v5
         with:
