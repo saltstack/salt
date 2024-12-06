@@ -1476,6 +1476,28 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     ctx.exit(0)
 
 
+def _os_test_filter(osdef, transport, chunk):
+    """
+    Filter out some test runs based on os, tranport and chunk to be run.
+    """
+    if transport == "tcp" and chunk in ("unit", "functional"):
+        return False
+    if "macos" in osdef.slug and chunk == "scenarios":
+        return False
+    if osdef.arch == "arm64" and os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+        return False
+    if transport == "tcp" and osdef.slug not in (
+        "rockylinux-9",
+        "rockylinux-9-arm64",
+        "photonos-5",
+        "photonos-5-arm64",
+        "ubuntu-22.04",
+        "ubuntu-22.04-arm64",
+    ):
+        return False
+    return True
+
+
 @ci.command(
     name="workflow-config",
     arguments={
@@ -1659,23 +1681,7 @@ def workflow_config(
     if not skip_tests:
         for platform in platforms:
             for transport in ("zeromq", "tcp"):
-                # if transport == "tcp" and distro_slug not in (
-                #     "rockylinux-9",
-                #     "rockylinux-9-arm64",
-                #     "photonos-5",
-                #     "photonos-5-arm64",
-                #     "ubuntu-22.04",
-                #     "ubuntu-22.04-arm64",
-                # ):
-                #     # Only run TCP transport tests on these distributions
-                #     continue
                 for chunk in ("unit", "functional", "integration", "scenarios"):
-                    if transport == "tcp" and chunk in ("unit", "functional"):
-                        # Only integration and scenarios shall be tested under TCP,
-                        # the rest would be repeating tests
-                        continue
-                    # if "macos" in distro_slug and chunk == "scenarios":
-                    #     continue
                     splits = _splits.get(chunk) or 1
                     if full and splits > 1:
                         for split in range(1, splits + 1):
@@ -1690,8 +1696,7 @@ def workflow_config(
                                     **_.as_dict(),
                                 )
                                 for _ in TEST_SALT_LISTING[platform]  # type: ignore
-                                if _.arch != "arm64"
-                                or os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
+                                if _os_test_filter(_, transport, chunk)
                             ]
                     else:
                         test_matrix[platform] += [
@@ -1700,8 +1705,7 @@ def workflow_config(
                                 **_.as_dict(),
                             )
                             for _ in TEST_SALT_LISTING[platform]  # type: ignore
-                            if _.arch != "arm64"
-                            or os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
+                            if _os_test_filter(_, transport, chunk)
                         ]
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
