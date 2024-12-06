@@ -1,6 +1,7 @@
   <%- set job_name = "test-packages" %>
   <{ job_name }>:
     name: Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
     needs:
       - prepare-workflow
       - build-pkgs-onedir

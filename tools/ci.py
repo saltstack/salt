@@ -1706,13 +1706,13 @@ def workflow_config(
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")
-    config["pkg-test-matrix"] = {"linux": [], "macos": [], "windows": []}
-    config["test-matrix"] = {"linux": [], "macos": [], "windows": []}
-    #config["pkg-test-matrix"] = pkg_test_matrix
-    #if not any([_ for _ in pkg_test_matrix]):
+    config["pkg-test-matrix"] = {"linux": [], "macos": [], "windows": []}  # type: ignore
+    config["test-matrix"] = {"linux": [], "macos": [], "windows": []}  # type: ignore
+    # config["pkg-test-matrix"] = pkg_test_matrix
+    # if not any([_ for _ in pkg_test_matrix]):
     #    jobs["test-pkg"] = False
-    #config["test-matrix"] = text_matrix
-    #if not any([_ for _ in test_matrix]):
+    # config["test-matrix"] = text_matrix
+    # if not any([_ for _ in test_matrix]):
     #    jobs["test"] = False
 
     ctx.info("Jobs selected are")

@@ -67,7 +67,8 @@ jobs:
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -193,7 +194,8 @@ jobs:
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['macos'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -309,8 +311,8 @@ jobs:
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
-
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
 
       - name: Set up Python ${{ inputs.python-version }}

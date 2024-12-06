@@ -5,7 +5,7 @@
 <%- endif %>
   test:
     name: Test
-    {#- if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }} #}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow
       - build-ci-deps
