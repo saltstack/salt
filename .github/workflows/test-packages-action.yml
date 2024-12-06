@@ -64,6 +64,7 @@ jobs:
   #  container:
   #    image: ${{ matrix.container }}
   #    options: --privileged
+    if: ${{ fromJSON(inputs.matrix)['linux'] != '[ ]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
@@ -191,6 +192,7 @@ jobs:
   test-macos:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.runner }}
+    if: ${{ fromJSON(inputs.matrix)['macos'] != '[ ]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
     strategy:
       fail-fast: false
@@ -309,6 +311,7 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.distro-slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    if: ${{ fromJSON(inputs.matrix)['windows'] != '[ ]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -456,7 +459,8 @@ jobs:
       - test-macos
       - test-windows
     strategy:
-      matrix: ${{ fromJSON(inputs.matrix)['linux'] }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     steps:
       - name: Checkout Source Code
