@@ -155,7 +155,7 @@ jobs:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          docker exec ${{ github.run_id }}_salt-tests nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          docker exec ${{ github.run_id }}_salt-test nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         env:
