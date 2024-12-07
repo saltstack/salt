@@ -29,7 +29,7 @@
   lint:
     <%- do conclusion_needs.append('lint') %>
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -58,7 +58,7 @@
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     steps:
@@ -185,7 +185,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -202,7 +202,7 @@
 
   <{ job_name }>:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - prepare-release

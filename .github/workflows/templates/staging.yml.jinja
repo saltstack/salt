@@ -91,13 +91,6 @@ concurrency:
       - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-     {#-
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-     #}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -110,14 +103,6 @@ concurrency:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: artifacts/release
 
-      {#-
-      - name: Download Source Repository
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
-          path: artifacts/release
-
-      #}
       - name: Download Release Documentation (HTML)
         uses: actions/download-artifact@v4
         with:
@@ -127,35 +112,6 @@ concurrency:
       - name: Show Release Artifacts
         run: |
           tree -a artifacts/release
-
-      {#-
-
-      - name: Download Release Documentation (PDF)
-        uses: actions/download-artifact@v4
-        with:
-          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.pdf
-          path: artifacts/release
-
-
-      - name: Upload Release Artifacts
-        run: |
-          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
-
-
-      - name: Upload PyPi Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pypi-artifacts
-          path: |
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
-          retention-days: 7
-          if-no-files-found: error
-      #}
-
-  <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
-  <%- endif %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
@@ -219,5 +175,24 @@ concurrency:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
           tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+  draft-release:
+    name: Draft Github Release
+    needs:
+      - prepare-workflow
+      - upload-release-artifacts
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_pkg_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    uses: ./.github/workflows/draft-release.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
 
 <%- endblock jobs %>
