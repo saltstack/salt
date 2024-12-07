@@ -368,10 +368,10 @@ jobs:
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
 
-      - name: Set up Python ${{ inputs.gh-actions-python-version }}
+      - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.gh-actions-python-version }}"
+          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
@@ -599,10 +599,10 @@ jobs:
         run: |
           echo true
 
-      - name: Set up Python ${{ inputs.gh-actions-python-version }}
+      - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.gh-actions-python-version }}"
+          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
@@ -855,10 +855,10 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python ${{ inputs.gh-actions-python-version }}
+      - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.gh-actions-python-version }}"
+          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
