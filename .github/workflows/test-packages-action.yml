@@ -125,15 +125,6 @@ jobs:
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
-      - name: Decompress .nox Directory
-        run: |
-          nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-
       - name: "Pull container ${{ matrix.container }}"
         run: |
           docker pull ${{ matrix.container }}
@@ -146,6 +137,15 @@ jobs:
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test
 
+      - name: Decompress .nox Directory
+        run: |
+          docker exec ${{ github.run_id}}_salt-test nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
       - name: List Free Space
         run: |
           df -h || true
@@ -155,7 +155,7 @@ jobs:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          docker exec ${{ github.run_id }}_salt-tests nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         env:
