@@ -152,7 +152,7 @@ jobs:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          docker exec ${{ github.run_id }}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          docker exec ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         env:
@@ -162,7 +162,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
         run: |
-          /usr/bin/docker exec ${{ github.run_id }}_salt-test \
+          /usr/bin/docker exec ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
