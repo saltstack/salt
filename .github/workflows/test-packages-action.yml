@@ -62,9 +62,6 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
-  #  container:
-  #    image: ${{ matrix.container }}
-  #    options: --privileged
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
@@ -131,15 +128,15 @@ jobs:
 
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/bin/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          /usr/bin/docker create --name ${{ github.run_id }}_salt-test-pkg --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/bin/systemd" ${{ matrix.container }} --systemd --unit rescue.target
 
       - name: "Start container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker start ${{ github.run_id }}_salt-test
+          /usr/bin/docker start ${{ github.run_id }}_salt-test-pkg
 
       - name: Decompress .nox Directory
         run: |
-          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+          docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
