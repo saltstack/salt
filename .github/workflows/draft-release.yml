@@ -1,0 +1,33 @@
+---
+name: Draft Github Release
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+
+  create-github-release:
+    name: Create Github Draft Release
+    runs-on: ubuntu-22.04
+    steps:
+      # Checkout here so we can easily use custom actions
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - name: List Directory Structure
+        run: ls -R

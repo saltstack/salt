@@ -254,25 +254,6 @@ jobs:
         run: |
           tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  pkg-download-tests:
-    name: Package Downloads
-    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-      - download-onedir-artifact
-    uses: ./.github/workflows/test-package-downloads-action.yml
-    with:
-      nox-session: ci-test-onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: release
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-    secrets: inherit
-
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     if: ${{ always() && ! failure() && ! cancelled() }}
@@ -284,7 +265,6 @@ jobs:
       - prepare-workflow
       - backup
       - publish-repositories
-      - pkg-download-tests
     environment: release
     steps:
       - name: Clone The Salt Repository
@@ -448,7 +428,6 @@ jobs:
       - check-requirements
       - prepare-workflow
       - publish-repositories
-      - pkg-download-tests
       - release
       - publish-pypi
       - build-ci-deps

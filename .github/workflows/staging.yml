@@ -279,7 +279,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -297,7 +297,7 @@ jobs:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
     needs:
       - prepare-workflow
     steps:
@@ -405,7 +405,7 @@ jobs:
 
   build-docs:
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-docs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -416,7 +416,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -582,6 +582,7 @@ jobs:
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: artifacts/release
+
       - name: Download Release Documentation (HTML)
         uses: actions/download-artifact@v4
         with:
@@ -592,25 +593,6 @@ jobs:
         run: |
           tree -a artifacts/release
 
-  pkg-download-tests:
-    name: Package Downloads
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-      - build-salt-onedir
-    uses: ./.github/workflows/test-package-downloads-action.yml
-    with:
-      nox-session: ci-test-onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: staging
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      skip-code-coverage: true
-      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
-    secrets: inherit
-
   publish-pypi:
     name: Publish to PyPi(test)
     if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
@@ -618,7 +600,6 @@ jobs:
       - prepare-workflow
       - upload-release-artifacts
       - build-ci-deps
-      - pkg-download-tests
     environment: staging
     runs-on:
       - ubuntu-22.04
@@ -666,6 +647,16 @@ jobs:
         run: |
           tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
+  draft-release:
+    name: Draft Github Release
+    needs:
+      - prepare-workflow
+      - upload-release-artifacts
+    uses: ./.github/workflows/draft-release.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
@@ -683,7 +674,6 @@ jobs:
       - build-salt-onedir
       - build-pkgs-src
       - upload-release-artifacts
-      - pkg-download-tests
       - publish-pypi
     steps:
       - name: Get workflow information

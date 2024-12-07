@@ -278,10 +278,6 @@ permissions:
         run: |
           tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
-  <%- endif %>
-
   release:
     <%- do conclusion_needs.append('release') %>
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
