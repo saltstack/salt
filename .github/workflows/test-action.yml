@@ -83,14 +83,10 @@ jobs:
       SALT_TRANSPORT: ${{ matrix.transport }}
 
     steps:
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.10'
-      #
-
-      - name: Check python
-        run: |
-          which python3
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -122,9 +118,17 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
-      - name: Install System Dependencies
+      - name: "Pull container ${{ matrix.container }}"
         run: |
-          echo true
+          docker pull ${{ matrix.container }}
+
+      - name: "Create container ${{ matrix.container }}"
+        run: |
+          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/bin/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+
+      - name: "Start container ${{ matrix.container }}"
+        run: |
+          /usr/bin/docker start ${{ github.run_id }}_salt-test
 
       - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
@@ -139,7 +143,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -155,8 +159,8 @@ jobs:
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
+        run:
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
@@ -172,7 +176,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
@@ -190,7 +194,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
       - name: Run Slow Tests
@@ -207,7 +211,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
@@ -224,7 +228,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
@@ -241,7 +245,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
@@ -258,7 +262,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests
 
       - name: Fix file ownership
