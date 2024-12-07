@@ -131,7 +131,7 @@ jobs:
 
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/bin/systemd" ${{ matrix.container }} --systemd --unit rescue.target
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -139,7 +139,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          docker exec ${{ github.run_id}}_salt-test nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -155,7 +155,7 @@ jobs:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          docker exec ${{ github.run_id }}_salt-test nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          docker exec ${{ github.run_id }}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         env:
@@ -166,7 +166,7 @@ jobs:
           COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
         run: |
           /usr/bin/docker exec ${{ github.run_id }}_salt-test \
-          nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Upload Test Run Log Artifacts
