@@ -12,7 +12,7 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
-      gh-actions-python-version:
+      python-version:
         required: false
         type: string
         description: The python version to run tests with
