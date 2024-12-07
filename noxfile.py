@@ -1805,13 +1805,24 @@ def ci_test_onedir_pkgs(session):
     session_warn(session, "Replacing VirtualEnv instance...")
 
     ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
-    session._runner.venv = VirtualEnv(
-        str(ci_test_onedir_path.relative_to(REPO_ROOT)),
-        interpreter=session._runner.func.python,
-        reuse_existing=True,
-        venv=session._runner.venv.venv_or_virtualenv == "venv",
-        venv_params=session._runner.venv.venv_params,
-    )
+    if hasattr(session._runner.venv, "venv_or_virtualenv"):
+        venv = session._runner.venv.venv_or_virtualenv == "venv"
+        session._runner.venv = VirtualEnv(
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=venv,
+            venv_params=session._runner.venv.venv_params,
+        )
+    else:
+        venv = session._runner.venv.venv_backend in ("venv", "virtualenv")
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv_backend=session._runner.venv.venv_backend,
+            venv_params=session._runner.venv.venv_params,
+        )
     os.environ["VIRTUAL_ENV"] = session._runner.venv.location
     session._runner.venv.create()
 
