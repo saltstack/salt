@@ -278,7 +278,7 @@ jobs:
         run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
-          rm -rf artifacts/salt*
+          sudo rm -rf artifacts/salt*
           tree -a artifacts
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
             mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
