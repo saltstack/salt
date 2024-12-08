@@ -31,7 +31,6 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - repo-release
     steps:
 
     - name: Checkout Salt
