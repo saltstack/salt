@@ -22,14 +22,37 @@ env:
 
 jobs:
 
-  create-github-release:
-    name: Create Github Draft Release
+  list-artifacts:
+    name: Download and list all artifacts
     runs-on: ubuntu-22.04
     steps:
       # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts/
       - name: List Directory Structure
         run: ls -R artifacts/
+
+
+  create-github-release:
+    name: Download and list all artifacts
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ inputs.salt-version }}
+          draft: true
+          prerelease: false
+
+  release-artifacts:
+    name: Download and list all artifacts
+    runs-on: ubuntu-22.04
+    needs:
+      - create-github-release
+    steps:
+      - name: Echo upload url
+        run: echo ${{ needs.create-github-release.outputs.upload_url }}
