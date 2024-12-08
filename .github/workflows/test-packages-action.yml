@@ -160,7 +160,7 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
+          COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           /usr/bin/docker exec ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
@@ -274,7 +274,7 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
+          COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
@@ -296,7 +296,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/
             !artifacts/pkg/*
@@ -307,7 +307,7 @@ jobs:
 
   test-windows:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
-    runs-on: ${{ matrix.distro-slug }}
+    runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
@@ -408,7 +408,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          COVERAGE_CONTEXT: ${{ matrix.distro-slug }}
+          COVERAGE_CONTEXT: ${{ matrix.slug }}
           OUTPUT_COLUMNS: "190"
           PYTHONUTF8: "1"
         run: >
@@ -424,14 +424,14 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
           fi
 
       - name: Upload Test Run Log Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -440,7 +440,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/
             !artifacts/pkg/*
@@ -477,8 +477,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}
-          pattern: pkg-testrun-artifacts-${{ matrix.distro-slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-*
+          name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}
+          pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-*
           separate-directories: true
           delete-merged: true
 
@@ -491,7 +491,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts/
-          pattern: pkg-testrun-artifacts-${{ matrix.distro-slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}*
+          pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}*
           merge-multiple: true
 
       - name: Show Test Run Artifacts
