@@ -214,7 +214,7 @@ jobs:
       - name: Download Packages
         uses: actions/download-artifact@v4
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
           path: artifacts/pkg/
 
       - name: Install System Dependencies
@@ -338,7 +338,7 @@ jobs:
       - name: Download Packages
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-windows
           path: ./artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
