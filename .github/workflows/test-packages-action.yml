@@ -170,7 +170,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.pkg_type }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
