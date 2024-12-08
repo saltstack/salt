@@ -170,7 +170,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.pkg_type }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.pkg_type }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -179,7 +179,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.distro-slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/
             !artifacts/pkg/*
