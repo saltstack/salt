@@ -47,6 +47,8 @@ jobs:
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
+      - run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" > $GITHUB_OUTPUT
+
 
   release-artifacts:
     name: Download and list all artifacts
