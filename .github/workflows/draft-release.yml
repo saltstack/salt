@@ -37,6 +37,8 @@ jobs:
   create-github-release:
     name: Download and list all artifacts
     runs-on: ubuntu-22.04
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Create Release
         id: create_release
@@ -47,7 +49,8 @@ jobs:
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
-      - run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" > $GITHUB_OUTPUT
+      - name: Release Output
+        run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
 
 
   release-artifacts:
