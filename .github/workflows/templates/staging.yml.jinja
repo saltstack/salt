@@ -181,6 +181,7 @@ concurrency:
     needs:
       - prepare-workflow
       - upload-release-artifacts
+      - build-pkgs-onedir
       <%- for need in test_salt_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
