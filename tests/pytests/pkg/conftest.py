@@ -34,6 +34,16 @@ def _system_up_to_date(
     grains,
     shell,
 ):
+    gpg_dest = "/etc/apt/keyrings/salt-archive-keyring.gpg"
+    if os.path.exists(gpg_dest):
+        with salt.utils.files.fopen(gpg_dest, "r") as fp:
+            log.error("Salt gpg key is %s", fp.read())
+    else:
+        log.error("Salt gpg not present")
+    # download_file(
+    #    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+    #    gpg_dest,
+    # )
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0

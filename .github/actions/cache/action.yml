@@ -26,10 +26,6 @@ inputs:
     description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
     default: 'false'
     required: false
-  save-always:
-    description: 'Run the post step to save the cache even if another step before fails'
-    default: 'false'
-    required: false
 
 outputs:
   cache-hit:
@@ -49,7 +45,6 @@ runs:
         echo "GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE=${{ inputs.enableCrossOsArchive }}" | tee -a "${GITHUB_ENV}"
         echo "GHA_CACHE_FAIL_ON_CACHE_MISS=${{ inputs.fail-on-cache-miss }}" | tee -a "${GITHUB_ENV}"
         echo "GHA_CACHE_LOOKUP_ONLY=${{ inputs.lookup-only }}" | tee -a "${GITHUB_ENV}"
-        echo "GHA_CACHE_SAVE_ALWAYS=${{ inputs.save-always }}" | tee -a "${GITHUB_ENV}"
         echo "GHA_CACHE_RESTORE_KEYS=${{ inputs.restore-keys }}" | tee -a "${GITHUB_ENV}"
         echo "GHA_CACHE_UPLOAD_CHUNK_SIZE=${{ inputs.upload-chunk-size }}" | tee -a "${GITHUB_ENV}"
 
@@ -63,7 +58,6 @@ runs:
         enableCrossOsArchive: ${{ env.GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE }}
         fail-on-cache-miss: ${{ env.GHA_CACHE_FAIL_ON_CACHE_MISS }}
         lookup-only: ${{ env.GHA_CACHE_LOOKUP_ONLY }}
-        save-always: ${{ env.GHA_CACHE_SAVE_ALWAYS }}
         restore-keys: ${{ env.GHA_CACHE_RESTORE_KEYS }}
         upload-chunk-size: ${{ env.GHA_CACHE_UPLOAD_CHUNK_SIZE }}
 
@@ -97,7 +91,6 @@ runs:
         enableCrossOsArchive: ${{ env.GHA_CACHE_ENABLE_CROSS_OS_ARCHIVE }}
         fail-on-cache-miss: ${{ env.GHA_CACHE_FAIL_ON_CACHE_MISS }}
         lookup-only: ${{ env.GHA_CACHE_LOOKUP_ONLY }}
-        save-always: ${{ env.GHA_CACHE_SAVE_ALWAYS }}
         restore-keys: ${{ env.GHA_CACHE_RESTORE_KEYS }}
         upload-chunk-size: ${{ env.GHA_CACHE_UPLOAD_CHUNK_SIZE }}
 
