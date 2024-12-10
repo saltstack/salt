@@ -33,7 +33,6 @@ jobs:
       - name: List Directory Structure
         run: ls -R artifacts/
 
-
   create-github-release:
     name: Download and list all artifacts
     runs-on: ubuntu-22.04
@@ -52,12 +51,60 @@ jobs:
       - name: Release Output
         run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
 
+  list-source-tarball:
+    name: Add Source Tarball to Release
+    needs:
+      - create-github-release
+    runs-on: ubuntu-22.04
+    outputs:
+      upload_url: ${{ steps.list_files.outputs.files }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.tar.gz
+          path: artifacts
+      - id: list-files
+        run: |
+          echo files=$(ls -l  artifacts/| jq -Rn '[inputs | { file: "\(.)" }]') >> "$GITHUB_OUTPUT"
+
+  upload-source-tarball:
+    name: Upload Source Tarball Artifacts
+    runs-on: ubunut-22.04
+    needs:
+      - list-source-tarball
+      - create-github-release
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.list-source-tarball.outputs.files) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.tar.gz
+          path: artifacts
+
+      - id: file-type
+        run: echo "file_type=$( file --mime-type artifacts/${{ matrix.file }} )" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Source Tarball
+        id: upload-release-asset-source
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-github-release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: artifacts/${{ matrix.file }}
+          asset_name: ${{ matrix.file }}
+          asset_content_type: ${{ steps.file-type.outputs.file_type }}
+
 
   release-artifacts:
     name: Download and list all artifacts
     runs-on: ubuntu-22.04
     needs:
       - create-github-release
+    strategy:
+      matrix:
+        ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
       - name: Echo upload url
         run: echo ${{ needs.create-github-release.outputs.upload_url }}
