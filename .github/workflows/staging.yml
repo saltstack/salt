@@ -657,6 +657,8 @@ jobs:
       - prepare-workflow
       - upload-release-artifacts
       - build-pkgs-onedir
+      - test-packages
+      - test
     uses: ./.github/workflows/draft-release.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
