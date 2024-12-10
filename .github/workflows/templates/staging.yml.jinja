@@ -178,6 +178,10 @@ concurrency:
 
   draft-release:
     name: Draft Github Release
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
     needs:
       - prepare-workflow
       - upload-release-artifacts
