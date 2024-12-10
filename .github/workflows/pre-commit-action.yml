@@ -21,20 +21,15 @@ jobs:
   Pre-Commit:
     name: Run Pre-Commit Against Salt
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
+      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
 
     env:
       PRE_COMMIT_COLOR: always
 
     steps:
-
-      - name: Install System Deps
-        run: |
-          apt-get update
-          apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev rustc
 
       - name: Add Git Safe Directory
         run: |

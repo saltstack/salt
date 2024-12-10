@@ -8,12 +8,6 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      github-hosted-runners:
-        type: boolean
-        required: true
-      self-hosted-runners:
-        type: boolean
-        required: true
       cache-seed:
         required: true
         type: string
@@ -26,6 +20,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      matrix:
+        type: string
+        required: true
+        description: Json config for build matrix
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -39,21 +37,17 @@ env:
 
 jobs:
 
+
   build-salt-linux:
     name: Linux
-    if: ${{ inputs.self-hosted-runners }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - arm64
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -95,18 +89,21 @@ jobs:
 
   build-salt-macos:
     name: macOS
-    if: ${{ inputs.github-hosted-runners }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
+      - name: "Check cores"
+        shell: bash
+        run: sysctl -n hw.ncpu
+
       - name: "Throttle Builds"
         shell: bash
         run: |
@@ -150,14 +147,11 @@ jobs:
 
   build-salt-windows:
     name: Windows
-    if: ${{ inputs.github-hosted-runners }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86
-          - amd64
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on: windows-latest
     env:
       PIP_INDEX_URL: https://pypi.org/simple
