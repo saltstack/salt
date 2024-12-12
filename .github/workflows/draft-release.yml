@@ -57,7 +57,7 @@ jobs:
       - create-github-release
     runs-on: ubuntu-22.04
     outputs:
-      upload_url: ${{ steps.list_files.outputs.files }}
+      upload_url: ${{ steps.list-files.outputs.files }}
     steps:
       - uses: actions/download-artifact@v4
         with:
