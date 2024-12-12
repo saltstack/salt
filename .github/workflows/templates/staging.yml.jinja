@@ -179,27 +179,18 @@ concurrency:
   draft-release:
     name: Draft Github Release
     if: |
-      always() && (needs.test.result == 'sucess' || needs.test.result == 'skipped') &&
-      (needs.test-pkg.result == 'sucess' || needs.test-pkg.result == 'skipped')
+      always() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.test-pkg.result == 'success' || needs.test-pkg.result == 'skipped') &&
+      needs.prepare-workflow.result == 'success' && needs.build-pkgs-onedir.result == 'success'
     permissions:
       contents: write
       pull-requests: read
       id-token: write
     needs:
       - prepare-workflow
-      - upload-release-artifacts
       - build-pkgs-onedir
       - test-packages
       - test
-      <%- for need in test_salt_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
-      <%- for need in test_salt_pkg_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
-      <%- for need in test_repo_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
     uses: ./.github/workflows/draft-release.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
