@@ -50,7 +50,7 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop(make_current=False)
         if args is None:
             args = []
         if kwargs is None:
