@@ -651,17 +651,17 @@ jobs:
     name: Draft Github Release
     if: |
       always() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
-      (needs.test-pkg.result == 'success' || needs.test-pkg.result == 'skipped') &&
+      (needs.test-packages.result == 'success' || needs.test-packages.result == 'skipped') &&
       needs.prepare-workflow.result == 'success' && needs.build-pkgs-onedir.result == 'success'
-    permissions:
-      contents: write
-      pull-requests: read
-      id-token: write
     needs:
       - prepare-workflow
       - build-pkgs-onedir
       - test-packages
       - test
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
     uses: ./.github/workflows/draft-release.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
