@@ -797,7 +797,7 @@ def test_verify_with_keyring(gpghome, gnupg, gpg, keyring, sig, signed_data, key
 @pytest.mark.usefixtures("_pubkeys_present")
 # Can't easily test the other signature validity levels since
 # we would need to sign the pubkey ourselves, which is not
-# exposed by python-gpg as of release 0.5.2.
+# exposed by python-gnupg as of release 0.5.2.
 @pytest.mark.parametrize(
     "ownertrust,text", (("TRUST_NEVER", "Undefined"), ("TRUST_ULTIMATE", "Ultimate"))
 )
