@@ -649,6 +649,9 @@ jobs:
 
   draft-release:
     name: Draft Github Release
+    if: |
+      always() && (needs.test.result == 'sucess' || needs.test.result == 'skipped') &&
+      (needs.test-pkg.result == 'sucess' || needs.test-pkg.result == 'skipped')
     permissions:
       contents: write
       pull-requests: read
