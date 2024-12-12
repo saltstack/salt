@@ -57,7 +57,7 @@ jobs:
       - create-github-release
     runs-on: ubuntu-22.04
     outputs:
-      upload_url: ${{ steps.list-files.outputs.files }}
+      files: ${{ steps.list-files.outputs.files }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -65,11 +65,11 @@ jobs:
           path: artifacts
       - id: list-files
         run: |
-          echo files=$(ls -l  artifacts/| jq -Rn '[inputs | { file: "\(.)" }]') >> "$GITHUB_OUTPUT"
+          echo files="$(find artifacts -maxdepth 1 -type f -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
 
   upload-source-tarball:
     name: Upload Source Tarball Artifacts
-    runs-on: ubunut-22.04
+    runs-on: ubuntu-22.04
     needs:
       - list-source-tarball
       - create-github-release
