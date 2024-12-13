@@ -45,6 +45,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          release_name: "Release v${{ inputs.version }}"
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
@@ -95,7 +96,6 @@ jobs:
           asset_path: artifacts/${{ matrix.file }}
           asset_name: ${{ matrix.file }}
           asset_content_type: ${{ steps.file-type.outputs.file_type }}
-
 
   release-artifacts:
     name: Download and list all artifacts
