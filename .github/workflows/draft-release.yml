@@ -45,7 +45,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_name: "Release v${{ inputs.version }}"
+          release_name: "Release v${{ inputs.salt-version }}"
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
@@ -53,7 +53,7 @@ jobs:
         run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
 
   list-source-tarball:
-    name: Add Source Tarball to Release
+    name: List Source Tarball Artifacts
     needs:
       - create-github-release
     runs-on: ubuntu-22.04
@@ -96,6 +96,36 @@ jobs:
           asset_path: artifacts/${{ matrix.file }}
           asset_name: ${{ matrix.file }}
           asset_content_type: ${{ steps.file-type.outputs.file_type }}
+
+  list-onedir-linux:
+    name: List Onedir Artifacts Linux
+    runs-on: ubuntu-22.04
+    needs:
+      - create-github-release
+    outputs:
+      ${{ matrix.arch }}-files: ${{ steps.list-files.outputs.files }}
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: artifacts
+      - id: list-files
+        run: |
+          echo ${{ matrix.arch }}-files="$(find artifacts -maxdepth 1 -type f -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+
+#  upload-onedir-linux:
+#    name: Upload Onedir Packages Linux
+#    runs-on: ubuntu-22.04
+#    needs:
+#      - create-github-release
+#      - list-onedir-linux
+#    strategy:
+#      matrix:
+#        include: ${{ fromJSON(needs.list-onedir-linux.outputs.files) }}
+
 
   release-artifacts:
     name: Download and list all artifacts
