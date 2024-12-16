@@ -17,6 +17,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Fixed
 
+- Fixed invalid downloads url in saltproject docs, point to broadcom location
 - Fixes multiple issues with the cmd module on Windows. Scripts are called using
   the ``-File`` parameter to the ``powershell.exe`` binary. ``CLIXML`` data in
   stderr is now removed (only applies to encoded commands). Commands can now be
