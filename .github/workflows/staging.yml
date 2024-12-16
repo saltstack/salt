@@ -665,7 +665,7 @@ jobs:
     uses: ./.github/workflows/draft-release.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['artifact-matrix']) }}
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
