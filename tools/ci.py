@@ -14,7 +14,7 @@ import random
 import shutil
 import sys
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ptscripts import Context, command_group
 
@@ -1567,7 +1567,7 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(gh_event)}")
     ctx.info(f"{'==== end github event ====':^80s}")
 
-    config = {}
+    config: dict[str, Any] = {}
     jobs = {
         "lint": True,
         "test": True,
@@ -1582,15 +1582,30 @@ def workflow_config(
         "build-deps-ci": True,
     }
 
-    kinds = ["linux", "windows", "macos"]
+    platforms: list[Literal["linux", "macos", "windows"]] = [
+        "linux",
+        "macos",
+        "windows",
+    ]
 
     if skip_pkg_download_tests:
         jobs["test-pkg-download"] = False
 
     config["jobs"] = jobs
     config["build-matrix"] = {
-        kind: _build_matrix(kind) for kind in ["linux", "macos", "windows"]  # type: ignore
+        platform: _build_matrix(platform) for platform in platforms
     }
+    ctx.info(f"{'==== build matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['build-matrix'])}")
+    ctx.info(f"{'==== end build matrix ====':^80s}")
+    config["artifact-matrix"] = []
+    for platform in platforms:
+        config["artifact-matrix"] += [
+            dict({"platform": platform}, **_) for _ in config["build-matrix"][platform]
+        ]
+    ctx.info(f"{'==== artifact matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['artifact-matrix'])}")
+    ctx.info(f"{'==== end artifact matrix ====':^80s}")
 
     # Get salt releases.
     releases = tools.utils.get_salt_releases(ctx)
@@ -1622,7 +1637,6 @@ def workflow_config(
     str_releases = [str(version) for version in testing_releases]
     ctx.info(f"str_releases {str_releases}")
 
-    platforms = ["linux", "macos", "windows"]
     pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
 
     if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
@@ -1642,7 +1656,7 @@ def workflow_config(
                     },
                     **_.as_dict(),
                 )
-                for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+                for _ in TEST_SALT_PKG_LISTING[platform]
             ]
         for version in str_releases:
             for platform in platforms:
@@ -1654,7 +1668,7 @@ def workflow_config(
                         },
                         **_.as_dict(),
                     )
-                    for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+                    for _ in TEST_SALT_PKG_LISTING[platform]
                 ]
                 pkg_test_matrix[platform] += [
                     dict(
@@ -1664,7 +1678,7 @@ def workflow_config(
                         },
                         **_.as_dict(),
                     )
-                    for _ in TEST_SALT_PKG_LISTING[platform]  # type: ignore
+                    for _ in TEST_SALT_PKG_LISTING[platform]
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
@@ -1695,7 +1709,7 @@ def workflow_config(
                                     },
                                     **_.as_dict(),
                                 )
-                                for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                                for _ in TEST_SALT_LISTING[platform]
                                 if _os_test_filter(_, transport, chunk)
                             ]
                     else:
@@ -1704,14 +1718,14 @@ def workflow_config(
                                 {"transport": transport, "tests-chunk": chunk},
                                 **_.as_dict(),
                             )
-                            for _ in TEST_SALT_LISTING[platform]  # type: ignore
+                            for _ in TEST_SALT_LISTING[platform]
                             if _os_test_filter(_, transport, chunk)
                         ]
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")
-    config["pkg-test-matrix"] = pkg_test_matrix  # type: ignore
-    config["test-matrix"] = test_matrix  # type: ignore
+    config["pkg-test-matrix"] = pkg_test_matrix
+    config["test-matrix"] = test_matrix
     ctx.info("Jobs selected are")
     for x, y in jobs.items():
         ctx.info(f"{x} = {y}")
