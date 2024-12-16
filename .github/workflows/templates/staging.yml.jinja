@@ -51,9 +51,9 @@ on:
 
 <%- block concurrency %>
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
-  cancel-in-progress: false
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+#  cancel-in-progress: false
 
 <%- endblock concurrency %>
 
