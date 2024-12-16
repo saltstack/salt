@@ -4,29 +4,27 @@ name: Upload Release Artifact
 on:
   workflow_call:
     inputs:
-      artifact-name:
+      name:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      uload-url:
+      upload_url:
         type: string
         required: true
         description: Release's upload url.
 
 
-steps:
+jobs:
 
   list-files:
     name: List Files From Artifact
-    needs:
-      - create-github-release
     runs-on: ubuntu-22.04
     outputs:
       files: ${{ steps.list-files.outputs.files }}
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.name }}
           path: artifacts
       - id: list-files
         run: |
@@ -43,7 +41,7 @@ steps:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.name }}
           path: artifacts
 
       - id: file-type

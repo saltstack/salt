@@ -12,6 +12,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      build-matrix:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -53,36 +57,75 @@ jobs:
         run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
 
   upload-source-tarball:
-    runs-on: ubuntu-22.04
     needs:
       - create-github-release
-    steps:
-      - uses: ./.github/workflows/release-artifact.yml
-        with:
-          name: salt-${{ inputs.salt-version }}.tar.gz
-          upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}.tar.gz
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
 
   upload-onedir:
-    runs-on: ubuntu-22.04
     needs:
       - create-github-release
     strategy:
       matrix:
-        include: ${{ inputs.matrix }}
-    steps:
-      - uses: ./.github/workflows/release-artifact.yml
-        with:
-          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.platform == 'windows' && 'zip' || 'tar.xz' }}
-          upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+        include: ${{ fromJSON(inputs.matrix) }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.platform == 'windows' && 'zip' || 'tar.xz' }}
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
 
-  release-artifacts:
-    name: Download and list all artifacts
-    runs-on: ubuntu-22.04
+  upload-deb-packages:
     needs:
       - create-github-release
     strategy:
       matrix:
-        ${{ fromJSON(inputs.matrix)['linux'] }}
-    steps:
-      - name: Echo upload url
-        run: echo ${{ needs.create-github-release.outputs.upload_url }}
+        include: ${{ fromJSON(inputs.build-matrix)['linux'] }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-rpm-packages:
+    needs:
+      - create-github-release
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.build-matrix)['linux'] }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-mac-packages:
+    needs:
+      - create-github-release
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.build-matrix)['macos'] }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-windows-msi-packages:
+    needs:
+      - create-github-release
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.build-matrix)['windows'] }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-windows-nsis-packages:
+    needs:
+      - create-github-release
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.build-matrix)['windows'] }}
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
