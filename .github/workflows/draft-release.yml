@@ -27,7 +27,7 @@ env:
 jobs:
 
   list-artifacts:
-    name: Download and list all artifacts
+    name: List Artifacts
     runs-on: ubuntu-22.04
     steps:
       # Checkout here so we can easily use custom actions
@@ -38,7 +38,7 @@ jobs:
         run: ls -R artifacts/
 
   create-github-release:
-    name: Download and list all artifacts
+    name: Draft Release v${{ inputs.salt-version }}
     runs-on: ubuntu-22.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
