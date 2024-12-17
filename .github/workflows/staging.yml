@@ -67,6 +67,7 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
+    environment: ci
     needs:
       - check-requirements
     outputs:
