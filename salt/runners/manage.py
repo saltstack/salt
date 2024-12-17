@@ -623,7 +623,7 @@ def versions():
 
 def bootstrap(
     version="develop",
-    script="https://bootstrap.saltproject.io",
+    script="https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh",
     hosts="",
     script_args="",
     roster="flat",
@@ -639,7 +639,7 @@ def bootstrap(
     version : develop
         Git tag of version to install
 
-    script : https://bootstrap.saltproject.io/
+    script : https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh
         URL containing the script to execute
 
     hosts
@@ -699,8 +699,8 @@ def bootstrap(
     .. code-block:: bash
 
         salt-run manage.bootstrap hosts='host1,host2'
-        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2'
-        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2' script='https://bootstrap.saltproject.io/develop'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3006.2'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3006.2' script='https://github.com/saltstack/salt-bootstrap/develop'
     """
 
     client_opts = __opts__.copy()

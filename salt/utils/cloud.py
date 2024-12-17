@@ -2950,7 +2950,10 @@ def update_bootstrap(config, url=None):
         - The absolute path to the bootstrap
         - The content of the bootstrap script
     """
-    default_url = config.get("bootstrap_script_url", "https://bootstrap.saltstack.com")
+    default_url = config.get(
+        "bootstrap_script_url",
+        "https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh",
+    )
     if not url:
         url = default_url
     if not url:
