@@ -1780,7 +1780,9 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = self.peel(local_head).hex
+            ## DGM head_sha = self.peel(local_head).hex
+            head_sha = str(self.peel(local_head).id)
+            print(f"pygit2 checkout, head_sha '{head_sha}'", flush=True)
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1839,7 +1841,15 @@ class Pygit2(GitProvider):
                     self.repo.create_reference(local_ref, pygit2_id)
 
                 try:
-                    target_sha = self.peel(self.repo.lookup_reference(remote_ref)).hex
+                    ## DGM target_sha = self.peel(self.repo.lookup_reference(remote_ref)).hex
+                    target_sha = str(
+                        self.peel(self.repo.lookup_reference(remote_ref)).id
+                    )
+                    print(
+                        f"pygit2 _perform_checkout, target_sha '{target_sha}'",
+                        flush=True,
+                    )
+
                 except KeyError:
                     log.error(
                         "pygit2 was unable to get SHA for %s in %s remote '%s'",
@@ -1920,10 +1930,21 @@ class Pygit2(GitProvider):
                 else:
                     try:
                         # If no AttributeError raised, this is an annotated tag
-                        tag_sha = tag_obj.target.hex
+                        ## DGM tag_sha = tag_obj.target.hex
+                        tag_sha = str(tag_obj.target.id)
+                        print(
+                            f"pygit2 _perform_checkout for tag_obj.target, tag_sha '{tag_sha}'",
+                            flush=True,
+                        )
+
                     except AttributeError:
                         try:
-                            tag_sha = tag_obj.hex
+                            ## DGM tag_sha = tag_obj.hex
+                            tag_sha = str(tag_obj.id)
+                            print(
+                                f"pygit2 _perform_checkout for tag_obj, tag_sha '{tag_sha}'",
+                                flush=True,
+                            )
                         except AttributeError:
                             # Shouldn't happen, but could if a future pygit2
                             # API change breaks things.
@@ -2277,7 +2298,13 @@ class Pygit2(GitProvider):
                 blob = None
                 break
         if isinstance(blob, pygit2.Blob):
-            return blob, blob.hex, mode
+            ## DGM return blob, blob.hex, mode
+            dgm_blob_hex_eq = str(blob.id)
+            print(
+                f"pygit2 find_file, old blob.hex now str blob.id '{dgm_blob_hex_eq}'",
+                flush=True,
+            )
+            return blob, dgm_blob_hex_eq, mode
         return None, None, None
 
     def get_tree_from_branch(self, ref):
