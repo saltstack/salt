@@ -51,6 +51,8 @@ jobs:
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
       config: ${{ steps.workflow-config.outputs.config }}
+    env:
+      LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
     steps:
       - uses: actions/checkout@v4
         with:
