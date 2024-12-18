@@ -1536,6 +1536,9 @@ def workflow_config(
     full = False
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
+    ctx.info(f"{'==== environment ====':^80s}")
+    ctx.info(f"{pprint.pformat(dict(os.environ))}")
+    ctx.info(f"{'==== end environment ====':^80s}")
     ctx.info(f"Github event path is {gh_event_path}")
 
     if event_name != "pull_request":

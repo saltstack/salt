@@ -248,6 +248,10 @@ jobs:
         run: |
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
+      - name: "Show environment"
+        run: |
+          env
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
