@@ -24,7 +24,7 @@ try:
 
     HAS_RANGE = True
 except ImportError:
-    log.error("Unable to load range library")
+    log.warning("Unable to load range library")
 # pylint: enable=import-error
 
 

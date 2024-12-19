@@ -65,6 +65,7 @@ def debian(
             f"Building the package using the onedir artifact {str(onedir_artifact)}"
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
+        buildargs = ["-uc"]
     else:
         if arch is None:
             ctx.error(
@@ -89,6 +90,7 @@ def debian(
         for key, value in new_env.items():
             os.environ[key] = value
             env_args.extend(["-e", key])
+        buildargs = ["-uc", "-us"]
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(
@@ -96,7 +98,7 @@ def debian(
     )
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", *env_args, "-uc", "-us", env=env)
+    ctx.run("debuild", *env_args, *buildargs, env=env)
 
     ctx.info("Done")
 
