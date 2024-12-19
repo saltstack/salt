@@ -12,6 +12,10 @@ on:
         type: string
         required: true
         description: Release's upload url.
+      pattern:
+        type: string
+        required: false
+        description: Pattern of files to upload
 
 
 jobs:
@@ -29,7 +33,11 @@ jobs:
       - run: find artifacts -maxdepth 1 -type f -printf '%f\n'
       - id: list-files
         run: |
-          echo files="$(find artifacts -maxdepth 1 -type f -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.pattern }}" != "" ]; then
+            echo files="$(find artifacts -maxdepth 1 -type f -name '${{ inputs.pattern }}' -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+          else
+            echo files="$(find artifacts -maxdepth 1 -type f -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+          fi
 
   upload-files:
     name: Upload ${{ matrix.file }} from ${{ inputs.name }}
