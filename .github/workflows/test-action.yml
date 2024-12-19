@@ -669,12 +669,6 @@ jobs:
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
-          COLUMNS: 190
-          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
-          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
-          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
-          PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
