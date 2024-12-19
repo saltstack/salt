@@ -421,6 +421,23 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         self.assertIn("world", ret["comment"])
         self.assertIn("hello", ret["comment"])
 
+    def test_module_run_ret_result(self):
+        with patch.dict(module.__salt__, {CMD: _mocked_none_return}), patch.dict(
+            module.__opts__, {"use_superseded": ["module.run"]}
+        ):
+            for val, res in [
+                (True, True),
+                (False, False),
+                ({"result": True}, True),
+                ({"result": False}, False),
+                ({"retcode": 0}, True),
+                ({"retcode": 1}, False),
+                ({"bla": {"result": True}}, True),
+                ({"bla": {"result": False}}, False),
+            ]:
+                ret = module.run(**{CMD: [{"ret": val}]})
+                self.assertEqual(ret["result"], res)
+
     def test_call_function_named_args(self):
         """
         Test _call_function routine when params are named. Their position ordering should not matter.
