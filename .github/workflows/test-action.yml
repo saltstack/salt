@@ -77,8 +77,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
 
     steps:
       - name: Set up Python ${{ inputs.python-version }}
@@ -277,9 +275,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['macos'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
-
     steps:
 
       - name: "Throttle Builds"
@@ -362,6 +357,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code \
@@ -380,6 +382,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code
@@ -397,6 +406,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -414,6 +430,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -431,6 +454,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -448,6 +478,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests -k "mac or darwin"
@@ -511,8 +548,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
     steps:
       - uses: actions/setup-python@v5
         with:
@@ -603,6 +638,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
@@ -621,6 +663,19 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code
@@ -638,6 +693,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -655,6 +717,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -672,6 +741,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -689,6 +765,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           --slow-tests --core-tests -k "win"
