@@ -528,7 +528,6 @@ class GitProvider:
         if HAS_PSUTIL:
             cur_pid = os.getpid()
             process = psutil.Process(cur_pid)
-            dgm_process_dir = dir(process)
             cache_dir = self.opts.get("cachedir", None)
             gitfs_active = self.opts.get("gitfs_remotes", None)
             if cache_dir and gitfs_active:
@@ -1780,7 +1779,7 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = self.peel(local_head).hex
+            head_sha = str(self.peel(local_head).id)
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1839,7 +1838,10 @@ class Pygit2(GitProvider):
                     self.repo.create_reference(local_ref, pygit2_id)
 
                 try:
-                    target_sha = self.peel(self.repo.lookup_reference(remote_ref)).hex
+                    target_sha = str(
+                        self.peel(self.repo.lookup_reference(remote_ref)).id
+                    )
+
                 except KeyError:
                     log.error(
                         "pygit2 was unable to get SHA for %s in %s remote '%s'",
@@ -1920,10 +1922,11 @@ class Pygit2(GitProvider):
                 else:
                     try:
                         # If no AttributeError raised, this is an annotated tag
-                        tag_sha = tag_obj.target.hex
+                        tag_sha = str(tag_obj.target.id)
+
                     except AttributeError:
                         try:
-                            tag_sha = tag_obj.hex
+                            tag_sha = str(tag_obj.id)
                         except AttributeError:
                             # Shouldn't happen, but could if a future pygit2
                             # API change breaks things.
@@ -2277,7 +2280,7 @@ class Pygit2(GitProvider):
                 blob = None
                 break
         if isinstance(blob, pygit2.Blob):
-            return blob, blob.hex, mode
+            return blob, str(blob.id), mode
         return None, None, None
 
     def get_tree_from_branch(self, ref):
