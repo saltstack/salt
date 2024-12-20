@@ -185,7 +185,12 @@ class HANDLE(wintypes.HANDLE):
 
     def Close(self, CloseHandle=kernel32.CloseHandle):
         if self and not getattr(self, "closed", False):
-            CloseHandle(self.Detach())
+            try:
+                CloseHandle(self.Detach())
+            except OSError:
+                # Suppress the error when there is no handle (WinError 6)
+                if ctypes.get_last_error() == 6:
+                    pass
 
     __del__ = Close
 
