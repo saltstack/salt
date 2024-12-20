@@ -77,8 +77,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
 
     steps:
       - name: Set up Python ${{ inputs.python-version }}
@@ -162,9 +160,23 @@ jobs:
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
@@ -172,9 +184,23 @@ jobs:
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
@@ -182,9 +208,23 @@ jobs:
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
@@ -192,9 +232,23 @@ jobs:
         id: run-core-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
@@ -202,9 +256,23 @@ jobs:
         id: run-flaky-tests
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
@@ -212,9 +280,23 @@ jobs:
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_TEST_SELECTION=0 -e PRINT_TEST_PLAN_ONLY=0 -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 -e GITHUB_ACTIONS_PIPELINE=1 -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          docker exec \
+            -e SKIP_REQUIREMENTS_INSTALL=1 \
+            -e PRINT_TEST_SELECTION=0 \
+            -e PRINT_TEST_PLAN_ONLY=0 \
+            -e PRINT_SYSTEM_INFO=0 \
+            -e RERUN_FAILURES=1 \
+            -e GITHUB_ACTIONS_PIPELINE=1 \
+            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+            -e COLUMNS=190 \
+            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+            -e SALT_TRANSPORT=${{ matrix.transport }} \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests
 
@@ -277,9 +359,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['macos'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
-
     steps:
 
       - name: "Throttle Builds"
@@ -362,6 +441,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --core-tests --slow-tests --suppress-no-test-exit-code \
@@ -380,6 +466,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code
@@ -397,6 +490,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -414,6 +514,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -431,6 +538,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -448,6 +562,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests -k "mac or darwin"
@@ -511,8 +632,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
-    env:
-      SALT_TRANSPORT: ${{ matrix.transport }}
     steps:
       - uses: actions/setup-python@v5
         with:
@@ -603,6 +722,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
@@ -621,6 +747,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code
@@ -638,6 +771,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -655,6 +795,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -672,6 +819,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -689,6 +843,13 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           --slow-tests --core-tests -k "win"

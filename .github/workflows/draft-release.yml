@@ -85,6 +85,7 @@ jobs:
     with:
       name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
       upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+      pattern: "*.deb"
 
   upload-rpm-packages:
     needs:
