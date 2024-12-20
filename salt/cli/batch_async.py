@@ -2,10 +2,12 @@
 Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 """
 
-import asyncio
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
 import re
+
 import tornado
+import asyncio
 
 import salt.client
 import salt.utils.event
@@ -138,7 +140,7 @@ class SharedEventsChannel:
             )
 
     async def __reconnect_subscriber(self):
-        if self.master_event.subscriber.connected() or self._reconnecting_subscriber:
+        if self.master_event.subscriber.connected or self._reconnecting_subscriber:
             return
         self._reconnecting_subscriber = True
         max_tries = max(1, int(self._subscriber_reconnect_tries))
@@ -157,8 +159,8 @@ class SharedEventsChannel:
                     _try,
                     max_tries,
                 )
-            if self.master_event.subscriber.connected():
-                self.master_event.subscriber.stream.set_close_callback(
+            if self.master_event.subscriber.connected:
+                self.master_event.subscriber._stream.set_close_callback(
                     self.__handle_close
                 )
                 log.info("Event publisher connection restored")
@@ -177,6 +179,7 @@ class SharedEventsChannel:
         self._used_by.discard(subscriber_id)
 
     def destroy_unused(self):
+        log.trace("SharedEventsChannel.destroy_unused called")
         if self._used_by:
             return False
         self.master_event.destroy()
@@ -274,14 +277,14 @@ class BatchAsync:
         )
 
     async def __event_handler(self, tag, data, op):
+        # IMPORTANT: This function must run fast and not wait for any other task,
+        # otherwise it would cause events to be stuck.
         if not self.event:
             return
         try:
             minion = data["id"]
             if op == "ping_return":
                 self.minions.add(minion)
-                if self.targeted_minions == self.minions:
-                    await self.start_batch()
             elif op == "find_job_return":
                 if data.get("return", None):
                     self.find_job_returned.add(minion)
@@ -289,7 +292,8 @@ class BatchAsync:
                 if minion in self.active:
                     self.active.remove(minion)
                     self.done_minions.add(minion)
-                    await self.schedule_next()
+                if not self.active:
+                    asyncio.create_task(self.schedule_next())
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Exception occured while processing event: %s: %s",
@@ -328,7 +332,7 @@ class BatchAsync:
         )
 
         if timedout_minions:
-            await self.schedule_next()
+            asyncio.create_task(self.schedule_next())
 
         if self.event and running:
             self.find_job_returned = self.find_job_returned.difference(running)
@@ -338,6 +342,7 @@ class BatchAsync:
         """
         Find if the job was finished on the minions
         """
+        log.trace("BatchAsync.find_job called for minions: %s", minions)
         if not self.event:
             return
         not_done = minions.difference(self.done_minions).difference(
@@ -350,7 +355,7 @@ class BatchAsync:
             self.events_channel.subscribe(
                 jid, "find_job_return", id(self), self.__event_handler
             )
-            ret = await self.events_channel.local_client.run_job_async(
+            await self.events_channel.local_client.run_job_async(
                 not_done,
                 "saltutil.find_job",
                 [self.batch_jid],
@@ -393,9 +398,18 @@ class BatchAsync:
         )
         self.targeted_minions = set(ping_return["minions"])
         # start batching even if not all minions respond to ping
-        await asyncio.sleep(
-            self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
-        )
+        try:
+            async with asyncio.timeout(
+                self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
+            ):
+                while True: 
+                    await asyncio.sleep(0.03)
+                    if self.targeted_minions == self.minions:
+                        break
+        except TimeoutError:
+            # Some minions are down, scheduling batch anyway
+            pass
+
         if self.event:
             await self.start_batch()
 
@@ -412,8 +426,8 @@ class BatchAsync:
             "down_minions": self.targeted_minions.difference(self.minions),
             "metadata": self.metadata,
         }
-        await self.events_channel.master_event.fire_event_async(
-            data, f"salt/batch/{self.batch_jid}/start"
+        ret = self.event.fire_event(
+           data, "salt/batch/{}/start".format(self.batch_jid)
         )
         if self.event:
             await self.run_next()
@@ -422,6 +436,7 @@ class BatchAsync:
         """
         End the batch and call safe closing
         """
+        log.trace("BatchAsync.end_batch called")
         left = self.minions.symmetric_difference(
             self.done_minions.union(self.timedout_minions)
         )
@@ -437,16 +452,17 @@ class BatchAsync:
             "timedout_minions": self.timedout_minions,
             "metadata": self.metadata,
         }
-        await self.events_channel.master_event.fire_event_async(
+        ret = self.event.fire_event(
             data, f"salt/batch/{self.batch_jid}/done"
         )
 
         # release to the IOLoop to allow the event to be published
         # before closing batch async execution
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.03)
         self.close_safe()
 
     def close_safe(self):
+        log.trace("BatchAsync.close_safe called")
         if self.events_channel is not None:
             self.events_channel.unsubscribe(None, None, id(self))
             self.events_channel.unuse(id(self))
@@ -455,11 +471,15 @@ class BatchAsync:
         self.event = None
 
     async def schedule_next(self):
+        log.trace("BatchAsync.schedule_next called")
         if self.scheduled:
+            log.trace("BatchAsync.schedule_next -> Batch already scheduled, nothing to do.")
             return
         self.scheduled = True
-        # call later so that we maybe gather more returns
-        await asyncio.sleep(self.batch_delay)
+        if self._get_next():
+            # call later so that we maybe gather more returns
+            log.trace("BatchAsync.schedule_next delaying batch %s second(s).", self.batch_delay)
+            await asyncio.sleep(self.batch_delay)
         if self.event:
             await self.run_next()
 
@@ -469,12 +489,13 @@ class BatchAsync:
         """
         self.scheduled = False
         next_batch = self._get_next()
+        log.trace("BatchAsync.run_next called. Next Batch -> %s", next_batch)
         if not next_batch:
             await self.end_batch()
             return
         self.active = self.active.union(next_batch)
         try:
-            ret = await self.events_channel.local_client.run_job_async(
+            await self.events_channel.local_client.run_job_async(
                 next_batch,
                 self.opts["fun"],
                 self.opts["arg"],
@@ -493,7 +514,7 @@ class BatchAsync:
             await asyncio.sleep(self.opts["timeout"])
 
             # The batch can be done already at this point, which means no self.event
-            if self.event:
+            if self.event and self.active.intersection(next_batch):
                 await self.find_job(set(next_batch))
         except Exception as ex:  # pylint: disable=W0703
             log.error(
