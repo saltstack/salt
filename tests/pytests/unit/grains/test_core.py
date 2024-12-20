@@ -3415,6 +3415,12 @@ def test_linux_gpus(caplog):
             "HD Graphics P630",
             "intel",
         ],  # Display controller
+        [
+            "processing accelerators",
+            "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "AMD_Processor_Xcelerator",
+            "amd",
+        ],  # AMD
     ]
 
     with patch("salt.grains.core.__opts__", {"enable_lspci": False}):
