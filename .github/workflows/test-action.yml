@@ -114,6 +114,7 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
+
       - name: "Pull container ${{ matrix.container }}"
         run: |
           docker pull ${{ matrix.container }}
@@ -159,6 +160,16 @@ jobs:
         run: |
           docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_SYSTEM_INFO_ONLY=1 ${{ github.run_id}}_salt-test \
           python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
+
+      - name: Free Space on Host
+        shell: bash
+        run: |
+          df -h
+
+      - name: Free Space on Container
+        shell: bash
+        run: |
+          docker exec ${{ github.run_id}}_salt-test df -h
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
