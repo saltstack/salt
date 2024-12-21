@@ -592,7 +592,8 @@ jobs:
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests -k "mac or darwin"
+            --slow-tests --core-tests -k "mac or darwin" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+
 
       - name: Fix file ownership
         run: |
@@ -873,7 +874,8 @@ jobs:
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          --slow-tests --core-tests -k "win"
+          --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false
