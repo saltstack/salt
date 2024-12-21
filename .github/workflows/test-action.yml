@@ -114,13 +114,18 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
+
       - name: "Pull container ${{ matrix.container }}"
         run: |
           docker pull ${{ matrix.container }}
 
+      - name: "Create docker network"
+        run: |
+           docker network create --ipv6 --subnet 2001:db8::/64 ip6net
+
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --network ip6net --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -156,6 +161,16 @@ jobs:
           docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_SYSTEM_INFO_ONLY=1 ${{ github.run_id}}_salt-test \
           python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
 
+      - name: Free Space on Host
+        shell: bash
+        run: |
+          df -h
+
+      - name: Free Space on Container
+        shell: bash
+        run: |
+          docker exec ${{ github.run_id}}_salt-test df -h
+
       - name: Run Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -177,6 +192,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
@@ -201,6 +217,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
@@ -225,6 +242,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
@@ -249,6 +267,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
@@ -273,6 +292,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
@@ -297,6 +317,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests
 
