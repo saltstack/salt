@@ -192,6 +192,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
@@ -216,6 +217,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
@@ -240,6 +242,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
@@ -264,6 +267,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
@@ -288,6 +292,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
@@ -312,6 +317,7 @@ jobs:
             -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
             -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
             -e SALT_TRANSPORT=${{ matrix.transport }} \
+            -e LANG="en_US.UTF-8" \
             ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests
 
