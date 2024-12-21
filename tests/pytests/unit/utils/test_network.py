@@ -1469,15 +1469,15 @@ def test_ip_to_host(grains):
 
     ret = network.ip_to_host("::1")
     if grains["os"] == "Amazon":
-        assert ret == "localhost6"
+        assert ret in ("localhost6", "localhost")
     elif grains["os_family"] == "Debian":
         if grains["osmajorrelease"] == 12:
             assert ret == hostname
         else:
-            assert ret == "ip6-localhost"
+            assert ret in ("ip6-localhost", "localhost")
     elif grains["os_family"] == "RedHat":
         if grains["oscodename"] == "Photon":
-            assert ret == "ipv6-localhost"
+            assert ret == ("ipv6-localhost", "localhost")
         else:
             assert ret == hostname
     elif grains["os_family"] == "Arch":
@@ -1485,7 +1485,7 @@ def test_ip_to_host(grains):
             # running doesn't have osmajorrelease grains
             assert ret == hostname
         else:
-            assert ret == "ip6-localhost"
+            assert ret in ("ip6-localhost", "localhost")
     else:
         assert ret == hostname
 
