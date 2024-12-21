@@ -1477,7 +1477,7 @@ def test_ip_to_host(grains):
             assert ret in ("ip6-localhost", "localhost")
     elif grains["os_family"] == "RedHat":
         if grains["oscodename"] == "Photon":
-            assert ret == ("ipv6-localhost", "localhost")
+            assert ret in ("ipv6-localhost", "localhost")
         else:
             assert ret == hostname
     elif grains["os_family"] == "Arch":
