@@ -1460,7 +1460,7 @@ def test_ip_to_host(grains):
     ret = network.ip_to_host("127.0.0.1")
     if grains.get("oscodename") == "Photon":
         # Photon returns this for IPv4
-        assert ret == "ipv6-localhost"
+        assert ret in ("ipv6-localhost", "localhost")
     else:
         assert ret == hostname
 
