@@ -140,7 +140,7 @@ jobs:
           -e PRINT_SYSTEM_INFO=0 \
           -e RERUN_FAILURES=1 \
           -e GITHUB_ACTIONS_PIPELINE=1 \
-          -e SKIP_INITIAL_ONEDIR_FAILURES= 1\
+          -e SKIP_INITIAL_ONEDIR_FAILURES=1 \
           -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
           -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
           -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
