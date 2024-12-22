@@ -393,6 +393,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -418,6 +419,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -442,6 +444,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -466,6 +469,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -490,6 +494,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -514,6 +519,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -676,6 +682,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -701,6 +708,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -725,6 +733,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -749,6 +758,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -773,6 +783,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -797,6 +808,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
