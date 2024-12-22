@@ -66,7 +66,8 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '--fips ' || '' }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
@@ -370,7 +371,8 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
@@ -644,7 +646,8 @@ jobs:
           include-hidden-files: true
 
   test-windows:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     runs-on: ${{ matrix.slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
