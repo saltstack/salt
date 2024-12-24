@@ -552,10 +552,9 @@ def _build_matrix(os_kind):
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
-    elif (
-        os_kind == "linux"
-        and "LINUX_ARM_RUNNER" in os.environ
-        and os.environ["LINUX_ARM_RUNNER"] != "0"
+    elif os_kind == "linux" and os.environ.get("LINUX_ARM_RUNNER", "0") not in (
+        "0",
+        "",
     ):
         _matrix.append({"arch": "arm64"})
     return _matrix
@@ -850,7 +849,7 @@ def pkg_matrix(
     if (
         arch == "arm64"
         and name not in ["windows", "macos"]
-        and os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
+        and os.environ.get("LINUX_ARM_RUNNER", "0") not in ("0", "")
     ):
         ctx.warn("This fork does not have a linux arm64 runner configured.")
         _matrix.clear()
@@ -908,7 +907,7 @@ def get_ci_deps_matrix(ctx: Context):
             {"distro-slug": "windows-2022", "arch": "amd64"},
         ],
     }
-    if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
+    if os.environ.get("LINUX_ARM_RUNNER", "0") not in ("0", ""):
         _matrix["linux"].append({"arch": "arm64"})
 
     ctx.info("Generated matrix:")
@@ -1484,7 +1483,10 @@ def _os_test_filter(osdef, transport, chunk):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
-    if osdef.arch == "arm64" and os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+    if osdef.arch == "arm64" and os.environ.get("LINUX_ARM_RUNNER", "0") not in (
+        "0",
+        "",
+    ):
         return False
     if transport == "tcp" and osdef.slug not in (
         "rockylinux-9",
@@ -1642,7 +1644,7 @@ def workflow_config(
 
     pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
 
-    if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+    if os.environ.get("LINUX_ARM_RUNNER", "0") in ("0", ""):
         TEST_SALT_LISTING["linux"] = list(
             filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
         )

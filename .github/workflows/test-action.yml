@@ -66,7 +66,8 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '--fips ' || '' }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
@@ -114,13 +115,54 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
+
       - name: "Pull container ${{ matrix.container }}"
         run: |
           docker pull ${{ matrix.container }}
 
+      - name: "Create docker network"
+        run: |
+           docker network create --ipv6 --subnet 2001:db8::/64 ip6net
+
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          /usr/bin/docker \
+          create --name ${{ github.run_id }}_salt-test \
+          --network ip6net \
+          --workdir /__w/salt/salt \
+          --privileged \
+          -e "HOME=/github/home" \
+          -e GITHUB_ACTIONS=true \
+          -e CI=true \
+          -e SKIP_REQUIREMENTS_INSTALL=1 \
+          -e PRINT_TEST_SELECTION=0 \
+          -e PRINT_TEST_PLAN_ONLY=0 \
+          -e PRINT_SYSTEM_INFO=0 \
+          -e RERUN_FAILURES=1 \
+          -e GITHUB_ACTIONS_PIPELINE=1 \
+          -e SKIP_INITIAL_ONEDIR_FAILURES=1 \
+          -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
+          -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
+          -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
+          -e COLUMNS=190 \
+          -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
+          -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
+          -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
+          -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
+          -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
+          -e SALT_TRANSPORT=${{ matrix.transport }} \
+          -e LANG="en_US.UTF-8" \
+          -e SHELL=/bin/bash \
+          -v "/var/run/docker.sock":"/var/run/docker.sock" \
+          -v "/home/runner/work":"/__w" \
+          -v "/home/runner/work/_temp":"/__w/_temp" \
+          -v "/home/runner/work/_actions":"/__w/_actions" \
+          -v "/opt/hostedtoolcache":"/__t" \
+          -v "/home/runner/work/_temp/_github_home":"/github/home" \
+          -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" \
+          --entrypoint "/usr/lib/systemd/systemd" \
+          ${{ matrix.container }} \
+          --systemd --unit rescue.target
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -156,149 +198,62 @@ jobs:
           docker exec -e SKIP_REQUIREMENTS_INSTALL=1 -e PRINT_SYSTEM_INFO_ONLY=1 ${{ github.run_id}}_salt-test \
           python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
 
+      - name: Free Space on Host
+        shell: bash
+        run: |
+          df -h
+
+      - name: Free Space on Container
+        shell: bash
+        run: |
+          docker exec ${{ github.run_id}}_salt-test df -h
+
       - name: Run Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test \
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
       - name: Run Slow Tests
         id: run-slow-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test \
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
       - name: Run Core Tests
         id: run-core-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test \
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
         if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec ${{ github.run_id}}_salt-test \
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          docker exec \
-            -e SKIP_REQUIREMENTS_INSTALL=1 \
-            -e PRINT_TEST_SELECTION=0 \
-            -e PRINT_TEST_PLAN_ONLY=0 \
-            -e PRINT_SYSTEM_INFO=0 \
-            -e RERUN_FAILURES=1 \
-            -e GITHUB_ACTIONS_PIPELINE=1 \
-            -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-            -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-            -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-            -e COLUMNS=190 \
-            -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-            -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-            -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-            -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-            -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-            -e SALT_TRANSPORT=${{ matrix.transport }} \
-            ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests
+          docker exec ${{ github.run_id}}_salt-test \
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+            --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
       - name: Fix file ownership
         run: |
@@ -349,7 +304,8 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
@@ -438,6 +394,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -463,6 +420,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -487,6 +445,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -511,6 +470,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -535,6 +495,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -559,6 +520,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -571,7 +533,8 @@ jobs:
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests -k "mac or darwin"
+            --slow-tests --core-tests -k "mac or darwin" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+
 
       - name: Fix file ownership
         run: |
@@ -622,7 +585,8 @@ jobs:
           include-hidden-files: true
 
   test-windows:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     runs-on: ${{ matrix.slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
@@ -719,6 +683,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -744,6 +709,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -768,6 +734,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -792,6 +759,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -816,6 +784,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -840,6 +809,7 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
@@ -852,7 +822,8 @@ jobs:
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
-          --slow-tests --core-tests -k "win"
+          --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false
