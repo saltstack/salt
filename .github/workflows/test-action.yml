@@ -152,6 +152,7 @@ jobs:
           -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
           -e SALT_TRANSPORT=${{ matrix.transport }} \
           -e LANG="en_US.UTF-8" \
+          -e SHELL=/bin/bash \
           -v "/var/run/docker.sock":"/var/run/docker.sock" \
           -v "/home/runner/work":"/__w" \
           -v "/home/runner/work/_temp":"/__w/_temp" \
