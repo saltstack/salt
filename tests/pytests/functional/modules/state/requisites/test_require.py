@@ -361,6 +361,88 @@ def test_requisites_require_ordering_and_errors_5(state, state_tree):
         assert ret.errors == [errmsg]
 
 
+def test_requisites_require_with_order_first_last(state, state_tree):
+    """
+    Call sls file containing a state with require_in order first
+    and require and order last.
+
+    Ensure that the order is right.
+    """
+    sls_contents = """
+    # Complex require/require_in graph
+    #
+    # Relative order of A > D is given by the definition order
+    #
+    # B (1) <------+
+    #              |
+    # A (2)        +
+    #              |
+    # D (3) <--+ --|
+    #          |
+    # E (4)    |
+    #          |
+    # C (5) ---+
+    #
+
+    A:
+      test.succeed_with_changes
+
+    B:
+      test.succeed_with_changes:
+        - order: first
+        - require_in:
+          - D
+
+    C:
+      test.succeed_with_changes:
+        - order: last
+        - require:
+          - D
+
+    D:
+      test.succeed_with_changes
+
+    E:
+      test.succeed_with_changes
+    """
+    expected_result = {
+        "test_|-B_|-B_|-succeed_with_changes": {
+            "__run_num__": 0,
+            "result": True,
+            "changes": True,
+            "comment": "Success!",
+        },
+        "test_|-A_|-A_|-succeed_with_changes": {
+            "__run_num__": 1,
+            "result": True,
+            "changes": True,
+            "comment": "Success!",
+        },
+        "test_|-D_|-D_|-succeed_with_changes": {
+            "__run_num__": 2,
+            "result": True,
+            "changes": True,
+            "comment": "Success!",
+        },
+        "test_|-E_|-E_|-succeed_with_changes": {
+            "__run_num__": 3,
+            "result": True,
+            "changes": True,
+            "comment": "Success!",
+        },
+        "test_|-C_|-C_|-succeed_with_changes": {
+            "__run_num__": 4,
+            "result": True,
+            "changes": True,
+            "comment": "Success!",
+        },
+    }
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        result = normalize_ret(ret.raw)
+        assert result == expected_result
+
+
 def test_requisites_require_any(state, state_tree):
     """
     Call sls file containing require_any.
