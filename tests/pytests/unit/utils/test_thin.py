@@ -1,9 +1,15 @@
+import importlib
+import os
+import sys
+
 import pytest
+import saltfactories.utils.saltext
 
 import salt.exceptions
 import salt.utils.stringutils
 import salt.utils.thin
 from tests.support.mock import MagicMock, patch
+from tests.support.pytest.helpers import FakeSaltExtension
 
 
 def _mock_popen(return_value=None, side_effect=None, returncode=0):
@@ -52,7 +58,6 @@ def test_get_ext_tops(version):
     python3 = False
     if tuple(version) >= (3, 0):
         python3 = True
-
     cfg = {
         "namespace": {
             "path": "/foo",
@@ -62,6 +67,7 @@ def test_get_ext_tops(version):
                 "yaml": "/yaml/",
                 "tornado": "/tornado/tornado.py",
                 "msgpack": "msgpack.py",
+                "networkx": "/networkx/networkx.py",
             },
         }
     }
@@ -77,3 +83,45 @@ def test_get_ext_tops(version):
     else:
         assert not [x for x in ret["namespace"]["dependencies"] if "distro" in x]
         assert [x for x in ret["namespace"]["dependencies"] if "msgpack" in x]
+
+
+def test_get_package_root_mod():
+    res = salt.utils.thin._get_package_root_mod(saltfactories.utils.saltext)
+    assert res[0] is saltfactories
+    assert res[1] == ()
+
+
+@pytest.fixture
+def namespaced_saltext(tmp_path_factory):
+    with FakeSaltExtension(
+        tmp_path_factory=tmp_path_factory,
+        name="saltext.wut",
+    ) as extension:
+        try:
+            sys.path.insert(0, str(extension.srcdir / "src"))
+            yield extension
+        finally:
+            sys.path.pop(0)
+
+
+def test_get_namespaced_package_root_mod(namespaced_saltext):
+    saltext = importlib.import_module(namespaced_saltext.name)
+    res = salt.utils.thin._get_package_root_mod(saltext)
+    assert res[0].__name__ == namespaced_saltext.name
+    assert res[1] == ("saltext",)
+
+
+def test_discover_saltexts():
+    """
+    pytest-salt-factories provides a saltext, which can be discovered here.
+    """
+    mods, dists = salt.utils.thin._discover_saltexts()
+    assert mods
+    assert any(mod.endswith(f"{os.sep}saltfactories") and not ns for mod, ns in mods)
+    assert dists
+    dist = "pytest-salt-factories"
+    assert dist in dists
+    assert "entrypoints" in dists[dist]
+    assert "name" in dists[dist]
+    assert dists[dist]["name"].startswith("pytest_salt_factories")
+    assert dists[dist]["name"].endswith(".dist-info")

@@ -95,7 +95,7 @@ def salt_run_cli(salt_master):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir):
+def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir, known_hosts_file):
     """
     The ``salt-ssh`` CLI as a fixture against the running master
     """
@@ -105,5 +105,10 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir):
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(sshd_config_dir / "client_key"),
-        base_script_args=["--ignore-host-keys"],
     )
+
+
+@pytest.fixture(scope="module")
+def salt_auto_account(salt_auto_account_factory):
+    with salt_auto_account_factory as account:
+        yield account

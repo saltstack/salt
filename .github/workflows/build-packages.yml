@@ -39,8 +39,9 @@ on:
 
 env:
   COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
@@ -51,12 +52,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - arm64
+        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
         source:
           - ${{ inputs.source }}
-
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
 
@@ -167,6 +167,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - medium
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -183,6 +184,19 @@ jobs:
     steps:
       # Checkout here so we can easily use custom actions
       - uses: actions/checkout@v4
+
+      # We need a more recent rustc
+      - name: Install a more recent `rustc`
+        if: ${{ inputs.source == 'src' }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Set rust environment variables
+        if: ${{ inputs.source == 'src' }}
+        run: |
+          CARGO_HOME=${CARGO_HOME:-${HOME}/.cargo}
+          export CARGO_HOME
+          echo "CARGO_HOME=${CARGO_HOME}" | tee -a "${GITHUB_ENV}"
+          echo "${CARGO_HOME}/bin" | tee -a "${GITHUB_PATH}"
 
       # Checkout here for the build process
       - name: Checkout in build directory
@@ -265,6 +279,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - medium
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -276,7 +291,7 @@ jobs:
           - ${{ inputs.source }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
 
     steps:
       - uses: actions/checkout@v4
@@ -362,6 +377,7 @@ jobs:
       SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
       SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
       WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
       - name: Check Package Signing Enabled

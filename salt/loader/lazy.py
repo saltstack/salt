@@ -166,6 +166,40 @@ class LoadedFunc:
         return f"<{self.__class__.__name__} name={self.name!r}>"
 
 
+class LoadedCoro(LoadedFunc):
+    """
+    Coroutine functions loaded by LazyLoader instances using subscript notation
+    'a[k]' will be wrapped with LoadedCoro.
+
+      - Makes sure functions are called with the correct loader's context.
+      - Provides access to a wrapped func's __global__ attribute
+
+    :param func str: The function name to wrap
+    :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
+    """
+
+    async def __call__(
+        self, *args, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
+        run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        # All modules we've imported should have __opts__ defined. There are
+        # cases in the test suite where mod ends up being something other than
+        # a module we've loaded.
+        set_test = False
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+                if "test" in self.loader.opts:
+                    mod.__opts__["test"] = self.loader.opts["test"]
+                    set_test = True
+        if self.loader.inject_globals:
+            run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        ret = await self.loader.run(run_func, *args, **kwargs)
+        if set_test:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
+
+
 class LoadedMod:
     """
     This class is used as a proxy to a loaded module
@@ -347,7 +381,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
-        super().__getitem__(item)  # try to get the item from the dictionary
+        _ = super().__getitem__(item)  # try to get the item from the dictionary
+        if not isinstance(_, LoadedFunc) and inspect.iscoroutinefunction(_):
+            return LoadedCoro(item, self)
         return LoadedFunc(item, self)
 
     def __getattr__(self, mod_name):
@@ -1245,7 +1281,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.parent_loader = current_loader
         token = salt.loader.context.loader_ctxvar.set(self)
         try:
-            return _func_or_method(*args, **kwargs)
+            ret = _func_or_method(*args, **kwargs)
+            if isinstance(ret, salt.loader.context.NamedLoaderContext):
+                ret = ret.value()
+            return ret
         finally:
             self.parent_loader = None
             salt.loader.context.loader_ctxvar.reset(token)

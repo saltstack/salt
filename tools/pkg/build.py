@@ -8,13 +8,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import os.path
 import pathlib
 import shutil
 import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
-import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -28,10 +28,6 @@ build = command_group(
     description=__doc__,
     parent="pkg",
 )
-
-
-def _get_shared_constants():
-    return yaml.safe_load(tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text())
 
 
 @build.command(
@@ -77,7 +73,7 @@ def debian(
             )
             ctx.exit(1)
         ctx.info("Building the package from the source files")
-        shared_constants = _get_shared_constants()
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -94,6 +90,20 @@ def debian(
         for key, value in new_env.items():
             os.environ[key] = value
             env_args.extend(["-e", key])
+
+        cargo_home = os.environ.get("CARGO_HOME")
+        user_cargo_bin = os.path.expanduser("~/.cargo/bin")
+        if os.path.exists(user_cargo_bin):
+            ctx.info(
+                f"The path '{user_cargo_bin}' exists so adding --prepend-path={user_cargo_bin}"
+            )
+            env_args.append(f"--prepend-path={user_cargo_bin}")
+        elif cargo_home is not None:
+            cargo_home_bin = os.path.join(cargo_home, "bin")
+            ctx.info(
+                f"The 'CARGO_HOME' environment variable is set, so adding --prepend-path={cargo_home_bin}"
+            )
+            env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(
@@ -149,7 +159,7 @@ def rpm(
             )
             ctx.exit(1)
         ctx.info("Building the package from the source files")
-        shared_constants = _get_shared_constants()
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -234,7 +244,7 @@ def macos(
 
     if not onedir:
         # Prep the salt onedir if not building from an existing one
-        shared_constants = _get_shared_constants()
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -323,7 +333,7 @@ def windows(
         assert salt_version is not None
         assert arch is not None
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -490,7 +500,7 @@ def onedir_dependencies(
     if platform != "macos" and arch == "arm64":
         arch = "aarch64"
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -629,7 +639,7 @@ def salt_onedir(
     if platform == "darwin":
         platform = "macos"
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
     if TYPE_CHECKING:

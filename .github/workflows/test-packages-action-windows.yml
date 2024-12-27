@@ -65,8 +65,9 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
@@ -82,6 +83,7 @@ jobs:
       - x86_64
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
+      build-reports: ${{ steps.generate-pkg-matrix.outputs.build-reports }}
     steps:
 
       - name: "Throttle Builds"
@@ -124,6 +126,11 @@ jobs:
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -185,7 +192,7 @@ jobs:
           tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
       - name: Downgrade importlib-metadata
-        if: ${{ contains(fromJSON('["amazonlinux-2", "centos-7", "debian-10"]'), inputs.distro-slug) && contains(fromJSON('["upgrade-classic", "downgrade-classic"]'), matrix.tests-chunk) }}
+        if: ${{ contains(fromJSON('["amazonlinux-2", "centos-7"]'), inputs.distro-slug) && contains(fromJSON('["upgrade-classic", "downgrade-classic"]'), matrix.tests-chunk) }}
         run: |
           # This step can go away once we stop testing classic packages upgrade/downgrades to/from 3005.x
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- "sudo python3 -m pip install -U 'importlib-metadata<=4.13.0' 'virtualenv<=20.21.1'"
@@ -199,7 +206,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install ${{ matrix.fips && '--fips ' || '' }}\
           --nox-session=${{ inputs.nox-session }}-pkgs --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.tests-chunk }} \
-          ${{ matrix.version && format('--prev-version {0}', matrix.version) || ''}}
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
@@ -218,11 +225,9 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        # This needs to be actions/upload-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts
             !artifacts/pkg/*
@@ -232,26 +237,34 @@ jobs:
   report:
     name: Report
     runs-on: ubuntu-latest
-    if: always() && inputs.skip-code-coverage == false && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always() && fromJSON(needs.generate-matrix.outputs.build-reports) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
-      - test
       - generate-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+      - test
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Merge Test Run Artifacts
+        uses: actions/upload-artifact/merge@v4
+        continue-on-error: true
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
+          pattern: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-*
+          separate-directories: true
+          delete-merged: true
+
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
-        uses: actions/download-artifact@v3
-        # This needs to be actions/download-artifact@v3 because we upload multiple artifacts
-        # under the same name something that actions/upload-artifact@v4 does not do.
+        uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.tests-chunk }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}
           path: artifacts
 
       - name: Show Test Run Artifacts

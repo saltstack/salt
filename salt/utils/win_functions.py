@@ -11,15 +11,21 @@ from salt.exceptions import CommandExecutionError
 
 try:
     import psutil
-    import pywintypes
     import win32api
     import win32net
     import win32security
     from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
 
+    import pywintypes  # isort:skip
+
     HAS_WIN32 = True
 except ImportError:
-    HAS_WIN32 = False
+    try:
+        import psutil
+        from win32 import pywintypes, win32api, win32net, win32security
+        from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
+    except ImportError:
+        HAS_WIN32 = False
 
 
 # Although utils are often directly imported, it is also possible to use the
@@ -184,11 +190,23 @@ def get_sam_name(username):
 
     .. note:: Long computer names are truncated to 15 characters
     """
+    # Some special identity groups require special handling. They do not have
+    # the domain prepended to the name. They should be added here as they are
+    # discovered. Use the SID to be locale agnostic.
+    # Everyone: S-1-1-0
+    special_id_groups = ["S-1-1-0"]
+
     try:
         sid_obj = win32security.LookupAccountName(None, username)[0]
     except pywintypes.error:
         return "\\".join([platform.node()[:15].upper(), username])
+
+    sid = win32security.ConvertSidToStringSid(sid_obj)
     username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
+
+    if sid in special_id_groups:
+        return username
+
     return "\\".join([domain, username])
 
 

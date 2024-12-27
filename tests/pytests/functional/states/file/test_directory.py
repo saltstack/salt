@@ -436,3 +436,55 @@ def test_issue_12209_follow_symlinks(
         assert one_group_check == state_file_account.group.name
         two_group_check = modules.file.get_group(str(twodir), follow_symlinks=False)
         assert two_group_check == state_file_account.group.name
+
+
+@pytest.mark.parametrize("backupname_isfile", [False, True])
+def test_directory_backupname_force_test_mode_noclobber(
+    file, tmp_path, backupname_isfile
+):
+    """
+    Ensure that file.directory does not make changes when backupname is used
+    alongside force=True and test=True.
+
+    See https://github.com/saltstack/salt/issues/66049
+    """
+    source_dir = tmp_path / "source_directory"
+    source_dir.mkdir()
+    dest_dir = tmp_path / "dest_directory"
+    backupname = tmp_path / "backup_dir"
+    dest_dir.symlink_to(source_dir.resolve())
+
+    if backupname_isfile:
+        backupname.touch()
+        assert backupname.is_file()
+
+    ret = file.directory(
+        name=str(dest_dir),
+        allow_symlink=False,
+        force=True,
+        backupname=str(backupname),
+        test=True,
+    )
+
+    # Confirm None result
+    assert ret.result is None
+    try:
+        # Confirm dest_dir not modified
+        assert salt.utils.path.readlink(str(dest_dir)) == str(source_dir)
+    except OSError:
+        pytest.fail(f"{dest_dir} was modified")
+
+    # Confirm that comment and changes match what we expect
+    assert (
+        ret.comment
+        == f"{dest_dir} would be backed up and replaced with a new directory"
+    )
+    assert ret.changes[str(dest_dir)] == {"directory": "new"}
+    assert ret.changes["backup"] == f"{dest_dir} would be renamed to {backupname}"
+
+    if backupname_isfile:
+        assert ret.changes["forced"] == (
+            f"Existing file at backup path {backupname} would be removed"
+        )
+    else:
+        assert "forced" not in ret.changes

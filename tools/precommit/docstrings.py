@@ -361,7 +361,6 @@ MISSING_DOCSTRINGS = {
         "machine_get_machinestate_tuple",
     ],
     "salt/utils/win_osinfo.py": ["get_os_version_info"],
-    "salt/utils/win_runas.py": ["split_username"],
     "salt/utils/yamldumper.py": [
         "represent_undefined",
         "represent_ordereddict",
@@ -749,7 +748,6 @@ MISSING_EXAMPLES = {
         "delete_advanced_configs",
         "get_vm",
     ],
-    "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
     "salt/modules/zk_concurrency.py": [
         "lock",

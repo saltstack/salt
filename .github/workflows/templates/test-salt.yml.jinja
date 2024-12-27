@@ -6,18 +6,22 @@
 <%- set partial_testrun_timeout_value = 360 %>
 <%- set windows_full_testrun_timeout_value = full_testrun_timeout_value + 30 %>
 
-  <%- for slug, display_name, arch in test_salt_listing["windows"] %>
+  <%- for os in test_salt_listing["windows"] %>
 
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
+  <{ os.slug.replace(".", "") }>:
+    <%- do test_salt_needs.append(os.slug.replace(".", "")) %>
+    name: <{ os.display_name }> Test
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-windows.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ os.slug }>
       nox-session: ci-test-onedir
       platform: windows
       arch: amd64
@@ -33,21 +37,26 @@
   <%- endfor %>
 
 
-  <%- for slug, display_name, arch in test_salt_listing["macos"] %>
+  <%- for os in test_salt_listing["macos"] %>
 
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
+  <{ os.slug.replace(".", "") }>:
+    <%- do test_salt_needs.append(os.slug.replace(".", "")) %>
+    name: <{ os.display_name }> Test
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-macos.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ os.slug }>
+      runner: <{ os.runner }>
       nox-session: ci-test-onedir
       platform: macos
-      arch: <{ arch }>
+      arch: <{ os.arch }>
       nox-version: <{ nox_version  }>
       gh-actions-python-version: "<{ gh_actions_workflows_python_version }>"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
@@ -59,21 +68,26 @@
 
   <%- endfor %>
 
-  <%- for slug, display_name, arch, fips in test_salt_listing["linux"] %>
+  <%- for os in test_salt_listing["linux"] %>
+    <%- set job_name = "{}{}".format(os.slug.replace(".", ""), os.fips and '-fips' or '') %>
 
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
+  <{ job_name }>:
+    <%- do test_salt_needs.append(job_name) %>
+    name: <{ os.display_name }> Test<%- if os.fips %> (fips)<%- endif %>
+    <%- if workflow_slug != "ci" or os.slug in mandatory_os_slugs %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] && contains(fromJSON(needs.prepare-workflow.outputs.os-labels), '<{ os.slug }>') }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-ci-deps
     uses: ./.github/workflows/test-action-linux.yml
     with:
-      distro-slug: <{ slug }>
+      distro-slug: <{ os.slug }>
       nox-session: ci-test-onedir
       platform: linux
-      arch: <{ arch }>
+      arch: <{ os.arch }>
       nox-version: <{ nox_version  }>
       gh-actions-python-version: "<{ gh_actions_workflows_python_version }>"
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
@@ -82,7 +96,7 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       workflow-slug: <{ workflow_slug }>
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && <{ full_testrun_timeout_value }> || <{ partial_testrun_timeout_value }> }}
-    <%- if fips == "fips" %>
+    <%- if os.fips %>
       fips: true
     <%- endif %>
 

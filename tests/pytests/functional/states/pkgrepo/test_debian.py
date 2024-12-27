@@ -4,10 +4,11 @@ import os
 import pathlib
 import shutil
 import sys
-from sysconfig import get_path
+import sysconfig
 
 import attr
 import pytest
+import requests
 
 import salt.modules.aptpkg
 import salt.utils.files
@@ -123,7 +124,7 @@ def system_aptsources(request, grains):
                     "{}".format(*sys.version_info),
                     "{}.{}".format(*sys.version_info),
                 ]
-                session_site_packages_dir = get_path(
+                session_site_packages_dir = sysconfig.get_path(
                     "purelib"
                 )  # note: platlib and purelib could differ
                 session_site_packages_dir = os.path.relpath(
@@ -649,6 +650,7 @@ class Repo:
     key_file = attr.ib()
     sources_list_file = attr.ib()
     repo_file = attr.ib()
+    repo_url = attr.ib()
     repo_content = attr.ib()
     key_url = attr.ib()
 
@@ -686,6 +688,10 @@ class Repo:
     def _default_repo_file(self):
         return self.sources_list_file
 
+    @repo_url.default
+    def _default_repo_url(self):
+        return f"https://repo.saltproject.io/py3/{self.fullname}/{self.grains['osrelease']}/{self.grains['osarch']}/latest"
+
     @repo_content.default
     def _default_repo_content(self):
         if self.alt_repo:
@@ -703,24 +709,25 @@ class Repo:
                 opts = "[arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]".format(
                     arch=self.grains["osarch"]
                 )
-            repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
-                self.fullname,
-                self.grains["osrelease"],
-                self.grains["oscodename"],
-                arch=self.grains["osarch"],
-                opts=opts,
+            repo_content = (
+                f"deb {opts} {self.repo_url} {self.grains['oscodename']} main"
             )
         return repo_content
 
     @key_url.default
     def _default_key_url(self):
-        key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-            self.fullname, self.grains["osrelease"], self.grains["osarch"]
-        )
-
+        key_url = f"{self.repo_url}/salt-archive-keyring.gpg"
         if self.alt_repo:
             key_url = "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
         return key_url
+
+    @property
+    def exists(self):
+        """
+        Return True if the repository path exists.
+        """
+        response = requests.head(self.key_url, timeout=30)
+        return response.status_code == 200
 
 
 @pytest.fixture
@@ -729,10 +736,14 @@ def repo(request, grains, sources_list_file):
     if "signedby" in request.node.name:
         signedby = True
     repo = Repo(grains=grains, sources_list_file=sources_list_file, signedby=signedby)
-    yield repo
-    for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
-        if key.is_file():
-            key.unlink()
+    if not repo.exists:
+        pytest.skip(f"The repo url '{repo.repo_url}' does not exist")
+    try:
+        yield repo
+    finally:
+        for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
+            if key.is_file():
+                key.unlink()
 
 
 def test_adding_repo_file_signedby(pkgrepo, states, repo, subtests):

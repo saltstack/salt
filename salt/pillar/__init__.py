@@ -474,7 +474,7 @@ class PillarCache:
             self.saltenv,
             ext=self.ext,
             functions=self.functions,
-            pillar_override=self.pillar_override,
+            pillar_override=None,
             pillarenv=self.pillarenv,
             extra_minion_data=self.extra_minion_data,
         )
@@ -1212,7 +1212,9 @@ class Pillar:
             for key, val in run.items():
                 if key not in self.ext_pillars:
                     log.critical(
-                        "Specified ext_pillar interface %s is unavailable", key
+                        "ext_pillar interface named %s is unavailable. Make sure it is placed in the correct "
+                        "directory/location. Check https://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules for details.",
+                        key,
                     )
                     continue
                 try:

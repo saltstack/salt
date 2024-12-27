@@ -103,6 +103,26 @@ def test_build_rule():
         "comment": "Successfully built rule",
     }
 
+    assert nftables.build_rule(
+        table="filter",
+        chain="input",
+        family="ip6",
+        command="insert",
+        position="3",
+        full="True",
+        connstate="related,established",
+        saddr="::/0",
+        daddr="fe80:cafe::1",
+        jump="accept",
+    ) == {
+        "result": True,
+        "rule": (
+            "nft insert rule ip6 filter input position 3 ct state {"
+            " related,established } ip6 saddr ::/0 ip6 daddr fe80:cafe::1 accept"
+        ),
+        "comment": "Successfully built rule",
+    }
+
     assert nftables.build_rule() == {"result": True, "rule": "", "comment": ""}
 
 

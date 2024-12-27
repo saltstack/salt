@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.relenv
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
@@ -190,6 +191,59 @@ EOF'''.format(
     ]
 )
 
+
+SSH_SH_SHIM_RELENV = "\n".join(
+    [
+        s.strip()
+        for s in """
+/bin/sh << 'EOF'
+set -e
+set -u
+DEBUG="{DEBUG}"
+if [ -n "$DEBUG" ]; then set -x; fi
+
+SET_PATH="{SET_PATH}"
+if [ -n "$SET_PATH" ]; then export PATH=$SET_PATH; fi
+
+SUDO=""
+if [ -n "{SUDO}" ]; then SUDO="{SUDO} "; fi
+
+SUDO_USER="{SUDO_USER}"
+if [ "$SUDO" ] && [ "$SUDO_USER" ]; then SUDO="$SUDO -u $SUDO_USER"; fi
+
+RELENV_TAR="{THIN_DIR}/salt-relenv.tar.xz"
+mkdir -p "{THIN_DIR}"
+SALT_CALL_BIN="{THIN_DIR}/salt-call"
+
+# Extract relenv tarball if not already extracted
+if [ ! -x "$SALT_CALL_BIN" ]; then
+    if [ ! -f "$RELENV_TAR" ]; then
+        echo deploy
+        echo "ERROR: relenv tarball not found at $RELENV_TAR" >&2
+        exit 11
+    fi
+
+    # Create directory if not exists and extract the tarball
+    tar --strip-components=1 -xf "$RELENV_TAR" -C "{THIN_DIR}"
+fi
+
+# Check if Python binary is executable
+if [ ! -x "$SALT_CALL_BIN" ]; then
+    echo "ERROR: salt-call binary not found or not executable at $SALT_CALL_BIN" >&2
+    exit 1
+fi
+
+echo "{RSTR}"
+echo "{RSTR}" >&2
+
+exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "{THIN_DIR}" {ARGS}
+EOF
+""".split(
+            "\n"
+        )
+    ]
+)
+
 if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
@@ -310,12 +364,18 @@ class SSH(MultiprocessingStateMixin):
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(
-            self.opts["cachedir"],
-            extra_mods=self.opts.get("thin_extra_mods"),
-            overwrite=self.opts["regen_thin"],
-            extended_cfg=self.opts.get("ssh_ext_alternatives"),
-        )
+        if self.opts.get("relenv"):
+            self.thin = None
+        else:
+            self.thin = salt.utils.thin.gen_thin(
+                self.opts["cachedir"],
+                extra_mods=self.opts.get("thin_extra_mods"),
+                overwrite=self.opts["regen_thin"],
+                extended_cfg=self.opts.get("ssh_ext_alternatives"),
+                exclude_saltexts=self.opts.get("thin_exclude_saltexts", False),
+                saltext_allowlist=self.opts.get("thin_saltext_allowlist"),
+                saltext_blocklist=self.opts.get("thin_saltext_blocklist"),
+            )
         self.mods = mod_data(self.fsclient)
 
     # __setstate__ and __getstate__ are only used on spawning platforms.
@@ -1008,6 +1068,7 @@ class Single:
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
+        self.ssh_pre_hook = kwargs.get("ssh_pre_hook", None)
         self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
         self.ssh_pre_flight_args = kwargs.get("ssh_pre_flight_args", None)
 
@@ -1067,7 +1128,73 @@ class Single:
             # Determine if Windows client is x86 or AMD64
             arch, _, _ = self.shell.exec_cmd("powershell $ENV:PROCESSOR_ARCHITECTURE")
             self.arch = arch.strip()
-        self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
+
+        if self.opts.get("relenv"):
+            kernel, os_arch = self.detect_os_arch()
+            self.thin = salt.utils.relenv.gen_relenv(
+                opts["cachedir"], kernel=kernel, os_arch=os_arch
+            )
+        else:
+            self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
+
+    def detect_os_arch(self):
+        """
+        Detect the OS and architecture of the target machine.
+        This is specifically for the purpose of downloading the latest onedir tarball from the Salt repos.
+        Returns a tuple of (kernel, architecture) or raises an error if detection fails.
+        """
+        # Unified command for Unix-based systems (including fallback to OSTYPE and MACHTYPE)
+        unix_cmd = 'uname -s -m || echo "$OSTYPE $MACHTYPE"'
+
+        # Command for Windows systems (PowerShell)
+        windows_cmd = 'echo "$env:PROCESSOR_ARCHITECTURE"'
+
+        # Try Unix command first
+        stdout, stderr, retcode = self.shell.exec_cmd(unix_cmd)
+
+        if retcode == 0 and stdout:
+            # Unix-based detection succeeded
+            stdout = stdout.lower().strip()
+
+            # Determine OS and architecture for Unix
+            if "linux" in stdout:
+                kernel = "linux"
+            elif "darwin" in stdout or "macos" in stdout:
+                kernel = "macos"
+            else:
+                raise ValueError(f"Unsupported Unix-based kernel: {stdout}")
+
+            # Set architecture
+            if "x86" in stdout:
+                os_arch = "x86_64"
+            else:
+                os_arch = "arm64"
+        else:
+            # If Unix detection fails, check for Windows-specific detection
+            stdout, stderr, retcode = self.shell.exec_cmd(windows_cmd)
+
+            if retcode == 0 and stdout:
+                # Windows detection
+                stdout = stdout.lower().strip()
+
+                # Set Windows architecture based on environment variable
+                if "64" in stdout:
+                    os_arch = "amd64"
+                elif "x86" in stdout:
+                    os_arch = "x86"
+                else:
+                    raise ValueError(f"Unsupported architecture for Windows: {stdout}")
+
+                kernel = "windows"
+            else:
+                # Neither Unix nor Windows detection succeeded
+                raise ValueError(
+                    f"Failed to detect OS and architecture. Commands failed with output: {stdout}, {stderr}"
+                )
+
+        log.info(f'Detected kernel "{kernel}" and architecture "{os_arch}" on target')
+
+        return kernel, os_arch
 
     def __arg_comps(self):
         """
@@ -1092,6 +1219,12 @@ class Single:
         if self.winrm:
             return arg
         return "".join(["\\" + char if re.match(r"\W", char) else char for char in arg])
+
+    def run_ssh_pre_hook(self):
+        """
+        Run a pre_hook script on the host machine before running any ssh commands
+        """
+        return self.shell.exec_cmd(self.ssh_pre_hook)
 
     def run_ssh_pre_flight(self):
         """
@@ -1135,10 +1268,16 @@ class Single:
         """
         Deploy salt-thin
         """
-        self.shell.send(
-            self.thin,
-            os.path.join(self.thin_dir, "salt-thin.tgz"),
-        )
+        if self.opts.get("relenv"):
+            self.shell.send(
+                self.thin,
+                os.path.join(self.thin_dir, "salt-relenv.tar.xz"),
+            )
+        else:
+            self.shell.send(
+                self.thin,
+                os.path.join(self.thin_dir, "salt-thin.tgz"),
+            )
         self.deploy_ext()
         return True
 
@@ -1167,6 +1306,13 @@ class Single:
         """
         stdout = stderr = ""
         retcode = salt.defaults.exitcodes.EX_OK
+
+        if self.ssh_pre_hook:
+            stdout, stderr, retcode = self.run_ssh_pre_hook()
+            if retcode != salt.defaults.exitcodes.EX_OK:
+                log.error("Error running ssh_pre_hook script %s", self.ssh_pre_hook)
+                return stdout, stderr, retcode
+            log.info("Successfully ran the ssh_pre_hook script: %s", self.ssh_pre_hook)
 
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
@@ -1364,6 +1510,7 @@ class Single:
                 self.args = mine_args
                 self.kwargs = {}
 
+        retcode = 0
         try:
             if self.mine:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)
@@ -1425,12 +1572,24 @@ class Single:
             cachedir = self.opts["_caller_cachedir"]
         else:
             cachedir = self.opts["cachedir"]
-        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, "sha1")
         debug = ""
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
         if LOG_LEVELS["debug"] >= LOG_LEVELS[self.opts.get("log_level", "info")]:
             debug = "1"
+
+        if self.opts.get("relenv"):
+            return SSH_SH_SHIM_RELENV.format(
+                DEBUG=debug,
+                SUDO=sudo,
+                SUDO_USER=sudo_user or "",
+                THIN_DIR=self.thin_dir,
+                SET_PATH=self.set_path,
+                RSTR=RSTR,
+                ARGS=" ".join(self.argv),
+            )
+
+        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, "sha1")
         arg_str = '''
 OPTIONS.config = \
 """

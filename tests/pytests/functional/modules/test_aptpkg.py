@@ -398,3 +398,9 @@ def test_aptpkg_remove_wildcard():
     assert ret["nginx-light"]["old"]
     assert not ret["nginx-doc"]["new"]
     assert ret["nginx-doc"]["old"]
+
+
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_unknown_package():
+    ret = aptpkg.remove(name="thispackageistotallynotthere")
+    assert not ret

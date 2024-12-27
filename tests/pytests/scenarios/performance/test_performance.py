@@ -365,6 +365,7 @@ def perf_state_name(state_tree, curr_master, prev_master):
     return subdir
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 def test_performance(
     prev_salt_cli,
     prev_minion,

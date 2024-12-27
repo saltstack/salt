@@ -284,7 +284,7 @@ Function pageMinionConfig
             `hostname` no changes will be made."
     ${Else}
         ${NSD_CreateLabel} 0 75u 100% 60u \
-            "Clicking `Install` will backup the the existing minion config \
+            "Clicking `Install` will backup the existing minion config \
             file and minion.d directories. The values above will be used in \
             the custom config.$\n\
             $\n\
@@ -533,78 +533,10 @@ Section -copy_prereqs
     File /r "..\..\prereqs\"
 SectionEnd
 
-# Check if the Windows 10 Universal C Runtime (KB2999226) is installed. Python
-# 3 needs the updated ucrt on Windows 8.1/2012R2 and lower. They are installed
-# via KB2999226, but we're not going to patch the system here. Instead, we're
-# going to copy the .dll files to the \salt\bin directory
-Section -install_ucrt
 
-    Var /GLOBAL UcrtFileName
-
-    # Get the Major.Minor version Number
-    # Windows 10 introduced CurrentMajorVersionNumber
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentMajorVersionNumber
-
-    # Windows 10/2016 will return a value here, skip to the end if returned
-    StrCmp $R0 '' lbl_needs_ucrt 0
-
-    # Found Windows 10
-    detailPrint "KB2999226 does not apply to this machine"
-    goto lbl_done
-
-    lbl_needs_ucrt:
-    # UCRT only needed on Windows Server 2012R2/Windows 8.1 and below. The
-    # first ReadRegStr command above should have skipped to lbl_done if on
-    # Windows 10 box
-
-    # Is the update already installed
-    ClearErrors
-
-    # Use WMI to check if it's installed
-    detailPrint "Checking for existing UCRT (KB2999226) installation"
-    nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
-    # Clean up the stack
-    Pop $R0 # Gets the ErrorCode
-    Pop $R1 # Gets the stdout, which should be KB2999226 if it's installed
-
-    # If it returned KB2999226 it's already installed
-    StrCmp $R1 'KB2999226' lbl_done
-
-    detailPrint "UCRT (KB2999226) not found"
-
-    # Use RunningX64 here to get the Architecture for the system running the
-    # installer.
-    ${If} ${RunningX64}
-        StrCpy $UcrtFileName "ucrt_x64.zip"
-    ${Else}
-        StrCpy $UcrtFileName "ucrt_x86.zip"
-    ${EndIf}
-
-    ClearErrors
-
-    detailPrint "Unzipping UCRT dll files to $INSTDIR\Scripts"
-    CreateDirectory $INSTDIR\Scripts
-    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\Scripts"
-
-    # Clean up the stack
-    Pop $R0  # Get Error
-
-    ${IfNot} $R0 == "success"
-        detailPrint "error: $R0"
-        Sleep 3000
-    ${Else}
-        detailPrint "UCRT dll files copied successfully"
-    ${EndIf}
-
-    lbl_done:
-
-SectionEnd
-
-
-# Check and install Visual C++ redist 2013 packages
+# Check and install Visual C++ redist 2022 packages
 # Hidden section (-) to install VCRedist
-Section -install_vcredist_2013
+Section -install_vcredist_2022
 
     Var /GLOBAL VcRedistName
     Var /GLOBAL VcRedistReg
@@ -613,11 +545,11 @@ Section -install_vcredist_2013
     # Use RunningX64 here to get the Architecture for the system running the
     # installer.
     ${If} ${RunningX64}
-        StrCpy $VcRedistName "vcredist_x64_2013"
-        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x64"
+        StrCpy $VcRedistName "vcredist_x64_2022"
+        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64"
     ${Else}
-        StrCpy $VcRedistName "vcredist_x86_2013"
-        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86"
+        StrCpy $VcRedistName "vcredist_x86_2022"
+        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86"
     ${EndIf}
 
     # Detecting VCRedist Installation

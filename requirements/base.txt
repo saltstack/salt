@@ -2,16 +2,21 @@
 
 Jinja2
 jmespath
-msgpack>=1.0.0
+msgpack>=1.0.0 ; python_version < '3.13'
+msgpack>=1.1.0 ; python_version >= '3.13'
 PyYAML
 MarkupSafe
-requests>=2.25.1
+# pin to a version available on all supported python versions so salt-ssh can run on older targets
+networkx
+requests>=2.31.0 ; python_version < '3.8'
+requests>=2.32.0 ; python_version >= '3.8'
 distro>=1.0.1
 psutil>=5.0.0
 packaging>=21.3
 looseversion
 tornado>=6.3.3
 aiohttp>=3.9.0
+croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
@@ -24,16 +29,18 @@ python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 importlib-metadata>=3.3.0
-cryptography>=42.0.0
+cryptography>=42.0.0; python_version < '3.13'
+cryptography==42.0.2; python_version >= '3.13'
 
 # From old requirements/static/pkg/linux.in
 rpm-vercmp; sys_platform == 'linux'
 
 # From old windows.txt requirements file
-pywin32>=305; sys_platform == 'win32'
-wmi>=1.5.1; sys_platform == 'win32'
-pythonnet>=3.0.1; sys_platform == 'win32'
+gitpython>=3.1.37; sys_platform == 'win32'
+lxml>=4.6.3; sys_platform == 'win32'
 pymssql>=2.2.1; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
-lxml>=4.6.3; sys_platform == 'win32'
+pythonnet>=3.0.4; sys_platform == 'win32' and python_version < '3.13'
+pywin32>=305; sys_platform == 'win32'
+wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'

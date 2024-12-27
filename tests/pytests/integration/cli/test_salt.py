@@ -16,6 +16,7 @@ from pytestshellutils.utils.processes import ProcessResult, terminate_process
 
 import salt.defaults.exitcodes
 import salt.utils.path
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,11 @@ def salt_minion_2(salt_master):
     """
     factory = salt_master.salt_minion_daemon(
         "minion-2",
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):

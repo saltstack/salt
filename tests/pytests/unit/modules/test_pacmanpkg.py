@@ -5,6 +5,7 @@
 import pytest
 
 import salt.modules.pacmanpkg as pacman
+import salt.utils.systemd
 from tests.support.mock import MagicMock, patch
 
 
@@ -166,3 +167,31 @@ def test_group_diff():
     ):
         results = pacman.group_diff("testgroup")
         assert results["default"] == {"installed": ["A"], "not installed": ["C"]}
+
+
+def test_pacman_install_sysupgrade_flag():
+    """
+    Test if the pacman.install function appends the '-u' flag only when sysupgrade is True
+    """
+    mock_parse_targets = MagicMock(return_value=({"somepkg": None}, "repository"))
+    mock_has_scope = MagicMock(return_value=False)
+    mock_list_pkgs = MagicMock(return_value={"somepkg": "1.0"})
+    mock_run_all = MagicMock(return_value={"retcode": 0, "stderr": ""})
+
+    with patch.dict(
+        pacman.__salt__,
+        {
+            "cmd.run_all": mock_run_all,
+            "pkg_resource.parse_targets": mock_parse_targets,
+            "config.get": MagicMock(return_value=True),
+        },
+    ), patch.object(salt.utils.systemd, "has_scope", mock_has_scope), patch.object(
+        pacman, "list_pkgs", mock_list_pkgs
+    ):
+        pacman.install(name="somepkg", sysupgrade=True)
+        args, _ = pacman.__salt__["cmd.run_all"].call_args
+        assert "-u" in args[0]
+
+        pacman.install(name="somepkg", sysupgrade=None, refresh=True)
+        args, _ = pacman.__salt__["cmd.run_all"].call_args
+        assert "-u" not in args[0]

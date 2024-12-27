@@ -1,22 +1,18 @@
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
-import fnmatch
 import hashlib
 import json
 import os
 import pathlib
 import shutil
 import sys
-import tempfile
-import zipfile
-from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from functools import cache
 
-import boto3
+import attr
 import packaging.version
-from botocore.exceptions import ClientError
+import yaml
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -27,6 +23,11 @@ from rich.progress import (
     TimeRemainingColumn,
     TransferSpeedColumn,
 )
+
+if sys.version_info < (3, 11):
+    from typing_extensions import TypedDict
+else:
+    from typing import TypedDict  # pylint: disable=no-name-in-module
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
@@ -43,6 +44,56 @@ class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
     SOFT_FAIL = 2
+
+
+@attr.s(frozen=True, slots=True)
+class OS:
+    platform: str = attr.ib()
+    slug: str = attr.ib()
+    arch: str = attr.ib()
+    display_name: str = attr.ib(default=None)
+    pkg_type: str = attr.ib(default=None)
+
+    @arch.default
+    def _default_arch(self):
+        return self._get_default_arch()
+
+    def _get_default_arch(self):
+        if "aarch64" in self.slug:
+            return "arm64"
+        if "arm64" in self.slug:
+            return "arm64"
+        return "x86_64"
+
+
+@attr.s(frozen=True, slots=True)
+class Linux(OS):
+    platform: str = attr.ib(default="linux")
+    fips: bool = attr.ib(default=False)
+
+
+@attr.s(frozen=True, slots=True)
+class MacOS(OS):
+    runner: str = attr.ib()
+    platform: str = attr.ib(default="macos")
+
+    @runner.default
+    def _default_runner(self):
+        return self.slug
+
+
+@attr.s(frozen=True, slots=True)
+class Windows(OS):
+    platform: str = attr.ib(default="windows")
+
+    def _get_default_arch(self):
+        return "amd64"
+
+
+class PlatformDefinitions(TypedDict):
+    linux: list[Linux]
+    macos: list[MacOS]
+    windows: list[Windows]
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):
@@ -226,7 +277,11 @@ def download_file(
     headers: dict[str, str] | None = None,
 ) -> pathlib.Path:
     ctx.info(f"Downloading {dest.name!r} @ {url} ...")
-    curl = shutil.which("curl")
+    if sys.platform == "win32":
+        # We don't want to use curl on Windows, it doesn't work
+        curl = None
+    else:
+        curl = shutil.which("curl")
     if curl is not None:
         command = [curl, "-sS", "-L"]
         if headers:
@@ -283,3 +338,23 @@ def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
         else:
             arch = "x86_64"
     return platform, arch
+
+
+@cache
+def get_cicd_shared_context():
+    """
+    Return the CI/CD shared context file contents.
+    """
+    shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    return yaml.safe_load(shared_context_file.read_text())
+
+
+@cache
+def get_golden_images():
+    """
+    Return the golden images information stored on file.
+    """
+    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+        "r", encoding="utf-8"
+    ) as rfh:
+        return json.load(rfh)

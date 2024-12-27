@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 import attr
 import distro
-import packaging
+import packaging.version
 import psutil
 import pytest
 import requests
@@ -22,6 +22,7 @@ from pytestshellutils.utils.processes import (
     ProcessResult,
     _get_cmdline,
     terminate_process,
+    terminate_process_list,
 )
 from pytestskipmarkers.utils import platform
 from saltfactories.bases import SystemdSaltDaemonImpl
@@ -85,7 +86,7 @@ class SaltPkgInstall:
 
     @proc.default
     def _default_proc(self):
-        return Subprocess()
+        return Subprocess(timeout=240)
 
     @distro_id.default
     def _default_distro_id(self):
@@ -105,7 +106,7 @@ class SaltPkgInstall:
 
     @distro_version.default
     def _default_distro_version(self):
-        if self.distro_name == "photon":
+        if self.distro_name in ("photon", "rocky"):
             return distro.version().split(".")[0]
         return distro.version().lower()
 
@@ -113,6 +114,7 @@ class SaltPkgInstall:
     def _default_pkg_mngr(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -129,6 +131,7 @@ class SaltPkgInstall:
     def _default_rm_pkg(self):
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -144,6 +147,7 @@ class SaltPkgInstall:
         dbg_pkg = None
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -167,6 +171,7 @@ class SaltPkgInstall:
         ]
         if self.distro_id in (
             "almalinux",
+            "rocky",
             "centos",
             "redhat",
             "amzn",
@@ -199,7 +204,7 @@ class SaltPkgInstall:
         Default location for salt configurations
         """
         if platform.is_windows():
-            config_path = pathlib.Path("C://salt", "etc", "salt")
+            config_path = pathlib.Path("C:\\salt", "etc", "salt")
         else:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
@@ -237,7 +242,7 @@ class SaltPkgInstall:
                 break
         if not version:
             pytest.fail(
-                f"Failed to package artifacts in '{ARTIFACTS_DIR}'. "
+                f"Failed to find package artifacts in '{ARTIFACTS_DIR}'. "
                 f"Directory Contents:\n{pprint.pformat(artifacts)}"
             )
         return version
@@ -295,6 +300,10 @@ class SaltPkgInstall:
                         self.run_root = self.bin_dir / "run"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
+                log.debug("root: %s", self.root)
+                log.debug("bin_dir: %s", self.bin_dir)
+                log.debug("ssm_bin: %s", self.ssm_bin)
+                log.debug("run_root: %s", self.run_root)
 
         if not self.pkgs:
             pytest.fail("Could not find Salt Artifacts")
@@ -400,21 +409,24 @@ class SaltPkgInstall:
                         self.binary_paths["spm"] = [shutil.which("salt-spm")]
                     else:
                         self.binary_paths["pip"] = [shutil.which("salt-pip")]
+        log.debug("python_bin: %s", python_bin)
+        log.debug("binary_paths: %s", self.binary_paths)
+        log.debug("install_dir: %s", self.install_dir)
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
         if system_service is False:
             return None
         if platform.is_windows():
-            return pathlib.Path("C:/salt")
+            return pathlib.Path("C:\\salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
 
     def _check_retcode(self, ret):
         """
-        helper function ot check subprocess.run
-        returncode equals 0, if not raise assertionerror
+        Helper function to check subprocess.run returncode equals 0
+        If not raise AssertionError
         """
         if ret.returncode != 0:
             log.error(ret)
@@ -434,9 +446,8 @@ class SaltPkgInstall:
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
                 batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg)} /start-minion=0 /S"
+                batch_content = f'start "" /wait {str(pkg)} /start-minion=0 /S'
                 with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
@@ -462,7 +473,13 @@ class SaltPkgInstall:
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+
+            # Add installation to the path
             self.update_process_path()
+
+            # Install the service using our config
+            if self.pkg_system_service:
+                self._install_ssm_service()
 
         elif platform.is_darwin():
             daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
@@ -497,7 +514,6 @@ class SaltPkgInstall:
                 upgrade_cmd,
                 "-y",
                 *args,
-                _timeout=120,
                 env=env,
             )
         else:
@@ -508,6 +524,54 @@ class SaltPkgInstall:
             assert ret.returncode == 0
             assert "/saltstack/salt/run" not in ret.stdout
         log.info(ret)
+        self._check_retcode(ret)
+
+    def _install_ssm_service(self, service="minion"):
+        """
+        This function installs the service on Windows using SSM but does not
+        start it.
+
+        Args:
+
+            service (str):
+                The name of the service. Default is ``minion``
+        """
+        service_name = f"salt-{service}"
+        binary = self.install_dir / f"{service_name}.exe"
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "install",
+            service_name,
+            binary,
+            "-c",
+            f'"{str(self.conf_dir)}"',
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "set",
+            service_name,
+            "Description",
+            "Salt Minion for testing",
+        )
+        self._check_retcode(ret)
+        # This doesn't start the service. It will start automatically on reboot
+        # It is set here to make it the same as what the installer does
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "Start", "SERVICE_AUTO_START"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodConsole", "24000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodWindow", "2000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppRestartDelay", "60000"
+        )
         self._check_retcode(ret)
 
     def package_python_version(self):
@@ -552,7 +616,7 @@ class SaltPkgInstall:
             "3006.0"
         )
         distro_name = self.distro_name
-        if distro_name in ("almalinux", "centos", "fedora"):
+        if distro_name in ("almalinux", "rocky", "centos", "fedora"):
             distro_name = "redhat"
         root_url = "salt/py3/"
         if self.classic:
@@ -560,6 +624,7 @@ class SaltPkgInstall:
 
         if self.distro_name in [
             "almalinux",
+            "rocky",
             "redhat",
             "centos",
             "amazon",
@@ -748,9 +813,8 @@ class SaltPkgInstall:
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
                 batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
+                batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
                 with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
@@ -762,7 +826,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
             if self.pkg_system_service:
-                self._install_system_service()
+                self._install_ssm_service()
 
         elif platform.is_darwin():
             if self.classic:
@@ -959,6 +1023,17 @@ class SaltPkgInstall:
         if not self.no_uninstall:
             self.uninstall()
 
+        # Did we left anything running?!
+        procs = []
+        for proc in psutil.process_iter():
+            if "salt" in proc.name():
+                cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
+                if "/opt/saltstack" in cmdl_strg:
+                    procs.append(proc)
+
+        if procs:
+            terminate_process_list(procs, kill=True, slow_stop=True)
+
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
     # pylint: disable=access-member-before-definition
@@ -1093,8 +1168,8 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
@@ -1229,8 +1304,8 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,

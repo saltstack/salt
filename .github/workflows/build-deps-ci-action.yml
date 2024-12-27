@@ -40,15 +40,48 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          tools ci deps-matrix
+
+
   linux-dependencies:
     name: Linux
+    needs:
+      - generate-matrix
     runs-on:
       - self-hosted
       - linux
@@ -59,11 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: centos-7
-            arch: x86_64
-          - distro-slug: centos-7-arm64
-            arch: arm64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -99,7 +128,7 @@ jobs:
       - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -163,16 +192,16 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    runs-on: ${{ matrix.distro-slug }}
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: macos-12
-            arch: x86_64
-          - distro-slug: macos-13-xlarge
-            arch: arm64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
     steps:
 
       - name: "Throttle Builds"
@@ -250,6 +279,8 @@ jobs:
           path: nox.macos.${{ matrix.arch }}.tar.*
 
   windows-dependencies:
+    needs:
+      - generate-matrix
     name: Windows
     runs-on:
       - self-hosted
@@ -261,9 +292,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - distro-slug: windows-2022
-            arch: amd64
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
     steps:
 
       - name: "Throttle Builds"
@@ -299,7 +328,7 @@ jobs:
       - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'

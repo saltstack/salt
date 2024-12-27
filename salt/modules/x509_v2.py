@@ -9,6 +9,10 @@ Manage X.509 certificates
     This module represents a complete rewrite of the original ``x509`` modules
     and is named ``x509_v2`` since it introduces breaking changes.
 
+.. versionchanged:: 3008.0
+
+    This module is now the default ``x509`` module and therefore does not need
+    to be enabled explicitly anymore.
 
 .. note::
 
@@ -19,19 +23,6 @@ Manage X.509 certificates
 
 Configuration
 -------------
-Explicit activation
-~~~~~~~~~~~~~~~~~~~
-Since this module uses the same virtualname as the previous ``x509`` modules,
-but is incompatible with them, it needs to be explicitly activated on each
-minion by including the following line in the minion configuration:
-
-.. code-block:: yaml
-
-    # /etc/salt/minion.d/x509.conf
-
-    features:
-      x509_v2: true
-
 Peer communication
 ~~~~~~~~~~~~~~~~~~
 To be able to remotely sign certificates, it is required to configure the Salt
@@ -163,17 +154,29 @@ Breaking changes versus the previous ``x509`` modules
 
 Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
+Revert to old modules
+~~~~~~~~~~~~~~~~~~~~~
+Until they are removed, you can still revert to the deprecated ``x509`` modules
+by setting the following minion configuration value:
+
+.. code-block:: yaml
+
+    # /etc/salt/minion.d/x509.conf
+
+    features:
+      x509_v2: false
+
 .. _x509-setup:
 """
 
 import base64
 import copy
-import datetime
 import glob
 import logging
 import os.path
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 
 try:
     import cryptography.x509 as cx509
@@ -201,12 +204,8 @@ def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
     # salt.features appears to not be setup when invoked via peer publishing
-    if not __opts__.get("features", {}).get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
+    if not __opts__.get("features", {}).get("x509_v2", True):
+        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
@@ -1409,10 +1408,12 @@ def expires(certificate, days=0):
         Defaults to ``0``, which checks for the current time.
     """
     cert = x509util.load_cert(certificate)
-    # dates are encoded in UTC/GMT, they are returned as a naive datetime object
-    return cert.not_valid_after <= datetime.datetime.utcnow() + datetime.timedelta(
-        days=days
-    )
+    try:
+        not_after = cert.not_valid_after_utc
+    except AttributeError:
+        # naive datetime object, release <42 (it's always UTC)
+        not_after = cert.not_valid_after.replace(tzinfo=timezone.utc)
+    return not_after <= datetime.now(tz=timezone.utc) + timedelta(days=days)
 
 
 def expired(certificate):
@@ -1692,6 +1693,13 @@ def read_certificate(certificate):
     cert = x509util.load_cert(certificate)
     key_type = x509util.get_key_type(cert.public_key(), as_string=True)
 
+    try:
+        not_before = cert.not_valid_before_utc
+        not_after = cert.not_valid_after_utc
+    except AttributeError:
+        # naive datetime object, release <42 (it's always UTC)
+        not_before = cert.not_valid_before.replace(tzinfo=timezone.utc)
+        not_after = cert.not_valid_after.replace(tzinfo=timezone.utc)
     ret = {
         "version": cert.version.value + 1,  # 0-indexed
         "key_size": cert.public_key().key_size if key_type in ["ec", "rsa"] else None,
@@ -1707,8 +1715,8 @@ def read_certificate(certificate):
         "issuer": _parse_dn(cert.issuer),
         "issuer_hash": x509util.pretty_hex(_get_name_hash(cert.issuer)),
         "issuer_str": cert.issuer.rfc4514_string(),
-        "not_before": cert.not_valid_before.strftime(x509util.TIME_FMT),
-        "not_after": cert.not_valid_after.strftime(x509util.TIME_FMT),
+        "not_before": not_before.strftime(x509util.TIME_FMT),
+        "not_after": not_after.strftime(x509util.TIME_FMT),
         "public_key": get_public_key(cert),
         "extensions": _parse_extensions(cert.extensions),
     }
@@ -1774,10 +1782,16 @@ def read_crl(crl):
         The certificate revocation list to read.
     """
     crl = x509util.load_crl(crl)
+    try:
+        last_update = crl.last_update_utc
+        next_update = crl.next_update_utc
+    except AttributeError:
+        last_update = crl.last_update.replace(tzinfo=timezone.utc)
+        next_update = crl.next_update.replace(tzinfo=timezone.utc)
     ret = {
         "issuer": _parse_dn(crl.issuer),
-        "last_update": crl.last_update.strftime(x509util.TIME_FMT),
-        "next_update": crl.next_update.strftime(x509util.TIME_FMT),
+        "last_update": last_update.strftime(x509util.TIME_FMT),
+        "next_update": next_update.strftime(x509util.TIME_FMT),
         "revoked_certificates": {},
         "extensions": _parse_extensions(crl.extensions),
     }
@@ -1797,12 +1811,15 @@ def read_crl(crl):
         ret["signature_algorithm"] = crl.signature_algorithm_oid.dotted_string
 
     for revoked in crl:
+        try:
+            revocation_date = revoked.revocation_date_utc
+        except AttributeError:
+            # naive datetime object, release <42 (it's always UTC)
+            revocation_date = revoked.revocation_date.replace(tzinfo=timezone.utc)
         ret["revoked_certificates"].update(
             {
                 x509util.dec2hex(revoked.serial_number).replace(":", ""): {
-                    "revocation_date": revoked.revocation_date.strftime(
-                        x509util.TIME_FMT
-                    ),
+                    "revocation_date": revocation_date.strftime(x509util.TIME_FMT),
                     "extensions": _parse_crl_entry_extensions(revoked.extensions),
                 }
             }

@@ -6,6 +6,7 @@ import errno
 import logging
 import os
 import shutil
+import subprocess
 import tempfile
 import textwrap
 
@@ -595,6 +596,12 @@ class GitPillarSSHTestBase(GitPillarTestBase):
             )
         self.make_repo(root_dir, user=self.username)
         self.make_extra_repo(root_dir, user=self.username)
+        # Force git repo ownership to prevent "fatal: detected dubious
+        # ownership in repository" errors.
+        subprocess.run(
+            ["chown", "-R", f"{self.username}:users", f"/home/{self.username}"],
+            check=True,
+        )
         log.info("%s.setUp() complete.", self.__class__.__name__)
 
     def get_pillar(self, ext_pillar_conf):

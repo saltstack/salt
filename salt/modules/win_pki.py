@@ -23,7 +23,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 _DEFAULT_CONTEXT = "LocalMachine"
 _DEFAULT_FORMAT = "cer"
@@ -73,15 +73,19 @@ def _cmd_run(cmd, as_json=False):
         "".join(cmd_full), shell="powershell", python_shell=True
     )
 
-    if cmd_ret["retcode"] != 0:
-        _LOG.error("Unable to execute command: %s\nError: %s", cmd, cmd_ret["stderr"])
+    if cmd_ret["stderr"]:
+        raise CommandExecutionError(
+            "Unable to execute command: {}\nError: {}".format(cmd, cmd_ret["stderr"])
+        )
 
     if as_json:
         try:
             items = salt.utils.json.loads(cmd_ret["stdout"], strict=False)
             return items
         except ValueError:
-            _LOG.error("Unable to parse return data as Json.")
+            raise CommandExecutionError(
+                "Unable to parse return data as JSON:\n{}".format(cmd_ret["stdout"])
+            )
 
     return cmd_ret["stdout"]
 

@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/freebsd.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/freebsd.in requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
-aiohttp==3.9.2
+aiohttp==3.9.5
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
@@ -13,6 +13,10 @@ aiosignal==1.3.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   aiohttp
+annotated-types==0.6.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   pydantic
 apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 asn1crypto==1.5.1
@@ -94,9 +98,11 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
-croniter==1.3.15 ; sys_platform != "win32"
-    # via -r requirements/static/ci/common.in
-cryptography==42.0.5
+croniter==2.0.5 ; sys_platform != "win32"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   -r requirements/base.txt
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
@@ -113,11 +119,11 @@ distro==1.8.0
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.3.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
@@ -125,7 +131,7 @@ exceptiongroup==1.1.1
     # via pytest
 filelock==3.13.1
     # via virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.4.1
     # via
@@ -142,13 +148,13 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.41
+gitpython==3.1.43
     # via -r requirements/static/ci/common.in
 google-auth==2.27.0
     # via kubernetes
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   etcd3-py
@@ -193,7 +199,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   jaraco.collections
-jinja2==3.1.3
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
@@ -258,7 +264,7 @@ more-itertools==9.1.0
     #   jaraco.text
 moto==4.1.11
     # via -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
@@ -283,6 +289,11 @@ netmiko==4.2.0
     # via napalm
 netutils==1.6.0
     # via napalm
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   -r requirements/base.txt
 ntc-templates==4.0.1
     # via netmiko
 oscrypto==1.3.0
@@ -291,7 +302,6 @@ packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -307,7 +317,7 @@ pathspec==0.11.1
     # via yamllint
 platformdirs==4.0.0
     # via virtualenv
-pluggy==1.0.0
+pluggy==1.4.0
     # via pytest
 portend==3.1.0
     # via
@@ -334,7 +344,11 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/crypto.txt
-pydantic==1.10.8
+pydantic-core==2.16.3
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   pydantic
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   inflect
@@ -370,7 +384,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc29
+pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -383,9 +397,9 @@ pytest-subtests==0.11.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.1.0
+pytest-timeout==2.3.1
     # via -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -414,6 +428,7 @@ python-gnupg==0.5.2
 pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   croniter
     #   tempora
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
@@ -430,12 +445,12 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.1.2
+pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
@@ -486,9 +501,9 @@ six==1.16.0
     #   transitions
     #   vcert
     #   websocket-client
-smmap==5.0.0
+smmap==5.0.1
     # via gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -498,6 +513,7 @@ tempora==5.3.0
     #   portend
 textfsm==1.1.3
     # via
+    #   -r requirements/static/ci/common.in
     #   napalm
     #   netmiko
     #   ntc-templates
@@ -528,9 +544,11 @@ types-pyyaml==6.0.1
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
+    #   annotated-types
     #   inflect
     #   napalm
     #   pydantic
+    #   pydantic-core
     #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.18
@@ -542,7 +560,7 @@ urllib3==1.26.18
     #   python-etcd
     #   requests
     #   responses
-vcert==0.9.1 ; sys_platform != "win32"
+vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13.0"
     # via -r requirements/static/ci/common.in
 virtualenv==20.24.7
     # via
@@ -551,12 +569,10 @@ virtualenv==20.24.7
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
-    # via
-    #   docker
-    #   kubernetes
+    # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   moto
     #   pytest-httpserver

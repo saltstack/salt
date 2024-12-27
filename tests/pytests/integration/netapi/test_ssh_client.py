@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.netapi
@@ -9,18 +11,22 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
     pytest.mark.skipif(
-        "grains['osfinger'] == 'Fedora Linux-39'",
-        reason="Fedora 39 ships with Python 3.12. Test can't run with system Python on 3.12",
+        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        reason="System ships with a version of python that is too recent for salt-ssh tests",
         # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
     ),
+    pytest.mark.timeout_unless_on_windows(120),
 ]
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def client_config(client_config):
+def client_config(client_config, known_hosts_file):
+    client_config["known_hosts_file"] = str(known_hosts_file)
     client_config["netapi_enable_clients"] = ["ssh"]
     return client_config
 
@@ -62,18 +68,11 @@ def salt_auth_account_1(salt_auth_account_1_factory):
         yield account
 
 
-@pytest.fixture(scope="module")
-def salt_auto_account(salt_auto_account_factory):
-    with salt_auto_account_factory as account:
-        yield account
-
-
 def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key):
     low = {
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
-        "ignore_host_keys": True,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
@@ -323,7 +322,6 @@ def test_ssh_auth_bypass(client, salt_ssh_roster_file):
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "eauth": "xx",
-        "ignore_host_keys": True,
     }
     with pytest.raises(EauthAuthenticationError):
         client.run(low)

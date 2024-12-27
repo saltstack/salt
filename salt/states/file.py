@@ -2326,6 +2326,7 @@ def managed(
     ignore_whitespace=False,
     ignore_comment_characters=None,
     new_file_diff=False,
+    sig_backend="gpg",
     **kwargs,
 ):
     r"""
@@ -2505,8 +2506,12 @@ def managed(
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
-        the source file will result in the state needing to re-download the
-        source file if the state is run again.
+        the source file might result in the state needing to re-download the
+        source file if the state is run again. If the source is not a local or
+        ``salt://`` one, the source hash is known, ``skip_verify`` is not true
+        and the managed file exists with the correct hash and is not templated,
+        this is not the case (i.e. remote downloads are avoided if the local hash
+        matches the expected one).
 
         .. versionadded:: 2017.7.3
 
@@ -2924,7 +2929,7 @@ def managed(
         .. versionadded:: 3005
 
     signature
-        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Ensure a valid signature exists on the selected ``source`` file.
         Set this to true for inline signatures, or to a file URI retrievable
         by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -2946,7 +2951,7 @@ def managed(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -2963,15 +2968,17 @@ def managed(
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require at least one valid signature from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require a valid signature from each of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -3023,6 +3030,13 @@ def managed(
         changes return.
 
         .. versionadded:: 3008.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3047,12 +3061,13 @@ def managed(
     has_changes = False
 
     if signature or source_hash_sig:
-        # Fail early in case the gpg module is not present
+        # Fail early in case the signature verification backend is not present
         try:
-            __salt__["gpg.verify"]
+            __salt__[f"{sig_backend}.verify"]
         except KeyError:
             _error(
-                ret, "Cannot verify signatures because the gpg module was not loaded"
+                ret,
+                f"Cannot verify signatures because the {sig_backend} module was not loaded",
             )
 
     if selinux:
@@ -3265,6 +3280,60 @@ def managed(
     if defaults and not isinstance(defaults, dict):
         return _error(ret, "Defaults must be formed as a dict")
 
+    # If we're pulling from a remote source untemplated and we have a source hash,
+    # check early if the local file exists with the correct hash and skip
+    # managing contents if so. This avoids a lot of overhead.
+    if (
+        contents is None
+        and not template
+        and source
+        and not skip_verify
+        and os.path.exists(name)
+        and replace
+    ):
+        try:
+            # If the source is a list, find the first existing file.
+            # We're doing this after basic checks to not slow down
+            # runs where it does not matter.
+            source, source_hash = __salt__["file.source_list"](
+                source, source_hash, __env__
+            )
+            source_sum = None
+            if (
+                source
+                and source_hash
+                and urllib.parse.urlparse(source).scheme
+                not in (
+                    "salt",
+                    "file",
+                )
+                and not os.path.isabs(source)
+            ):
+                source_sum = __salt__["file.get_source_sum"](
+                    name,
+                    source,
+                    source_hash,
+                    source_hash_name,
+                    __env__,
+                    verify_ssl=verify_ssl,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
+                    sig_backend=sig_backend,
+                )
+                hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
+        except (CommandExecutionError, OSError) as err:
+            log.error(
+                "Failed checking existing file's hash against specified source_hash: %s",
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+        else:
+            if source_sum and source_sum["hsum"] == hsum:
+                replace = False
+
     if not replace and os.path.exists(name):
         ret_perms = {}
         # Check and set the permissions if necessary
@@ -3348,6 +3417,7 @@ def managed(
                     signed_by_all=signed_by_all,
                     keyring=keyring,
                     gnupghome=gnupghome,
+                    sig_backend=sig_backend,
                     ignore_ordering=ignore_ordering,
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
@@ -3433,6 +3503,7 @@ def managed(
             signed_by_all=signed_by_all,
             keyring=keyring,
             gnupghome=gnupghome,
+            sig_backend=sig_backend,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3493,6 +3564,7 @@ def managed(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
@@ -3586,6 +3658,7 @@ def managed(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
                 ignore_ordering=ignore_ordering,
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
@@ -4080,13 +4153,25 @@ def directory(
                 if not force:
                     return _error(
                         ret,
-                        "File exists where the backup target {} should go".format(
-                            backupname
-                        ),
+                        f"File exists where the backup target {backupname} should go",
                     )
+                if __opts__["test"]:
+                    ret["changes"][
+                        "forced"
+                    ] = f"Existing file at backup path {backupname} would be removed"
                 else:
                     __salt__["file.remove"](backupname)
-            os.rename(name, backupname)
+
+            if __opts__["test"]:
+                ret["changes"]["backup"] = f"{name} would be renamed to {backupname}"
+                ret["changes"][name] = {"directory": "new"}
+                ret["comment"] = (
+                    f"{name} would be backed up and replaced with a new directory"
+                )
+                ret["result"] = None
+                return ret
+            else:
+                os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
@@ -9121,6 +9206,7 @@ def cached(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2017.7.3
@@ -9181,7 +9267,7 @@ def cached(
     source_hash_sig
         When ``name`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -9196,15 +9282,17 @@ def cached(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to
-        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to
-        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -9217,6 +9305,13 @@ def cached(
         When verifying signatures, use this GnuPG home.
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
@@ -9288,6 +9383,7 @@ def cached(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror

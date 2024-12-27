@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import logging
 import os
@@ -337,7 +338,7 @@ def test_source_address(minion_opts):
 
 # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
+async def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts, io_loop):
     """
     Tests that the _handle_decoded_payload function returns when a jid is given that is already present
     in the jid_queue.
@@ -352,10 +353,10 @@ def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
     minion = salt.minion.Minion(
         minion_opts,
         jid_queue=copy.copy(mock_jid_queue),
-        io_loop=tornado.ioloop.IOLoop(),
+        io_loop=io_loop,
     )
     try:
-        ret = minion._handle_decoded_payload(mock_data).result()
+        ret = await minion._handle_decoded_payload(mock_data)
         assert minion.jid_queue == mock_jid_queue
         assert ret is None
     finally:
@@ -363,7 +364,7 @@ def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_queue_addition(minion_opts):
+async def test_handle_decoded_payload_jid_queue_addition(minion_opts, io_loop):
     """
     Tests that the _handle_decoded_payload function adds a jid to the minion's jid_queue when the new
     jid isn't already present in the jid_queue.
@@ -381,7 +382,7 @@ def test_handle_decoded_payload_jid_queue_addition(minion_opts):
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=io_loop,
         )
         try:
 
@@ -392,7 +393,7 @@ def test_handle_decoded_payload_jid_queue_addition(minion_opts):
             # Call the _handle_decoded_payload function and update the mock_jid_queue to include the new
             # mock_jid. The mock_jid should have been added to the jid_queue since the mock_jid wasn't
             # previously included. The minion's jid_queue attribute and the mock_jid_queue should be equal.
-            minion._handle_decoded_payload(mock_data).result()
+            await minion._handle_decoded_payload(mock_data)
             mock_jid_queue.append(mock_jid)
             assert minion.jid_queue == mock_jid_queue
         finally:
@@ -400,7 +401,9 @@ def test_handle_decoded_payload_jid_queue_addition(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_opts):
+async def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(
+    minion_opts, io_loop
+):
     """
     Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
     minion's jid_queue high water mark (minion_jid_queue_hwm) is hit.
@@ -418,7 +421,7 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_op
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=io_loop,
         )
         try:
 
@@ -428,7 +431,7 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_op
 
             # Call the _handle_decoded_payload function and check that the queue is smaller by one item
             # and contains the new jid
-            minion._handle_decoded_payload(mock_data).result()
+            await minion._handle_decoded_payload(mock_data)
             assert len(minion.jid_queue) == 2
             assert minion.jid_queue == [456, 789]
         finally:
@@ -436,7 +439,7 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_op
 
 
 @pytest.mark.slow_test
-def test_process_count_max(minion_opts):
+async def test_process_count_max(minion_opts, io_loop):
     """
     Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
     as per process_count_max.
@@ -450,15 +453,14 @@ def test_process_count_max(minion_opts):
     ), patch(
         "salt.utils.minion.running", MagicMock(return_value=[])
     ), patch(
-        "tornado.gen.sleep",
-        MagicMock(return_value=tornado.concurrent.Future()),
+        "asyncio.sleep",
+        MagicMock(return_value=asyncio.Future()),
     ):
         process_count_max = 10
         minion_opts["__role"] = "minion"
         minion_opts["minion_jid_queue_hwm"] = 100
         minion_opts["process_count_max"] = process_count_max
 
-        io_loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
         try:
 
@@ -466,14 +468,12 @@ def test_process_count_max(minion_opts):
             class SleepCalledException(Exception):
                 """Thrown when sleep is called"""
 
-            tornado.gen.sleep.return_value.set_exception(SleepCalledException())
+            asyncio.sleep.return_value.set_exception(asyncio.TimeoutError())
 
             # up until process_count_max: gen.sleep does not get called, processes are started normally
             for i in range(process_count_max):
                 mock_data = {"fun": "foo.bar", "jid": i}
-                io_loop.run_sync(
-                    lambda data=mock_data: minion._handle_decoded_payload(data)
-                )
+                await minion._handle_decoded_payload(mock_data)
                 assert (
                     salt.utils.process.SignalHandlingProcess.start.call_count == i + 1
                 )
@@ -483,12 +483,8 @@ def test_process_count_max(minion_opts):
             # above process_count_max: gen.sleep does get called, JIDs are created but no new processes are started
             mock_data = {"fun": "foo.bar", "jid": process_count_max + 1}
 
-            pytest.raises(
-                SleepCalledException,
-                lambda: io_loop.run_sync(
-                    lambda: minion._handle_decoded_payload(mock_data)
-                ),
-            )
+            with pytest.raises(asyncio.exceptions.TimeoutError):
+                await minion._handle_decoded_payload(mock_data)
             assert (
                 salt.utils.process.SignalHandlingProcess.start.call_count
                 == process_count_max
@@ -744,38 +740,6 @@ def test_gen_modules_executors(minion_opts):
         minion.destroy()
 
 
-def test_reinit_crypto_on_fork(minion_opts):
-    """
-    Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
-    """
-    minion_opts["multiprocessing"] = True
-    with patch("salt.utils.process.default_signals"):
-
-        io_loop = tornado.ioloop.IOLoop()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
-
-        job_data = {"jid": "test-jid", "fun": "test.ping"}
-
-        def mock_start(self):
-            # pylint: disable=comparison-with-callable
-            assert (
-                len(
-                    [
-                        x
-                        for x in self._after_fork_methods
-                        if x[0] == salt.utils.crypt.reinit_crypto
-                    ]
-                )
-                == 1
-            )
-            # pylint: enable=comparison-with-callable
-
-        with patch.object(
-            salt.utils.process.SignalHandlingProcess, "start", mock_start
-        ):
-            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
-
-
 def test_minion_manage_schedule(minion_opts):
     """
     Tests that the manage_schedule will call the add function, adding
@@ -1006,7 +970,7 @@ def test_config_cache_path_overrides():
     assert mminion.opts["cachedir"] == cachedir
 
 
-def test_minion_grains_refresh_pre_exec_false(minion_opts):
+async def test_minion_grains_refresh_pre_exec_false(minion_opts):
     """
     Minion does not refresh grains when grains_refresh_pre_exec is False
     """
@@ -1023,13 +987,13 @@ def test_minion_grains_refresh_pre_exec_false(minion_opts):
             load_grains=False,
         )
         try:
-            ret = minion._handle_decoded_payload(mock_data).result()
+            ret = await minion._handle_decoded_payload(mock_data)
             grainsfunc.assert_not_called()
         finally:
             minion.destroy()
 
 
-def test_minion_grains_refresh_pre_exec_true(minion_opts):
+async def test_minion_grains_refresh_pre_exec_true(minion_opts):
     """
     Minion refreshes grains when grains_refresh_pre_exec is True
     """
@@ -1046,7 +1010,7 @@ def test_minion_grains_refresh_pre_exec_true(minion_opts):
             load_grains=False,
         )
         try:
-            ret = minion._handle_decoded_payload(mock_data).result()
+            ret = await minion._handle_decoded_payload(mock_data)
             grainsfunc.assert_called()
         finally:
             minion.destroy()

@@ -128,6 +128,7 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     if install_salt.distro_id not in (
         "almalinux",
+        "rocky",
         "centos",
         "redhat",
         "amzn",

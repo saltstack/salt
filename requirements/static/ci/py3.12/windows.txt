@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.12/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.9.2
+aiohttp==3.9.5
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -92,7 +92,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -111,34 +111,41 @@ distro==1.8.0
     #   pytest-skip-markers
 dmidecode==0.9.0
     # via -r requirements/static/ci/windows.in
-dnspython==2.3.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.13.1
     # via virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.4.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   aiohttp
     #   aiosignal
+future==1.0.0
+    # via textfsm
 genshi==0.7.7
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.11
-    # via gitpython
-gitpython==3.1.41
-    # via -r requirements/static/ci/common.in
+gitdb==4.0.10
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/windows.txt
+    #   gitpython
+gitpython==3.1.43 ; sys_platform == "win32"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/windows.txt
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
 google-auth==2.27.0
     # via kubernetes
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   etcd3-py
@@ -179,7 +186,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   jaraco.collections
-jinja2==3.1.3
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -229,7 +236,7 @@ more-itertools==8.2.0
     #   jaraco.text
 moto==4.1.11
     # via -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -239,11 +246,15 @@ multidict==6.0.4
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   aiohttp
     #   yarl
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.12/windows.txt
+    #   -r requirements/base.txt
 packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
@@ -253,7 +264,7 @@ pathspec==0.11.1
     # via yamllint
 platformdirs==4.0.0
     # via virtualenv
-pluggy==1.0.0
+pluggy==1.4.0
     # via pytest
 portend==3.1.0
     # via
@@ -280,11 +291,11 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.14.5
+pydantic-core==2.16.3
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   pydantic
-pydantic==2.5.2
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   inflect
@@ -320,7 +331,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc29
+pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
@@ -333,9 +344,9 @@ pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.1.0
+pytest-timeout==2.3.1
     # via -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -359,7 +370,7 @@ python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
-pythonnet==3.0.3 ; sys_platform == "win32"
+pythonnet==3.0.4 ; sys_platform == "win32" and python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -387,14 +398,14 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.2
+pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   -r requirements/base.txt
@@ -435,10 +446,13 @@ six==1.15.0
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
+    #   textfsm
     #   websocket-client
 smmap==5.0.1
-    # via gitdb
-sqlparse==0.4.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/windows.txt
+    #   gitdb
+sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -446,6 +460,8 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
     #   portend
+textfsm==1.1.3
+    # via -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/windows.txt
@@ -484,12 +500,10 @@ virtualenv==20.24.7
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
-    # via
-    #   docker
-    #   kubernetes
+    # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   moto
     #   pytest-httpserver

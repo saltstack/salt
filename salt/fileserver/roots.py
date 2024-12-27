@@ -101,7 +101,9 @@ def find_file(path, saltenv="base", **kwargs):
         full = os.path.join(root, path)
 
         # Refuse to serve file that is not under the root.
-        if not salt.utils.verify.clean_path(root, full, subdir=True):
+        if not salt.utils.verify.clean_path(
+            root, full, subdir=True, realpath=not __opts__["fileserver_followsymlinks"]
+        ):
             continue
 
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
@@ -149,7 +151,9 @@ def serve_file(load, fnd):
         if saltenv == "__env__":
             root = root.replace("__env__", actual_saltenv)
         # Refuse to serve file that is not under the root.
-        if salt.utils.verify.clean_path(root, fpath, subdir=True):
+        if salt.utils.verify.clean_path(
+            root, fpath, subdir=True, realpath=not __opts__["fileserver_followsymlinks"]
+        ):
             file_in_root = True
     if not file_in_root:
         return ret

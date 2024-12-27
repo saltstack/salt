@@ -450,7 +450,9 @@ def get_config():
         raise
 
     config = dict()
-    if raw_config:
+    if not raw_config:
+        raise CommandExecutionError("Not Configured")
+    else:
         # Does this Configuration contain a single resource
         if "ConfigurationName" in raw_config:
             # Load the single resource
@@ -606,11 +608,13 @@ def test_config():
     """
     cmd = "Test-DscConfiguration"
     try:
-        _pshell(cmd, ignore_retcode=True)
+        result = _pshell(cmd, ignore_retcode=True)
     except CommandExecutionError as exc:
         if "Current configuration does not exist" in exc.info["stderr"]:
             raise CommandExecutionError("Not Configured")
         raise
+    if not result:
+        raise CommandExecutionError("Not Configured")
     return True
 
 
@@ -635,11 +639,14 @@ def get_config_status():
         "Type, Mode, RebootRequested, NumberofResources"
     )
     try:
-        return _pshell(cmd, ignore_retcode=True)
+        result = _pshell(cmd, ignore_retcode=True)
     except CommandExecutionError as exc:
         if "No status information available" in exc.info["stderr"]:
             raise CommandExecutionError("Not Configured")
         raise
+    if not result:
+        raise CommandExecutionError("Not Configured")
+    return result
 
 
 def get_lcm_config():

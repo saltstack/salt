@@ -32,8 +32,9 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
@@ -50,6 +51,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - medium
       - ${{ matrix.arch }}
     env:
       USE_S3_CACHE: 'true'
@@ -65,7 +67,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-linux-${{ matrix.arch }}
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|linux|${{ matrix.arch }}
 
       - name: Setup Relenv
         id: setup-relenv
@@ -92,13 +94,12 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86_64
-          - arm64
+        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
     runs-on:
       - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
     env:
       USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
     steps:
 
       - name: "Throttle Builds"
@@ -116,7 +117,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-macos
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|macos
 
       - name: Setup Relenv
         id: setup-relenv
@@ -149,6 +150,7 @@ jobs:
     runs-on: windows-latest
     env:
       USE_S3_CACHE: 'false'
+      PIP_INDEX_URL: https://pypi.org/simple
     steps:
 
       - name: "Throttle Builds"
@@ -166,7 +168,7 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-seed }}-build-deps-windows-${{ matrix.arch }}
+          cache-prefix: ${{ inputs.cache-seed }}|build-deps|windows|${{ matrix.arch }}
 
       - name: Setup Relenv
         id: setup-relenv

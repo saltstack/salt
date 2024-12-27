@@ -771,6 +771,7 @@ def get_source_sum(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2016.11.0
@@ -813,7 +814,7 @@ def get_source_sum(
 
     source_hash_sig
         When ``source`` is a remote file source and ``source_hash`` is a file,
-        ensure a valid GPG signature exists on the source hash file.
+        ensure a valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -822,15 +823,17 @@ def get_source_sum(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -843,6 +846,13 @@ def get_source_sum(
         When verifying ``source_hash_sig``, use this GnuPG home.
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -888,14 +898,13 @@ def get_source_sum(
                     _check_sig(
                         hash_fn,
                         signature=(
-                            source_hash_sig
-                            if isinstance(source_hash_sig, str)
-                            else None
+                            source_hash_sig if source_hash_sig is not True else None
                         ),
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -1028,29 +1037,51 @@ def _check_sig(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
     saltenv="base",
     verify_ssl=True,
 ):
     try:
-        verify = __salt__["gpg.verify"]
+        verify = __salt__[f"{sig_backend}.verify"]
     except KeyError:
         raise CommandExecutionError(
-            "Signature verification requires the gpg module, "
+            f"Signature verification requires the {sig_backend} module, "
             "which could not be found. Make sure you have the "
-            "necessary tools and libraries intalled (gpg, python-gnupg)"
+            "necessary tools and libraries intalled"
         )
-    sig = None
+    # The GPG module does not understand URLs as signatures currently.
+    # Also, we want to ensure that, when verification fails, we get rid
+    # of the cached signatures.
+    final_sigs = None
     if signature is not None:
-        # Fetch detached signature
-        sig = __salt__["cp.cache_file"](signature, saltenv, verify_ssl=verify_ssl)
-        if not sig:
-            raise CommandExecutionError(
-                f"Detached signature file {signature} not found"
-            )
+        sigs = [signature] if isinstance(signature, str) else signature
+        sigs_cached = []
+        final_sigs = []
+        for sig in sigs:
+            cached_sig = None
+            try:
+                urllib.parse.urlparse(sig)
+            except (TypeError, ValueError):
+                pass
+            else:
+                cached_sig = __salt__["cp.cache_file"](
+                    sig, saltenv, verify_ssl=verify_ssl
+                )
+            if not cached_sig:
+                # The GPG module expects signatures as a single file path currently
+                if sig_backend == "gpg":
+                    raise CommandExecutionError(
+                        f"Detached signature file {sig} not found"
+                    )
+            else:
+                sigs_cached.append(cached_sig)
+            final_sigs.append(cached_sig or sig)
+        if isinstance(signature, str):
+            final_sigs = final_sigs[0]
 
     res = verify(
         filename=on_file,
-        signature=sig,
+        signature=final_sigs,
         keyring=keyring,
         gnupghome=gnupghome,
         signed_by_any=signed_by_any,
@@ -1061,8 +1092,9 @@ def _check_sig(
         return
     # Ensure detached signature and file are deleted from cache
     # on signature verification failure.
-    if sig:
-        salt.utils.files.safe_rm(sig)
+    if signature is not None:
+        for sig in sigs_cached:
+            salt.utils.files.safe_rm(sig)
     salt.utils.files.safe_rm(on_file)
     raise CommandExecutionError(
         f"The file's signature could not be verified: {res['message']}"
@@ -4705,13 +4737,14 @@ def get_managed(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
     Return the managed file data for file.managed
 
     name
-        location where the file lives on the server
+        location where the file lives on the minion
 
     template
         template format
@@ -4773,7 +4806,7 @@ def get_managed(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -4782,15 +4815,17 @@ def get_managed(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -4836,6 +4871,13 @@ def get_managed(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -4910,6 +4952,7 @@ def get_managed(
                             signed_by_all=signed_by_all,
                             keyring=keyring,
                             gnupghome=gnupghome,
+                            sig_backend=sig_backend,
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
@@ -5339,7 +5382,7 @@ def check_perms(
                 if err:
                     ret["result"] = False
                     ret["comment"].append(err)
-                else:
+                elif not is_link:
                     # Python os.chown() resets the suid and sgid, hence we
                     # setting the previous mode again. Pending mode changes
                     # will be applied later.
@@ -5390,7 +5433,6 @@ def check_perms(
                 ret["comment"].append(f"Failed to change group to {group}")
         elif "cgroup" in perms:
             ret["changes"]["group"] = group
-
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
@@ -6363,6 +6405,7 @@ def manage_file(
     ignore_whitespace=False,
     ignore_comment_characters=None,
     new_file_diff=False,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -6493,7 +6536,7 @@ def manage_file(
         .. versionadded:: 3005
 
     signature
-        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Ensure a valid signature exists on the selected ``source`` file.
         Set this to true for inline signatures, or to a file URI retrievable
         by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6515,7 +6558,7 @@ def manage_file(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6532,15 +6575,17 @@ def manage_file(
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require at least one valid signature from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require a valid signature from each of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -6590,6 +6635,13 @@ def manage_file(
     new_file_diff
         If ``True``, creation of new files will still show a diff in the
         changes return.
+
+        .. versionadded:: 3008.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
 
         .. versionadded:: 3008.0
 
@@ -6683,11 +6735,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -6818,11 +6871,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -6949,11 +7003,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )

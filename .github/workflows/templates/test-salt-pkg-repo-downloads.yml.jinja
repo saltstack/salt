@@ -13,9 +13,7 @@
     needs:
       - prepare-workflow
       - publish-repositories
-      <%- for slug in test_salt_pkg_downloads_needs_slugs %>
-      - <{ slug }>
-      <%- endfor %>
+      - build-ci-deps
     <%- if gh_environment == "release" %>
       - download-onedir-artifact
     <%- else %>

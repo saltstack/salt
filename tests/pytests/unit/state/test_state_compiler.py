@@ -3,6 +3,7 @@
 """
 
 import logging
+from typing import Any
 
 import pytest
 
@@ -54,7 +55,7 @@ def test_render_error_on_invalid_requisite(minion_opts):
     exception when a requisite cannot be resolved
     """
     with patch("salt.state.State._gather_pillar"):
-        high_data = {
+        high_data: dict[str, Any] = {
             "git": salt.state.HashableOrderedDict(
                 [
                     (
@@ -88,12 +89,16 @@ def test_render_error_on_invalid_requisite(minion_opts):
                 ]
             )
         }
+        expected_result = [
+            "Requisite [require: file] in state [git] in SLS"
+            " [issue_35226] must have a string as the value"
+        ]
         minion_opts["pillar"] = {
             "git": salt.state.HashableOrderedDict([("test1", "test")])
         }
         state_obj = salt.state.State(minion_opts)
-        with pytest.raises(salt.exceptions.SaltRenderError):
-            state_obj.call_high(high_data)
+        return_result = state_obj.call_high(high_data)
+        assert expected_result == return_result
 
 
 def test_verify_onlyif_parse(minion_opts):
@@ -756,6 +761,7 @@ def test_render_requisite_require_disabled(minion_opts):
         minion_opts["disabled_requisites"] = ["require"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
+        assert isinstance(ret, dict)
         run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
             "__run_num__"
         ]
@@ -804,6 +810,7 @@ def test_render_requisite_require_in_disabled(minion_opts):
         minion_opts["disabled_requisites"] = ["require_in"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
+        assert isinstance(ret, dict)
         run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
             "__run_num__"
         ]
@@ -846,135 +853,13 @@ def test_call_chunk_sub_state_run(minion_opts):
         with patch("salt.state.State.call", return_value=mock_call_return):
             minion_opts["disabled_requisites"] = ["require"]
             state_obj = salt.state.State(minion_opts)
-            ret = state_obj.call_chunk(low_data, {}, {})
+            ret = state_obj.call_chunk(low_data, {}, [])
             sub_state = ret.get(expected_sub_state_tag)
             assert sub_state
             assert sub_state["__run_num__"] == 1
             assert sub_state["name"] == "external_state_name"
             assert sub_state["__state_ran__"]
             assert sub_state["__sls__"] == "external"
-
-
-def test_aggregate_requisites(minion_opts):
-    """
-    Test to ensure that the requisites are included in the aggregated low state.
-    """
-    # The low that is returned from _mod_aggregrate
-    low = {
-        "state": "pkg",
-        "name": "other_pkgs",
-        "__sls__": "47628",
-        "__env__": "base",
-        "__id__": "other_pkgs",
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
-        "aggregate": True,
-        "order": 10002,
-        "fun": "installed",
-        "__agg__": True,
-    }
-
-    # Chunks that have been processed through the pkg mod_aggregate function
-    chunks = [
-        {
-            "state": "file",
-            "name": "/tmp/install-vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-vim",
-            "order": 10000,
-            "fun": "managed",
-        },
-        {
-            "state": "file",
-            "name": "/tmp/install-tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-tmux",
-            "order": 10001,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "other_pkgs",
-            "__sls__": "47628",
-            "__env __": "base",
-            "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
-            "aggregate": True,
-            "order": 10002,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "bc",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "bc",
-            "hold": True,
-            "__agg__": True,
-            "order": 10003,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "vim",
-            "require": ["/tmp/install-vim"],
-            "order": 10004,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "tmux",
-            "require": ["/tmp/install-tmux"],
-            "order": 10005,
-            "fun": "installed",
-        },
-        {
-            "state": "pkgrepo",
-            "name": "deb https://packages.cloud.google.com/apt cloud-sdk main",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "google-cloud-repo",
-            "humanname": "Google Cloud SDK",
-            "file": "/etc/apt/sources.list.d/google-cloud-sdk.list",
-            "key_url": "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
-            "order": 10006,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "google-cloud-sdk",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "google-cloud-sdk",
-            "require": ["google-cloud-repo"],
-            "order": 10007,
-            "fun": "installed",
-        },
-    ]
-
-    with patch("salt.state.State._gather_pillar"):
-        state_obj = salt.state.State(minion_opts)
-        low_ret = state_obj._aggregate_requisites(low, chunks)
-
-        # Ensure the low returned contains require
-        assert "require" in low_ret
-
-        # Ensure all the requires from pkg states are in low
-        assert low_ret["require"] == [
-            "/tmp/install-vim",
-            "/tmp/install-tmux",
-            "google-cloud-repo",
-        ]
 
 
 def test_mod_aggregate(minion_opts):
@@ -1030,6 +915,16 @@ def test_mod_aggregate(minion_opts):
             "aggregate": True,
             "fun": "installed",
         },
+        {
+            "state": "pkg",
+            "name": "hello",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "hello",
+            "order": 10003,
+            "aggregate": True,
+            "fun": "installed",
+        },
     ]
 
     running = {}
@@ -1044,7 +939,7 @@ def test_mod_aggregate(minion_opts):
         "order": 10002,
         "fun": "installed",
         "__agg__": True,
-        "pkgs": ["figlet", "sl"],
+        "pkgs": ["sl", "hello"],
     }
 
     with patch("salt.state.State._gather_pillar"):
@@ -1053,7 +948,8 @@ def test_mod_aggregate(minion_opts):
             state_obj.states,
             {"pkg.mod_aggregate": MagicMock(return_value=mock_pkg_mod_aggregate)},
         ):
-            low_ret = state_obj._mod_aggregate(low, running, chunks)
+            state_obj.order_chunks(chunks)
+            low_ret = state_obj._mod_aggregate(low, running)
 
             # Ensure the low returned contains require
             assert "require_in" in low_ret
@@ -1068,7 +964,7 @@ def test_mod_aggregate(minion_opts):
             assert "require" not in low_ret
 
             # Ensure pkgs were aggregated
-            assert low_ret["pkgs"] == ["figlet", "sl"]
+            assert low_ret["pkgs"] == ["sl", "hello"]
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):

@@ -183,21 +183,10 @@ $scripts | ForEach-Object {
     }
 }
 
-# Copy VCRedist 2013 to the prereqs directory
+# Copy VCRedist 2022 to the prereqs directory
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
-$file = "vcredist_$ARCH_X`_2013.exe"
-Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
-if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-# Copy Universal C Runtimes to the prereqs directory
-Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
-$file = "ucrt_$ARCH_X.zip"
+Write-Host "Copying VCRedist 2022 $ARCH_X to prereqs: " -NoNewline
+$file = "vcredist_$ARCH_X`_2022.exe"
 Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
 if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
     Write-Result "Success" -ForegroundColor Green

@@ -5,7 +5,6 @@ These commands are related to downloading test suite CI artifacts.
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
-import json
 import logging
 import pathlib
 from typing import TYPE_CHECKING
@@ -14,11 +13,6 @@ from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.gh
-
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-    "r", encoding="utf-8"
-) as rfh:
-    OS_SLUGS = sorted(json.load(rfh))
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +129,7 @@ def download_nox_artifact(
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": OS_SLUGS,
+            "choices": sorted(tools.utils.get_golden_images()),
         },
         "repository": {
             "help": "The repository to query, e.g. saltstack/salt",
