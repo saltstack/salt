@@ -231,12 +231,10 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given
         """
-        self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
+        self.run_function("cp.get_url", ["https://www.broadcom.com", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Broadcom Inc. is a global technology leader", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -244,15 +242,11 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given and destination omitted.
         """
-        ret = self.run_function(
-            "cp.get_url", ["https://repo.saltproject.io/index.html"]
-        )
+        ret = self.run_function("cp.get_url", ["https://www.broadcom.com"])
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Broadcom Inc. is a global technology leader", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -265,17 +259,13 @@ class CPModuleTest(ModuleCase):
         sleep = 5
         tgt = None
         while time.time() - start <= timeout:
-            ret = self.run_function(
-                "cp.get_url", ["https://repo.saltproject.io/index.html", tgt]
-            )
+            ret = self.run_function("cp.get_url", ["https://www.broadcom.com", tgt])
             if ret.find("HTTP 599") == -1:
                 break
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
-            raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+            raise Exception("https://www.broadcom.com returned 599 error")
+        self.assertIn("Broadcom Inc. is a global technology leader", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -344,11 +334,9 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_file_str with https:// source given
         """
-        src = "https://repo.saltproject.io/index.html"
+        src = "https://www.broadcom.com"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+        self.assertIn("Broadcom Inc. is a global technology leader", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
