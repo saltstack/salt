@@ -24,7 +24,8 @@ def configure_loader_modules(minion_opts, tmp_path):
 @pytest.fixture
 def winrepo_remotes(minion_opts):
     remotes = set()
-    remotes.update(minion_opts.get("winrepo_remotes", []))
+    # Legacy repo has been archived as of September 2024
+    # remotes.update(minion_opts.get("winrepo_remotes", []))
     remotes.update(minion_opts.get("winrepo_remotes_ng", []))
     return remotes
 
