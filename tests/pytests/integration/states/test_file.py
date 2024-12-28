@@ -1229,6 +1229,7 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
 
     target_file = target_dir / "test-file"
     target_file.write_text("this is a test file")
+    file_perms = target_file.stat().st_mode
 
     target_link = target_dir / "test-link"
     target_link.symlink_to(target_file)
@@ -1237,7 +1238,6 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
     ret = subprocess.run(["chown", "-h", "nobody", str(target_link)], check=False)
     assert ret.returncode == 0
 
-    file_perms = stat.S_IFREG | stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP
     if grains["os"] != "VMware Photon OS":
         file_perms |= stat.S_IROTH
 
