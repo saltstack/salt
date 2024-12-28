@@ -97,6 +97,19 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+      - name: Free Disk Space Before Build
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/lib/android/sdk/ndk
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo apt-get clean
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: Setup Salt Version
         run: |
@@ -254,6 +267,18 @@ jobs:
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+
+      - name: Stop Container
+        run: |
+          docker container stop ${{ github.run_id}}_salt-test
+
+      - name: Remove Container
+        run: |
+          docker container rm ${{ github.run_id}}_salt-test
+
+      - name: Remove Container Image
+        run: |
+          docker image rm ${{ matrix.container }}
 
       - name: Fix file ownership
         run: |
