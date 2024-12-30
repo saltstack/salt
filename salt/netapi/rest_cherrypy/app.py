@@ -160,6 +160,17 @@ A REST API for Salt
         A URL path to the main entry point for the application. This is useful
         for serving multiple applications from the same URL.
 
+    global : ``{}``
+        A dictionary of additional CherryPy "global" configuration. See the
+        CherryPy documentation for more information.
+
+        .. versionadded:: 3008
+
+    / : ``{}``
+        A dictionary of additional CherryPy "/" configuration. See the CherryPy
+        documentation for more information.
+
+        .. versionadded:: 3008
 .. _rest_cherrypy-auth:
 
 Authentication
@@ -2930,6 +2941,9 @@ class API:
                 "tools.staticdir.on": True,
                 "tools.staticdir.dir": self.apiopts["static"],
             }
+
+        conf["global"].update(self.apiopts.get("global", {}))
+        conf["/"].update(self.apiopts.get("/", {}))
 
         # Add to global config
         cherrypy.config.update(conf["global"])
