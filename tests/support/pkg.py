@@ -786,7 +786,7 @@ class SaltPkgInstall:
                 log.debug("Unknown windows file extension: %s", self.file_ext)
 
             win_pkg_url = (
-                f"{root_url}/saltproject-generic/windows/{major_ver}/{win_pkg}"
+                f"{root_url}/saltproject-generic/windows/{self.prev_version}/{win_pkg}"
             )
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
@@ -823,7 +823,9 @@ class SaltPkgInstall:
                 arch = "x86_64"
 
             mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
-            mac_pkg_url = f"{root_url}/saltproject-generic/macos/{major_ver}/{mac_pkg}"
+            mac_pkg_url = (
+                f"{root_url}/saltproject-generic/macos/{self.prev_version}/{mac_pkg}"
+            )
 
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
