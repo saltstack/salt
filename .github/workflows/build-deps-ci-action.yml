@@ -124,6 +124,7 @@ jobs:
         env:
           PRINT_TEST_SELECTION: "0"
           PRINT_SYSTEM_INFO: "0"
+          RELENV_BUILDENV: "1"
         run: |
           nox --install-only -e ${{ inputs.nox-session }}
 
