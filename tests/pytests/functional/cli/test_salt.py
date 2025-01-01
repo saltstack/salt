@@ -100,4 +100,6 @@ def test_help_log(salt_cli):
     ret = salt_cli.run("--help")
     count = 0
     # This can be dependent on COLUMNS environment variable
-    assert "sensitive data: all, debug, garbage, profile, trace" in " ".join(ret.stdout.split())
+    assert "sensitive data: all, debug, garbage, profile, trace" in " ".join(
+        ret.stdout.split()
+    )
