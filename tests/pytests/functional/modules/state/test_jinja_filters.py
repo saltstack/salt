@@ -385,6 +385,8 @@ def _filter_id(value):
             sls=r"""
             {% if grains['os'] == 'Windows' %}
               {% set result = 'c:\Windows\System32\cmd.exe' | is_bin_file() %}
+            {% elif grains['os_family'] == 'Debian' %}
+              {% set result = '/usr/bin/file' | is_bin_file() %}
             {% else %}
               {% set result = '/bin/file' | is_bin_file() %}
             {% endif %}
