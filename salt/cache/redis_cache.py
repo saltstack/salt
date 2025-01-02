@@ -541,7 +541,7 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_redis_key = _get_bank_redis_key(bank)
     try:
         banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
