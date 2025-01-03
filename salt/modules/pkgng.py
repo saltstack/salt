@@ -2369,15 +2369,15 @@ def _parse_upgrade(stdout):
     """
     # Match strings like 'python36: 3.6.3 -> 3.6.4 [FreeBSD]'
     upgrade_regex = re.compile(
-        r"^\s+([^:]+):\s([0-9a-z_,.]+)\s+->\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?"
+        r"^\s+([^:]+):\s([0-9a-z_,.]+)\s+->\s+([0-9a-z_,.]+)\s*(\[([^]]+)])?\s*(\(([^)]+)\))?"
     )
     # Match strings like 'rubygem-bcrypt_pbkdf: 1.0.0 [FreeBSD]'
     install_regex = re.compile(
-        r"^\s+([^:]+):\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?"
+        r"^\s+([^:]+):\s+([0-9a-z_,.]+)\s*(\[([^]]+)])?\s*(\(([^)]+)\))?"
     )
     # Match strings like 'py27-yaml-3.11_2 [FreeBSD] (direct dependency changed: py27-setuptools)'
     reinstall_regex = re.compile(
-        r"^\s+(\S+)-(?<=-)([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?"
+        r"^\s+(\S+)-(?<=-)([0-9a-z_,.]+)\s*(\[([^]]+)])?\s*(\(([^)]+)\))?"
     )
 
     result = {
