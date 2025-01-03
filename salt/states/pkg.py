@@ -743,7 +743,15 @@ def _find_install_targets(
     warnings = []
     failed_verify = False
     for package_name, version_string in desired.items():
-        cver = cur_pkgs.get(package_name, [])
+
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        origin = bool(re.search('/', package_name))
+
+        if __grains__['os'] == 'FreeBSD' and origin:
+            cver = [k for k, v in cur_pkgs.items() if v['origin'] == package_name]
+        else:
+            cver = cur_pkgs.get(package_name, [])
+
         if resolve_capabilities and not cver and package_name in cur_prov:
             cver = cur_pkgs.get(cur_prov.get(package_name)[0], [])
 
