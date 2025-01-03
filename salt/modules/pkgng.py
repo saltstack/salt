@@ -927,7 +927,7 @@ def remove(
 
     .. note::
 
-        This function can accessed using ``pkg.delete`` in addition to
+        This function can be accessed using ``pkg.delete`` in addition to
         ``pkg.remove``, to more closely match the CLI usage of ``pkg(8)``.
 
     name
@@ -1904,7 +1904,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     .. note::
         This function is provided primarily for compatibility with some
         parts of :py:mod:`states.pkg <salt.states.pkg>`.
-        Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
+        Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
     name
         The name of the package to be held.
@@ -2030,7 +2030,7 @@ def list_locked(**kwargs):
     Query the package database those packages which are
     locked against reinstallation, modification or deletion.
 
-    Returns returns a list of package names with version strings
+    Returns a list of package names with version strings
 
     CLI Example:
 
