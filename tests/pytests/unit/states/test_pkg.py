@@ -8,6 +8,7 @@ import salt.modules.cp as cp
 import salt.modules.pacmanpkg as pacmanpkg
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
+import salt.modules.pkgng as pkgng
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
 import salt.utils.state as state_utils
@@ -48,6 +49,11 @@ def configure_loader_modules(minion_opts):
         pkg_resource: {
             "__salt__": {},
             "__grains__": {"os": "CentOS", "os_family": "RedHat"},
+        },
+        pkgng: {
+            "__salt__": {},
+            "__grains__": {"os": "FreeBSD", "osarch": "amd64", "osmajorrelease": 14},
+            "__opts__": minion_opts,
         },
         yumpkg: {
             "__salt__": {},
@@ -882,6 +888,52 @@ def test_installed_with_single_normalize():
         )
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+def test_installed_with_freebsd_origin():
+    """
+    Test pkg.installed where the package name is specified as an origin name
+    """
+
+    list_pkgs = MagicMock(
+        return_value={
+            "pkga": {
+                "origin": "test/pkga",
+                "version": ["1.0.1"],
+            }
+        }
+    )
+
+    install_mock = MagicMock(return_value={})
+
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+        "pkg_resource.parse_targets": pkg_resource.parse_targets,
+        "pkg_resource.check_extra_requirements": pkg_resource.check_extra_requirements,
+    }
+
+    with (
+        patch("salt.modules.pkgng.list_pkgs", list_pkgs),
+        patch("salt.modules.pkgng.version_cmp", MagicMock(return_value=0)),
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(pkgng.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__,
+            {
+                "os": "FreeBSD",
+                "osarch": "amd64",
+                "os_family": "FreeBSD",
+                "osmajorrelease": 14,
+            },
+        ),
+    ):
+
+        ret = pkg.installed("test/pkga")
+        install_mock.assert_not_called()
+        assert ret["result"]
 
 
 def test_removed_with_single_normalize():
