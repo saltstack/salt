@@ -60,6 +60,12 @@ def test_directory_symlink_dry_run(file, tmp_path):
     assert ret.result is True
 
 
+def _kernel_check(lookfor):
+    with salt.utils.files.fopen("/proc/version") as fp:
+        versioninfo = fp.read().lower()
+    return lookfor in versioninfo
+
+
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows(reason="Windows does not report any file modes. Skipping.")
 def test_directory_max_depth(file, tmp_path):
@@ -83,7 +89,10 @@ def test_directory_max_depth(file, tmp_path):
     initial_mode = "0111"
     changed_mode = "0555"
 
-    if salt.utils.platform.is_photonos():
+    # Check that we are not just running photon but the kernel matches. This
+    # check should fail if we are in a photon container running on and os other
+    # than photon.
+    if salt.utils.platform.is_photonos() and _kernel_check("photon"):
         initial_modes = {
             0: {sub: "0750", subsub: "0110"},
             1: {sub: "0110", subsub: "0110"},
