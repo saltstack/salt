@@ -667,11 +667,11 @@ class SaltPkgInstall:
             ret = self.proc.run(
                 "rpm",
                 "--import",
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
+                "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
             )
             self._check_retcode(ret)
             download_file(
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}.repo",
+                "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
             if self.distro_name == "photon":
@@ -724,16 +724,13 @@ class SaltPkgInstall:
             if relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
             download_file(
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
+                "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
                 f"/etc/apt/keyrings/{gpg_dest}",
             )
-            with salt.utils.files.fopen(
-                pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
-            ) as fp:
-                fp.write(
-                    f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
-                    f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
-                )
+            download_file(
+                "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources",
+                "/etc/apt/sources.list.d/salt.sources",
+            )
             self._check_retcode(ret)
 
             cmd = [
@@ -750,7 +747,7 @@ class SaltPkgInstall:
                     textwrap.dedent(
                         """\
                 Package: salt*
-                Pin: origin "repo.saltproject.io"
+                Pin: origin "packages.broadcom.com"
                 Pin-Priority: 1001
                 """
                     ),
@@ -801,7 +798,10 @@ class SaltPkgInstall:
                         )
                     elif self.file_ext == "exe":
                         win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
+                win_pkg_url = (
+                    f"https://packages.broadcom.com/artifactory/saltproject-generic/"
+                    f"windows/{self.prev_version}/{win_pkg}"
+                )
             else:
                 if self.file_ext == "msi":
                     win_pkg = (
@@ -809,7 +809,10 @@ class SaltPkgInstall:
                     )
                 elif self.file_ext == "exe":
                     win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
+                win_pkg_url = (
+                    f"https://packages.broadcom.com/artifactory/saltproject-generic/"
+                    f"windows/{self.prev_version}/{win_pkg}"
+                )
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
             download_file(win_pkg_url, pkg_path)
@@ -846,14 +849,18 @@ class SaltPkgInstall:
 
             if self.classic:
                 mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
-                mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
+                mac_pkg_url = (
+                    f"https://packages.broadcom.com/artifactory/saltproject-generic/"
+                    f"macos/{self.prev_version}/{mac_pkg}"
+                )
             else:
                 if not relenv:
                     mac_pkg = f"salt-{self.prev_version}-1-macos-{arch}.pkg"
                 else:
                     mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
                 mac_pkg_url = (
-                    f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
+                    f"https://packages.broadcom.com/artifactory/saltproject-generic/"
+                    f"macos/{self.prev_version}/{mac_pkg}"
                 )
 
             mac_pkg_path = f"/tmp/{mac_pkg}"

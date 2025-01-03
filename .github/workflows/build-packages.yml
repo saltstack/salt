@@ -36,6 +36,10 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -46,19 +50,183 @@ env:
 
 jobs:
 
+  build-deb-packages:
+    name: DEB
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
+
+    steps:
+      # Checkout here so we can easily use custom actions
+      - uses: actions/checkout@v4
+
+      # Checkout here for the build process
+      - name: Checkout in build directory
+        uses: actions/checkout@v4
+        with:
+          path:
+            pkgs/checkout/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: pkgs/checkout/artifacts/
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+          path: pkgs/checkout/
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cwd: pkgs/checkout/
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+          cwd: pkgs/checkout/
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Build Deb
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
+
+      - name: Cleanup
+        run: |
+          rm -rf pkgs/checkout/
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload DEBs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: ${{ github.workspace }}/pkgs/*
+          retention-days: 7
+          if-no-files-found: error
+
+  build-rpm-packages:
+    name: RPM
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Build RPM
+        run: |
+          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+              inputs.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ inputs.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
   build-macos-pkgs:
     name: macOS
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
-        source:
-          - ${{ inputs.source }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
 
     steps:
       - name: Check Package Signing Enabled
@@ -162,184 +330,6 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  build-deb-packages:
-    name: DEB
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - x86_64
-          - arm64
-        source:
-          - ${{ inputs.source }}
-
-    container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
-
-    steps:
-      # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v4
-
-      # Checkout here for the build process
-      - name: Checkout in build directory
-        uses: actions/checkout@v4
-        with:
-          path:
-            pkgs/checkout/
-
-      - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: pkgs/checkout/artifacts/
-
-      - name: Download Release Patch
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ inputs.salt-version }}.patch
-          path: pkgs/checkout/
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cwd: pkgs/checkout/
-          cache-prefix: ${{ inputs.cache-prefix }}
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ inputs.salt-version }}"
-          cwd: pkgs/checkout/
-
-      - name: Configure Git
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        working-directory: pkgs/checkout/
-        run: |
-          tools pkg configure-git
-
-      - name: Apply release patch
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        working-directory: pkgs/checkout/
-        run: |
-          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
-
-      - name: Build Deb
-        working-directory: pkgs/checkout/
-        run: |
-          tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
-              inputs.source == 'onedir' &&
-              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
-              ||
-              format('--arch={0}', matrix.arch)
-          }}
-
-      - name: Cleanup
-        run: |
-          rm -rf pkgs/checkout/
-
-      - name: Set Artifact Name
-        id: set-artifact-name
-        run: |
-          if [ "${{ inputs.source }}" != "src" ]; then
-            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb" >> "$GITHUB_OUTPUT"
-          else
-            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload DEBs
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
-          path: ${{ github.workspace }}/pkgs/*
-          retention-days: 7
-          if-no-files-found: error
-
-  build-rpm-packages:
-    name: RPM
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - x86_64
-          - arm64
-        source:
-          - ${{ inputs.source }}
-
-    container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Download Release Patch
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ inputs.salt-version }}.patch
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ inputs.salt-version }}"
-
-      - name: Configure Git
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        run: |
-          tools pkg configure-git
-
-      - name: Apply release patch
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        run: |
-          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
-
-      - name: Build RPM
-        run: |
-          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
-              inputs.source == 'onedir' &&
-              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
-              ||
-              format('--arch={0}', matrix.arch)
-          }}
-
-      - name: Set Artifact Name
-        id: set-artifact-name
-        run: |
-          if [ "${{ inputs.source }}" != "src" ]; then
-            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
-          else
-            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload RPMs
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
-          path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
-          retention-days: 7
-          if-no-files-found: error
-
   build-windows-pkgs:
     name: Windows
     environment: ${{ inputs.environment }}
@@ -347,12 +337,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86
-          - amd64
-        source:
-          - ${{ inputs.source }}
-
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on:
       - windows-latest
     env:

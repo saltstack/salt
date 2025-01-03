@@ -13,12 +13,6 @@
         with:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
       - name: Download macOS x86_64 Packages
         uses: actions/download-artifact@v4
         with:

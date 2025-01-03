@@ -13,118 +13,20 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
-from tools.utils import Linux, MacOS, PlatformDefinitions, Windows
+from tools.utils import (
+    Linux,
+    LinuxPkg,
+    MacOS,
+    MacOSPkg,
+    PlatformDefinitions,
+    Windows,
+    WindowsPkg,
+)
 
 log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
-
-TEST_SALT_LISTING = PlatformDefinitions(
-    {
-        "linux": [
-            Linux(slug="rockylinux-8", display_name="Rocky Linux 8", arch="x86_64"),
-            Linux(
-                slug="rockylinux-8-arm64",
-                display_name="Rocky Linux 8 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="rockylinux-9", display_name="Rocky Linux 9", arch="x86_64"),
-            Linux(
-                slug="rockylinux-9-arm64",
-                display_name="Rocky Linux 9 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="amazonlinux-2", display_name="Amazon Linux 2", arch="x86_64"),
-            Linux(
-                slug="amazonlinux-2-arm64",
-                display_name="Amazon Linux 2 Arm64",
-                arch="arm64",
-            ),
-            Linux(
-                slug="amazonlinux-2023",
-                display_name="Amazon Linux 2023",
-                arch="x86_64",
-            ),
-            Linux(
-                slug="amazonlinux-2023-arm64",
-                display_name="Amazon Linux 2023 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="debian-11", display_name="Debian 11", arch="x86_64"),
-            Linux(slug="debian-11-arm64", display_name="Debian 11 Arm64", arch="arm64"),
-            Linux(slug="debian-12", display_name="Debian 12", arch="x86_64"),
-            Linux(slug="debian-12-arm64", display_name="Debian 12 Arm64", arch="arm64"),
-            Linux(slug="fedora-40", display_name="Fedora 40", arch="x86_64"),
-            Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
-            Linux(slug="photonos-4", display_name="Photon OS 4", arch="x86_64"),
-            Linux(
-                slug="photonos-4-arm64", display_name="Photon OS 4 Arm64", arch="arm64"
-            ),
-            Linux(
-                slug="photonos-4",
-                display_name="Photon OS 4",
-                arch="x86_64",
-                fips=True,
-            ),
-            Linux(
-                slug="photonos-4-arm64",
-                display_name="Photon OS 4 Arm64",
-                arch="arm64",
-                fips=True,
-            ),
-            Linux(slug="photonos-5", display_name="Photon OS 5", arch="x86_64"),
-            Linux(
-                slug="photonos-5-arm64", display_name="Photon OS 5 Arm64", arch="arm64"
-            ),
-            Linux(
-                slug="photonos-5",
-                display_name="Photon OS 5",
-                arch="x86_64",
-                fips=True,
-            ),
-            Linux(
-                slug="photonos-5-arm64",
-                display_name="Photon OS 5 Arm64",
-                arch="arm64",
-                fips=True,
-            ),
-            Linux(slug="ubuntu-20.04", display_name="Ubuntu 20.04", arch="x86_64"),
-            Linux(
-                slug="ubuntu-20.04-arm64",
-                display_name="Ubuntu 20.04 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="ubuntu-22.04", display_name="Ubuntu 22.04", arch="x86_64"),
-            Linux(
-                slug="ubuntu-22.04-arm64",
-                display_name="Ubuntu 22.04 Arm64",
-                arch="arm64",
-            ),
-            Linux(slug="ubuntu-24.04", display_name="Ubuntu 24.04", arch="x86_64"),
-            Linux(
-                slug="ubuntu-24.04-arm64",
-                display_name="Ubuntu 24.04 Arm64",
-                arch="arm64",
-            ),
-        ],
-        "macos": [
-            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-            MacOS(
-                slug="macos-13-arm64",
-                display_name="macOS 13 Arm64",
-                arch="arm64",
-                runner="macos-13-xlarge",
-            ),
-        ],
-        "windows": [
-            Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
-            Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
-            Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
-        ],
-    }
-)
 
 # Define the command group
 cgroup = command_group(
@@ -132,6 +34,416 @@ cgroup = command_group(
     help="Pre-Commit GH Actions Workflows Related Commands",
     description=__doc__,
     parent="pre-commit",
+)
+
+# Testing platforms
+TEST_SALT_LISTING = PlatformDefinitions(
+    {
+        "linux": [
+            Linux(
+                slug="rockylinux-8",
+                display_name="Rocky Linux 8",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            Linux(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            Linux(
+                slug="rockylinux-9",
+                display_name="Rocky Linux 9",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            Linux(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            Linux(
+                slug="amazonlinux-2",
+                display_name="Amazon Linux 2",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            Linux(
+                slug="amazonlinux-2-arm64",
+                display_name="Amazon Linux 2 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            Linux(
+                slug="amazonlinux-2023",
+                display_name="Amazon Linux 2023",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            Linux(
+                slug="amazonlinux-2023-arm64",
+                display_name="Amazon Linux 2023 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            Linux(
+                slug="debian-11",
+                display_name="Debian 11",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            Linux(
+                slug="debian-11-arm64",
+                display_name="Debian 11 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            Linux(
+                slug="debian-12",
+                display_name="Debian 12",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            Linux(
+                slug="debian-12-arm64",
+                display_name="Debian 12 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            Linux(
+                slug="fedora-40",
+                display_name="Fedora 40",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:fedora-40",
+            ),
+            # Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
+            Linux(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="ubuntu-20.04",
+                display_name="Ubuntu 20.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
+            ),
+            Linux(
+                slug="ubuntu-20.04-arm64",
+                display_name="Ubuntu 20.04 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
+            ),
+            Linux(
+                slug="ubuntu-22.04",
+                display_name="Ubuntu 22.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            Linux(
+                slug="ubuntu-22.04-arm64",
+                display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            Linux(
+                slug="ubuntu-24.04",
+                display_name="Ubuntu 24.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+            Linux(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+        ],
+        "macos": [
+            MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOS(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOS(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
+        ],
+        "windows": [
+            # Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
+            Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
+            Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
+        ],
+    }
+)
+TEST_SALT_PKG_LISTING = PlatformDefinitions(
+    {
+        "linux": [
+            LinuxPkg(
+                slug="rockylinux-8",
+                display_name="Rocky Linux 8",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            LinuxPkg(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            LinuxPkg(
+                slug="rockylinux-9",
+                display_name="Rocky Linux 9",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            LinuxPkg(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            LinuxPkg(
+                slug="amazonlinux-2",
+                display_name="Amazon Linux 2",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            LinuxPkg(
+                slug="amazonlinux-2-arm64",
+                display_name="Amazon Linux 2 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            LinuxPkg(
+                slug="amazonlinux-2023",
+                display_name="Amazon Linux 2023",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            LinuxPkg(
+                slug="amazonlinux-2023-arm64",
+                display_name="Amazon Linux 2023 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            LinuxPkg(
+                slug="debian-11",
+                display_name="Debian 11",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            LinuxPkg(
+                slug="debian-11-arm64",
+                display_name="Debian 11 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            LinuxPkg(
+                slug="debian-12",
+                display_name="Debian 12",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            LinuxPkg(
+                slug="debian-12-arm64",
+                display_name="Debian 12 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            LinuxPkg(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="ubuntu-20.04",
+                display_name="Ubuntu 20.04",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-20.04-arm64",
+                display_name="Ubuntu 20.04 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-22.04",
+                display_name="Ubuntu 22.04",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-22.04-arm64",
+                display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-24.04",
+                display_name="Ubuntu 24.04",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+        ],
+        "macos": [
+            MacOSPkg(slug="macos-12", display_name="macOS 12", arch="x86_64"),
+            MacOSPkg(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOSPkg(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOSPkg(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
+        ],
+        "windows": [
+            WindowsPkg(
+                slug="windows-2019",
+                display_name="Windows 2019",
+                arch="amd64",
+                pkg_type="NSIS",
+            ),
+            WindowsPkg(
+                slug="windows-2019",
+                display_name="Windows 2019",
+                arch="amd64",
+                pkg_type="MSI",
+            ),
+            WindowsPkg(
+                slug="windows-2022",
+                display_name="Windows 2022",
+                arch="amd64",
+                pkg_type="NSIS",
+            ),
+            WindowsPkg(
+                slug="windows-2022",
+                display_name="Windows 2022",
+                arch="amd64",
+                pkg_type="MSI",
+            ),
+        ],
+    }
 )
 
 
@@ -191,221 +503,7 @@ def generate_workflows(ctx: Context):
             },
         },
     }
-
-    test_salt_pkg_listing = PlatformDefinitions(
-        {
-            "linux": [
-                Linux(
-                    slug="rockylinux-8",
-                    display_name="Rocky Linux 8",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="rockylinux-8-arm64",
-                    display_name="Rocky Linux 8 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="rockylinux-9",
-                    display_name="Rocky Linux 9",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="rockylinux-9-arm64",
-                    display_name="Rocky Linux 9 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="amazonlinux-2",
-                    display_name="Amazon Linux 2",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="amazonlinux-2-arm64",
-                    display_name="Amazon Linux 2 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="amazonlinux-2023",
-                    display_name="Amazon Linux 2023",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="amazonlinux-2023-arm64",
-                    display_name="Amazon Linux 2023 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="debian-11",
-                    display_name="Debian 11",
-                    arch="x86_64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="debian-11-arm64",
-                    display_name="Debian 11 Arm64",
-                    arch="arm64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="debian-12",
-                    display_name="Debian 12",
-                    arch="x86_64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="debian-12-arm64",
-                    display_name="Debian 12 Arm64",
-                    arch="arm64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="photonos-4",
-                    display_name="Photon OS 4",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="photonos-4-arm64",
-                    display_name="Photon OS 4 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="photonos-4",
-                    display_name="Photon OS 4",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-4-arm64",
-                    display_name="Photon OS 4 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-5",
-                    display_name="Photon OS 5",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="photonos-5-arm64",
-                    display_name="Photon OS 5 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                ),
-                Linux(
-                    slug="photonos-5",
-                    display_name="Photon OS 5",
-                    arch="x86_64",
-                    pkg_type="rpm",
-                    fips=True,
-                ),
-                Linux(
-                    slug="photonos-5-arm64",
-                    display_name="Photon OS 5 Arm64",
-                    arch="arm64",
-                    pkg_type="rpm",
-                    fips=True,
-                ),
-                Linux(
-                    slug="ubuntu-20.04",
-                    display_name="Ubuntu 20.04",
-                    arch="x86_64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="ubuntu-20.04-arm64",
-                    display_name="Ubuntu 20.04 Arm64",
-                    arch="arm64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="ubuntu-22.04",
-                    display_name="Ubuntu 22.04",
-                    arch="x86_64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="ubuntu-22.04-arm64",
-                    display_name="Ubuntu 22.04 Arm64",
-                    arch="arm64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="ubuntu-24.04",
-                    display_name="Ubuntu 24.04",
-                    arch="x86_64",
-                    pkg_type="deb",
-                ),
-                Linux(
-                    slug="ubuntu-24.04-arm64",
-                    display_name="Ubuntu 24.04 Arm64",
-                    arch="arm64",
-                    pkg_type="deb",
-                ),
-            ],
-            "macos": [
-                MacOS(slug="macos-12", display_name="macOS 12", arch="x86_64"),
-                MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
-                MacOS(
-                    slug="macos-13-arm64",
-                    display_name="macOS 13 Arm64",
-                    arch="arm64",
-                    runner="macos-13-xlarge",
-                ),
-            ],
-            "windows": [
-                Windows(
-                    slug="windows-2016",
-                    display_name="Windows 2016",
-                    arch="amd64",
-                    pkg_type="NSIS",
-                ),
-                Windows(
-                    slug="windows-2016",
-                    display_name="Windows 2016",
-                    arch="amd64",
-                    pkg_type="MSI",
-                ),
-                Windows(
-                    slug="windows-2019",
-                    display_name="Windows 2019",
-                    arch="amd64",
-                    pkg_type="NSIS",
-                ),
-                Windows(
-                    slug="windows-2019",
-                    display_name="Windows 2019",
-                    arch="amd64",
-                    pkg_type="MSI",
-                ),
-                Windows(
-                    slug="windows-2022",
-                    display_name="Windows 2022",
-                    arch="amd64",
-                    pkg_type="NSIS",
-                ),
-                Windows(
-                    slug="windows-2022",
-                    display_name="Windows 2022",
-                    arch="amd64",
-                    pkg_type="MSI",
-                ),
-            ],
-        }
-    )
+    test_salt_pkg_listing = TEST_SALT_PKG_LISTING
 
     build_rpms_listing = []
     rpm_os_versions: dict[str, list[str]] = {
@@ -474,6 +572,9 @@ def generate_workflows(ctx: Context):
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "test_salt_linux_needs": NeedsTracker(),
+            "test_salt_macos_needs": NeedsTracker(),
+            "test_salt_windows_needs": NeedsTracker(),
             "test_salt_pkg_needs": NeedsTracker(),
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
