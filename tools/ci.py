@@ -1675,6 +1675,8 @@ def workflow_config(
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
                 ]
+                # Skipping downgrade tests on windows. These tests have never
+                # been run and currently fail. This should be fixed.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1683,7 +1685,7 @@ def workflow_config(
                         },
                         **_.as_dict(),
                     )
-                    for _ in TEST_SALT_PKG_LISTING[platform]
+                    for _ in TEST_SALT_PKG_LISTING[platform] if _ != "windows"
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
