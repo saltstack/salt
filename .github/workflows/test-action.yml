@@ -130,7 +130,7 @@ jobs:
 
       - name: "Show docker config"
         run: |
-          cat /lib/systemd/system/containerd.service 
+          cat /lib/systemd/system/containerd.service
 
       - name: "Pull container ${{ matrix.container }}"
         run: |
@@ -169,7 +169,6 @@ jobs:
           -e SALT_TRANSPORT=${{ matrix.transport }} \
           -e LANG="en_US.UTF-8" \
           -e SHELL=/bin/bash \
-          -v "/var/run/docker.sock":"/var/run/docker.sock" \
           -v "/home/runner/work":"/__w" \
           --entrypoint "/usr/lib/systemd/systemd" \
           ${{ matrix.container }} \
