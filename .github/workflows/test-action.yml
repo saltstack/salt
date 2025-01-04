@@ -214,11 +214,15 @@ jobs:
         run: |
           df -h
 
-      - name: Container network info
+      - name: Show container network info
         shell: bash
         run: |
           docker exec ${{ github.run_id}}_salt-test ip addr
 
+      - name: Show container processes
+        shell: bash
+        run: |
+          docker exec ${{ github.run_id}}_salt-test ps auxf
 
       - name: Free Space on Container
         shell: bash
