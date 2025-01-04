@@ -12,7 +12,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def url(modules):
-    return "rewrite.amazon.com"
+    return "ns.google.com"
 
 
 @pytest.fixture(scope="module")
