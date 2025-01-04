@@ -97,6 +97,7 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
       - name: Free Disk Space Before Build
         run: |
           echo "Disk space before cleanup:"
@@ -212,6 +213,12 @@ jobs:
         shell: bash
         run: |
           df -h
+
+      - name: Container network info
+        shell: bash
+        run: |
+          docker exec ${{ github.run_id}}_salt-test ip addr
+
 
       - name: Free Space on Container
         shell: bash
