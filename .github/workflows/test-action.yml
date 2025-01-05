@@ -137,15 +137,16 @@ jobs:
         run: |
           docker pull ${{ matrix.container }}
 
-      - name: "Create docker network"
-        run: |
-           docker network create --ipv6 --subnet 2001:db8::/64 ip6net
-
+#      - name: "Create docker network"
+#        run: |
+#           docker network create --ipv6 --subnet 2001:db8::/64 ip6net
+#
+#
+#          --network ip6net \
       - name: "Create container ${{ matrix.container }}"
         run: |
           /usr/bin/docker \
           create --name ${{ github.run_id }}_salt-test \
-          --network ip6net \
           --workdir /__w/salt/salt \
           --privileged \
           -e "HOME=/github/home" \
