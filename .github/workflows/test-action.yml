@@ -131,9 +131,9 @@ jobs:
 
       - name: "Configure docker"
         run: |
-          sed -i '/LimitNOFILE=infinity/c\LimitNOFILE=1048576' /lib/systemd/system/containerd.service
-          systemctl daemon-reload
-          systemctl restart containerd
+          sudo sed -i '/LimitNOFILE=infinity/c\LimitNOFILE=1048576' /lib/systemd/system/containerd.service
+          sudo systemctl daemon-reload
+          sudo systemctl restart containerd
           cat /lib/systemd/system/containerd.service
 
       - name: "Pull container ${{ matrix.container }}"
