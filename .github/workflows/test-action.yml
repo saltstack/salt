@@ -129,8 +129,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
-      - name: "Show docker config"
+      - name: "Configure docker"
         run: |
+          sed -i '/LimitNOFILE=infinity/c\LimitNOFILE=1048576' /lib/systemd/system/containerd.service
+          systemctl daemon-reload
+          systemctl restart containerd
           cat /lib/systemd/system/containerd.service
 
       - name: "Pull container ${{ matrix.container }}"
