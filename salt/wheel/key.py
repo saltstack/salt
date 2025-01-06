@@ -30,6 +30,7 @@ import hashlib
 import logging
 import os
 
+import salt.cache
 import salt.crypt
 import salt.key
 import salt.utils.crypt
@@ -37,10 +38,7 @@ import salt.utils.files
 import salt.utils.platform
 from salt.utils.sanitizers import clean
 
-__func_alias__ = {
-    "list_": "list",
-    "key_str": "print",
-}
+__func_alias__ = {"list_": "list", "key_str": "print", "name_match": "glob_match"}
 
 log = logging.getLogger(__name__)
 
@@ -78,15 +76,15 @@ def list_all():
         'minions': ['minion1', 'minion2', 'minion3']}
     """
     with salt.key.get_key(__opts__) as skey:
-        return skey.all_keys()
+        return skey.list_keys()
 
 
-def name_match(match):
+def glob_match(match):
     """
     List all the keys based on a glob match
     """
     with salt.key.get_key(__opts__) as skey:
-        return skey.name_match(match)
+        return skey.glob_match(match)
 
 
 def accept(match, include_rejected=False, include_denied=False):
@@ -434,11 +432,14 @@ def gen_accept(id_, keysize=2048, force=False):
     """
     id_ = clean.id(id_)
     ret = gen(id_, keysize)
-    acc_path = os.path.join(__opts__["pki_dir"], "minions", id_)
-    if os.path.isfile(acc_path) and not force:
+
+    cache = salt.cache.Cache(__opts__, driver=__opts__["keys.cache_driver"])
+    key = cache.fetch("keys", id_)
+
+    if key and not force:
         return {}
-    with salt.utils.files.fopen(acc_path, "w+") as fp_:
-        fp_.write(salt.utils.stringutils.to_str(ret["pub"]))
+
+    cache.store("keys", id_, {"pub": ret["pub"], "state": "accepted"})
     return ret
 
 
