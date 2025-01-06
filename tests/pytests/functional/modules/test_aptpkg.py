@@ -87,6 +87,9 @@ def configure_loader_modules(minion_opts):
 
 @pytest.fixture()
 def revert_repo_file(tmp_path):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
