@@ -185,12 +185,13 @@ a return like::
 .. |500| replace:: internal server error
 """
 
-import cgi
+import cgi  # pylint: disable=deprecated-module
 import fnmatch
 import logging
 import time
 from collections import defaultdict
 from copy import copy
+from functools import cached_property
 
 import tornado.escape
 import tornado.gen
@@ -443,8 +444,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
 
-        if not hasattr(self, "ckminions"):
-            self.ckminions = salt.utils.minions.CkMinions(self.application.opts)
+    @cached_property
+    def ckminions(self):
+        return salt.utils.minions.CkMinions(self.application.opts)
 
     @property
     def token(self):

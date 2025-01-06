@@ -3,12 +3,12 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
-import fnmatch
 import logging
 import os
 import re
 
 import salt.cache
+import salt.key
 import salt.payload
 import salt.roster
 import salt.transport
@@ -209,6 +209,7 @@ class CkMinions:
     def __init__(self, opts):
         self.opts = opts
         self.cache = salt.cache.factory(opts)
+        self.key = salt.key.get_key(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
@@ -231,7 +232,9 @@ class CkMinions:
         """
         Return the minions found by looking via globs
         """
-        return {"minions": fnmatch.filter(self._pki_minions(), expr), "missing": []}
+        matched = self.key.glob_match(expr).get(self.key.ACC, [])
+
+        return {"minions": matched, "missing": []}
 
     def _check_list_minions(
         self, expr, greedy, ignore_missing=False
@@ -241,10 +244,15 @@ class CkMinions:
         """
         if isinstance(expr, str):
             expr = [m for m in expr.split(",") if m]
-        minions = self._pki_minions()
+
+        found = self.key.list_match(expr)
         return {
-            "minions": [x for x in expr if x in minions],
-            "missing": [] if ignore_missing else [x for x in expr if x not in minions],
+            "minions": found.get(self.key.ACC, []),
+            "missing": (
+                []
+                if ignore_missing
+                else [x for x in expr if x not in found.get(self.key.ACC, [])]
+            ),
         }
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
@@ -262,29 +270,20 @@ class CkMinions:
         Retrieve complete minion list from PKI dir.
         Respects cache if configured
         """
-        minions = []
-        pki_cache_fn = os.path.join(self.pki_dir, self.acc, ".key_cache")
+
+        minions = set()
         try:
-            os.makedirs(os.path.dirname(pki_cache_fn))
-        except OSError:
-            pass
-        try:
-            if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
-                log.debug("Returning cached minion list")
-                with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                    return salt.payload.load(fn_)
-            else:
-                for fn_ in salt.utils.data.sorted_ignorecase(
-                    os.listdir(os.path.join(self.pki_dir, self.acc))
-                ):
-                    if not fn_.startswith("."):
-                        minions.append(fn_)
-            return minions
+            accepted = self.key.list_status("accepted").get("minions")
+            if accepted:
+                minions = minions | set(accepted)
         except OSError as exc:
             log.error(
                 "Encountered OSError while evaluating minions in PKI dir: %s", exc
             )
-            return minions
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Encountered Exception while evaluating pki minions: %s", exc)
+
+        return minions
 
     def _check_cache_minions(
         self, expr, delimiter, greedy, search_type, regex_match=False, exact_match=False
