@@ -144,6 +144,10 @@ jobs:
         run: |
            docker network create -o "com.docker.network.driver.mtu=1500" --ipv6 --subnet 2001:db8::/64 ip6net
 
+      - name: "Host network config"
+        run: |
+          ip a
+
       - name: "Create container ${{ matrix.container }}"
         run: |
           /usr/bin/docker \
