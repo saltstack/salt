@@ -1016,6 +1016,8 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # the cache driver to be used to manage keys for both minion and master
+        "keys.cache_driver": (type(None), str),
     }
 )
 
@@ -1325,6 +1327,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key_backcompat",
     }
 )
 
@@ -1679,6 +1682,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key_backcompat",
     }
 )
 
@@ -2555,12 +2559,12 @@ def apply_sdb(opts, sdb_opts=None):
     """
     Recurse for sdb:// links for opts
     """
-    # Late load of SDB to keep CLI light
-    import salt.utils.sdb
-
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
+        # Late load of SDB to keep CLI light
+        import salt.utils.sdb
+
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():

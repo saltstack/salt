@@ -18,7 +18,6 @@ import salt.payload
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
-import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
@@ -204,7 +203,7 @@ class AsyncReqChannel:
             timeout,
         )
         key = self.auth.get_keys()
-        if "key" not in ret:
+        if not isinstance(ret, dict) or "key" not in ret:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
             ret = yield self._send_with_retry(
@@ -235,7 +234,7 @@ class AsyncReqChannel:
         raise tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.PublicKey(self.master_pubkey_path).verify(
+        return salt.crypt.PublicKey.from_file(self.master_pubkey_path).verify(
             data, sig, self.opts["signing_algorithm"]
         )
 
