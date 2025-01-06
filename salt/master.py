@@ -1410,6 +1410,9 @@ class AESFuncs(TransportMethods):
             self.pki_dir = self.opts["cluster_pki_dir"]
         else:
             self.pki_dir = self.opts.get("pki_dir", "")
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
 
     def __setup_fileserver(self):
         """
@@ -1442,18 +1445,24 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.pki_dir, "minions", id_)
+        key = self.key_cache.fetch("keys", id_)
+
+        if not key:
+            log.error("Unexpectedly got no pub key for %s", id_)
+            return False
+
         try:
-            pub = salt.crypt.PublicKey(pub_path)
-        except OSError:
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except (OSError, KeyError):
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
                 "master, but key could not be read and verification was denied.",
                 id_,
+                exc_info=True,
             )
             return False
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load public key "%s": %s', pub_path, err)
+            log.error('Unable to load public key "%s": %s', id_, err)
         try:
             if pub.decrypt(token) == b"salt":
                 return True
@@ -1863,9 +1872,7 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = os.path.join(
-                self.pki_dir, "minions/{}".format(load["id"])
-            )
+            this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(
                 this_minion_pubkey, serialized_load, sig
