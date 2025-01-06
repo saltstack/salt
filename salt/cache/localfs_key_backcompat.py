@@ -1,0 +1,265 @@
+"""
+Backward compatible shim layer for pki interaction
+
+.. versionadded:: xxx
+
+The ``localfs_keys_backcompat`` is a shim driver meant to allow the salt.cache
+subsystem to interact with the existing master pki folder/file structure
+without any migration from previous versions of salt.  It is not meant for
+general purpose use and should not be used outside of the master auth system.
+
+The main difference from before is the 'state' of the key, ie accepted/rejected
+is now stored in the data itself, as opposed to the cache equivalent of a bank
+previously.
+
+store and fetch handle ETL from new style, where data itself contains key
+state, to old style, where folder and/or bank contain state.
+flush/list/contains/updated are left as nearly equivalent to localfs, without
+the .p file extension to work with legacy keys via banks.
+"""
+
+import errno
+import logging
+import os
+import os.path
+import shutil
+import tempfile
+
+import salt.utils.atomicfile
+import salt.utils.files
+import salt.utils.verify
+from salt.exceptions import SaltCacheError
+
+log = logging.getLogger(__name__)
+
+__func_alias__ = {"list_": "list"}
+
+BASE_MAPPING = {
+    "minions_pre": "pending",
+    "minions_rejected": "rejected",
+    "minions": "accepted",
+    "minions_denied": "denied",
+}
+
+
+# we explicitly override cache dir to point to pki here
+def init_kwargs(kwargs):
+    """
+    given the kwarg inputs give the mapping for each cache func call
+    """
+    if __opts__["cluster_id"]:
+        pki_dir = __opts__["cluster_pki_dir"]
+    else:
+        pki_dir = __opts__["pki_dir"]
+
+    return {"cachedir": pki_dir, "user": kwargs.get("user")}
+
+
+def store(bank, key, data, cachedir, user, **kwargs):
+    """
+    Store key state information. storing a accepted/pending/rejected state
+    means clearing it from the other 2. denied is handled separately
+    """
+    # All possible removefns, once we determine the state we will remove current state
+    # Unless the state is denied, then we remove all of these states
+    removefns = {"minions", "minions_pre", "minions_rejected"}
+
+    if bank == "keys":
+        if data["state"] == "rejected":
+            base = "minions_rejected"
+        elif data["state"] == "pending":
+            base = "minions_pre"
+        elif data["state"] == "accepted":
+            base = "minions"
+        else:
+            raise SaltCacheError("Unrecognized data/bank: {}".format(data["state"]))
+        data = data["pub"]
+        removefns.remove(base)
+    elif bank == "denied_keys":
+        # denied keys is a list post migration, but is a single key in legacy
+        data = data[0]
+        base = "minions_denied"
+        removefns = {}
+
+    base = os.path.join(cachedir, base)
+    savefn = os.path.join(base, key)
+
+    try:
+        os.makedirs(base)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise SaltCacheError(
+                f"The cache directory, {base}, could not be created: {exc}"
+            )
+
+    if __opts__["permissive_pki_access"]:
+        umask = 0o0700
+        mod = 0o0440
+    else:
+        umask = 0o0750
+        mod = 0o0400
+
+    tmpfh, tmpfname = tempfile.mkstemp(dir=base)
+    os.close(tmpfh)
+
+    if user:
+        try:
+            import pwd
+
+            uid = pwd.getpwnam(user).pw_uid
+            os.chown(tmpfname, uid, -1)
+        except (KeyError, ImportError, OSError):
+            # The specified user was not found, allow the backup systems to
+            # report the error
+            pass
+
+    try:
+        with salt.utils.files.set_umask(umask):
+            with salt.utils.files.fopen(tmpfname, "w+b") as fh_:
+                fh_.write(data.encode("utf-8"))
+        # On Windows, os.rename will fail if the destination file exists.
+        salt.utils.atomicfile.atomic_rename(tmpfname, savefn)
+    except OSError as exc:
+        raise SaltCacheError(
+            f"There was an error writing the cache file, {base}: {exc}"
+        )
+
+    # legacy dirs are banks, keys are ids
+    for bank in removefns:
+        flush(bank, key, cachedir, **kwargs)
+
+
+def fetch(bank, key, cachedir, **kwargs):
+    """
+    Fetch and construct state data for a given minion based on the bank and id
+    """
+    if key == ".key_cache":
+        raise SaltCacheError("trying to read key_cache, there is a bug at call-site")
+    try:
+        if bank == "keys":
+            for state, bank in [
+                ("rejected", "minions_rejected"),
+                ("pending", "minions_pre"),
+                ("accepted", "minions"),
+            ]:
+                pubfn = os.path.join(cachedir, bank, key)
+                if os.path.isfile(pubfn):
+                    with salt.utils.files.fopen(pubfn, "r") as fh_:
+                        return {"state": state, "pub": fh_.read()}
+            return None
+        elif bank == "denied_keys":
+            # there can be many denied keys per minion post refactor, but only 1
+            # with the filesystem, so return a list of 1
+            pubfn_denied = os.path.join(cachedir, "minions_denied", key)
+
+            if os.path.isfile(pubfn_denied):
+                with salt.utils.files.fopen(pubfn_denied, "r") as fh_:
+                    return [fh_.read()]
+        else:
+            raise SaltCacheError(f'unrecognized bank "{bank}"')
+    except OSError as exc:
+        raise SaltCacheError(
+            'There was an error reading the cache bank "{}", key "{}": {}'.format(
+                bank, key, exc
+            )
+        )
+
+
+def updated(bank, key, cachedir, **kwargs):
+    """
+    Return the epoch of the mtime for this cache file
+    """
+    key_file = os.path.join(cachedir, os.path.normpath(bank), key)
+    if not os.path.isfile(key_file):
+        log.warning('Cache file "%s" does not exist', key_file)
+        return None
+    try:
+        return int(os.path.getmtime(key_file))
+    except OSError as exc:
+        raise SaltCacheError(
+            f'There was an error reading the mtime for "{key_file}": {exc}'
+        )
+
+
+def flush(bank, key=None, cachedir=None, **kwargs):
+    """
+    Remove the key from the cache bank with all the key content.
+    flush can take a legacy bank or a keys/denied_keys modern bank
+    """
+    if cachedir is None:
+        raise SaltCacheError("cachedir missing")
+
+    flushed = False
+
+    if bank not in BASE_MAPPING:
+        if bank == "keys":
+            bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+        elif bank == "denied_keys":
+            bases = ["minions_denied"]
+    else:
+        bases = [bank]
+
+    for base in bases:
+        try:
+            if key is None:
+                target = os.path.join(cachedir, base)
+                if not os.path.isdir(target):
+                    return False
+                shutil.rmtree(target)
+            else:
+                target = os.path.join(cachedir, base, key)
+                if not os.path.isfile(target):
+                    continue
+                os.remove(target)
+                flushed = True
+        except OSError as exc:
+            raise SaltCacheError(f'There was an error removing "{target}": {exc}')
+    return flushed
+
+
+def list_(bank, cachedir, **kwargs):
+    """
+    Return an iterable object containing all entries stored in the specified bank.
+    """
+
+    if bank != "keys" and bank != "denied_keys" and bank not in BASE_MAPPING:
+        raise SaltCacheError(f'Invalid bank "{bank}"')
+
+    if bank not in BASE_MAPPING:
+        if bank == "keys":
+            bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+        elif bank == "denied_keys":
+            bases = ["minions_denied"]
+    else:
+        bases = [bank]
+
+    ret = []
+    for base in bases:
+        base = os.path.join(cachedir, os.path.normpath(base))
+        if not os.path.isdir(base):
+            continue
+        try:
+            items = os.listdir(base)
+        except OSError as exc:
+            raise SaltCacheError(
+                f'There was an error accessing directory "{base}": {exc}'
+            )
+        for item in items:
+            # salt foolishly dumps a file here, ignore it
+            if salt.utils.verify.valid_id(__opts__, item):
+                ret.append(item)
+            else:
+                log.error("saw invalid id %s, discarding", item)
+    return ret
+
+
+def contains(bank, key, cachedir, **kwargs):
+    """
+    Checks if the specified bank contains the specified key.
+    """
+    if key is None:
+        base = os.path.join(cachedir, os.path.normpath(bank))
+        return os.path.isdir(base)
+    else:
+        keyfile = os.path.join(cachedir, os.path.normpath(bank), key)
+    return os.path.isfile(keyfile)
