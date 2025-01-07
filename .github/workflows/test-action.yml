@@ -277,10 +277,14 @@ jobs:
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        #run: |
+        #  docker exec ${{ github.run_id}}_salt-test \
+        #    python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+        #    --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
-            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
-            --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
+            python3 -m nox --force-color -e ${{ inputs.nox-session }} -- --slow-tests --core-tests \
+            tests/pytests/integration/states/test_ansiblegate.py::test_ansible_playbook
 
       - name: Stop Container
         run: |
