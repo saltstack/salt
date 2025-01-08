@@ -1193,6 +1193,12 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
+        if payload.get("cmd") == "_auth":
+            start = payload.get("_start")
+            if self.opts["master_stats"] and start is not None:
+                self.stats["_auth"]["runs"] += 1
+                self._post_stats(start, "_auth")
+            return
         key = payload["enc"]
         load = payload["load"]
         if key == "clear":
