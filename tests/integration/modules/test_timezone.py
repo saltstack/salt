@@ -23,7 +23,9 @@ def _check_systemctl():
         proc = subprocess.run(["systemctl"], capture_output=True, check=False)
         _check_systemctl.memo = (
             b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
+            or b"Failed to connect to bus: No such file or directory" in proc.stderr
         )
+        print(repr(proc.stderr))
     return _check_systemctl.memo
 
 
