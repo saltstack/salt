@@ -332,7 +332,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-junit-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: testrun-junit-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/xml-unittests-output/
           include-hidden-files: true
