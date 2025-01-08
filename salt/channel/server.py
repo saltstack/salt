@@ -268,7 +268,13 @@ class ReqServerChannel:
                 payload["enc"] == "clear"
                 and payload.get("load", {}).get("cmd") == "_auth"
             ):
-                return self._auth(payload["load"], sign_messages, version)
+                # Store time at the beginning of serving _auth call
+                # to calculate duration of the call with master_stats
+                start = time.time()
+                ret = self._auth(payload["load"], sign_messages, version)
+                if self.opts.get("master_stats", False):
+                    await self.payload_handler({"cmd": "_auth", "_start": start})
+                return ret
 
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
