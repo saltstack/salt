@@ -1431,12 +1431,17 @@ def test_isportopen_false():
     assert ret is False
 
 
-def test_isportopen():
-    if salt.utils.platform.is_windows():
-        port = "135"
-    else:
-        port = "22"
-    ret = network.isportopen("127.0.0.1", port)
+@pytest.fixture
+def openport_22233():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", 22233))
+    s.listen(5)
+    yield
+    s.close()
+
+
+def test_isportopen(openport_22233):
+    ret = network.isportopen("127.0.0.1", 22233)
     assert ret == 0
 
 
