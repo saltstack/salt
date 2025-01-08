@@ -27,6 +27,9 @@ pytestmark = [
 
 @pytest.fixture
 def pkgrepo(states, grains):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     if grains["os_family"] != "Debian":
         raise pytest.skip.Exception(
             "Test only for debian based platforms", _use_item_location=True
