@@ -1,6 +1,18 @@
+import subprocess
+
 import pytest
 
 from tests.support.case import ModuleCase
+
+
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        proc = subprocess.run(["localectl"], capture_output=True, check=False)
+        _check_systemctl.memo = (
+            b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
+            or b"Failed to connect to bus: No such file or directory" in proc.stderr
+        )
+    return _check_systemctl.memo
 
 
 @pytest.mark.skip_on_windows(reason="minion is windows")
@@ -8,6 +20,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.skip_on_freebsd(
     reason="locale method is supported only within login classes or environment variables"
 )
+@pytest.mark.skipif(_check_systemctl(), reason="localectl degraded")
 @pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):

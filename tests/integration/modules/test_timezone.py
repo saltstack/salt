@@ -20,12 +20,11 @@ except ImportError:
 
 def _check_systemctl():
     if not hasattr(_check_systemctl, "memo"):
-        proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+        proc = subprocess.run(["timedatectl"], capture_output=True, check=False)
         _check_systemctl.memo = (
             b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
             or b"Failed to connect to bus: No such file or directory" in proc.stderr
         )
-        print(repr(proc.stderr))
     return _check_systemctl.memo
 
 
