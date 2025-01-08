@@ -4,6 +4,8 @@ Integration tests for timezone module
 Linux and Solaris are supported
 """
 
+import subprocess
+
 import pytest
 
 from tests.support.case import ModuleCase
@@ -16,6 +18,16 @@ except ImportError:
     HAS_TZLOCAL = False
 
 
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+        _check_systemctl.memo = (
+            b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
+        )
+    return _check_systemctl.memo
+
+
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 class TimezoneLinuxModuleTest(ModuleCase):
     def setUp(self):
         """
@@ -32,6 +44,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
         self.assertIn(ret, timescale)
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 class TimezoneSolarisModuleTest(ModuleCase):
     def setUp(self):
         """
