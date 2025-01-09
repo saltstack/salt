@@ -154,6 +154,7 @@ jobs:
           create --name ${{ github.run_id }}_salt-test \
           --workdir /__w/salt/salt \
           --privileged \
+          --ulimit="nofile=262144:262144" \
           -e "HOME=/github/home" \
           -e GITHUB_ACTIONS=true \
           -e CI=true \
@@ -184,6 +185,10 @@ jobs:
       - name: "Start container ${{ matrix.container }}"
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test
+
+      - name: "Show container inspect ${{ matrix.container }}"
+        run: |
+          /usr/bin/docker inspect ${{ github.run_id }}_salt-test
 
       - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
         uses: actions/download-artifact@v4
