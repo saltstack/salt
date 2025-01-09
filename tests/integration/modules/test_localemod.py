@@ -8,10 +8,7 @@ from tests.support.case import ModuleCase
 def _check_systemctl():
     if not hasattr(_check_systemctl, "memo"):
         proc = subprocess.run(["localectl"], capture_output=True, check=False)
-        _check_systemctl.memo = (
-            b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
-            or b"Failed to connect to bus: No such file or directory" in proc.stderr
-        )
+        _check_systemctl.memo = b"No such file or directory" in proc.stderr
     return _check_systemctl.memo
 
 
@@ -63,6 +60,7 @@ class LocaleModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skipif(_check_systemctl(), reason="systemd degraded")
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = self._find_new_locale(original_locale)

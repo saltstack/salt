@@ -148,6 +148,11 @@ jobs:
         run: |
           ip a
 
+      - name: Free Memory Before Container
+        shell: bash
+        run: |
+          free -h
+
       - name: "Create container ${{ matrix.container }}"
         run: |
           /usr/bin/docker \
@@ -239,6 +244,11 @@ jobs:
         shell: bash
         run: |
           docker exec ${{ github.run_id}}_salt-test df -h
+
+      - name: Free Memory
+        shell: bash
+        run: |
+          free -h
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
