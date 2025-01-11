@@ -2,13 +2,17 @@ import subprocess
 
 import pytest
 
+import salt.utils.platform
 from tests.support.case import ModuleCase
 
 
 def _check_systemctl():
     if not hasattr(_check_systemctl, "memo"):
-        proc = subprocess.run(["localectl"], capture_output=True, check=False)
-        _check_systemctl.memo = b"No such file or directory" in proc.stderr
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["localectl"], capture_output=True, check=False)
+            _check_systemctl.memo = b"No such file or directory" in proc.stderr
     return _check_systemctl.memo
 
 
