@@ -3,16 +3,15 @@
 """
 
 import logging
-import shutil
 import subprocess
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
 import salt.utils.platform
 from salt.utils.event import SaltEvent
-
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -20,11 +19,15 @@ log = logging.getLogger(__name__)
 
 def _check_systemctl():
     if not hasattr(_check_systemctl, "memo"):
-        proc = subprocess.run(["systemctl"], capture_output=True, check=False)
-        _check_systemctl.memo = (
-            b"Failed to get D-Bus connection: No such file or directory" in proc.stderr
-            or b"Failed to connect to bus: No such file or directory" in proc.stderr
-        )
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+            _check_systemctl.memo = (
+                b"Failed to get D-Bus connection: No such file or directory"
+                in proc.stderr
+                or b"Failed to connect to bus: No such file or directory" in proc.stderr
+            )
     return _check_systemctl.memo
 
 
