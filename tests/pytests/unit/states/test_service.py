@@ -3,15 +3,16 @@
 """
 
 import logging
+import shutil
 import subprocess
 
 import pytest
-
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
 import salt.utils.platform
 from salt.utils.event import SaltEvent
+
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -689,8 +690,8 @@ def test_mod_beacon(tmp_path):
                         assert ret == expected
 
 
-@pytest.mark.skipif(_check_systemctl(), reason="systemctl is in a degraded state")
 @pytest.mark.skip_on_darwin(reason="service.running is currently failing on OSX")
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl is in a degraded state")
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
