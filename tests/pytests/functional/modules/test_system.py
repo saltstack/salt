@@ -22,12 +22,15 @@ log = logging.getLogger(__name__)
 
 def check_hostnamectl():
     if not hasattr(check_hostnamectl, "memo"):
-        proc = subprocess.run(["hostnamectl"], capture_output=True, check=False)
-        check_hostnamectl.memo = (
-            b"Failed to connect to bus: No such file or directory" in proc.stderr
-            or b"Failed to create bus connection: No such file or directory"
-            in proc.stderr
-        )
+        if not salt.utils.platform.is_linux():
+            check_hostnamectl.memo = False
+        else:
+            proc = subprocess.run(["hostnamectl"], capture_output=True, check=False)
+            check_hostnamectl.memo = (
+                b"Failed to connect to bus: No such file or directory" in proc.stderr
+                or b"Failed to create bus connection: No such file or directory"
+                in proc.stderr
+            )
     return check_hostnamectl.memo
 
 
