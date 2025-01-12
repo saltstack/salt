@@ -16,7 +16,7 @@ charset-normalizer==3.2.0
     #   requests
 dill==0.3.8
     # via pylint
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/lint.in
@@ -28,10 +28,6 @@ isort==4.3.21
     # via pylint
 mccabe==0.6.1
     # via pylint
-packaging==23.1
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   docker
 platformdirs==4.0.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -40,16 +36,12 @@ pylint==3.1.0
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   docker
 saltpylint==2024.2.5
     # via -r requirements/static/ci/lint.in
-six==1.16.0
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   websocket-client
 toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -70,7 +62,3 @@ urllib3==1.26.18
     #   -c requirements/static/ci/py3.8/linux.txt
     #   docker
     #   requests
-websocket-client==0.40.0
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   docker

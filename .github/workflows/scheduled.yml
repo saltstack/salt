@@ -484,7 +484,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.16.0"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
 
   build-salt-onedir:
@@ -500,7 +500,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.16.0"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
 
   build-pkgs-onedir:
@@ -513,7 +513,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.16.0"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
       source: "onedir"
 
@@ -527,7 +527,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.16.0"
+      relenv-version: "0.17.0"
       python-version: "3.10.14"
       source: "src"
   build-ci-deps:
@@ -705,27 +705,6 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: arm64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: rpm
-      nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
-      skip-code-coverage: false
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  centos-7-pkg-tests:
-    name: CentOS 7 Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs-onedir
-      - build-ci-deps
-    uses: ./.github/workflows/test-packages-action-linux.yml
-    with:
-      distro-slug: centos-7
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       nox-version: 2022.8.7
@@ -1626,27 +1605,6 @@ jobs:
       workflow-slug: scheduled
       timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
 
-  centos-7:
-    name: CentOS 7 Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-ci-deps
-    uses: ./.github/workflows/test-action-linux.yml
-    with:
-      distro-slug: centos-7
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      nox-version: 2022.8.7
-      gh-actions-python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.14
-      skip-code-coverage: false
-      workflow-slug: scheduled
-      timeout-minutes: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['type'] == 'full' && 180 || 360 }}
-
   debian-11:
     name: Debian 11 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2075,6 +2033,8 @@ jobs:
     name: Combine Code Coverage
     if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
     runs-on: ubuntu-latest
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
       - build-ci-deps
@@ -2093,7 +2053,6 @@ jobs:
       - amazonlinux-2023
       - amazonlinux-2023-arm64
       - archlinux-lts
-      - centos-7
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2263,7 +2222,6 @@ jobs:
       - amazonlinux-2023
       - amazonlinux-2023-arm64
       - archlinux-lts
-      - centos-7
       - debian-11
       - debian-11-arm64
       - debian-12
@@ -2292,7 +2250,6 @@ jobs:
       - amazonlinux-2-arm64-pkg-tests
       - amazonlinux-2023-pkg-tests
       - amazonlinux-2023-arm64-pkg-tests
-      - centos-7-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
       - debian-12-pkg-tests

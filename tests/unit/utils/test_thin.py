@@ -39,6 +39,15 @@ def patch_if(condition, *args, **kwargs):
     return inner
 
 
+class FakeSaltSystemExit(Exception):
+    """
+    Fake SaltSystemExit so the process does not actually die
+    """
+
+    def __init__(self, code=-1, msg=None):
+        super().__init__(msg or code)
+
+
 class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.
@@ -69,6 +78,7 @@ class SSHThinTestCase(TestCase):
             "yaml": os.path.join(lib_root, "yaml"),
             "tornado": os.path.join(lib_root, "tornado"),
             "msgpack": os.path.join(lib_root, "msgpack"),
+            "networkx": os.path.join(lib_root, "networkx"),
         }
 
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
@@ -78,6 +88,7 @@ class SSHThinTestCase(TestCase):
             "yaml": str(code_dir / "yaml"),
             "tornado": str(code_dir / "tornado"),
             "msgpack": str(code_dir / "msgpack"),
+            "networkx": str(code_dir / "networkx"),
             "certifi": str(code_dir / "certifi"),
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
@@ -164,7 +175,7 @@ class SSHThinTestCase(TestCase):
         self.assertIn("Missing dependencies", thin.log.error.call_args[0][0])
         self.assertIn("jinja2, yaml, tornado, msgpack", thin.log.error.call_args[0][0])
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
     def test_get_ext_tops_cfg_missing_interpreter(self):
@@ -178,7 +189,7 @@ class SSHThinTestCase(TestCase):
             thin.get_ext_tops(cfg)
         self.assertIn("missing specific locked Python version", str(err.value))
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
     def test_get_ext_tops_cfg_wrong_interpreter(self):
@@ -196,7 +207,7 @@ class SSHThinTestCase(TestCase):
             str(err.value),
         )
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
     def test_get_ext_tops_cfg_interpreter(self):
@@ -271,7 +282,7 @@ class SSHThinTestCase(TestCase):
             "configured with not a file or does not exist", messages["jinja2"]
         )
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=True))
     def test_get_ext_tops_config_pass(self):
@@ -289,6 +300,7 @@ class SSHThinTestCase(TestCase):
                     "yaml": "/yaml/",
                     "tornado": "/tornado/tornado.py",
                     "msgpack": "msgpack.py",
+                    "networkx": "/networkx/networkx.py",
                     "distro": "distro.py",
                 },
             }
@@ -302,6 +314,7 @@ class SSHThinTestCase(TestCase):
                 "/jinja/foo.py",
                 "/yaml/",
                 "msgpack.py",
+                "/networkx/networkx.py",
                 "distro.py",
             ]
         )
@@ -408,6 +421,10 @@ class SSHThinTestCase(TestCase):
         type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
     )
     @patch(
+        "salt.utils.thin.networkx",
+        type("networkx", (), {"__file__": "/site-packages/networkx"}),
+    )
+    @patch(
         "salt.utils.thin.certifi",
         type("certifi", (), {"__file__": "/site-packages/certifi"}),
     )
@@ -465,6 +482,7 @@ class SSHThinTestCase(TestCase):
             "yaml",
             "tornado",
             "msgpack",
+            "networkx",
             "certifi",
             "sdp",
             "sdp_hlp",
@@ -511,6 +529,10 @@ class SSHThinTestCase(TestCase):
     @patch(
         "salt.utils.thin.msgpack",
         type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
+    )
+    @patch(
+        "salt.utils.thin.networkx",
+        type("networkx", (), {"__file__": "/site-packages/networkx"}),
     )
     @patch(
         "salt.utils.thin.certifi",
@@ -570,6 +592,7 @@ class SSHThinTestCase(TestCase):
             "yaml",
             "tornado",
             "msgpack",
+            "networkx",
             "certifi",
             "sdp",
             "sdp_hlp",
@@ -626,6 +649,10 @@ class SSHThinTestCase(TestCase):
     @patch(
         "salt.utils.thin.msgpack",
         type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
+    )
+    @patch(
+        "salt.utils.thin.networkx",
+        type("networkx", (), {"__file__": "/site-packages/networkx"}),
     )
     @patch(
         "salt.utils.thin.certifi",
@@ -685,6 +712,7 @@ class SSHThinTestCase(TestCase):
             "yaml",
             "tornado",
             "msgpack",
+            "networkx",
             "certifi",
             "sdp",
             "sdp_hlp",
@@ -754,7 +782,7 @@ class SSHThinTestCase(TestCase):
         assert form == "sha256"
 
     @patch("salt.utils.thin.sys.version_info", (2, 5))
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     def test_gen_thin_fails_ancient_python_version(self):
         """
         Test thin.gen_thin function raises an exception
@@ -770,7 +798,7 @@ class SSHThinTestCase(TestCase):
             str(err.value),
         )
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
@@ -826,7 +854,7 @@ class SSHThinTestCase(TestCase):
         thin.zipfile.ZipFile.assert_not_called()
         thin.tarfile.open.assert_called()
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
@@ -880,7 +908,7 @@ class SSHThinTestCase(TestCase):
             self.assertEqual(name, fname)
         thin.tarfile.open().close.assert_called()
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
@@ -948,7 +976,7 @@ class SSHThinTestCase(TestCase):
             files.pop(files.index(arcname))
         self.assertFalse(files)
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
@@ -1076,7 +1104,7 @@ class SSHThinTestCase(TestCase):
         for t_line in ["second-system-effect:2:7", "solar-interference:2:6"]:
             self.assertIn(t_line, out)
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.exceptions.SaltSystemExit", FakeSaltSystemExit)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
     @patch("salt.utils.files.fopen", MagicMock())
@@ -1148,6 +1176,7 @@ class SSHThinTestCase(TestCase):
                     (bts("yaml/__init__.py"), bts("")),
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
+                    (bts("networkx/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
@@ -1190,6 +1219,7 @@ class SSHThinTestCase(TestCase):
                 side_effect=[
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
+                    (bts("networkx/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
@@ -1235,6 +1265,7 @@ class SSHThinTestCase(TestCase):
                     (bts(self.fake_libs["yaml"]), bts("")),
                     (bts(self.fake_libs["tornado"]), bts("")),
                     (bts(self.fake_libs["msgpack"]), bts("")),
+                    (bts(self.fake_libs["networkx"]), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
@@ -1263,6 +1294,7 @@ class SSHThinTestCase(TestCase):
                 os.path.join("yaml", "__init__.py"),
                 os.path.join("tornado", "__init__.py"),
                 os.path.join("msgpack", "__init__.py"),
+                os.path.join("networkx", "__init__.py"),
             ]
         )
 
@@ -1363,6 +1395,7 @@ class SSHThinTestCase(TestCase):
                 os.path.join("yaml", "__init__.py"),
                 os.path.join("tornado", "__init__.py"),
                 os.path.join("msgpack", "__init__.py"),
+                os.path.join("networkx", "__init__.py"),
             ]
         )
         with patch_tops_py:

@@ -58,7 +58,6 @@ def test_get_ext_tops(version):
     python3 = False
     if tuple(version) >= (3, 0):
         python3 = True
-
     cfg = {
         "namespace": {
             "path": "/foo",
@@ -68,6 +67,7 @@ def test_get_ext_tops(version):
                 "yaml": "/yaml/",
                 "tornado": "/tornado/tornado.py",
                 "msgpack": "msgpack.py",
+                "networkx": "/networkx/networkx.py",
             },
         }
     }

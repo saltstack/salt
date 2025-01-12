@@ -1469,7 +1469,7 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+        for key in ("CI", "PIP_INDEX_URL", "PIP_TRUSTED_HOST", "PIP_EXTRA_INDEX_URL"):
             if key in os.environ:
                 env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"

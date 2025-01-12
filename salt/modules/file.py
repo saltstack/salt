@@ -4744,7 +4744,7 @@ def get_managed(
     Return the managed file data for file.managed
 
     name
-        location where the file lives on the server
+        location where the file lives on the minion
 
     template
         template format

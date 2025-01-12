@@ -7,6 +7,10 @@ pytestmark = [
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skipif(
+        True,
+        reason="CI/CD making too many requests to chocolatey and we're getting blocked",
+    ),
 ]
 
 

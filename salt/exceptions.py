@@ -362,6 +362,12 @@ class AuthorizationError(SaltException):
     """
 
 
+class UnsupportedAlgorithm(SaltException):
+    """
+    Thrown when a requested encryption or signing algorithm is un-supported.
+    """
+
+
 class SaltDaemonNotRunning(SaltException):
     """
     Throw when a running master/minion/syndic is not running but is needed to

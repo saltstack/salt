@@ -48,7 +48,9 @@ def file_add_delete_sls(tmp_path, salt_master):
         yield sls_name
 
 
-@pytest.mark.flaky(max_runs=4)
+# This test is fundimentally flawed. Needs to be re-factored to test the memory
+# consuption of the minoin process not system wide memory.
+@pytest.mark.skip(reason="Flawed test")
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
     max_usg = None
 

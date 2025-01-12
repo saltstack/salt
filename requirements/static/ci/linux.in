@@ -3,7 +3,7 @@
 
 pyiface
 pygit2>=1.10.1
-pymysql>=1.0.2
+pymysql>=1.1.1
 ansible>=9.1.0; python_version >= '3.10'
 twilio
 python-telegram-bot>=13.7

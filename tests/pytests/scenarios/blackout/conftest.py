@@ -5,6 +5,8 @@ import time
 import attr
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @attr.s
 class BlackoutPillar:
@@ -126,9 +128,17 @@ def salt_master(salt_factories, pillar_state_tree):
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
     }
+    config_overrides = {
+        "interface": "127.0.0.1",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         "blackout-master",
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started():
@@ -138,7 +148,13 @@ def salt_master(salt_factories, pillar_state_tree):
 @pytest.fixture(scope="package")
 def salt_minion_1(salt_master):
     factory = salt_master.salt_minion_daemon(
-        "blackout-minion-1", defaults={"open_mode": True}
+        "blackout-minion-1",
+        defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         yield factory
@@ -147,7 +163,13 @@ def salt_minion_1(salt_master):
 @pytest.fixture(scope="package")
 def salt_minion_2(salt_master):
     factory = salt_master.salt_minion_daemon(
-        "blackout-minion-2", defaults={"open_mode": True}
+        "blackout-minion-2",
+        defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         yield factory

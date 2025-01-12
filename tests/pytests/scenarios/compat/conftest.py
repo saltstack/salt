@@ -14,6 +14,7 @@ from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 
 import salt.utils.path
+from tests.conftest import FIPS_TESTRUN
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
@@ -135,6 +136,10 @@ def salt_master(
         "log_level_logfile": "quiet",
         # We also want to scrutinize the key acceptance
         "open_mode": False,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # We need to copy the extension modules into the new master root_dir or

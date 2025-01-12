@@ -4,6 +4,7 @@ import subprocess
 import pytest
 
 import salt.utils.platform
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +52,10 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
             "salt.channel": "debug",
             "salt.utils.event": "debug",
         },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "127.0.0.1",
@@ -86,6 +91,10 @@ def cluster_master_2(salt_factories, cluster_master_1):
             "salt.channel": "debug",
             "salt.utils.event": "debug",
         },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -128,6 +137,10 @@ def cluster_master_3(salt_factories, cluster_master_1):
             "salt.channel": "debug",
             "salt.utils.event": "debug",
         },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -163,6 +176,9 @@ def cluster_minion_1(cluster_master_1):
             "salt.channel": "debug",
             "salt.utils.event": "debug",
         },
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = cluster_master_1.salt_minion_daemon(
         "cluster-minion-1",

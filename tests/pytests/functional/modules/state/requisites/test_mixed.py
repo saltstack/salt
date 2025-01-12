@@ -1,7 +1,5 @@
 import pytest
 
-from . import normalize_ret
-
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
@@ -93,13 +91,21 @@ def test_requisites_mixed_require_prereq_use_1(state, state_tree):
         - prereq:
             - cmd: B
     """
+    expected_result = [
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}), "
+        "({'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}), "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C'})"
+    ]
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret.raw)
-        assert result == expected_simple_result
+        assert ret.failed
+        assert ret.errors == expected_result
 
 
-@pytest.mark.skip("Undetected infinite loops prevents this test from running...")
 def test_requisites_mixed_require_prereq_use_2(state, state_tree):
     sls_contents = """
     # Complex require/require_in/prereq/preqreq_in graph
@@ -153,47 +159,21 @@ def test_requisites_mixed_require_prereq_use_2(state, state_tree):
         - require_in:
           - cmd: A
     """
-    expected_result = {
-        "cmd_|-A_|-echo A fifth_|-run": {
-            "__run_num__": 4,
-            "comment": 'Command "echo A fifth" run',
-            "result": True,
-            "changes": True,
-        },
-        "cmd_|-B_|-echo B third_|-run": {
-            "__run_num__": 2,
-            "comment": 'Command "echo B third" run',
-            "result": True,
-            "changes": True,
-        },
-        "cmd_|-C_|-echo C second_|-run": {
-            "__run_num__": 1,
-            "comment": 'Command "echo C second" run',
-            "result": True,
-            "changes": True,
-        },
-        "cmd_|-D_|-echo D first_|-run": {
-            "__run_num__": 0,
-            "comment": 'Command "echo D first" run',
-            "result": True,
-            "changes": True,
-        },
-        "cmd_|-E_|-echo E fourth_|-run": {
-            "__run_num__": 3,
-            "comment": 'Command "echo E fourth" run',
-            "result": True,
-            "changes": True,
-        },
-    }
-    # undetected infinite loops prevents this test from running...
-    # TODO: this is actually failing badly
+    expected_result = [
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A fifth'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B third'}), "
+        "({'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C second'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A fifth'}), "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B third'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C second'})"
+    ]
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret.raw)
-        assert result == expected_result
+        assert ret.failed
+        assert ret.errors == expected_result
 
 
-@pytest.mark.skip("Undetected infinite loops prevents this test from running...")
 def test_requisites_mixed_require_prereq_use_3(state, state_tree):
     # test Traceback recursion prereq+require #8785
     sls_contents = """
@@ -217,15 +197,19 @@ def test_requisites_mixed_require_prereq_use_3(state, state_tree):
         - prereq:
             - cmd: A
     """
-    expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
-    # TODO: this is actually failing badly
+    expected_result = [
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}), "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'})"
+    ]
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == expected_result
+        assert ret.failed
+        assert ret.errors == expected_result
 
 
-@pytest.mark.skip("Undetected infinite loops prevents this test from running...")
 def test_requisites_mixed_require_prereq_use_4(state, state_tree):
     # test Infinite recursion prereq+require #8785 v2
     sls_contents = """
@@ -260,15 +244,19 @@ def test_requisites_mixed_require_prereq_use_4(state, state_tree):
         - prereq:
             - cmd: B
     """
-    expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
-    # TODO: this is actually failing badly
+    expected_result = [
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}), "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'C', 'NAME': 'echo C'})"
+    ]
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == expected_result
+        assert ret.failed
+        assert ret.errors == expected_result
 
 
-@pytest.mark.skip("Undetected infinite loops prevents this test from running...")
 def test_requisites_mixed_require_prereq_use_5(state, state_tree):
     # test Infinite recursion prereq+require #8785 v3
     sls_contents = """
@@ -300,12 +288,17 @@ def test_requisites_mixed_require_prereq_use_5(state, state_tree):
         - require_in:
           - cmd: A
     """
-    expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
-    # TODO: this is actually failing badly, and expected result is maybe not a recursion
+    expected_result = [
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}, 'require', "
+        "{'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}), "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, 'prereq', "
+        "{'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'})"
+    ]
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == expected_result
+        assert ret.failed
+        assert ret.errors == expected_result
 
 
 def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(
@@ -451,4 +444,31 @@ def test_requisites_mixed_illegal_req(state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state_mod.sls("requisite")
-        assert ret == ["Illegal requisite \"['A']\", please check your syntax.\n"]
+        assert ret == [
+            'Illegal requisite "[\'A\']" in SLS "requisite", please check your syntax.\n'
+        ]
+
+
+def test_many_requisites(state, state_tree):
+    """Test to make sure that many requisites does not take too long"""
+
+    sls_name = "many_aggregates_test"
+    sls_contents = """
+    {%- for i in range(1000) %}
+    nop-{{ i }}:
+      test.nop:
+        {%- if i > 0 %}
+        - require:
+          - test: nop-{{ i - 1 }}
+        {%- else %}
+        - require: []
+        {%- endif %}
+    {%- endfor %}
+    """
+    with pytest.helpers.temp_file(f"{sls_name}.sls", sls_contents, state_tree):
+        ret = state.sls(sls_name)
+        # Check the results
+        assert not ret.failed
+        for index, state_run in enumerate(ret):
+            expected_tag = f"test_|-nop-{index}_|-nop-{index}_|-nop"
+            assert expected_tag in state_run.raw

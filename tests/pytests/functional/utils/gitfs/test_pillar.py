@@ -5,6 +5,7 @@ import pytest
 from salt.pillar.git_pillar import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitPillar, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -339,17 +340,24 @@ def _test_lock(opts):
     p.fetch_remotes()
     assert len(p.remotes) == 1
     repo = p.remotes[0]
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     assert repo.get_salt_working_dir() in repo._get_lock_file()
     assert repo.lock() == (
         [
-            "Set update lock for git_pillar remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+            (
+                f"Set update lock for git_pillar remote "
+                f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
         ],
         [],
     )
     assert os.path.isfile(repo._get_lock_file())
     assert repo.clear_lock() == (
         [
-            "Removed update lock for git_pillar remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+            (
+                f"Removed update lock for git_pillar remote "
+                f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
         ],
         [],
     )
