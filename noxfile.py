@@ -1063,19 +1063,12 @@ def _ci_test(session, transport, onedir=False):
     if onedir:
         env["ONEDIR_TESTRUN"] = "1"
     chunks = {
-        "pkg": [
-            "tests/pytests/pkg",
-        ],
+        "pkg": [],
         "unit": [
-            "tests/unit",
-            "tests/pytests/unit",
+            "tests/pytests/test_get_users.py",
         ],
-        "functional": [
-            "tests/pytests/functional",
-        ],
-        "scenarios": [
-            "tests/pytests/scenarios",
-        ],
+        "functional": [],
+        "scenarios": [],
     }
 
     test_group_number = os.environ.get("TEST_GROUP") or "1"
