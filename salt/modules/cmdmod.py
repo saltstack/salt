@@ -2942,6 +2942,23 @@ def script(
     else:
         cmd_path = _cmd_quote(path)
 
+        if not env:
+            env = {}
+
+        paths = [
+            fr'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules',
+            fr'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules',
+            fr'{os.getenv("ProgramFiles(x86)", "")}\WindowsPowerShell\Modules',
+        ]
+
+        ps_module_path = os.getenv("PSModulePath", "").split(";")
+
+        for path in paths:
+            if os.path.exists(path):
+                ps_module_path.append(path)
+
+        env.update({"PSModulePath": ";".join(ps_module_path)})
+
     ret = _run(
         cmd_path + " " + str(args) if args else cmd_path,
         cwd=cwd,
