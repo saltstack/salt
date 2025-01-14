@@ -57,13 +57,7 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
     )
     script = "salt://issue-56195/test.ps1"
 
-    ret = cmd.script(
-        source=script,
-        args=args,
-        shell="powershell",
-        saltenv="base",
-        env={"PSModulePath": ""},
-    )
+    ret = cmd.script(source=script, args=args, shell="powershell", saltenv="base")
 
     assert ret["stdout"] == password
 
