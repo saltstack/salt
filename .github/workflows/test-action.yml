@@ -183,6 +183,7 @@ jobs:
           -e LANG="en_US.UTF-8" \
           -e SHELL=/bin/bash \
           -v "/home/runner/work":"/__w" \
+          -v "/tmp/":"/var/lib/docker" \
           --entrypoint "/usr/lib/systemd/systemd" \
           ${{ matrix.container }} \
           --systemd --unit rescue.target
