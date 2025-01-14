@@ -62,7 +62,7 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
         args=args,
         shell="powershell",
         saltenv="base",
-        env={"PSModulePath": ""}
+        env={"PSModulePath": ""},
     )
 
     assert ret["stdout"] == password
