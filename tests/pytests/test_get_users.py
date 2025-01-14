@@ -1,4 +1,3 @@
-import json
 import subprocess
 import sys
 
@@ -15,11 +14,4 @@ def test_get_local_users():
     )
 
     print(result.stdout)
-    assert result.returncode == 0, f"PowerShell command failed: {result.stderr}"
-
-    # Parse the JSON output
-    users = json.loads(result.stdout)
-
-    # Make test fail by asserting there are no disabled users
-    disabled_users = [user for user in users if not user["Enabled"]]
-    assert not disabled_users, f"Found disabled users: {disabled_users}"
+    assert False
