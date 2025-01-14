@@ -127,6 +127,7 @@ def test_uid_to_user_empty():
 
 
 def test_user_to_uid():
+    # Add change to ensure tests run
     result = win_file.user_to_uid("Administrator")
     expected = salt.utils.win_dacl.get_sid_string("Administrator")
     assert result == expected
