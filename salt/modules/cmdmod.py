@@ -2946,9 +2946,9 @@ def script(
             env = {}
 
         paths = [
-            fr'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules',
-            fr'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules',
-            fr'{os.getenv("ProgramFiles(x86)", "")}\WindowsPowerShell\Modules',
+            rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules',
+            rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules',
+            rf'{os.getenv("ProgramFiles(x86)", "")}\WindowsPowerShell\Modules',
         ]
 
         ps_module_path = os.getenv("PSModulePath", "").split(";")
