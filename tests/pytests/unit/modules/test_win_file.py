@@ -5,7 +5,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.modules.win_file as win_file
-import salt.modules.win_useradd as win_useradd
+import salt.modules.win_useradd
 import salt.utils.user
 import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError
