@@ -32,8 +32,9 @@ def configure_loader_modules():
             "__salt__": {
                 "cmd.run_all": cmd.run_all,
             },
-        }
+        },
     }
+
 
 @pytest.fixture
 def temp_account():
