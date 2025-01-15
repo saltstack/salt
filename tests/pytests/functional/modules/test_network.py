@@ -4,6 +4,8 @@ Validate network module
 
 import pytest
 
+import salt.utils.platform
+
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.requires_network,
@@ -26,12 +28,18 @@ def test_network_ping(network, url):
     network.ping
     """
     ret = network.ping(url)
-    if "100% packet loss" not in ret.lower():
+
+    # Github Runners are on Azure, which doesn't allow ping
+    packet_loss = "100% packet loss"
+    if salt.utils.platform.is_windows():
+        packet_loss = "100% loss"
+
+    if packet_loss not in ret.lower():
         exp_out = ["ping", url, "ms", "time"]
         for out in exp_out:
             assert out in ret.lower()
     else:
-        assert "100% packet loss" in ret.lower()
+        assert packet_loss in ret.lower()
 
 
 @pytest.mark.skip_on_darwin(reason="Not supported on macOS")
