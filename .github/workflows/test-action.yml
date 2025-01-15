@@ -251,6 +251,32 @@ jobs:
         run: |
           free -h
 
+      - name: Configure apparmor
+        run: |
+          # Apparmor's unix-chkpwd profile gets in the way of tests needing to
+          # authenticate from inside a container.
+          cat <<'EOF' | sudo tee /etc/apparmor.d/unix-chkpwd
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile unix-chkpwd /{,usr/}{,s}bin/unix_chkpwd flags=(unconfined) {
+            include <abstractions/base>
+            include <abstractions/nameservice>
+            # To write records to the kernel auditing log.
+            capability audit_write,
+            network netlink raw,
+            /{,usr/}{,s}bin/unix_chkpwd mr,
+            /etc/shadow r,
+            # systemd userdb, used in nspawn
+            /run/host/userdb/*.user r,
+            /run/host/userdb/*.user-privileged r,
+            # file_inherit
+            owner /dev/tty[0-9]* rw,
+            include if exists <local/unix-chkpwd>
+          }
+          EOF
+          sudo systemctl restart apparmor
+          sudo aa-status
+
       - name: Run Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}

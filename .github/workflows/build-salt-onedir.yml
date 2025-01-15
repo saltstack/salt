@@ -40,6 +40,7 @@ jobs:
 
   build-salt-linux:
     name: Linux
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     env:
       USE_S3_CACHE: 'false'
     runs-on:
@@ -89,6 +90,7 @@ jobs:
 
   build-salt-macos:
     name: macOS
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -147,6 +149,7 @@ jobs:
 
   build-salt-windows:
     name: Windows
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2

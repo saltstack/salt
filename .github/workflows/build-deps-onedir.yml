@@ -39,6 +39,7 @@ jobs:
 
   build-deps-linux:
     name: Linux
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
@@ -81,6 +82,7 @@ jobs:
 
   build-deps-macos:
     name: macOS
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -134,6 +136,7 @@ jobs:
 
   build-deps-windows:
     name: Windows
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2

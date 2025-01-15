@@ -52,6 +52,7 @@ jobs:
 
   build-deb-packages:
     name: DEB
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
@@ -144,6 +145,7 @@ jobs:
 
   build-rpm-packages:
     name: RPM
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
     strategy:
@@ -218,6 +220,7 @@ jobs:
 
   build-macos-pkgs:
     name: macOS
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
@@ -332,6 +335,7 @@ jobs:
 
   build-windows-pkgs:
     name: Windows
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false

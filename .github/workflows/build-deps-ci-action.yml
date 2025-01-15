@@ -54,6 +54,7 @@ jobs:
 
   linux-dependencies:
     name: Linux
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
     env:
@@ -147,6 +148,7 @@ jobs:
   macos-dependencies:
     name: MacOS
     runs-on: ${{ matrix.arch == 'x86_64' && 'macos-13' || 'macos-14' }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -234,6 +236,7 @@ jobs:
   windows-dependencies:
     name: Windows
     runs-on: windows-latest
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     env:
       USE_S3_CACHE: 'false'
       GITHUB_WORKSPACE: 'C:\Windows\Temp\testing'
