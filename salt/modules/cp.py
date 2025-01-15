@@ -463,7 +463,14 @@ def get_file_str(path, saltenv=None):
     return fn_
 
 
-def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=False):
+def cache_file(
+    path,
+    saltenv=None,
+    source_hash=None,
+    verify_ssl=True,
+    use_etag=False,
+    http_params=None,
+):
     """
     .. versionchanged:: 3005
         ``saltenv`` will use value from config if not explicitly set
@@ -556,6 +563,7 @@ def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=F
             source_hash=source_hash,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            http_params=http_params,
         )
     if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
