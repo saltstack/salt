@@ -2,7 +2,6 @@ import pytest
 
 import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
-import salt.utils.win_functions as win_functions
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -52,8 +51,7 @@ def temp_path(tmp_path):
     # Now we create a directory for testing that does inherit those permissions from the above, new parent directory
     test_dir = tmp_path / "test_dir"
     test_dir.mkdir()
-    current_user = win_functions.get_current_user(with_domain=False)
-    assert win_dacl.get_owner(obj_name=str(test_dir)) == current_user
+    assert win_dacl.get_owner(obj_name=str(test_dir)) == "Administrators"
     # We do want the test directory to inherit permissions from the parent directory
     assert win_dacl.get_inheritance(obj_name=str(test_dir))
     # Make sure the permissions are inherited from the parent
