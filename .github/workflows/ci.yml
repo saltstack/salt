@@ -646,6 +646,8 @@ jobs:
       - build-salt-onedir
       - combine-all-code-coverage
       - build-ci-deps
+      - test-packages
+      - test
     steps:
       - name: Get workflow information
         id: get-workflow-info

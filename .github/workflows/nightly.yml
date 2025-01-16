@@ -597,6 +597,8 @@ jobs:
       - build-salt-onedir
       - build-pkgs-src
       - build-ci-deps
+      - test-packages
+      - test
     steps:
       - name: Get workflow information
         id: get-workflow-info

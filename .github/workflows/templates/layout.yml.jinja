@@ -347,6 +347,8 @@ jobs:
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
+      - test-packages
+      - test
     steps:
       - name: Get workflow information
         id: get-workflow-info
