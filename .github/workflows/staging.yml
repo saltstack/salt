@@ -692,6 +692,8 @@ jobs:
       - build-pkgs-src
       - upload-release-artifacts
       - publish-pypi
+      - test-packages
+      - test
     steps:
       - name: Get workflow information
         id: get-workflow-info
