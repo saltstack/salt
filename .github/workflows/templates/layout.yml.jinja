@@ -347,8 +347,10 @@ jobs:
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
+      <%- if workflow_slug != "release" %>
       - test-packages
       - test
+      <%- endif %>
     steps:
       - name: Get workflow information
         id: get-workflow-info
