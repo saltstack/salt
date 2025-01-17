@@ -16,6 +16,7 @@ import _pytest.logging
 import _pytest.skipping
 import more_itertools
 import pytest
+import pytestskipmarkers
 
 import salt
 import salt._logging
@@ -426,7 +427,8 @@ def pytest_itemcollected(item):
             pytest.fail(
                 "The test {!r} appears to be written for pytest but it's not under"
                 " {!r}. Please move it there.".format(
-                    item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
+                    item.nodeid,
+                    str(PYTESTS_DIR.relative_to(CODE_DIR)),
                 )
             )
 
@@ -801,6 +803,12 @@ def salt_factories_default_root_dir(salt_factories_default_root_dir):
         dictionary, then that's the value used, and not the one returned by
         this fixture.
     """
+    if os.environ.get("CI") and pytestskipmarkers.utils.platform.is_windows():
+        tempdir = pathlib.Path(
+            os.environ.get("RUNNER_TEMP", r"C:\Windows\Temp")
+        ).resolve()
+        return tempdir / "stsuite"
+
     return salt_factories_default_root_dir / "stsuite"
 
 
