@@ -4,10 +4,12 @@ Simple Smoke Tests for Connected SSH minions
 
 import subprocess
 
+import packaging.version
 import pytest
 from saltfactories.utils.functional import StateResult
 
 import salt.utils.platform
+import salt.utils.versions
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -28,8 +30,21 @@ def _check_systemctl():
     return _check_systemctl.memo
 
 
+def _check_python():
+    try:
+        proc = subprocess.run(
+            ["/usr/bin/python3", "--version"], capture_output=True, check=False
+        )
+    except FileNotFoundError:
+        return True
+    return packaging.version.Version(
+        proc.stdout.decode().strip().split()[1]
+    ) <= packaging.version.Version("3.10")
+
+
 @pytest.mark.skip_if_not_root
 @pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
+@pytest.mark.skipif(_check_python(), reason="System python less than 3.10")
 def test_service(salt_ssh_cli, grains):
     service = "cron"
     os_family = grains["os_family"]
