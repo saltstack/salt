@@ -225,6 +225,7 @@ class CMDModuleTest(ModuleCase):
         )
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_script(self):
         """
         cmd.script
@@ -235,6 +236,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_script_query_string(self):
         """
         cmd.script
@@ -245,6 +247,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_script_retcode(self):
         """
         cmd.script_retcode
@@ -254,6 +257,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret, 0)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_script_cwd(self):
         """
         cmd.script with cwd
@@ -267,6 +271,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_script_cwd_with_space(self):
         """
         cmd.script with cwd
