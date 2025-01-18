@@ -400,7 +400,7 @@ def _check_min_patch_version(shell):
     min_patch_ver = "2.6"
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
-    version = ret.stdout.strip().split()[2]
+    version = ret.stdout.splitlines()[0].split()[-1]
     if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
