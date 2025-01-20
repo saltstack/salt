@@ -3148,6 +3148,10 @@ def test__windows_platform_data():
             {"virtual": "Parallels"},
         ),
         (
+            {"kernel": "Windows", "manufacturer": "Nutanix", "product_name": "AHV"},
+            {"virtual": "kvm", "virtual_subtype": "Nutanix AHV"},
+        ),
+        (
             {"kernel": "Windows", "manufacturer": None, "productname": None},
             {"virtual": "physical"},
         ),
@@ -3945,6 +3949,186 @@ def test_virtual_linux_proc_files_with_non_utf8_chars():
             environ_fh.close()
             virt_grains = core._virtual({"kernel": "Linux"})
             assert virt_grains == {"virtual": "physical"}
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_nutanix_virt_what():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            "/usr/sbin/virt-what",
+            "/usr/sbin/virt-what",
+            None,
+            "/usr/sbin/dmidecode",
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            {"retcode": 0, "stderr": "", "stdout": "nutanix_ahv"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+        ]
+    )
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ):
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert virtual_grains["virtual_subtype"] == "Nutanix AHV"
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_nutanix_dmidecode():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            None,
+            None,
+            None,
+            "/usr/sbin/dmidecode",
+            None,
+            "/usr/sbin/dmidecode",
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+        ]
+    )
+
+    def _mock_is_file(filename):
+        if filename in (
+            "/proc/1/cgroup",
+            "/proc/cpuinfo",
+            "/sys/devices/virtual/dmi/id/product_name",
+            "/proc/xen/xsd_kva",
+            "/proc/xen/capabilities",
+        ):
+            return False
+        return True
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ), patch("os.path.isfile", _mock_is_file), patch(
+        "os.path.isdir", return_value=False
+    ):
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert virtual_grains["virtual_subtype"] == "Nutanix AHV"
 
 
 @pytest.mark.skip_unless_on_linux
