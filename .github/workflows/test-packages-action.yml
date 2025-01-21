@@ -64,8 +64,7 @@ jobs:
 
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
-    runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
