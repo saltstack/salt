@@ -2883,12 +2883,20 @@ class Minion(MinionBase):
             self._mine_send(tag, data)
         elif tag.startswith("fire_master"):
             if self.connected:
-                log.debug("Forwarding master event tag=%s", data["tag"])
+                log.debug(
+                    "Forwarding event %s to master %s",
+                    data["tag"],
+                    self.opts["master"],
+                )
                 yield self._fire_master_main(
                     data["data"],
                     data["tag"],
                     data["events"],
                     data["pretag"],
+                )
+            else:
+                log.debug(
+                    "Master %s is not connected, dropping event %s", self.opts["master"], data["tag"]
                 )
         elif tag.startswith(master_event(type="disconnected")) or tag.startswith(
             master_event(type="failback")
