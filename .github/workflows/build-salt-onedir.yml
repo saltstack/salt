@@ -25,8 +25,7 @@ on:
         required: true
         description: Json config for build matrix
       linux_arm_runner:
-        required: false
-        default: ""
+        required: true
         type: string
         description: Json job matrix config
 

@@ -41,8 +41,7 @@ on:
         type: string
         description: Json job matrix config
       linux_arm_runner:
-        required: false
-        default: ""
+        required: true
         type: string
         description: Json job matrix config
 
