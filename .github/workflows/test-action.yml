@@ -54,8 +54,7 @@ on:
         type: string
         description: Json job matrix config
       linux_arm_runner:
-        required: false
-        default: ""
+        required: true
         type: string
         description: Json job matrix config
 
@@ -71,10 +70,8 @@ jobs:
 
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
-
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
-    runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -82,7 +79,6 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
-
     steps:
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
@@ -390,7 +386,6 @@ jobs:
 
   test-macos:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
-
     runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
