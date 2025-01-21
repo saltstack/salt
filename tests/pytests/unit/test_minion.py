@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import uuid
 
 import pytest
 
@@ -94,12 +95,15 @@ def test_minion_load_grains_default(minion_opts):
     ],
 )
 def test_send_req_fires_completion_event(event, minion_opts):
+    req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    with patch("salt.utils.event.get_event", return_value=event):
+    with patch("salt.utils.event.get_event", return_value=event), patch(
+        "uuid.uuid4", return_value=req_id
+    ):
         minion_opts["random_startup_delay"] = 0
         minion_opts["return_retry_tries"] = 30
         minion_opts["grains"] = {}
@@ -123,7 +127,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                     condition_event_tag = (
                         len(call.args) > 1
                         and call.args[1]
-                        == f"__master_req_channel_payload/{minion_opts['master']}"
+                        == f"__master_req_channel_payload/{req_id}/{minion_opts['master']}"
                     )
                     condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
                         idx, call, call.args[1], "__master_req_channel_payload"

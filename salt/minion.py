@@ -1072,8 +1072,11 @@ class MinionManager(MinionBase):
 
     @salt.ext.tornado.gen.coroutine
     def handle_event(self, package):
-        for minion in self.minions:
-            yield minion.handle_event(package)
+        log.error("Dispatch event to minions")
+        try:
+            yield [_.handle_event(package) for _ in self.minions]
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error dispatching event. %s", exc)
 
     def _create_minion_object(
         self,
