@@ -24,6 +24,11 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      linux_arm_runner:
+        required: false
+        default: ""
+        type: string
+        description: Json job matrix config
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -41,7 +46,7 @@ jobs:
     name: Linux
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     strategy:
       fail-fast: false
       matrix:

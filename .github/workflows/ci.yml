@@ -420,6 +420,7 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -435,6 +436,7 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
     name: Build Packages
@@ -450,6 +452,7 @@ jobs:
       python-version: "3.10.15"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
@@ -465,6 +468,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -500,6 +504,7 @@ jobs:
       workflow-slug: ci
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   combine-all-code-coverage:
     name: Combine Code Coverage

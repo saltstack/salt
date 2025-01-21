@@ -540,7 +540,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         wfh.write(f"testrun={json.dumps(testrun)}\n")
 
 
-def _build_matrix(os_kind):
+def _build_matrix(os_kind, linux_arm_runner):
     """
     Generate matrix for build ci/cd steps.
     """
@@ -552,10 +552,7 @@ def _build_matrix(os_kind):
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
-    elif os_kind == "linux" and os.environ.get("LINUX_ARM_RUNNER", "0") not in (
-        "0",
-        "",
-    ):
+    elif os_kind == "linux" and linux_arm_runner:
         _matrix.append({"arch": "arm64"})
     return _matrix
 
@@ -1538,6 +1535,8 @@ def workflow_config(
     full = False
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
+    config: dict[str, Any] = {}
+
     ctx.info(f"{'==== environment ====':^80s}")
     ctx.info(f"{pprint.pformat(dict(os.environ))}")
     ctx.info(f"{'==== end environment ====':^80s}")
@@ -1548,6 +1547,7 @@ def workflow_config(
 
     if gh_event_path is None:
         labels = []
+        config["linux_arm_runner"] = ""
     else:
         try:
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
@@ -1564,6 +1564,17 @@ def workflow_config(
             labels = []
             ctx.warn("The 'pull_request' key was not found on the event payload.")
 
+        if gh_event["repository"]["private"]:
+            # Private repositories need arm runner configuration environment
+            # variable.
+            if os.environ.get("LINUX_ARM_RUNNER", "0") in ("0", ""):
+                config["linux_arm_runner"] = ""
+            else:
+                config["linux_arm_runner"] = os.environ["LINUX_ARM_RUNNER"]
+        else:
+            # Public repositories can use github's arm64 runners.
+            config["linux_arm_runner"] = "ubuntu-24.04-arm"
+
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
     ctx.info(f"{'==== end labels ====':^80s}")
@@ -1572,7 +1583,6 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(gh_event)}")
     ctx.info(f"{'==== end github event ====':^80s}")
 
-    config: dict[str, Any] = {}
     jobs = {
         "lint": True,
         "test": True,
@@ -1598,7 +1608,8 @@ def workflow_config(
 
     config["jobs"] = jobs
     config["build-matrix"] = {
-        platform: _build_matrix(platform) for platform in platforms
+        platform: _build_matrix(platform, config["linux_arm_runner"])
+        for platform in platforms
     }
     ctx.info(f"{'==== build matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(config['build-matrix'])}")
@@ -1644,7 +1655,9 @@ def workflow_config(
 
     pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
 
-    if os.environ.get("LINUX_ARM_RUNNER", "0") in ("0", ""):
+    if not config["linux_arm_runner"]:
+        # Filter out linux arm tests because we are on a private repository and
+        # no arm64 runner is defined.
         TEST_SALT_LISTING["linux"] = list(
             filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
         )
