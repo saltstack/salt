@@ -152,7 +152,7 @@ jobs:
     name: RPM
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     strategy:
       fail-fast: false
       matrix:
