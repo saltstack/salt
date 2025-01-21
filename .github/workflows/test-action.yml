@@ -53,7 +53,11 @@ on:
         required: true
         type: string
         description: Json job matrix config
-
+      linux_arm_runner:
+        required: false
+        default: ""
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -70,7 +74,7 @@ jobs:
 
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}

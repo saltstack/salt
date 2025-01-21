@@ -38,6 +38,11 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      linux_arm_runner:
+        required: false
+        default: ""
+        type: string
+        description: Json job matrix config
 
 
 env:
@@ -56,7 +61,7 @@ jobs:
     name: Linux
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || inputs.linux_arm_runner }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
