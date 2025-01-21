@@ -1573,7 +1573,7 @@ def workflow_config(
                 config["linux_arm_runner"] = os.environ["LINUX_ARM_RUNNER"]
         else:
             # Public repositories can use github's arm64 runners.
-            config["linux_arm_runner"] = "ubuntu-24.04-arm"
+            config["linux_arm_runner"] = "ubuntu-22.04-arm"
 
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
