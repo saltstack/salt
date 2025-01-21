@@ -1708,7 +1708,7 @@ def workflow_config(
 
     _splits = {
         "functional": 4,
-        "integration": 7,
+        "integration": 5,
         "scenarios": 1,
         "unit": 4,
     }
