@@ -1706,6 +1706,8 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")
 
+    # We need to be careful about how many chunks we make. We are limitied to
+    # 256 items in a matrix.
     _splits = {
         "functional": 4,
         "integration": 5,
@@ -1743,6 +1745,13 @@ def workflow_config(
                             for _ in TEST_SALT_LISTING[platform]
                             if _os_test_filter(_, transport, chunk)
                         ]
+
+    for platform in platforms:
+        if len(test_matrix[platform]) > 256:
+            ctx.warn(
+                f"Number of jobs in {platform} test matrix exceeds 256 ({len(test_matrix[platform])}), jobs may not run."
+            )
+
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")
