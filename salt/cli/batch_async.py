@@ -2,17 +2,16 @@
 Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 """
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
+import asyncio
 import logging
 import re
 
 import tornado
-import asyncio
+from tornado.iostream import StreamClosedError
 
 import salt.client
 import salt.utils.event
 from salt.cli.batch import batch_get_eauth, batch_get_opts, get_bnum
-from tornado.iostream import StreamClosedError
 
 log = logging.getLogger(__name__)
 
@@ -402,7 +401,7 @@ class BatchAsync:
             async with asyncio.timeout(
                 self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
             ):
-                while True: 
+                while True:
                     await asyncio.sleep(0.03)
                     if self.targeted_minions == self.minions:
                         break
@@ -426,9 +425,7 @@ class BatchAsync:
             "down_minions": self.targeted_minions.difference(self.minions),
             "metadata": self.metadata,
         }
-        ret = self.event.fire_event(
-           data, "salt/batch/{}/start".format(self.batch_jid)
-        )
+        ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/start")
         if self.event:
             await self.run_next()
 
@@ -452,9 +449,7 @@ class BatchAsync:
             "timedout_minions": self.timedout_minions,
             "metadata": self.metadata,
         }
-        ret = self.event.fire_event(
-            data, f"salt/batch/{self.batch_jid}/done"
-        )
+        ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/done")
 
         # release to the IOLoop to allow the event to be published
         # before closing batch async execution
@@ -473,12 +468,17 @@ class BatchAsync:
     async def schedule_next(self):
         log.trace("BatchAsync.schedule_next called")
         if self.scheduled:
-            log.trace("BatchAsync.schedule_next -> Batch already scheduled, nothing to do.")
+            log.trace(
+                "BatchAsync.schedule_next -> Batch already scheduled, nothing to do."
+            )
             return
         self.scheduled = True
         if self._get_next():
             # call later so that we maybe gather more returns
-            log.trace("BatchAsync.schedule_next delaying batch %s second(s).", self.batch_delay)
+            log.trace(
+                "BatchAsync.schedule_next delaying batch %s second(s).",
+                self.batch_delay,
+            )
             await asyncio.sleep(self.batch_delay)
         if self.event:
             await self.run_next()

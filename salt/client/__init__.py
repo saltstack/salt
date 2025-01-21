@@ -754,7 +754,7 @@ class LocalClient:
             tgt_type=tgt_type,
             ret=ret,
             kwarg=kwarg,
-            **kwargs
+            **kwargs,
         )
 
         eauth = salt.cli.batch.batch_get_eauth(kwargs)
