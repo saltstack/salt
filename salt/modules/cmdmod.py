@@ -2939,21 +2939,29 @@ def script(
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if salt.utils.platform.is_windows():
-        if shell.lower() != "powershell":
+        if shell.lower() not in ["powershell", "pwsh"]:
             cmd_path = _cmd_quote(path, escape=False)
         else:
             cmd_path = path
             if not env:
                 env = {}
-            mod_paths = [
-                pathlib.Path(
-                    rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules'
-                ),
-                pathlib.Path(rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules'),
-                pathlib.Path(
-                    rf'{os.getenv("ProgramFiles(x86)", "")}\WindowsPowerShell\Modules'
-                ),
-            ]
+            if shell.lower() == "powershell":
+                mod_paths = [
+                    pathlib.Path(
+                        rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules'
+                    ),
+                    pathlib.Path(
+                        rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules'
+                    ),
+                ]
+            else:
+                mod_paths = [
+                    pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\Modules'),
+                    pathlib.Path(
+                        rf'{os.getenv("ProgramFiles")}\PowerShell\6.0.0\Modules'
+                    ),
+                    pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\7\Modules'),
+                ]
             ps_module_path = [
                 pathlib.Path(x) for x in os.getenv("PSModulePath", "").split(";")
             ]
