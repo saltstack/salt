@@ -775,6 +775,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
@@ -801,6 +802,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code
@@ -826,6 +828,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -851,6 +854,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -876,6 +880,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -901,6 +906,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
+          TMPDIR: ${{ runner.temp }}
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
