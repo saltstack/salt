@@ -60,7 +60,7 @@ jobs:
     name: Linux
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
@@ -80,6 +80,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
