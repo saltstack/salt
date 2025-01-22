@@ -772,6 +772,8 @@ def test__encode_xmlns_url():
     Spaces in the xmlns url should be converted to %20
     """
     line = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity intelligence">'
-    result = re.sub(r'(.*)(\bxmlns(?::\w+)?)\s*=\s*"([^"]+)"(.*)', win_lgpo._encode_xmlns_url, line)
+    result = re.sub(
+        r'(.*)(\bxmlns(?::\w+)?)\s*=\s*"([^"]+)"(.*)', win_lgpo._encode_xmlns_url, line
+    )
     expected = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity%20intelligence">'
     assert result == expected
