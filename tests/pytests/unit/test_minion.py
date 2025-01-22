@@ -162,11 +162,11 @@ async def test_send_req_async_regression_62453(minion_opts):
         minion = salt.minion.Minion(minion_opts)
 
         load = {"load": "value"}
-        timeout = 60
+        timeout = 1
 
         # We are just validating no exception is raised
-        rtn = await minion._send_req_async(load, timeout)
-        assert rtn is False
+        with pytest.raises(TimeoutError):
+            rtn = await minion._send_req_async(load, timeout)
 
 
 def test_mine_send_tries(minion_opts):
