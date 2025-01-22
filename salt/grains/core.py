@@ -785,6 +785,9 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
+    elif "Nutanix" in manufacturer and "AHV" in product_name:
+        grains["virtual"] = "kvm"
+        grains["virtual_subtype"] = "Nutanix AHV"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in product_name:
         grains["virtual"] = "kvm"
@@ -944,6 +947,10 @@ def _virtual(osdata):
                 elif "parallels" in line:
                     grains["virtual"] = "Parallels"
                     break
+                elif "nutanix" in line:
+                    grains["virtual"] = "kvm"
+                    grains["virtual_subtype"] = "Nutanix AHV"
+                    break
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
@@ -995,6 +1002,9 @@ def _virtual(osdata):
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual"] = "kvm"
+                grains["virtual_subtype"] = "Nutanix AHV"
             # Proxmox KVM
             elif "Vendor: SeaBIOS" in output:
                 grains["virtual"] = "kvm"
@@ -1251,6 +1261,7 @@ def _virtual(osdata):
         grains["virtual"] = "virtual"
 
     # Try to detect if the instance is running on Amazon EC2
+    # or Nutanix AHV
     if grains["virtual"] in ("qemu", "kvm", "xen", "amazon"):
         dmidecode = salt.utils.path.which("dmidecode")
         if dmidecode:
@@ -1269,6 +1280,9 @@ def _virtual(osdata):
                     grains["virtual_subtype"] = f"Amazon EC2 ({product[1]})"
             elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
+
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual_subtype"] = "Nutanix AHV"
 
     for command in failed_commands:
         log.info(
