@@ -57,7 +57,9 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
     )
     script = "salt://issue-56195/test.ps1"
 
-    ret = cmd.script(source=script, args=args, shell="powershell", saltenv="base")
+    ret = cmd.script(source=script, args=args, shell=shell, saltenv="base")
+
+    import_result = cmd.run("Import-Module Microsoft.PowerShell.Security", shell=shell)
 
     assert ret["stdout"] == password
 
@@ -78,7 +80,7 @@ def test_windows_script_args_powershell_runas(cmd, shell, account, issue_56195):
     ret = cmd.script(
         source=script,
         args=args,
-        shell="powershell",
+        shell=shell,
         saltenv="base",
         runas=account.username,
         password=account.password,
