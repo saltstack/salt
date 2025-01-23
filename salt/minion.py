@@ -1072,7 +1072,6 @@ class MinionManager(MinionBase):
 
     @salt.ext.tornado.gen.coroutine
     def handle_event(self, package):
-        log.error("Dispatch event to minions")
         try:
             yield [_.handle_event(package) for _ in self.minions]
         except Exception as exc:  # pylint: disable=broad-except
@@ -1635,7 +1634,7 @@ class Minion(MinionBase):
             load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
-            log.debug("Send request to main id=%s", request_id)
+            log.trace("Send request to main id=%s", request_id)
             event.fire_event(
                 load,
                 f"__master_req_channel_payload/{request_id}/{self.opts['master']}",
@@ -1661,10 +1660,7 @@ class Minion(MinionBase):
             load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
-            log.debug(
-                "Sending req to main thread. id=%s",
-                request_id,
-            )
+            log.trace("Send request to main id=%s", request_id)
             yield event.fire_event_async(
                 load,
                 f"__master_req_channel_payload/{request_id}/{self.opts['master']}",
@@ -1680,7 +1676,7 @@ class Minion(MinionBase):
                 yield salt.ext.tornado.gen.sleep(0.3)
             else:
                 raise TimeoutError("Did not recieve return event")
-            log.debug("Recieved request reply %s %r", request_id, ret)
+            log.trace("Reply from main %s", request_id)
             raise salt.ext.tornado.gen.Return(ret["ret"])
 
     @salt.ext.tornado.gen.coroutine
