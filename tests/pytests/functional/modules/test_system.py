@@ -30,6 +30,7 @@ def check_hostnamectl():
                 b"Failed to connect to bus: No such file or directory" in proc.stderr
                 or b"Failed to create bus connection: No such file or directory"
                 in proc.stderr
+                or b"Failed to query system properties" in proc.stderr
             )
     return check_hostnamectl.memo
 
