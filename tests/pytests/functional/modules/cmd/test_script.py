@@ -60,6 +60,7 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
     ret = cmd.script(source=script, args=args, shell=shell, saltenv="base")
 
     import_result = cmd.run("Import-Module Microsoft.PowerShell.Security", shell=shell)
+    powershell_version = cmd.run("$PSVersionTable", shell=shell)
 
     assert ret["stdout"] == password
 
