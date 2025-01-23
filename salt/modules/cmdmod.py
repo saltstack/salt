@@ -2973,7 +2973,8 @@ def script(
             for mod_path in ps_module_path:
                 if mod_path:
                     mod_paths += f"{str(path)};"
-            env.update({"PSModulePath": mod_paths})
+            # env.update({"PSModulePath": mod_paths})
+            env.update({"PSModulePath": ""})
     else:
         cmd_path = _cmd_quote(path)
 
