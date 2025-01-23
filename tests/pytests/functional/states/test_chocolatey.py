@@ -111,7 +111,7 @@ def vim(chocolatey_mod):
 
 @pytest.fixture(scope="function")
 def everything(chocolatey_mod):
-    chocolatey_mod.install(name="everything", version="1.4.1935")
+    chocolatey_mod.install(name="everything", version="1.4.11024")
     yield
     chocolatey_mod.uninstall(name="everything", force=True)
 
@@ -132,8 +132,8 @@ def test_installed_version(clean, chocolatey, chocolatey_mod):
 def test_installed_version_existing_capitalization(
     everything, chocolatey, chocolatey_mod
 ):
-    result = chocolatey.installed(name="everything", version="1.4.11024")
-    expected_changes = {"Everything": {"new": ["1.4.11024"], "old": ["1.4.1935"]}}
+    result = chocolatey.installed(name="everything", version="1.4.11026")
+    expected_changes = {"Everything": {"new": ["1.4.11026"], "old": ["1.4.11024"]}}
     assert result["changes"] == expected_changes
 
 
