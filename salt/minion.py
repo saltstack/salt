@@ -2896,7 +2896,9 @@ class Minion(MinionBase):
                 )
             else:
                 log.debug(
-                    "Master %s is not connected, dropping event %s", self.opts["master"], data["tag"]
+                    "Master %s is not connected, dropping event %s",
+                    self.opts["master"],
+                    data["tag"],
                 )
         elif tag.startswith(master_event(type="disconnected")) or tag.startswith(
             master_event(type="failback")
