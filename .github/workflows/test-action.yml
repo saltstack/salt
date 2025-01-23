@@ -1092,6 +1092,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+          AZP_AGENT_CLEANUP_PSMODULES_IN_POWERSHELL: "1"
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
