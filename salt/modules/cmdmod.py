@@ -2943,38 +2943,34 @@ def script(
             cmd_path = _cmd_quote(path, escape=False)
         else:
             cmd_path = path
-            if not env:
-                env = {}
-            if shell.lower() == "powershell":
-                mod_paths = [
-                    pathlib.Path(
-                        rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules'
-                    ),
-                    pathlib.Path(
-                        rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules'
-                    ),
-                ]
-            else:
-                mod_paths = [
-                    pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\Modules'),
-                    pathlib.Path(
-                        rf'{os.getenv("ProgramFiles")}\PowerShell\6.0.0\Modules'
-                    ),
-                    pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\7\Modules'),
-                ]
-            ps_module_path = [
-                pathlib.Path(x) for x in os.getenv("PSModulePath", "").split(";")
-            ]
-            for mod_path in mod_paths:
-                if mod_path.exists():
-                    if mod_path not in ps_module_path:
-                        ps_module_path.append(mod_path)
-            mod_paths = ""
-            for mod_path in ps_module_path:
-                if mod_path:
-                    mod_paths += f"{str(path)};"
+            # if not env:
+            #     env = {}
+            # if shell.lower() == "powershell":
+            #     mod_paths = [
+            #         pathlib.Path(
+            #             rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules'
+            #         ),
+            #         pathlib.Path(rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules'),
+            #     ]
+            # else:
+            #     mod_paths = [
+            #         pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\Modules'),
+            #         pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\6.0.0\Modules'),
+            #         pathlib.Path(rf'{os.getenv("ProgramFiles")}\PowerShell\7\Modules'),
+            #     ]
+            # ps_module_path = [
+            #     pathlib.Path(x) for x in os.getenv("PSModulePath", "").split(";")
+            # ]
+            # for mod_path in mod_paths:
+            #     if mod_path.exists():
+            #         if mod_path not in ps_module_path:
+            #             ps_module_path.append(mod_path)
+            # mod_paths = ""
+            # for mod_path in ps_module_path:
+            #     if mod_path:
+            #         mod_paths += f"{str(path)};"
             # env.update({"PSModulePath": mod_paths})
-            env.update({"PSModulePath": ""})
+            # env.update({"PSModulePath": ""})
     else:
         cmd_path = _cmd_quote(path)
 

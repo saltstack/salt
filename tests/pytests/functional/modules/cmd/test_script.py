@@ -57,7 +57,8 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
     )
     script = "salt://issue-56195/test.ps1"
 
-    ret = cmd.script(source=script, args=args, shell=shell, saltenv="base")
+    ps_path = {"PSModulePath": ""}
+    ret = cmd.script(source=script, args=args, shell=shell, saltenv="base", env=ps_path)
 
     import_result = cmd.run("Import-Module Microsoft.PowerShell.Security", shell=shell)
     powershell_version = cmd.run("$PSVersionTable", shell=shell)
