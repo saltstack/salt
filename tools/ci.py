@@ -1472,7 +1472,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     ctx.exit(0)
 
 
-def _os_test_filter(osdef, transport, chunk):
+def _os_test_filter(osdef, transport, chunk, arm_runner):
     """
     Filter out some test runs based on os, tranport and chunk to be run.
     """
@@ -1480,10 +1480,7 @@ def _os_test_filter(osdef, transport, chunk):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
-    if osdef.arch == "arm64" and os.environ.get("LINUX_ARM_RUNNER", "0") not in (
-        "0",
-        "",
-    ):
+    if not arm_runner:
         return False
     if transport == "tcp" and osdef.slug not in (
         "rockylinux-9",
@@ -1737,7 +1734,9 @@ def workflow_config(
                                         **_.as_dict(),
                                     )
                                     for _ in TEST_SALT_LISTING[platform]
-                                    if _os_test_filter(_, transport, chunk)
+                                    if _os_test_filter(
+                                        _, transport, chunk, config["linux_arm_runner"]
+                                    )
                                 ]
                             else:
                                 for arch in ["x86_64", "arm64"]:
@@ -1754,7 +1753,12 @@ def workflow_config(
                                             **_.as_dict(),
                                         )
                                         for _ in TEST_SALT_LISTING[platform]
-                                        if _os_test_filter(_, transport, chunk)
+                                        if _os_test_filter(
+                                            _,
+                                            transport,
+                                            chunk,
+                                            config["linux_arm_runner"],
+                                        )
                                         and _.arch == arch
                                     ]
                     else:
@@ -1767,7 +1771,9 @@ def workflow_config(
                                     **_.as_dict(),
                                 )
                                 for _ in TEST_SALT_LISTING[platform]
-                                if _os_test_filter(_, transport, chunk)
+                                if _os_test_filter(
+                                    _, transport, chunk, config["linux_arm_runner"]
+                                )
                             ]
                         else:
                             for arch in ["x86_64", "arm64"]:
@@ -1779,7 +1785,9 @@ def workflow_config(
                                         **_.as_dict(),
                                     )
                                     for _ in TEST_SALT_LISTING[platform]
-                                    if _os_test_filter(_, transport, chunk)
+                                    if _os_test_filter(
+                                        _, transport, chunk, config["linux_arm_runner"]
+                                    )
                                     and _.arch == arch
                                 ]
 
