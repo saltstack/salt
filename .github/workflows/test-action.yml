@@ -385,7 +385,7 @@ jobs:
           include-hidden-files: true
 
   test-linux-arm64:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
+    name: ${{ matrix.display_name }} arm64 ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     # Full test runs. Each chunk should never take more than 2 hours.
