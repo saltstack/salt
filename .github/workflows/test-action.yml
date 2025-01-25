@@ -986,8 +986,8 @@ jobs:
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     runs-on: ${{ matrix.slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
-    # Partial test runs(no chunk parallelization), 6 Hours
-    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
+    # Partial test runs(no chunk parallelization), 7 Hours
+    timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 420 }}
     strategy:
       fail-fast: false
       matrix:
