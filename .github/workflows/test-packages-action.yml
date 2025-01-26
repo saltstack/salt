@@ -454,7 +454,7 @@ jobs:
   report:
     name: Report
     runs-on: ubuntu-22.04
-    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    if: ${{ false }}
     needs:
       - test-linux
       - test-macos
