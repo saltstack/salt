@@ -38,6 +38,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 
 env:
@@ -54,8 +58,9 @@ jobs:
 
   linux-dependencies:
     name: Linux
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-latest' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     env:
       USE_S3_CACHE: 'false'
     timeout-minutes: 90
@@ -75,6 +80,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -124,6 +133,7 @@ jobs:
         env:
           PRINT_TEST_SELECTION: "0"
           PRINT_SYSTEM_INFO: "0"
+          RELENV_BUILDENV: "1"
         run: |
           nox --install-only -e ${{ inputs.nox-session }}
 
@@ -146,6 +156,7 @@ jobs:
   macos-dependencies:
     name: MacOS
     runs-on: ${{ matrix.arch == 'x86_64' && 'macos-13' || 'macos-14' }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -233,6 +244,7 @@ jobs:
   windows-dependencies:
     name: Windows
     runs-on: windows-latest
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     env:
       USE_S3_CACHE: 'false'
       GITHUB_WORKSPACE: 'C:\Windows\Temp\testing'

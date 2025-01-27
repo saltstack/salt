@@ -250,6 +250,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   <%- endif %>
 
@@ -271,6 +272,7 @@
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   <%- endif %>
 

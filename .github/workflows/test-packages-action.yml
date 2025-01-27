@@ -44,6 +44,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -60,8 +64,7 @@ jobs:
 
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
-    runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'linux-arm64' }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
@@ -451,7 +454,7 @@ jobs:
   report:
     name: Report
     runs-on: ubuntu-22.04
-    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    if: ${{ false }}
     needs:
       - test-linux
       - test-macos

@@ -1,6 +1,19 @@
+import subprocess
+
 import pytest
 
+import salt.utils.platform
 from tests.support.case import ModuleCase
+
+
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["localectl"], capture_output=True, check=False)
+            _check_systemctl.memo = b"No such file or directory" in proc.stderr
+    return _check_systemctl.memo
 
 
 @pytest.mark.skip_on_windows(reason="minion is windows")
@@ -8,6 +21,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.skip_on_freebsd(
     reason="locale method is supported only within login classes or environment variables"
 )
+@pytest.mark.skipif(_check_systemctl(), reason="localectl degraded")
 @pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
@@ -50,6 +64,7 @@ class LocaleModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skipif(_check_systemctl(), reason="systemd degraded")
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = self._find_new_locale(original_locale)
