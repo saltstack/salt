@@ -34,7 +34,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -77,7 +77,8 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    environment: ci
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
@@ -89,10 +90,7 @@ jobs:
     <%- endif %>
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
-      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      os-labels: ${{ steps.get-pull-labels.outputs.os-labels }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.test-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
@@ -100,6 +98,9 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
+    env:
+      LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -212,14 +213,6 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
-      - name: Get Pull Request Test Labels
-        id: get-pull-labels
-        if: ${{ github.event_name == 'pull_request'}}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools ci get-pr-test-labels --repository ${{ github.repository }}
-
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
@@ -258,11 +251,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Runner Types
-        id: runner-types
-        run: |
-          tools ci runner-types ${{ github.event_name }}
-
       - name: Define Jobs To Run
         id: define-jobs
         run: |
@@ -288,6 +276,13 @@ jobs:
         id: define-testrun
         run: |
           tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Define workflow config
+        id: workflow-config
+        run: |
+          tools ci workflow-config<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
@@ -332,7 +327,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>
     <%- endif %>
@@ -352,6 +347,10 @@ jobs:
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
+      <%- if workflow_slug != "release" %>
+      - test-packages
+      - test
+      <%- endif %>
     steps:
       - name: Get workflow information
         id: get-workflow-info
