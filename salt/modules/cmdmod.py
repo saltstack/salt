@@ -11,7 +11,6 @@ import functools
 import glob
 import logging
 import os
-import pathlib
 import re
 import shutil
 import subprocess
@@ -2943,6 +2942,7 @@ def script(
             cmd_path = _cmd_quote(path, escape=False)
         else:
             cmd_path = path
+            # import pathlib
             # if not env:
             #     env = {}
             # if shell.lower() == "powershell":
