@@ -11,7 +11,6 @@ import functools
 import glob
 import logging
 import os
-import pathlib
 import re
 import shutil
 import subprocess
@@ -2939,33 +2938,10 @@ def script(
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if salt.utils.platform.is_windows():
-        if shell.lower() != "powershell":
+        if shell.lower() not in ["powershell", "pwsh"]:
             cmd_path = _cmd_quote(path, escape=False)
         else:
             cmd_path = path
-            if not env:
-                env = {}
-            mod_paths = [
-                pathlib.Path(
-                    rf'{os.getenv("SystemRoot")}\System32\WindowsPowerShell\v1.0\Modules'
-                ),
-                pathlib.Path(rf'{os.getenv("ProgramFiles")}\WindowsPowerShell\Modules'),
-                pathlib.Path(
-                    rf'{os.getenv("ProgramFiles(x86)", "")}\WindowsPowerShell\Modules'
-                ),
-            ]
-            ps_module_path = [
-                pathlib.Path(x) for x in os.getenv("PSModulePath", "").split(";")
-            ]
-            for mod_path in mod_paths:
-                if mod_path.exists():
-                    if mod_path not in ps_module_path:
-                        ps_module_path.append(mod_path)
-            mod_paths = ""
-            for mod_path in ps_module_path:
-                if mod_path:
-                    mod_paths += f"{str(path)};"
-            env.update({"PSModulePath": mod_paths})
     else:
         cmd_path = _cmd_quote(path)
 
