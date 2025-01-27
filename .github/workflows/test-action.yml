@@ -1091,6 +1091,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --core-tests --slow-tests --suppress-no-test-exit-code
@@ -1118,6 +1119,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code
@@ -1144,6 +1146,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -1170,6 +1173,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -1196,6 +1200,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           -k "win" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -1222,6 +1227,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
+        shell: powershell
         run: >
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} --
           --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
