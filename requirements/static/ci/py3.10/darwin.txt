@@ -56,7 +56,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.17.1 ; python_version == "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/static/ci/common.in

@@ -13,7 +13,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   requests
-cffi==1.14.6
+cffi==1.14.6 ; python_version > "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   cryptography
