@@ -23,6 +23,9 @@ except AttributeError:
 if HAS_PYGIT2:
     import pygit2
 
+    ## DGM
+    from pygit2.enums import ObjectType
+
 
 @pytest.fixture
 def minion_opts(tmp_path):
@@ -147,8 +150,11 @@ def _prepare_remote_repository_pygit2(tmp_path):
         tree,
         [repository.head.target],
     )
+    ## DGM repository.create_tag(
+    ## DGM     "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+    ## DGM )
     repository.create_tag(
-        "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+        "annotated_tag", commit, ObjectType.COMMIT, signature, "some message"
     )
     return remote
 
