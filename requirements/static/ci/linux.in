@@ -2,7 +2,11 @@
 --constraint=../pkg/py{py_version}/{platform}.txt
 
 pyiface
-pygit2>=1.10.1
+# DGM pygit2>=1.10.1
+pygit2>=1.10.1; python_version < '3.10'
+pygit2>=1.17.0; python_version == '3.10'
+pygit2>=1.10.1; python_version > '3.10'
+
 pymysql>=1.1.1
 ansible>=9.1.0; python_version >= '3.10'
 twilio

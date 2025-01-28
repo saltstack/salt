@@ -60,7 +60,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.14.6 ; python_version > "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
@@ -291,7 +291,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.13.1 ; python_version > "3.10"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
