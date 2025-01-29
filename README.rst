@@ -87,6 +87,11 @@ for more information.
 
 To download and install Salt, see:
 
+* `The Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/index.html>`_
+    * `Salt Project Repository: Linux (RPM) <https://packages.broadcom.com/artifactory/saltproject-rpm>`__ - Where Salt ``rpm`` packages are officially stored and distributed.
+    * `Salt Project Repository: Linux (DEB) <https://packages.broadcom.com/artifactory/saltproject-deb>`__ - Where Salt ``deb`` packages are officially stored and distributed.
+    * `Salt Project Repository: GENERIC <https://packages.broadcom.com/artifactory/saltproject-generic>`__ - Where Salt Windows, macOS, etc. (non-rpm, non-deb) packages are officially stored and distributed.
+
 Technical support
 =================
 Report bugs or problems using Salt by opening an issue: `<https://github.com/saltstack/salt/issues>`_
