@@ -75,11 +75,11 @@ $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 if ( $ARCH -eq "64bit" ) {
     $ARCH         = "AMD64"
     $ARCH_X       = "x64"
-    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/64"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64/"
 } else {
     $ARCH         = "x86"
     $ARCH_X       = "x86"
-    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/32"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32/"
 }
 
 #-------------------------------------------------------------------------------
