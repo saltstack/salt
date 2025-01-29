@@ -29,7 +29,7 @@ if HAS_PYGIT2:
 
         HAS_PYGIT2_ENUMS = True
 
-    except AttributeError:
+    except ModuleNotFoundError:
         HAS_PYGIT2_ENUMS = False
 
 
