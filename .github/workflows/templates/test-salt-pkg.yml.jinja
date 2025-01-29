@@ -16,3 +16,4 @@
       skip-code-coverage: <{ skip_test_coverage_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}

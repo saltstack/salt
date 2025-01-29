@@ -173,18 +173,20 @@ class SystemdTestCase(TestCase):
             # return data, so it is sufficient enough to mock it as True for
             # these tests.
             with patch("os.stat", side_effect=_booted_effect):
-                # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
-                # Test that context key is set when context dict is passed
-                context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
-                    {
-                        "salt.utils.systemd.booted": True,
-                        "salt.utils.systemd.version": _version,
-                    },
-                )
+                with patch("salt.utils.systemd.status", return_value=True):
+                    # Test without context dict passed
+                    self.assertEqual(_systemd.has_scope(), _expected)
+                    context = {"salt.utils.systemd.status": True}
+                    # Test that context key is set when context dict is passed
+                    self.assertEqual(_systemd.has_scope(context), _expected)
+                    self.assertEqual(
+                        context,
+                        {
+                            "salt.utils.systemd.booted": True,
+                            "salt.utils.systemd.status": True,
+                            "salt.utils.systemd.version": _version,
+                        },
+                    )
 
     def test_has_scope_systemd205(self):
         """
@@ -207,18 +209,20 @@ class SystemdTestCase(TestCase):
             # return data, so it is sufficient enough to mock it as True for
             # these tests.
             with patch("os.stat", side_effect=_booted_effect):
-                # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
-                # Test that context key is set when context dict is passed
-                context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
-                    {
-                        "salt.utils.systemd.booted": True,
-                        "salt.utils.systemd.version": _version,
-                    },
-                )
+                with patch("salt.utils.systemd.status", return_value=True):
+                    # Test without context dict passed
+                    self.assertEqual(_systemd.has_scope(), _expected)
+                    # Test that context key is set when context dict is passed
+                    context = {"salt.utils.systemd.status": True}
+                    self.assertEqual(_systemd.has_scope(context), _expected)
+                    self.assertEqual(
+                        context,
+                        {
+                            "salt.utils.systemd.booted": True,
+                            "salt.utils.systemd.version": _version,
+                            "salt.utils.systemd.status": True,
+                        },
+                    )
 
     def test_has_scope_systemd206(self):
         """
@@ -241,18 +245,20 @@ class SystemdTestCase(TestCase):
             # return data, so it is sufficient enough to mock it as True for
             # these tests.
             with patch("os.stat", side_effect=_booted_effect):
-                # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
-                # Test that context key is set when context dict is passed
-                context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
-                    {
-                        "salt.utils.systemd.booted": True,
-                        "salt.utils.systemd.version": _version,
-                    },
-                )
+                with patch("salt.utils.systemd.status", return_value=True):
+                    # Test without context dict passed
+                    self.assertEqual(_systemd.has_scope(), _expected)
+                    # Test that context key is set when context dict is passed
+                    context = {"salt.utils.systemd.status": True}
+                    self.assertEqual(_systemd.has_scope(context), _expected)
+                    self.assertEqual(
+                        context,
+                        {
+                            "salt.utils.systemd.booted": True,
+                            "salt.utils.systemd.version": _version,
+                            "salt.utils.systemd.status": True,
+                        },
+                    )
 
     def test_has_scope_no_systemd(self):
         """

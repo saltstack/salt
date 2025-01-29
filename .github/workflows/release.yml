@@ -189,6 +189,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   backup:
     name: Backup

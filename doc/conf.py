@@ -181,20 +181,6 @@ rst_prolog = """\
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. _`salt-discord`: https://discord.com/invite/J7b7EscrAs
-.. |windownload| raw:: html
-
-     <p>Python3 x86: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
-
-     <p>Python3 AMD64: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
-
-.. |osxdownloadpy3| raw:: html
-
-     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(
     release=stripped_release
