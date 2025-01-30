@@ -65,7 +65,6 @@ if ( $BuildDir ) {
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
-$BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
 $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
@@ -73,12 +72,10 @@ $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 
 if ( $ARCH -eq "64bit" ) {
     $ARCH         = "AMD64"
-    $ARCH_X       = "x64"
-    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64/"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64"
 } else {
     $ARCH         = "x86"
-    $ARCH_X       = "x86"
-    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32/"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32"
 }
 
 #-------------------------------------------------------------------------------
