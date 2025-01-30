@@ -745,10 +745,10 @@ def _find_install_targets(
     for package_name, version_string in desired.items():
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
-        origin = bool(re.search('/', package_name))
+        origin = bool(re.search("/", package_name))
 
-        if __grains__['os'] == 'FreeBSD' and origin:
-            cver = [k for k, v in cur_pkgs.items() if v['origin'] == package_name]
+        if __grains__["os"] == "FreeBSD" and origin:
+            cver = [k for k, v in cur_pkgs.items() if v["origin"] == package_name]
         else:
             cver = cur_pkgs.get(package_name, [])
 
