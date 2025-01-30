@@ -7,12 +7,7 @@ apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.17.67
 boto>=2.46.0
 cassandra-driver>=2.0
-
-# DGM cffi>=1.14.6
-cffi>=1.14.6; python_version < '3.10'
-cffi>=1.17.1; python_version == '3.10'
-cffi>=1.14.6; python_version > '3.10'
-
+cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
 dnspython

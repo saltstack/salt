@@ -23,7 +23,6 @@ except AttributeError:
 if HAS_PYGIT2:
     import pygit2
 
-    ## DGM
     try:
         from pygit2.enums import ObjectType
 
@@ -156,9 +155,6 @@ def _prepare_remote_repository_pygit2(tmp_path):
         tree,
         [repository.head.target],
     )
-    ## DGM repository.create_tag(
-    ## DGM     "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
-    ## DGM )
     if HAS_PYGIT2_ENUMS:
         repository.create_tag(
             "annotated_tag", commit, ObjectType.COMMIT, signature, "some message"

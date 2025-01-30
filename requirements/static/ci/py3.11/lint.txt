@@ -85,7 +85,7 @@ certvalidator==0.11.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   vcert
-cffi==1.14.6 ; python_version > "3.10"
+cffi==1.14.6
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -396,7 +396,7 @@ pycryptodomex==3.19.1
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/crypto.txt
-pygit2==1.13.1 ; python_version > "3.10"
+pygit2==1.13.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/linux.in
