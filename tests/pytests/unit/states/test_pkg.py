@@ -7,8 +7,8 @@ import salt.modules.beacons as beaconmod
 import salt.modules.cp as cp
 import salt.modules.pacmanpkg as pacmanpkg
 import salt.modules.pkg_resource as pkg_resource
-import salt.modules.yumpkg as yumpkg
 import salt.modules.pkgng as pkgng
+import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
 import salt.utils.state as state_utils
