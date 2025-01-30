@@ -127,7 +127,7 @@ jobs:
 
       - name: "Ensure docker is running"
         run: |
-          sudo systemctl start containerd
+          sudo systemctl start containerd || exit 0
 
       - name: "Pull container ${{ matrix.container }}"
         run: |
