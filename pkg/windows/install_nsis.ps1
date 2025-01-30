@@ -68,7 +68,7 @@ if ( Test-Path -Path "$check_file" ) {
     Write-Result "Missing" -ForegroundColor Yellow
 
     Write-Host "Downloading NSIS: " -NoNewline
-    $url = "$DEPS_URL/nsis-3.03-setup.exe"
+    $url = "$DEPS_URL/nsis-3.10-setup.exe"
     $file = "$env:TEMP\install_nsis.exe"
     Invoke-WebRequest -Uri $url -OutFile "$file"
     if ( Test-Path -Path "$file" ) {
