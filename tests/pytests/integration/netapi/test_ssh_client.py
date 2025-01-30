@@ -150,7 +150,7 @@ def test_shell_inject_ssh_priv(
     """
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
-    tgts = ["repo.saltproject.io", "www.zerodayinitiative.com"]
+    tgts = ["packages.broadcom.com", "www.zerodayinitiative.com"]
     ret = None
     for tgt in tgts:
         low = {

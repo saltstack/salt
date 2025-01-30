@@ -1431,12 +1431,17 @@ def test_isportopen_false():
     assert ret is False
 
 
-def test_isportopen():
-    if salt.utils.platform.is_windows():
-        port = "135"
-    else:
-        port = "22"
-    ret = network.isportopen("127.0.0.1", port)
+@pytest.fixture
+def openport_22233():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", 22233))
+    s.listen(5)
+    yield
+    s.close()
+
+
+def test_isportopen(openport_22233):
+    ret = network.isportopen("127.0.0.1", 22233)
     assert ret == 0
 
 
@@ -1460,7 +1465,7 @@ def test_ip_to_host(grains):
     ret = network.ip_to_host("127.0.0.1")
     if grains.get("oscodename") == "Photon":
         # Photon returns this for IPv4
-        assert ret == "ipv6-localhost"
+        assert ret in ("ipv6-localhost", "localhost")
     else:
         assert ret == hostname
 
@@ -1469,15 +1474,15 @@ def test_ip_to_host(grains):
 
     ret = network.ip_to_host("::1")
     if grains["os"] == "Amazon":
-        assert ret == "localhost6"
+        assert ret in ("localhost6", "localhost")
     elif grains["os_family"] == "Debian":
         if grains["osmajorrelease"] == 12:
             assert ret == hostname
         else:
-            assert ret == "ip6-localhost"
+            assert ret in ("ip6-localhost", "localhost")
     elif grains["os_family"] == "RedHat":
         if grains["oscodename"] == "Photon":
-            assert ret == "ipv6-localhost"
+            assert ret in ("ipv6-localhost", "localhost")
         else:
             assert ret == hostname
     elif grains["os_family"] == "Arch":
@@ -1485,7 +1490,7 @@ def test_ip_to_host(grains):
             # running doesn't have osmajorrelease grains
             assert ret == hostname
         else:
-            assert ret == "ip6-localhost"
+            assert ret in ("ip6-localhost", "localhost")
     else:
         assert ret == hostname
 

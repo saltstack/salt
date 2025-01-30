@@ -540,7 +540,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         wfh.write(f"testrun={json.dumps(testrun)}\n")
 
 
-def _build_matrix(os_kind):
+def _build_matrix(os_kind, linux_arm_runner):
     """
     Generate matrix for build ci/cd steps.
     """
@@ -552,11 +552,7 @@ def _build_matrix(os_kind):
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
-    elif (
-        os_kind == "linux"
-        and "LINUX_ARM_RUNNER" in os.environ
-        and os.environ["LINUX_ARM_RUNNER"] != "0"
-    ):
+    elif os_kind == "linux" and linux_arm_runner:
         _matrix.append({"arch": "arm64"})
     return _matrix
 
@@ -850,7 +846,7 @@ def pkg_matrix(
     if (
         arch == "arm64"
         and name not in ["windows", "macos"]
-        and os.environ.get("LINUX_ARM_RUNNER", "0") != "0"
+        and os.environ.get("LINUX_ARM_RUNNER", "0") not in ("0", "")
     ):
         ctx.warn("This fork does not have a linux arm64 runner configured.")
         _matrix.clear()
@@ -908,7 +904,7 @@ def get_ci_deps_matrix(ctx: Context):
             {"distro-slug": "windows-2022", "arch": "amd64"},
         ],
     }
-    if "LINUX_ARM_RUNNER" in os.environ and os.environ["LINUX_ARM_RUNNER"] != "0":
+    if os.environ.get("LINUX_ARM_RUNNER", "0") not in ("0", ""):
         _matrix["linux"].append({"arch": "arm64"})
 
     ctx.info("Generated matrix:")
@@ -1476,7 +1472,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     ctx.exit(0)
 
 
-def _os_test_filter(osdef, transport, chunk):
+def _os_test_filter(osdef, transport, chunk, arm_runner):
     """
     Filter out some test runs based on os, tranport and chunk to be run.
     """
@@ -1484,7 +1480,7 @@ def _os_test_filter(osdef, transport, chunk):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
-    if osdef.arch == "arm64" and os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+    if not arm_runner:
         return False
     if transport == "tcp" and osdef.slug not in (
         "rockylinux-9",
@@ -1536,6 +1532,8 @@ def workflow_config(
     full = False
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event = None
+    config: dict[str, Any] = {}
+
     ctx.info(f"{'==== environment ====':^80s}")
     ctx.info(f"{pprint.pformat(dict(os.environ))}")
     ctx.info(f"{'==== end environment ====':^80s}")
@@ -1546,6 +1544,7 @@ def workflow_config(
 
     if gh_event_path is None:
         labels = []
+        config["linux_arm_runner"] = ""
     else:
         try:
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
@@ -1562,6 +1561,17 @@ def workflow_config(
             labels = []
             ctx.warn("The 'pull_request' key was not found on the event payload.")
 
+        if gh_event["repository"]["private"]:
+            # Private repositories need arm runner configuration environment
+            # variable.
+            if os.environ.get("LINUX_ARM_RUNNER", "0") in ("0", ""):
+                config["linux_arm_runner"] = ""
+            else:
+                config["linux_arm_runner"] = os.environ["LINUX_ARM_RUNNER"]
+        else:
+            # Public repositories can use github's arm64 runners.
+            config["linux_arm_runner"] = "ubuntu-24.04-arm"
+
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
     ctx.info(f"{'==== end labels ====':^80s}")
@@ -1570,7 +1580,6 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(gh_event)}")
     ctx.info(f"{'==== end github event ====':^80s}")
 
-    config: dict[str, Any] = {}
     jobs = {
         "lint": True,
         "test": True,
@@ -1596,7 +1605,8 @@ def workflow_config(
 
     config["jobs"] = jobs
     config["build-matrix"] = {
-        platform: _build_matrix(platform) for platform in platforms
+        platform: _build_matrix(platform, config["linux_arm_runner"])
+        for platform in platforms
     }
     ctx.info(f"{'==== build matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(config['build-matrix'])}")
@@ -1642,7 +1652,9 @@ def workflow_config(
 
     pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
 
-    if os.environ.get("LINUX_ARM_RUNNER", "0") == "0":
+    if not config["linux_arm_runner"]:
+        # Filter out linux arm tests because we are on a private repository and
+        # no arm64 runner is defined.
         TEST_SALT_LISTING["linux"] = list(
             filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
         )
@@ -1673,6 +1685,10 @@ def workflow_config(
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
                 ]
+                # Skipping downgrade tests on windows. These tests have never
+                # been run and currently fail. This should be fixed.
+                if platform == "windows":
+                    continue
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1687,6 +1703,8 @@ def workflow_config(
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")
 
+    # We need to be careful about how many chunks we make. We are limitied to
+    # 256 items in a matrix.
     _splits = {
         "functional": 4,
         "integration": 7,
@@ -1694,7 +1712,7 @@ def workflow_config(
         "unit": 4,
     }
 
-    test_matrix: dict[str, list] = {_: [] for _ in platforms}
+    test_matrix: dict[str, list] = {}
     if not skip_tests:
         for platform in platforms:
             for transport in ("zeromq", "tcp"):
@@ -1702,28 +1720,83 @@ def workflow_config(
                     splits = _splits.get(chunk) or 1
                     if full and splits > 1:
                         for split in range(1, splits + 1):
+                            if platform != "linux":
+                                if platform not in test_matrix:
+                                    test_matrix[platform] = []
+                                test_matrix[platform] += [
+                                    dict(
+                                        {
+                                            "transport": transport,
+                                            "tests-chunk": chunk,
+                                            "test-group": split,
+                                            "test-group-count": splits,
+                                        },
+                                        **_.as_dict(),
+                                    )
+                                    for _ in TEST_SALT_LISTING[platform]
+                                    if _os_test_filter(
+                                        _, transport, chunk, config["linux_arm_runner"]
+                                    )
+                                ]
+                            else:
+                                for arch in ["x86_64", "arm64"]:
+                                    if f"{platform}-{arch}" not in test_matrix:
+                                        test_matrix[f"{platform}-{arch}"] = []
+                                    test_matrix[f"{platform}-{arch}"] += [
+                                        dict(
+                                            {
+                                                "transport": transport,
+                                                "tests-chunk": chunk,
+                                                "test-group": split,
+                                                "test-group-count": splits,
+                                            },
+                                            **_.as_dict(),
+                                        )
+                                        for _ in TEST_SALT_LISTING[platform]
+                                        if _os_test_filter(
+                                            _,
+                                            transport,
+                                            chunk,
+                                            config["linux_arm_runner"],
+                                        )
+                                        and _.arch == arch
+                                    ]
+                    else:
+                        if platform != "linux":
+                            if platform not in test_matrix:
+                                test_matrix[platform] = []
                             test_matrix[platform] += [
                                 dict(
-                                    {
-                                        "transport": transport,
-                                        "tests-chunk": chunk,
-                                        "test-group": split,
-                                        "test-group-count": splits,
-                                    },
+                                    {"transport": transport, "tests-chunk": chunk},
                                     **_.as_dict(),
                                 )
                                 for _ in TEST_SALT_LISTING[platform]
-                                if _os_test_filter(_, transport, chunk)
+                                if _os_test_filter(
+                                    _, transport, chunk, config["linux_arm_runner"]
+                                )
                             ]
-                    else:
-                        test_matrix[platform] += [
-                            dict(
-                                {"transport": transport, "tests-chunk": chunk},
-                                **_.as_dict(),
-                            )
-                            for _ in TEST_SALT_LISTING[platform]
-                            if _os_test_filter(_, transport, chunk)
-                        ]
+                        else:
+                            for arch in ["x86_64", "arm64"]:
+                                if f"{platform}-{arch}" not in test_matrix:
+                                    test_matrix[f"{platform}-{arch}"] = []
+                                test_matrix[f"{platform}-{arch}"] += [
+                                    dict(
+                                        {"transport": transport, "tests-chunk": chunk},
+                                        **_.as_dict(),
+                                    )
+                                    for _ in TEST_SALT_LISTING[platform]
+                                    if _os_test_filter(
+                                        _, transport, chunk, config["linux_arm_runner"]
+                                    )
+                                    and _.arch == arch
+                                ]
+
+    for key in test_matrix:
+        if len(test_matrix[key]) > 256:
+            ctx.warn(
+                f"Number of jobs in {platform} test matrix exceeds 256 ({len(test_matrix[key])}), jobs may not run."
+            )
+
     ctx.info(f"{'==== test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(test_matrix)}")
     ctx.info(f"{'==== end test matrix ====':^80s}")

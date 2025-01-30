@@ -460,6 +460,7 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -475,6 +476,7 @@ jobs:
       relenv-version: "0.18.0"
       python-version: "3.10.15"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
     name: Build Packages
@@ -490,6 +492,7 @@ jobs:
       python-version: "3.10.15"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
@@ -509,6 +512,7 @@ jobs:
       python-version: "3.10.15"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
@@ -528,6 +532,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -545,6 +550,7 @@ jobs:
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
   test:
     name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
@@ -563,6 +569,7 @@ jobs:
       workflow-slug: staging
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   upload-release-artifacts:
     name: Upload Release Artifacts
@@ -692,6 +699,8 @@ jobs:
       - build-pkgs-src
       - upload-release-artifacts
       - publish-pypi
+      - test-packages
+      - test
     steps:
       - name: Get workflow information
         id: get-workflow-info

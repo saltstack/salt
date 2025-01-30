@@ -23,6 +23,7 @@
       python-version: "<{ python_version }>"
       source: "<{ backend }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
     <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
       sign-macos-packages: false

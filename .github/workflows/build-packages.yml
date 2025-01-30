@@ -40,6 +40,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   COLUMNS: 190
@@ -52,8 +56,9 @@ jobs:
 
   build-deb-packages:
     name: DEB
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -144,8 +149,9 @@ jobs:
 
   build-rpm-packages:
     name: RPM
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'linux-arm64' }}
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -218,6 +224,7 @@ jobs:
 
   build-macos-pkgs:
     name: macOS
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
@@ -332,6 +339,7 @@ jobs:
 
   build-windows-pkgs:
     name: Windows
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
