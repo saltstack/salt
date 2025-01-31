@@ -10,9 +10,13 @@ import sys
 import textwrap
 import time
 
-import aiortc.exceptions
-from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.signaling import BYE, add_signaling_arguments, create_signaling
+try:
+    import aiortc.exceptions
+    from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+    from aiortc.contrib.signaling import BYE, add_signaling_arguments, create_signaling
+except ImportError:
+    print("Please `pip install aiortc` before running.")
+    sys.exit(1)
 
 log = logging.getLogger(__name__)
 
