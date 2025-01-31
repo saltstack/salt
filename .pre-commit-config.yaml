@@ -59,7 +59,7 @@ repos:
       - id: tools
         alias: generate-workflows
         name: Generate GitHub Workflow Templates
-        files: ^(cicd/shared-gh-workflows-context\.yml|tools/precommit/workflows\.py|.github/workflows/.*)$
+        files: ^(cicd/shared-gh-workflows-context\.yml|tools/utils/__init__.py|tools/precommit/workflows\.py|.github/workflows/.*)$
         pass_filenames: false
         args:
           - pre-commit

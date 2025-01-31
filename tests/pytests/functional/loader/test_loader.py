@@ -23,7 +23,9 @@ def salt_extension(tmp_path_factory):
 
 @pytest.fixture
 def venv(tmp_path):
-    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as _venv:
+    with SaltVirtualEnv(
+        venv_dir=tmp_path / ".venv", system_site_packages=True
+    ) as _venv:
         yield _venv
 
 
