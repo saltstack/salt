@@ -32,6 +32,10 @@ except ImportError:
 skipif_no_gitpython = pytest.mark.skipif(not HAS_GITPYTHON, reason="Missing gitpython")
 skipif_no_pygit2 = pytest.mark.skipif(not HAS_PYGIT2, reason="Missing pygit2")
 
+## DGM
+## testgitfs = "https://github.com/saltstack/salt-test-pillar-gitfs.git"
+testgitfs = "https://github.com/dmurphy18/salt-test-pillar-gitfs.git"
+
 
 @pytest.fixture
 def pillar_opts(salt_factories, tmp_path):
@@ -72,9 +76,10 @@ def _get_pillar(opts, *remotes):
 
 @skipif_no_gitpython
 def test_gitpython_pillar_provider(gitpython_pillar_opts):
-    p = _get_pillar(
-        gitpython_pillar_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p = _get_pillar(
+    ## DGM     gitpython_pillar_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p = _get_pillar(gitpython_pillar_opts, testgitfs)
     assert len(p.remotes) == 1
     assert p.provider == "gitpython"
     assert isinstance(p.remotes[0], GitPython)
@@ -82,18 +87,20 @@ def test_gitpython_pillar_provider(gitpython_pillar_opts):
 
 @skipif_no_pygit2
 def test_pygit2_pillar_provider(pygit2_pillar_opts):
-    p = _get_pillar(
-        pygit2_pillar_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p = _get_pillar(
+    ## DGM     pygit2_pillar_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p = _get_pillar(pygit2_pillar_opts, testgitfs)
     assert len(p.remotes) == 1
     assert p.provider == "pygit2"
     assert isinstance(p.remotes[0], Pygit2)
 
 
 def _test_env(opts):
-    p = _get_pillar(
-        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p = _get_pillar(
+    ## DGM     opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p = _get_pillar(opts, f"__env__ {testgitfs}")
     assert len(p.remotes) == 1
     p.checkout()
     repo = p.remotes[0]
@@ -102,9 +109,10 @@ def _test_env(opts):
     for f in (".gitignore", "README.md", "file.sls", "top.sls"):
         assert f in files
     opts["pillarenv"] = "main"
-    p2 = _get_pillar(
-        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p2 = _get_pillar(
+    ## DGM     opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p2 = _get_pillar(opts, f"__env__ {testgitfs}")
     assert len(p.remotes) == 1
     p2.checkout()
     repo2 = p2.remotes[0]
@@ -163,11 +171,19 @@ def test_pygit2_checkout_fetch_on_fail(pygit2_pillar_opts):
 
 
 def _test_multiple_repos(opts):
+    ## DGM p = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM     "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM )
     p = _get_pillar(
         opts,
-        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        f"__env__ {testgitfs}",
+        f"main {testgitfs}",
+        f"branch {testgitfs}",
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
@@ -177,11 +193,19 @@ def _test_multiple_repos(opts):
     assert len({r.get_cachedir() for r in p.remotes}) == 5
     assert len({r.get_salt_working_dir() for r in p.remotes}) == 5
 
+    ## DGM p2 = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM     "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM )
     p2 = _get_pillar(
         opts,
-        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        f"__env__ {testgitfs}",
+        f"main {testgitfs}",
+        f"branch {testgitfs}",
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
@@ -192,11 +216,19 @@ def _test_multiple_repos(opts):
         assert repo.get_cachedir() == repo2.get_cachedir()
         assert repo.get_salt_working_dir() == repo2.get_salt_working_dir()
     opts["pillarenv"] = "main"
+    ## DGM p3 = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM     "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM )
     p3 = _get_pillar(
         opts,
-        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
-        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        f"__env__ {testgitfs}",
+        f"main {testgitfs}",
+        f"branch {testgitfs}",
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
@@ -225,17 +257,23 @@ def test_pygit2_multiple_repos(pygit2_pillar_opts):
 
 
 def _test_fetch_request(opts):
+    ## DGM p = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM )
     p = _get_pillar(
         opts,
-        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        f"__env__ {testgitfs}",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
     frequest = os.path.join(p.remotes[0].get_salt_working_dir(), "fetch_request")
     frequest_other = os.path.join(p.remotes[1].get_salt_working_dir(), "fetch_request")
     opts["pillarenv"] = "main"
-    p2 = _get_pillar(
-        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p2 = _get_pillar(
+    ## DGM     opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p2 = _get_pillar(opts, f"__env__ {testgitfs}")
     frequest2 = os.path.join(p2.remotes[0].get_salt_working_dir(), "fetch_request")
     assert frequest != frequest2
     assert os.path.isfile(frequest) is False
@@ -275,17 +313,23 @@ def test_pygit2_fetch_request(pygit2_pillar_opts):
 
 
 def _test_clear_old_remotes(opts):
+    ## DGM p = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM     "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    ## DGM )
     p = _get_pillar(
         opts,
-        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        f"__env__ {testgitfs}",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
     repo = p.remotes[0]
     repo2 = p.remotes[1]
     opts["pillarenv"] = "main"
-    p2 = _get_pillar(
-        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
-    )
+    ## DGM p2 = _get_pillar(
+    ## DGM     opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    ## DGM )
+    p2 = _get_pillar(opts, f"__env__ {testgitfs}")
     repo3 = p2.remotes[0]
     assert os.path.isdir(repo.get_cachedir()) is True
     assert os.path.isdir(repo2.get_cachedir()) is True
@@ -311,9 +355,13 @@ def test_pygit2_clear_old_remotes(pygit2_pillar_opts):
 
 
 def _test_remote_map(opts):
+    ## DGM p = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM )
     p = _get_pillar(
         opts,
-        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        testgitfs,
     )
     p.fetch_remotes()
     assert len(p.remotes) == 1
@@ -333,9 +381,13 @@ def test_pygit2_remote_map(pygit2_pillar_opts):
 
 
 def _test_lock(opts):
+    ## DGM p = _get_pillar(
+    ## DGM     opts,
+    ## DGM     "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    ## DGM )
     p = _get_pillar(
         opts,
-        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        testgitfs,
     )
     p.fetch_remotes()
     assert len(p.remotes) == 1
@@ -355,8 +407,9 @@ def _test_lock(opts):
     assert repo.clear_lock() == (
         [
             (
-                f"Removed update lock for git_pillar remote "
-                f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+                ## DGM f"Set update lock for git_pillar remote "
+                ## DGM f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+                f"Set update lock for git_pillar remote '{testgitfs}' on machine_id '{mach_id}'"
             )
         ],
         [],
