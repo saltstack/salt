@@ -408,9 +408,9 @@ def _test_lock(opts):
     assert repo.clear_lock() == (
         [
             (
-                ## DGM f"Set update lock for git_pillar remote "
+                ## DGM f"Removed update lock for git_pillar remote "
                 ## DGM f"'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
-                f"Set update lock for git_pillar remote '{testgitfs}' on machine_id '{mach_id}'"
+                f"Removed update lock for git_pillar remote '{testgitfs}' on machine_id '{mach_id}'"
             )
         ],
         [],
