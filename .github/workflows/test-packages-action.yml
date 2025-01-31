@@ -125,6 +125,10 @@ jobs:
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
+      - name: "Ensure docker is running"
+        run: |
+          sudo systemctl start containerd || exit 0
+
       - name: "Pull container ${{ matrix.container }}"
         run: |
           docker pull ${{ matrix.container }}
