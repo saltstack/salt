@@ -10,13 +10,31 @@ import sys
 import textwrap
 import time
 
+aiortc = None
 try:
     import aiortc.exceptions
     from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
     from aiortc.contrib.signaling import BYE, add_signaling_arguments, create_signaling
 except ImportError:
-    print("Please `pip install aiortc` before running.")
-    sys.exit(1)
+    pass
+
+uvloop = None
+try:
+    import uvloop
+except ImportError:
+    pass
+
+if sys.platform == "win32":
+    if not aiortc:
+        print("Please run 'pip install aiortc' and try again.")
+        sys.exit(1)
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+else:
+    if not aiortc or not uvloop:
+        print("Please run 'pip install aiortc uvloop' and try again.")
+        sys.exit(1)
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
 
 log = logging.getLogger(__name__)
 
