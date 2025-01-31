@@ -1,4 +1,5 @@
 name: SSH Debug
+run-name: "SSH Debug ${{ inputs.runner }}"
 on:
   workflow_dispatch:
     inputs:
