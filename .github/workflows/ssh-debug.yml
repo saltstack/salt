@@ -20,7 +20,7 @@ on:
 
 jobs:
   debug:
-    runs-on: {{ inputs.runner }}
+    runs-on: ${{ inputs.runner }}
     environment: ci
     steps:
 
