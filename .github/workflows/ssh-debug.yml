@@ -1,6 +1,7 @@
 name: SSH Debug
 run-name: "SSH Debug ${{ inputs.runner }}"
 on:
+  pull: {}
   workflow_dispatch:
     inputs:
        runner:
@@ -21,6 +22,7 @@ on:
 jobs:
   debug:
     runs-on: ${{ inputs.runner }}
+    if: ${{ inputs.runner }}
     environment: ci
     steps:
 
