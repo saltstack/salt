@@ -1,7 +1,7 @@
 name: SSH Debug
 run-name: "SSH Debug ${{ inputs.runner }}"
 on:
-  pull: {}
+  pull_request: {}
   workflow_dispatch:
     inputs:
        runner:
