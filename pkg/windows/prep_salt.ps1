@@ -62,11 +62,9 @@ if ( $BuildDir ) {
 } else {
     $BUILD_DIR = "$SCRIPT_DIR\buildenv"
 }
-$PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
-$BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
 $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
@@ -74,11 +72,9 @@ $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 
 if ( $ARCH -eq "64bit" ) {
     $ARCH         = "AMD64"
-    $ARCH_X       = "x64"
     $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64"
 } else {
     $ARCH         = "x86"
-    $ARCH_X       = "x86"
     $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32"
 }
 
@@ -119,17 +115,6 @@ if ( Test-Path -Path $BUILD_CONF_DIR) {
     Write-Host "Removing Configs Directory: " -NoNewline
     Remove-Item -Path $BUILD_CONF_DIR -Recurse -Force
     if ( ! (Test-Path -Path $BUILD_CONF_DIR) ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-if ( Test-Path -Path $PREREQ_DIR ) {
-    Write-Host "Removing PreReq Directory: " -NoNewline
-    Remove-Item -Path $PREREQ_DIR -Recurse -Force
-    if ( ! (Test-Path -Path $PREREQ_DIR) ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
         Write-Result "Failed" -ForegroundColor Red
@@ -181,18 +166,6 @@ $scripts | ForEach-Object {
             exit 1
         }
     }
-}
-
-# Copy VCRedist 2022 to the prereqs directory
-New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-Write-Host "Copying VCRedist 2022 $ARCH_X to prereqs: " -NoNewline
-$file = "vcredist_$ARCH_X`_2022.exe"
-Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
-if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
 }
 
 #-------------------------------------------------------------------------------
@@ -267,70 +240,20 @@ $directories | ForEach-Object {
     }
 }
 
-Write-Host "Removing __pycache__ directories: " -NoNewline
-$found = Get-ChildItem -Path "$BUILD_DIR" -Filter "__pycache__" -Recurse
-$found | ForEach-Object {
-    Remove-Item -Path "$($_.FullName)" -Recurse -Force
-    if ( Test-Path -Path "$($_.FullName)" ) {
-        Write-Result "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $($_.FullName)"
-        exit 1
-    }
-}
-Write-Result "Success" -ForegroundColor Green
-
-# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
-# __pycache__ directories, it won't be able to find them because they are no
-# longer present
-# This probably won't find any *.pyc files, but just in case
-$remove = "*.pyc",
+Write-Host "Removing unneeded files (.pyc, .chm): " -NoNewline
+$remove = "__pycache__",
+          "*.pyc",
           "*.chm"
 $remove | ForEach-Object {
-    Write-Host "Removing unneeded $_ files: " -NoNewline
-    $found = Get-ChildItem -Path "$BUILD_DIR" -Filter $_ -Recurse
+    $found = Get-ChildItem -Path "$BUILD_DIR\$_" -Recurse
     $found | ForEach-Object {
-        Remove-Item -Path "$($_.FullName)" -Recurse -Force
-        if ( Test-Path -Path "$($_.FullName)" ) {
+        Remove-Item -Path "$_" -Recurse -Force
+        if ( Test-Path -Path $_ ) {
             Write-Result "Failed" -ForegroundColor Red
-            Write-Host "Failed to remove: $($_.FullName)"
+            Write-Host "Failed to remove: $_"
             exit 1
         }
     }
-    Write-Result "Success" -ForegroundColor Green
-}
-
-#-------------------------------------------------------------------------------
-# Set timestamps on Files
-#-------------------------------------------------------------------------------
-
-# We're doing this again in this script because we use python above to get the
-# build architecture and that adds back some __pycache__ and *.pyc files
-Write-Host "Getting commit time stamp: " -NoNewline
-[DateTime]$origin = "1970-01-01 00:00:00"
-$hash_time = $(git show -s --format=%at)
-$time_stamp = $origin.AddSeconds($hash_time)
-if ( $hash_time ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Setting time stamp on all salt files: " -NoNewline
-$found = Get-ChildItem -Path $BUILD_DIR -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
-}
-Write-Result "Success" -ForegroundColor Green
-
-Write-Host "Setting time stamp on all prereq files: " -NoNewline
-$found = Get-ChildItem -Path $PREREQ_DIR -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
 }
 Write-Result "Success" -ForegroundColor Green
 
