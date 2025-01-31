@@ -19,6 +19,7 @@ import shutil
 import stat
 import subprocess
 import time
+import traceback  # # DGM
 import weakref
 from datetime import datetime
 
@@ -255,6 +256,13 @@ class GitProvider:
         self.opts = opts
         self.role = role
 
+        ## DGM
+        if hasattr(self, "name"):
+            print(
+                f"DGM class GitProvider dunder init, very start, hasattr self.name '{self.name}'",
+                flush=True,
+            )
+
         def _val_cb(x, y):
             return str(y)
 
@@ -476,21 +484,48 @@ class GitProvider:
             failhard(self.role)
         if hasattr(self, "name"):
             self._cache_basehash = self.name
+            ## DGM
+            print(
+                f"DGM class GitProvider dunder init, hasattr self.name '{self.name}'",
+                flush=True,
+            )
         else:
             hash_type = getattr(hashlib, self.opts.get("hash_type", DEFAULT_HASH_TYPE))
             # We loaded this data from yaml configuration files, so, its safe
             # to use UTF-8
+            ## DGM
+            dgm_orig_cache_bash_str = str(
+                base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
+                encoding="ascii",
+            )
+            print(
+                f"DGM class GitProvider dunder init, hasattr dgm_orig_cache_bash_str '{dgm_orig_cache_bash_str}'",
+                flush=True,
+            )
+
             self._cache_basehash = str(
                 base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
                 encoding="ascii",  # base64 only outputs ascii
             ).replace(
                 "/", "_"
             )  # replace "/" with "_" to not cause trouble with file system
+
+        ## DGM
+        print(
+            f"DGM class GitProvider dunder init, self._cache_basehash '{self._cache_basehash}'",
+            flush=True,
+        )
+
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
                 self._cache_basename = self.get_checkout_target()
+                print(
+                    f"DGM class GitProvider dunder init, self.id '{self.id}', self._cache_basename '{self._cache_basename}'",
+                    flush=True,
+                )
+
             except AttributeError:
                 log.critical(
                     "__env__ cant generate basename: %s %s", self.role, self.id
@@ -771,10 +806,17 @@ class GitProvider:
         success = []
         failed = []
 
+        ## DGM someone is calling this after the lock file has been removed, ie twice ?
+        stk_summary = traceback.format_stack()
+
         try:
             os.remove(lock_file)
         except OSError as exc:
             if exc.errno == errno.ENOENT:
+                print(
+                    f"DGM class GitProvider _clear_lock entry, exception, stk_summary '{stk_summary}'",
+                    flush=True,
+                )
                 # No lock file present
                 msg = (
                     f"Attempt to remove lock {self.url} for file ({lock_file}) "
@@ -793,6 +835,12 @@ class GitProvider:
             else:
                 _add_error(failed, exc)
         else:
+            ## DGM
+            print(
+                f"DGM class GitProvider _clear_lock entry, else, stk_summary '{stk_summary}'",
+                flush=True,
+            )
+
             msg = (
                 f"Removed {lock_type} lock for {self.role} remote '{self.id}' "
                 f"on machine_id '{self.mach_id}'"
@@ -826,6 +874,10 @@ class GitProvider:
                 # section for the remote to the git config
                 conf.add_section(remote_section)
                 conf_changed = True
+                print(
+                    f"DGM class GitProvider enforce_git_config, URL NoSectionError conf_changed set True '{conf_changed}'",
+                    flush=True,
+                )
                 url = None
             log.debug(
                 "Current fetch URL for %s remote '%s': %s (desired: %s)",
@@ -843,6 +895,10 @@ class GitProvider:
                     self.url,
                 )
                 conf_changed = True
+                print(
+                    f"DGM class GitProvider enforce_git_config, URL change conf_changed set True '{conf_changed}'",
+                    flush=True,
+                )
 
             # 2. refspecs
             try:
@@ -869,6 +925,10 @@ class GitProvider:
                     desired_refspecs,
                 )
                 conf_changed = True
+                print(
+                    f"DGM class GitProvider enforce_git_config, refspecs conf_changed set True '{conf_changed}'",
+                    flush=True,
+                )
 
             # 3. http.sslVerify
             try:
@@ -895,9 +955,17 @@ class GitProvider:
                     desired_ssl_verify,
                 )
                 conf_changed = True
+                print(
+                    f"DGM class GitProvider enforce_git_config, ssl_verify conf_changed set True '{conf_changed}'",
+                    flush=True,
+                )
 
             # Write changes, if necessary
             if conf_changed:
+                print(
+                    f"DGM class GitProvider enforce_git_config, conf_changed set True, examine file '{git_config}'",
+                    flush=True,
+                )
                 with salt.utils.files.fopen(git_config, "w") as fp_:
                     conf.write(fp_)
                     log.debug(
@@ -915,6 +983,8 @@ class GitProvider:
         This function requires that a _fetch() function be implemented in a
         sub-class.
         """
+        ## DGM stk_summary = traceback.format_stack()
+        ## DGM print(f"DGM class GitProvider fetch, stk_summary '{stk_summary}'", flush=True)
         try:
             with self.gen_lock(lock_type="update"):
                 log.debug("Fetching %s remote '%s'", self.role, self.id)
@@ -1565,13 +1635,36 @@ class GitPython(GitProvider):
         local copy was already up-to-date, return False.
         """
         origin = self.repo.remotes[0]
+
+        print(f"DGM class GitPython _fetch entry, origin '{dir(origin)}'", flush=True)
+
         try:
             fetch_results = origin.fetch()
         except AssertionError:
             fetch_results = origin.fetch()
 
         new_objs = False
+
+        print(
+            f"DGM class GitPython _fetch, origin '{dir(origin)}', fetch_results '{fetch_results}'",
+            flush=True,
+        )
+
         for fetchinfo in fetch_results:
+            ## DGM
+            dgm_commit = 0
+            dgm_old_commit = 0
+
+            ## DGM
+            if fetchinfo.old_commit is not None:
+                dgm_commit = fetchinfo.commit.hexsha[:7]
+                dgm_old_commit = fetchinfo.old_commit.hexsha[:7]
+
+            print(
+                f"DGM class GitPython _fetch, fetchinfo dir '{dir(fetchinfo)}', self.id '{self.id}', fetchinfo.name '{fetchinfo.name}', fetchinfo.old_commit '{dgm_old_commit}', fetchinfo.commit '{dgm_commit}', fetchinfo.flags '{fetchinfo.flags}', NEW_TAG '{fetchinfo.NEW_TAG}', NEW_HEAD '{fetchinfo.NEW_HEAD}'",
+                flush=True,
+            )
+
             if fetchinfo.old_commit is not None:
                 log.debug(
                     "%s has updated '%s' for remote '%s' from %s to %s",
@@ -1593,7 +1686,10 @@ class GitPython(GitProvider):
                 new_objs = True
 
         cleaned = self.clean_stale_refs()
-        return True if (new_objs or cleaned) else None
+        ## DGM return True if (new_objs or cleaned) else None
+        dgm_ret = True if (new_objs or cleaned) else None
+        print(f"DGM class GitPython _fetch, return '{dgm_ret}'", flush=True)
+        return dgm_ret
 
     def file_list(self, tgt_env):
         """
@@ -1766,11 +1862,17 @@ class Pygit2(GitProvider):
         fetch_on_fail
           If checkout fails perform a fetch then try to checkout again.
         """
+        print("DGM class Pygit2 checkout entry", flush=True)
         self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
         local_ref = "refs/heads/" + tgt_ref
         remote_ref = "refs/remotes/origin/" + tgt_ref
         tag_ref = "refs/tags/" + tgt_ref
+
+        print(
+            f"DGM class Pygit2 checkout entry, tgt_ref '{tgt_ref}', local_ref '{local_ref}', tag_ref '{tag_ref}'",
+            flush=True,
+        )
 
         try:
             local_head = self.repo.lookup_reference("HEAD")
@@ -1854,6 +1956,12 @@ class Pygit2(GitProvider):
 
                 # Only perform a checkout if HEAD and target are not pointing
                 # at the same SHA1.
+
+                print(
+                    f"DGM class Pygit2 checkout, head_sha '{head_sha}', target_sha '{target_sha}'",
+                    flush=True,
+                )
+
                 if head_sha != target_sha:
                     # Check existence of the ref in refs/heads/ which
                     # corresponds to the local HEAD. Checking out local_ref
@@ -2108,6 +2216,12 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
+
+        print(
+            f"DGM class pygit2 _fetch, origin '{dir(origin)}', refs_pre '{refs_pre}'",
+            flush=True,
+        )
+
         # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs["callbacks"] = self.remotecallbacks
@@ -2121,8 +2235,18 @@ class Pygit2(GitProvider):
             pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
+            print(
+                f"DGM class pygit2 _fetch, fetch_results '{fetch_results}', fetch_kwargs '{fetch_kwargs}', dir fetch_results '{dir(fetch_results)}'",
+                flush=True,
+            )
+
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()
+            print(
+                f"DGM class pygit2 _fetch, exception giterror exc '{exc_str}'",
+                flush=True,
+            )
+
             if "unsupported url protocol" in exc_str and isinstance(
                 self.credentials, pygit2.Keypair
             ):
@@ -2151,6 +2275,10 @@ class Pygit2(GitProvider):
                     exc,
                     exc_info=True,
                 )
+            print(
+                f"DGM class pygit2 _fetch, exception giterror returning False, role '{self.role}', id '{self.id}'",
+                flush=True,
+            )
             return False
         try:
             # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
@@ -2159,6 +2287,11 @@ class Pygit2(GitProvider):
             # pygit2.Remote.fetch() returns a class instance in
             # pygit2 >= 0.21.0
             received_objects = fetch_results.received_objects
+            print(
+                f"DGM class pygit2 _fetch, fetch_results contents, indexed_deltas '{fetch_results.indexed_deltas}', indexed_objects '{fetch_results.indexed_objects}', local_objects '{fetch_results.local_objects}', received_bytes '{fetch_results.received_bytes}', received_objects '{fetch_results.received_objects}', total_deltas '{fetch_results.total_deltas}', total_objects '{fetch_results.total_objects}'",
+                flush=True,
+            )
+
         if received_objects != 0:
             log.debug(
                 "%s received %s objects for remote '%s'",
@@ -2170,12 +2303,21 @@ class Pygit2(GitProvider):
             log.debug("%s remote '%s' is up-to-date", self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
-        return True if (received_objects or refs_pre != refs_post or cleaned) else None
+
+        ## DGM return True if (received_objects or refs_pre != refs_post or cleaned) else None
+        dgm_ret = (
+            True if (received_objects or refs_pre != refs_post or cleaned) else None
+        )
+        print(
+            f"DGM class pygit2 _fetch, return '{dgm_ret}', received_objects '{received_objects}', refs_pre '{refs_pre}', refs_post '{refs_post}', cleaned '{cleaned}'",
+            flush=True,
+        )
 
     def file_list(self, tgt_env):
         """
         Get file list for the target environment using pygit2
         """
+        print(f"DGM class Pygit2 file_list entry, tgt_env '{tgt_env}'", flush=True)
 
         def _traverse(tree, blobs, prefix):
             """
@@ -2540,6 +2682,10 @@ class GitBase:
 
             gitfs.fetch_remotes()
         """
+        print(
+            f"DGM class GitBase dunder init entry, opts '{opts}', git_providers '{git_providers}', remotes '{remotes}'",
+            flush=True,
+        )
         self.opts = opts
         self.git_providers = (
             git_providers if git_providers is not None else GIT_PROVIDERS
@@ -2579,6 +2725,11 @@ class GitBase:
         # are defined and the provider is not one that supports auth, then
         # error out and do not proceed.
         override_params = copy.deepcopy(per_remote_overrides)
+        print(
+            f"DGM class GitBase init_remotes entry, remotes '{remotes}', override_params '{override_params}'",
+            flush=True,
+        )
+
         global_auth_params = [
             f"{self.role}_{x}" for x in AUTH_PARAMS if self.opts[f"{self.role}_{x}"]
         ]
@@ -2754,12 +2905,20 @@ class GitBase:
                 # matches or else skip this one
                 try:
                     if not fnmatch.fnmatch(repo.url, remote):
+                        print(
+                            f"DGM clear_lock not fnmatch, repo.url '{repo.url}', remote '{remote}'",
+                            flush=True,
+                        )
                         continue
                 except TypeError:
                     # remote was non-string, try again
                     if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.clear_lock(lock_type=lock_type)
+            print(
+                f"DGM clear_lock, success '{success}', failed '{failed}', for lock_type '{lock_type}'",
+                flush=True,
+            )
             cleared.extend(success)
             errors.extend(failed)
 
@@ -2770,6 +2929,7 @@ class GitBase:
         Fetch all remotes and return a boolean to let the calling function know
         whether or not any remotes were updated in the process of fetching
         """
+        print(f"DGM class GitBase fetch_remotes entry, remotes '{remotes}'", flush=True)
         if remotes is None:
             remotes = []
         elif isinstance(remotes, str):
@@ -2785,17 +2945,33 @@ class GitBase:
         changed = False
         for repo in self.remotes:
             name = getattr(repo, "name", None)
+            print(
+                f"DGM class GitBase fetch_remotes, self.role '{self.role}', name '{name}', repo id '{repo.id}'",
+                flush=True,
+            )
             if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
                     # Find and place fetch_request file for all the other branches for this repo
                     repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
+                    print(
+                        f"DGM class GitBase fetch_remotes, repo working_dir '{repo.get_salt_working_dir()}', repo_work_hash '{repo_work_hash}'",
+                        flush=True,
+                    )
                     for branch in os.listdir(repo_work_hash):
                         # Don't place fetch request in current branch being updated
+                        print(
+                            f"DGM class GitBase fetch_remotes, for loop branch, branch '{branch}', repo cache basename '{repo.get_cache_basename()}'",
+                            flush=True,
+                        )
                         if branch == repo.get_cache_basename():
                             continue
                         branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
                         fetch_path = salt.utils.path.join(
                             branch_salt_dir, "fetch_request"
+                        )
+                        print(
+                            f"DGM class GitBase fetch_remotes, for loop branch, branch_salt_dir '{branch_salt_dir}', fetch_path '{fetch_path}'",
+                            flush=True,
                         )
                         if os.path.isdir(branch_salt_dir):
                             try:
@@ -2818,6 +2994,10 @@ class GitBase:
                         # changes would override this value and make it
                         # incorrect.
                         changed = True
+                        print(
+                            f"DGM class GitBase fetch_remotes, for loop branch, repo.fetch check, changed '{changed}'",
+                            flush=True,
+                        )
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Exception caught while fetching %s remote '%s': %s",
@@ -2826,6 +3006,10 @@ class GitBase:
                         exc,
                         exc_info=True,
                     )
+        print(
+            f"DGM class GitBase fetch_remotes, exit returning changed '{changed}'",
+            flush=True,
+        )
         return changed
 
     def lock(self, remote=None):
@@ -2840,12 +3024,17 @@ class GitBase:
                 # matches or else skip this one
                 try:
                     if not fnmatch.fnmatch(repo.url, remote):
+                        print(
+                            f"DGM lock not fnmatch, repo.url '{repo.url}', remote '{remote}'",
+                            flush=True,
+                        )
                         continue
                 except TypeError:
                     # remote was non-string, try again
                     if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.lock()
+            print(f"DGM lock, success '{success}', failed '{failed}'", flush=True)
             locked.extend(success)
             errors.extend(failed)
         return locked, errors
@@ -2918,6 +3107,8 @@ class GitBase:
         """
         Determine which provider to use
         """
+        print(f"DGM class GitBase verify_provider, self.role '{self.role}'", flush=True)
+
         if f"verified_{self.role}_provider" in self.opts:
             self.provider = self.opts[f"verified_{self.role}_provider"]
         else:
@@ -3074,10 +3265,20 @@ class GitBase:
         fetch_on_fail
           If checkout fails perform a fetch then try to checkout again.
         """
+        print(
+            f"DGM class GitBase do_checkout entry, repo '{repo}', dir repo '{dir(repo)}', fetch_on_fail '{fetch_on_fail}'",
+            flush=True,
+        )
         time_start = time.time()
         while time.time() - time_start <= 5:
             try:
-                return repo.checkout(fetch_on_fail=fetch_on_fail)
+                ## DGM return repo.checkout(fetch_on_fail=fetch_on_fail)
+                dgm_cachedir = repo.checkout(fetch_on_fail=fetch_on_fail)
+                print(
+                    f"DGM class GitBase do_checkout, returning cachedir '{dgm_cachedir}'",
+                    flush=True,
+                )
+                return dgm_cachedir
             except GitLockError as exc:
                 if exc.errno == errno.EEXIST:
                     time.sleep(0.1)
@@ -3483,8 +3684,14 @@ class GitPillar(GitBase):
         """
         self.pillar_dirs = OrderedDict()
         self.pillar_linked_dirs = []
+        print(f"DGM class GitPillar checkout, remotes '{self.remotes}'", flush=True)
+
         for repo in self.remotes:
             cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
+            print(
+                f"DGM class GitPillar checkout, repo '{repo}', cachedir '{cachedir}'",
+                flush=True,
+            )
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
                 if repo.branch == "__env__" and hasattr(repo, "all_saltenvs"):

@@ -61,12 +61,20 @@ def update(branch=None, repo=None):
         # Run with debug logging
         salt-run git_pillar.update -l debug
     """
+    print(
+        f"DGM runners git_pillar update entry, branch '{branch}', repo '{repo}'",
+        flush=True,
+    )
     ret = {}
     for ext_pillar in __opts__.get("ext_pillar", []):
         pillar_type = next(iter(ext_pillar))
         if pillar_type != "git":
             continue
         pillar_conf = ext_pillar[pillar_type]
+        print(
+            f"DGM runners git_pillar update, pillar_type '{pillar_type}', pillar_conf '{pillar_conf}'",
+            flush=True,
+        )
         pillar = salt.utils.gitfs.GitPillar(
             __opts__,
             pillar_conf,
@@ -75,6 +83,12 @@ def update(branch=None, repo=None):
             global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
         )
         for remote in pillar.remotes:
+            dgm_remote_name = getattr(remote, "name", None)
+            print(
+                f"DGM runners git_pillar update, branch '{branch}', remote branch '{remote.branch}', remote url '{remote.url}', remote name '{dgm_remote_name}'",
+                flush=True,
+            )
+
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:
                 if branch != remote.branch:
@@ -104,4 +118,5 @@ def update(branch=None, repo=None):
         else:
             raise SaltRunnerError("No git_pillar remotes are configured")
 
+    print(f"DGM runners git_pillar update, exit ret '{ret}'", flush=True)
     return ret
