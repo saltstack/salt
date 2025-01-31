@@ -17,16 +17,16 @@ on:
 
 
 
-debug:
+jobs:
+  debug:
+    runs-on: {{ inputs.runner }}
+    environment: ci
+    steps:
 
-  runs-on: {{ inputs.runner }}
-  environment: ci
-  steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
-
-    - uses: ./.github/actions/ssh-tunnel
-      with:
-        public_key: ${{ inputs.public_key }}
-        offer: ${{ inputs.offer }}
+      - uses: ./.github/actions/ssh-tunnel
+        with:
+          public_key: ${{ inputs.public_key }}
+          offer: ${{ inputs.offer }}
