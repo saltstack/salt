@@ -327,6 +327,51 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(systemd, "show", mock):
                 self.assertDictEqual(systemd.execs(), {"a": "c", "b": "c"})
 
+    def _check_automatic_daemon_reload(self, reload_needed):
+        """
+        Test if a needed 'systemctl daemon-reload' is detected and executed when starting a service
+        """
+        status = _SYSTEMCTL_STATUS["sshd.service"]
+        if reload_needed:
+            status[
+                "stdout"
+            ] = f"""\
+Warning: The unit file, source configuration file or drop-ins of sshd.service changed on disk. Run 'systemctl daemon-reload' to reload units.
+{status["stdout"]}"""
+
+        mock_systemctl_reload = MagicMock(return_value=True)
+        mock_run = MagicMock(
+            side_effect=lambda x, **_: (
+                status
+                if "status" in x
+                else {"stdout": "", "stderr": "", "retcode": 0, "pid": 54321}
+            )
+        )
+
+        with patch("salt.utils.path.which", lambda x: "/bin/" + x):
+            with patch.object(
+                systemd, "_untracked_custom_unit_found", MagicMock(return_value=False)
+            ):
+                with patch.object(systemd, "systemctl_reload", mock_systemctl_reload):
+                    with patch.object(
+                        systemd, "_check_unmask", MagicMock(return_value=None)
+                    ):
+                        with patch.dict(
+                            systemd.__salt__,
+                            {
+                                "config.get": MagicMock(return_value=False),
+                                "cmd.run_all": mock_run,
+                            },
+                        ):
+                            self.assertTrue(systemd.start("sshd.service"))
+                            self.assertTrue(
+                                (mock_systemctl_reload.call_count == 1) == reload_needed
+                            )
+
+    def test_automatic_daemon_reload(self):
+        self._check_automatic_daemon_reload(False)
+        self._check_automatic_daemon_reload(True)
+
 
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -395,7 +440,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                     self.assertTrue(ret)
                                     self.mock_run_all_success.assert_called_with(
                                         scope_prefix + systemctl_command,
-                                        **assert_kwargs
+                                        **assert_kwargs,
                                     )
 
                                 # Scope enabled, failed
@@ -418,7 +463,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                         )
                                     self.mock_run_all_failure.assert_called_with(
                                         scope_prefix + systemctl_command,
-                                        **assert_kwargs
+                                        **assert_kwargs,
                                     )
 
                                 # Scope disabled, successful
