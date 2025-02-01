@@ -13,7 +13,8 @@ inputs:
   debug:
     required: false
     type: bool
-    default: true
+    default: false
+    description: Run sshd with debug enabled.
 
 runs:
   using: composite
