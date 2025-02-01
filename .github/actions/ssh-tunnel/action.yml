@@ -36,6 +36,8 @@ runs:
       run: |
         if [ "$RUNNER_OS" = "Windows" ]; then
           powershell.exe -command "Start-Service sshd"
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          sudo launchctl start com.openssh.sshd
         else
           sudo systemctl start ssh
         fi
@@ -75,6 +77,8 @@ runs:
         if [ "${{ inputs.debug }}" = "true" ]; then
           if [ "$RUNNER_OS" = "Windows" ]; then
             powershell.exe -command "Stop-Service sshd"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo launchctl stop com.openssh.sshd
           else
             sudo systemctl stop ssh
           fi
