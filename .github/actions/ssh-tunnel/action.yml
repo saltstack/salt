@@ -90,6 +90,8 @@ runs:
         if [ "${{ inputs.debug }}" = "true" ]; then
           if [ "$RUNNER_OS" = "Windows" ]; then
             ./OpenSSH-Win64/sshd.exe -d &
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo /usr/sbin/sshd -d &
           else
             sudo mkdir -p /run/sshd
             sudo chmod 755 /run/sshd
