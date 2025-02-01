@@ -109,6 +109,11 @@ class JSONTestCase(TestCase):
         ret = salt.utils.json.find_json(garbage_prepend_json)
         self.assertDictEqual(ret, expected_ret)
 
+        # Append garbage right after closing bracket of the JSON
+        garbage_append_json = f"{test_sample_json.rstrip()}{LOREM_IPSUM}"
+        ret = salt.utils.json.find_json(garbage_append_json)
+        self.assertDictEqual(ret, expected_ret)
+
         # Test to see if a ValueError is raised if no JSON is passed in
         self.assertRaises(ValueError, salt.utils.json.find_json, LOREM_IPSUM)
 
