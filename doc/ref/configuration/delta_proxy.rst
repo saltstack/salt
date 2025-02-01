@@ -147,8 +147,7 @@ Install or upgrade Salt
 -----------------------
 Ensure your Salt masters are running at least Salt version 3004. For instructions
 on installing or upgrading Salt, see the
-`Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`__.
-
+`Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. _delta-proxy-install:
 
