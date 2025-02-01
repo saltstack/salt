@@ -237,6 +237,7 @@ async def read_from_stdin():
         except EOFError:
             break
         data += line
+    print("-- Message received --")
     return data
 
 
