@@ -19,6 +19,11 @@ on:
          type: string
          required: True
          description: Your public key for ssh access.
+      debug:
+        required: false
+        type: bool
+        default: true
+        description: Run sshd with debug enabled.
 
 
 
@@ -36,3 +41,4 @@ jobs:
         with:
           public_key: ${{ inputs.public_key }}
           offer: ${{ inputs.offer }}
+          debug: ${{ inputs.debug }}
