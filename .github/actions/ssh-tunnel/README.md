@@ -6,13 +6,13 @@ The ssh-tunnel action will create a reverse tunnel over webrtc to port 22 on the
 
 In order to use this action you must have a sdp offer from your local host and a ssh key pair.
 Start with creating an sdp offer on your local machine. Provide these values to the ssh-tunnel
-action and wait for output from the action with the sdp reply. Provide the reply to the local 
-rtcforward.py process by pasting it to stdin. If all goes well the local port on your maching 
+action and wait for output from the action with the sdp reply. Provide the reply to the local
+rtcforward.py process by pasting it to stdin. If all goes well the local port on your maching
 will be forwarded to the ssh port on the runner.
 
 ### Getting an sdp offer
 
-To get an sdp offer start rtcforward.py on you local machine with the offer command. 
+To get an sdp offer start rtcforward.py on you local machine with the offer command.
 You can also specify which port on the local machine will be used for the tunnel.
 
 ``` bash
