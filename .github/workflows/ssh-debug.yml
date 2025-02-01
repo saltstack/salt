@@ -7,22 +7,22 @@ on:
       - '**'
   workflow_dispatch:
     inputs:
-       runner:
-         type: string
-         required: True
-         description: The runner to start a tunnel on.
-       offer:
-         type: string
-         required: True
-         description: SDP Offer
-       public_key:
-         type: string
-         required: True
-         description: Your public key for ssh access.
+      runner:
+        type: string
+        required: True
+        description: The runner to start a tunnel on.
+      offer:
+        type: string
+        required: True
+        description: SDP Offer
+      public_key:
+        type: string
+        required: True
+        description: Your public key for ssh access.
       debug:
         required: false
-        type: bool
-        default: true
+        type: boolean
+        default: false
         description: Run sshd with debug enabled.
 
 
