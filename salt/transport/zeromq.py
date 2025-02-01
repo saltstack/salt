@@ -1135,7 +1135,7 @@ class RequestClient(salt.transport.base.RequestClient):
             try:
                 await self.socket.send(message)
                 ret = await self.socket.recv()
-            except zmq.error.ZMQError:
+            except (zmq.error.ZMQError, AttributeError):
                 self.close()
                 await self.connect()
                 await self.socket.send(message)
