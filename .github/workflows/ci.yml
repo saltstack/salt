@@ -24,7 +24,7 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-  actions: write  # for technote-space/workflow-conclusion-action to get the job statuses
+  actions: write
 
 concurrency:
   # Concurrency is defined in a way that concurrent builds against branches do
@@ -54,7 +54,6 @@ jobs:
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
-      - run: exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
