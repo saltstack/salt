@@ -53,6 +53,8 @@ jobs:
     env:
       USE_S3_CACHE: 'false'
     steps:
+      - name: "Fail"
+        run: exit 1
 
       - name: "Throttle Builds"
         shell: bash
