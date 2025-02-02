@@ -485,3 +485,14 @@ jobs:
         if: always()
         run:
           echo "All worflows finished"
+
+  retry-if-needed:
+    needs:
+      - set-pipeline-exit-status
+    if: failure() && fromJSON(github.run_attempt) < 3
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run retry-workflow.yml -F run_id=${{ github.run_id }}
