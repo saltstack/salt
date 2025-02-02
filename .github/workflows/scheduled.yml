@@ -74,7 +74,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: ci
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
@@ -551,7 +551,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - workflow-requirements
       - trigger-branch-scheduled-builds

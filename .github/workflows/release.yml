@@ -424,7 +424,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - check-requirements
       - prepare-workflow

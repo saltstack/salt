@@ -38,7 +38,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: ci
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
@@ -641,7 +641,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - prepare-workflow
       - pre-commit
