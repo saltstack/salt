@@ -46,9 +46,7 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-<%- if workflow_slug not in ("nightly", "scheduled") %>
-  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
-<%- endif %>
+  actions: write
 
 <%- endblock permissions %>
 

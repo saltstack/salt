@@ -24,7 +24,7 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
+  actions: write  # for technote-space/workflow-conclusion-action to get the job statuses
 
 concurrency:
   # Concurrency is defined in a way that concurrent builds against branches do

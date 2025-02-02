@@ -1,4 +1,5 @@
 name: Retry workflow
+run-name: Retry workflow ${{ inputs.run_id }}
 
 on:
     workflow_dispatch:
