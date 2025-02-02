@@ -102,6 +102,7 @@ jobs:
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
+      - run: exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
@@ -377,6 +378,7 @@ jobs:
         run:
           echo "All worflows finished"
 
+<%- block retry %>
   retry-if-needed:
     needs:
       - set-pipeline-exit-status
@@ -387,3 +389,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run retry-workflow.yml -F run_id=${{ github.run_id }}
+<%- endblock retry %>
