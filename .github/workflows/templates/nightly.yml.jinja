@@ -39,13 +39,6 @@ concurrency:
 
 <%- endblock concurrency %>
 
-<%- block permissions %>
-<{- super() }>
-<%- if workflow_slug == "nightly" %>
-  actions: write  # to trigger branch nightly builds
-<%- endif %>
-<%- endblock permissions %>
-
 <%- block pre_jobs %>
 
   <%- include "workflow-requirements-check.yml.jinja" %>
