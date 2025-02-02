@@ -2002,7 +2002,9 @@ class State:
         with salt.utils.files.fopen(tfile, "wb+") as fp_:
             fp_.write(msgpack_serialize(ret))
 
-    def call_parallel(self, cdata: dict[str, Any], low: LowChunk):
+    def call_parallel(
+        self, cdata: dict[str, Any], low: LowChunk, running: dict[str, dict]
+    ):
         """
         Call the state defined in the given cdata in parallel
         """
@@ -2025,13 +2027,19 @@ class State:
             args=(instance, self._init_kwargs, name, cdata, low),
             name=f"ParallelState({name})",
         )
-        proc.start()
+        if "__procs__" not in running:
+            running["__procs__"] = {}
+        running["__procs__"][_gen_tag(low)] = proc
+        if self.check_max_parallel(running):
+            proc.start()
+            comment = "Started in a separate process"
+        else:
+            comment = "Waiting to be started in a separate process, max_parallel hit"
         ret = {
             "name": name,
             "result": None,
             "changes": {},
-            "comment": "Started in a separate process",
-            "proc": proc,
+            "comment": comment,
         }
         return ret
 
@@ -2177,7 +2185,9 @@ class State:
                         )
                     elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
-                        ret = self.call_parallel(cdata, low)
+                        ret = self.call_parallel(
+                            cdata, low, running if running is not None else {}
+                        )
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
@@ -2468,6 +2478,20 @@ class State:
         """
         Iterate over a list of chunks and call them, checking for requires.
         """
+
+        def _call_pending(
+            pending: dict[str, LowChunk], running: dict[str, dict]
+        ) -> tuple[dict[str, LowChunk], dict[str, dict], bool]:
+            still_pending = {}
+            for tag, pend in pending.items():
+                if tag not in running:
+                    running, is_pending = self.call_chunk(pend, running, chunks)
+                    if is_pending:
+                        still_pending[tag] = pend
+                    if self.check_failhard(pend, running):
+                        return still_pending, running, True
+            return still_pending, running, False
+
         if disabled_states is None:
             # Check for any disabled states
             disabled = {}
@@ -2475,25 +2499,42 @@ class State:
                 self._check_disabled(chunk, disabled)
         else:
             disabled = disabled_states
-        running = {}
+        # Pre-populate the __procs__ key to always allow implicit
+        # propagation of terminated procs from within _check_requisites.
+        running = {"__procs__": {}}
+        pending_chunks = {}
         for low in chunks:
+            pending_chunks, running, failhard = _call_pending(pending_chunks, running)
+            if failhard:
+                return running
             if "__FAILHARD__" in running:
                 running.pop("__FAILHARD__")
                 return running
+            # Start any queued states when state_max_parallel has been hit previously
+            self.reconcile_procs(running)
+
             tag = _gen_tag(low)
             if tag not in running:
                 # Check if this low chunk is paused
                 action = self.check_pause(low)
                 if action == "kill":
                     break
-                running = self.call_chunk(low, running, chunks)
+                running, pending = self.call_chunk(low, running, chunks)
+                if pending:
+                    pending_chunks[tag] = low
                 if self.check_failhard(low, running):
                     return running
+        while pending_chunks:
+            pending_chunks, running, failhard = _call_pending(pending_chunks, running)
+            if failhard:
+                return running
+            time.sleep(0.01)
         while True:
             if self.reconcile_procs(running):
                 break
             time.sleep(0.01)
-        ret = dict(list(disabled.items()) + list(running.items()))
+        running.pop("__procs__", None)
+        ret = {**disabled, **running}
         return ret
 
     def check_failhard(self, low: LowChunk, running: dict[str, dict]):
@@ -2556,41 +2597,62 @@ class State:
                 return "run"
         return "run"
 
+    def check_max_parallel(self, running: dict) -> bool:
+        """
+        Check whether an additional ``parallel`` state can be started.
+        """
+        if not (allowed := self.opts.get("state_max_parallel")):
+            return True
+        cnt = sum(
+            int(proc.ident is not None and proc.is_alive())
+            for proc in running.get("__procs__", {}).values()
+        )
+        return cnt < allowed
+
     def reconcile_procs(self, running: dict) -> bool:
         """
         Check the running dict for processes and resolve them
         """
         retset = set()
-        for tag in running:
-            proc = running[tag].get("proc")
-            if proc:
-                if not proc.is_alive():
-                    ret_cache = os.path.join(
-                        self.opts["cachedir"],
-                        self.jid,
-                        salt.utils.hashutils.sha1_digest(tag),
-                    )
-                    if not os.path.isfile(ret_cache):
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel process failed to return",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    try:
-                        with salt.utils.files.fopen(ret_cache, "rb") as fp_:
-                            ret = msgpack_deserialize(fp_.read())
-                    except OSError:
-                        ret = {
-                            "result": False,
-                            "comment": "Parallel cache failure",
-                            "name": running[tag]["name"],
-                            "changes": {},
-                        }
-                    running[tag].update(ret)
-                    running[tag].pop("proc")
-                else:
-                    retset.add(False)
+        # Cannot iterate over the dict itself, need to pop items from the dictionary later
+        for tag in list(running.get("__procs__", {})):
+            if tag not in running:
+                # When checking requisites, this function is called with a filtered
+                # running dict. This tag is not part of the requisites, so skip it.
+                continue
+            proc = running["__procs__"][tag]
+            if proc.ident is None:
+                if self.check_max_parallel(running):
+                    proc.start()
+                    running[tag]["comment"] = "Started in a separate process"
+                retset.add(False)
+            elif not proc.is_alive():
+                ret_cache = os.path.join(
+                    self.opts["cachedir"],
+                    self.jid,
+                    salt.utils.hashutils.sha1_digest(tag),
+                )
+                if not os.path.isfile(ret_cache):
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel process failed to return",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                try:
+                    with salt.utils.files.fopen(ret_cache, "rb") as fp_:
+                        ret = msgpack_deserialize(fp_.read())
+                except OSError:
+                    ret = {
+                        "result": False,
+                        "comment": "Parallel cache failure",
+                        "name": running[tag]["name"],
+                        "changes": {},
+                    }
+                running[tag].update(ret)
+                running["__procs__"].pop(tag)
+            else:
+                retset.add(False)
         return False not in retset
 
     def _check_requisites(self, low: LowChunk, running: dict[str, dict[str, Any]]):
@@ -2599,6 +2661,7 @@ class State:
         states.
         """
         reqs = {}
+        pending = False
         for req_type, chunk in self.dependency_dag.get_dependencies(low):
             reqs.setdefault(req_type, []).append(chunk)
         fun_stats = set()
@@ -2610,7 +2673,7 @@ class State:
             else:
                 run_dict = running
 
-            filtered_run_dict = {}
+            filtered_run_dict = {"__procs__": run_dict.get("__procs__", {})}
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 run_dict_chunk = run_dict.get(tag)
@@ -2618,15 +2681,20 @@ class State:
                     filtered_run_dict[tag] = run_dict_chunk
             run_dict = filtered_run_dict
 
-            while True:
-                if self.reconcile_procs(run_dict):
-                    break
-                time.sleep(0.01)
+            if low.get("parallel"):
+                pending = not self.reconcile_procs(run_dict)
+            else:
+                while True:
+                    if self.reconcile_procs(run_dict):
+                        break
+                    time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
                     req_stats.add("unmet")
+                    continue
+                if pending:
                     continue
                 # A state can include a "skip_req" key in the return dict
                 # with a True value to skip triggering onchanges, watch, or
@@ -2684,6 +2752,8 @@ class State:
 
         if "unmet" in fun_stats:
             status = "unmet"
+        elif pending:
+            status = "pending"
         elif "fail" in fun_stats:
             status = "fail"
         elif "skip_req" in fun_stats and (fun_stats & {"onchangesmet", "premet"}):
@@ -2765,7 +2835,7 @@ class State:
         running: dict[str, dict],
         chunks: Sequence[LowChunk],
         depth: int = 0,
-    ) -> dict[str, dict]:
+    ) -> tuple[dict[str, dict], bool]:
         """
         Execute the chunk if the requisites did not fail
         """
@@ -2781,8 +2851,13 @@ class State:
 
         status, reqs = self._check_requisites(low, running)
         if status == "unmet":
-            if self._call_unmet_requisites(low, running, chunks, tag, depth):
-                return running
+            running_failhard, pending = self._call_unmet_requisites(
+                low, running, chunks, tag, depth
+            )
+            if running_failhard or pending:
+                return running, pending
+        elif status == "pending":
+            return running, True
         elif status == "met":
             if low.get("__prereq__"):
                 self.pre[tag] = self.call(low, chunks, running)
@@ -2910,7 +2985,7 @@ class State:
                 for key in ("__sls__", "__id__", "name"):
                     running[sub_tag][key] = low.get(key)
 
-        return running
+        return running, False
 
     def _assign_not_run_result_dict(
         self,
@@ -2944,16 +3019,19 @@ class State:
         chunks: Sequence[LowChunk],
         tag: str,
         depth: int,
-    ) -> dict[str, dict]:
+    ) -> tuple[dict[str, dict], bool]:
+        pending = False
         for _, chunk in self.dependency_dag.get_dependencies(low):
             # Check to see if the chunk has been run, only run it if
             # it has not been run already
             ctag = _gen_tag(chunk)
             if ctag not in running:
-                running = self.call_chunk(chunk, running, chunks)
+                running, pending = self.call_chunk(chunk, running, chunks)
+                if pending:
+                    return running, pending
                 if self.check_failhard(chunk, running):
                     running["__FAILHARD__"] = True
-                    return running
+                    return running, pending
         if low.get("__prereq__"):
             status, _ = self._check_requisites(low, running)
             self.pre[tag] = self.call(low, chunks, running)
@@ -2975,11 +3053,11 @@ class State:
                 for key in ("__sls__", "__id__", "name"):
                     running[tag][key] = low.get(key)
             else:
-                running = self.call_chunk(low, running, chunks, depth)
+                running, pending = self.call_chunk(low, running, chunks, depth)
         if self.check_failhard(low, running):
             running["__FAILHARD__"] = True
-            return running
-        return {}
+            return running, pending
+        return {}, pending
 
     def call_beacons(self, chunks: Iterable[LowChunk], running: dict) -> dict:
         """
