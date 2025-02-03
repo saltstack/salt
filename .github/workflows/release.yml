@@ -435,7 +435,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: im-open/workflow-conclusion@v2
+        uses: im-open/workflow-conclusion@v2.2.3
 
       - run: |
           # shellcheck disable=SC2129
