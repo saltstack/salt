@@ -726,7 +726,16 @@ jobs:
     environment: ci
     runs-on: ubuntu-24.04
     steps:
-      - env:
+
+      - name: Generate a token
+        id: generate-token
+        if: ${{ vars.APP_ID != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Run retry workflow
+        env:
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token && steps.generate-token.outputs.token || github.token }}
         run: gh workflow run retry-workflow.yml -F run_id=${{ github.run_id }} --ref=${{ github.ref }}
