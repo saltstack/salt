@@ -1,5 +1,5 @@
 name: Workflow Finished
-run-name: Workflow ${{ github.event.workflow.name }} Finished
+run-name: Workflow Finished ${{ github.event.workflow_run.display_title }} (${{ github.event.workflow_run.conclusion }})
 
 on:
   workflow_run:
