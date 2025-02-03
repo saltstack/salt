@@ -24,7 +24,6 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-  metadata: read
   actions: write
 
 concurrency:
@@ -677,6 +676,7 @@ jobs:
     needs:
       - set-pipeline-exit-status
     if: failure() && fromJSON(github.run_attempt) < 3
+    environment: ci
     runs-on: ubuntu-24.04
     steps:
       - env:
