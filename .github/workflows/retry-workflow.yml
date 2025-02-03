@@ -1,0 +1,37 @@
+name: Retry workflow
+run-name: Retry workflows
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '*/10 * * * *'
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    environment: ci
+    steps:
+      - name: rerun ${{ inputs.run_id }}
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          cat <<"EOF" > jq.cmd
+          .[]
+           | select(
+             ( .updatedAt |fromdate ) > ( $d |tonumber ) and .attempt < 5
+           ).databaseId
+          EOF
+          gh run ls -w ci.yml --status failure \
+          --limit=1000 --json databaseId,updatedAt,attempt > json
+          for i in $(cat json| jq --arg d $((`date -u +%s` - 86400)) "$(cat jq.cmd)"); do
+            echo Restarting run $i
+            gh run rerun $i --failed || true
+          done
