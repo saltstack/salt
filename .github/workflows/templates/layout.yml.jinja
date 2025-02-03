@@ -100,6 +100,7 @@ jobs:
     env:
       LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
     steps:
+      - run: exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version

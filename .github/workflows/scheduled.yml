@@ -93,6 +93,7 @@ jobs:
     env:
       LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
     steps:
+      - run: exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
@@ -586,7 +587,7 @@ jobs:
   retry-if-needed:
     needs:
       - set-pipeline-exit-status
-    if: failure() && fromJSON(github.run_attempt) < 3
+    if: failure() && fromJSON(github.run_attempt) < 3 && github.event_name != 'pull_request' || ( github.event.repository.fork == false || vars.APP_ID != '' )
     environment: ci
     runs-on: ubuntu-24.04
     steps:
