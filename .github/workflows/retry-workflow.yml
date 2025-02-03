@@ -29,9 +29,9 @@ jobs:
              ( .updatedAt |fromdate ) > ( $d |tonumber ) and .attempt < 5
            ).databaseId
           EOF
-          gh run ls -w ci.yml --status failure --status startup_failure \
-          --limit=100  --json databaseId,updatedAt,attempt > json
-          for i in $(cat json| jq --arg d $((`date -u +%s` - 2 * 24 * 60 * 60)) "$(cat jq.cmd)"); do
+          gh run ls -w ci.yml --status failure \
+          --limit=1000 --json databaseId,updatedAt,attempt > json
+          for i in $(cat json| jq --arg d $((`date -u +%s` - 24 * 60 * 60 * 1000)) "$(cat jq.cmd)"); do
             echo Restarting run $i
             gh run rerun $i --failed || true
           done
