@@ -520,11 +520,20 @@ class GitProvider:
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
-                self._cache_basename = self.get_checkout_target()
+                ## DGM self._cache_basename = self.get_checkout_target()
+                dgm_cache_basename = self.get_checkout_target()
+                self._cache_basename = dgm_cache_basename.replace(
+                    "/", "-"
+                )  # replace '/' with '-' to not cause trouble with file-system
                 print(
-                    f"DGM class GitProvider dunder init, self.id '{self.id}', self._cache_basename '{self._cache_basename}'",
+                    f"DGM class GitProvider dunder init, have__env__, self.id '{self.id}', dgm_cache_basename '{dgm_cache_basename}', self._cache_basename '{self._cache_basename}'",
                     flush=True,
                 )
+                if dgm_cache_basename != self._cache_basename:
+                    print(
+                        "DGM class GitProvider dunder init, have__env__, caught slash in get_checkout_target for cache basename",
+                        flush=True,
+                    )
 
             except AttributeError:
                 log.critical(
@@ -1326,14 +1335,40 @@ class GitProvider:
         """
         Resolve dynamically-set branch
         """
+        print(
+            f"DGM class GitProvider get_checkout_target, self.role '{self.role}', self.branch '{self.branch}'",
+            flush=True,
+        )
         if self.role == "git_pillar" and self.branch == "__env__":
             try:
+                print(
+                    f"DGM class GitProvider get_checkout_target, returning self.all_saltenvs '{self.all_saltenvs}'",
+                    flush=True,
+                )
                 return self.all_saltenvs
             except AttributeError:
                 # all_saltenvs not configured for this remote
                 pass
             target = self.opts.get("pillarenv") or self.opts.get("saltenv") or "base"
-            return self.base if target == "base" else str(target)
+            ## DGM return self.base if target == "base" else str(target)
+            if target == "base":
+                print(
+                    f"DGM class GitProvider get_checkout_target, returning self.base '{self.base}'",
+                    flush=True,
+                )
+                return self.base
+            else:
+                dgm_target = str(target)
+                print(
+                    f"DGM class GitProvider get_checkout_target, returning str target '{dgm_target}'",
+                    flush=True,
+                )
+                return dgm_target
+
+        print(
+            f"DGM class GitProvider get_checkout_target, returning self.branch '{self.branch}'",
+            flush=True,
+        )
         return self.branch
 
     def get_tree(self, tgt_env):
