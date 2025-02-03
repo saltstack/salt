@@ -631,7 +631,7 @@ jobs:
     environment: ci
     runs-on: ubuntu-24.04
     steps:
-
+      # Restarts on PRs from public forks requires an app id.
       - name: Generate a token
         id: generate-token
         if: ${{ vars.APP_ID != '' }}
