@@ -35,12 +35,12 @@ jobs:
     name: Set the ${{ github.event.workflow.name }} Pipeline Exit Status
     if: ${{ github.event.workflow_run.conclusion == 'success'  || github.event.workflow_run.run_attempt >= 5 }}
     runs-on: ubuntu-latest
-    shell: bash
     needs:
       - show-context
       - on-failure
     steps:
-      - run:
+      - shell: bash
+        run:
           if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
             exit 1;
           else
