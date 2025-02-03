@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ci
     steps:
-      - name: rerun ${{ inputs.run_id }}
+      - name: Rerun failed workflows
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
