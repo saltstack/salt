@@ -1,20 +1,36 @@
 name: Retry workflow
-run-name: Retry workflow ${{ inputs.run_id }}
+run-name: Retry workflows
 
 on:
-    workflow_dispatch:
-        inputs:
-            run_id:
-                required: true
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '*/10 * * * *'
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
 
 jobs:
-    rerun:
-        runs-on: ubuntu-latest
-        steps:
-            - name: rerun ${{ inputs.run_id }}
-              env:
-                  GH_REPO: ${{ github.repository }}
-                  GH_TOKEN: ${{ github.token }}
-              run: |
-                  gh run watch ${{ inputs.run_id }} > /dev/null 2>&1
-                  gh run rerun ${{ inputs.run_id }} --failed
+  rerun:
+    runs-on: ubuntu-latest
+    environment: ci
+    steps:
+      - name: rerun ${{ inputs.run_id }}
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          IFS='' read -r -d '' JQ <<"EOF"
+          .[]
+           | select(
+             ( .updatedAt |fromdate ) > ( $d |tonumber ) and .attempt < 5
+           ).databaseId
+          EOF
+          gh run ls -w ci.yml --status failure --status startup_failure \
+          --limit=100  --json databaseId,updatedAt,attempt > json
+          for i in $(cat json| jq --arg d $((`date -u +%s` - 2 * 24 * 60 * 60)) "$JQ"); do
+            gh run watch ${{ $i }} > /dev/null 2>&1
+            gh run rerun ${{ $i }} --failed
+          done
