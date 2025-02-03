@@ -733,6 +733,10 @@ class GitProvider:
         """
         Remove stale refs so that they are no longer seen as fileserver envs
         """
+        print(
+            "DGM class GItProvider clean_stale_refs entry",
+            flush=True,
+        )
         cleaned = []
         cmd_str = "git remote prune origin"
 
@@ -756,6 +760,10 @@ class GitProvider:
         output = cmd.communicate()[0]
         output = output.decode(__salt_system_encoding__)
         if cmd.returncode != 0:
+            print(
+                f"DGM class GitProvider, cmd returncode not 0, Failed to prune stale branches for '{self.role}' remote '{self.id}'. Output from '{cmd_str}' follows:\n'{output}'",
+                flush=True,
+            )
             log.warning(
                 "Failed to prune stale branches for %s remote '%s'. "
                 "Output from '%s' follows:\n%s",
@@ -765,16 +773,31 @@ class GitProvider:
                 output,
             )
         else:
+            print(
+                f"DGM class GitProvider, cmd returncode 0, output '{output}'",
+                flush=True,
+            )
             marker = " * [pruned] "
             for line in salt.utils.itertools.split(output, "\n"):
                 if line.startswith(marker):
                     cleaned.append(line[len(marker) :].strip())
             if cleaned:
+                dgm_str_stale_refs = ", ".join(cleaned)
+                print(
+                    f"DGM class GitProvider, '{self.role}' pruned the following stale refs: '{dgm_str_stale_refs}'",
+                    flush=True,
+                )
                 log.debug(
                     "%s pruned the following stale refs: %s",
                     self.role,
                     ", ".join(cleaned),
                 )
+            else:
+                print(
+                    "DGM class GitProvider, cmd returncode 0, cleaned is empty",
+                    flush=True,
+                )
+
         return cleaned
 
     def clear_lock(self, lock_type="update"):
@@ -2088,8 +2111,16 @@ class Pygit2(GitProvider):
         """
         Clean stale local refs so they don't appear as fileserver environments
         """
+        print(
+            f"DGM class pygit2 clean_stale_refs, local_refs '{local_refs}'",
+            flush=True,
+        )
         try:
             if pygit2.GIT_FETCH_PRUNE:
+                print(
+                    "DGM class pygit2 clean_stale_refs, pygit2.GIT_FETCH_PRUNE is set",
+                    flush=True,
+                )
                 # Don't need to clean anything, pygit2 can do it by itself
                 return []
         except AttributeError:
@@ -2102,6 +2133,10 @@ class Pygit2(GitProvider):
                 "will not reflect branches/tags removed from remote '%s'",
                 PYGIT2_VERSION,
                 self.id,
+            )
+            print(
+                f"DGM class pygit2 clean_stale_refs, The installed version of pygit2 '{PYGIT2_VERSION}' does not support detecting stale refs for authenticated remotes, saltenvs will not reflect branches/tags removed from remote '{self.id}'",
+                flush=True,
             )
             return []
         return super().clean_stale_refs()
@@ -2293,6 +2328,10 @@ class Pygit2(GitProvider):
             )
 
         if received_objects != 0:
+            print(
+                f"DGM class pygit2 _fetch, role '{self.role}' received '{received_objects}' objects for remote '{self.id}'",
+                flush=True,
+            )
             log.debug(
                 "%s received %s objects for remote '%s'",
                 self.role,
@@ -2300,6 +2339,10 @@ class Pygit2(GitProvider):
                 self.id,
             )
         else:
+            print(
+                f"DGM class pygit2 _fetch, 'role {self.role}' remote '{self.id}' is up-to-date",
+                flush=True,
+            )
             log.debug("%s remote '%s' is up-to-date", self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
