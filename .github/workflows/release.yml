@@ -418,23 +418,23 @@ jobs:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
           tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
- set-pipeline-exit-status:
-   # This step is just so we can make github require this step, to pass checks
-   # on a pull request instead of requiring all
-   name: Set the ${{ github.workflow }} Pipeline Exit Status
-   if: always()
-   runs-on: ubuntu-22.04
-   needs:
-     - check-requirements
-     - prepare-workflow
-     - publish-repositories
-     - release
-     - publish-pypi
-     - build-ci-deps
-   steps:
-     - name: Get workflow information
-       id: get-workflow-info
-       uses: im-open/workflow-conclusion@v2
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-22.04
+    needs:
+      - check-requirements
+      - prepare-workflow
+      - publish-repositories
+      - release
+      - publish-pypi
+      - build-ci-deps
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: im-open/workflow-conclusion@v2
 
       - run: |
           # shellcheck disable=SC2129
@@ -445,11 +445,11 @@ jobs:
             echo '```' >> "${GITHUB_STEP_SUMMARY}"
           fi
 
-     - name: Set Pipeline Exit Status
-       shell: bash
-       run: |
-         if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
-           exit 1
-         else
-           exit 0
-         fi
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
