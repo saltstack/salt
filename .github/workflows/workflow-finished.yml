@@ -18,8 +18,6 @@ jobs:
   restart-failed-jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 5 }}
-    needs:
-      - show-context
     steps:
       - name: Restart failed jobs
         env:
