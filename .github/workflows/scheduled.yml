@@ -545,3 +545,35 @@ jobs:
       default-timeout: 360
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+ set-pipeline-exit-status:
+   # This step is just so we can make github require this step, to pass checks
+   # on a pull request instead of requiring all
+   name: Set the ${{ github.workflow }} Pipeline Exit Status
+   if: always()
+   runs-on: ubuntu-22.04
+   needs:
+     - workflow-requirements
+     - trigger-branch-scheduled-builds
+     - prepare-workflow
+     - pre-commit
+     - lint
+     - nsis-tests
+     - build-docs
+     - build-deps-onedir
+     - build-salt-onedir
+     - build-ci-deps
+     - test-packages
+     - test
+   steps:
+     - name: Get workflow information
+       id: get-workflow-info
+       uses: im-open/workflow-conclusion@v2
+
+     - name: Set Pipeline Exit Status
+       shell: bash
+       run: |
+         if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
+           exit 1
+         else
+           exit 0
+         fi

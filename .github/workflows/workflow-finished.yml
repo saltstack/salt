@@ -15,16 +15,6 @@ permissions:
 
 jobs:
 
-  show-context:
-     name: Show Github Context
-     runs-on: ubuntu-latest
-     steps:
-       - name: event
-         env:
-           GITHUB_CONTEXT: ${{ toJson(github) }}
-         run: |
-           echo "$GITHUB_CONTEXT"
-
   restart-failed-jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 5 }}
@@ -37,19 +27,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh run rerun ${{ github.event.workflow_run.id }} --failed
-
-  # Branch protection rules require this to run with exit code 0.
-  set-pipeline-exit-status:
-    name: Set the ${{ github.event.workflow.name }} Pipeline Exit Status
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.run_attempt >= 5 }}
-    runs-on: ubuntu-latest
-    needs:
-      - show-context
-    steps:
-      - shell: bash
-        run:
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            exit 1;
-          else
-            exit 0;
-          fi
