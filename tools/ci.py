@@ -820,10 +820,12 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     ctx.exit(0)
 
 
-def _os_test_filter(osdef, transport, chunk, arm_runner):
+def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
     """
     Filter out some test runs based on os, tranport and chunk to be run.
     """
+    if osdef.slug not in requested_slugs:
+        return False
     if transport == "tcp" and chunk in ("unit", "functional"):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
@@ -923,6 +925,72 @@ def _define_testrun(ctx, changed_files, labels, full):
     return testrun
 
 
+def _environment_slugs(ctx, slugdef, labels):
+    """
+    Based a slugs defenition from our environment and labels for a pr, return
+    the requeted slugs for a testrun.
+
+    Environment slug defenitions can be a comma separated list. An "all" item
+    in the list will include all os and package slugs.
+    """
+    requests = [_.strip().lower() for _ in slugdef.split(",") if _.strip()]
+    label_requests = [
+        _[0].rsplit(":", 1)[1] for _ in labels if _[0].startswith("test:os:")
+    ]
+    all_slugs = []
+    slugs = set()
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    if "all" in requests:
+        slugs = all_slugs[:]
+        requests.remove("all")
+    if "all" in label_requests:
+        slugs = all_slugs[:]
+        label_requests.remove("all")
+    for request in requests[:]:
+        if request.startswith("+"):
+            request = request.strip("+")
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                ctx.info("slug already requested from environment {request}")
+                continue
+            slugs.append(request)
+        elif request.startswith("-"):
+            request = request.strip("-")
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                slugs.remove(request)
+            else:
+                ctx.info("slug from environment was never requested {request}")
+        else:
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                ctx.info("slug from environment already requested {request}")
+                continue
+            slugs.append(request)
+
+    for label in label_requests:
+        if label not in all_slugs:
+            ctx.warn(f"invalid slug name from label {label}")
+            continue
+        if label in slugs:
+            ctx.info(f"slug from labels already requested {label}")
+            continue
+        slugs.append(label)
+
+    return slugs
+
+
 @ci.command(
     name="workflow-config",
     arguments={
@@ -962,17 +1030,15 @@ def workflow_config(
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     gh_event: dict[str, Any] = {}
     config: dict[str, Any] = {}
+    labels: list[tuple[str, str]] = []
+    slugs: list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
     ctx.info(f"{pprint.pformat(dict(os.environ))}")
     ctx.info(f"{'==== end environment ====':^80s}")
     ctx.info(f"Github event path is {gh_event_path}")
 
-    if event_name != "pull_request":
-        full = True
-
     if gh_event_path is None:
-        labels = []
         config["linux_arm_runner"] = ""
     else:
         try:
@@ -987,7 +1053,6 @@ def workflow_config(
             pr = gh_event["pull_request"]["number"]
             labels = _get_pr_test_labels_from_event_payload(gh_event)
         else:
-            labels = []
             ctx.warn("The 'pull_request' key was not found on the event payload.")
 
         if gh_event["repository"]["private"]:
@@ -1000,6 +1065,20 @@ def workflow_config(
         else:
             # Public repositories can use github's arm64 runners.
             config["linux_arm_runner"] = "ubuntu-24.04-arm"
+
+    if event_name != "pull_request":
+        full = True
+        requested_slugs = _environment_slugs(
+            ctx,
+            os.environ.get("FULL_TESTRUN_SLUGS", "") or "all",
+            labels,
+        )
+    else:
+        requested_slugs = _environment_slugs(
+            ctx,
+            os.environ.get("PR_TESTRUN_SLUGS", ""),
+            labels,
+        )
 
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
@@ -1016,6 +1095,7 @@ def workflow_config(
     ctx.info(f"{'==== end github event ====':^80s}")
 
     config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
+
     ctx.info(f"{'==== testrun ====':^80s}")
     ctx.info(f"{pprint.pformat(config['testrun'])}")
     ctx.info(f"{'==== testrun ====':^80s}")
@@ -1112,6 +1192,7 @@ def workflow_config(
                     **_.as_dict(),
                 )
                 for _ in TEST_SALT_PKG_LISTING[platform]
+                if _.slug in requested_slugs
             ]
         for version in str_releases:
             for platform in platforms:
@@ -1124,6 +1205,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
+                    if _.slug in requested_slugs
                 ]
                 # Skipping downgrade tests on windows. These tests have never
                 # been run and currently fail. This should be fixed.
@@ -1138,6 +1220,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
+                    if _.slug in requested_slugs
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
@@ -1175,7 +1258,11 @@ def workflow_config(
                                     )
                                     for _ in TEST_SALT_LISTING[platform]
                                     if _os_test_filter(
-                                        _, transport, chunk, config["linux_arm_runner"]
+                                        _,
+                                        transport,
+                                        chunk,
+                                        config["linux_arm_runner"],
+                                        requested_slugs,
                                     )
                                 ]
                             else:
@@ -1198,6 +1285,7 @@ def workflow_config(
                                             transport,
                                             chunk,
                                             config["linux_arm_runner"],
+                                            requested_slugs,
                                         )
                                         and _.arch == arch
                                     ]
@@ -1212,7 +1300,11 @@ def workflow_config(
                                 )
                                 for _ in TEST_SALT_LISTING[platform]
                                 if _os_test_filter(
-                                    _, transport, chunk, config["linux_arm_runner"]
+                                    _,
+                                    transport,
+                                    chunk,
+                                    config["linux_arm_runner"],
+                                    requested_slugs,
                                 )
                             ]
                         else:
@@ -1226,7 +1318,11 @@ def workflow_config(
                                     )
                                     for _ in TEST_SALT_LISTING[platform]
                                     if _os_test_filter(
-                                        _, transport, chunk, config["linux_arm_runner"]
+                                        _,
+                                        transport,
+                                        chunk,
+                                        config["linux_arm_runner"],
+                                        requested_slugs,
                                     )
                                     and _.arch == arch
                                 ]

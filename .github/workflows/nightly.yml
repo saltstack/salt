@@ -100,6 +100,8 @@ jobs:
       config: ${{ steps.workflow-config.outputs.config }}
     env:
       LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
+      FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
+      PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
       - uses: actions/checkout@v4
         with:
