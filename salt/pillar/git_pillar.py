@@ -388,8 +388,6 @@ Setting ``fallback`` per-remote or global configuration parameter will map non-e
 
 """
 
-# DGM comment to generate a rebuild
-
 import copy
 import logging
 
