@@ -1011,11 +1011,14 @@ def workflow_config(
     else:
         ctx.info("Skipping code coverage.")
 
-    config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
-
     ctx.info(f"{'==== github event ====':^80s}")
     ctx.info(f"{pprint.pformat(gh_event)}")
     ctx.info(f"{'==== end github event ====':^80s}")
+
+    config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
+    ctx.info(f"{'==== testrun ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['testrun'])}")
+    ctx.info(f"{'==== testrun ====':^80s}")
 
     jobs = {
         "lint": True,
