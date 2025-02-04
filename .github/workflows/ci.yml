@@ -207,12 +207,12 @@ jobs:
           tools ci workflow-config ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.config)['testrun']['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.config)['testrun']['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
