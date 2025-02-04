@@ -90,9 +90,7 @@ jobs:
     needs:
       - workflow-requirements
     outputs:
-      jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
@@ -238,11 +236,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Jobs To Run
-        id: define-jobs
-        run: |
-          tools ci define-jobs${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ github.event_name }} changed-files.json
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
@@ -257,23 +250,18 @@ jobs:
         run: |
           tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Define Testrun
-        id: define-testrun
-        run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
-
       - name: Define workflow config
         id: workflow-config
         run: |
           tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['testrun']['type'] != 'full' }}
         run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['testrun']['type'] != 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
@@ -494,7 +482,7 @@ jobs:
 
   build-pkgs-onedir:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -514,7 +502,7 @@ jobs:
 
   build-pkgs-src:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -533,7 +521,7 @@ jobs:
     secrets: inherit
   build-ci-deps:
     name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -576,7 +564,7 @@ jobs:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
       python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)["testrun"]) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       skip-code-coverage: true
