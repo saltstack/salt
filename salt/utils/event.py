@@ -570,7 +570,7 @@ class SaltEvent:
                     break
                 if not self._run_io_loop_sync:
                     log.error("Trying to get event with async subscriber")
-                    raise SaltInvocationError("get_event needs synchornous subscriber")
+                    raise SaltInvocationError("get_event needs synchronous subscriber")
                 raw = self.subscriber.read(timeout=wait)
                 if raw is None:
                     break
