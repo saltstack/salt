@@ -104,5 +104,4 @@ def update(branch=None, repo=None):
         else:
             raise SaltRunnerError("No git_pillar remotes are configured")
 
-    print(f"DGM runners git_pillar update, exit ret '{ret}'", flush=True)
     return ret

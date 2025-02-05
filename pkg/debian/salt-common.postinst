@@ -1,4 +1,0 @@
-#!/bin/sh
-set -e
-
-/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib

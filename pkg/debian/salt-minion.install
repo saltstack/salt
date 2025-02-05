@@ -1,4 +1,0 @@
-conf/minion /etc/salt
-conf/proxy /etc/salt
-pkg/common/salt-minion.service /lib/systemd/system
-pkg/common/salt-proxy@.service /lib/systemd/system
