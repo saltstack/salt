@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 
+import salt.utils.files
 import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
@@ -175,3 +176,17 @@ def atomic_open(filename, mode="w"):
         kwargs["newline"] = ""
     ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)
+
+
+def safe_atomic_write(dst, data, backup_mode="", cachedir=""):
+    """
+    Create a temporary file with only user r/w perms, write the binary
+    data and atomically copy it to the destination. Supports the
+    Salt file backup mechanism.
+    """
+    mode = "wb" if isinstance(data, bytes) else "w"
+    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
+    with salt.utils.files.fopen(tmp, mode) as tmp_:
+        tmp_.write(data)
+    salt.utils.files.copyfile(tmp, dst, backup_mode, cachedir)
+    salt.utils.files.safe_rm(tmp)
