@@ -260,3 +260,31 @@ def test_gitpython_multiple_2(gitpython_pillar_opts, grains):
 @skipif_no_pygit2
 def test_pygit2_multiple_2(pygit2_pillar_opts, grains):
     _test_multiple_2(pygit2_pillar_opts, grains)
+
+
+def _test_multiple_slash_in_branch_name(pillar_opts, grains):
+    pillar_opts["pillarenv"] = "doggy/moggy"
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    assert data == {
+        "key": "data",
+        "foo": {
+            "animals": {"breed": "seadog"},
+            "feature/baz": {"test1": "dog", "test2": "kat", "test3": "horse"},
+        },
+    }
+
+
+@skipif_no_gitpython
+def test_gitpython_multiple_slash_in_branch_name(gitpython_pillar_opts, grains):
+    _test_multiple_slash_in_branch_name(gitpython_pillar_opts, grains)
+
+
+@skipif_no_pygit2
+def test_pygit2_multiple_slash_in_branch_name(pygit2_pillar_opts, grains):
+    _test_multiple_slash_in_branch_name(pygit2_pillar_opts, grains)
