@@ -5,6 +5,8 @@ on:
   workflow_run:
     workflows:
      - CI
+     - Nightly
+     - Stage Release
     types:
      - completed
 
