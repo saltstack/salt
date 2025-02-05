@@ -1111,7 +1111,7 @@ def workflow_config(
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
-        "build-deps-ci": True,
+        "build-deps-ci": True if requested_slugs else False,
     }
 
     platforms: list[Literal["linux", "macos", "windows"]] = [
