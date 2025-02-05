@@ -39,12 +39,20 @@ def holy(state_tree_prod):
 
 @pytest.fixture
 def grail_scene33_file(grail):
-    return grail / "scene33"
+    file_obj = grail / "scene33"
+    content = file_obj.read_bytes()
+    content = content.replace(b"\r\n", b"\n")
+    file_obj.write_bytes(content)
+    return file_obj
 
 
 @pytest.fixture
 def grail_scene33_clearsign_file(grail_scene33_file):
-    return grail_scene33_file.with_suffix(".clearsign.asc")
+    file_obj = grail_scene33_file.with_suffix(".clearsign.asc")
+    content = file_obj.read_bytes()
+    content = content.replace(b"\r\n", b"\n")
+    file_obj.write_bytes(content)
+    return file_obj
 
 
 @pytest.fixture
