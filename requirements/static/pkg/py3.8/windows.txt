@@ -69,7 +69,7 @@ jaraco.functools==3.7.0
     #   tempora
 jaraco.text==3.11.1
     # via jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt

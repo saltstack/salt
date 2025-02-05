@@ -62,7 +62,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/docs.in
