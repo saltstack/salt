@@ -1,4 +1,0 @@
-# Controls whether or not service is restarted automatically when it exits.
-# See the manpage for systemd.service(5) for possible values for the "Restart="
-# option.
-RESTART='no'

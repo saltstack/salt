@@ -1,2 +1,0 @@
-opt/saltstack/salt/salt-minion /usr/bin/salt-minion
-opt/saltstack/salt/salt-proxy /usr/bin/salt-proxy
