@@ -2,6 +2,7 @@ import pytest
 
 from salt.pillar.git_pillar import ext_pillar
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
+from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 pytestmark = [
@@ -273,10 +274,17 @@ def _test_multiple_slash_in_branch_name(pillar_opts, grains):
     )
     assert data == {
         "key": "data",
-        "foo": {
-            "animals": {"breed": "seadog"},
-            "feature/baz": {"test1": "dog", "test2": "kat", "test3": "horse"},
-        },
+        "foo": OrderedDict(
+            [
+                ("animals", OrderedDict([("breed", "seadog")])),
+                (
+                    "feature/baz",
+                    OrderedDict(
+                        [("test1", "dog"), ("test2", "kat"), ("test3", "gerbil")]
+                    ),
+                ),
+            ]
+        ),
     }
 
 
