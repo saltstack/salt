@@ -960,7 +960,7 @@ def _environment_slugs(ctx, slugdef, labels):
             if request in slugs:
                 ctx.info("slug already requested from environment {request}")
                 continue
-            slugs.append(request)
+            slugs.add(request)
         elif request.startswith("-"):
             request = request.strip("-")
             if request not in all_slugs:
@@ -977,7 +977,7 @@ def _environment_slugs(ctx, slugdef, labels):
             if request in slugs:
                 ctx.info("slug from environment already requested {request}")
                 continue
-            slugs.append(request)
+            slugs.add(request)
 
     for label in label_requests:
         if label not in all_slugs:
@@ -986,9 +986,9 @@ def _environment_slugs(ctx, slugdef, labels):
         if label in slugs:
             ctx.info(f"slug from labels already requested {label}")
             continue
-        slugs.append(label)
+        slugs.add(label)
 
-    return slugs
+    return list(slugs)
 
 
 @ci.command(
