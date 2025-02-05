@@ -1066,7 +1066,7 @@ def workflow_config(
             # Public repositories can use github's arm64 runners.
             config["linux_arm_runner"] = "ubuntu-24.04-arm"
 
-    if event_name != "pull_request":
+    if event_name != "pull_request" or "test:full" in [_[0] for _ in labels]:
         full = True
         requested_slugs = _environment_slugs(
             ctx,
