@@ -861,12 +861,16 @@ def _define_testrun(ctx, changed_files, labels, full):
     # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
-    changed_pkg_requirements_files = json.loads(
-        changed_files_contents["pkg_requirements_files"]
-    )
-    changed_test_requirements_files = json.loads(
-        changed_files_contents["test_requirements_files"]
-    )
+    changed_pkg_requirements_files: list[str] = []
+    changed_test_requirements_files: list[str] = []
+    if "pkg_requirements_files" in changed_files_contents:
+        changed_pkg_requirements_files = json.loads(
+            changed_files_contents["pkg_requirements_files"]
+        )
+    if "test_requirements_files" in changed_files_contents:
+        changed_test_requirements_files = json.loads(
+            changed_files_contents["test_requirements_files"]
+        )
     if full:
         ctx.info("Full test run chosen")
         testrun = TestRun(type="full", skip_code_coverage=True)
