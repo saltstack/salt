@@ -6,6 +6,8 @@ import types
 
 import pytest
 
+from tests.pytests.functional.states.test_service import _check_systemctl
+
 pytestmark = [
     pytest.mark.skip_on_windows,
     pytest.mark.destructive_test,
@@ -18,6 +20,7 @@ def formula():
     return types.SimpleNamespace(name="nginx-formula", tag="2.8.1")
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_formula(modules):
     ret = modules.state.sls("nginx")
     assert not ret.errors

@@ -2,21 +2,11 @@
 Cluster scinarios.
 """
 
-import os
+import getpass
 import pathlib
 import time
 
-import pytest
-
 import salt.crypt
-
-
-@pytest.fixture
-def login():
-    path = pathlib.Path("/proc/self/loginuid")
-    if not path.exists():
-        path.write_text(f"{os.getuid()}", encoding="utf-8")
-    return os.getlogin()
 
 
 def test_cluster_key_rotation(
@@ -25,7 +15,6 @@ def test_cluster_key_rotation(
     cluster_master_3,
     cluster_minion_1,
     cluster_cache_path,
-    login,
 ):
     cli = cluster_master_2.salt_cli(timeout=120)
     ret = cli.run("test.ping", minion_tgt="cluster-minion-1")
@@ -55,7 +44,7 @@ def test_cluster_key_rotation(
     assert not dfpath.exists()
     salt.crypt.dropfile(
         cluster_master_1.config["cachedir"],
-        user=login,
+        user=getpass.getuser(),
         master_id=cluster_master_1.config["id"],
     )
     assert dfpath.exists()
