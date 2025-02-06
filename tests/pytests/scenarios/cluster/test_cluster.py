@@ -6,14 +6,18 @@ import os
 import pathlib
 import time
 
+import pytest
+
 import salt.crypt
+
 
 @pytest.fixture
 def login():
     path = pathlib.Path("/proc/self/loginuid")
     if not path.exists():
-        path.write_text(f"{os.getuid()}")
+        path.write_text(f"{os.getuid()}", encoding="utf-8")
     return os.getlogin()
+
 
 def test_cluster_key_rotation(
     cluster_master_1,
