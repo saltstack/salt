@@ -112,7 +112,6 @@ tests/integration/cloud/providers/pki/minions
 .python-version
 
 /artifacts/
-artifacts/*
 requirements/static/*/py*/*.log
 
 # Vim's default session file
