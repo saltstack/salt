@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+import signal
 import sys
 import textwrap
 import time
@@ -75,6 +76,42 @@ def print_pastable(data, message="offer"):
     sys.stdout.flush()
     print(f"-- end {message} --")
     sys.stdout.flush()
+
+
+async def read_from_stdin():
+    loop = asyncio.get_event_loop()
+    line = await loop.run_in_executor(
+        None, input, "-- Please enter a message from remote party --\n"
+    )
+    data = line
+    while line:
+        try:
+            line = await loop.run_in_executor(None, input)
+        except EOFError:
+            break
+        data += line
+    print("-- Message received --")
+    return data
+
+
+class Channels:
+    def __init__(self, channels=None):
+        if channels is None:
+            channels = []
+        self.channels = channels
+
+    def add(self, channel):
+        self.channels.append(channel)
+
+    def close(self):
+        for channel in self.channels:
+            channel.close()
+
+
+class ProxyConnection:
+    def __init__(self, pc, channel):
+        self.pc = pc
+        self.channel = channel
 
 
 class ProxyClient:
@@ -219,29 +256,7 @@ class ProxyServer:
             log.exception("WTF")
 
 
-class ProxyConnection:
-    def __init__(self, pc, channel):
-        self.pc = pc
-        self.channel = channel
-
-
-async def read_from_stdin():
-    loop = asyncio.get_event_loop()
-    line = await loop.run_in_executor(
-        None, input, "-- Please enter a message from remote party --\n"
-    )
-    data = line
-    while line:
-        try:
-            line = await loop.run_in_executor(None, input)
-        except EOFError:
-            break
-        data += line
-    print("-- Message received --")
-    return data
-
-
-async def run_answer(pc, args):
+async def run_answer(stop, pc, args):
     """
     Top level offer answer server.
     """
@@ -270,11 +285,11 @@ async def run_answer(pc, args):
     elif obj is BYE:
         print("Exiting")
 
-    while True:
+    while not stop.is_set():
         await asyncio.sleep(0.3)
 
 
-async def run_offer(pc, args):
+async def run_offer(stop, pc, args):
     """
     Top level offer server this will estabilsh a data channel and start a tcp
     server on the port provided. New connections to the server will start the
@@ -324,8 +339,12 @@ async def run_offer(pc, args):
     elif obj is BYE:
         print("Exiting")
 
-    while True:
+    while not stop.is_set():
         await asyncio.sleep(0.3)
+
+
+async def signal_handler(stop, pc):
+    stop.set()
 
 
 if __name__ == "__main__":
@@ -343,16 +362,22 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-
+    stop = asyncio.Event()
     pc = RTCPeerConnection()
     if args.role == "offer":
-        coro = run_offer(pc, args)
+        coro = run_offer(stop, pc, args)
     else:
-        coro = run_answer(pc, args)
+        coro = run_answer(stop, pc, args)
 
     # run event loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    for signame in ("SIGINT", "SIGTERM"):
+        loop.add_signal_handler(
+            getattr(signal, signame),
+            lambda: asyncio.create_task(signal_handler(stop, pc)),
+        )
+
     try:
         loop.run_until_complete(coro)
     except KeyboardInterrupt:
