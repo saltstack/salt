@@ -31,6 +31,7 @@ RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
 ptscripts.set_default_config(DEFAULT_REQS_CONFIG)
 ptscripts.register_tools_module("tools.changelog")
 ptscripts.register_tools_module("tools.ci")
+ptscripts.register_tools_module("tools.container")
 ptscripts.register_tools_module("tools.docs")
 ptscripts.register_tools_module("tools.gh")
 ptscripts.register_tools_module("tools.pkg")
