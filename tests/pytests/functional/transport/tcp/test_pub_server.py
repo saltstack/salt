@@ -16,14 +16,14 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
     master_opts["transport"] = "tcp"
     minion_opts.update(master_ip="127.0.0.1", transport="tcp")
 
-    server = salt.transport.tcp.TCPPublishServer(
+    server = salt.transport.tcp.PublishServer(
         master_opts,
         pub_host="127.0.0.1",
         pub_port=master_opts["publish_port"],
         pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
     )
 
-    client = salt.transport.tcp.TCPPubClient(
+    client = salt.transport.tcp.PublishClient(
         minion_opts,
         io_loop,
         host="127.0.0.1",
@@ -34,7 +34,7 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
 
     publishes = []
 
-    async def publish_payload(payload, callback):
+    async def publish_payload(payload):
         await server.publish_payload(payload)
         payloads.append(payload)
 

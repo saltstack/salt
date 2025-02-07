@@ -1218,25 +1218,6 @@ class TCPPuller:
         See https://tornado.readthedocs.io/en/latest/iostream.html#tornado.iostream.IOStream
         for additional details.
         """
-
-        async def _null(msg):
-            return
-
-        def write_callback(stream, header):
-            if header.get("mid"):
-
-                async def return_message(msg):
-                    pack = salt.transport.frame.frame_msg_ipc(
-                        msg,
-                        header={"mid": header["mid"]},
-                        raw_body=True,
-                    )
-                    await stream.write(pack)
-
-                return return_message
-            else:
-                return _null
-
         unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not stream.closed():
             try:
@@ -1247,7 +1228,6 @@ class TCPPuller:
                     self.io_loop.spawn_callback(
                         self.payload_handler,
                         body,
-                        write_callback(stream, framed_msg["head"]),
                     )
             except tornado.iostream.StreamClosedError:
                 if self.path:
@@ -1315,6 +1295,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     Tornado based TCP PublishServer
     """
 
+    # Required from DaemonizedPublishServer
+    support_ssl = True
+
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
@@ -1336,8 +1319,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path=None,
         pull_path_perms=0o600,
         pub_path_perms=0o600,
-        ssl=None,
         started=None,
+        ssl=None,
     ):
         self.opts = opts
         self.pub_sock = None
@@ -1483,8 +1466,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             name=self.__class__.__name__,
         )
 
-    async def publish_payload(self, payload, *args):
-        return await self.pub_server.publish_payload(payload)
+    async def publish_payload(self, payload, topic_list=None):
+        return await self.pub_server.publish_payload(payload, topic_list)
 
     def connect(self, timeout=None):
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
