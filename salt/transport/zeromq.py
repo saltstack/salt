@@ -837,6 +837,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     Encapsulate synchronous operations for a publisher channel
     """
 
+    # Required from DaemonizedPublishServer
+    support_ssl = False
+
     async_methods = [
         "publish",
     ]
@@ -856,7 +859,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
-        ssl=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
