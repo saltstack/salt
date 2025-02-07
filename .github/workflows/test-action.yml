@@ -476,6 +476,7 @@ jobs:
           --workdir /__w/salt/salt \
           --privileged \
           --ulimit="nofile=262144:262144" \
+          --network ip6net \
           -e "HOME=/github/home" \
           -e GITHUB_ACTIONS=true \
           -e CI=true \
