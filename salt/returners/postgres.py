@@ -269,6 +269,13 @@ def event_return(events):
             cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__["id"]))
 
 
+def all_minions():
+    """
+    Retrive all the minions which are expected to return for job.
+    """
+    
+    return ret
+
 def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
     """
     Save the load to the specified jid id
