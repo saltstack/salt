@@ -134,8 +134,28 @@ jobs:
           docker pull ${{ matrix.container }}
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          GITHUB_ACTIONS: true
+          CI: true
+          SKIP_REQUIREMENTS_INSTALL: 1
+          PRINT_TEST_SELECTION: 0
+          PRINT_TEST_PLAN_ONLY: 0
+          PRINT_SYSTEM_INFO: 0
+          RERUN_FAILURES: 1
+          GITHUB_ACTIONS_PIPELINE: 1
+          SKIP_INITIAL_ONEDIR_FAILURES: 1
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: 1
+          SKIP_CODE_COVERAGE: ${{ inputs.skip-code-coverage && '1' || '0' }}
+          CONVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+          PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+          PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test-pkg --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          tools create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
