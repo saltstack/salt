@@ -478,39 +478,7 @@ jobs:
 
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker \
-          create --name ${{ github.run_id }}_salt-test \
-          --workdir /__w/salt/salt \
-          --privileged \
-          --ulimit="nofile=262144:262144" \
-          --network ip6net \
-          -e "HOME=/github/home" \
-          -e GITHUB_ACTIONS=true \
-          -e CI=true \
-          -e SKIP_REQUIREMENTS_INSTALL=1 \
-          -e PRINT_TEST_SELECTION=0 \
-          -e PRINT_TEST_PLAN_ONLY=0 \
-          -e PRINT_SYSTEM_INFO=0 \
-          -e RERUN_FAILURES=1 \
-          -e GITHUB_ACTIONS_PIPELINE=1 \
-          -e SKIP_INITIAL_ONEDIR_FAILURES=1 \
-          -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-          -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-          -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-          -e COLUMNS=190 \
-          -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-          -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-          -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-          -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-          -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-          -e SALT_TRANSPORT=${{ matrix.transport }} \
-          -e LANG="en_US.UTF-8" \
-          -e SHELL=/bin/bash \
-          -v "/home/runner/work":"/__w" \
-          -v "/tmp/":"/var/lib/docker" \
-          --entrypoint "/usr/lib/systemd/systemd" \
-          ${{ matrix.container }} \
-          --systemd --unit rescue.target
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
