@@ -86,6 +86,16 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
       - name: Download Packages
         uses: actions/download-artifact@v4
         with:
@@ -104,11 +114,6 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
@@ -155,7 +160,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          tools create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -164,11 +169,6 @@ jobs:
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: List Free Space
         run: |
