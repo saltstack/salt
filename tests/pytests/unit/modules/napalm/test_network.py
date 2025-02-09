@@ -20,6 +20,7 @@ def configure_loader_modules():
             "file.join": napalm_test_support.join,
             "file.get_managed": napalm_test_support.get_managed_file,
             "random.hash": napalm_test_support.random_hash,
+            "file.apply_template_on_contents": MagicMock()
         }
     }
 
@@ -181,9 +182,13 @@ def test_load_template():
         "salt.utils.napalm.get_device",
         MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
     ):
+        # template_name
         ret = napalm_network.load_template("set_ntp_peers", peers=["192.168.0.1"])
         assert ret["out"] is None
 
+        # template_source
+        ret = napalm_network.load_template(template_source="ntp server 192.168.0.1")
+        assert ret["out"] is None
 
 def test_commit():
     with patch(
