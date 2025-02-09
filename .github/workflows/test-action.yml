@@ -80,10 +80,6 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux-x86_64'] }}
     steps:
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -97,6 +93,16 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Free Disk Space Before Build
         run: |
@@ -175,7 +181,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          tools create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -385,10 +391,6 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux-arm64'] }}
     steps:
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -400,8 +402,24 @@ jobs:
         run: |
           echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Free Disk Space Before Build
         run: |
@@ -716,6 +734,11 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
       - name: Setup Salt Version
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
@@ -741,12 +764,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
-
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
@@ -1021,7 +1038,7 @@ jobs:
         run: |
           echo true
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
@@ -1339,7 +1356,7 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
