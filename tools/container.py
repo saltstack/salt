@@ -38,7 +38,7 @@ def create(ctx: Context, image: str, name: str = ""):
     workdir = "/salt"
     home = "/root"
     network = "ip6net"
-    if not has_network(ctx, network):
+    if not onci and not has_network(ctx, network):
         ctx.info(f"Creating docker network: {network}")
         create_network(ctx, network)
     if onci:
@@ -90,6 +90,7 @@ def create(ctx: Context, image: str, name: str = ""):
         cmd.extend(["-v", "/home/runner/work:/__w"])
     else:
         cmd.extend(["-v", f"{os.getcwd()}:/salt"])
+        cmd.extend(["--network", network])
     if name:
         cmd.extend(["--name", name])
     cmd.extend(

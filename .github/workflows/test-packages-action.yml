@@ -160,7 +160,7 @@ jobs:
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
       - name: "Start container ${{ matrix.container }}"
         run: |
