@@ -76,6 +76,7 @@ def create(ctx: Context, image: str, name: str = ""):
     cmd = [
         "/usr/bin/docker",
         "create",
+        f"--name={name}",
         "--privileged",
         # "--ulimit",
         # "\"nofile=262144:262144\"",
@@ -101,6 +102,7 @@ def create(ctx: Context, image: str, name: str = ""):
             "rescue.target",
         ],
     )
+    ctx.info(f"command is: {cmd}")
     ret = ctx.run(*cmd, capture=True, check=False)
     if ret.returncode != 0:
         ctx.warn(ret.stderr.decode())
