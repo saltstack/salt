@@ -50,7 +50,7 @@ def create(ctx: Context, image: str, name: str = ""):
         "PRINT_TEST_SELECTION": "0",
         "PRINT_TEST_PLAN_ONLY": "0",
         "PRINT_SYSTEM_INFO": "0",
-        "RERUN_FEAILURES": "0",
+        "RERUN_FAILURES": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
         "RAISE_DEPRECATIONS_RUNTIME_ERRORS": "1",
@@ -69,7 +69,8 @@ def create(ctx: Context, image: str, name: str = ""):
         "CI",
         "SKIP_CODE_COVERAGE",
         "COVERAGE_CONTEXT",
-        "RERUN_FEAILURES",
+        "RERUN_FAILURES",
+        "COLUMNS",
     ]:
         if var in os.environ:
             env[var] = os.environ[var]
