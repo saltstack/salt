@@ -1,9 +1,7 @@
 import pytest
 
 import salt.utils.win_lgpo_netsh as win_lgpo_netsh
-import salt.utils.win_pwsh as win_pwsh
 from salt.exceptions import CommandExecutionError
-from salt.modules.win_useradd import current
 
 pytestmark = [
     pytest.mark.windows_whitelisted,

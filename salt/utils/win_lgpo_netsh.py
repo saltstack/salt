@@ -74,8 +74,6 @@ Usage:
                                                     store='lgpo')
 """
 
-from lib2to3.fixer_util import Comma
-
 import salt.utils.platform
 import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError
@@ -546,7 +544,7 @@ def set_logging_settings(profile, setting, value, store="local"):
     if str(value).lower() == "notconfigured" and store.lower() == "local":
         if setting in ["allowedconnections", "droppedconnections", "maxfilesize"]:
             raise CommandExecutionError(
-                f"NotConfigured only valid when setting Group Policy"
+                "NotConfigured only valid when setting Group Policy"
             )
     if setting == "maxfilesize" and str(value).lower() == "notconfigured":
         raise CommandExecutionError(f"NotConfigured not a valid option for {setting}")
