@@ -301,7 +301,7 @@
   combine-all-code-coverage:
     <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] == false }}
     runs-on: ubuntu-22.04
     env:
       PIP_INDEX_URL: https://pypi.org/simple

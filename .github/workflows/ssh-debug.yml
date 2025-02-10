@@ -1,24 +1,25 @@
 name: SSH Debug
 run-name: "SSH Debug ${{ inputs.runner }}"
 on:
-  pull_request: {}
-  push:
-    branches:
-      - '**'
   workflow_dispatch:
     inputs:
-       runner:
-         type: string
-         required: True
-         description: The runner to start a tunnel on.
-       offer:
-         type: string
-         required: True
-         description: SDP Offer
-       public_key:
-         type: string
-         required: True
-         description: Your public key for ssh access.
+      runner:
+        type: string
+        required: True
+        description: The runner to start a tunnel on.
+      offer:
+        type: string
+        required: True
+        description: SDP Offer
+      public_key:
+        type: string
+        required: True
+        description: Your public key for ssh access.
+      debug:
+        required: false
+        type: boolean
+        default: false
+        description: Run sshd with debug enabled.
 
 
 
@@ -36,3 +37,4 @@ jobs:
         with:
           public_key: ${{ inputs.public_key }}
           offer: ${{ inputs.offer }}
+          debug: ${{ inputs.debug }}
