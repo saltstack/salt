@@ -1,0 +1,13 @@
+[Unit]
+Description=The Salt Syndic daemon
+After=network.target
+PartOf=salt-master.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-syndic
+
+[Install]
+WantedBy=multi-user.target

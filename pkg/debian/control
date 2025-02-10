@@ -1,0 +1,182 @@
+Source: salt
+Section: admin
+Priority: optional
+Maintainer: Debian Salt Team <pkg-salt-team@lists.alioth.debian.org>
+Uploaders: Joe Healy <joehealy@gmail.com>,
+           Franklin G Mendoza <franklin.g.mendoza@gmail.com>,
+           Andriy Senkovych <jolly_roger@itblog.org.ua>,
+           David Murphy <dmurphy@saltstack.com>
+Build-Depends: bash-completion,
+               debhelper (>= 10)
+Standards-Version: 4.1.3
+Homepage: http://saltproject.io/
+Vcs-Browser: https://github.com/saltstack/salt.git
+Vcs-Git: git://github.com/saltstack/salt.git
+
+
+Package: salt-dbg
+Architecture: amd64 arm64
+Section: debug
+Priority: extra
+Homepage: http://saltproject.io/
+Description: Salt debug symbols
+
+
+Package: salt-common
+Architecture: amd64 arm64
+Depends: ${misc:Depends}
+Breaks: salt-minion (<= 3006.4)
+Suggests: ifupdown
+Recommends: lsb-release
+Description: shared libraries that salt requires for all packages
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides shared libraries that
+ salt-master, salt-minion, and salt-syndic require to function.
+
+
+Package: salt-master
+Architecture: amd64 arm64
+Replaces: salt-common (<= 3006.4)
+Breaks: salt-common (<= 3006.4)
+Depends: salt-common (= ${source:Version}),
+         ${misc:Depends}
+Description: remote manager to administer servers via salt
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides the salt controller.
+
+
+Package: salt-minion
+Architecture: amd64 arm64
+Replaces: salt-common (<= 3006.4)
+Breaks: salt-common (<= 3006.4)
+Depends: bsdmainutils,
+         dctrl-tools,
+         salt-common (= ${source:Version}),
+         ${misc:Depends}
+Recommends: debconf-utils, dmidecode, net-tools
+Description: client package for salt, the distributed remote execution system
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides the worker / agent for salt.
+
+
+Package: salt-syndic
+Architecture: amd64 arm64
+Depends: salt-master (= ${source:Version}),
+         ${misc:Depends}
+Description: master-of-masters for salt, the distributed remote execution system
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides the master of masters for salt
+ - it enables the management of multiple masters at a time.
+
+
+Package: salt-ssh
+Architecture: amd64 arm64
+Breaks: salt-common (<= 3006.4)
+Depends: salt-common (= ${source:Version}),
+         openssh-client,
+         ${misc:Depends}
+Description: remote manager to administer servers via Salt SSH
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides the salt ssh controller. It
+ is able to run salt modules and states on remote hosts via ssh.
+ No minion or other salt specific software needs to be installed
+ on the remote host.
+
+
+Package: salt-cloud
+Architecture: amd64 arm64
+Breaks: salt-common (<= 3006.4)
+Depends: salt-common (= ${source:Version}),
+         ${misc:Depends}
+Description: public cloud VM management system
+ provision virtual machines on various public clouds via a cleanly
+ controlled profile and mapping system.
+
+
+Package: salt-api
+Architecture: amd64 arm64
+Depends: salt-master,
+         ${misc:Depends}
+Description: Generic, modular network access system
+ a modular interface on top of Salt that can provide a variety of entry points
+ into a running Salt system. It can start and manage multiple interfaces
+ allowing a REST API to coexist with XMLRPC or even a Websocket API.
+ .
+ The Salt API system is used to expose the fundamental aspects of Salt control
+ to external sources. salt-api acts as the bridge between Salt itself and
+ REST, Websockets, etc.

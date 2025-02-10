@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+>> - Ends With
+<< - Starts With - Requires CDATA because < is a key character in xml
+
+CADH  - Custom Action Data Helper - Sends variables from the client to the server
+        One way only (send only)
+        Runs as Administrator
+DECAC - Deferred Custom Action - It is run by the msiserver service, local system
+        Runs as LOCAL_SYSTEM
+        Sandboxed
+IMCAC - Immediate Custom Action - It's immediate
+        Runs as Administrator
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  <Product
+    Manufacturer = "$(var.MANUFACTURER)"
+    Name         = "$(var.PRODUCT) $(var.DisplayVersion)"
+    Version      = "$(var.InternalVersion)"
+    UpgradeCode  = "FC6FB3A2-65DE-41A9-AD91-D10A402BD641"
+    Id           = "*"
+    Language     = "1033">
+
+    <!--  Install per Machine -->
+    <Package
+      InstallScope      = "perMachine"
+      InstallerVersion  = "500"
+      Compressed        = "yes"
+      InstallPrivileges = "elevated"
+    />
+
+    <!-- Prevent downgrade -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <!-- Do not create cab files -->
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!--  Abort installation if conditions are met -->
+    <?if $(var.WIN64)="no" ?>
+      <Condition Message="The 32bit variant must be installed on 32bit Windows.">not VersionNT64</Condition>
+    <?endif?>
+    <Condition Message="[AbortReason]">Installed or (not AbortReason)</Condition>
+    <Condition Message="Installation requires Windows 7/Server 2012. Found MsiNTProductType [MsiNTProductType], VersionNT [VersionNT]">
+      Installed
+      OR (MsiNTProductType = 1) AND (VersionNT >= 601)
+      OR (MsiNTProductType = 2) AND (VersionNT >= 602)
+      OR (MsiNTProductType = 3) AND (VersionNT >= 602)
+    </Condition>
+    <Condition Message="Installation requires 125 MB RAM. Found [PhysicalMemory] MB">Installed OR (PhysicalMemory > 125)</Condition>
+    <!--
+      ReadConfig_IMCAC must run immediately as Admin, the msi cannot elevate
+      before deferred, so the user must be Admin. We need to run with elevated
+      privileges in order to read the minion config, if it exists, and get the
+      currently configured master and minion id.
+    -->
+    <Condition Message="Searching for configuration requires Administrator privileges. Please open from an elevated command prompt.">Privileged</Condition>
+    <Condition Message="CONFIG_TYPE must not be &quot;[CONFIG_TYPE]&quot;. Please use &quot;Existing&quot;, &quot;Custom&quot; or &quot;Default&quot;.">
+      Installed
+      OR (CONFIG_TYPE = "Existing")
+      OR (CONFIG_TYPE = "Custom")
+      OR (CONFIG_TYPE = "Default")
+    </Condition>
+
+    <!-- Properties default values. For Properties unset by default see README.md -->
+    <Property Id="CONFIG_TYPE"              Value="Default" />
+    <Property Id="START_MINION"             Value="1" />
+    <Property Id="ROOTDRIVE"                Value="C:\" />  <!-- Prevent msi to choose the drive with most free space -->
+    <Property Id="ARPPRODUCTICON"           Value="icon.ico" />
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
+    <Property Id="WIXUI_INSTALLDIR"         Value="INSTALLDIR" />
+
+    <!-- Allow command line alias for Property  -->
+    <SetProperty Id="INSTALLDIR"    Value="[INSTALLFOLDER]" Before="LaunchConditions">INSTALLFOLDER</SetProperty>
+
+    <!--
+    This attempts to set the checkbox in the UI:
+    - If START_MINION is not passed, default to 1.
+    - If START_MINION is passed a value that is not "0"
+    So far it's not working, so commented out for now
+    -->
+<!--     <SetProperty Id="START_MINION"  Value="1" Before="LaunchConditions"><![CDATA[NOT START_MINION OR START_MINION <> "0"]]></SetProperty> -->
+
+    <!-- MINION_CONFIG implies REMOVE_CONFIG  -->
+    <SetProperty Id="REMOVE_CONFIG" Value="1" Before="LaunchConditions">MINION_CONFIG</SetProperty>
+
+    <!-- Search for old config minion file -->
+    <Property Id="OLD_CONF_EXISTS">
+      <DirectorySearch Id="conf_old" Path="C:\salt\conf">
+        <FileSearch Name="minion" />
+      </DirectorySearch>
+    </Property>
+
+    <!-- Search for new config minion file -->
+    <Property Id="NEW_CONF_EXISTS">
+      <DirectorySearch Id="conf_new" Path="C:\ProgramData\Salt Project\Salt\conf">
+        <FileSearch Name="minion" />
+      </DirectorySearch>
+    </Property>
+
+    <!-- Search registry for previous msi and Nullsoft install dirs -->
+    <Property Id="REGISTRY_ROOTDIR">
+      <!-- New layout is C:\ProgramData\Salt Project\Salt -->
+      <?if $(var.WIN64)=yes ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)" Name="root_dir" Win64="yes" Type="raw" Id="p1" />
+      <?endif ?>
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)" Name="root_dir" Win64="no"  Type="raw" Id="p2" />
+    </Property>
+    <!-- Search registry for option to remove config uninstall, set in previous install -->
+    <Property Id="REMOVE_CONFIG">
+      <?if $(var.WIN64)=yes ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)" Name="REMOVE_CONFIG" Win64="yes" Type="raw" Id="p3" />
+      <?endif ?>
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)" Name="REMOVE_CONFIG" Win64="no"  Type="raw" Id="p4" />
+    </Property>
+
+    <!-- Write registry (declare components) and delete on uninstall -->
+    <Component Id="register_dirs" Directory="TARGETDIR">
+      <RegistryKey Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)">
+        <RegistryValue Name="install_dir" Value="[INSTALLDIR]" Type="string" />
+        <RegistryValue Name="root_dir"    Value="[ROOTDIR]"    Type="string" />
+      </RegistryKey>
+    </Component>
+    <Component Id="register_remove_config" Directory="TARGETDIR">
+      <Condition>REMOVE_CONFIG</Condition>
+      <RegistryKey Root="HKLM" Key="SOFTWARE\$(var.MANUFACTURER)\$(var.PRODUCTDIR)" ForceDeleteOnUninstall="yes" >
+        <RegistryValue Name="REMOVE_CONFIG" Value="1"            Type="string" />
+      </RegistryKey>
+    </Component>
+
+    <!-- Search registry for NSIS install  -->
+    <Property         Id="NSIS_UNINSTALLSTRING">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="no"  Id="n1" />
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="yes" Id="n2" />
+    </Property>
+
+    <!-- Detect NSIS install -->
+    <SetProperty Id="nsis_install_found" Before="LaunchConditions" Value="1">NSIS_UNINSTALLSTRING >> "uninst.exe"</SetProperty>
+
+    <!--
+    Workaround.
+    We stop the salt-minion service before validating the installation. Part of
+    validation is checking the log file. If the log file is locked, the check can
+    fail and the install can fail. Something has a lock on the minion log file,
+    either salt-minion or ssm.exe
+
+    Message is:
+    Another application has exclusive access to the file \salt\var\log\salt\minion
+    Please shut down the application
+    -->
+    <CustomAction Id="stopSalt" Script="vbscript">
+      On error resume next
+      Set objShell = CreateObject("WScript.Shell")
+      objShell.Run "net stop salt-minion", 0, true
+    </CustomAction>
+
+    <!-- This is the import statement for the Custom Actions:
+            IMCAC, DECAC, etc...
+    -->
+    <Binary Id="MinionConfigExt" SourceFile="CustomAction01\CustomAction01.CA.dll" />
+
+    <!--
+    The GUI Sequence (ask for input from the user)
+    You should not apply changes, only retrieve config. Normally runs
+    non-privileged, but reading salt config requires admin privilege.
+    https://docs.microsoft.com/en-us/windows/win32/msi/suggested-installuisequence
+    If this sequence is left out, this is a "silent install".
+    -->
+    <InstallUISequence>
+      <Custom Action="ReadConfig_IMCAC" Before="LaunchConditions">NOT Installed</Custom>
+      <LaunchConditions After="AppSearch" /> <!-- Benefit  unclear. -->
+    </InstallUISequence>
+
+    <!--
+    The Install Sequence (aka server side)
+    Run with localsystem privilege.
+
+    https://docs.microsoft.com/en-us/windows/win32/msi/suggested-installexecutesequence
+    If the UI sequence took place, some (non-UI) actions are repeated (e.g. CostInitialize).
+
+    Actions before MigrateFeatureStates:
+      Custom action is placed before the transaction starts, coined "immediate".
+      You should not modifiy the system.
+    Actions after InstallFiles:
+      Custom action is placed after the transaction started, coined "deferred" and run in a sandbox.
+      Deferred custom actions (DECAC) need custom action helper (CADH) to access msi properties
+      You may modify the system.
+    -->
+    <InstallExecuteSequence>
+      <!--
+      On install and uninstall:
+        stopSalt to release log file, installValidate requires access to all
+        files, including the log file
+      -->
+      <Custom Action="stopSalt"                 Before="InstallValidate"          >1</Custom>
+
+      <!--
+      On uninstall or upgrade: stop salt python.exe processes that would lock dll's
+      - This will only run on silent installs. /quiet or /qn
+      - All other installs will display a dialog box of process that need to be closed
+      -->
+      <Custom Action="kill_python_exe"          After="StopServices"              >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
+
+      <!-- ReadConfig_IMCAC must be called before CostInitialize so features can depend on properties set-->
+      <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
+      <Custom Action="del_NSIS_DECAC"           After="InstallInitialize"         >nsis_install_found</Custom>
+
+      <!-- If CLEAN_INSTALL, on install or upgrade: delete config and cache -->
+      <Custom Action="DeleteConfig2_CADH"       Before="DeleteConfig2_DECAC"      >CLEAN_INSTALL and ((NOT Installed) or WIX_UPGRADE_DETECTED)</Custom>
+      <Custom Action="DeleteConfig2_DECAC"      After="InstallInitialize"         >CLEAN_INSTALL and ((NOT Installed) or WIX_UPGRADE_DETECTED)</Custom>
+
+      <Custom Action="MoveInsecureConfig_CADH"  Before="MoveInsecureConfig_DECAC" >(NOT Installed) and INSECURE_CONFIG_FOUND</Custom>
+      <Custom Action="MoveInsecureConfig_DECAC" Before="CreateFolders"            >(NOT Installed) and INSECURE_CONFIG_FOUND</Custom>
+      <Custom Action="BackupConfig_DECAC"       Before="CreateFolders"            >(NOT Installed) and (not INSECURE_CONFIG_FOUND) and (not MINION_CONFIG) and ((CONFIG_TYPE = "Custom") or (CONFIG_TYPE = "Default"))</Custom>
+      <Custom Action="MoveConfig_DECAC"         Before="CreateFolders"            >(NOT Installed) and MOVE_CONF</Custom>
+
+      <Custom Action="WriteConfig_CADH"         Before="WriteConfig_DECAC"        >NOT Installed</Custom>
+      <Custom Action="WriteConfig_DECAC"        After="WriteIniValues"            >NOT Installed</Custom>
+
+      <!-- Optionally start the service  -->
+      <!-- https://learn.microsoft.com/en-us/windows/win32/msi/suggested-installexecutesequence -->
+      <StartServices Sequence="5900">START_MINION</StartServices>
+
+      <!-- On uninstall (not upgrade): delete config and cache -->
+      <Custom Action="DeleteConfig_CADH"        Before="DeleteConfig_DECAC"       >REMOVE ~= "ALL"</Custom>
+      <Custom Action="DeleteConfig_DECAC"       After="RemoveFolders"             >REMOVE ~= "ALL"</Custom>
+
+    </InstallExecuteSequence>
+
+    <!-- Declare Immediate (*_IMCAC) and Deferred (*_DECAC) Custom Actions. -->
+    <!-- These are the entry points into the DLL -->
+    <CustomAction Id="ReadConfig_IMCAC"     BinaryKey="MinionConfigExt" DllEntry="ReadConfig_IMCAC"       Execute="firstSequence" />
+    <CustomAction Id="del_NSIS_DECAC"       BinaryKey="MinionConfigExt" DllEntry="del_NSIS_DECAC"         Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="MoveInsecureConfig_DECAC"  BinaryKey="MinionConfigExt" DllEntry="MoveInsecureConfig_DECAC" Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="MoveConfig_DECAC"     BinaryKey="MinionConfigExt" DllEntry="MoveConfig_DECAC"       Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="WriteConfig_DECAC"    BinaryKey="MinionConfigExt" DllEntry="WriteConfig_DECAC"      Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="DeleteConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="DeleteConfig2_DECAC"  BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="BackupConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="deferred" Return="check" Impersonate="no" />
+    <!-- Custom Action Data Helper for deferred custom actions  -->
+    <!-- master and id must be named like in YAML configuration -->
+    <!-- Send all this stuff down to the sandbox -->
+    <CustomAction Id="WriteConfig_CADH"  Property="WriteConfig_DECAC"  Value="master=[MASTER];id=[MINION_ID];MOVE_CONF=[MOVE_CONF];sourcedir=[SOURCEDIR];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];CONFDIR=[CONFDIR];config_type=[CONFIG_TYPE];MINION_CONFIG=[MINION_CONFIG];custom_config=[CUSTOM_CONFIG];" />
+    <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
+    <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
+    <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
+
+    <!-- Add INSTALLDIR to the system Path -->
+    <DirectoryRef Id="TARGETDIR">
+      <Component Id="INSTALLDIR_System_Path" Guid="A9F54641-91F8-4AFB-B812-9409E6EA0192">
+        <Environment Id="Env_PATH" Name="PATH" Value="[INSTALLDIR]" Permanent="no" Part="last" Action="set" System="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Assemble fixed and conditional features -->
+    <!-- Conditional features need attention for install and uninstall -->
+    <!-- Leaving registry keys would mean the product is still installed -->
+    <Feature Id="ProductFeature" Title="Minion" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <!-- Get the config file template from the msi store only if no config is present -->
+    <Feature Id='GetConfigTemplate' Level='0'>
+      <ComponentGroupRef Id="DiscoveredConfigFiles" />
+      <Condition Level="1">GET_CONFIG_TEMPLATE_FROM_MSI_STORE or (REMOVE ~= "ALL")</Condition>
+    </Feature>
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLDIR">
+      <ComponentGroupRef Id="DiscoveredBinaryFiles" />
+      <ComponentGroupRef Id="service" />
+      <ComponentRef Id="INSTALLDIR_Permissions" />
+      <ComponentRef Id="ROOTDIR_Permissions" />
+      <ComponentRef Id="CreateMinionDDir" />
+      <ComponentRef Id="CreatePKIMinionDir" />
+      <ComponentRef Id="CreateRunDir" />
+      <ComponentRef Id="CreateLogSaltDir" />
+      <ComponentRef Id="CreateProcDir" />
+      <ComponentRef Id="CreateGrainsDir" />
+      <ComponentRef Id="INSTALLDIR_System_Path" />
+      <ComponentRef Id="register_dirs" />
+      <ComponentRef Id="register_remove_config" />
+    </ComponentGroup>
+
+    <!-- Icons -->
+    <Icon        Id="icon.ico"   SourceFile="pkg_resources\Product-icon.ico" />
+    <WixVariable Id="WixUIBannerBmp"  Value="pkg_resources\Product-imgTop.jpg" />
+    <WixVariable Id="WixUIDialogBmp"  Value="pkg_resources\Product-imgLeft.png" />
+    <WixVariable Id="WixUILicenseRtf" Value="pkg_resources\LICENSE.rtf" />
+
+    <!--
+    GUI
+      Built-in dialogs description ... https://wixtoolset.org//documentation/manual/v3/wixui/dialog_reference/wixui_dialogs.html
+      Dialogs appearing (* == built-in):
+        WelcomeDlg*
+        LicenseAgreementDlg*
+        HostsDlg
+        DirectoryDlg = InstallDirDlg*
+        VerifyReadyDlg*
+    -->
+    <UI>
+      <TextStyle Id="WixUI_Font_Warning" FaceName="Tahoma" Size="8" Red="200" Bold="yes" />
+
+      <UIRef Id="WixUI_Mondo" />
+      <UIRef Id="WixUI_ErrorProgressText" /> <!-- This line needed to fix the progress bar on later versions of Windows -->
+
+      <Publish Dialog="LicenseAgreementDlg"   Control="Next"   Event="NewDialog"   Value="HostsDlg" Order="3">LicenseAccepted = "1"</Publish>
+
+      <Publish Dialog="HostsDlg"              Control="Back"   Event="NewDialog"   Value="LicenseAgreementDlg">1</Publish>
+      <Publish Dialog="HostsDlg"              Control="Next"   Event="NewDialog"   Value="DirectoryDlg"       >1</Publish>
+      <Publish Dialog="HostsDlg"              Control="Cancel" Event="SpawnDialog" Value="CancelDlg"          >1</Publish>
+
+      <Publish Dialog="DirectoryDlg"          Control="Back"   Event="NewDialog"   Value="HostsDlg"           >1</Publish>
+      <Publish Dialog="DirectoryDlg"          Control="Next"   Event="NewDialog"   Value="VerifyReadyDlg"     >1</Publish>
+      <Publish Dialog="DirectoryDlg"          Control="Cancel" Event="SpawnDialog" Value="CancelDlg"          >1</Publish>
+
+      <Publish Dialog="VerifyReadyDlg"        Control="Back"   Event="NewDialog"   Value="DirectoryDlg"       >1</Publish>
+
+      <Dialog Id="HostsDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Title"        Type="Text"       X="15"  Y="6"   Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Minion configuration" />
+        <Control Id="Description"  Type="Text"       X="25"  Y="23"  Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Please verify master and minion." />
+        <Control Id="BannerBitmap" Type="Bitmap"     X="0"   Y="0"   Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine"   Type="Line"       X="0"   Y="44"  Width="370" Height="0" />
+        <Control Id="BottomLine"   Type="Line"       X="0"   Y="234" Width="370" Height="0" />
+        <Control Id="MasterLabel"  Type="Text"       X="20"  Y="55"  Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Master (hostnames or IPv4, commma separated):" />
+        <Control Id="MasterId"     Type="Edit"       X="30"  Y="70"  Width="190" Height="15" Property="MASTER" />
+        <Control Id="MinionLabel"  Type="Text"       X="20"  Y="85"  Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Minion:" />
+        <Control Id="MinionId"     Type="Edit"       X="30"  Y="100" Width="190" Height="15" Property="MINION_ID" />
+        <Control Id="cbt_type"     Type="Text"       X="20"  Y="125"  Width="45" Height="15" Transparent="yes" NoPrefix="yes" Text="Config type:">
+          <Condition Action="show">not (MINION_CONFIG or INSECURE_CONFIG_FOUND or (not CONFIG_FOUND))</Condition>
+          <Condition Action="hide">     MINION_CONFIG or INSECURE_CONFIG_FOUND or (not CONFIG_FOUND)</Condition>
+        </Control>
+        <Control Id="cbo_type"     Type="ComboBox"   X="75"  Y="125"  Width="60" Height="15" Property="CONFIG_TYPE" >
+          <ComboBox Property="CONFIG_TYPE">
+            <ListItem Value="Existing" />
+            <ListItem Value="Custom" />
+            <ListItem Value="Default" />
+          </ComboBox>
+          <Condition Action="show">not (MINION_CONFIG or INSECURE_CONFIG_FOUND or (not CONFIG_FOUND))</Condition>
+          <Condition Action="hide">     MINION_CONFIG or INSECURE_CONFIG_FOUND or (not CONFIG_FOUND)</Condition>
+        </Control>
+        <Control Id="StartService" Type="CheckBox"   X="25"  Y="150" Width="280" Height="15" Property="START_MINION"       CheckBoxValue="1" Text="&amp;Start salt-minion service immediately" />
+        <Control Id="HideInARP"    Type="CheckBox"   X="25"  Y="165" Width="280" Height="15" Property="ARPSYSTEMCOMPONENT" CheckBoxValue="1" Text="&amp;Hide in 'Programs and Features'" />
+        <Control Id="conf_txt"     Type="Text"       X="36"  Y="182" Width="130" Height="15"                                                 Text="Remove configuration and cache:" />
+        <Control Id="clean_inst"   Type="CheckBox"   X="166" Y="180" Width="70"  Height="15" Property="CLEAN_INSTALL"      CheckBoxValue="1" Text="B&amp;efore upgrade" />
+        <Control Id="remove_conf"  Type="CheckBox"   X="244" Y="180" Width="60"  Height="15" Property="REMOVE_CONFIG"      CheckBoxValue="1" Text="&amp;On uninstall" />
+        <Control Id="move_conf"    Type="CheckBox"   X="25"  Y="195" Width="280" Height="15" Property="MOVE_CONF"          CheckBoxValue="1" Text="&amp;Move configuration from &quot;C:\salt&quot; to &quot;C:\ProgramData\Salt Project&quot;">
+          <Condition Action="show">     OLD_CONF_EXISTS</Condition>
+          <Condition Action="hide">not (OLD_CONF_EXISTS)</Condition>
+        </Control>
+        <Control Id="Insecure1"    Type="Text"       X="20"  Y="125" Width="320" Height="30" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Warning}Insecure config found at C:\salt\conf. If you continue, the config directory will be renamed and the default config will be used.">
+          <Condition Action="show">     INSECURE_CONFIG_FOUND and (not MINION_CONFIG) </Condition>
+          <Condition Action="hide">not (INSECURE_CONFIG_FOUND and (not MINION_CONFIG))</Condition>
+        </Control>
+        <Control Id="Insecure2"    Type="Text"       X="20"  Y="125" Width="320" Height="30" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Warning}Insecure config found at C:\salt\conf. If you continue, the config directory will be renamed and the MINION_CONFIG property will be used.">
+          <Condition Action="show">     INSECURE_CONFIG_FOUND and      MINION_CONFIG </Condition>
+          <Condition Action="hide">not (INSECURE_CONFIG_FOUND and      MINION_CONFIG)</Condition>
+        </Control>
+        <Control Id="Back"         Type="PushButton" X="180" Y="243" Width="56"  Height="17"               Text="!(loc.WixUIBack)" />
+        <Control Id="Next"         Type="PushButton" X="236" Y="243" Width="56"  Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Cancel"       Type="PushButton" X="304" Y="243" Width="56"  Height="17" Cancel="yes"  Text="!(loc.WixUICancel)"/>
+      </Dialog>
+
+      <Dialog Id="DirectoryDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Title"        Type="Text"       X="15"  Y="6"   Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Installation directory" />
+        <Control Id="Description"  Type="Text"       X="25"  Y="23"  Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Please specify the installation directory." />
+        <Control Id="BannerBitmap" Type="Bitmap"     X="0"   Y="0"   Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine"   Type="Line"       X="0"   Y="44"  Width="370" Height="0" />
+        <Control Id="BottomLine"   Type="Line"       X="0"   Y="234" Width="370" Height="0" />
+        <Control Id="i1" Type="Text"       X="20"  Y="55"  Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Install program into directory:" />
+        <Control Id="i2" Type="PathEdit"   X="30"  Y="70"  Width="250" Height="15" Property="INSTALLDIR" />
+        <Control Id="i3" Type="PushButton" X="280" Y="70"  Width="40"  Height="15" Text="Browse" >
+          <Publish Property="_BrowseProperty" Value="INSTALLDIR" Order="1">1</Publish>
+          <Publish Event="SpawnDialog" Value="BrowseDlg" Order="2">1</Publish>
+        </Control>
+        <Control Id="Back"         Type="PushButton" X="180" Y="243" Width="56"  Height="17"               Text="!(loc.WixUIBack)" />
+        <Control Id="Next"         Type="PushButton" X="236" Y="243" Width="56"  Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Cancel"       Type="PushButton" X="304" Y="243" Width="56"  Height="17" Cancel="yes"  Text="!(loc.WixUICancel)" />
+      </Dialog>
+    </UI>
+
+    <!--  Default directory layout, Admin could modify by setting all affected directory id's  -->
+    <Directory Id="TARGETDIR" Name="SourceDir">                   <!-- Fixed expression. Location of the msi file -->
+      <Directory Id="$(var.PROGRAMFILES)">                        <!-- C:\Program Files  or  C:\Program Files (x86) -->
+        <Directory Id="installparent" Name="$(var.MANUFACTURER)">
+          <Directory Id="INSTALLDIR" Name="$(var.PRODUCTDIR)" />
+        </Directory>
+      </Directory>
+      <!-- Default layout for the ROOTDIR, this is always in ProgramData -->
+      <Directory Id="CommonAppDataFolder">                        <!-- C:\ProgramData -->
+        <Directory Id="rootparent" Name="$(var.MANUFACTURER)">
+          <Directory Id="ROOTDIR" Name="$(var.PRODUCTDIR)">
+            <Directory Id="CONFDIR" Name="conf">
+              <Directory Id="MINIONDDIR" Name="minion.d" />
+              <Directory Id="PKIDIR" Name="pki">
+                <Directory Id="PKIMINIONDIR" Name="minion" />
+              </Directory>
+            </Directory>
+            <Directory Id="VARDIR" Name="var">
+              <Directory Id="RUNDIR" Name="run" />
+              <Directory Id="LOGDIR" Name="log">
+                <Directory Id="LOGSALTDIR" Name="salt" />
+              </Directory>
+              <Directory Id="CACHEDIR" Name="cache">
+                <Directory Id="CACHESALTDIR" Name="salt">
+                  <Directory Id="CACHESALTMINIONDIR" Name="minion">
+                    <Directory Id="PROCDIR" Name="proc" />
+                    <Directory Id="EXTMODSDIR" Name="extmods">
+                      <Directory Id="GRAINSDIR" Name="grains" />
+                    </Directory>
+                  </Directory>
+                </Directory>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <!-- Set ROOTDIR to C:\salt if OLD_CONF_EXISTS and not MOVE_CONF (only before install sequence)  -->
+    <SetDirectory Id="ROOTDIR" Value="C:\salt"      Sequence="execute">OLD_CONF_EXISTS and (not MOVE_CONF)</SetDirectory>
+    <SetDirectory Id="CONFDIR" Value="C:\salt\conf" Sequence="execute">OLD_CONF_EXISTS and (not MOVE_CONF)</SetDirectory>
+    <!-- Set ownership to 'Localized qualified name of the Administrators group' -->
+    <PropertyRef Id="WIX_ACCOUNT_ADMINISTRATORS" />
+    <Component Id="INSTALLDIR_Permissions"  Directory="INSTALLDIR" Guid="B30E119F-0286-4453-8AB7-C6E916FA2843">
+      <CreateFolder>
+        <Permission User="[WIX_ACCOUNT_ADMINISTRATORS]" GenericAll="yes" TakeOwnership="yes" />
+      </CreateFolder>
+    </Component>
+    <Component Id="ROOTDIR_Permissions" Directory="ROOTDIR" Guid="84554438-6807-4d92-b602-7fce831b01a3">
+      <CreateFolder>
+        <Permission User="[WIX_ACCOUNT_ADMINISTRATORS]" GenericAll="yes" TakeOwnership="yes" />
+      </CreateFolder>
+    </Component>
+    <Component Id="CreateMinionDDir" Directory="MINIONDDIR" Guid="59E64BE0-284C-4482-987C-416F4BD20A4C">
+      <CreateFolder />
+    </Component>
+    <Component Id="CreatePKIMinionDir" Directory="PKIMINIONDIR" Guid="F907613B-3669-4AB2-9630-A8ECDD50F157">
+      <CreateFolder />
+    </Component>
+    <Component Id="CreateRunDir" Directory="RUNDIR" Guid="BB3727B5-4C46-4622-BF08-F69E5004D817">
+      <CreateFolder />
+    </Component>
+    <Component Id="CreateLogSaltDir" Directory="LOGSALTDIR" Guid="BE111495-EE66-4BD0-9111-1373C2F78AE1">
+      <CreateFolder />
+    </Component>
+    <Component Id="CreateProcDir" Directory="PROCDIR" Guid="3B92D253-189F-4100-A21D-4FD7C45F5CD9">
+      <CreateFolder />
+    </Component>
+    <Component Id="CreateGrainsDir" Directory="GRAINSDIR" Guid="2F08218A-45C6-4E51-970C-DCB2530D36C5">
+      <CreateFolder />
+    </Component>
+
+    <!--  Install Windows service (nssm and without)-->
+    <?if 1=1 ?>
+      <ComponentGroup Id="service">
+        <Component Id="cmp906378FA53882935FD2EC0CC58D32FAC" Directory="INSTALLDIR" Guid="{E27F3682-194D-4CC2-9F9B-F3E1D53ADCDB}">
+          <File Id="ssm.exe" KeyPath="yes" Source="$(var.DISCOVER_INSTALLDIR)\ssm.exe" />
+          <ServiceInstall
+            Account="LocalSystem" ErrorControl="normal" Start="auto" Type="ownProcess" Vital="yes"
+            Name="salt-minion"
+            Description="Salt Minion from saltproject.io"
+            DisplayName="salt-minion"
+            Id="si1">
+            <util:ServiceConfig
+              FirstFailureActionType="none"
+              SecondFailureActionType="none"
+              ThirdFailureActionType="none" />
+          </ServiceInstall>
+          <ServiceControl Name="salt-minion" Remove="uninstall" Stop="both" Start="install" Wait="yes" Id="sc1" />
+          <util:EventSource Log="Application" Name="ssm" EventMessageFile="[#ssm.exe]" />
+          <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\salt-minion">
+            <RegistryKey Key="Parameters">
+              <RegistryValue Type="expandable" Name="AppDirectory"         Value="[INSTALLDIR]" />
+              <RegistryValue Type="expandable" Name="Application"          Value="[INSTALLDIR]salt-minion.exe" />
+              <RegistryValue Type="expandable" Name="AppParameters"        Value='-c "[ROOTDIR]conf" -l quiet' />
+              <RegistryValue Type="integer"    Name="AppStopMethodConsole" Value="24000" />
+              <RegistryValue Type="integer"    Name="AppStopMethodWindow"  Value="2000" />
+              <RegistryValue Type="integer"    Name="AppRestartDelay"      Value="60000" />
+              <RegistryKey Key="AppExit">
+                <RegistryValue Type="string" Value="Restart" />
+              </RegistryKey>
+            </RegistryKey>
+          </RegistryKey>
+        </Component>
+      </ComponentGroup>
+    <?else ?>
+      <!-- For the far future, in which nssm.exe is no longer used -->
+      <ComponentGroup Id="service">
+        <Component        Id="servicec1" Directory="INSTALLDIR" Guid="51713960-fbe7-4e87-9472-66e3c18f76cd">
+          <File           Source="$(var.DISCOVER_INSTALLDIR)\salt-minion.exe"  KeyPath="yes" />
+          <ServiceInstall Name="salt-minion"  DisplayName="Salt Minion"  Description="Salt Minion from saltproject.io"
+                          Arguments="-c [ROOTDIR]conf -l quiet"
+                          Account="LocalSystem"  ErrorControl="normal" Start="auto"  Type="ownProcess"  Vital="yes" >
+            <util:ServiceConfig
+              FirstFailureActionType="none"
+              SecondFailureActionType="none"
+              ThirdFailureActionType="none" />
+          </ServiceInstall>
+          <ServiceControl Name="salt-minion"  Start="install"  Stop="both"  Remove="uninstall"  Wait="yes" Id="ServiceControl">
+            <ServiceArgument /> <!-- http://stackoverflow.com/questions/10621082/wix-serviceinstall-arguments  -->
+          </ServiceControl>
+        </Component>
+      </ComponentGroup>
+    <?endif ?>
+  </Product>
+</Wix>

@@ -1,0 +1,2 @@
+properties START_MINION="" CONFIG_TYPE=Custom CUSTOM_CONFIG=tests\config_tests\custom_config_commented_master_set_master.conf MASTER=cli.master
+dormant

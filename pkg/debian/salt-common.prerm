@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+dpkg -L salt-common | perl -ne 's,/([^/]*)\.py$,/__pycache__/\1.*, or next; unlink $_ or die $! foreach glob($_)'
+find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir

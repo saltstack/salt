@@ -1,0 +1,30 @@
+From 1539d14a40d976b94724b14a17aff77f9a273a9a Mon Sep 17 00:00:00 2001
+From: Tim Serong <tserong@suse.com>
+Date: Mon, 18 Aug 2014 23:00:39 +1000
+Subject: [PATCH] Fix service.py version parsing for SLE 11
+
+"osrelease" on SLES 11 is in the form "11 SP3", i.e. major version, then a space, then service pack number. This means we can't just split on '.' to get the major number for comparisons. Rather we need to split on non-digit characters to handle both space-delimited and dot-delimited release formats (yuck).
+---
+ salt/modules/service.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/salt/modules/service.py b/salt/modules/service.py
+index d581916..dab0817 100644
+--- a/salt/modules/service.py
++++ b/salt/modules/service.py
+@@ -49,7 +49,12 @@ def __virtual__():
+     # SUSE >=12.0 uses systemd
+     if __grains__.get('os_family', '') == 'SUSE':
+         try:
+-            if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
++            # osrelease might be in decimal format (e.g. "12.1"), or for
++            # SLES might include service pack (e.g. "11 SP3"), so split on
++            # non-digit characters, and the zeroth element is the major
++            # number (it'd be so much simpler if it was always "X.Y"...)
++            import re
++            if int(re.split('\D+', __grains__.get('osrelease', ''))[0]) >= 12:
+                 return False
+         except ValueError:
+             return False
+--
+2.0.3
