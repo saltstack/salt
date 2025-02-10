@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+command="/usr/bin/salt-api"
+command_args="--daemon"
+pidfile="/var/run/salt-api.pid"
+name="Salt API daemon"
+
+depend() {
+	need localmount
+	use net
+	after bootmisc
+}

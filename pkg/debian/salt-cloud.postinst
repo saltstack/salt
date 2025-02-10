@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+  configure)
+    db_get salt-master/user
+    if [ "$RET" != "root" ]; then
+      PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
+      chown -R $RET:$RET /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+    fi
+  ;;
+esac

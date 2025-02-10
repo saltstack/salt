@@ -1,0 +1,12 @@
+[Unit]
+Description=The Salt Master daemon
+After=network.target
+
+[Service]
+LimitNOFILE=16384
+Type=notify
+NotifyAccess=all
+ExecStart=/usr/bin/salt-master
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,41 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+  configure)
+    db_get salt-master/user
+    if [ "$RET" != "root" ]; then
+      if [ ! -e "/var/log/salt/master" ]; then
+        touch /var/log/salt/master
+        chmod 640 /var/log/salt/master
+      fi
+      if [ ! -e "/var/log/salt/key" ]; then
+        touch /var/log/salt/key
+        chmod 640 /var/log/salt/key
+      fi
+      chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+    fi
+    if command -v systemctl; then
+        db_get salt-master/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
+            if [ "$RESLT" = "active" ]; then
+                systemctl restart salt-master
+            fi
+            db_get salt-master/enabled
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
+                systemctl disable salt-master
+            else
+                systemctl enable salt-master
+            fi
+        else
+            systemctl daemon-reload
+            systemctl restart salt-master
+            systemctl enable salt-master
+        fi
+    fi
+  ;;
+esac

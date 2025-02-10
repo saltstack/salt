@@ -1,0 +1,39 @@
+case "$1" in
+  install|upgrade)
+    [ -z "$SALT_HOME" ] && SALT_HOME=/opt/saltstack/salt
+    [ -z "$SALT_USER" ] && SALT_USER=salt
+    [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
+    [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
+    [ -z "$SALT_SHELL" ] && SALT_SHELL=/usr/sbin/nologin
+
+    # create user to avoid running server as root
+    # 1. create group if not existing
+    if ! getent group | grep -q "^$SALT_GROUP:" ; then
+       echo -n "Adding group $SALT_GROUP.."
+       addgroup --quiet --system $SALT_GROUP 2>/dev/null ||true
+       echo "..done"
+    fi
+    # 2. create homedir if not existing
+    test -d $SALT_HOME || mkdir -p $SALT_HOME
+    # 3. create user if not existing
+    if ! getent passwd | grep -q "^$SALT_USER:"; then
+      echo -n "Adding system user $SALT_USER.."
+      useradd --system \
+              --no-create-home \
+              -s $SALT_SHELL \
+              -g $SALT_GROUP \
+              $SALT_USER 2>/dev/null || true
+      echo "..done"
+    fi
+    # 4. adjust passwd entry
+    usermod -c "$SALT_NAME" \
+            -d $SALT_HOME   \
+            -s $SALT_SHELL  \
+            -g $SALT_GROUP  \
+             $SALT_USER
+
+    # Remove incorrectly installed logrotate config - issue 65231
+    test -d /etc/logrotate.d/salt && rm -r /etc/logrotate.d/salt || /bin/true
+
+  ;;
+esac

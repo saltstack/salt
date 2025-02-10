@@ -1,0 +1,12 @@
+[Unit]
+Description=REST API for Salt
+After=network.target
+
+[Service]
+LimitNOFILE=8192
+Type=notify
+NotifyAccess=all
+ExecStart=/usr/bin/salt-api
+
+[Install]
+WantedBy=multi-user.target

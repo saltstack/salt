@@ -1,0 +1,154 @@
+#!/bin/sh
+#
+# Salt API
+###################################
+
+# LSB header
+
+### BEGIN INIT INFO
+# Provides:          salt-api
+# Required-Start:    $local_fs $remote_fs $network $named $time
+# Should-Start:		 $time ypbind smtp
+# Required-Stop:	 $local_fs $remote_fs $network $named $time
+# Should-Stop:		 ypbind smtp
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: Salt API control daemon
+# Description:       This is a daemon that controls the Salt API.
+### END INIT INFO
+
+
+# chkconfig header
+
+# chkconfig: 345 99 99
+# description:  This is a daemon that controls the Salt API.
+#
+# processname: /usr/bin/salt-api
+
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTAPI=/usr/bin/salt-api
+    PYTHON=/usr/bin/python
+fi
+
+# Sanity checks.
+[ -x $SALTAPI ] || exit 0
+
+DEBIAN_VERSION=/etc/debian_version
+SUSE_RELEASE=/etc/SuSE-release
+# Source function library.
+if [ -f $DEBIAN_VERSION ]; then
+   break
+elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
+    . /etc/rc.status
+else
+    . /etc/rc.d/init.d/functions
+fi
+
+SERVICE=salt-api
+PROCESS=salt-api
+CONFIG_ARGS="-d"
+PID_FILE="/var/run/salt-api.pid"
+
+RETVAL=0
+
+start() {
+    echo -n $"Starting salt-api daemon: "
+    if [ -f $SUSE_RELEASE ]; then
+        startproc -f -p /var/run/$SERVICE.pid $SALTAPI $CONFIG_ARGS
+        rc_status -v
+    elif [ -e $DEBIAN_VERSION ]; then
+        if [ -f $LOCKFILE ]; then
+            echo -n "already started, lock file found"
+            RETVAL=1
+        elif $PYTHON $SALTAPI; then
+            echo -n "OK"
+            RETVAL=0
+        fi
+    else
+        if status $PROCESS &> /dev/null; then
+            failure "Already running."
+            RETVAL=1
+        else
+            daemon --pidfile=$PID_FILE --check $SERVICE $SALTAPI $CONFIG_ARGS
+            RETVAL=$?
+            [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
+            echo
+            return $RETVAL
+        fi
+    fi
+    RETVAL=$?
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping salt-api daemon: "
+    if [ -f $SUSE_RELEASE ]; then
+        killproc -TERM $SALTAPI
+        rc_status -v
+    elif [ -f $DEBIAN_VERSION ]; then
+        # Added this since Debian's start-stop-daemon doesn't support spawned processes
+        if ps -ef | grep "$PYTHON $SALTAPI" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
+            echo -n "OK"
+            RETVAL=0
+        else
+            echo -n "Daemon is not started"
+            RETVAL=1
+        fi
+    else
+        killproc $PROCESS
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$SERVICE
+        return $RETVAL
+    fi
+    RETVAL=$?
+    echo
+    return $RETVAL
+}
+
+restart() {
+   stop
+   start
+}
+
+# See how we were called.
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        if [ -f $SUSE_RELEASE ]; then
+            echo -n "Checking for service salt-api "
+            checkproc $SALTAPI
+            rc_status -v
+            RETVAL=$?
+        elif [ -f $DEBIAN_VERSION ]; then
+            if [ -f $LOCKFILE ]; then
+                RETVAL=0
+                echo "salt-api is running."
+            else
+                RETVAL=1
+                echo "salt-api is stopped."
+            fi
+        else
+            status $PROCESS
+            RETVAL=$?
+        fi
+        ;;
+    condrestart|try-restart)
+        [ -f $LOCKFILE ] && restart || :
+        ;;
+    reload)
+        echo "can't reload configuration, you have to restart it"
+        RETVAL=1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
+        exit 1
+        ;;
+esac
+exit $RETVAL
