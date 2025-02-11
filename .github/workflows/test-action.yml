@@ -177,8 +177,8 @@ jobs:
           PIP_INDEX_URL: "${{ vars.PIP_INDEX_URL }}"
           PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
           PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
-          PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 1
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
@@ -477,6 +477,26 @@ jobs:
           free -h
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          GITHUB_ACTIONS: true
+          CI: true
+          SKIP_REQUIREMENTS_INSTALL: 1
+          PRINT_TEST_SELECTION: 0
+          PRINT_TEST_PLAN_ONLY: 0
+          PRINT_SYSTEM_INFO: 0
+          RERUN_FAILURES: 1
+          GITHUB_ACTIONS_PIPELINE: 1
+          SKIP_INITIAL_ONEDIR_FAILURES: 1
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: 1
+          SKIP_CODE_COVERAGE: ${{ inputs.skip-code-coverage && '1' || '0' }}
+          CONVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: "${{ vars.PIP_INDEX_URL }}"
+          PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
+          PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 1
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
