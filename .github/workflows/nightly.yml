@@ -188,10 +188,16 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
-      - name: Shot github context
+      - name: Show github context
         env:
           CONTEXT: "${{ toJSON(github) }}"
         run: echo $CONTEXT
+
+      - name: Shot github vars
+        env:
+          CONTEXT: "${{ toJSON(vars) }}"
+        run: echo $CONTEXT
+
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
