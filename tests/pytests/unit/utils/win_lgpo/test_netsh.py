@@ -288,9 +288,27 @@ def test_set_firewall_settings(store, setting, value):
 
 @pytest.mark.destructive_test
 @pytest.mark.parametrize("store", ["local", "lgpo"])
+@pytest.mark.parametrize("state", ["on", "off", "notconfigured"])
+def test_set_firewall_state(store, state):
+    current_state = win_lgpo_netsh.get_settings(
+        profile="domain", section="state", store=store
+    )["State"]
+    try:
+        ret = win_lgpo_netsh.set_state(profile="domain", state=state, store=store)
+        assert ret is True
+        new = win_lgpo_netsh.get_settings(
+            profile="domain", section="state", store=store
+        )["State"]
+        assert new.lower() == state.lower()
+    finally:
+        win_lgpo_netsh.set_state(profile="domain", state=current_state, store=store)
+
+
+@pytest.mark.destructive_test
+@pytest.mark.parametrize("store", ["local", "lgpo"])
 @pytest.mark.parametrize("allow_inbound", ["enable", "disable"])
 @pytest.mark.parametrize("state", ["on", "off", "notconfigured"])
-def test_set_firewall_state(store, allow_inbound, state):
+def test_set_firewall_state_allow_inbound(store, allow_inbound, state):
     current_state = win_lgpo_netsh.get_settings(
         profile="domain", section="state", store=store
     )["State"]
@@ -316,10 +334,11 @@ def test_set_firewall_state(store, allow_inbound, state):
         )["State"]
         assert new.lower() == state.lower()
     finally:
-        win_lgpo_netsh.set_settings(
-            profile="domain",
-            setting="localfirewallrules",
-            value=current_local_fw_rules,
-            store=store,
-        )
+        if current_local_fw_rules.lower() != "notconfigured":
+            win_lgpo_netsh.set_settings(
+                profile="domain",
+                setting="localfirewallrules",
+                value=current_local_fw_rules,
+                store=store,
+            )
         win_lgpo_netsh.set_state(profile="domain", state=current_state, store=store)
