@@ -75,7 +75,6 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
-    environment: ci
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
       - workflow-requirements

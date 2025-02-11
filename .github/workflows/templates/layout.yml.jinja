@@ -78,7 +78,6 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
-    environment: ci
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
