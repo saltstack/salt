@@ -937,7 +937,10 @@ def _environment_slugs(ctx, slugdef, labels):
     Environment slug defenitions can be a comma separated list. An "all" item
     in the list will include all os and package slugs.
     """
-    requests = [_.strip().lower() for _ in slugdef.split(",") if _.strip()]
+    if isinstance(slugdef, list):
+        requests = slugdef
+    else:
+        requests = [_.strip().lower() for _ in slugdef.split(",") if _.strip()]
     label_requests = [
         _[0].rsplit(":", 1)[1] for _ in labels if _[0].startswith("test:os:")
     ]
@@ -1074,15 +1077,19 @@ def workflow_config(
         full = True
         requested_slugs = _environment_slugs(
             ctx,
-            os.environ.get("FULL_TESTRUN_SLUGS", "") or "all",
+            tools.utils.get_cicd_shared_context()["full-testrun-slugs"],
             labels,
         )
     else:
         requested_slugs = _environment_slugs(
             ctx,
-            os.environ.get("PR_TESTRUN_SLUGS", ""),
+            tools.utils.get_cicd_shared_context()["pr-testrun-slugs"],
             labels,
         )
+
+    ctx.info(f"{'==== requested slugs ====':^80s}")
+    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(f"{'==== end requested slugs ====':^80s}")
 
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
