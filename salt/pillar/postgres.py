@@ -69,6 +69,12 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
             "pass": "salt",
             "db": "salt",
             "port": 5432,
+            "sslmode": "prefer",
+            "sslcert": None,
+            "sslkey": None,
+            "sslrootcert": None,
+            "sslcrl": None,
+            "kwargs": {},
         }
         _options = {}
         _opts = __opts__.get("postgres", {})
@@ -92,6 +98,12 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
             password=_options["pass"],
             dbname=_options["db"],
             port=_options["port"],
+            sslmode=_options["sslmode"],
+            sslcert=_options["sslcert"],
+            sslkey=_options["sslkey"],
+            sslrootcert=_options["sslrootcert"],
+            sslcrl=_options["sslcrl"],
+            **_options["kwargs"],
         )
         cursor = conn.cursor()
         try:
