@@ -183,7 +183,7 @@ jaraco.text==3.5.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
