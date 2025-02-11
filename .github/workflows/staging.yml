@@ -169,6 +169,11 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
+      - name: Shot github context
+        env:
+          CONTEXT: "${{ toJSON(github) }}"
+        run: echo $CONTEXT
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -244,6 +249,11 @@ jobs:
 
       - name: Define workflow config
         id: workflow-config
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
+          FULL_TESTRUN_SLUGS: "${{ vars.FULL_TESTRUN_SLUGS }}"
+          PR_TESTRUN_SLUGS: "${{ vars.PR_TESTRUN_SLUGS }}"
         run: |
           tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 

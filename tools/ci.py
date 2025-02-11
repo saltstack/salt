@@ -1083,6 +1083,9 @@ def workflow_config(
             os.environ.get("PR_TESTRUN_SLUGS", ""),
             labels,
         )
+    ctx.info(f"{'==== requested slugs ====':^80s}")
+    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(f"{'==== end requested slugs ====':^80s}")
 
     ctx.info(f"{'==== labels ====':^80s}")
     ctx.info(f"{pprint.pformat(labels)}")
