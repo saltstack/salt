@@ -331,6 +331,8 @@ psutil==6.1.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.11
+    # via -r requirements/static/ci/common.in
 pyasn1==0.6.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
