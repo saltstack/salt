@@ -491,9 +491,10 @@ class GitProvider:
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
-                self._cache_basename = self.get_checkout_target().replace(
-                    "/", "-"
-                )  # replace '/' with '-' to not cause trouble with file-system
+                ## DGM self._cache_basename = self.get_checkout_target().replace(
+                ## DGM     "/", "-"
+                ## DGM )  # replace '/' with '-' to not cause trouble with file-system
+                self._cache_basename = self.get_checkout_target()
 
             except AttributeError:
                 log.critical(
