@@ -76,7 +76,7 @@ def test_file_server_url_escape(tmp_path):
         "fileserver_backend": ["roots"],
         "extension_modules": "",
         "optimization_order": [
-            0,
+            0, 1
         ],
         "file_roots": {
             "base": [fileroot],
@@ -103,7 +103,7 @@ def test_file_server_serve_url_escape(tmp_path):
         "fileserver_backend": ["roots"],
         "extension_modules": "",
         "optimization_order": [
-            0,
+            0, 1
         ],
         "file_roots": {
             "base": [fileroot],
