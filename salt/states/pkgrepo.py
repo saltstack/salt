@@ -99,17 +99,17 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - key_url: https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public
         - aptkey: False
 
 Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - keyserver: keyserver.ubuntu.com

@@ -3,8 +3,11 @@ Tests for win_file execution module
 """
 
 import pytest
+from saltfactories.utils import random_string
 
+import salt.modules.cmdmod as cmd
 import salt.modules.win_file as win_file
+import salt.modules.win_useradd as win_useradd
 import salt.utils.win_dacl as win_dacl
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch
@@ -25,7 +28,20 @@ def configure_loader_modules():
             },
             "__opts__": {"test": False},
         },
+        win_useradd: {
+            "__salt__": {
+                "cmd.run_all": cmd.run_all,
+            },
+        },
     }
+
+
+@pytest.fixture
+def temp_account():
+    user_name = random_string("test-account-", uppercase=False)
+    with pytest.helpers.create_account(username=user_name) as account:
+        win_useradd.addgroup(account.username, "Users")
+        yield account.username
 
 
 @pytest.fixture(scope="function")
@@ -184,7 +200,7 @@ def test_check_perms_inheritance_true(test_file):
     assert result == expected
 
 
-def test_check_perms_reset_test_true(test_file):
+def test_check_perms_reset_test_true(test_file, temp_account):
     """
     Test resetting perms with test=True. This shows minimal changes
     """
@@ -193,7 +209,7 @@ def test_check_perms_reset_test_true(test_file):
     # Set some permissions
     win_dacl.set_permissions(
         obj_name=str(test_file),
-        principal="Administrator",
+        principal=temp_account,
         permissions="full_control",
     )
     expected = {
@@ -204,7 +220,7 @@ def test_check_perms_reset_test_true(test_file):
                 "Users": {"permissions": "read_execute"},
             },
             "remove_perms": {
-                "Administrator": {
+                f"{temp_account}": {
                     "grant": {
                         "applies to": "This folder only",
                         "permissions": "Full control",
@@ -228,7 +244,7 @@ def test_check_perms_reset_test_true(test_file):
         assert result == expected
 
 
-def test_check_perms_reset(test_file):
+def test_check_perms_reset(test_file, temp_account):
     """
     Test resetting perms on a File
     """
@@ -237,7 +253,7 @@ def test_check_perms_reset(test_file):
     # Set some permissions
     win_dacl.set_permissions(
         obj_name=str(test_file),
-        principal="Administrator",
+        principal=temp_account,
         permissions="full_control",
     )
     expected = {
@@ -248,7 +264,7 @@ def test_check_perms_reset(test_file):
                 "Users": {"permissions": "read_execute"},
             },
             "remove_perms": {
-                "Administrator": {
+                f"{temp_account}": {
                     "grant": {
                         "applies to": "This folder only",
                         "permissions": "Full control",

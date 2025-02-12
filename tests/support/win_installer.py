@@ -10,18 +10,46 @@
 """
 
 import hashlib
+from html.parser import HTMLParser
 
 import requests
 
 PREFIX = "Salt-Minion-"
-REPO = "https://repo.saltproject.io/windows"
+REPO = "https://packages.broadcom.com/artifactory/saltproject-generic/windows/"
 
 
 def latest_installer_name(arch="AMD64", **kwargs):
     """
     Create an installer file name
     """
-    return f"Salt-Minion-Latest-Py3-{arch}-Setup.exe"
+
+    # This is where windows packages are found
+    # Each version is in its own directory, so we need to list the directories
+    # and use the last one as the latest
+    html_response = requests.get(REPO, timeout=60)
+
+    versions = []
+
+    # Create a class so we can define how to handle the starttag
+    # We're looking for a "href" in the "a" tag which is the version
+    class MyHTMLParser(HTMLParser):
+
+        def handle_starttag(self, tag, attrs):
+            # Only parse the 'anchor' tag.
+            if tag == "a":
+                # Check the list of defined attributes.
+                for name, value in attrs:
+                    # If href is defined, add the value to the list of versions
+                    if name == "href":
+                        versions.append(value.strip("/"))
+
+    parser = MyHTMLParser()
+    parser.feed(html_response.text)
+    parser.close()
+
+    latest = versions[-1]
+
+    return f"{PREFIX}{latest}-Py3-{arch}-Setup.exe"
 
 
 def download_and_verify(fp, name, repo=REPO):

@@ -5061,6 +5061,18 @@ def _remove_invalid_xmlns(xml_file):
     return xml_tree
 
 
+def _encode_xmlns_url(match):
+    """
+    Escape spaces in xmlns urls
+    """
+    before_xmlns = match.group(1)
+    xmlns = match.group(2)
+    url = match.group(3)
+    after_url = match.group(4)
+    encoded_url = re.sub(r"\s+", "%20", url)
+    return f'{before_xmlns}{xmlns}="{encoded_url}"{after_url}'
+
+
 def _parse_xml(adm_file):
     """
     Parse the admx/adml file. There are 3 scenarios (so far) that we'll likely
@@ -5107,6 +5119,12 @@ def _parse_xml(adm_file):
                 encoding = "utf-16"
                 raw = raw.decode(encoding)
             for line in raw.split("\r\n"):
+                if 'xmlns="' in line:
+                    line = re.sub(
+                        r'(.*)(\bxmlns(?::\w+)?)\s*=\s*"([^"]+)"(.*)',
+                        _encode_xmlns_url,
+                        line,
+                    )
                 if 'key="' in line:
                     start = line.index('key="')
                     q1 = line[start:].index('"') + start
@@ -5744,8 +5762,9 @@ def _set_netsh_value(profile, section, option, value):
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store="lgpo"
         )
-    log.trace("LGPO: Clearing netsh data for %s profile", profile)
-    __context__["lgpo.netsh_data"].pop(profile)
+    if profile in __context__["lgpo.netsh_data"]:
+        log.trace("LGPO: Clearing netsh data for %s profile", profile)
+        __context__["lgpo.netsh_data"].pop(profile, {})
     return True
 
 
