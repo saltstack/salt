@@ -4364,6 +4364,12 @@ Added
 - [#54919](https://github.com/saltstack/salt/pull/54919) - Added missing `win_wusa` state and module docs - [@twangboy](https://github.com/twangboy)
 
 ## [2019.2.1] - 2019-09-25 [YANKED]
+## [Unreleased]
+
+### Changed
+- Improved error handling and logging in `tools/utils/repo.py` using `log` for consistency.
+
+
 
 
 - See [old release notes](https://docs.saltproject.io/en/latest/topics/releases/2019.2.1.html)
