@@ -153,9 +153,6 @@ jobs:
           SKIP_CODE_COVERAGE: ${{ inputs.skip-code-coverage && '1' || '0' }}
           CONVERAGE_CONTEXT: ${{ matrix.slug }}
           COLUMNS: 190
-          PIP_INDEX_URL: "{{ vars.PIP_INDEX_URL }}"
-          PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
-          PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
           PIP_DISABLE_PIP_VERSION_CHECK: 1
           RAISE_DEPRECATIONS_RUNTIME_ERRORS: 1
           SALT_TRANSPORT: ${{ matrix.transport }}
