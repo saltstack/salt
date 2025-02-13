@@ -31,8 +31,7 @@ runs:
       id: get-python-version
       uses: ./.github/actions/get-python-version
       with:
-        ## DGM python-binary: python3
-        python-binary: /__w/salt/salt/artifacts/salt/bin/python3
+        python-binary: python3
 
     - name: Setup Cache Key
       shell: bash
