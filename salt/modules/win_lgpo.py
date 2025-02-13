@@ -5762,8 +5762,9 @@ def _set_netsh_value(profile, section, option, value):
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store="lgpo"
         )
-    log.trace("LGPO: Clearing netsh data for %s profile", profile)
-    __context__["lgpo.netsh_data"].pop(profile)
+    if profile in __context__["lgpo.netsh_data"]:
+        log.trace("LGPO: Clearing netsh data for %s profile", profile)
+        __context__["lgpo.netsh_data"].pop(profile, {})
     return True
 
 
