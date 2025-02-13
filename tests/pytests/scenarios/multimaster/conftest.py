@@ -25,6 +25,12 @@ def salt_mm_master_1(request, salt_factories):
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
     factory = salt_factories.salt_master_daemon(
         "mm-master-1",
@@ -56,6 +62,12 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -106,6 +118,13 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.minion": "debug",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
     factory = salt_mm_master_1.salt_minion_daemon(
         "mm-minion-1",
@@ -136,6 +155,13 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.minion": "debug",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
     factory = salt_mm_master_2.salt_minion_daemon(
         "mm-minion-2",

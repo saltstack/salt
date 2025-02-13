@@ -4,7 +4,7 @@
     <%- do test_salt_linux_needs.append("build-ci-deps") %>
     name: CI Deps
     <%- if workflow_slug != 'release' %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
     <%- endif %>
     needs:
       - prepare-workflow

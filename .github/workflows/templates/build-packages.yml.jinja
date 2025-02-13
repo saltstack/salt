@@ -11,7 +11,7 @@
 
   <{ job_name }>:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir

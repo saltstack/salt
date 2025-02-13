@@ -6,7 +6,7 @@
     <%- do conclusion_needs.append(job_name) %>
     name: Package Downloads
     <%- if gh_environment == "staging" %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-download'] }}
     <%- else %>
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     <%- endif %>
