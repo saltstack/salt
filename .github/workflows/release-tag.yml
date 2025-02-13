@@ -54,10 +54,10 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         custom_tag: ${{ github.event.inputs.saltVersion }}
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.10
 
     - uses: actions/checkout@v4
     - name: Install pypa/build
