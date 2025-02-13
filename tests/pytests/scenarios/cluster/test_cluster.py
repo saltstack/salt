@@ -2,7 +2,7 @@
 Cluster scinarios.
 """
 
-import os
+import getpass
 import pathlib
 import time
 
@@ -44,7 +44,7 @@ def test_cluster_key_rotation(
     assert not dfpath.exists()
     salt.crypt.dropfile(
         cluster_master_1.config["cachedir"],
-        user=os.getlogin(),
+        user=getpass.getuser(),
         master_id=cluster_master_1.config["id"],
     )
     assert dfpath.exists()
