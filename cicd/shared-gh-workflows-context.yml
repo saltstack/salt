@@ -4,6 +4,14 @@ relenv_version: "0.18.0"
 release_branches:
   - "3006.x"
   - "3007.x"
-mandatory_os_slugs:
-  - ubuntu-22.04
-  - ubuntu-22.04-arm64
+pr-testrun-slugs:
+  - ubuntu-24.04-pkg
+  - ubuntu-24.04
+  - rockylinux-9
+  - rockylinux-9-pkg
+  - windows-2022
+  - windows-2022-pkg
+  - macos-15
+  - macos-15-pkg
+full-testrun-slugs:
+  - all

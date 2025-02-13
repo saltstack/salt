@@ -110,19 +110,37 @@ def _get_inbound_text(rule, action):
     The "Inbound connections" setting is a combination of 2 parameters:
 
     - AllowInboundRules
+      0 = False
+      1 = True
+      2 = NotConfigured
+      I don't see a way to set "AllowInboundRules" outside of PowerShell
+
     - DefaultInboundAction
+      0 = Not Configured
+      2 = Allow Inbound
+      4 = Block Inbound
 
     The settings are as follows:
 
     Rules Action
+    0     4       BlockInboundAlways
+    1     0       NotConfigured
+    1     2       AllowInbound
+    1     4       BlockInbound
+    2     0       NotConfigured
     2     2       AllowInbound
     2     4       BlockInbound
-    0     4       BlockInboundAlways
-    2     0       NotConfigured
     """
     settings = {
         0: {
+            0: "NotConfigured",
+            2: "AllowInbound",
             4: "BlockInboundAlways",
+        },
+        1: {
+            0: "NotConfigured",
+            2: "AllowInbound",
+            4: "BlockInbound",
         },
         2: {
             0: "NotConfigured",
@@ -141,6 +159,30 @@ def _get_inbound_settings(text):
         "notconfigured": (2, 0),
     }
     return settings[text.lower()]
+
+
+def _get_all_settings(profile, store="local"):
+    # Get current settings using PowerShell
+    # if "lgpo.firewall_profile_settings" not in __context__:
+    cmd = ["Get-NetFirewallProfile"]
+    if profile:
+        cmd.append(profile)
+    if store.lower() == "lgpo":
+        cmd.extend(["-PolicyStore", "localhost"])
+
+    # Run the command and get dict
+    settings = salt.utils.win_pwsh.run_dict(cmd)
+
+    # A successful run should return a dictionary
+    if not settings:
+        raise CommandExecutionError("LGPO NETSH: An unknown error occurred")
+
+    # Remove the junk
+    for setting in list(settings.keys()):
+        if setting.startswith("Cim"):
+            settings.pop(setting)
+
+    return settings
 
 
 def get_settings(profile, section, store="local"):
@@ -190,24 +232,7 @@ def get_settings(profile, section, store="local"):
     if store.lower() not in ("local", "lgpo"):
         raise ValueError(f"Incorrect store: {store}")
 
-    # Build the powershell command
-    cmd = ["Get-NetFirewallProfile"]
-    if profile:
-        cmd.append(profile)
-    if store and store.lower() == "lgpo":
-        cmd.extend(["-PolicyStore", "localhost"])
-
-    # Run the command
-    settings = salt.utils.win_pwsh.run_dict(cmd)
-
-    # A successful run should return a dictionary
-    if not settings:
-        raise CommandExecutionError("LGPO NETSH: An unknown error occurred")
-
-    # Remove the junk
-    for setting in list(settings.keys()):
-        if setting.startswith("Cim"):
-            settings.pop(setting)
+    settings = _get_all_settings(profile=profile, store=store)
 
     # Make it look like netsh output
     ret_settings = {
@@ -299,24 +324,7 @@ def get_all_settings(profile, store="local"):
     if store.lower() not in ("local", "lgpo"):
         raise ValueError(f"Incorrect store: {store}")
 
-    # Build the powershell command
-    cmd = ["Get-NetFirewallProfile"]
-    if profile:
-        cmd.append(profile)
-    if store and store.lower() == "lgpo":
-        cmd.extend(["-PolicyStore", "localhost"])
-
-    # Run the command
-    settings = salt.utils.win_pwsh.run_dict(cmd)
-
-    # A successful run should return a dictionary
-    if not settings:
-        raise CommandExecutionError("LGPO NETSH: An unknown error occurred")
-
-    # Remove the junk
-    for setting in list(settings.keys()):
-        if setting.startswith("Cim"):
-            settings.pop(setting)
+    settings = _get_all_settings(profile=profile, store=store)
 
     # Make it look like netsh output
     ret_settings = {
@@ -409,6 +417,9 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
         raise ValueError(f"Incorrect outbound value: {outbound}")
     if not inbound and not outbound:
         raise ValueError("Must set inbound or outbound")
+
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-allowinboundrules
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-defaultoutboundaction
     if store == "local":
         if inbound and inbound.lower() == "notconfigured":
             msg = "Cannot set local inbound policies as NotConfigured"
@@ -417,16 +428,26 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
             msg = "Cannot set local outbound policies as NotConfigured"
             raise CommandExecutionError(msg)
 
+    # Get current settings
+    settings = _get_all_settings(profile=profile, store=store)
+
     # Build the powershell command
     cmd = ["Set-NetFirewallProfile"]
     if profile:
         cmd.append(profile)
-    if store and store.lower() == "lgpo":
+    if store.lower() == "lgpo":
         cmd.extend(["-PolicyStore", "localhost"])
 
     # Get inbound settings
     if inbound:
         in_rule, in_action = _get_inbound_settings(inbound.lower())
+        # If current AllowInboundRules is set (1 or 2) and new AllowInboundRules is 2
+        # We want to just keep the current setting.
+        # We don't have a way in LGPO to set the AllowInboundRules. I can't find it in
+        # gpedit.msc either. Not sure how to set it outside of PowerShell
+        current_in_rule = settings["AllowInboundRules"]
+        if current_in_rule > 0 and in_rule == 2:
+            in_rule = current_in_rule
         cmd.extend(["-AllowInboundRules", in_rule, "-DefaultInboundAction", in_action])
 
     if outbound:
@@ -509,10 +530,6 @@ def set_logging_settings(profile, setting, value, store="local"):
     # Input validation
     if profile.lower() not in ("domain", "public", "private"):
         raise ValueError(f"Incorrect profile: {profile}")
-    if store == "local":
-        if str(value).lower() == "notconfigured":
-            msg = "Cannot set local policies as NotConfigured"
-            raise CommandExecutionError(msg)
     if setting.lower() not in (
         "allowedconnections",
         "droppedconnections",
@@ -520,6 +537,18 @@ def set_logging_settings(profile, setting, value, store="local"):
         "maxfilesize",
     ):
         raise ValueError(f"Incorrect setting: {setting}")
+
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-logallowed
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-logblocked
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-logmaxsizekilobytes
+    if str(value).lower() == "notconfigured" and store.lower() == "local":
+        if setting in ["allowedconnections", "droppedconnections", "maxfilesize"]:
+            raise CommandExecutionError(
+                "NotConfigured only valid when setting Group Policy"
+            )
+    if setting == "maxfilesize" and str(value).lower() == "notconfigured":
+        raise CommandExecutionError(f"NotConfigured not a valid option for {setting}")
+
     settings = {"filename": ["-LogFileName", value]}
     if setting.lower() in ("allowedconnections", "droppedconnections"):
         if value.lower() not in ("enable", "disable", "notconfigured"):
@@ -588,7 +617,7 @@ def set_settings(profile, setting, value, store="local"):
 
             - enable
             - disable
-            - notconfigured
+            - notconfigured  <== lgpo only
 
         store (str):
             The store to use. This is either the local firewall policy or the
@@ -618,20 +647,19 @@ def set_settings(profile, setting, value, store="local"):
         raise ValueError(f"Incorrect setting: {setting}")
     if value.lower() not in ("enable", "disable", "notconfigured"):
         raise ValueError(f"Incorrect value: {value}")
-    if setting.lower() in ["localfirewallrules", "localconsecrules"]:
-        if store.lower() != "lgpo":
-            msg = f"{setting} can only be set using Group Policy"
-            raise CommandExecutionError(msg)
-    if setting.lower() == "inboundusernotification" and store.lower() != "lgpo":
-        if value.lower() == "notconfigured":
-            msg = "NotConfigured is only valid when setting group policy"
-            raise CommandExecutionError(msg)
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-allowlocalfirewallrules
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-allowlocalipsecrules
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-allowunicastresponsetomulticast
+    # https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2025-ps#-notifyonlisten
+    if value.lower() == "notconfigured" and store.lower() == "local":
+        msg = "NotConfigured is only valid when setting group policy"
+        raise CommandExecutionError(msg)
 
     # Build the powershell command
     cmd = ["Set-NetFirewallProfile"]
     if profile:
         cmd.append(profile)
-    if store and store.lower() == "lgpo":
+    if store.lower() == "lgpo":
         cmd.extend(["-PolicyStore", "localhost"])
 
     settings = {
@@ -706,7 +734,7 @@ def set_state(profile, state, store="local"):
     cmd = ["Set-NetFirewallProfile"]
     if profile:
         cmd.append(profile)
-    if store and store.lower() == "lgpo":
+    if store.lower() == "lgpo":
         cmd.extend(["-PolicyStore", "localhost"])
 
     cmd.extend(["-Enabled", ON_OFF[state.lower()]])

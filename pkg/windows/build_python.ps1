@@ -176,13 +176,10 @@ $BUILD_DIR    = "$SCRIPT_DIR\buildenv"
 $RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
 $SYS_PY_BIN   = (python -c "import sys; print(sys.executable)")
 $BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
-$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
 
 if ( $Architecture -eq "x64" ) {
-    $SALT_DEP_URL = "$SALT_DEP_URL/64"
     $ARCH         = "amd64"
 } else {
-    $SALT_DEP_URL = "$SALT_DEP_URL/32"
     $ARCH         = "x86"
 }
 
@@ -249,7 +246,7 @@ if ( $env:VIRTUAL_ENV ) {
 #-------------------------------------------------------------------------------
 # Installing Relenv
 #-------------------------------------------------------------------------------
-Write-Host "Installing Relenv: " -NoNewLine
+Write-Host "Installing Relenv ($RelenvVersion): " -NoNewLine
 pip install relenv==$RelenvVersion --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {
