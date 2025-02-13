@@ -25,7 +25,6 @@ runs:
       id: get-python-version
       uses: ./.github/actions/get-python-version
       with:
-        python-version: "3.10"
         python-binary: python3
 
     - name: Define Cache Hash
