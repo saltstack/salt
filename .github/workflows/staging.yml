@@ -301,6 +301,16 @@ jobs:
         with:
           python-version: "3.10"
 
+      ## DGM Debug  Python 1
+      - name: DGM debug python 1
+        run: |
+          ls -alrth /home/runner/work/salt/salt/.relenv
+
+      ## DGM Debug  Python 2
+      - name: DGM debug python 2
+        run: |
+         find / -name python3 | xargs ls -alrth
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
