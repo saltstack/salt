@@ -1672,13 +1672,13 @@ class Minion(MinionBase):
                 )
                 if ret:
                     break
-                yield salt.ext.tornado.gen.sleep(0.3)
+                yield tornado.gen.sleep(0.3)
             else:
                 raise TimeoutError("Did not recieve return event")
             log.trace("Reply from main %s", request_id)
-            raise salt.ext.tornado.gen.Return(ret["ret"])
+            raise tornado.gen.Return(ret["ret"])
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _send_req_async_main(self, load, timeout):
         """
         Send a request to the master's request server. To be called from the
@@ -1695,7 +1695,7 @@ class Minion(MinionBase):
         ret = yield self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def _fire_master_prepare(
         self, data, tag, events, pretag, include_startup_grains=False
@@ -1726,7 +1726,7 @@ class Minion(MinionBase):
             load["grains"] = grains_to_add
         return load
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _fire_master_main(
         self,
         data=None,
@@ -2336,7 +2336,7 @@ class Minion(MinionBase):
             salt.utils.minion.cache_jobs(self.opts, ret["jid"], ret)
         return load
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _return_pub_main(self, ret, ret_cmd="_return", timeout=60):
         jid = ret.get("jid", ret.get("__jid__"))
         load = self._prepare_return_pub(ret, ret_cmd)
@@ -2359,7 +2359,7 @@ class Minion(MinionBase):
             timeout_handler()
             ret_val = ""
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
-        raise salt.ext.tornado.gen.Return(ret_val)
+        raise tornado.gen.Return(ret_val)
 
     def _return_pub(self, ret, ret_cmd="_return", timeout=60):
         """
@@ -2840,7 +2840,7 @@ class Minion(MinionBase):
                         data,
                         request_id,
                     )
-                    raise salt.ext.tornado.gen.Return()
+                    raise tornado.gen.Return()
                 with salt.utils.event.get_event(
                     "minion", opts=self.opts, listen=False
                 ) as event:
