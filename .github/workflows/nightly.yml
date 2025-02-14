@@ -321,7 +321,7 @@ jobs:
       - name: DGM debug python 2
         shell: bash
         run: |
-         find / -name python3 | xargs ls -alrth
+         find -L / -name python3 -print0 | xargs ls -alrth
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
