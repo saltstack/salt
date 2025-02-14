@@ -491,9 +491,6 @@ class GitProvider:
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
-                ## DGM self._cache_basename = self.get_checkout_target().replace(
-                ## DGM     "/", "-"
-                ## DGM )  # replace '/' with '-' to not cause trouble with file-system
                 self._cache_basename = self.get_checkout_target()
 
             except AttributeError:
@@ -2799,63 +2796,21 @@ class GitBase:
             name = getattr(repo, "name", None)
             if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
-                    ## DGM # Find and place fetch_request file for all the other branches for this repo
-                    ## DGM repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
-                    ## DGM for branch in os.listdir(repo_work_hash):
-                    ## DGM     # Don't place fetch request in current branch being updated
-                    ## DGM     if branch == repo.get_cache_basename():
-                    ## DGM         continue
-                    ## DGM     branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
-                    ## DGM     fetch_path = salt.utils.path.join(
-                    ## DGM         branch_salt_dir, "fetch_request"
-                    ## DGM     )
-                    ## DGM     if os.path.isdir(branch_salt_dir):
-                    ## DGM         try:
-                    ## DGM             with salt.utils.files.fopen(fetch_path, "w"):
-                    ## DGM                 pass
-                    ## DGM         except OSError as exc:  # pylint: disable=broad-except
-                    ## DGM             log.error(
-                    ## DGM                 "Failed to make fetch request: %s %s",
-                    ## DGM                 fetch_path,
-                    ## DGM                 exc,
-                    ## DGM                 exc_info=True,
-                    ## DGM             )
-                    ## DGM     else:
-                    ## DGM         log.error("Failed to make fetch request: %s", fetch_path)
-
                     # Find and place fetch_request file for all the other branches for this repo
                     repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
-                    print(
-                        f"DGM class GitBase fetch_remotes, repo_work_hash '{repo_work_hash}', salt working dir '{repo.get_salt_working_dir()}'",
-                        flush=True,
-                    )
-
                     branches = [
                         os.path.relpath(path, repo_work_hash)
                         for (path, subdirs, files) in os.walk(repo_work_hash)
                         if not subdirs
                     ]
-                    print(
-                        f"DGM class GitBase fetch_remotes, branches '{branches}' from repo_work_hash '{repo_work_hash}'",
-                        flush=True,
-                    )
 
-                    ## DGM for branch in os.listdir(repo_work_hash):
-                    for branch in os.listdir(branches):
+                    for branch in branches:
                         # Don't place fetch request in current branch being updated
-                        print(
-                            f"DGM class GitBase fetch_remotes, for loop branch, branch '{branch}', repo get_cache_basename '{repo.get_cache_basename()}'",
-                            flush=True,
-                        )
                         if branch == repo.get_cache_basename():
                             continue
                         branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
                         fetch_path = salt.utils.path.join(
                             branch_salt_dir, "fetch_request"
-                        )
-                        print(
-                            f"DGM class GitBase fetch_remotes, for loop branch, branch_salt_dir '{branch_salt_dir}', fetch_path '{fetch_path}'",
-                            flush=True,
                         )
                         if os.path.isdir(branch_salt_dir):
                             try:
