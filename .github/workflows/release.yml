@@ -72,24 +72,24 @@ jobs:
         with:
           python-version: "3.10"
 
-      ## DGM Debug Python 1
-      - name: DGM debug python 1
-        shell: bash
-        if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
-        run: |
-          ls -alrth /home/runner/work/salt/salt/.relenv
+      ## DGM ## DGM Debug Python 1
+      ## DGM - name: DGM debug python 1
+      ## DGM   shell: bash
+      ## DGM   if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
+      ## DGM   run: |
+      ## DGM     ls -alrth /home/runner/work/salt/salt/.relenv
 
-      ## DGM Debug Python 2
-      - name: DGM debug python 2
-        shell: bash
-        run: |
-         find -L /opt/hostedtoolcache/Python/3.10.16 -name python3 -print | xargs ls -alrth
+      ## DGM ## DGM Debug Python 2
+      ## DGM - name: DGM debug python 2
+      ## DGM   shell: bash
+      ## DGM   run: |
+      ## DGM    find -L /opt/hostedtoolcache/Python/3.10.16 -name python3 -print | xargs ls -alrth
 
-      ## DGM Debug Python 3
-      - name: DGM debug python 3
-        shell: bash
-        run: |
-         find -L /opt/hostedtoolcache/Python -name python3 -print | xargs ls -alrth
+      ## DGM ## DGM Debug Python 3
+      ## DGM - name: DGM debug python 3
+      ## DGM   shell: bash
+      ## DGM   run: |
+      ## DGM    find -L /opt/hostedtoolcache/Python -name python3 -print | xargs ls -alrth
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

@@ -27,12 +27,27 @@ runs:
 
   steps:
 
-    - name: Get Python Version
+    - name: Get Python Version not Windows
       id: get-python-version
+      if: ${{ runner.os != 'Windows' }}
       uses: ./.github/actions/get-python-version
       with:
         python-binary: $pythonLocation/bin/python3
         ## DGM python-binary: python3
+
+    - name: Get Python Version Windows
+      id: get-python-version
+      if: ${{ runner.os == 'Windows' }}
+      uses: ./.github/actions/get-python-version
+      with:
+        python-binary: $pythonLocation\bin\python3.exe
+        ## DGM python-binary: python3
+
+    ## DGM - name: Get Python Version
+    ## DGM   id: get-python-version
+    ## DGM   uses: ./.github/actions/get-python-version
+    ## DGM   with:
+    ## DGM     python-binary: python3
 
     - name: Setup Cache Key
       shell: bash
