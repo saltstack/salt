@@ -1043,7 +1043,6 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-
         self.io_loop = tornado.ioloop.IOLoop.current()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.spawn_callback(
@@ -1070,10 +1069,9 @@ class MinionManager(MinionBase):
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
 
-    @tornado.gen.coroutine
-    def handle_event(self, package):
+    async def handle_event(self, package):
         try:
-            yield [_.handle_event(package) for _ in self.minions]
+            await asyncio.gather(*[_.handle_event(package) for _ in self.minions])
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
 
@@ -1644,6 +1642,9 @@ class Minion(MinionBase):
                 wait=timeout,
             )
             log.trace("Reply from main %s", request_id)
+            if ret is None:
+                log.error("Timeout waiting for response")
+                return
             return ret["ret"]
 
     @tornado.gen.coroutine
@@ -2849,7 +2850,7 @@ class Minion(MinionBase):
                         f"__master_req_channel_return/{request_id}",
                     )
             else:
-                log.debug(
+                log.error(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
                     data["cmd"],
                     job_master,
@@ -2891,6 +2892,9 @@ class Minion(MinionBase):
                     data["tag"],
                     data["events"],
                     data["pretag"],
+                )
+                log.debug(
+                    "Event sent to master %s %s", data["tag"], self.opts["master"]
                 )
             else:
                 log.debug(
