@@ -29,7 +29,7 @@ runs:
         ## DGM python-binary: python3
 
     - name: Get Python Version Windows
-      id: get-python-version
+      id: get-python-version-win
       if: ${{ runner.os == 'Windows' }}
       uses: ./.github/actions/get-python-version
       with:
@@ -40,15 +40,22 @@ runs:
     ## DGM   id: get-python-version
     ## DGM   uses: ./.github/actions/get-python-version
     ## DGM   with:
-    ## DGM     python-binary: python3
+    ## DGM     python-binary: $pythonLocation/bin/python3
+    ## DGM     ## DGM python-binary: python3
 
     - name: Define Cache Hash
       id: venv-hash
       shell: bash
       run: |
-        VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
-          steps.get-python-version.outputs.version-sha256sum }}|${{
-          hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
+            steps.get-python-version-win.outputs.version-sha256sum }}|${{
+            hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+        else
+          VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
+            steps.get-python-version.outputs.version-sha256sum }}|${{
+            hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+        fi
         echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
         echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
 
@@ -71,12 +78,22 @@ runs:
         PYTHON_EXE=${{ steps.tools-virtualenv.outputs.python-executable }}
         ${PYTHON_EXE} -m ensurepip --upgrade
         (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
-        if [ $exitcode -eq 0 ]; then
-          ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
-          ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          if [ $exitcode -eq 0 ]; then
+            ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
+            ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version-win.outputs.version }}/tools.txt
+          else
+            ${PYTHON_EXE} -m pip install --upgrade setuptools
+            ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version-win.outputs.version }}/tools.txt
+          fi
         else
-          ${PYTHON_EXE} -m pip install --upgrade setuptools
-          ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+          if [ $exitcode -eq 0 ]; then
+            ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
+            ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+          else
+            ${PYTHON_EXE} -m pip install --upgrade setuptools
+            ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+          fi
         fi
 
     - name: Get 'python-tools-scripts' Version

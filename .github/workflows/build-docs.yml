@@ -46,27 +46,28 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
-      - name: Get Python Version not Windows
-        id: get-python-version
-        if: ${{ runner.os != 'Windows' }}
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: $pythonLocation/bin/python3
-          ## DGM python-binary: python3
-
-      - name: Get Python Version Windows
-        id: get-python-version
-        if: ${{ runner.os == 'Windows' }}
-        uses: ./.github/actions/get-python-version
-        with:
-          python-binary: $pythonLocation\bin\python3.exe
-          ## DGM python-binary: python3
-
-      ## DGM - name: Get Python Version
+      ## DGM - name: Get Python Version not Windows
       ## DGM   id: get-python-version
+      ## DGM   if: ${{ runner.os != 'Windows' }}
       ## DGM   uses: ./.github/actions/get-python-version
       ## DGM   with:
-      ## DGM     python-binary: python3
+      ## DGM     python-binary: $pythonLocation/bin/python3
+      ## DGM     ## DGM python-binary: python3
+
+      ## DGM - name: Get Python Version Windows
+      ## DGM   id: get-python-version
+      ## DGM   if: ${{ runner.os == 'Windows' }}
+      ## DGM   uses: ./.github/actions/get-python-version
+      ## DGM   with:
+      ## DGM     python-binary: $pythonLocation\bin\python3.exe
+      ## DGM     ## DGM python-binary: python3
+
+    - name: Get Python Version
+      id: get-python-version
+      uses: ./.github/actions/get-python-version
+      with:
+        python-binary: $pythonLocation/bin/python3
+        ## DGM python-binary: python3
 
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
