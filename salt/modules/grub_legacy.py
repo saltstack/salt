@@ -75,14 +75,14 @@ def conf():
                 if line.startswith("\n"):
                     in_stanza = False
                     if "title" in stanza:
-                        stanza += "order {}".format(pos)
+                        stanza += f"order {pos}"
                         pos += 1
                         stanzas.append(stanza)
                     stanza = ""
                     continue
                 if line.strip().startswith("title"):
                     if in_stanza:
-                        stanza += "order {}".format(pos)
+                        stanza += f"order {pos}"
                         pos += 1
                         stanzas.append(stanza)
                         stanza = ""
@@ -97,7 +97,7 @@ def conf():
                 if not line.endswith("\n"):
                     line += "\n"
                 stanza += line
-                stanza += "order {}".format(pos)
+                stanza += f"order {pos}"
                 pos += 1
                 stanzas.append(stanza)
     except OSError as exc:

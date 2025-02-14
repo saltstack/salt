@@ -843,7 +843,7 @@ def test_301_process_results_with_lists():
                     assert list(y.keys()) == ["g"]
                     assert y["g"] == 2
                 else:
-                    raise ValueError("Unexpected value {}".format(y))
+                    raise ValueError(f"Unexpected value {y}")
         elif "h" in x:
             assert len(x["h"]) == 1
             for y in x["h"]:
@@ -854,9 +854,9 @@ def test_301_process_results_with_lists():
                     assert len(y.keys()) == 2
                     assert y["k"] == 4
                 else:
-                    raise ValueError("Unexpected value {}".format(y))
+                    raise ValueError(f"Unexpected value {y}")
         else:
-            raise ValueError("Unexpected value {}".format(x))
+            raise ValueError(f"Unexpected value {x}")
 
 
 def test_302_process_results_with_lists_consecutive():
@@ -901,7 +901,7 @@ def test_302_process_results_with_lists_consecutive():
                     assert list(y.keys()) == ["g"]
                     assert y["g"] == 2
                 else:
-                    raise ValueError("Unexpected value {}".format(y))
+                    raise ValueError(f"Unexpected value {y}")
         elif len(x[0][0]) == 2:
             for y in x[0]:
                 if "j" in y:
@@ -911,6 +911,6 @@ def test_302_process_results_with_lists_consecutive():
                     assert len(y.keys()) == 2
                     assert y["k"] == 4
                 else:
-                    raise ValueError("Unexpected value {}".format(len(x[0][0])))
+                    raise ValueError(f"Unexpected value {len(x[0][0])}")
         else:
-            raise ValueError("Unexpected value {}".format(x))
+            raise ValueError(f"Unexpected value {x}")

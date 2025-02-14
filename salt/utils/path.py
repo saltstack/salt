@@ -3,7 +3,6 @@ Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
 """
 
-
 import logging
 import os
 import posixpath
@@ -182,9 +181,11 @@ def which(exe=None):
         # The specified extension isn't valid, so we just assume it's part of the
         # filename and proceed to walk the pathext list
         else:
-            is_executable = lambda path, membership=res: is_executable_common(
-                path
-            ) and has_executable_ext(path, membership)
+
+            def is_executable(path, membership=res):
+                return is_executable_common(path) and has_executable_ext(
+                    path, membership
+                )
 
     else:
         # in posix, there's no such thing as file extensions..only zuul
@@ -202,7 +203,7 @@ def which(exe=None):
 
     # now to search through our system_path
     for path in system_path:
-        p = join(path, exe)
+        p = join(os.path.expandvars(path), exe)
 
         # iterate through all extensions to see which one is executable
         for ext in pathext:
@@ -287,7 +288,7 @@ def check_or_die(command):
         raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError("'{}' is not in the path".format(command))
+        raise CommandNotFoundError(f"'{command}' is not in the path")
 
 
 def sanitize_win_path(winpath):

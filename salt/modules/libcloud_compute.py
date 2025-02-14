@@ -26,6 +26,7 @@ Clouds include Amazon EC2, Azure, Google GCE, VMware, OpenStack Nova
 
 :depends: apache-libcloud
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -786,7 +787,7 @@ def _get_by_id(collection, id):
     if not matches:
         raise ValueError("Could not find a matching item")
     elif len(matches) > 1:
-        raise ValueError("The id matched {} items, not 1".format(len(matches)))
+        raise ValueError(f"The id matched {len(matches)} items, not 1")
     return matches[0]
 
 

@@ -1,4 +1,4 @@
 # auto.py is full of patterns mypy doesn't like, so for type checking
 # purposes we replace it with interface.py.
 
-from .interface import *
+from .interface import *  # pylint: disable=unused-wildcard-import,wildcard-import

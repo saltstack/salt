@@ -6,8 +6,9 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-    pytest.helpers.run_command([pytest.INST_BIN, "/minion-name=cli_minion"])
-    yield
+    args = ["/minion-name=cli_minion"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 

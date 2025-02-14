@@ -132,11 +132,11 @@ def _contextkey(jail=None, chroot=None, root=None, prefix="pkg.list_pkgs"):
     unique to that jail/chroot is used.
     """
     if jail:
-        return str(prefix) + ".jail_{}".format(jail)
+        return str(prefix) + f".jail_{jail}"
     elif chroot:
-        return str(prefix) + ".chroot_{}".format(chroot)
+        return str(prefix) + f".chroot_{chroot}"
     elif root:
-        return str(prefix) + ".root_{}".format(root)
+        return str(prefix) + f".root_{root}"
     return prefix
 
 
@@ -154,7 +154,7 @@ def parse_config(file_name="/usr/local/etc/pkg.conf"):
     """
     ret = {}
     if not os.path.isfile(file_name):
-        return "Unable to find {} on file system".format(file_name)
+        return f"Unable to find {file_name} on file system"
 
     with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
@@ -356,7 +356,7 @@ def list_pkgs(
     chroot=None,
     root=None,
     with_origin=False,
-    **kwargs
+    **kwargs,
 ):
     """
     List the packages currently installed as a dict::
@@ -444,9 +444,7 @@ def update_package_site(new_url):
         salt '*' pkg.update_package_site http://127.0.0.1/
     """
     config_file = parse_config()["config_file"]
-    __salt__["file.sed"](
-        config_file, "PACKAGESITE.*", "PACKAGESITE\t : {}".format(new_url)
-    )
+    __salt__["file.sed"](config_file, "PACKAGESITE.*", f"PACKAGESITE\t : {new_url}")
 
     # add change return later
     return True
@@ -684,7 +682,7 @@ def install(
     regex=False,
     pcre=False,
     batch=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Install package(s) from a repository
@@ -870,7 +868,7 @@ def install(
             if version_num is None:
                 targets.append(param)
             else:
-                targets.append("{}-{}".format(param, version_num))
+                targets.append(f"{param}-{version_num}")
     else:
         raise CommandExecutionError("Problem encountered installing package(s)")
 
@@ -922,7 +920,7 @@ def remove(
     recurse=False,
     regex=False,
     pcre=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Remove a package from the database and system
@@ -1887,9 +1885,9 @@ def updating(name, jail=None, chroot=None, root=None, filedate=None, filename=No
 
     opts = ""
     if filedate:
-        opts += "d {}".format(filedate)
+        opts += f"d {filedate}"
     if filename:
-        opts += "f {}".format(filename)
+        opts += f"f {filename}"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("updating")
@@ -1942,7 +1940,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         if not locked(target, **kwargs):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be held.".format(target)
+                ret[target]["comment"] = f"Package {target} is set to be held."
             else:
                 if lock(target, **kwargs):
                     ret[target].update(result=True)
@@ -2020,10 +2018,10 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be unheld.".format(target)
+                    ] = f"Package {target} was unable to be unheld."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is not being held.".format(target)
+            ret[target]["comment"] = f"Package {target} is not being held."
     return ret
 
 
@@ -2071,7 +2069,7 @@ def list_locked(**kwargs):
 
     """
     return [
-        "{}-{}".format(pkgname, version(pkgname, **kwargs))
+        f"{pkgname}-{version(pkgname, **kwargs)}"
         for pkgname in _lockcmd("lock", name=None, **kwargs)
     ]
 
@@ -2247,7 +2245,7 @@ def _lockcmd(subcmd, pkgname=None, **kwargs):
 
     if out["retcode"] != 0:
         raise CommandExecutionError(
-            "Problem encountered {}ing packages".format(subcmd), info={"result": out}
+            f"Problem encountered {subcmd}ing packages", info={"result": out}
         )
 
     for line in salt.utils.itertools.split(out["stdout"], "\n"):

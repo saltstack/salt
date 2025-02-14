@@ -4,6 +4,10 @@ Integration tests for the ini_manage state
 
 import pytest
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
+
 
 def test_options_present(salt_master, salt_call_cli):
     """

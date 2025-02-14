@@ -70,7 +70,7 @@ def _parse_master(path=MASTER_CF):
             "maxproc": comps[6],
             "command": " ".join(comps[7:]),
         }
-        dict_key = "{} {}".format(comps[0], comps[1])
+        dict_key = f"{comps[0]} {comps[1]}"
         conf_list.append(conf_line)
         conf_dict[dict_key] = conf_line
 
@@ -135,7 +135,7 @@ def set_master(
     conf_dict, conf_list = _parse_master(path)
 
     new_conf = []
-    dict_key = "{} {}".format(service, conn_type)
+    dict_key = f"{service} {conn_type}"
     new_line = _format_master(
         service,
         conn_type,
@@ -291,15 +291,15 @@ def set_main(key, value, path=MAIN_CF):
     pairs, conf_list = _parse_main(path)
 
     new_conf = []
-    key_line_match = re.compile("^{}([\\s=]|$)".format(re.escape(key)))
+    key_line_match = re.compile(f"^{re.escape(key)}([\\s=]|$)")
     if key in pairs:
         for line in conf_list:
             if re.match(key_line_match, line):
-                new_conf.append("{} = {}".format(key, value))
+                new_conf.append(f"{key} = {value}")
             else:
                 new_conf.append(line)
     else:
-        conf_list.append("{} = {}".format(key, value))
+        conf_list.append(f"{key} = {value}")
         new_conf = conf_list
 
     _write_conf(new_conf, path)
@@ -394,11 +394,11 @@ def delete(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {}".format(queue_id)
+            ret["message"] = f"No message in queue with ID {queue_id}"
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -d {}".format(queue_id)
+    cmd = f"postsuper -d {queue_id}"
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
@@ -445,28 +445,28 @@ def hold(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {}".format(queue_id)
+            ret["message"] = f"No message in queue with ID {queue_id}"
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -h {}".format(queue_id)
+    cmd = f"postsuper -h {queue_id}"
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
         if queue_id == "ALL":
             ret["message"] = "Successfully placed all messages on hold"
         else:
-            ret[
-                "message"
-            ] = "Successfully placed message on hold with queue id {}".format(queue_id)
+            ret["message"] = (
+                f"Successfully placed message on hold with queue id {queue_id}"
+            )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to place all messages on hold"
         else:
-            ret[
-                "message"
-            ] = "Unable to place message on hold with queue id {}: {}".format(
-                queue_id, result["stderr"]
+            ret["message"] = (
+                "Unable to place message on hold with queue id {}: {}".format(
+                    queue_id, result["stderr"]
+                )
             )
     return ret
 
@@ -498,28 +498,28 @@ def unhold(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {}".format(queue_id)
+            ret["message"] = f"No message in queue with ID {queue_id}"
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -H {}".format(queue_id)
+    cmd = f"postsuper -H {queue_id}"
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
         if queue_id == "ALL":
             ret["message"] = "Successfully set all message as unheld"
         else:
-            ret[
-                "message"
-            ] = "Successfully set message as unheld with queue id {}".format(queue_id)
+            ret["message"] = (
+                f"Successfully set message as unheld with queue id {queue_id}"
+            )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to set all message as unheld."
         else:
-            ret[
-                "message"
-            ] = "Unable to set message as unheld with queue id {}: {}".format(
-                queue_id, result["stderr"]
+            ret["message"] = (
+                "Unable to set message as unheld with queue id {}: {}".format(
+                    queue_id, result["stderr"]
+                )
             )
     return ret
 
@@ -551,11 +551,11 @@ def requeue(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {}".format(queue_id)
+            ret["message"] = f"No message in queue with ID {queue_id}"
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -r {}".format(queue_id)
+    cmd = f"postsuper -r {queue_id}"
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:

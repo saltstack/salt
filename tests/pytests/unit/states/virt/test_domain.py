@@ -165,7 +165,11 @@ def test_defined_update(test):
                 "initrd": "/root/f8-i386-initrd",
                 "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
             }
-            assert virt.defined("myvm", cpu=2, boot=boot,) == {
+            assert virt.defined(
+                "myvm",
+                cpu=2,
+                boot=boot,
+            ) == {
                 "name": "myvm",
                 "changes": {"myvm": {"definition": True, "cpu": True}},
                 "result": True if not test else None,
@@ -262,9 +266,11 @@ def test_running_no_change(test, running):
                 "name": "myvm",
                 "result": True,
                 "changes": {"myvm": {"started": True}} if running == "shutdown" else {},
-                "comment": "Domain myvm started"
-                if running == "shutdown"
-                else "Domain myvm exists and is running",
+                "comment": (
+                    "Domain myvm started"
+                    if running == "shutdown"
+                    else "Domain myvm exists and is running"
+                ),
             }
             if running == "shutdown" and not test:
                 start_mock.assert_called()
@@ -426,9 +432,11 @@ def test_running_update(test, running):
                 "name": "myvm",
                 "changes": {"myvm": changes},
                 "result": True if not test else None,
-                "comment": "Domain myvm updated"
-                if running == "running"
-                else "Domain myvm updated and started",
+                "comment": (
+                    "Domain myvm updated"
+                    if running == "running"
+                    else "Domain myvm updated and started"
+                ),
             }
             if running == "shutdown" and not test:
                 start_mock.assert_called()

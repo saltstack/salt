@@ -2,7 +2,6 @@
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
-
 import datetime
 import os
 import textwrap

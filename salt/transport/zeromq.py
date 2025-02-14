@@ -1,6 +1,7 @@
 """
 Zeromq transport classes
 """
+
 import errno
 import hashlib
 import logging
@@ -281,7 +282,12 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
-        return self.stream.on_recv(callback)
+        try:
+            return self.stream.on_recv(callback)
+        except OSError as exc:
+            if callback is None and str(exc) == "Stream is closed":
+                return
+            raise
 
     @salt.ext.tornado.gen.coroutine
     def send(self, msg):
@@ -449,7 +455,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:
@@ -602,14 +608,16 @@ class AsyncReqMessageClient:
                 try:
                     recv = yield self.socket.recv()
                 except zmq.eventloop.future.CancelledError as exc:
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                     return
 
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            future.set_exception(exc)
+            if not future.done():
+                future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
@@ -698,7 +706,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
-        run in a thread or process as it creates and runs an it's own ioloop.
+        run in a thread or process as it creates and runs its own ioloop.
         """
         ioloop = salt.ext.tornado.ioloop.IOLoop()
         ioloop.make_current()
@@ -738,13 +746,22 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         @salt.ext.tornado.gen.coroutine
         def on_recv(packages):
-            for package in packages:
-                payload = salt.payload.loads(package)
-                yield publish_payload(payload)
+            try:
+                for package in packages:
+                    payload = salt.payload.loads(package)
+                    yield publish_payload(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Un-handled error in publisher %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
 
         pull_sock.on_recv(on_recv)
         try:
             ioloop.start()
+        except KeyboardInterrupt:
+            pass
         finally:
             pub_sock.close()
             pull_sock.close()
@@ -777,21 +794,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     htopic = salt.utils.stringutils.to_bytes(
                         hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    yield self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
-                    yield self.dpub_sock.send(payload)
+                    yield self.dpub_sock.send_multipart([htopic, payload])
                     log.trace("Filtered data has been sent")
                 # Syndic broadcast
                 if self.opts.get("order_masters"):
                     log.trace("Sending filtered data to syndic")
-                    yield self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
-                    yield self.dpub_sock.send(payload)
+                    yield self.dpub_sock.send_multipart([b"syndic", payload])
                     log.trace("Filtered data has been sent to syndic")
             # otherwise its a broadcast
             else:
                 # TODO: constants file for "broadcast"
                 log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
-                yield self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
-                yield self.dpub_sock.send(payload)
+                yield self.dpub_sock.send_multipart([b"broadcast", payload])
                 log.trace("Broadcasted data has been sent")
         else:
             log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)

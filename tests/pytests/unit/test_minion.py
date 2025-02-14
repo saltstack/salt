@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import uuid
 
 import pytest
 
@@ -20,6 +21,31 @@ from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSy
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture
+def connect_master_mock():
+    class ConnectMasterMock:
+        """
+        Mock connect master call.
+
+        The first call will raise an exception stored on the exc attribute.
+        Subsequent calls will return True.
+        """
+
+        def __init__(self):
+            self.calls = 0
+            self.exc = Exception
+
+        @salt.ext.tornado.gen.coroutine
+        def __call__(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                raise self.exc()
+            else:
+                return True
+
+    return ConnectMasterMock()
 
 
 def test_minion_load_grains_false(minion_opts):
@@ -69,12 +95,15 @@ def test_minion_load_grains_default(minion_opts):
     ],
 )
 def test_send_req_fires_completion_event(event, minion_opts):
+    req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    with patch("salt.utils.event.get_event", return_value=event):
+    with patch("salt.utils.event.get_event", return_value=event), patch(
+        "uuid.uuid4", return_value=req_id
+    ):
         minion_opts["random_startup_delay"] = 0
         minion_opts["return_retry_tries"] = 30
         minion_opts["grains"] = {}
@@ -98,7 +127,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                     condition_event_tag = (
                         len(call.args) > 1
                         and call.args[1]
-                        == f"__master_req_channel_payload/{minion_opts['master']}"
+                        == f"__master_req_channel_payload/{req_id}/{minion_opts['master']}"
                     )
                     condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
                         idx, call, call.args[1], "__master_req_channel_payload"
@@ -133,11 +162,11 @@ async def test_send_req_async_regression_62453(minion_opts):
         minion = salt.minion.Minion(minion_opts)
 
         load = {"load": "value"}
-        timeout = 60
+        timeout = 1
 
         # We are just validating no exception is raised
-        rtn = await minion._send_req_async(load, timeout)
-        assert rtn is False
+        with pytest.raises(TimeoutError):
+            rtn = await minion._send_req_async(load, timeout)
 
 
 def test_mine_send_tries(minion_opts):
@@ -713,39 +742,6 @@ def test_gen_modules_executors(minion_opts):
         minion.destroy()
 
 
-def test_reinit_crypto_on_fork(minion_opts):
-    """
-    Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
-    """
-    minion_opts["multiprocessing"] = True
-    with patch("salt.utils.process.default_signals"):
-
-        io_loop = salt.ext.tornado.ioloop.IOLoop()
-        io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
-
-        job_data = {"jid": "test-jid", "fun": "test.ping"}
-
-        def mock_start(self):
-            # pylint: disable=comparison-with-callable
-            assert (
-                len(
-                    [
-                        x
-                        for x in self._after_fork_methods
-                        if x[0] == salt.utils.crypt.reinit_crypto
-                    ]
-                )
-                == 1
-            )
-            # pylint: enable=comparison-with-callable
-
-        with patch.object(
-            salt.utils.process.SignalHandlingProcess, "start", mock_start
-        ):
-            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
-
-
 def test_minion_manage_schedule(minion_opts):
     """
     Tests that the manage_schedule will call the add function, adding
@@ -1119,3 +1115,55 @@ def test_load_args_and_kwargs(minion_opts):
     _args = [{"max_sleep": 40, "__kwarg__": True}]
     with pytest.raises(salt.exceptions.SaltInvocationError):
         ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
+
+
+async def test_connect_master_salt_client_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an salt client error while connecting to master.
+    """
+    minion_opts["acceptance_wait_time"] = 0
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+
+    connect_master_mock.exc = SaltClientError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    await mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # The first call raised an error which caused minion.destroy to get called,
+    # the second call is a success.
+    assert minion.connect_master.calls == 2
+
+
+async def test_connect_master_unresolveable_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an unresolvable while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = SaltMasterUnresolvableError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # Unresolvable errors break out of the loop.
+    assert minion.connect_master.calls == 1
+
+
+async def test_connect_master_general_exception_error(minion_opts, connect_master_mock):
+    """
+    Ensure minion's destory method is called on an un-handled exception while connecting to master.
+    """
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = Exception
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+    mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+
+    # The first call raised an error which caused minion.destroy to get called,
+    # the second call is a success.
+    assert minion.connect_master.calls == 2

@@ -53,7 +53,7 @@ def present(
         database, user, password, host, port
     ):
         ret["result"] = False
-        ret["comment"] = "Database {} does not exist".format(database)
+        ret["comment"] = f"Database {database} does not exist"
         return ret
 
     # check if user exists
@@ -70,16 +70,16 @@ def present(
         if __salt__["influxdb08.user_create"](
             name, passwd, database, user, password, host, port
         ):
-            ret["comment"] = "User {} has been created".format(name)
+            ret["comment"] = f"User {name} has been created"
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create user {}".format(name)
+            ret["comment"] = f"Failed to create user {name}"
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "User {} is already present".format(name)
+    ret["comment"] = f"User {name} is already present"
     return ret
 
 
@@ -112,19 +112,19 @@ def absent(name, database=None, user=None, password=None, host=None, port=None):
     if __salt__["influxdb08.user_exists"](name, database, user, password, host, port):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {} is present and needs to be removed".format(name)
+            ret["comment"] = f"User {name} is present and needs to be removed"
             return ret
         if __salt__["influxdb08.user_remove"](
             name, database, user, password, host, port
         ):
-            ret["comment"] = "User {} has been removed".format(name)
+            ret["comment"] = f"User {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove user {}".format(name)
+            ret["comment"] = f"Failed to remove user {name}"
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "User {} is not present, so it cannot be removed".format(name)
+    ret["comment"] = f"User {name} is not present, so it cannot be removed"
     return ret

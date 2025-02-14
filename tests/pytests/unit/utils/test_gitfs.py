@@ -23,6 +23,14 @@ except AttributeError:
 if HAS_PYGIT2:
     import pygit2
 
+    try:
+        from pygit2.enums import ObjectType
+
+        HAS_PYGIT2_ENUMS = True
+
+    except ModuleNotFoundError:
+        HAS_PYGIT2_ENUMS = False
+
 
 @pytest.fixture
 def minion_opts(tmp_path):
@@ -54,7 +62,7 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
     Ensure that both lowercase and non-lowercase values are supported
     """
     provider = "GitPython"
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     with patch.object(role_class, "verify_gitpython", MagicMock(return_value=True)):
         with patch.object(role_class, "verify_pygit2", MagicMock(return_value=False)):
             args = [minion_opts, {}]
@@ -92,7 +100,7 @@ def test_valid_provider_gitfs_provider(minion_opts, role_name, role_class):
         """
         return MagicMock(return_value=verify.endswith(provider))
 
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     for provider in salt.utils.gitfs.GIT_PROVIDERS:
         verify = "verify_gitpython"
         mock1 = _get_mock(verify, provider)
@@ -147,9 +155,14 @@ def _prepare_remote_repository_pygit2(tmp_path):
         tree,
         [repository.head.target],
     )
-    repository.create_tag(
-        "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
-    )
+    if HAS_PYGIT2_ENUMS:
+        repository.create_tag(
+            "annotated_tag", commit, ObjectType.COMMIT, signature, "some message"
+        )
+    else:
+        repository.create_tag(
+            "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+        )
     return remote
 
 

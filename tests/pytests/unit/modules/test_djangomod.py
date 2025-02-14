@@ -3,6 +3,7 @@
 
     Test cases for salt.modules.djangomod
 """
+
 import pytest
 
 import salt.modules.djangomod as djangomod

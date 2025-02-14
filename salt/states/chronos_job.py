@@ -97,7 +97,7 @@ def config(name, config):
         # if test report there will be an update
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Chronos job {} is set to be updated".format(name)
+            ret["comment"] = f"Chronos job {name} is set to be updated"
             return ret
 
         update_result = __salt__["chronos.update_job"](name, update_config)
@@ -110,10 +110,10 @@ def config(name, config):
             return ret
         else:
             ret["result"] = True
-            ret["comment"] = "Updated job config for {}".format(name)
+            ret["comment"] = f"Updated job config for {name}"
             return ret
     ret["result"] = True
-    ret["comment"] = "Chronos job {} configured correctly".format(name)
+    ret["comment"] = f"Chronos job {name} configured correctly"
     return ret
 
 
@@ -127,18 +127,18 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not __salt__["chronos.has_job"](name):
         ret["result"] = True
-        ret["comment"] = "Job {} already absent".format(name)
+        ret["comment"] = f"Job {name} already absent"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Job {} is set to be removed".format(name)
+        ret["comment"] = f"Job {name} is set to be removed"
         return ret
     if __salt__["chronos.rm_job"](name):
         ret["changes"] = {"job": name}
         ret["result"] = True
-        ret["comment"] = "Removed job {}".format(name)
+        ret["comment"] = f"Removed job {name}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove job {}".format(name)
+        ret["comment"] = f"Failed to remove job {name}"
         return ret

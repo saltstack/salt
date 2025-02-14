@@ -8,7 +8,6 @@
     Test salt.utils.immutabletypes
 """
 
-
 import salt.utils.immutabletypes as immutabletypes
 from tests.support.unit import TestCase
 

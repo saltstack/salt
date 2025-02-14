@@ -62,7 +62,7 @@ def test_pv_present():
     """
     name = "/dev/sda5"
 
-    comt = "Physical Volume {} already present".format(name)
+    comt = f"Physical Volume {name} already present"
 
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
@@ -70,7 +70,7 @@ def test_pv_present():
     with patch.dict(lvm.__salt__, {"lvm.pvdisplay": mock}):
         assert lvm.pv_present(name) == ret
 
-        comt = "Physical Volume {} is set to be created".format(name)
+        comt = f"Physical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.pv_present(name) == ret
@@ -82,7 +82,7 @@ def test_pv_absent():
     """
     name = "/dev/sda5"
 
-    comt = "Physical Volume {} does not exist".format(name)
+    comt = f"Physical Volume {name} does not exist"
 
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
@@ -90,7 +90,7 @@ def test_pv_absent():
     with patch.dict(lvm.__salt__, {"lvm.pvdisplay": mock}):
         assert lvm.pv_absent(name) == ret
 
-        comt = "Physical Volume {} is set to be removed".format(name)
+        comt = f"Physical Volume {name} is set to be removed"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.pv_absent(name) == ret
@@ -102,7 +102,7 @@ def test_vg_present():
     """
     name = "testvg00"
 
-    comt = "Failed to create Volume Group {}".format(name)
+    comt = f"Failed to create Volume Group {name}"
 
     ret = {"name": name, "changes": {}, "result": False, "comment": comt}
 
@@ -111,7 +111,7 @@ def test_vg_present():
         with patch.dict(lvm.__opts__, {"test": False}):
             assert lvm.vg_present(name) == ret
 
-        comt = "Volume Group {} is set to be created".format(name)
+        comt = f"Volume Group {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.vg_present(name) == ret
@@ -123,7 +123,7 @@ def test_vg_absent():
     """
     name = "testvg00"
 
-    comt = "Volume Group {} already absent".format(name)
+    comt = f"Volume Group {name} already absent"
 
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
@@ -131,7 +131,7 @@ def test_vg_absent():
     with patch.dict(lvm.__salt__, {"lvm.vgdisplay": mock}):
         assert lvm.vg_absent(name) == ret
 
-        comt = "Volume Group {} is set to be removed".format(name)
+        comt = f"Volume Group {name} is set to be removed"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.vg_absent(name) == ret
@@ -143,7 +143,7 @@ def test_lv_present(lv01, lv02):
     """
     name = "testlv01"
     vgname = "testvg01"
-    comt = "Logical Volume {} already present".format(name)
+    comt = f"Logical Volume {name} already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -152,7 +152,7 @@ def test_lv_present(lv01, lv02):
 
     mock = MagicMock(return_value=lv02)
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-        comt = "Logical Volume {} is set to be created".format(name)
+        comt = f"Logical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.lv_present(name, vgname=vgname) == ret
@@ -177,7 +177,7 @@ def test_lv_present_with_valid_suffixes(lv01, lv02):
         "4194304s",
         "4194304S",
     ]
-    comt = "Logical Volume {} already present".format(name)
+    comt = f"Logical Volume {name} already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -207,7 +207,7 @@ def test_lv_present_with_valid_suffixes(lv01, lv02):
     ]
     mock = MagicMock(return_value=lv02)
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-        comt = "Logical Volume {} is set to be created".format(name)
+        comt = f"Logical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             for size in sizes_list:
@@ -221,12 +221,12 @@ def test_lv_present_with_invalid_suffixes(lv02):
     name = "testlv01"
     vgname = "testvg01"
     sizes_list = ["1B", "1b", "2K", "2k", "2KB", "2kb", "3BB", "3Bb", "4JKL", "YJK"]
-    comt = "Logical Volume {} already present".format(name)
+    comt = f"Logical Volume {name} already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
     mock = MagicMock(return_value=lv02)
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-        comt = "Logical Volume {} is set to be created".format(name)
+        comt = f"Logical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             for size in sizes_list:
@@ -258,7 +258,7 @@ def test_lv_present_with_percentage_extents(lv01, lv02):
     extents = "42%VG"
     mock = MagicMock(return_value=lv02)
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-        comt = "Logical Volume {} is set to be created".format(name)
+        comt = f"Logical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.lv_present(name, vgname=vgname, extents=extents) == ret
@@ -270,7 +270,7 @@ def test_lv_present_with_force(lv01, lv02):
     """
     name = "testlv01"
     vgname = "testvg01"
-    comt = "Logical Volume {} already present".format(name)
+    comt = f"Logical Volume {name} already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -279,7 +279,7 @@ def test_lv_present_with_force(lv01, lv02):
 
     mock = MagicMock(return_value=lv02)
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-        comt = "Logical Volume {} is set to be created".format(name)
+        comt = f"Logical Volume {name} is set to be created"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.lv_present(name, vgname=vgname, force=True) == ret
@@ -291,7 +291,7 @@ def test_lv_present_with_same_size(lv01):
     """
     name = "testlv01"
     vgname = "testvg01"
-    comt = "Logical Volume {} already present".format(name)
+    comt = f"Logical Volume {name} already present"
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -305,7 +305,7 @@ def test_lv_present_with_increase(lv01):
     """
     name = "testlv01"
     vgname = "testvg01"
-    comt = "Logical Volume {} is set to be resized".format(name)
+    comt = f"Logical Volume {name} is set to be resized"
     ret = {"name": name, "changes": {}, "result": None, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -334,7 +334,7 @@ def test_lv_present_with_reduce_with_force(lv01):
     """
     name = "testlv01"
     vgname = "testvg01"
-    comt = "Logical Volume {} is set to be resized".format(name)
+    comt = f"Logical Volume {name} is set to be resized"
     ret = {"name": name, "changes": {}, "result": None, "comment": comt}
 
     mock = MagicMock(return_value=lv01)
@@ -349,7 +349,7 @@ def test_lv_absent():
     """
     name = "testlv00"
 
-    comt = "Logical Volume {} already absent".format(name)
+    comt = f"Logical Volume {name} already absent"
 
     ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
@@ -357,7 +357,7 @@ def test_lv_absent():
     with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
         assert lvm.lv_absent(name) == ret
 
-        comt = "Logical Volume {} is set to be removed".format(name)
+        comt = f"Logical Volume {name} is set to be removed"
         ret.update({"comment": comt, "result": None})
         with patch.dict(lvm.__opts__, {"test": True}):
             assert lvm.lv_absent(name) == ret

@@ -44,23 +44,30 @@ def _find_durations(data, name_max=60):
     ml = len("duration (ms)")
     for host in data:
         for sid in data[host]:
-            dat = data[host][sid]
-            ts = sid.split("_|-")
+            try:
+                dat = data[host][sid]
+            except TypeError:
+                dat = {}
+
+            if not isinstance(dat, dict):
+                dat = {"name": str(sid)}
+
+            ts = str(sid).split("_|-")
             mod = ts[0]
             fun = ts[-1]
             name = dat.get("name", dat.get("__id__"))
-            dur = float(data[host][sid].get("duration", -1))
+            dur = float(dat.get("duration", -1))
 
             if name is None:
                 name = "<>"
             if len(name) > name_max:
                 name = name[0 : name_max - 3] + "..."
 
-            l = len("{:0.4f}".format(dur))
+            l = len(f"{dur:0.4f}")
             if l > ml:
                 ml = l
 
-            ret.append([dur, name, "{}.{}".format(mod, fun)])
+            ret.append([dur, name, f"{mod}.{fun}"])
 
     for row in ret:
         row[0] = "{0:{w}.4f}".format(row[0], w=ml)

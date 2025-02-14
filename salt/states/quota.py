@@ -41,17 +41,17 @@ def mode(name, mode, quotatype):
         fun = "on"
     if __salt__["quota.get_mode"](name)[name][quotatype] == fun:
         ret["result"] = True
-        ret["comment"] = "Quota for {} already set to {}".format(name, fun)
+        ret["comment"] = f"Quota for {name} already set to {fun}"
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Quota for {} needs to be set to {}".format(name, fun)
+        ret["comment"] = f"Quota for {name} needs to be set to {fun}"
         return ret
-    if __salt__["quota.{}".format(fun)](name):
+    if __salt__[f"quota.{fun}"](name):
         ret["changes"] = {"quota": name}
         ret["result"] = True
-        ret["comment"] = "Set quota for {} to {}".format(name, fun)
+        ret["comment"] = f"Set quota for {name} to {fun}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to set quota for {} to {}".format(name, fun)
+        ret["comment"] = f"Failed to set quota for {name} to {fun}"
         return ret

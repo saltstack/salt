@@ -24,7 +24,6 @@ The api key can be specified in the master or minion configuration like below:
 
 """
 
-
 from salt.exceptions import SaltInvocationError
 
 
@@ -162,11 +161,11 @@ def post_message(name, **kwargs):
             )
 
     except SaltInvocationError as sie:
-        ret["comment"] = "Failed to send message ({}): {}".format(sie, name)
+        ret["comment"] = f"Failed to send message ({sie}): {name}"
     else:
         if isinstance(result, bool) and result:
             ret["result"] = True
-            ret["comment"] = "Sent message: {}".format(name)
+            ret["comment"] = f"Sent message: {name}"
         else:
             ret["comment"] = "Failed to send message ({}): {}".format(
                 result["message"], name

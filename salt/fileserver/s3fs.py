@@ -75,8 +75,17 @@ structure::
 
     More info here:
     https://docs.aws.amazon.com/cli/latest/topic/s3-config.html
-"""
 
+.. note:: This fileserver back-end will by default sync all buckets on every
+    fileserver update.
+
+    If you want files to be only populated in the cache when requested, you can
+    disable this in the master config:
+
+    .. code-block:: yaml
+
+        s3.s3_sync_on_update: False
+"""
 
 import datetime
 import logging
@@ -94,8 +103,7 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-S3_CACHE_EXPIRE = 30  # cache for 30 seconds
-S3_SYNC_ON_UPDATE = True  # sync cache on update rather than jit
+S3_HASH_TYPE = "md5"
 
 
 def envs():
@@ -116,7 +124,8 @@ def update():
 
     metadata = _init()
 
-    if S3_SYNC_ON_UPDATE:
+    # sync cache on update rather than jit
+    if __opts__.get("s3.s3_sync_on_update", True):
         # sync the buckets to the local cache
         log.info("Syncing local cache from S3...")
         for saltenv, env_meta in metadata.items():
@@ -126,7 +135,8 @@ def update():
                         cached_file_path = _get_cached_file_name(
                             bucket, saltenv, file_path
                         )
-                        log.info("%s - %s : %s", bucket, saltenv, file_path)
+
+                        log.debug("%s - %s : %s", bucket, saltenv, file_path)
 
                         # load the file from S3 if it's not in the cache or it's old
                         _get_file_from_s3(
@@ -181,7 +191,7 @@ def find_file(path, saltenv="base", **kwargs):
 
 def file_hash(load, fnd):
     """
-    Return an MD5 file hash
+    Return the hash of an object's cached copy
     """
     if "env" in load:
         # "env" is not supported; Use "saltenv".
@@ -200,8 +210,8 @@ def file_hash(load, fnd):
     )
 
     if os.path.isfile(cached_file_path):
-        ret["hsum"] = salt.utils.hashutils.get_hash(cached_file_path)
-        ret["hash_type"] = "md5"
+        ret["hash_type"] = S3_HASH_TYPE
+        ret["hsum"] = salt.utils.hashutils.get_hash(cached_file_path, S3_HASH_TYPE)
 
     return ret
 
@@ -343,10 +353,11 @@ def _init():
     specified and cache the data to disk.
     """
     cache_file = _get_buckets_cache_filename()
-    exp = time.time() - S3_CACHE_EXPIRE
+    exp = time.time() - __opts__.get("s3.s3_cache_expire", 30)
 
     # check mtime of the buckets files cache
     metadata = None
+
     try:
         if os.path.getmtime(cache_file) > exp:
             metadata = _read_buckets_cache_file(cache_file)
@@ -357,6 +368,8 @@ def _init():
         # bucket files cache expired or does not exist
         metadata = _refresh_buckets_cache_file(cache_file)
 
+    _prune_deleted_files(metadata)
+
     return metadata
 
 
@@ -365,7 +378,6 @@ def _get_cache_dir():
     Return the path to the s3cache dir
     """
 
-    # Or is that making too many assumptions?
     return os.path.join(__opts__["cachedir"], "s3cache")
 
 
@@ -374,26 +386,15 @@ def _get_cached_file_name(bucket_name, saltenv, path):
     Return the cached file name for a bucket path file
     """
 
-    file_path = os.path.join(_get_cache_dir(), saltenv, bucket_name, path)
-
-    # make sure bucket and saltenv directories exist
-    if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
-
-    return file_path
+    return os.path.join(_get_cache_dir(), saltenv, bucket_name, path)
 
 
 def _get_buckets_cache_filename():
     """
     Return the filename of the cache for bucket contents.
-    Create the path if it does not exist.
     """
 
-    cache_dir = _get_cache_dir()
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
-
-    return os.path.join(cache_dir, "buckets_files.cache")
+    return os.path.join(_get_cache_dir(), "buckets_files.cache")
 
 
 def _refresh_buckets_cache_file(cache_file):
@@ -414,6 +415,7 @@ def _refresh_buckets_cache_file(cache_file):
         path_style,
         https_enable,
     ) = _get_s3_key()
+
     metadata = {}
 
     # helper s3 query function
@@ -562,10 +564,72 @@ def _refresh_buckets_cache_file(cache_file):
     return metadata
 
 
+def _prune_deleted_files(metadata):
+    cache_dir = _get_cache_dir()
+    cached_files = set()
+    roots = set()
+
+    if _is_env_per_bucket():
+        for env, env_data in metadata.items():
+            for bucket_meta in env_data:
+                for bucket, bucket_data in bucket_meta.items():
+                    root = os.path.join(cache_dir, env, bucket)
+
+                    if os.path.exists(root):
+                        roots.add(root)
+
+                    for meta in bucket_data:
+                        path = meta["Key"]
+                        cached_files.add(path)
+
+    else:
+        for env, env_data in metadata.items():
+            for bucket in _get_buckets():
+                root = os.path.join(cache_dir, bucket)
+
+                if os.path.exists(root):
+                    roots.add(root)
+
+            for meta in env_data:
+                cached_files.add(meta["Key"])
+
+    if log.isEnabledFor(logging.DEBUG):
+        import pprint
+
+        log.debug("cached file list:\n%s", pprint.pformat(cached_files))
+
+    for root in roots:
+        for base, dirs, files in os.walk(root):
+            for file_name in files:
+                path = os.path.join(base, file_name)
+                relpath = os.path.relpath(path, root)
+
+                if relpath not in cached_files:
+                    log.debug("File '%s' not found in cached file list", path)
+                    log.info(
+                        "File '%s' was deleted from bucket, deleting local copy",
+                        relpath,
+                    )
+
+                    os.unlink(path)
+                    dirname = os.path.dirname(path)
+
+                    # delete empty dirs all the way up to the cache dir
+                    while dirname != cache_dir and len(os.listdir(dirname)) == 0:
+                        log.debug("Directory '%s' is now empty, removing", dirname)
+                        os.rmdir(dirname)
+                        dirname = os.path.dirname(dirname)
+
+
 def _write_buckets_cache_file(metadata, cache_file):
     """
     Write the contents of the buckets cache file
     """
+    cache_dir = _get_cache_dir()
+
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
     if os.path.isfile(cache_file):
         os.remove(cache_file)
 
@@ -581,6 +645,10 @@ def _read_buckets_cache_file(cache_file):
     """
 
     log.debug("Reading buckets cache file")
+
+    if not os.path.exists(cache_file):
+        log.debug("Cache file does not exist")
+        return None
 
     with salt.utils.files.fopen(cache_file, "rb") as fp_:
         try:
@@ -689,6 +757,13 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     """
+
+    # make sure bucket and saltenv directories exist
+    target_dir = os.path.dirname(cached_file_path)
+
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
     (
         key,
         keyid,
@@ -708,11 +783,15 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
 
             if file_etag.find("-") == -1:
                 file_md5 = file_etag
-                cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, "md5")
+                cached_md5 = salt.utils.hashutils.get_hash(
+                    cached_file_path, S3_HASH_TYPE
+                )
 
                 # hashes match we have a cache hit
                 if cached_md5 == file_md5:
                     return
+                else:
+                    log.info("found different hash for file %s, updating...", path)
             else:
                 cached_file_stat = os.stat(cached_file_path)
                 cached_file_size = cached_file_stat.st_size
@@ -748,6 +827,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         https_enable=https_enable,
                     )
                     if ret is not None:
+                        s3_file_mtime = s3_file_size = None
                         for header_name, header_value in ret["headers"].items():
                             name = header_name.strip()
                             value = header_value.strip()
@@ -757,9 +837,8 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                                 )
                             elif str(name).lower() == "content-length":
                                 s3_file_size = int(value)
-                        if (
-                            cached_file_size == s3_file_size
-                            and cached_file_mtime > s3_file_mtime
+                        if (s3_file_size and cached_file_size == s3_file_size) and (
+                            s3_file_mtime and cached_file_mtime > s3_file_mtime
                         ):
                             log.info(
                                 "%s - %s : %s skipped download since cached file size "

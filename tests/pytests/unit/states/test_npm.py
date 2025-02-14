@@ -140,7 +140,7 @@ def test_cache_cleaned():
     pkg_ret = {"name": name, "result": False, "comment": "", "changes": {}}
     ret = {"name": None, "result": False, "comment": "", "changes": {}}
 
-    mock_list = MagicMock(return_value=["~/.npm", "~/.npm/{}/".format(name)])
+    mock_list = MagicMock(return_value=["~/.npm", f"~/.npm/{name}/"])
     mock_cache_clean_success = MagicMock(return_value=True)
     mock_cache_clean_failure = MagicMock(return_value=False)
     mock_err = MagicMock(side_effect=CommandExecutionError)
@@ -151,14 +151,14 @@ def test_cache_cleaned():
         assert npm.cache_cleaned() == ret
 
     with patch.dict(npm.__salt__, {"npm.cache_list": mock_err}):
-        comt = "Error looking up cached {}: ".format(name)
+        comt = f"Error looking up cached {name}: "
         pkg_ret.update({"comment": comt})
         assert npm.cache_cleaned(name) == pkg_ret
 
     mock_data = {"npm.cache_list": mock_list, "npm.cache_clean": MagicMock()}
     with patch.dict(npm.__salt__, mock_data):
         non_cached_pkg = "salt"
-        comt = "Package {} is not in the cache".format(non_cached_pkg)
+        comt = f"Package {non_cached_pkg} is not in the cache"
         pkg_ret.update({"name": non_cached_pkg, "result": True, "comment": comt})
         assert npm.cache_cleaned(non_cached_pkg) == pkg_ret
         pkg_ret.update({"name": name})
@@ -169,7 +169,7 @@ def test_cache_cleaned():
             assert npm.cache_cleaned() == ret
 
         with patch.dict(npm.__opts__, {"test": True}):
-            comt = "Cached {} set to be removed".format(name)
+            comt = f"Cached {name} set to be removed"
             pkg_ret.update({"result": None, "comment": comt})
             assert npm.cache_cleaned(name) == pkg_ret
 
@@ -181,7 +181,7 @@ def test_cache_cleaned():
             assert npm.cache_cleaned() == ret
 
         with patch.dict(npm.__opts__, {"test": False}):
-            comt = "Cached {} successfully removed".format(name)
+            comt = f"Cached {name} successfully removed"
             pkg_ret.update(
                 {"result": True, "comment": comt, "changes": {name: "Removed"}}
             )
@@ -199,7 +199,7 @@ def test_cache_cleaned():
             assert npm.cache_cleaned() == ret
 
         with patch.dict(npm.__opts__, {"test": False}):
-            comt = "Error cleaning cached {}".format(name)
+            comt = f"Error cleaning cached {name}"
             pkg_ret.update({"result": False, "comment": comt})
             pkg_ret["changes"] = {}
             assert npm.cache_cleaned(name) == pkg_ret

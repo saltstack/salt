@@ -47,7 +47,6 @@ Enable MySQL authentication.
 :depends:   - MySQL-python Python module
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

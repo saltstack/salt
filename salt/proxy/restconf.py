@@ -72,7 +72,6 @@ Proxy Pillar Example
       verify: false
 """
 
-
 import copy
 import json
 import logging

@@ -4,7 +4,6 @@ Utility functions for SMB connections
 :depends: impacket
 """
 
-
 import logging
 import socket
 import uuid
@@ -73,7 +72,7 @@ class SMBProto:
 
     def tree_connect(self, share):
         if share.endswith("$"):
-            share = r"\\{}\{}".format(self.server, share)
+            share = rf"\\{self.server}\{share}"
         tree = TreeConnect(self.session, share)
         tree.connect()
         return tree
@@ -87,9 +86,9 @@ class SMBProto:
         file = cls.normalize_filename(file)
         # ensure file is created, get maximal access, and set everybody read access
         max_req = SMB2CreateContextRequest()
-        max_req[
-            "buffer_name"
-        ] = CreateContextName.SMB2_CREATE_QUERY_MAXIMAL_ACCESS_REQUEST
+        max_req["buffer_name"] = (
+            CreateContextName.SMB2_CREATE_QUERY_MAXIMAL_ACCESS_REQUEST
+        )
         max_req["buffer_data"] = SMB2CreateQueryMaximalAccessRequest()
 
         # create security buffer that sets the ACL for everyone to have read access

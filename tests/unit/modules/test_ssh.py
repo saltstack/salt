@@ -116,7 +116,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             _fh.write(comment_line)
             # Add empty line for #41335
             _fh.write(empty_line)
-            _fh.write("{} {} {} {}".format(options, enc, key, email))
+            _fh.write(f"{options} {enc} {key} {email}")
 
         with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
             with patch(
@@ -138,7 +138,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         key = "abcxyz"
 
         with salt.utils.files.fopen(temp_file.name, "a") as _fh:
-            _fh.write(salt.utils.stringutils.to_str("{} {}".format(enc, key)))
+            _fh.write(salt.utils.stringutils.to_str(f"{enc} {key}"))
 
         # Replace the simple key from before with the more complicated options + new email
         # Option example is taken from Pull Request #39855
@@ -181,7 +181,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         key = "abcxyz"
 
         with salt.utils.files.fopen(temp_file.name, "a") as _fh:
-            _fh.write(salt.utils.stringutils.to_str("{} {}".format(enc, key)))
+            _fh.write(salt.utils.stringutils.to_str(f"{enc} {key}"))
 
         # Replace the simple key from before with the more complicated options + new email
         # Option example is taken from Pull Request #39855
@@ -209,7 +209,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(temp_file.name) as _fh:
             file_txt = salt.utils.stringutils.to_unicode(_fh.read())
             # the initial key must have been replaced and no longer present
-            self.assertNotIn("\n{} {}\n".format(enc, key), file_txt)
+            self.assertNotIn(f"\n{enc} {key}\n", file_txt)
             # the new key must be present
             self.assertIn(
                 "{} {} {} {}".format(",".join(options), enc, key, email), file_txt
@@ -231,11 +231,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         email = "foo@example.com"
 
         with salt.utils.files.fopen(temp_file.name, "w") as _fh:
-            _fh.write(
-                salt.utils.stringutils.to_str(
-                    "{} {} {} {}".format(options, enc, key, email)
-                )
-            )
+            _fh.write(salt.utils.stringutils.to_str(f"{options} {enc} {key} {email}"))
 
         with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
             with patch(
@@ -251,7 +247,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(
                         ssh.rm_auth_key(
                             "foo",
-                            "{}".format(key),
+                            f"{key}",
                             config=temp_file.name,
                         ),
                         "Key removed",

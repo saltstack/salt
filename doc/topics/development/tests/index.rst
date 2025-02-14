@@ -6,13 +6,10 @@ Salt's Test Suite
 
 Salt comes with a powerful integration and unit test suite allowing for
 the fully automated run of integration and/or unit tests from a single
-interface. It uses the combination of pytest, nox and `Kitchen Salt`_ to
-run these tests. Nox is used to manage all of the test python dependencies.
+interface. It uses the combination of pytest and nox to run these tests.
+Nox is used to manage all of the test python dependencies.
 When you run the test runner with nox, you will be installing the same
 python dependencies that we use to run our test suite on PRs and branch tests.
-`Kitchen Salt`_ is used to spin up our virtual machines based off of golden
-images. These virtual machines use the `salt-jenkins`_ sls states to configure
-any system dependencies.
 
 To learn the basics of how Salt's test suite works, be sure to check
 out the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
@@ -64,28 +61,17 @@ You can view all available sessions by running:
 For the most part you will only need nox to run the test suite, as this tool
 will install the exact same python dependencies we use to run on our test runs.
 The exception to this is when a system dependency is required, for example ``mysql``.
-These system dependencies are installed with sls states managed in the `salt-jenkins`_
+These system dependencies are installed with sls states managed in the `salt-ci-images`_
 repo or you can manually install the dependency yourself.
 
 System Dependencies
 ===================
-The system dependencies are installed from the `salt-jenkins`_ repo. The
+The system dependencies are installed from the `salt-ci-images`_ repo. The
 ``golden-images-provision`` state is what is run to determine what dependencies
 to install on which platform.
 We run this state only when we want to update our current VM images with new
 dependencies.
 
-Kitchen Salt
-============
-We also use `Kitchen Salt`_ to spin up the VM's used for testing. You can view the
-kitchen-salt `getting started`_ for instructions on how to install and set it up.
-`Kitchen Salt`_ uses Test Kitchen to spin up the VM or container in the configured
-provider. Once the VM is spun up, `Kitchen Salt`_ can install salt and run a particular
-set of states. In the case of our branch and PR tests we create "Golden Images" which
-run the `salt-jenkins`_ states and install salt system dependencies beforehand. We only
-update these "Golden Images" when we need to upgrade or install a system dependency. You can
-view the `kitchen-salt jenkins setup`_ docs for instructions on how to set up `Kitchen Salt`_
-similar to the jenkins environment we use to run branch and PR tests.
 
 Test Directory Structure
 ========================
@@ -378,8 +364,7 @@ the actual testing, such as functions containing assertions, must start with
 
 .. code-block:: python
 
-    def test_user_present(self):
-        ...
+    def test_user_present(self): ...
 
 When functions in test files are not prepended with ``test_``, the function
 acts as a normal, helper function and is not run as a test by the test suite.
@@ -532,8 +517,5 @@ run:
     nox -e 'test-3(coverage=False)' -- --markers
 
 
-.. _kitchen-salt jenkins setup: https://kitchen.saltproject.io/docs/file/docs/jenkins.md
-.. _getting started: https://kitchen.saltproject.io/docs/file/docs/gettingstarted.md
-.. _salt-jenkins: https://github.com/saltstack/salt-jenkins
-.. _Kitchen Salt: https://kitchen.saltproject.io/
+.. _salt-ci-images: https://github.com/saltstack/salt-ci-images
 .. _pytest: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests

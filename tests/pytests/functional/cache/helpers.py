@@ -138,7 +138,7 @@ def run_common_cache_tests(subtests, cache):
     ):
         with patch.dict(
             cache.modules._dict,
-            {"{}.updated".format(cache.driver): MagicMock(side_effect=SaltCacheError)},
+            {f"{cache.driver}.updated": MagicMock(side_effect=SaltCacheError)},
         ), pytest.raises(SaltCacheError):
             cache.updated(bank="kaboom", key="oops")
 

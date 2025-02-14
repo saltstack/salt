@@ -103,7 +103,7 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
             except (IndexError, SaltInvocationError, CommandExecutionError):
                 pass
         try:
-            response = __salt__["vagrant.{}".format(function)](node, **kwargs)
+            response = __salt__[f"vagrant.{function}"](node, **kwargs)
             if isinstance(response, dict):
                 response = response["name"]
             changed_nodes.append({"node": node, function: response})
@@ -170,7 +170,7 @@ def running(name, **kwargs):
             "name": name,
             "changes": {},
             "result": True,
-            "comment": "{} is already running".format(name),
+            "comment": f"{name} is already running",
         }
 
         try:
@@ -178,14 +178,14 @@ def running(name, **kwargs):
             if info[0]["state"] != "running":
                 __salt__["vagrant.start"](name)
                 ret["changes"][name] = "Machine started"
-                ret["comment"] = "Node {} started".format(name)
+                ret["comment"] = f"Node {name} started"
         except (SaltInvocationError, CommandExecutionError):
             #  there was no viable existing machine to start
             ret, kwargs = _find_init_change(name, ret, **kwargs)
             kwargs["start"] = True
             __salt__["vagrant.init"](name, **kwargs)
             ret["changes"][name] = "Node defined and started"
-            ret["comment"] = "Node {} defined and started".format(name)
+            ret["comment"] = f"Node {name} defined and started"
 
         return ret
 
@@ -272,7 +272,7 @@ def initialized(name, **kwargs):
     kwargs["start"] = False
     __salt__["vagrant.init"](name, **kwargs)
     ret["changes"][name] = "Node initialized"
-    ret["comment"] = "Node {} defined but not started.".format(name)
+    ret["comment"] = f"Node {name} defined but not started."
 
     return ret
 

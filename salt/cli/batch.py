@@ -83,14 +83,24 @@ class Batch:
                         )
                     break
                 if m is not None:
-                    fret.add(m)
+                    if "failed" in ret[m] and ret[m]["failed"] is True:
+                        log.debug(
+                            "minion '%s' failed test.ping - will be returned as a down minion",
+                            m,
+                        )
+                    else:
+                        fret.add(m)
+
         return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
         """
         Return the active number of minions to maintain
         """
-        partition = lambda x: float(x) / 100.0 * len(self.minions)
+
+        def partition(x):
+            return float(x) / 100.0 * len(self.minions)
+
         try:
             if isinstance(self.opts["batch"], str) and "%" in self.opts["batch"]:
                 res = partition(float(self.opts["batch"].strip("%")))
@@ -188,7 +198,7 @@ class Batch:
             if next_:
                 if not self.quiet:
                     salt.utils.stringutils.print_cli(
-                        "\nExecuting run on {}\n".format(sorted(next_))
+                        f"\nExecuting run on {sorted(next_)}\n"
                     )
                 # create a new iterator for this batch of minions
                 return_value = self.opts.get("return", self.opts.get("ret", ""))
@@ -289,11 +299,12 @@ class Batch:
                         # We already know some minions didn't respond to the ping, so inform
                         # inform user attempt to run a job failed
                         salt.utils.stringutils.print_cli(
-                            "Minion '%s' failed to respond to job sent", minion
+                            f"Minion '{minion}' failed to respond to job sent"
                         )
 
                     if self.opts.get("failhard"):
                         failhard = True
+                    ret[minion] = data
                 else:
                     # If we are executing multiple modules with the same cmd,
                     # We use the highest retcode.

@@ -111,6 +111,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
             headers=headers,
             verify=verify,
             cert=(certfile, keyfile),
+            timeout=120,
         )
         result = resp.json()
 

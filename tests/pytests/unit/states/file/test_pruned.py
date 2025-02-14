@@ -28,7 +28,7 @@ def test_pruned_clean(directory_name):
         ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {},
-        "comment": "Directory {} is not present".format(directory_name),
+        "comment": f"Directory {directory_name} is not present",
         "name": directory_name,
         "result": True,
     }
@@ -41,7 +41,7 @@ def test_pruned_test(directory_name):
         ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {"deleted": directory_name},
-        "comment": "Directory {} is set for removal".format(directory_name),
+        "comment": f"Directory {directory_name} is set for removal",
         "name": directory_name,
         "result": None,
     }
@@ -55,7 +55,7 @@ def test_pruned_success(directory_name):
         ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {"deleted": directory_name},
-        "comment": "Removed directory {}".format(directory_name),
+        "comment": f"Removed directory {directory_name}",
         "name": directory_name,
         "result": True,
     }

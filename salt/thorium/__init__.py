@@ -1,6 +1,7 @@
 """
 The thorium system allows for advanced event tracking and reactions
 """
+
 # Needed:
 # Use a top file to load sls files locally
 # use the existing state system to compile a low state
@@ -49,7 +50,7 @@ class ThorState(salt.state.HighState):
         regdata = {}
         if self.reg_ret is not None:
             try:
-                regdata = self.returners["{}.load_reg".format(self.reg_ret)]()
+                regdata = self.returners[f"{self.reg_ret}.load_reg"]()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(exc)
 
@@ -67,7 +68,7 @@ class ThorState(salt.state.HighState):
                 if not minions:
                     return cache
                 for minion in minions:
-                    total = self.cache.fetch("minions/{}".format(minion), "data")
+                    total = self.cache.fetch(f"minions/{minion}", "data")
 
                     if "pillar" in total:
                         if self.pillar_keys:
@@ -175,5 +176,5 @@ class ThorState(salt.state.HighState):
                 cache = self.gather_cache()
                 chunks = self.get_chunks()
                 if self.reg_ret is not None:
-                    self.returners["{}.save_reg".format(self.reg_ret)](chunks)
+                    self.returners[f"{self.reg_ret}.save_reg"](chunks)
                 r_start = time.time()

@@ -27,11 +27,11 @@ def test_present():
         {"splunk_search.get": mock, "splunk_search.create": mock},
     ):
         with patch.dict(splunk_search.__opts__, {"test": True}):
-            comt = "Would update {}".format(name)
+            comt = f"Would update {name}"
             ret.update({"comment": comt})
             assert splunk_search.present(name) == ret
 
-            comt = "Would create {}".format(name)
+            comt = f"Would create {name}"
             ret.update({"comment": comt})
             assert splunk_search.present(name) == ret
 
@@ -53,10 +53,10 @@ def test_absent():
     mock = MagicMock(side_effect=[True, False])
     with patch.dict(splunk_search.__salt__, {"splunk_search.get": mock}):
         with patch.dict(splunk_search.__opts__, {"test": True}):
-            comt = "Would delete {}".format(name)
+            comt = f"Would delete {name}"
             ret.update({"comment": comt})
             assert splunk_search.absent(name) == ret
 
-        comt = "{} is absent.".format(name)
+        comt = f"{name} is absent."
         ret.update({"comment": comt, "result": True, "changes": {}})
         assert splunk_search.absent(name) == ret

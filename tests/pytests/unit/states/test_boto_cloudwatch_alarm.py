@@ -68,7 +68,7 @@ def test_absent():
         boto_cloudwatch_alarm.__salt__, {"boto_cloudwatch.get_alarm": mock}
     ):
         with patch.dict(boto_cloudwatch_alarm.__opts__, {"test": True}):
-            comt = "alarm {} is set to be removed.".format(name)
+            comt = f"alarm {name} is set to be removed."
             ret.update({"comment": comt})
             assert boto_cloudwatch_alarm.absent(name) == ret
 

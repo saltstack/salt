@@ -3,6 +3,7 @@ Commands for working with travisci.
 
 :depends: pyOpenSSL >= 16.0.0
 """
+
 import base64
 import urllib.parse
 

@@ -331,9 +331,7 @@ def neighbors(*asns, **kwargs):
                 )
             )
         if ipnet:
-            title_parts.append(
-                "Selecting neighbors within the IP network: {ipnet}".format(ipnet=ipnet)
-            )
+            title_parts.append(f"Selecting neighbors within the IP network: {ipnet}")
         if kwargs:
             title_parts.append(
                 "Searching for BGP neighbors having the attributes: {attrmap}".format(

@@ -2,7 +2,6 @@
 State management of a java keystore
 """
 
-
 import logging
 import os
 
@@ -147,12 +146,12 @@ def managed(name, passphrase, entries, force_remove=False):
         log.debug("Will remove: %s", remove_list)
         for alias_name in remove_list:
             if __opts__["test"]:
-                ret["comment"] += "Alias {} would have been removed".format(alias_name)
+                ret["comment"] += f"Alias {alias_name} would have been removed"
                 ret["result"] = None
             else:
                 __salt__["keystore.remove"](alias_name, name, passphrase)
                 ret["changes"][alias_name] = "Removed"
-                ret["comment"] += "Alias {} removed.\n".format(alias_name)
+                ret["comment"] += f"Alias {alias_name} removed.\n"
 
     if not ret["changes"] and not ret["comment"]:
         ret["comment"] = "No changes made.\n"

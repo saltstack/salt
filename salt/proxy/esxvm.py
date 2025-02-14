@@ -144,7 +144,6 @@ Look there to find an example structure for Pillar as well as an example
 ``.sls`` file for configuring an ESX virtual machine from scratch.
 """
 
-
 import logging
 import os
 

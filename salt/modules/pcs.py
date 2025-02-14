@@ -10,7 +10,6 @@ Pacemaker/Cororsync conifguration system (PCS)
 .. versionadded:: 2016.3.0
 """
 
-
 import logging
 
 import salt.utils.path
@@ -160,7 +159,7 @@ def item_create(
     if isinstance(extra_args, (list, tuple)):
         # constraint command needs item_id in format 'id=<id' after all params
         if item in ["constraint"]:
-            extra_args = extra_args + ["id={}".format(item_id)]
+            extra_args = extra_args + [f"id={item_id}"]
         cmd += extra_args
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
@@ -328,7 +327,7 @@ def cib_create(cibfile, scope="configuration", extra_args=None):
     """
     cmd = ["pcs", "cluster", "cib", cibfile]
     if isinstance(scope, str):
-        cmd += ["scope={}".format(scope)]
+        cmd += [f"scope={scope}"]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -354,7 +353,7 @@ def cib_push(cibfile, scope="configuration", extra_args=None):
     """
     cmd = ["pcs", "cluster", "cib-push", cibfile]
     if isinstance(scope, str):
-        cmd += ["scope={}".format(scope)]
+        cmd += [f"scope={scope}"]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -420,7 +419,7 @@ def prop_set(prop, value, extra_args=None, cibfile=None):
     """
     return item_create(
         item="property",
-        item_id="{}={}".format(prop, value),
+        item_id=f"{prop}={value}",
         item_type=None,
         create="set",
         extra_args=extra_args,

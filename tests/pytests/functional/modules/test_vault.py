@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 def minion_config_overrides(vault_port):
     return {
         "vault": {
-            "url": "http://127.0.0.1:{}".format(vault_port),
+            "url": f"http://127.0.0.1:{vault_port}",
             "auth": {
                 "method": "token",
                 "token": "testsecret",
@@ -35,7 +35,7 @@ def minion_config_overrides(vault_port):
 
 
 def vault_container_version_id(value):
-    return "vault=={}".format(value)
+    return f"vault=={value}"
 
 
 @pytest.fixture(
@@ -54,7 +54,7 @@ def vault_container_version(request, salt_factories, vault_port, shell):
 
     factory = salt_factories.get_container(
         "vault",
-        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
+        f"ghcr.io/saltstack/salt-ci-containers/vault:{vault_version}",
         check_ports=[vault_port],
         container_run_kwargs={
             "ports": {"8200/tcp": vault_port},
@@ -77,7 +77,7 @@ def vault_container_version(request, salt_factories, vault_port, shell):
                 VAULT_BINARY,
                 "login",
                 "token=testsecret",
-                env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
+                env={"VAULT_ADDR": f"http://127.0.0.1:{vault_port}"},
             )
             if ret.returncode == 0:
                 break
@@ -91,8 +91,8 @@ def vault_container_version(request, salt_factories, vault_port, shell):
             "policy",
             "write",
             "testpolicy",
-            "{}/vault.hcl".format(RUNTIME_VARS.FILES),
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
+            f"{RUNTIME_VARS.FILES}/vault.hcl",
+            env={"VAULT_ADDR": f"http://127.0.0.1:{vault_port}"},
         )
         if ret.returncode != 0:
             log.debug("Failed to assign policy to vault:\n%s", ret)
@@ -118,17 +118,17 @@ def vault(loaders, modules, vault_container_version, shell, vault_port):
             "list",
             "--format=json",
             secret_path,
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
+            env={"VAULT_ADDR": f"http://127.0.0.1:{vault_port}"},
         )
         if ret.returncode == 0:
             for secret in ret.data:
-                secret_path = "secret/my/{}".format(secret)
+                secret_path = f"secret/my/{secret}"
                 ret = shell.run(
                     VAULT_BINARY,
                     "kv",
                     "delete",
                     secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
+                    env={"VAULT_ADDR": f"http://127.0.0.1:{vault_port}"},
                 )
                 ret = shell.run(
                     VAULT_BINARY,
@@ -136,7 +136,7 @@ def vault(loaders, modules, vault_container_version, shell, vault_port):
                     "metadata",
                     "delete",
                     secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
+                    env={"VAULT_ADDR": f"http://127.0.0.1:{vault_port}"},
                 )
 
 
@@ -270,6 +270,6 @@ def test_list_secrets(vault):
 @pytest.mark.usefixtures("existing_secret")
 def test_destroy_secret_kv2(vault, vault_container_version):
     if vault_container_version == "0.9.6":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.destroy_secret("secret/my/secret", "1")
     assert ret is True

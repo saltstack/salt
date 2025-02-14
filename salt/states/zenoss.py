@@ -17,7 +17,6 @@ Allows for setting a state of minions in Zenoss using the Zenoss API. Currently 
         - prod_state: 1000
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -55,30 +54,30 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
     if device:
         ret["result"] = True
         ret["changes"] = None
-        ret["comment"] = "{} is already monitored".format(name)
+        ret["comment"] = f"{name} is already monitored"
 
         # if prod_state is set, ensure it matches with the current state
         if prod_state is not None and device["productionState"] != prod_state:
             if __opts__["test"]:
-                ret[
-                    "comment"
-                ] = "{} is already monitored but prodState will be updated".format(name)
+                ret["comment"] = (
+                    f"{name} is already monitored but prodState will be updated"
+                )
                 ret["result"] = None
             else:
                 __salt__["zenoss.set_prod_state"](prod_state, name)
-                ret[
-                    "comment"
-                ] = "{} is already monitored but prodState was updated".format(name)
+                ret["comment"] = (
+                    f"{name} is already monitored but prodState was updated"
+                )
 
             ret["changes"] = {
                 "old": "prodState == {}".format(device["productionState"]),
-                "new": "prodState == {}".format(prod_state),
+                "new": f"prodState == {prod_state}",
             }
         return ret
 
     # Device not yet in Zenoss
     if __opts__["test"]:
-        ret["comment"] = 'The state of "{}" will be changed.'.format(name)
+        ret["comment"] = f'The state of "{name}" will be changed.'
         ret["changes"] = {"old": "monitored == False", "new": "monitored == True"}
         ret["result"] = None
         return ret
@@ -87,9 +86,9 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
     if __salt__["zenoss.add_device"](name, device_class, collector, prod_state):
         ret["result"] = True
         ret["changes"] = {"old": "monitored == False", "new": "monitored == True"}
-        ret["comment"] = "{} has been added to Zenoss".format(name)
+        ret["comment"] = f"{name} has been added to Zenoss"
     else:
         ret["result"] = False
         ret["changes"] = None
-        ret["comment"] = "Unable to add {} to Zenoss".format(name)
+        ret["comment"] = f"Unable to add {name} to Zenoss"
     return ret

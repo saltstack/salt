@@ -2,7 +2,6 @@
 Use hiera data as a Pillar source
 """
 
-
 import logging
 
 import salt.utils.path
@@ -25,10 +24,10 @@ def ext_pillar(
     """
     Execute hiera and return the data
     """
-    cmd = "hiera -c {}".format(conf)
+    cmd = f"hiera -c {conf}"
     for key, val in __grains__.items():
         if isinstance(val, str):
-            cmd += " {}='{}'".format(key, val)
+            cmd += f" {key}='{val}'"
     try:
         data = salt.utils.yaml.safe_load(__salt__["cmd.run"](cmd))
     except Exception:  # pylint: disable=broad-except

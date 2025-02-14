@@ -46,7 +46,6 @@ CLI Example:
     salt '*' foo.bar --out=pony
 """
 
-
 import subprocess
 
 import salt.utils.data
@@ -66,6 +65,4 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     Mane function
     """
     high_out = __salt__["highstate"](data)
-    return subprocess.check_output(
-        ["ponysay", salt.utils.data.decode(high_out)]
-    )  # pylint: disable=E0598
+    return subprocess.check_output(["ponysay", salt.utils.data.decode(high_out)])

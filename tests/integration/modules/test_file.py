@@ -7,6 +7,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
@@ -199,7 +200,7 @@ class FileModuleTest(ModuleCase):
         assert ret["retcode"] == 0, repr(ret)
         with salt.utils.files.fopen(src_file) as fp:
             self.assertEqual(
-                salt.utils.stringutils.to_unicode(fp.read()), "Hello world\n"
+                salt.utils.stringutils.to_unicode(fp.read()), f"Hello world{os.linesep}"
             )
 
     def test_remove_file(self):

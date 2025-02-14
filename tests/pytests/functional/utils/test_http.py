@@ -1,7 +1,14 @@
 import shutil
+import ssl
 import tarfile
 
 import pytest
+
+try:
+    import trustme
+except ImportError:
+    pass
+
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
@@ -38,6 +45,25 @@ def tinyproxy_user():
 @pytest.fixture(scope="module")
 def tinyproxy_pass():
     return random_string("tinyproxy-pass-")
+
+
+@pytest.fixture(scope="session")
+def ca():
+    return trustme.CA()
+
+
+@pytest.fixture(scope="session")
+def httpserver_ssl_context(ca):
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    localhost_cert = ca.issue_cert("127.0.0.1")
+    localhost_cert.configure_cert(context)
+    return context
+
+
+@pytest.fixture(scope="session")
+def httpclient_ssl_context(ca):
+    with ca.cert_pem.tempfile() as ca_temp_path:
+        return ssl.create_default_context(cafile=ca_temp_path)
 
 
 @pytest.fixture(params=[True, False], ids=lambda x: "basic-auth" if x else "no-auth")
@@ -107,6 +133,7 @@ def tinyproxy_container(
 def test_real_proxy(
     tinyproxy_container,
     httpserver,
+    ca,
     tinyproxy_port,
     tinyproxy_user,
     tinyproxy_pass,
@@ -137,18 +164,19 @@ def test_real_proxy(
     else:
         httpserver.expect_request(
             "/real_proxy_test",
-            headers={"X-Tinyproxy-Header": "Test custom tinyproxy header"},
         ).respond_with_data(data, content_type="application/octet-stream")
     url = httpserver.url_for("/real_proxy_test").replace("localhost", "127.0.0.1")
 
     # We just want to be sure that it's using the proxy
-    ret = salt.utils.http.query(
-        url,
-        method=http_method,
-        data=data,
-        backend=backend,
-        opts=opts,
-        decode_body=False,
-    )
+    with ca.cert_pem.tempfile() as ca_temp_path:
+        ret = salt.utils.http.query(
+            url,
+            method=http_method,
+            data=data,
+            backend=backend,
+            opts=opts,
+            decode_body=False,
+            verify_ssl=ca_temp_path,
+        )
     body = ret.get("body", "")
     assert body == data

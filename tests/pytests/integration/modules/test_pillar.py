@@ -210,7 +210,7 @@ class PillarRefresh:
             "top.sls", top_file_contents
         )
         self.minion_1_pillar = self.master.pillar_tree.base.temp_file(
-            "minion-1-pillar.sls", "{}: true".format(self.pillar_key)
+            "minion-1-pillar.sls", f"{self.pillar_key}: true"
         )
         self.top_file.__enter__()
         self.minion_1_pillar.__enter__()
@@ -395,6 +395,7 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 def test_pillar_refresh_pillar_scheduler(salt_master, salt_cli, salt_minion):
     """
     Ensure schedule jobs in pillar are only updated when values change.

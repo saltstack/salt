@@ -2,7 +2,6 @@
     Test cases for salt.modules.uptime
 """
 
-
 import pytest
 
 import salt.modules.uptime as uptime

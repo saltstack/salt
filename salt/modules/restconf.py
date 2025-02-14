@@ -7,7 +7,6 @@ Execution module for RESTCONF Proxy minions
 
 """
 
-
 import logging
 
 __proxyenabled__ = ["restconf"]
@@ -18,7 +17,7 @@ log = logging.getLogger(__file__)
 
 def __virtual__():
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {}".format(__virtualname__)
+        return False, f"Proxytype does not match: {__virtualname__}"
     return True
 
 

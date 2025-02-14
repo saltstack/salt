@@ -179,9 +179,7 @@ class TestGitConfigParser(TestCase):
             self.conf.write(fp_)
         # Confirm that the new file was written correctly
         expected = self.fix_indent(ORIG_CONFIG)
-        # pylint: disable=string-substitution-usage-error
-        expected.insert(6, "\tfetch = %s" % new_refspec)
-        # pylint: enable=string-substitution-usage-error
+        expected.insert(6, f"\tfetch = {new_refspec}")
         self.assertEqual(self.get_lines(self.new_config), expected)
 
     def test_remove_option(self):

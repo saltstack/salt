@@ -3,7 +3,6 @@ Package management operations specific to APT- and DEB-based systems
 ====================================================================
 """
 
-
 import logging
 
 import salt.utils.data
@@ -36,18 +35,18 @@ def held(name):
         pattern=name,
     )
     if not state:
-        ret.update(comment="Package {} does not have a state".format(name))
+        ret.update(comment=f"Package {name} does not have a state")
     elif not salt.utils.data.is_true(state.get("hold", False)):
         if not __opts__["test"]:
             result = __salt__["pkg.set_selections"](selection={"hold": [name]})
             ret.update(
                 changes=result[name],
                 result=True,
-                comment="Package {} is now being held".format(name),
+                comment=f"Package {name} is now being held",
             )
         else:
-            ret.update(result=None, comment="Package {} is set to be held".format(name))
+            ret.update(result=None, comment=f"Package {name} is set to be held")
     else:
-        ret.update(result=True, comment="Package {} is already held".format(name))
+        ret.update(result=True, comment=f"Package {name} is already held")
 
     return ret

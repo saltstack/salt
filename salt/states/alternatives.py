@@ -76,10 +76,10 @@ def install(name, link, path, priority):
         )
     else:
         if __opts__["test"]:
-            ret[
-                "comment"
-            ] = "Alternative will be set for {} to {} with priority {}".format(
-                name, path, priority
+            ret["comment"] = (
+                "Alternative will be set for {} to {} with priority {}".format(
+                    name, path, priority
+                )
             )
             ret["result"] = None
             return ret
@@ -87,10 +87,10 @@ def install(name, link, path, priority):
         out = __salt__["alternatives.install"](name, link, path, priority)
         if __salt__["alternatives.check_exists"](name, path):
             if __salt__["alternatives.check_installed"](name, path):
-                ret[
-                    "comment"
-                ] = "Alternative for {} set to path {} with priority {}".format(
-                    name, path, priority
+                ret["comment"] = (
+                    "Alternative for {} set to path {} with priority {}".format(
+                        name, path, priority
+                    )
                 )
             else:
                 ret["comment"] = (
@@ -105,7 +105,7 @@ def install(name, link, path, priority):
             }
         else:
             ret["result"] = False
-            ret["comment"] = "Alternative for {} not installed: {}".format(name, out)
+            ret["comment"] = f"Alternative for {name} not installed: {out}"
 
     return ret
 
@@ -128,22 +128,22 @@ def remove(name, path):
     isinstalled = __salt__["alternatives.check_exists"](name, path)
     if isinstalled:
         if __opts__["test"]:
-            ret["comment"] = "Alternative for {} will be removed".format(name)
+            ret["comment"] = f"Alternative for {name} will be removed"
             ret["result"] = None
             return ret
         __salt__["alternatives.remove"](name, path)
         current = __salt__["alternatives.show_current"](name)
         if current:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "Alternative for {} removed. Falling back to path {}".format(
-                name, current
+            ret["comment"] = (
+                "Alternative for {} removed. Falling back to path {}".format(
+                    name, current
+                )
             )
             ret["changes"] = {"path": current}
             return ret
 
-        ret["comment"] = "Alternative for {} removed".format(name)
+        ret["comment"] = f"Alternative for {name} removed"
         ret["changes"] = {}
         return ret
 
@@ -156,7 +156,7 @@ def remove(name, path):
         return ret
 
     ret["result"] = False
-    ret["comment"] = "Alternative for {} doesn't exist".format(name)
+    ret["comment"] = f"Alternative for {name} doesn't exist"
 
     return ret
 
@@ -178,11 +178,11 @@ def auto(name):
     display = __salt__["alternatives.display"](name)
     line = display.splitlines()[0]
     if line.endswith(" auto mode"):
-        ret["comment"] = "{} already in auto mode".format(name)
+        ret["comment"] = f"{name} already in auto mode"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "{} will be put in auto mode".format(name)
+        ret["comment"] = f"{name} will be put in auto mode"
         ret["result"] = None
         return ret
     ret["changes"]["result"] = __salt__["alternatives.auto"](name)
@@ -214,7 +214,7 @@ def set_(name, path):
 
     current = __salt__["alternatives.show_current"](name)
     if current == path:
-        ret["comment"] = "Alternative for {} already set to {}".format(name, path)
+        ret["comment"] = f"Alternative for {name} already set to {path}"
         return ret
 
     display = __salt__["alternatives.display"](name)
@@ -234,15 +234,15 @@ def set_(name, path):
         __salt__["alternatives.set"](name, path)
         current = __salt__["alternatives.show_current"](name)
         if current == path:
-            ret["comment"] = "Alternative for {} set to path {}".format(name, current)
+            ret["comment"] = f"Alternative for {name} set to path {current}"
             ret["changes"] = {"path": current}
         else:
-            ret["comment"] = "Alternative for {} not updated".format(name)
+            ret["comment"] = f"Alternative for {name} not updated"
 
         return ret
 
     else:
         ret["result"] = False
-        ret["comment"] = "Alternative {} for {} doesn't exist".format(path, name)
+        ret["comment"] = f"Alternative {path} for {name} doesn't exist"
 
     return ret

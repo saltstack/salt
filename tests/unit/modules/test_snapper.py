@@ -4,6 +4,7 @@ Unit tests for the Snapper module
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 """
+
 import pytest
 
 import salt.modules.snapper as snapper

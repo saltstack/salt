@@ -15,7 +15,6 @@ The default for this setting is ``False``.
 :depends: virtualbox
 """
 
-
 import logging
 import os.path
 import re
@@ -86,7 +85,7 @@ def list_nodes_min():
         salt '*' vboxmanage.list_nodes_min
     """
     ret = {}
-    cmd = "{} list vms".format(vboxcmd())
+    cmd = f"{vboxcmd()} list vms"
     for line in salt.modules.cmdmod.run(cmd).splitlines():
         if not line.strip():
             continue
@@ -148,7 +147,7 @@ def start(name):
         salt '*' vboxmanage.start my_vm
     """
     ret = {}
-    cmd = "{} startvm {}".format(vboxcmd(), name)
+    cmd = f"{vboxcmd()} startvm {name}"
     ret = salt.modules.cmdmod.run(cmd).splitlines()
     return ret
 
@@ -163,7 +162,7 @@ def stop(name):
 
         salt '*' vboxmanage.stop my_vm
     """
-    cmd = "{} controlvm {} poweroff".format(vboxcmd(), name)
+    cmd = f"{vboxcmd()} controlvm {name} poweroff"
     ret = salt.modules.cmdmod.run(cmd).splitlines()
     return ret
 
@@ -180,10 +179,10 @@ def register(filename):
     """
     if not os.path.isfile(filename):
         raise CommandExecutionError(
-            "The specified filename ({}) does not exist.".format(filename)
+            f"The specified filename ({filename}) does not exist."
         )
 
-    cmd = "{} registervm {}".format(vboxcmd(), filename)
+    cmd = f"{vboxcmd()} registervm {filename}"
     ret = salt.modules.cmdmod.run_all(cmd)
     if ret["retcode"] == 0:
         return True
@@ -202,11 +201,9 @@ def unregister(name, delete=False):
     """
     nodes = list_nodes_min()
     if name not in nodes:
-        raise CommandExecutionError(
-            "The specified VM ({}) is not registered.".format(name)
-        )
+        raise CommandExecutionError(f"The specified VM ({name}) is not registered.")
 
-    cmd = "{} unregistervm {}".format(vboxcmd(), name)
+    cmd = f"{vboxcmd()} unregistervm {name}"
     if delete is True:
         cmd += " --delete"
     ret = salt.modules.cmdmod.run_all(cmd)
@@ -235,7 +232,7 @@ def create(
     register=True,
     basefolder=None,
     new_uuid=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a new VM
@@ -248,16 +245,14 @@ def create(
     """
     nodes = list_nodes_min()
     if name in nodes:
-        raise CommandExecutionError(
-            "The specified VM ({}) is already registered.".format(name)
-        )
+        raise CommandExecutionError(f"The specified VM ({name}) is already registered.")
 
     params = ""
 
     if name:
         if NAME_RE.search(name):
             raise CommandExecutionError("New VM name contains invalid characters")
-        params += " --name {}".format(name)
+        params += f" --name {name}"
 
     if groups:
         if isinstance(groups, str):
@@ -271,9 +266,7 @@ def create(
 
     ostypes = list_ostypes()
     if ostype not in ostypes:
-        raise CommandExecutionError(
-            "The specified OS type ({}) is not available.".format(name)
-        )
+        raise CommandExecutionError(f"The specified OS type ({name}) is not available.")
     else:
         params += " --ostype " + ostype
 
@@ -282,17 +275,15 @@ def create(
 
     if basefolder:
         if not os.path.exists(basefolder):
-            raise CommandExecutionError(
-                "basefolder {} was not found".format(basefolder)
-            )
-        params += " --basefolder {}".format(basefolder)
+            raise CommandExecutionError(f"basefolder {basefolder} was not found")
+        params += f" --basefolder {basefolder}"
 
     if new_uuid:
         if NAME_RE.search(new_uuid):
             raise CommandExecutionError("New UUID contains invalid characters")
-        params += " --uuid {}".format(new_uuid)
+        params += f" --uuid {new_uuid}"
 
-    cmd = "{} create {}".format(vboxcmd(), params)
+    cmd = f"{vboxcmd()} create {params}"
     ret = salt.modules.cmdmod.run_all(cmd)
     if ret["retcode"] == 0:
         return True
@@ -311,7 +302,7 @@ def clonevm(
     new_uuid=None,
     register=False,
     groups=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Clone a new VM from an existing VM
@@ -332,15 +323,11 @@ def clonevm(
     nodes_uuids = list_items("vms", True, "UUID").keys()
     if name:
         if name not in nodes_names:
-            raise CommandExecutionError(
-                "The specified VM ({}) is not registered.".format(name)
-            )
+            raise CommandExecutionError(f"The specified VM ({name}) is not registered.")
         params += " " + name
     elif uuid:
         if uuid not in nodes_uuids:
-            raise CommandExecutionError(
-                "The specified VM ({}) is not registered.".format(name)
-            )
+            raise CommandExecutionError(f"The specified VM ({name}) is not registered.")
         params += " " + uuid
 
     if snapshot_name and snapshot_uuid:
@@ -351,11 +338,11 @@ def clonevm(
     if snapshot_name:
         if NAME_RE.search(snapshot_name):
             raise CommandExecutionError("Snapshot name contains invalid characters")
-        params += " --snapshot {}".format(snapshot_name)
+        params += f" --snapshot {snapshot_name}"
     elif snapshot_uuid:
         if UUID_RE.search(snapshot_uuid):
             raise CommandExecutionError("Snapshot name contains invalid characters")
-        params += " --snapshot {}".format(snapshot_uuid)
+        params += f" --snapshot {snapshot_uuid}"
 
     valid_modes = ("machine", "machineandchildren", "all")
     if mode and mode not in valid_modes:
@@ -376,7 +363,7 @@ def clonevm(
     if new_name:
         if NAME_RE.search(new_name):
             raise CommandExecutionError("New name contains invalid characters")
-        params += " --name {}".format(new_name)
+        params += f" --name {new_name}"
 
     if groups:
         if isinstance(groups, str):
@@ -390,20 +377,18 @@ def clonevm(
 
     if basefolder:
         if not os.path.exists(basefolder):
-            raise CommandExecutionError(
-                "basefolder {} was not found".format(basefolder)
-            )
-        params += " --basefolder {}".format(basefolder)
+            raise CommandExecutionError(f"basefolder {basefolder} was not found")
+        params += f" --basefolder {basefolder}"
 
     if new_uuid:
         if NAME_RE.search(new_uuid):
             raise CommandExecutionError("New UUID contains invalid characters")
-        params += " --uuid {}".format(new_uuid)
+        params += f" --uuid {new_uuid}"
 
     if register is True:
         params += " --register"
 
-    cmd = "{} clonevm {}".format(vboxcmd(), name)
+    cmd = f"{vboxcmd()} clonevm {name}"
     ret = salt.modules.cmdmod.run_all(cmd)
     if ret["retcode"] == 0:
         return True
@@ -419,7 +404,7 @@ def clonemedium(
     mformat=None,
     variant=None,
     existing=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Clone a new VM from an existing VM
@@ -455,11 +440,11 @@ def clonemedium(
         items = list_items(item)
 
         if uuid_in not in items:
-            raise CommandExecutionError("UUID {} was not found".format(uuid_in))
+            raise CommandExecutionError(f"UUID {uuid_in} was not found")
         params += " " + uuid_in
     elif file_in:
         if not os.path.exists(file_in):
-            raise CommandExecutionError("File {} was not found".format(file_in))
+            raise CommandExecutionError(f"File {file_in} was not found")
         params += " " + file_in
 
     if (uuid_out and file_out) or (not uuid_out and not file_out):
@@ -477,7 +462,7 @@ def clonemedium(
             os.unlink(file_out)
             params += " " + file_out
         except OSError:
-            raise CommandExecutionError("{} is not a valid filename".format(file_out))
+            raise CommandExecutionError(f"{file_out} is not a valid filename")
 
     if mformat:
         valid_mformat = ("VDI", "VMDK", "VHD", "RAW")
@@ -504,7 +489,7 @@ def clonemedium(
     if existing:
         params += " --existing"
 
-    cmd = "{} clonemedium {}".format(vboxcmd(), params)
+    cmd = f"{vboxcmd()} clonemedium {params}"
     ret = salt.modules.cmdmod.run_all(cmd)
     if ret["retcode"] == 0:
         return True
@@ -587,7 +572,7 @@ def list_items(item, details=False, group_by="UUID"):
     ret = {}
     tmp_id = None
     tmp_dict = {}
-    cmd = "{} list{} {}".format(vboxcmd(), flag, item)
+    cmd = f"{vboxcmd()} list{flag} {item}"
     for line in salt.modules.cmdmod.run(cmd).splitlines():
         if not line.strip():
             continue

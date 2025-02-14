@@ -142,7 +142,7 @@ def availability_set_present(
     virtual_machines=None,
     sku=None,
     connection_auth=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -198,9 +198,9 @@ def availability_set_present(
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     if sku:
@@ -254,12 +254,12 @@ def availability_set_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Availability set {} is already present.".format(name)
+            ret["comment"] = f"Availability set {name} is already present."
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Availability set {} would be updated.".format(name)
+            ret["comment"] = f"Availability set {name} would be updated."
             return ret
 
     else:
@@ -276,7 +276,7 @@ def availability_set_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Availability set {} would be created.".format(name)
+        ret["comment"] = f"Availability set {name} would be created."
         ret["result"] = None
         return ret
 
@@ -291,12 +291,12 @@ def availability_set_present(
         platform_fault_domain_count=platform_fault_domain_count,
         sku=sku,
         tags=tags,
-        **aset_kwargs
+        **aset_kwargs,
     )
 
     if "error" not in aset:
         ret["result"] = True
-        ret["comment"] = "Availability set {} has been created.".format(name)
+        ret["comment"] = f"Availability set {name} has been created."
         return ret
 
     ret["comment"] = "Failed to create availability set {}! ({})".format(
@@ -325,9 +325,9 @@ def availability_set_absent(name, resource_group, connection_auth=None):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret[
-            "comment"
-        ] = "Connection information must be specified via connection_auth dictionary!"
+        ret["comment"] = (
+            "Connection information must be specified via connection_auth dictionary!"
+        )
         return ret
 
     aset = __salt__["azurearm_compute.availability_set_get"](
@@ -336,11 +336,11 @@ def availability_set_absent(name, resource_group, connection_auth=None):
 
     if "error" in aset:
         ret["result"] = True
-        ret["comment"] = "Availability set {} was not found.".format(name)
+        ret["comment"] = f"Availability set {name} was not found."
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Availability set {} would be deleted.".format(name)
+        ret["comment"] = f"Availability set {name} would be deleted."
         ret["result"] = None
         ret["changes"] = {
             "old": aset,
@@ -354,9 +354,9 @@ def availability_set_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Availability set {} has been deleted.".format(name)
+        ret["comment"] = f"Availability set {name} has been deleted."
         ret["changes"] = {"old": aset, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete availability set {}!".format(name)
+    ret["comment"] = f"Failed to delete availability set {name}!"
     return ret

@@ -405,8 +405,9 @@ This text will be wrapped in quotes.
 
 .. versionadded:: 2017.7.0
 
-Scan through string looking for a location where this regular expression
-produces a match. Returns ``None`` in case there were no matches found
+Looks for a match for the specified regex anywhere in the string. If the string
+does not match the regex, this filter returns ``None``. If the string _does_
+match the regex, then the `capture groups`_ for the regex will be returned.
 
 Example:
 
@@ -420,6 +421,29 @@ Returns:
 
   ("defabcdef",)
 
+If the regex you use does not contain a capture group then the number of
+capture groups will be zero, and a matching regex will return an empty tuple.
+This means that the following ``if`` statement would evaluate as ``False``:
+
+.. code-block:: jinja
+
+  {%- if 'foobar' | regex_search('foo') %}
+
+If you do not need a capture group and are just looking to test if a string
+matches a regex, then you should check to see if the filter returns ``None``:
+
+.. code-block:: jinja
+
+  {%- if (some_var | regex_search('foo')) is not none %}
+
+.. note::
+
+   In a Jinja statement, a null value (i.e. a Python ``None``) should be
+   expressed as ``none`` (i.e. lowercase). More info on this can be found in
+   the **Note** section here in the `jinja docs`_.
+
+.. _`capture groups`: https://docs.python.org/3/library/re.html#re.Match.groups
+.. _`jinja docs`:  https://jinja.palletsprojects.com/en/stable/templates/#literals
 
 .. jinja_ref:: regex_match
 
@@ -428,8 +452,8 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-If zero or more characters at the beginning of string match this regular
-expression, otherwise returns ``None``.
+Works exactly like :jinja_ref:`regex_search`, but only checks for matches at
+the _beginning_ of the string passed into this filter.
 
 Example:
 

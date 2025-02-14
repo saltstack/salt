@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/lint.txt requirements/base.txt requirements/static/ci/common.in requirements/static/ci/lint.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.0
+aiohttp==3.9.4
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   etcd3-py
@@ -12,14 +12,6 @@ aiosignal==1.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
-ansible-core==2.14.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ansible
-ansible==7.1.0 ; python_version >= "3.9"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -33,7 +25,7 @@ asn1crypto==1.3.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   certvalidator
     #   oscrypto
-astroid==2.3.3
+astroid==3.1.0
     # via pylint
 async-timeout==4.0.2
     # via
@@ -77,11 +69,11 @@ cassandra-driver==3.23.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   python-telegram-bot
     #   requests
@@ -139,21 +131,24 @@ contextvars==2.4
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-croniter==0.3.29 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
-cryptography==41.0.7
+croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
+cryptography==42.0.5
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-    #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
     #   vcert
+dill==0.3.8
+    # via pylint
 distlib==0.3.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -163,13 +158,13 @@ distro==1.5.0
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/lint.in
@@ -203,7 +198,7 @@ gitdb==4.0.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   gitpython
-gitpython==3.1.37
+gitpython==3.1.41
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
@@ -215,7 +210,7 @@ hglib==2.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -260,12 +255,11 @@ jaraco.text==3.5.1
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -302,8 +296,6 @@ kubernetes==3.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
-lazy-object-proxy==1.4.3
-    # via astroid
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -338,8 +330,6 @@ mercurial==6.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
-modernize==0.5
-    # via saltpylint
 more-itertools==5.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
@@ -393,8 +383,6 @@ packaging==22.0
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
-    #   docker
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -420,13 +408,14 @@ pathtools==0.1.2
 platformdirs==2.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   pylint
     #   virtualenv
 portend==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-psutil==5.8.0
+psutil==5.8.0 ; python_version <= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -440,8 +429,6 @@ pyasn1==0.4.8
     #   -c requirements/static/ci/py3.9/linux.txt
     #   pyasn1-modules
     #   rsa
-pycodestyle==2.5.0
-    # via saltpylint
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
@@ -449,7 +436,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -474,11 +461,11 @@ pyjwt==2.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   twilio
-pylint==2.4.4
+pylint==3.1.0
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.0.2
+pymysql==1.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -487,7 +474,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -538,6 +525,7 @@ pytz==2022.1
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   apscheduler
+    #   croniter
     #   moto
     #   python-telegram-bot
     #   tempora
@@ -551,7 +539,6 @@ pyyaml==6.0.1
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -571,12 +558,11 @@ redis==3.5.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   redis-py-cluster
-requests==2.31.0
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   apache-libcloud
     #   docker
     #   etcd3-py
@@ -588,10 +574,6 @@ requests==2.31.0
     #   responses
     #   twilio
     #   vcert
-resolvelib==0.5.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ansible-core
 responses==0.10.6
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -613,7 +595,7 @@ s3transfer==0.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   boto3
-saltpylint==2023.8.3
+saltpylint==2024.2.5
     # via -r requirements/static/ci/lint.in
 scp==0.13.2
     # via
@@ -635,7 +617,6 @@ six==1.16.0
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   apscheduler
-    #   astroid
     #   cassandra-driver
     #   cheroot
     #   etcd3-py
@@ -668,7 +649,7 @@ smmap==4.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
@@ -688,6 +669,7 @@ terminal==0.4.0
 textfsm==1.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
     #   napalm
     #   netmiko
     #   ntc-templates
@@ -701,6 +683,12 @@ toml==0.10.2
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
+tomli==2.0.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pylint
+tomlkit==0.12.3
+    # via pylint
 tornado==6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -713,6 +701,11 @@ twilio==7.9.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
+typing-extensions==4.8.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   astroid
+    #   pylint
 tzlocal==3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -741,18 +734,15 @@ watchdog==0.10.3
 websocket-client==0.40.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   docker
     #   kubernetes
 wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   moto
-wrapt==1.11.1
-    # via astroid
 xmltodict==0.12.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

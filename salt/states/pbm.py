@@ -90,7 +90,6 @@ PyVmomi can be installed via pip:
     information.
 """
 
-
 import copy
 import logging
 import sys
@@ -153,7 +152,7 @@ def default_vsan_policy_configured(name, policy):
     # All allowed proxies have a shim execution module with the same
     # name which implementes a get_details function
     # All allowed proxies have a vcenter detail
-    vcenter = __salt__["{}.get_details".format(proxy_type)]()["vcenter"]
+    vcenter = __salt__[f"{proxy_type}.get_details"]()["vcenter"]
     log.info("Running %s on vCenter '%s'", name, vcenter)
     log.trace("policy = %s", policy)
     changes_required = False
@@ -215,7 +214,7 @@ def default_vsan_policy_configured(name, policy):
                     if subprofile_differ.diffs:
                         str_changes.extend(
                             [
-                                "  {}".format(change)
+                                f"  {change}"
                                 for change in subprofile_differ.changes_str.split("\n")
                             ]
                         )
@@ -223,7 +222,7 @@ def default_vsan_policy_configured(name, policy):
                         str_changes.append("  capabilities:")
                         str_changes.extend(
                             [
-                                "  {}".format(change)
+                                f"  {change}"
                                 for change in capabilities_differ.changes_str2.split(
                                     "\n"
                                 )
@@ -241,7 +240,7 @@ def default_vsan_policy_configured(name, policy):
                     service_instance=si,
                 )
                 comments.append(
-                    "Updated the default VSAN policy in vCenter '{}'".format(vcenter)
+                    f"Updated the default VSAN policy in vCenter '{vcenter}'"
                 )
             log.info(comments[-1])
 
@@ -320,7 +319,7 @@ def storage_policies_configured(name, policies):
         # All allowed proxies have a shim execution module with the same
         # name which implementes a get_details function
         # All allowed proxies have a vcenter detail
-        vcenter = __salt__["{}.get_details".format(proxy_type)]()["vcenter"]
+        vcenter = __salt__[f"{proxy_type}.get_details"]()["vcenter"]
         log.info("Running state '%s' on vCenter '%s'", name, vcenter)
         si = __salt__["vsphere.get_service_instance_via_proxy"]()
         current_policies = __salt__["vsphere.list_storage_policies"](
@@ -402,7 +401,7 @@ def storage_policies_configured(name, policies):
                         if subprofile_differ.diffs:
                             str_changes.extend(
                                 [
-                                    "  {}".format(change)
+                                    f"  {change}"
                                     for change in subprofile_differ.changes_str.split(
                                         "\n"
                                     )
@@ -412,7 +411,7 @@ def storage_policies_configured(name, policies):
                             str_changes.append("  capabilities:")
                             str_changes.extend(
                                 [
-                                    "  {}".format(change)
+                                    f"  {change}"
                                     for change in capabilities_differ.changes_str2.split(
                                         "\n"
                                     )

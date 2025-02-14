@@ -111,13 +111,13 @@ def locate(pattern, database="", limit=0, **kwargs):
         if bool(kwargs[option]) is True and option in toggles:
             options += toggles[option]
     if options:
-        options = "-{}".format(options)
+        options = f"-{options}"
     if database:
-        options += " -d {}".format(database)
+        options += f" -d {database}"
     if limit > 0:
-        options += " -l {}".format(limit)
+        options += f" -l {limit}"
     if "regex" in kwargs and bool(kwargs["regex"]) is True:
         options += " --regex"
-    cmd = "locate {} {}".format(options, pattern)
+    cmd = f"locate {options} {pattern}"
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return out

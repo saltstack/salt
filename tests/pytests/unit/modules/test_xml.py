@@ -2,7 +2,6 @@
     Tests for xml module
 """
 
-
 import pytest
 
 from salt.modules import xml

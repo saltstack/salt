@@ -26,12 +26,7 @@ def nested_empty_dirs(tmp_path):
     for root in range(1, num_root + 1):
         for mid in range(1, num_mid + 1):
             for last in range(1, num_last + 1):
-                nest = (
-                    tmp_path
-                    / "root{}".format(root)
-                    / "mid{}".format(mid)
-                    / "last{}".format(last)
-                )
+                nest = tmp_path / f"root{root}" / f"mid{mid}" / f"last{last}"
                 nest.mkdir(parents=True, exist_ok=True)
     yield str(tmp_path)
 
@@ -44,12 +39,7 @@ def nested_dirs_with_files(tmp_path):
     for root in range(1, num_root + 1):
         for mid in range(1, num_mid + 1):
             for last in range(1, num_last + 1):
-                nest = (
-                    tmp_path
-                    / "root{}".format(root)
-                    / "mid{}".format(mid)
-                    / "last{}".format(last)
-                )
+                nest = tmp_path / f"root{root}" / f"mid{mid}" / f"last{last}"
                 nest.mkdir(parents=True, exist_ok=True)
                 if last % 2:
                     last_file = nest / "stuff.txt"
@@ -62,7 +52,7 @@ def test_pruned_failure(file, single_dir_with_file):
     assert ret.result is False
     assert not ret.changes["deleted"]
     assert len(ret.changes["errors"]) == 1
-    assert ret.comment == "Failed to remove directory {}".format(single_dir_with_file)
+    assert ret.comment == f"Failed to remove directory {single_dir_with_file}"
 
 
 def test_pruned_success_recurse_and_deleted(file, nested_empty_dirs):

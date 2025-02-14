@@ -37,7 +37,7 @@ def test__check_directory(tmp_path):
 
     def create_files(tmp_dir):
         for f in range(depth):
-            path = os.path.join(tmp_dir, "file_{:03}.txt".format(f))
+            path = os.path.join(tmp_dir, f"file_{f:03}.txt")
             with salt.utils.files.fopen(path, "w+"):
                 os.chmod(path, expected_mode)
 
@@ -47,12 +47,12 @@ def test__check_directory(tmp_path):
     create_files(root_tmp_dir)
 
     for d in range(depth):
-        dir_name = os.path.join(root_tmp_dir, "dir{:03}".format(d))
+        dir_name = os.path.join(root_tmp_dir, f"dir{d:03}")
         os.mkdir(dir_name)
         os.chmod(dir_name, expected_mode)
         create_files(dir_name)
         for s in range(depth):
-            sub_dir_name = os.path.join(dir_name, "dir{:03}".format(s))
+            sub_dir_name = os.path.join(dir_name, f"dir{s:03}")
             os.mkdir(sub_dir_name)
             os.chmod(sub_dir_name, expected_mode)
             create_files(sub_dir_name)

@@ -61,9 +61,7 @@ class LoggerMock:
         :return:
         """
         for data in self.messages:
-            log_str = (
-                data["message"] % data["args"]
-            )  # pylint: disable=incompatible-py3-code
+            log_str = data["message"] % data["args"]
             if (data["type"] == log_type or not log_type) and log_str.find(msg) > -1:
                 return True
 
@@ -91,7 +89,7 @@ def _master_exec_test(child_pipe):
                 for alg in ["md5", "sha1"]:
                     _create_master().start()
                     ret = ret and _logger.has_message(
-                        "Do not use {alg}".format(alg=alg), log_type="warning"
+                        f"Do not use {alg}", log_type="warning"
                     )
 
                 _logger.reset()
@@ -132,7 +130,7 @@ def _minion_exec_test(child_pipe):
                 for alg in ["md5", "sha1"]:
                     _create_minion().start()
                     ret = ret and _logger.has_message(
-                        "Do not use {alg}".format(alg=alg), log_type="warning"
+                        f"Do not use {alg}", log_type="warning"
                     )
                 _logger.reset()
 
@@ -172,7 +170,7 @@ def _proxy_exec_test(child_pipe):
                 for alg in ["md5", "sha1"]:
                     _create_proxy_minion().start()
                     ret = ret and _logger.has_message(
-                        "Do not use {alg}".format(alg=alg), log_type="warning"
+                        f"Do not use {alg}", log_type="warning"
                     )
 
                 _logger.reset()
@@ -212,7 +210,7 @@ def _syndic_exec_test(child_pipe):
                 for alg in ["md5", "sha1"]:
                     _create_syndic().start()
                     ret = ret and _logger.has_message(
-                        "Do not use {alg}".format(alg=alg), log_type="warning"
+                        f"Do not use {alg}", log_type="warning"
                     )
 
                 _logger.reset()

@@ -4,6 +4,7 @@ tests for pkg state
 
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -19,11 +20,17 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
+    pytest.mark.windows_whitelisted,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
 @pytest.fixture(scope="module", autouse=True)
 def refresh_db(grains, modules):
+
+    if salt.utils.platform.is_windows():
+        modules.winrepo.update_git_repos()
+
     modules.pkg.refresh_db()
 
     # If this is Arch Linux, check if pacman is in use by another process
@@ -37,11 +44,21 @@ def refresh_db(grains, modules):
             pytest.fail("Package database locked after 60 seconds, bailing out")
 
 
+@pytest.fixture(scope="module", autouse=True)
+def refresh_keys(grains, modules):
+    if grains["os_family"] == "Arch":
+        # We should be running this periodically when building new test runner
+        # images, otherwise this could take several minutes to complete.
+        proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
+        if proc.returncode != 0:
+            pytest.fail("pacman-key --refresh-keys command failed.")
+
+
 @pytest.fixture
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
-        _PKG_TARGETS = ["vlc", "putty"]
+        _PKG_TARGETS = ["npp_x64", "winrar"]
     elif grains["os"] == "Amazon":
         if grains["osfinger"] == "Amazon Linux-2023":
             _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
@@ -50,11 +67,11 @@ def PKG_TARGETS(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             if grains["osmajorrelease"] >= 5:
-                _PKG_TARGETS = ["wget", "zsh"]
+                _PKG_TARGETS = ["ctags", "zsh"]
             else:
-                _PKG_TARGETS = ["wget", "zsh-html"]
+                _PKG_TARGETS = ["ctags", "zsh-html"]
         elif (
-            grains["os"] in ("CentOS Stream", "AlmaLinux")
+            grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
             and grains["osmajorrelease"] == 9
         ):
             _PKG_TARGETS = ["units", "zsh"]
@@ -100,6 +117,8 @@ def PKG_32_TARGETS(grains):
                 _PKG_32_TARGETS = ["xz-devel.i386"]
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
+    elif grains["os"] == "Windows":
+        _PKG_32_TARGETS = ["npp", "putty"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
@@ -193,6 +212,23 @@ def latest_version(ctx, modules):
     return run_command
 
 
+@pytest.fixture(scope="function")
+def install_7zip(modules):
+    try:
+        modules.pkg.install(name="7zip", version="22.01.00.0")
+        modules.pkg.install(name="7zip", version="19.00.00.0")
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" in versions
+        assert "22.01.00.0" in versions
+        yield
+    finally:
+        modules.pkg.remove(name="7zip", version="19.00.00.0")
+        modules.pkg.remove(name="7zip", version="22.01.00.0")
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" not in versions
+        assert "22.01.00.0" not in versions
+
+
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
@@ -237,10 +273,13 @@ def test_pkg_002_installed_with_version(PKG_TARGETS, states, latest_version):
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
+def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states, grains):
     """
     This is a destructive test as it installs and then removes two packages
     """
+    if grains["os_family"] == "Arch":
+        pytest.skip("Arch needs refresh_db logic added to golden image")
+
     version = modules.pkg.version(*PKG_TARGETS)
 
     # If this assert fails, we need to find new targets, this test needs to
@@ -253,6 +292,8 @@ def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
     try:
         ret = states.pkg.installed(name=None, pkgs=PKG_TARGETS, refresh=False)
         assert ret.result is True
+        if not salt.utils.platform.is_windows():
+            assert "WARNING" not in caplog.text
     finally:
         ret = states.pkg.removed(name=None, pkgs=PKG_TARGETS)
         assert ret.result is True
@@ -261,10 +302,14 @@ def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
 @pytest.mark.usefixtures("VERSION_SPEC_SUPPORTED")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_004_installed_multipkg_with_version(PKG_TARGETS, latest_version, states):
+def test_pkg_004_installed_multipkg_with_version(
+    PKG_TARGETS, latest_version, states, grains
+):
     """
     This is a destructive test as it installs and then removes two packages
     """
+    if grains["os_family"] == "Arch":
+        pytest.skip("Arch needs refresh_db logic added to golden image")
     version = latest_version(PKG_TARGETS[0])
 
     # If this assert fails, we need to find new targets, this test needs to
@@ -476,9 +521,10 @@ def test_pkg_011_latest_only_upgrade(
         new_version = modules.pkg.version(target, use_context=False)
         assert new_version == updates[target]
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
-        assert ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)][
-            "comment"
-        ] == "Package {} is already up-to-date".format(target)
+        assert (
+            ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"]
+            == f"Package {target} is already up-to-date"
+        )
 
 
 @pytest.mark.usefixtures("WILDCARDS_SUPPORTED")
@@ -512,7 +558,7 @@ def test_pkg_012_installed_with_wildcard_version(PKG_TARGETS, states, modules):
     )
 
     expected_comment = (
-        "All specified packages are already installed and are at the " "desired version"
+        "All specified packages are already installed and are at the desired version"
     )
     assert ret.result is True
     assert ret.raw[next(iter(ret.raw))]["comment"] == expected_comment
@@ -626,7 +672,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -645,7 +691,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     )
 
     if versionlock_pkg and "-versionlock is not installed" in str(ret):
-        pytest.skip("{}  `{}` is installed".format(ret, versionlock_pkg))
+        pytest.skip(f"{ret}  `{versionlock_pkg}` is installed")
 
     # changes from pkg.hold for Red Hat family are different
     target_changes = {}
@@ -745,7 +791,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
             except AssertionError as exc:
                 log.debug("Versionlock package not found:\n%s", exc)
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     target = PKG_TARGETS[0]
 
@@ -758,7 +804,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
     assert target_ret.result is True
 
     if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
-        pytest.skip("{}  `{}` is installed".format(target_ret, versionlock_pkg))
+        pytest.skip(f"{target_ret}  `{versionlock_pkg}` is installed")
 
     try:
         tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
@@ -810,7 +856,7 @@ def test_pkg_cap_001_installed(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/updated: {}".format(realpkg)
+            f"The following packages would be installed/updated: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.installed(
@@ -872,6 +918,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
     latest_version,
     modules,
     states,
+    grains,
 ):
     """
     This is a destructive test as it installs and then removes two packages
@@ -908,7 +955,7 @@ def test_pkg_cap_003_installed_multipkg_with_version(
             test=True,
         )
         assert "packages would be installed/updated" in ret.comment
-        assert "{}={}".format(realpkg, realver) in ret.comment
+        assert f"{realpkg}={realver}" in ret.comment
 
         ret = states.pkg.installed(
             name="test_pkg_cap_003_installed_multipkg_with_version-install-capability",
@@ -952,7 +999,7 @@ def test_pkg_cap_004_latest(PKG_CAP_TARGETS, modules, states):
             test=True,
         )
         assert (
-            "The following packages would be installed/upgraded: {}".format(realpkg)
+            f"The following packages would be installed/upgraded: {realpkg}"
             in ret.comment
         )
         ret = states.pkg.latest(name=target, refresh=False, resolve_capabilities=True)
@@ -992,9 +1039,7 @@ def test_pkg_cap_005_downloaded(PKG_CAP_TARGETS, modules, states):
         resolve_capabilities=True,
         test=True,
     )
-    assert (
-        "The following packages would be downloaded: {}".format(realpkg) in ret.comment
-    )
+    assert f"The following packages would be downloaded: {realpkg}" in ret.comment
 
     ret = states.pkg.downloaded(name=target, refresh=False, resolve_capabilities=True)
     assert ret.result is True
@@ -1071,3 +1116,17 @@ def test_pkg_purged_with_removed_pkg(grains, PKG_TARGETS, states, modules):
         "installed": {},
         "removed": {target: {"new": "", "old": version}},
     }
+
+
+@pytest.mark.skip_unless_on_windows()
+def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
+    """
+    This tests removing a specific version of a package when multiple versions
+    are installed. This is specific to Windows. The only version I could find
+    that allowed multiple installs of differing versions was 7zip, so we'll use
+    that.
+    """
+    ret = states.pkg.removed(name="7zip", version="19.00.00.0")
+    assert ret.result is True
+    current = modules.pkg.version("7zip")
+    assert "22.01.00.0" in current

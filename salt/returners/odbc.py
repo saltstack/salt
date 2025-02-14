@@ -153,7 +153,7 @@ def _get_options(ret=None):
     attrs = {"dsn": "dsn", "user": "user", "passwd": "passwd"}
 
     _options = salt.returners.get_returner_options(
-        "returner.{}".format(__virtualname__),
+        f"returner.{__virtualname__}",
         ret,
         attrs,
         __salt__=__salt__,
@@ -171,7 +171,7 @@ def _get_conn(ret=None):
     user = _options.get("user")
     passwd = _options.get("passwd")
 
-    return pyodbc.connect("DSN={};UID={};PWD={}".format(dsn, user, passwd))
+    return pyodbc.connect(f"DSN={dsn};UID={user};PWD={passwd}")
 
 
 def _close_conn(conn):

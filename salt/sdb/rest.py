@@ -64,7 +64,6 @@ For instance:
           user: myuser
 """
 
-
 import logging
 
 import salt.loader

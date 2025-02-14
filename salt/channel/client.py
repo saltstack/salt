@@ -4,7 +4,6 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
-
 import logging
 import os
 import time
@@ -22,21 +21,6 @@ import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper
-
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        try:
-            from Crypto.Cipher import PKCS1_OAEP  # nosec
-        except ImportError:
-            pass
-
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +128,7 @@ class AsyncReqChannel:
         auth,
         timeout=REQUEST_CHANNEL_TIMEOUT,
         tries=REQUEST_CHANNEL_TRIES,
-        **kwargs
+        **kwargs,
     ):
         self.opts = dict(opts)
         self.transport = transport
@@ -167,11 +151,15 @@ class AsyncReqChannel:
         return self.transport.ttype
 
     def _package_load(self, load):
-        return {
+        ret = {
             "enc": self.crypt,
             "load": load,
             "version": 2,
         }
+        if self.crypt == "aes":
+            ret["enc_algo"] = self.opts["encryption_algorithm"]
+            ret["sig_algo"] = self.opts["signing_algorithm"]
+        return ret
 
     @salt.ext.tornado.gen.coroutine
     def _send_with_retry(self, load, tries, timeout):
@@ -222,11 +210,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -249,7 +233,9 @@ class AsyncReqChannel:
         raise salt.ext.tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.verify_signature(self.master_pubkey_path, data, sig)
+        return salt.crypt.PublicKey(self.master_pubkey_path).verify(
+            data, sig, self.opts["signing_algorithm"]
+        )
 
     @salt.ext.tornado.gen.coroutine
     def _crypted_transfer(self, load, timeout, raw=False):
@@ -374,7 +360,7 @@ class AsyncPubChannel:
 
     async_methods = [
         "connect",
-        "_decode_messages",
+        "_decode_payload",
     ]
     close_methods = [
         "close",
@@ -447,7 +433,7 @@ class AsyncPubChannel:
         except Exception as exc:  # pylint: disable=broad-except
             if "-|RETRY|-" not in str(exc):
                 raise salt.exceptions.SaltClientError(
-                    "Unable to sign_in to master: {}".format(exc)
+                    f"Unable to sign_in to master: {exc}"
                 )  # TODO: better error message
 
     def close(self):
@@ -584,7 +570,10 @@ class AsyncPubChannel:
 
             # Verify that the signature is valid
             if not salt.crypt.verify_signature(
-                self.master_pubkey_path, payload["load"], payload.get("sig")
+                self.master_pubkey_path,
+                payload["load"],
+                payload.get("sig"),
+                algorithm=payload["sig_algo"],
             ):
                 raise salt.crypt.AuthenticationError(
                     "Message signature failed to validate."
@@ -594,14 +583,22 @@ class AsyncPubChannel:
     def _decode_payload(self, payload):
         # we need to decrypt it
         log.trace("Decoding payload: %s", payload)
+        reauth = False
         if payload["enc"] == "aes":
             self._verify_master_signature(payload)
             try:
                 payload["load"] = self.auth.crypticle.loads(payload["load"])
             except salt.crypt.AuthenticationError:
-                yield self.auth.authenticate()
-                payload["load"] = self.auth.crypticle.loads(payload["load"])
-
+                reauth = True
+            if reauth:
+                try:
+                    yield self.auth.authenticate()
+                    payload["load"] = self.auth.crypticle.loads(payload["load"])
+                except salt.crypt.AuthenticationError:
+                    log.error(
+                        "Payload decryption failed even after re-authenticating with master %s",
+                        self.opts["master_ip"],
+                    )
         raise salt.ext.tornado.gen.Return(payload)
 
     def __enter__(self):

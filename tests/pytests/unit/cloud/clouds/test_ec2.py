@@ -189,9 +189,7 @@ def test__validate_key_path_and_mode():
             ec2._validate_key_path_and_mode("key_file")
 
 
-@pytest.mark.skipif(
-    not salt.crypt.HAS_M2 and not salt.crypt.HAS_CRYPTO, reason="Needs crypto library"
-)
+@pytest.mark.skipif(not salt.crypt.HAS_CRYPTOGRAPHY, reason="Needs crypto library")
 def test_get_password_data(tmp_path):
     key_file = str(tmp_path / "keyfile.pem")
 

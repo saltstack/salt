@@ -209,7 +209,7 @@ def _zmq(address, port, **kwargs):
     socket = context.socket(zmq.SUB)
     if salt.utils.network.is_ipv6(address):
         socket.ipv6 = True
-    socket.connect("tcp://{addr}:{port}".format(addr=address, port=port))
+    socket.connect(f"tcp://{address}:{port}")
     socket.setsockopt(zmq.SUBSCRIBE, b"")
     return socket.recv
 

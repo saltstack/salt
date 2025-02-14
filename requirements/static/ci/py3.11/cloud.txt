@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.11/cloud.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/cloud.in requirements/static/ci/common.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.0
+aiohttp==3.9.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   etcd3-py
@@ -27,7 +27,6 @@ attrs==23.1.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
@@ -64,11 +63,11 @@ cassandra-driver==3.23.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1
@@ -115,14 +114,16 @@ contextvars==2.4
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
-croniter==0.3.29 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   -r requirements/static/ci/common.in
-cryptography==41.0.7
+croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
+cryptography==42.0.5
+    # via
+    #   -c requirements/static/ci/../pkg/py3.11/linux.txt
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
     #   moto
@@ -131,6 +132,7 @@ cryptography==41.0.7
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
+    #   trustme
     #   vcert
 distlib==0.3.2
     # via
@@ -142,12 +144,12 @@ distro==1.5.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
@@ -159,7 +161,7 @@ filelock==3.0.12
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
@@ -168,6 +170,10 @@ frozenlist==1.3.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   aiohttp
     #   aiosignal
+future==1.0.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   textfsm
 genshi==0.7.5
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -180,7 +186,7 @@ gitdb==4.0.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   gitpython
-gitpython==3.1.37
+gitpython==3.1.41
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
@@ -188,12 +194,13 @@ google-auth==2.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   kubernetes
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -235,7 +242,7 @@ jaraco.text==3.5.1
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -332,7 +339,6 @@ packaging==22.0
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -350,7 +356,7 @@ platformdirs==2.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   virtualenv
-pluggy==0.13.0
+pluggy==1.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   pytest
@@ -361,7 +367,7 @@ portend==2.4
     #   cherrypy
 profitbricks==4.1.3
     # via -r requirements/static/ci/cloud.in
-psutil==5.8.0
+psutil==5.8.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -385,7 +391,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -403,7 +409,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -433,17 +439,19 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
-pytest-shell-utilities==1.8.0
+pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -455,11 +463,11 @@ pytest-system-statistics==1.0.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   pytest-salt-factories
-pytest-timeout==1.4.2
+pytest-timeout==2.3.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
-pytest==7.2.0
+pytest==8.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/pytest.txt
@@ -494,6 +502,7 @@ pytz==2022.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   croniter
     #   moto
     #   tempora
 pyvmomi==6.7.1.2018.12
@@ -518,12 +527,11 @@ pyzmq==23.2.0
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   apache-libcloud
     #   docker
     #   etcd3-py
@@ -584,6 +592,7 @@ six==1.16.0
     #   pyvmomi
     #   pywinrm
     #   responses
+    #   textfsm
     #   vcert
     #   virtualenv
     #   websocket-client
@@ -595,7 +604,7 @@ smmap==4.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
@@ -608,6 +617,10 @@ tempora==4.1.1
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   portend
+textfsm==1.1.3
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/static/ci/common.in
 timelib==0.2.5
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
@@ -617,10 +630,13 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
+trustme==1.1.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/pytest.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.18
     # via
@@ -647,13 +663,12 @@ watchdog==0.10.3
 websocket-client==0.40.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   docker
     #   kubernetes
 wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   moto

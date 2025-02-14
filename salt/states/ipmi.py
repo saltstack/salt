@@ -131,7 +131,7 @@ def power(name="power_on", wait=300, **kwargs):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "would power: {} system".format(name)
+        ret["comment"] = f"would power: {name} system"
         ret["result"] = None
         ret["changes"] = {"old": org, "new": name}
         return ret
@@ -152,7 +152,7 @@ def user_present(
     link_auth=True,
     ipmi_msg=True,
     privilege_level="administrator",
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure IPMI user and user privileges.
@@ -259,7 +259,7 @@ def user_present(
         link_auth,
         ipmi_msg,
         privilege_level,
-        **kwargs
+        **kwargs,
     )
     current_user = __salt__["ipmi.get_user"](uid=uid, channel=channel, **kwargs)
     ret["comment"] = "(re)created user"

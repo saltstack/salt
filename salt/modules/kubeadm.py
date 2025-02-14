@@ -139,7 +139,7 @@ def version(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     cmd.extend(["--output", "json"])
 
@@ -226,9 +226,9 @@ def token_create(
     for parameter, value in parameters:
         if value:
             if parameter in ("groups", "usages"):
-                cmd.extend(["--{}".format(parameter), json.dumps(value)])
+                cmd.extend([f"--{parameter}", json.dumps(value)])
             else:
-                cmd.extend(["--{}".format(parameter), str(value)])
+                cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -264,7 +264,7 @@ def token_delete(token, kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return bool(_cmd(cmd))
 
@@ -295,7 +295,7 @@ def token_generate(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -325,7 +325,7 @@ def token_list(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     lines = _cmd(cmd).splitlines()
 
@@ -368,7 +368,7 @@ def alpha_certs_renew(rootfs=None):
     parameters = [("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -430,7 +430,7 @@ def alpha_kubeconfig_user(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -469,7 +469,7 @@ def alpha_kubelet_config_download(kubeconfig=None, kubelet_version=None, rootfs=
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -520,7 +520,7 @@ def alpha_kubelet_config_enable_dynamic(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -574,7 +574,7 @@ def alpha_selfhosting_pivot(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -627,7 +627,7 @@ def config_images_list(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd).splitlines()
 
@@ -685,7 +685,7 @@ def config_images_pull(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     prefix = "[config/images] Pulled "
     return [(line.replace(prefix, "")) for line in _cmd(cmd).splitlines()]
@@ -729,7 +729,7 @@ def config_migrate(old_config, new_config=None, kubeconfig=None, rootfs=None):
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -769,7 +769,7 @@ def config_print_init_defaults(component_configs=None, kubeconfig=None, rootfs=N
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -809,7 +809,7 @@ def config_print_join_defaults(component_configs=None, kubeconfig=None, rootfs=N
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -843,7 +843,7 @@ def config_upload_from_file(config, kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -940,7 +940,7 @@ def config_upload_from_flags(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -970,7 +970,7 @@ def config_view(kubeconfig=None, rootfs=None):
     parameters = [("kubeconfig", kubeconfig), ("rootfs", rootfs)]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -1132,7 +1132,7 @@ def init(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -1297,7 +1297,7 @@ def join(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 
@@ -1364,7 +1364,7 @@ def reset(
     ]
     for parameter, value in parameters:
         if value:
-            cmd.extend(["--{}".format(parameter), str(value)])
+            cmd.extend([f"--{parameter}", str(value)])
 
     return _cmd(cmd)
 

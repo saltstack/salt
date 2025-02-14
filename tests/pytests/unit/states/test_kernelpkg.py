@@ -2,7 +2,6 @@
     Test cases for salt.states.kernelpkg
 """
 
-
 import pytest
 
 import salt.states.kernelpkg as kernelpkg

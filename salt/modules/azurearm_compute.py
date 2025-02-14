@@ -156,7 +156,7 @@ def availability_set_create_or_update(
             "compute", "AvailabilitySet", **kwargs
         )
     except TypeError as exc:
-        result = {"error": "The object model could not be built. ({})".format(str(exc))}
+        result = {"error": f"The object model could not be built. ({str(exc)})"}
         return result
 
     try:
@@ -171,9 +171,7 @@ def availability_set_create_or_update(
         __utils__["azurearm.log_cloud_error"]("compute", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {
-            "error": "The object model could not be parsed. ({})".format(str(exc))
-        }
+        result = {"error": f"The object model could not be parsed. ({str(exc)})"}
 
     return result
 

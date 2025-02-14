@@ -846,7 +846,7 @@ def test_list_repo_pkgs_with_options(list_repos_var):
                         except AssertionError:
                             continue
                     else:
-                        pytest.fail("repo '{}' not checked".format(repo))
+                        pytest.fail(f"repo '{repo}' not checked")
 
 
 def test_list_upgrades_dnf():
@@ -1423,10 +1423,8 @@ def test_install_with_options():
                     "--disablerepo=*",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "install",
                     "foo",
                 ],
@@ -1454,10 +1452,8 @@ def test_install_with_options():
                     "--disablerepo=bad",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "install",
                     "foo",
                 ],
@@ -1557,9 +1553,9 @@ def test_remove_with_epoch_and_arch_info():
     installed = "8:3.8.12-4.n.el7"
     list_pkgs_mock = MagicMock(
         side_effect=lambda **kwargs: {
-            name_and_arch: [installed]
-            if kwargs.get("versions_as_list", False)
-            else installed
+            name_and_arch: (
+                [installed] if kwargs.get("versions_as_list", False) else installed
+            )
         }
     )
     cmd_mock = MagicMock(
@@ -1852,10 +1848,8 @@ def test_upgrade_with_options():
                     "--disablerepo=*",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "--exclude=kernel*",
                     "--nogpgcheck",
                     "upgrade",
@@ -1897,10 +1891,8 @@ def test_upgrade_with_options():
                     "--disablerepo=bad",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "--exclude=kernel*",
                     "upgrade",
                 ],
@@ -3046,10 +3038,8 @@ def test_pkg_update_dnf():
                 "dnf",
                 "--quiet",
                 "-y",
-                "--setopt",
-                "plugins=0",
-                "--setopt",
-                "obsoletes=False",
+                "--setopt=plugins=0",
+                "--setopt=obsoletes=False",
                 "upgrade",
                 "foo",
             ],

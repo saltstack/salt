@@ -25,7 +25,9 @@ def server(config):
         send = []
         disconnect = False
 
-        async def handle_stream(self, stream, address):
+        async def handle_stream(  # pylint: disable=invalid-overridden-method
+            self, stream, address
+        ):
             while self.disconnect is False:
                 for msg in self.send[:]:
                     msg = self.send.pop(0)

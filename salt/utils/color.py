@@ -2,7 +2,6 @@
 Functions used for CLI color themes.
 """
 
-
 import logging
 import os
 
@@ -28,7 +27,7 @@ def get_color_theme(theme):
             colors = salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
             ret = {}
             for color in colors:
-                ret[color] = "\033[{}m".format(colors[color])
+                ret[color] = f"\033[{colors[color]}m"
             if not isinstance(colors, dict):
                 log.warning("The theme file %s is not a dict", theme)
                 return {}

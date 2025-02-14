@@ -4,7 +4,6 @@
     Test cases for salt.modules.pecl
 """
 
-
 import pytest
 
 import salt.modules.pecl as pecl

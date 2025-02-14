@@ -53,7 +53,7 @@ def parse_gitlog(filename=None):
     if not filename or filename == "-":
         fh = sys.stdin
     else:
-        fh = open(filename, "r+")
+        fh = open(filename, "r+", encoding="utf-8")
 
     try:
         commitcount = 0
@@ -78,7 +78,7 @@ def parse_gitlog(filename=None):
 
             if len(line) < 2 and new_commit:
                 new_commit = False
-                key = "{}-{}".format(d.year, str(d.month).zfill(2))
+                key = f"{d.year}-{str(d.month).zfill(2)}"
 
                 if key not in results:
                     results[key] = []
@@ -108,15 +108,15 @@ def counts_by_contributor(commits_by_contributor, results):
     output = ""
     dates = sorted(results.keys())
     for d in dates:
-        output += "\t{}".format(d)
+        output += f"\t{d}"
 
     output += "\n"
 
     for email in sorted(commits_by_contributor.keys()):
-        output += "'{}".format(email)
+        output += f"'{email}"
         for d in dates:
             if d in commits_by_contributor[email]:
-                output += "\t{}".format(commits_by_contributor[email][d])
+                output += f"\t{commits_by_contributor[email][d]}"
             else:
                 output += "\t"
         output += "\n"
@@ -127,7 +127,7 @@ def count_results(results, commits):
     result_str = ""
     print("Date\tContributors\tCommits")
     for k in sorted(results.keys()):
-        result_str += "{}\t{}\t{}".format(k, len(results[k]), commits[k])
+        result_str += f"{k}\t{len(results[k])}\t{commits[k]}"
         result_str += "\n"
     return result_str
 

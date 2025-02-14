@@ -8,6 +8,7 @@ Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
 :maturity:      new
 :depends:       sense_hat Python module
 """
+
 import logging
 import re
 
@@ -72,7 +73,7 @@ def beacon(config):
     config = salt.utils.beacons.list_to_dict(config)
 
     for sensor in config.get("sensors", {}):
-        sensor_function = "sensehat.get_{}".format(sensor)
+        sensor_function = f"sensehat.get_{sensor}"
         if sensor_function not in __salt__:
             log.error("No sensor for meassuring %s. Skipping.", sensor)
             continue
@@ -94,6 +95,6 @@ def beacon(config):
 
         current_value = __salt__[sensor_function]()
         if not sensor_min <= current_value <= sensor_max:
-            ret.append({"tag": "sensehat/{}".format(sensor), sensor: current_value})
+            ret.append({"tag": f"sensehat/{sensor}", sensor: current_value})
 
     return ret

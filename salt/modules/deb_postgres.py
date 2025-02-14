@@ -2,6 +2,7 @@
 Module to provide Postgres compatibility to salt for debian family specific tools.
 
 """
+
 import logging
 import shlex
 

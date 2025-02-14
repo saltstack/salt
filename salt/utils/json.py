@@ -2,7 +2,6 @@
 Functions to work with JSON
 """
 
-
 import json
 import logging
 

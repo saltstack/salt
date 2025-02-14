@@ -1,6 +1,7 @@
 """
     Tests for salt.modules.boto3_elasticsearch
 """
+
 import datetime
 import random
 import string

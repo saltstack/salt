@@ -3,7 +3,6 @@ This state downloads artifacts from artifactory.
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

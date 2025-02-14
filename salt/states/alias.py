@@ -43,20 +43,20 @@ def present(name, target):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if __salt__["aliases.has_target"](name, target):
         ret["result"] = True
-        ret["comment"] = "Alias {} already present".format(name)
+        ret["comment"] = f"Alias {name} already present"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Alias {} -> {} is set to be added".format(name, target)
+        ret["comment"] = f"Alias {name} -> {target} is set to be added"
         return ret
     if __salt__["aliases.set_target"](name, target):
         ret["changes"] = {"alias": name}
         ret["result"] = True
-        ret["comment"] = "Set email alias {} -> {}".format(name, target)
+        ret["comment"] = f"Set email alias {name} -> {target}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to set alias {} -> {}".format(name, target)
+        ret["comment"] = f"Failed to set alias {name} -> {target}"
         return ret
 
 
@@ -70,18 +70,18 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not __salt__["aliases.get_target"](name):
         ret["result"] = True
-        ret["comment"] = "Alias {} already absent".format(name)
+        ret["comment"] = f"Alias {name} already absent"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Alias {} is set to be removed".format(name)
+        ret["comment"] = f"Alias {name} is set to be removed"
         return ret
     if __salt__["aliases.rm_alias"](name):
         ret["changes"] = {"alias": name}
         ret["result"] = True
-        ret["comment"] = "Removed alias {}".format(name)
+        ret["comment"] = f"Removed alias {name}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove alias {}".format(name)
+        ret["comment"] = f"Failed to remove alias {name}"
         return ret

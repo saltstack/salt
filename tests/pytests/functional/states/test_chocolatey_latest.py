@@ -1,6 +1,7 @@
 """
 Functional tests for chocolatey state
 """
+
 import os
 import pathlib
 
@@ -108,6 +109,13 @@ def vim(chocolatey_mod):
     chocolatey_mod.uninstall(name="vim", force=True)
 
 
+@pytest.fixture(scope="function")
+def sudo(chocolatey_mod):
+    chocolatey_mod.install(name="sudo", version="1.1.2")
+    yield
+    chocolatey_mod.uninstall(name="sudo", force=True)
+
+
 def test_installed_latest(clean, chocolatey, chocolatey_mod):
     chocolatey.installed(name="vim")
     result = chocolatey_mod.version(name="vim")
@@ -119,6 +127,13 @@ def test_installed_version(clean, chocolatey, chocolatey_mod):
     result = chocolatey_mod.version(name="vim")
     assert "vim" in result
     assert result["vim"]["installed"][0] == "9.0.1672"
+
+
+# @pytest.mark.skipif(True, reason="Timing out, skipping for now")
+def test_installed_version_existing_capitalization(sudo, chocolatey, chocolatey_mod):
+    result = chocolatey.installed(name="sudo", version="1.1.3")
+    expected_changes = {"Sudo": {"new": ["1.1.3"], "old": ["1.1.2"]}}
+    assert result["changes"] == expected_changes
 
 
 def test_uninstalled(vim, chocolatey, chocolatey_mod):

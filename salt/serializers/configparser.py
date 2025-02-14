@@ -54,7 +54,7 @@ def serialize(obj, **options):
     try:
         if not isinstance(obj, dict):
             raise TypeError(
-                "configparser can only serialize dictionaries, not {}".format(type(obj))
+                f"configparser can only serialize dictionaries, not {type(obj)}"
             )
         fp = options.pop("fp", None)
         cp = configparser.ConfigParser(**options)

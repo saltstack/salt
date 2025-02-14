@@ -177,7 +177,7 @@ class KeyCLI:
 
         if cmd in ("accept", "reject", "delete") and args is None:
             args = self.opts.get("match_dict", {}).get("minions")
-        fstr = "key.{}".format(cmd)
+        fstr = f"key.{cmd}"
         fun = self.client.functions[fstr]
         args, kwargs = self._get_args_kwargs(fun, args)
 
@@ -230,7 +230,7 @@ class KeyCLI:
             stat_str = statuses[0]
         else:
             stat_str = "{} or {}".format(", ".join(statuses[:-1]), statuses[-1])
-        msg = "The key glob '{}' does not match any {} keys.".format(match, stat_str)
+        msg = f"The key glob '{match}' does not match any {stat_str} keys."
         print(msg)
 
     def run(self):
@@ -291,7 +291,7 @@ class KeyCLI:
                 else:
                     salt.output.display_output({"return": ret}, "key", opts=self.opts)
         except salt.exceptions.SaltException as exc:
-            ret = "{}".format(exc)
+            ret = f"{exc}"
             if not self.opts.get("quiet", False):
                 salt.output.display_output(ret, "nested", self.opts)
         return ret
@@ -311,7 +311,7 @@ class Key:
         self.opts = opts
         kind = self.opts.get("__role", "")  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
-            emsg = "Invalid application kind = '{}'.".format(kind)
+            emsg = f"Invalid application kind = '{kind}'."
             log.error(emsg)
             raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
@@ -377,7 +377,7 @@ class Key:
         # check given pub-key
         if pub:
             if not os.path.isfile(pub):
-                return "Public-key {} does not exist".format(pub)
+                return f"Public-key {pub} does not exist"
         # default to master.pub
         else:
             mpub = self.opts["pki_dir"] + "/" + "master.pub"
@@ -387,7 +387,7 @@ class Key:
         # check given priv-key
         if priv:
             if not os.path.isfile(priv):
-                return "Private-key {} does not exist".format(priv)
+                return f"Private-key {priv} does not exist"
         # default to master_sign.pem
         else:
             mpriv = self.opts["pki_dir"] + "/" + "master_sign.pem"
@@ -467,7 +467,7 @@ class Key:
             if clist:
                 for minion in clist:
                     if minion not in minions and minion not in preserve_minions:
-                        cache.flush("{}/{}".format(self.ACC, minion))
+                        cache.flush(f"{self.ACC}/{minion}")
 
     def check_master(self):
         """
@@ -663,7 +663,7 @@ class Key:
                     pass
         for keydir, key in invalid_keys:
             matches[keydir].remove(key)
-            sys.stderr.write("Unable to accept invalid key for {}.\n".format(key))
+            sys.stderr.write(f"Unable to accept invalid key for {key}.\n")
         return self.name_match(match) if match is not None else self.dict_match(matches)
 
     def accept_all(self):

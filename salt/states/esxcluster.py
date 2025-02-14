@@ -48,7 +48,6 @@ The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
 Module was developed against.
 """
 
-
 import logging
 import sys
 from functools import wraps
@@ -140,7 +139,7 @@ def _get_vsan_datastore(si, cluster_name):
 
     if not vsan_datastores:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No vSAN datastores where retrieved for cluster '{}'".format(cluster_name)
+            f"No vSAN datastores where retrieved for cluster '{cluster_name}'"
         )
     return vsan_datastores[0]
 
@@ -201,9 +200,7 @@ def cluster_configured(name, cluster_config):
             __salt__["esxcluster.get_details"]()["datacenter"],
         )
     else:
-        raise salt.exceptions.CommandExecutionError(
-            "Unsupported proxy {}".format(proxy_type)
-        )
+        raise salt.exceptions.CommandExecutionError(f"Unsupported proxy {proxy_type}")
     log.info(
         "Running %s for cluster '%s' in datacenter '%s'",
         name,
@@ -288,13 +285,11 @@ def cluster_configured(name, cluster_config):
                 changes_required = True
                 changes_str = ""
                 if diff.diffs:
-                    changes_str = "{}{}".format(changes_str, diff.changes_str)
+                    changes_str = f"{changes_str}{diff.changes_str}"
                 if ldiff and ldiff.diffs:
                     changes_str = "{}\nha:\n  options:\n{}".format(
                         changes_str,
-                        "\n".join(
-                            ["  {}".format(l) for l in ldiff.changes_str2.split("\n")]
-                        ),
+                        "\n".join([f"  {l}" for l in ldiff.changes_str2.split("\n")]),
                     )
                 # Apply the changes
                 if __opts__["test"]:
@@ -355,7 +350,7 @@ def vsan_datastore_configured(name, datastore_name):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    display_name = f"{datacenter_name}/{cluster_name}"
     log.info("Running vsan_datastore_configured for '%s'", display_name)
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
@@ -394,9 +389,7 @@ def vsan_datastore_configured(name, datastore_name):
                     new_datastore_name=datastore_name,
                     service_instance=si,
                 )
-                comments.append(
-                    "Renamed vSAN datastore to '{}'.".format(datastore_name)
-                )
+                comments.append(f"Renamed vSAN datastore to '{datastore_name}'.")
                 changes = {
                     "vsan_datastore": {
                         "new": {"name": datastore_name},
@@ -408,11 +401,11 @@ def vsan_datastore_configured(name, datastore_name):
 
         ret.update(
             {
-                "result": True
-                if (not changes_required)
-                else None
-                if __opts__["test"]
-                else True,
+                "result": (
+                    True
+                    if (not changes_required)
+                    else None if __opts__["test"] else True
+                ),
                 "comment": "\n".join(comments),
                 "changes": changes,
             }
@@ -446,7 +439,7 @@ def licenses_configured(name, licenses=None):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    display_name = f"{datacenter_name}/{cluster_name}"
     log.info("Running licenses configured for '%s'", display_name)
     log.trace("licenses = %s", licenses)
     entity = {"type": "cluster", "datacenter": datacenter_name, "cluster": cluster_name}
@@ -496,7 +489,7 @@ def licenses_configured(name, licenses=None):
                         log.error(comments[-1])
                         has_errors = True
                         continue
-                    comments.append("Added license '{}'.".format(license_name))
+                    comments.append(f"Added license '{license_name}'.")
                     log.info(comments[-1])
             else:
                 # License exists let's check if it's assigned to the cluster
@@ -606,13 +599,11 @@ def licenses_configured(name, licenses=None):
 
         ret.update(
             {
-                "result": True
-                if (not needs_changes)
-                else None
-                if __opts__["test"]
-                else False
-                if has_errors
-                else True,
+                "result": (
+                    True
+                    if (not needs_changes)
+                    else None if __opts__["test"] else False if has_errors else True
+                ),
                 "comment": "\n".join(comments),
                 "changes": changes if not __opts__["test"] else {},
             }

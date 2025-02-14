@@ -836,7 +836,7 @@ def create_network_interface(call=None, kwargs=None):
                         NetworkInterfaceIPConfiguration(
                             name="{}-ip".format(kwargs["iface_name"]),
                             subnet=subnet_obj,
-                            **ip_kwargs
+                            **ip_kwargs,
                         )
                     ]
                     break
@@ -999,7 +999,7 @@ def request_instance(vm_, kwargs=None):
     if not win_installer and ssh_publickeyfile_contents is not None:
         sshpublickey = SshPublicKey(
             key_data=ssh_publickeyfile_contents,
-            path="/home/{}/.ssh/authorized_keys".format(vm_username),
+            path=f"/home/{vm_username}/.ssh/authorized_keys",
         )
         sshconfiguration = SshConfiguration(
             public_keys=[sshpublickey],
@@ -1620,7 +1620,7 @@ def _get_cloud_environment():
         cloud_env = getattr(cloud_env_module, cloud_environment or "AZURE_PUBLIC_CLOUD")
     except (AttributeError, ImportError):
         raise SaltCloudSystemExit(
-            "The azure {} cloud environment is not available.".format(cloud_environment)
+            f"The azure {cloud_environment} cloud environment is not available."
         )
 
     return cloud_env
@@ -1911,7 +1911,7 @@ def create_or_update_vmextension(
     except CloudError as exc:
         salt.utils.azurearm.log_cloud_error(
             "compute",
-            "Error attempting to create the VM extension: {}".format(exc.message),
+            f"Error attempting to create the VM extension: {exc.message}",
         )
         ret = {"error": exc.message}
 
@@ -1959,9 +1959,9 @@ def stop(name, call=None):
                     ret = {"error": exc.message}
         if not ret:
             salt.utils.azurearm.log_cloud_error(
-                "compute", "Unable to find virtual machine with name: {}".format(name)
+                "compute", f"Unable to find virtual machine with name: {name}"
             )
-            ret = {"error": "Unable to find virtual machine with name: {}".format(name)}
+            ret = {"error": f"Unable to find virtual machine with name: {name}"}
     else:
         try:
             instance = compconn.virtual_machines.deallocate(
@@ -1972,7 +1972,7 @@ def stop(name, call=None):
             ret = vm_result.as_dict()
         except CloudError as exc:
             salt.utils.azurearm.log_cloud_error(
-                "compute", "Error attempting to stop {}: {}".format(name, exc.message)
+                "compute", f"Error attempting to stop {name}: {exc.message}"
             )
             ret = {"error": exc.message}
 
@@ -2022,9 +2022,9 @@ def start(name, call=None):
                     ret = {"error": exc.message}
         if not ret:
             salt.utils.azurearm.log_cloud_error(
-                "compute", "Unable to find virtual machine with name: {}".format(name)
+                "compute", f"Unable to find virtual machine with name: {name}"
             )
-            ret = {"error": "Unable to find virtual machine with name: {}".format(name)}
+            ret = {"error": f"Unable to find virtual machine with name: {name}"}
     else:
         try:
             instance = compconn.virtual_machines.start(
@@ -2036,7 +2036,7 @@ def start(name, call=None):
         except CloudError as exc:
             salt.utils.azurearm.log_cloud_error(
                 "compute",
-                "Error attempting to start {}: {}".format(name, exc.message),
+                f"Error attempting to start {name}: {exc.message}",
             )
             ret = {"error": exc.message}
 

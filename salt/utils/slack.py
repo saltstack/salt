@@ -85,7 +85,7 @@ def query(
     # send the token in an HTTP POST body.
     # Apps created before February 24, 2021 will continue functioning no
     # matter which way you pass your token.
-    header_dict["Authorization"] = "Bearer {}".format(api_key)
+    header_dict["Authorization"] = f"Bearer {api_key}"
     result = salt.utils.http.query(
         url,
         method,

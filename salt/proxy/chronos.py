@@ -55,7 +55,7 @@ def ping():
     """
     try:
         response = salt.utils.http.query(
-            "{}/scheduler/jobs".format(CONFIG[CONFIG_BASE_URL]),
+            f"{CONFIG[CONFIG_BASE_URL]}/scheduler/jobs",
             decode_type="json",
             decode=True,
         )

@@ -85,7 +85,7 @@ def info(device):
 
         salt '*' btrfs.info /dev/sda1
     """
-    out = __salt__["cmd.run_all"]("btrfs filesystem show {}".format(device))
+    out = __salt__["cmd.run_all"](f"btrfs filesystem show {device}")
     salt.utils.fsutils._verify_run(out)
 
     return _parse_btrfs_info(out["stdout"])
@@ -111,9 +111,7 @@ def _defragment_mountpoint(mountpoint):
     """
     Defragment only one BTRFS mountpoint.
     """
-    out = __salt__["cmd.run_all"](
-        "btrfs filesystem defragment -f {}".format(mountpoint)
-    )
+    out = __salt__["cmd.run_all"](f"btrfs filesystem defragment -f {mountpoint}")
     return {
         "mount_point": mountpoint,
         "passed": not out["stderr"],
@@ -140,7 +138,7 @@ def defragment(path):
     is_device = salt.utils.fsutils._is_device(path)
     mounts = salt.utils.fsutils._get_mounts("btrfs")
     if is_device and not mounts.get(path):
-        raise CommandExecutionError('Device "{}" is not mounted'.format(path))
+        raise CommandExecutionError(f'Device "{path}" is not mounted')
 
     result = []
     if is_device:
@@ -159,9 +157,9 @@ def defragment(path):
             and not d_res["passed"]
             and "range ioctl not supported" in d_res["log"]
         ):
-            d_res[
-                "log"
-            ] = "Range ioctl defragmentation is not supported in this kernel."
+            d_res["log"] = (
+                "Range ioctl defragmentation is not supported in this kernel."
+            )
 
         if not is_mountpoint:
             d_res["mount_point"] = False
@@ -212,7 +210,7 @@ def _usage_overall(raw):
                 subk = keyset[1].split("(")
                 data[key] = subk[0].strip()
                 subk = subk[1].replace(")", "").split(": ")
-                data["{}_{}".format(key, subk[0])] = subk[1]
+                data[f"{key}_{subk[0]}"] = subk[1]
             else:
                 data[key] = keyset[1]
 
@@ -223,7 +221,10 @@ def _usage_specific(raw):
     """
     Parse usage/specific.
     """
-    get_key = lambda val: dict([tuple(val.split(":"))])
+
+    def get_key(val):
+        return dict([tuple(val.split(":"))])
+
     raw = raw.split("\n")
     section, size, used = raw[0].split(" ")
     section = section.replace(",", "_").replace(":", "").lower()
@@ -263,7 +264,7 @@ def usage(path):
 
         salt '*' btrfs.usage /your/mountpoint
     """
-    out = __salt__["cmd.run_all"]("btrfs filesystem usage {}".format(path))
+    out = __salt__["cmd.run_all"](f"btrfs filesystem usage {path}")
     salt.utils.fsutils._verify_run(out)
 
     ret = {}
@@ -317,9 +318,7 @@ def mkfs(*devices, **kwargs):
     mounts = salt.utils.fsutils._get_mounts("btrfs")
     for device in devices:
         if mounts.get(device):
-            raise CommandExecutionError(
-                'Device "{}" should not be mounted'.format(device)
-            )
+            raise CommandExecutionError(f'Device "{device}" should not be mounted')
 
     cmd = ["mkfs.btrfs"]
 
@@ -332,9 +331,9 @@ def mkfs(*devices, **kwargs):
             cmd.append("-m single")
     else:
         if dto:
-            cmd.append("-d {}".format(dto))
+            cmd.append(f"-d {dto}")
         if mto:
-            cmd.append("-m {}".format(mto))
+            cmd.append(f"-m {mto}")
 
     for key, option in [
         ("-l", "leafsize"),
@@ -348,7 +347,7 @@ def mkfs(*devices, **kwargs):
         if option == "label" and option in kwargs:
             kwargs["label"] = "'{}'".format(kwargs["label"])
         if kwargs.get(option):
-            cmd.append("{} {}".format(key, kwargs.get(option)))
+            cmd.append(f"{key} {kwargs.get(option)}")
 
     if kwargs.get("uuid"):
         cmd.append(
@@ -393,12 +392,10 @@ def resize(mountpoint, size):
     if size == "max":
         if not salt.utils.fsutils._is_device(mountpoint):
             raise CommandExecutionError(
-                'Mountpoint "{}" should be a valid device'.format(mountpoint)
+                f'Mountpoint "{mountpoint}" should be a valid device'
             )
         if not salt.utils.fsutils._get_mounts("btrfs").get(mountpoint):
-            raise CommandExecutionError(
-                'Device "{}" should be mounted'.format(mountpoint)
-            )
+            raise CommandExecutionError(f'Device "{mountpoint}" should be mounted')
     elif (
         len(size) < 3
         or size[0] not in "-+"
@@ -411,9 +408,7 @@ def resize(mountpoint, size):
             )
         )
 
-    out = __salt__["cmd.run_all"](
-        "btrfs filesystem resize {} {}".format(size, mountpoint)
-    )
+    out = __salt__["cmd.run_all"](f"btrfs filesystem resize {size} {mountpoint}")
     salt.utils.fsutils._verify_run(out)
 
     ret = {"log": out["stdout"]}
@@ -441,7 +436,7 @@ def _fsck_ext(device):
     }
 
     return msgs.get(
-        __salt__["cmd.run_all"]("fsck -f -n {}".format(device))["retcode"],
+        __salt__["cmd.run_all"](f"fsck -f -n {device}")["retcode"],
         "Unknown error",
     )
 
@@ -472,7 +467,7 @@ def convert(device, permanent=False, keeplf=False):
     salt.utils.fsutils._verify_run(out)
     devices = salt.utils.fsutils._blkid_output(out["stdout"])
     if not devices.get(device):
-        raise CommandExecutionError('The device "{}" was is not found.'.format(device))
+        raise CommandExecutionError(f'The device "{device}" was is not found.')
 
     if not devices[device]["type"] in ["ext2", "ext3", "ext4"]:
         raise CommandExecutionError(
@@ -503,7 +498,7 @@ documentation regarding this topic.
 """
         )
 
-    salt.utils.fsutils._verify_run(__salt__["cmd.run_all"]("umount {}".format(device)))
+    salt.utils.fsutils._verify_run(__salt__["cmd.run_all"](f"umount {device}"))
 
     ret = {
         "before": {
@@ -513,11 +508,9 @@ documentation regarding this topic.
         }
     }
 
+    salt.utils.fsutils._verify_run(__salt__["cmd.run_all"](f"btrfs-convert {device}"))
     salt.utils.fsutils._verify_run(
-        __salt__["cmd.run_all"]("btrfs-convert {}".format(device))
-    )
-    salt.utils.fsutils._verify_run(
-        __salt__["cmd.run_all"]("mount {} {}".format(device, mountpoint))
+        __salt__["cmd.run_all"](f"mount {device} {mountpoint}")
     )
 
     # Refresh devices
@@ -532,38 +525,34 @@ documentation regarding this topic.
     }
 
     # Post-migration procedures
-    image_path = "{}/ext2_saved".format(mountpoint)
+    image_path = f"{mountpoint}/ext2_saved"
     orig_fstype = ret["before"]["type"]
 
     if not os.path.exists(image_path):
         raise CommandExecutionError(
-            'BTRFS migration went wrong: the image "{}" not found!'.format(image_path)
+            f'BTRFS migration went wrong: the image "{image_path}" not found!'
         )
 
     if not permanent:
-        ret["after"]["{}_image".format(orig_fstype)] = image_path
+        ret["after"][f"{orig_fstype}_image"] = image_path
         image_info_proc = subprocess.run(
-            ["file", "{}/image".format(image_path)], check=True, stdout=subprocess.PIPE
+            ["file", f"{image_path}/image"], check=True, stdout=subprocess.PIPE
         )
-        ret["after"][
-            "{}_image_info".format(orig_fstype)
-        ] = image_info_proc.stdout.strip()
+        ret["after"][f"{orig_fstype}_image_info"] = image_info_proc.stdout.strip()
     else:
-        ret["after"]["{}_image".format(orig_fstype)] = "removed"
-        ret["after"]["{}_image_info".format(orig_fstype)] = "N/A"
+        ret["after"][f"{orig_fstype}_image"] = "removed"
+        ret["after"][f"{orig_fstype}_image_info"] = "N/A"
 
         salt.utils.fsutils._verify_run(
-            __salt__["cmd.run_all"]("btrfs subvolume delete {}".format(image_path))
+            __salt__["cmd.run_all"](f"btrfs subvolume delete {image_path}")
         )
-        out = __salt__["cmd.run_all"]("btrfs filesystem balance {}".format(mountpoint))
+        out = __salt__["cmd.run_all"](f"btrfs filesystem balance {mountpoint}")
         salt.utils.fsutils._verify_run(out)
         ret["after"]["balance_log"] = out["stdout"]
 
-    lost_found = "{}/lost+found".format(mountpoint)
+    lost_found = f"{mountpoint}/lost+found"
     if os.path.exists(lost_found) and not keeplf:
-        salt.utils.fsutils._verify_run(
-            __salt__["cmd.run_all"]("rm -rf {}".format(lost_found))
-        )
+        salt.utils.fsutils._verify_run(__salt__["cmd.run_all"](f"rm -rf {lost_found}"))
 
     return ret
 
@@ -576,7 +565,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
 
     if salt.utils.fsutils._is_device(mountpoint):
         raise CommandExecutionError(
-            'Mountpount expected, while device "{}" specified'.format(mountpoint)
+            f'Mountpount expected, while device "{mountpoint}" specified'
         )
 
     mounted = False
@@ -588,7 +577,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
 
     if not mounted:
         raise CommandExecutionError(
-            'No BTRFS device mounted on "{}" mountpoint'.format(mountpoint)
+            f'No BTRFS device mounted on "{mountpoint}" mountpoint'
         )
 
     if not devices:
@@ -597,9 +586,9 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
     available_devices = __salt__["btrfs.devices"]()
     for device in devices:
         if device not in available_devices.keys():
-            raise CommandExecutionError('Device "{}" is not recognized'.format(device))
+            raise CommandExecutionError(f'Device "{device}" is not recognized')
 
-    cmd = ["btrfs device {}".format(direction)]
+    cmd = [f"btrfs device {direction}"]
     for device in devices:
         cmd.append(device)
 
@@ -627,9 +616,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
                 )
             )
         else:
-            out = __salt__["cmd.run_all"](
-                "btrfs filesystem balance {}".format(mountpoint)
-            )
+            out = __salt__["cmd.run_all"](f"btrfs filesystem balance {mountpoint}")
         salt.utils.fsutils._verify_run(out)
         if out["stdout"]:
             fs_log.append(out["stdout"])
@@ -715,15 +702,13 @@ def properties(obj, type=None, set=None):
         "d",
         "device",
     ]:
-        raise CommandExecutionError(
-            'Unknown property type: "{}" specified'.format(type)
-        )
+        raise CommandExecutionError(f'Unknown property type: "{type}" specified')
 
     cmd = ["btrfs"]
     cmd.append("property")
     cmd.append(set and "set" or "list")
     if type:
-        cmd.append("-t{}".format(type))
+        cmd.append(f"-t{type}")
     cmd.append(obj)
 
     if set:
@@ -744,9 +729,9 @@ def properties(obj, type=None, set=None):
         ret = {}
         for prop, descr in _parse_proplist(out["stdout"]).items():
             ret[prop] = {"description": descr}
-            value = __salt__["cmd.run_all"](
-                "btrfs property get {} {}".format(obj, prop)
-            )["stdout"]
+            value = __salt__["cmd.run_all"](f"btrfs property get {obj} {prop}")[
+                "stdout"
+            ]
             ret[prop]["value"] = value and value.split("=")[-1] or "N/A"
 
         return ret

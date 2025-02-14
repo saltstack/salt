@@ -17,6 +17,7 @@ salt/_logging/(impl|handlers).py:
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
+  - pytests.functional.modules.test_win_pkg
   - pytests.functional.states.test_pkg
   - pytests.functional.states.pkgrepo.test_centos
   - pytests.functional.states.pkgrepo.test_debian
@@ -154,7 +155,7 @@ salt/engines/*:
   - pytests.unit.engines.test_engines
 
 salt/grains/*:
-  - integration.grains.test_custom
+  - pytests.integration.grains.test_custom
 
 salt/matchers/*:
   - integration.states.test_match
@@ -210,8 +211,8 @@ salt/config/*:
   - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
-  - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
+  - pytests.integration.loader.test_ext_grains
   - pytests.functional.loader.test_loader
   - pytests.functional.loader.test_loaded_base_name
 

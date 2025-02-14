@@ -96,7 +96,7 @@ def test_beacons_duplicate_53344(
     # Since beacons will be executed both together, we wait for the status beacon event
     # which means that, the inotify becacon was executed too
     start_time = setup_beacons
-    expected_tag = "salt/beacon/{}/status/*".format(salt_mm_minion_1.id)
+    expected_tag = f"salt/beacon/{salt_mm_minion_1.id}/status/*"
     expected_patterns = [
         (salt_mm_master_1.id, expected_tag),
         (salt_mm_master_2.id, expected_tag),

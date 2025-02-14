@@ -4,6 +4,7 @@
 
     Bonjour announce beacon test cases
 """
+
 import pytest
 
 import salt.beacons.bonjour_announce as bonjour_announce

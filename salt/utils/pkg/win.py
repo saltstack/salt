@@ -10,6 +10,7 @@ Collect information about software installed on Windows OS
 
 Known Issue: install_date may not match Control Panel\Programs\Programs and Features
 """
+
 import collections
 import datetime
 import locale
@@ -143,7 +144,7 @@ class RegSoftwareInfo:
                     )
                 )
                 self.__reg_upgradecode_path = (
-                    "{}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(sid)
+                    f"{sid}\\Software\\Microsoft\\Installer\\UpgradeCodes"
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
@@ -160,7 +161,7 @@ class RegSoftwareInfo:
             )
             if self.__squid:
                 self.__reg_products_path = (
-                    "Software\\Classes\\Installer\\Products\\{}".format(self.__squid)
+                    f"Software\\Classes\\Installer\\Products\\{self.__squid}"
                 )
                 self.__reg_upgradecode_path = (
                     "Software\\Classes\\Installer\\UpgradeCodes"
@@ -603,7 +604,7 @@ class RegSoftwareInfo:
         Returns:
             str: <hive>\\<uninstall registry entry>
         """
-        return "{}\\{}".format(self.__reg_hive, self.__reg_uninstall_path)
+        return f"{self.__reg_hive}\\{self.__reg_uninstall_path}"
 
     @property
     def registry_path(self):
@@ -825,7 +826,7 @@ class WinSoftware:
         Returns:
             str: Package Id
         """
-        return self.__next__()
+        return next(self)
 
     def get(self, pkg_id, default_value=None):
         """
@@ -848,7 +849,7 @@ class WinSoftware:
         return 1 if Version(ver1) > Version(ver2) else -1
 
     @staticmethod
-    def __latest_to_oldest_version(ver1, ver2):
+    def __latest_to_oldest_version(ver1, ver2):  # pylint: disable=unused-private-member
         """
         Used for sorting version numbers, latest to oldest
         """
@@ -929,7 +930,7 @@ class WinSoftware:
             name, domain, _account_type = win32security.LookupAccountSid(
                 None, sid_bin
             )  # pylint: disable=no-member
-            user_name = "{}\\{}".format(domain, name)
+            user_name = f"{domain}\\{name}"
         except pywintypes.error as exc:  # pylint: disable=no-member
             # if user does not exist...
             # winerror.ERROR_NONE_MAPPED = No mapping between account names and
@@ -961,7 +962,7 @@ class WinSoftware:
                 winerror.ERROR_INVALID_DOMAINNAME,
                 winerror.ERROR_NONE_MAPPED,
             ):
-                return "{}@{}".format(name.lower(), domain.lower())
+                return f"{name.lower()}@{domain.lower()}"
             else:
                 raise
         return user_principal
@@ -1441,9 +1442,7 @@ def __main():
         system|system+user: System installed and System and User installs.
     """
     if len(sys.argv) < 3:
-        sys.stderr.write(
-            "usage: {} <detail|list> <system|system+user>\n".format(sys.argv[0])
-        )
+        sys.stderr.write(f"usage: {sys.argv[0]} <detail|list> <system|system+user>\n")
         sys.exit(64)
     user_pkgs = False
     version_only = False
@@ -1463,10 +1462,10 @@ def __main():
         print(
             salt.utils.json.dumps(pkg_list.data, sort_keys=True, indent=4)
         )  # pylint: disable=superfluous-parens
-        print("Total: {}".format(len(pkg_list)))  # pylint: disable=superfluous-parens
+        print(f"Total: {len(pkg_list)}")  # pylint: disable=superfluous-parens
 
     print(
-        "Time Taken: {}".format(timeit.timeit(run, number=1))
+        f"Time Taken: {timeit.timeit(run, number=1)}"
     )  # pylint: disable=superfluous-parens
 
 

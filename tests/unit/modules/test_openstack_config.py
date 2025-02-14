@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.openstack_config as openstack_config
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin

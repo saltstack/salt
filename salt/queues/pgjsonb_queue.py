@@ -38,7 +38,6 @@ Use the following Pg database schema:
     salt-run queue.process_queue test all backend=pgjsonb
 """
 
-
 import logging
 import sys
 from contextlib import contextmanager
@@ -81,15 +80,11 @@ def _conn(commit=False):
 
     conn_kwargs = {}
     for key, value in defaults.items():
-        conn_kwargs[key] = __opts__.get(
-            "queue.{}.{}".format(__virtualname__, key), value
-        )
+        conn_kwargs[key] = __opts__.get(f"queue.{__virtualname__}.{key}", value)
     try:
         conn = psycopg2.connect(**conn_kwargs)
     except psycopg2.OperationalError as exc:
-        raise SaltMasterError(
-            "pgjsonb returner could not connect to database: {exc}".format(exc=exc)
-        )
+        raise SaltMasterError(f"pgjsonb returner could not connect to database: {exc}")
 
     cursor = conn.cursor()
 
@@ -118,7 +113,7 @@ def _list_tables(cur):
 
 
 def _create_table(cur, queue):
-    cmd = "CREATE TABLE {}(id SERIAL PRIMARY KEY, data jsonb NOT NULL)".format(queue)
+    cmd = f"CREATE TABLE {queue}(id SERIAL PRIMARY KEY, data jsonb NOT NULL)"
     log.debug("SQL Query: %s", cmd)
     cur.execute(cmd)
     return True
@@ -129,7 +124,7 @@ def _list_items(queue):
     Private function to list contents of a queue
     """
     with _conn() as cur:
-        cmd = "SELECT data FROM {}".format(queue)
+        cmd = f"SELECT data FROM {queue}"
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
@@ -192,7 +187,7 @@ def insert(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items)
-            cmd = "INSERT INTO {}(data) VALUES('{}')".format(queue, items)
+            cmd = f"INSERT INTO {queue}(data) VALUES('{items}')"
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
@@ -202,7 +197,7 @@ def insert(queue, items):
                 )
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]
-            cmd = "INSERT INTO {}(data) VALUES (%s)".format(queue)
+            cmd = f"INSERT INTO {queue}(data) VALUES (%s)"
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.executemany(cmd, items)
@@ -228,7 +223,7 @@ def delete(queue, items):
             return True
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]
-            cmd = "DELETE FROM {} WHERE data = %s".format(queue)
+            cmd = f"DELETE FROM {queue} WHERE data = %s"
             log.debug("SQL Query: %s", cmd)
             cur.executemany(cmd, items)
     return True
@@ -238,7 +233,7 @@ def pop(queue, quantity=1, is_runner=False):
     """
     Pop one or more or all items from the queue return them.
     """
-    cmd = "SELECT id, data FROM {}".format(queue)
+    cmd = f"SELECT id, data FROM {queue}"
     if quantity != "all":
         try:
             quantity = int(quantity)
@@ -247,7 +242,7 @@ def pop(queue, quantity=1, is_runner=False):
                 exc
             )
             raise SaltInvocationError(error_txt)
-        cmd = "".join([cmd, " LIMIT {};".format(quantity)])
+        cmd = "".join([cmd, f" LIMIT {quantity};"])
     log.debug("SQL Query: %s", cmd)
     items = []
     with _conn(commit=True) as cur:
@@ -257,7 +252,7 @@ def pop(queue, quantity=1, is_runner=False):
             ids = [str(item[0]) for item in result]
             items = [item[1] for item in result]
             idlist = "','".join(ids)
-            del_cmd = "DELETE FROM {} WHERE id IN ('{}');".format(queue, idlist)
+            del_cmd = f"DELETE FROM {queue} WHERE id IN ('{idlist}');"
 
             log.debug("SQL Query: %s", del_cmd)
 

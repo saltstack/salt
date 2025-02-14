@@ -79,7 +79,7 @@ def test_boolean():
 
     mock_en = MagicMock(return_value=[])
     with patch.dict(selinux.__salt__, {"selinux.list_sebool": mock_en}):
-        comt = "Boolean {} is not available".format(name)
+        comt = f"Boolean {name} is not available"
         ret.update({"comment": comt})
         assert selinux.boolean(name, value) == ret
 

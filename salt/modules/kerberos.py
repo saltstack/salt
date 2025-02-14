@@ -19,7 +19,6 @@ authenticate as.
     auth_principal: kadmin/admin
 """
 
-
 import logging
 
 import salt.utils.path
@@ -45,7 +44,7 @@ def __execute_kadmin(cmd):
 
     if __salt__["file.file_exists"](auth_keytab) and auth_principal:
         return __salt__["cmd.run_all"](
-            'kadmin -k -t {} -p {} -q "{}"'.format(auth_keytab, auth_principal, cmd)
+            f'kadmin -k -t {auth_keytab} -p {auth_principal} -q "{cmd}"'
         )
     else:
         log.error("Unable to find kerberos keytab/principal")
@@ -95,7 +94,7 @@ def get_principal(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("get_principal {}".format(name))
+    cmd = __execute_kadmin(f"get_principal {name}")
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -151,7 +150,7 @@ def get_policy(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("get_policy {}".format(name))
+    cmd = __execute_kadmin(f"get_policy {name}")
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -210,9 +209,9 @@ def create_principal(name, enctypes=None):
     krb_cmd = "addprinc -randkey"
 
     if enctypes:
-        krb_cmd += " -e {}".format(enctypes)
+        krb_cmd += f" -e {enctypes}"
 
-    krb_cmd += " {}".format(name)
+    krb_cmd += f" {name}"
 
     cmd = __execute_kadmin(krb_cmd)
 
@@ -238,7 +237,7 @@ def delete_principal(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("delprinc -force {}".format(name))
+    cmd = __execute_kadmin(f"delprinc -force {name}")
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -261,12 +260,12 @@ def create_keytab(name, keytab, enctypes=None):
     """
     ret = {}
 
-    krb_cmd = "ktadd -k {}".format(keytab)
+    krb_cmd = f"ktadd -k {keytab}"
 
     if enctypes:
-        krb_cmd += " -e {}".format(enctypes)
+        krb_cmd += f" -e {enctypes}"
 
-    krb_cmd += " {}".format(name)
+    krb_cmd += f" {name}"
 
     cmd = __execute_kadmin(krb_cmd)
 

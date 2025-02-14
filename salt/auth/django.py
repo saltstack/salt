@@ -46,7 +46,6 @@ indicated above, though the model DOES NOT have to be named
 'SaltExternalAuthModel'.
 """
 
-
 import logging
 import os
 import sys
@@ -112,7 +111,7 @@ def __django_auth_setup():
             django_module_name, globals(), locals(), "SaltExternalAuthModel"
         )
         # pylint: enable=possibly-unused-variable
-        DJANGO_AUTH_CLASS_str = "django_auth_module.{}".format(django_model_name)
+        DJANGO_AUTH_CLASS_str = f"django_auth_module.{django_model_name}"
         DJANGO_AUTH_CLASS = eval(DJANGO_AUTH_CLASS_str)  # pylint: disable=W0123
 
 

@@ -150,7 +150,7 @@ def _apply_assertion(expected, result):
             raise
         return comparison(expected["expected"], result)
     else:
-        raise TypeError("Expected bool or dict but received {}".format(type(expected)))
+        raise TypeError(f"Expected bool or dict but received {type(expected)}")
 
 
 # This does not currently generate documentation from the underlying modules

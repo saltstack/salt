@@ -29,7 +29,7 @@ def test_post_message_apikey():
     with patch.dict(slack.__opts__, {"test": True}):
         mock = MagicMock(return_value=True)
         with patch.dict(slack.__salt__, {"config.get": mock}):
-            comt = "The following message is to be sent to Slack: {}".format(message)
+            comt = f"The following message is to be sent to Slack: {message}"
             ret.update({"comment": comt})
             assert (
                 slack.post_message(
@@ -129,7 +129,7 @@ def test_post_message_webhook():
     with patch.dict(slack.__opts__, {"test": True}):
         mock = MagicMock(return_value=True)
         with patch.dict(slack.__salt__, {"config.get": mock}):
-            comt = "The following message is to be sent to Slack: {}".format(message)
+            comt = f"The following message is to be sent to Slack: {message}"
             ret.update({"comment": comt})
             assert (
                 slack.post_message(

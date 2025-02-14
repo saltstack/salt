@@ -39,7 +39,7 @@ def version():
 
         salt '*' nginx.version
     """
-    cmd = "{} -v".format(__detect_os())
+    cmd = f"{__detect_os()} -v"
     out = __salt__["cmd.run"](cmd).splitlines()
     ret = out[0].rsplit("/", maxsplit=1)
     return ret[-1]
@@ -56,7 +56,7 @@ def build_info():
         salt '*' nginx.build_info
     """
     ret = {"info": []}
-    out = __salt__["cmd.run"]("{} -V".format(__detect_os()))
+    out = __salt__["cmd.run"](f"{__detect_os()} -V")
 
     for i in out.splitlines():
         if i.startswith("configure argument"):
@@ -80,7 +80,7 @@ def configtest():
     """
     ret = {}
 
-    cmd = "{} -t".format(__detect_os())
+    cmd = f"{__detect_os()} -t"
     out = __salt__["cmd.run_all"](cmd)
 
     if out["retcode"] != 0:
@@ -116,7 +116,7 @@ def signal(signal=None):
     if signal == "start":
         arguments = ""
     else:
-        arguments = " -s {}".format(signal)
+        arguments = f" -s {signal}"
     cmd = __detect_os() + arguments
     out = __salt__["cmd.run_all"](cmd)
 
@@ -130,7 +130,7 @@ def signal(signal=None):
         ret = out["stdout"].strip()
     # No output for something like: nginxctl graceful
     else:
-        ret = 'Command: "{}" completed successfully!'.format(cmd)
+        ret = f'Command: "{cmd}" completed successfully!'
     return ret
 
 

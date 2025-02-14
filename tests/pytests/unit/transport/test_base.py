@@ -1,6 +1,7 @@
 """
 Unit tests for salt.transport.base.
 """
+
 import pytest
 
 import salt.transport.base

@@ -40,6 +40,7 @@ Connection module for Amazon ELB
 
 :depends: boto >= 2.33.0
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -1101,9 +1102,9 @@ def _build_tag_param_list(params, tags):
     i = 1
     for key in keys:
         value = tags[key]
-        params["Tags.member.{}.Key".format(i)] = key
+        params[f"Tags.member.{i}.Key"] = key
         if value is not None:
-            params["Tags.member.{}.Value".format(i)] = value
+            params[f"Tags.member.{i}.Value"] = value
         i += 1
 
 

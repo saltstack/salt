@@ -27,7 +27,7 @@ def match(tgt, opts=None, minion_id=None):
         except:  # pylint: disable=bare-except
             log.error("Invalid IP/CIDR target: %s", tgt)
             return []
-    proto = "ipv{}".format(tgt.version)
+    proto = f"ipv{tgt.version}"
 
     grains = opts["grains"]
 

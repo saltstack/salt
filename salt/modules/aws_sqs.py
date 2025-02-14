@@ -23,7 +23,7 @@ def _region(region):
     """
     Return the region argument.
     """
-    return " --region {r}".format(r=region)
+    return f" --region {region}"
 
 
 def _run_aws(cmd, region, opts, user, **kwargs):
@@ -49,7 +49,7 @@ def _run_aws(cmd, region, opts, user, **kwargs):
     if num:
         kwargs["max-number-of-messages"] = num
 
-    _formatted_args = ['--{} "{}"'.format(k, v) for k, v in kwargs.items()]
+    _formatted_args = [f'--{k} "{v}"' for k, v in kwargs.items()]
 
     cmd = "aws sqs {cmd} {args} {region} {out}".format(
         cmd=cmd, args=" ".join(_formatted_args), region=_region(region), out=_OUTPUT
@@ -245,7 +245,7 @@ def delete_queue(name, region, opts=None, user=None):
         rtn = _run_aws("delete-queue", region=region, opts=opts, user=user, **delete)
         success = True
         err = ""
-        out = "{} deleted".format(name)
+        out = f"{name} deleted"
 
     else:
         out = ""

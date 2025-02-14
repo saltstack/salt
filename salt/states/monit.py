@@ -40,20 +40,20 @@ def monitor(name):
     try:
         for key, value in result.items():
             if "Running" in value[name]:
-                ret["comment"] = "{} is being being monitored.".format(name)
+                ret["comment"] = f"{name} is being being monitored."
                 ret["result"] = True
             else:
                 if __opts__["test"]:
-                    ret["comment"] = "Service {} is set to be monitored.".format(name)
+                    ret["comment"] = f"Service {name} is set to be monitored."
                     ret["result"] = None
                     return ret
                 __salt__["monit.monitor"](name)
-                ret["comment"] = "{} started to be monitored.".format(name)
+                ret["comment"] = f"{name} started to be monitored."
                 ret["changes"][name] = "Running"
                 ret["result"] = True
                 break
     except KeyError:
-        ret["comment"] = "{} not found in configuration.".format(name)
+        ret["comment"] = f"{name} not found in configuration."
         ret["result"] = False
 
     return ret
@@ -70,20 +70,20 @@ def unmonitor(name):
     try:
         for key, value in result.items():
             if "Not monitored" in value[name]:
-                ret["comment"] = "{} is not being monitored.".format(name)
+                ret["comment"] = f"{name} is not being monitored."
                 ret["result"] = True
             else:
                 if __opts__["test"]:
-                    ret["comment"] = "Service {} is set to be unmonitored.".format(name)
+                    ret["comment"] = f"Service {name} is set to be unmonitored."
                     ret["result"] = None
                     return ret
                 __salt__["monit.unmonitor"](name)
-                ret["comment"] = "{} stopped being monitored.".format(name)
+                ret["comment"] = f"{name} stopped being monitored."
                 ret["changes"][name] = "Not monitored"
                 ret["result"] = True
                 break
     except KeyError:
-        ret["comment"] = "{} not found in configuration.".format(name)
+        ret["comment"] = f"{name} not found in configuration."
         ret["result"] = False
 
     return ret

@@ -66,15 +66,15 @@ def test_function_signatures():
     mock_azure.salt.utils.cloud.gen_keys.return_value = [MagicMock(), MagicMock()]
     mock_azure.__opts__["pki_dir"] = None
 
-    mock_azure.request_instance.__globals__[
-        "__builtins__"
-    ] = mock_azure.request_instance.__globals__["__builtins__"].copy()
+    mock_azure.request_instance.__globals__["__builtins__"] = (
+        mock_azure.request_instance.__globals__["__builtins__"].copy()
+    )
     mock_azure.request_instance.__globals__["__builtins__"]["getattr"] = MagicMock()
 
     mock_azure.__utils__["cloud.fire_event"] = mock_azure.salt.utils.cloud.fire_event
-    mock_azure.__utils__[
-        "cloud.filter_event"
-    ] = mock_azure.salt.utils.cloud.filter_event
+    mock_azure.__utils__["cloud.filter_event"] = (
+        mock_azure.salt.utils.cloud.filter_event
+    )
     mock_azure.__opts__["sock_dir"] = MagicMock()
     mock_azure.__opts__["transport"] = MagicMock()
 

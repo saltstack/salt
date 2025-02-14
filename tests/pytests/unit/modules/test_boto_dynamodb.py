@@ -2,7 +2,6 @@
     Test cases for salt.modules.boto_dynamodb
 """
 
-
 import pytest
 
 import salt.modules.boto_dynamodb as boto_dynamodb

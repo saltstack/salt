@@ -7,11 +7,11 @@
     strings against integers.
 """
 
-
 import datetime
 import inspect
 import logging
 import numbers
+import os
 import sys
 import warnings
 
@@ -105,7 +105,7 @@ def _format_warning(message, category, filename, lineno, line=None):
     Replacement for warnings.formatwarning that disables the echoing of
     the 'line' parameter.
     """
-    return "{}:{}: {}: {}\n".format(filename, lineno, category.__name__, message)
+    return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 
 def warn_until(
@@ -171,7 +171,7 @@ def warn_until(
 
     if _version_ >= version:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
-        raise RuntimeError(
+        deprecated_message = (
             "The warning triggered on filename '{filename}', line number "
             "{lineno}, is supposed to be shown until version "
             "{until_version} is released. Current version is now "
@@ -180,8 +180,15 @@ def warn_until(
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
                 salt_version=_version_.formatted_version,
-            ),
+            )
         )
+        if os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") == "1":
+            # We don't raise RuntimeError by default since that can break
+            # users systems. We do however want to raise them in a CI context.
+            raise RuntimeError(deprecated_message)
+        # Otherwise, print the deprecated message to STDERR
+        sys.stderr.write(f"\n{deprecated_message}\n")
+        sys.stderr.flush()
 
     if _dont_call_warnings is False:
         warnings.warn(
@@ -239,7 +246,7 @@ def warn_until_date(
     today = _current_date or datetime.datetime.utcnow().date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
-        raise RuntimeError(
+        deprecated_message = (
             "{message} This warning(now exception) triggered on "
             "filename '{filename}', line number {lineno}, is "
             "supposed to be shown until {date}. Today is {today}. "
@@ -251,6 +258,13 @@ def warn_until_date(
                 today=today.isoformat(),
             ),
         )
+        if os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") == "1":
+            # We don't raise RuntimeError by default since that can break
+            # users systems. We do however want to raise them in a CI context.
+            raise RuntimeError(deprecated_message)
+        # Otherwise, print the deprecated message to STDERR
+        sys.stderr.write(f"\n{deprecated_message}\n")
+        sys.stderr.flush()
 
     if _dont_call_warnings is False:
         warnings.warn(
@@ -317,7 +331,7 @@ def kwargs_warn_until(
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ", ".join("'{}'".format(key) for key in kwargs)
+        arg_names = ", ".join(f"'{key}'" for key in kwargs)
         warn_until(
             version,
             message=(
@@ -339,7 +353,10 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -433,7 +450,7 @@ def check_boto_reqs(
             boto_ver = "2.0.0"
 
         if not has_boto or version_cmp(boto.__version__, boto_ver) == -1:
-            return False, "A minimum version of boto {} is required.".format(boto_ver)
+            return False, f"A minimum version of boto {boto_ver} is required."
 
     if check_boto3 is True:
         try:
@@ -455,12 +472,12 @@ def check_boto_reqs(
         if not has_boto3 or version_cmp(boto3.__version__, boto3_ver) == -1:
             return (
                 False,
-                "A minimum version of boto3 {} is required.".format(boto3_ver),
+                f"A minimum version of boto3 {boto3_ver} is required.",
             )
         elif version_cmp(botocore.__version__, botocore_ver) == -1:
             return (
                 False,
-                "A minimum version of botocore {} is required".format(botocore_ver),
+                f"A minimum version of botocore {botocore_ver} is required",
             )
 
     return True

@@ -111,7 +111,6 @@ Larger files like certificates can be encrypted with:
 
 """
 
-
 import salt.utils.nacl
 
 __virtualname__ = "nacl"

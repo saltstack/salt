@@ -2,7 +2,6 @@
 Manage Django sites
 """
 
-
 import os
 
 import salt.exceptions
@@ -44,7 +43,7 @@ def command(
     env=None,
     runas=None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Run arbitrary django management command
@@ -56,17 +55,17 @@ def command(
         salt '*' django.command <settings_module> <command>
     """
     dja = _get_django_admin(bin_env)
-    cmd = "{} {} --settings={}".format(dja, command, settings_module)
+    cmd = f"{dja} {command} --settings={settings_module}"
 
     if pythonpath:
-        cmd = "{} --pythonpath={}".format(cmd, pythonpath)
+        cmd = f"{cmd} --pythonpath={pythonpath}"
 
     for arg in args:
-        cmd = "{} --{}".format(cmd, arg)
+        cmd = f"{cmd} --{arg}"
 
     for key, value in kwargs.items():
         if not key.startswith("__"):
-            cmd = "{} --{}={}".format(cmd, key, value)
+            cmd = f"{cmd} --{key}={value}"
     return __salt__["cmd.run"](cmd, env=env, runas=runas, python_shell=False)
 
 
@@ -193,9 +192,9 @@ def migrate(
         args.append("noinput")
 
     if app_label and migration_name:
-        cmd = "migrate {} {}".format(app_label, migration_name)
+        cmd = f"migrate {app_label} {migration_name}"
     elif app_label:
-        cmd = "migrate {}".format(app_label)
+        cmd = f"migrate {app_label}"
     else:
         cmd = "migrate"
 
@@ -240,7 +239,7 @@ def createsuperuser(
         env,
         runas,
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -316,5 +315,5 @@ def collectstatic(
         env,
         runas,
         *args,
-        **kwargs
+        **kwargs,
     )

@@ -94,7 +94,7 @@ def delete_device(name, safety_on=True):
     if not access_token:
         return "Vistara access token not available"
 
-    query_string = "dnsName:{}".format(name)
+    query_string = f"dnsName:{name}"
 
     devices = _search_devices(query_string, config["client_id"], access_token)
 
@@ -123,7 +123,7 @@ def delete_device(name, safety_on=True):
 
 def _search_devices(query_string, client_id, access_token):
 
-    authstring = "Bearer {}".format(access_token)
+    authstring = f"Bearer {access_token}"
 
     headers = {
         "Authorization": authstring,
@@ -134,7 +134,7 @@ def _search_devices(query_string, client_id, access_token):
     params = {"queryString": query_string}
 
     method = "GET"
-    url = "https://api.vistara.io/api/v2/tenants/{}/devices/search".format(client_id)
+    url = f"https://api.vistara.io/api/v2/tenants/{client_id}/devices/search"
 
     resp = salt.utils.http.query(
         url=url, method=method, header_dict=headers, params=params, opts=__opts__
@@ -152,7 +152,7 @@ def _search_devices(query_string, client_id, access_token):
 
 def _delete_resource(device_id, client_id, access_token):
 
-    authstring = "Bearer {}".format(access_token)
+    authstring = f"Bearer {access_token}"
 
     headers = {
         "Authorization": authstring,

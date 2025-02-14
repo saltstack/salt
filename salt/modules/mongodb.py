@@ -236,7 +236,7 @@ def version(
     """
     conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -283,7 +283,7 @@ def user_find(
     """
     conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
-        err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
+        err_msg = f"Failed to connect to MongoDB database {host}:{port}"
         log.error(err_msg)
         return (False, err_msg)
 
@@ -993,7 +993,7 @@ def update_one(
             col = getattr(mdb, collection)
             ids = col.update_one(_id_field, {"$set": _update_doc})
             nb_mod = ids.modified_count
-            return "{} objects updated".format(nb_mod)
+            return f"{nb_mod} objects updated"
         except pymongo.errors.PyMongoError as err:
             log.error("Updating object %s failed with error %s", objects, err)
             return err
@@ -1139,7 +1139,7 @@ def remove(
             for count in range(0, w):
                 res = col.delete_one(query)
                 deleted_count += res.deleted_count
-        return "{} objects removed".format(deleted_count)
+        return f"{deleted_count} objects removed"
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", _get_error_message(err))
         return _get_error_message(err)

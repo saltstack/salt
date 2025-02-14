@@ -26,6 +26,7 @@ Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack s
 
 :depends: apache-libcloud
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 

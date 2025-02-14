@@ -75,6 +75,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -306,12 +307,8 @@ class SaltEvent:
                 id_hash = hash_type(
                     salt.utils.stringutils.to_bytes(minion_id)
                 ).hexdigest()[:10]
-                puburi = os.path.join(
-                    sock_dir, "minion_event_{}_pub.ipc".format(id_hash)
-                )
-                pulluri = os.path.join(
-                    sock_dir, "minion_event_{}_pull.ipc".format(id_hash)
-                )
+                puburi = os.path.join(sock_dir, f"minion_event_{id_hash}_pub.ipc")
+                pulluri = os.path.join(sock_dir, f"minion_event_{id_hash}_pull.ipc")
         log.debug("%s PUB socket URI: %s", self.__class__.__name__, puburi)
         log.debug("%s PULL socket URI: %s", self.__class__.__name__, pulluri)
         return puburi, pulluri
@@ -467,7 +464,7 @@ class SaltEvent:
     def _get_match_func(self, match_type=None):
         if match_type is None:
             match_type = self.opts["event_match_type"]
-        return getattr(self, "_match_tag_{}".format(match_type), None)
+        return getattr(self, f"_match_tag_{match_type}", None)
 
     def _check_pending(self, tag, match_func=None):
         """Check the pending_events list for events that match the tag
@@ -571,6 +568,9 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
+                if not self._run_io_loop_sync:
+                    log.error("Trying to get event with async subscriber")
+                    raise SaltInvocationError("get_event needs synchronous subscriber")
                 raw = self.subscriber.read(timeout=wait)
                 if raw is None:
                     break
@@ -743,7 +743,7 @@ class SaltEvent:
             raise ValueError("Empty tag.")
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError("Dict object expected, not '{}'.".format(data))
+            raise ValueError(f"Dict object expected, not '{data}'.")
 
         if not self.cpush:
             if timeout is not None:
@@ -795,7 +795,7 @@ class SaltEvent:
             raise ValueError("Empty tag.")
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError("Dict object expected, not '{}'.".format(data))
+            raise ValueError(f"Dict object expected, not '{data}'.")
 
         if not self.cpush:
             if timeout is not None:
@@ -894,13 +894,11 @@ class SaltEvent:
                 data["retcode"] = retcode
                 tags = tag.split("_|-")
                 if data.get("result") is False:
-                    self.fire_event(
-                        data, "{}.{}".format(tags[0], tags[-1])
-                    )  # old dup event
+                    self.fire_event(data, f"{tags[0]}.{tags[-1]}")  # old dup event
                     data["jid"] = load["jid"]
                     data["id"] = load["id"]
                     data["success"] = False
-                    data["return"] = "Error: {}.{}".format(tags[0], tags[-1])
+                    data["return"] = f"Error: {tags[0]}.{tags[-1]}"
                     data["fun"] = fun
                     if "user" in load:
                         data["user"] = load["user"]
@@ -1079,12 +1077,12 @@ class AsyncEventPublisher:
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()[:10]
         epub_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+            self.opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc"
         )
         if os.path.exists(epub_sock_path):
             os.unlink(epub_sock_path)
         epull_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+            self.opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
         )
         if os.path.exists(epull_sock_path):
             os.unlink(epull_sock_path)
@@ -1297,7 +1295,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
             # Multiple event returners
             for r in self.opts["event_return"]:
                 log.debug("Calling event returner %s, one of many.", r)
-                event_return = "{}.event_return".format(r)
+                event_return = f"{r}.event_return"
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner

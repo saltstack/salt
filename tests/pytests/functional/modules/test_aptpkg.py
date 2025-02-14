@@ -13,6 +13,7 @@ import salt.modules.file as file
 import salt.modules.gpg as gpg
 import salt.utils.files
 import salt.utils.stringutils
+from salt.loader.dunder import __opts__
 from tests.support.mock import Mock, patch
 
 pytestmark = [
@@ -35,7 +36,7 @@ class Key:
         keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not keydir.is_dir():
             keydir.mkdir()
-        aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
+        aptpkg.add_repo_key(f"salt://{self.keyname}", aptkey=self.aptkey)
 
     def del_key(self):
         aptpkg.del_repo_key(keyid="0E08A149DE57BFBE", aptkey=self.aptkey)
@@ -76,7 +77,7 @@ def configure_loader_modules(minion_opts):
         },
         gpg: {},
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         config: {
             "__opts__": minion_opts,
@@ -86,6 +87,9 @@ def configure_loader_modules(minion_opts):
 
 @pytest.fixture()
 def revert_repo_file(tmp_path):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -103,7 +107,7 @@ def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
         test_repos = [
-            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ jammy main",
             "deb http://dist.list stable/all/",
         ]
         with salt.utils.files.fopen(source_path, "w+") as fp:
@@ -124,7 +128,7 @@ def get_repos_from_file(source_path):
             for line in fp:
                 test_repos.append(line.strip())
     except FileNotFoundError as error:
-        pytest.skip("Missing {}".format(error.filename))
+        pytest.skip(f"Missing {error.filename}")
     if not test_repos:
         pytest.skip("Did not detect an APT repo")
     return test_repos
@@ -153,7 +157,7 @@ def get_current_repo(multiple_comps=False):
                     else:
                         break
     except FileNotFoundError as error:
-        pytest.skip("Missing {}".format(error.filename))
+        pytest.skip(f"Missing {error.filename}")
     if not test_repo:
         pytest.skip("Did not detect an APT repo")
     return test_repo, comps
@@ -237,10 +241,10 @@ def test_del_repo(build_repo_file):
     test_repos = get_repos_from_file(build_repo_file)
     for test_repo in test_repos:
         ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo '{}' has been removed".format(test_repo)
+        assert f"Repo '{test_repo}' has been removed"
         with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
             ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
+        assert f"Repo {test_repo} doesn't exist" in exc.value.message
 
 
 @pytest.mark.skipif(
@@ -287,7 +291,7 @@ def test_mod_repo(revert_repo_file):
         ret = aptpkg.mod_repo(repo=test_repo, comments=msg)
     assert sorted(ret[list(ret.keys())[0]]["comps"]) == sorted(comps)
     ret = file.grep("/etc/apt/sources.list", msg)
-    assert "#{}".format(msg) in ret["stdout"]
+    assert f"#{msg}" in ret["stdout"]
 
 
 @pytest.mark.destructive_test
@@ -356,7 +360,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
     and using both binary and armored gpg keys
     """
     try:
-        assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
+        assert aptpkg.add_repo_key(f"salt://{get_key_file}", aptkey=aptkey)
         keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()

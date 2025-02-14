@@ -66,7 +66,7 @@ def config(name, config):
         # if test, report there will be an update
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Marathon app {} is set to be updated".format(name)
+            ret["comment"] = f"Marathon app {name} is set to be updated"
             return ret
 
         update_result = __salt__["marathon.update_app"](name, update_config)
@@ -79,10 +79,10 @@ def config(name, config):
             return ret
         else:
             ret["result"] = True
-            ret["comment"] = "Updated app config for {}".format(name)
+            ret["comment"] = f"Updated app config for {name}"
             return ret
     ret["result"] = True
-    ret["comment"] = "Marathon app {} configured correctly".format(name)
+    ret["comment"] = f"Marathon app {name} configured correctly"
     return ret
 
 
@@ -96,20 +96,20 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not __salt__["marathon.has_app"](name):
         ret["result"] = True
-        ret["comment"] = "App {} already absent".format(name)
+        ret["comment"] = f"App {name} already absent"
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "App {} is set to be removed".format(name)
+        ret["comment"] = f"App {name} is set to be removed"
         return ret
     if __salt__["marathon.rm_app"](name):
         ret["changes"] = {"app": name}
         ret["result"] = True
-        ret["comment"] = "Removed app {}".format(name)
+        ret["comment"] = f"Removed app {name}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove app {}".format(name)
+        ret["comment"] = f"Failed to remove app {name}"
         return ret
 
 
@@ -125,12 +125,12 @@ def running(name, restart=False, force=True):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not __salt__["marathon.has_app"](name):
         ret["result"] = False
-        ret["comment"] = "App {} cannot be restarted because it is absent".format(name)
+        ret["comment"] = f"App {name} cannot be restarted because it is absent"
         return ret
     if __opts__["test"]:
         ret["result"] = None
         qualifier = "is" if restart else "is not"
-        ret["comment"] = "App {} {} set to be restarted".format(name, qualifier)
+        ret["comment"] = f"App {name} {qualifier} set to be restarted"
         return ret
     restart_result = __salt__["marathon.restart_app"](name, restart, force)
     if "exception" in restart_result:
@@ -143,5 +143,5 @@ def running(name, restart=False, force=True):
         ret["changes"] = restart_result
         ret["result"] = True
         qualifier = "Restarted" if restart else "Did not restart"
-        ret["comment"] = "{} app {}".format(qualifier, name)
+        ret["comment"] = f"{qualifier} app {name}"
         return ret

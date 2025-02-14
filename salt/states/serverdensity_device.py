@@ -46,7 +46,6 @@ Example:
       serverdensity_device.monitored
 """
 
-
 import logging
 
 import salt.utils.json
@@ -206,9 +205,9 @@ def monitored(
         ret["changes"] = {}
         if __opts__["test"]:
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "Agent is not installed and device is not in the Server Density DB"
+            ret["comment"] = (
+                "Agent is not installed and device is not in the Server Density DB"
+            )
         return ret
 
     if __opts__["test"]:
@@ -224,8 +223,8 @@ def monitored(
     )
 
     ret["result"] = True
-    ret[
-        "comment"
-    ] = "Successfully installed agent and created device in Server Density db."
+    ret["comment"] = (
+        "Successfully installed agent and created device in Server Density db."
+    )
     ret["changes"] = {"created_device": device, "installed_agent": installed_agent}
     return ret

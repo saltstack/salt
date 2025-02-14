@@ -148,10 +148,6 @@ import salt.utils.data
 import salt.utils.job
 import salt.utils.json
 
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
-
-
 try:
     # Trying to import MySQLdb
     import MySQLdb
@@ -274,7 +270,7 @@ def _get_serv(ret=None, commit=False):
                 pass
         except OperationalError as exc:
             raise salt.exceptions.SaltMasterError(
-                "MySQL returner could not connect to database: {exc}".format(exc=exc)
+                f"MySQL returner could not connect to database: {exc}"
             )
 
     cursor = conn.cursor()

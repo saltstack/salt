@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -37,11 +38,6 @@ create = command_group(
 
 _deb_distro_info = {
     "debian": {
-        "10": {
-            "label": "deb10ary",
-            "codename": "buster",
-            "suitename": "oldoldstable",
-        },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
@@ -61,6 +57,10 @@ _deb_distro_info = {
         "22.04": {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
+        },
+        "24.04": {
+            "label": "salt_ubuntu2404",
+            "codename": "noble",
         },
     },
 }
@@ -311,8 +311,8 @@ def debian(
 _rpm_distro_info = {
     "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
-    "fedora": ["36", "37", "38"],
-    "photon": ["3", "4", "5"],
+    "fedora": ["40"],
+    "photon": ["4", "5"],
 }
 
 
@@ -435,7 +435,7 @@ def rpm(
 
     createrepo = shutil.which("createrepo")
     if createrepo is None:
-        container = "ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9"
+        container = "ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9"
         ctx.info(f"Using docker container '{container}' to call 'createrepo'...")
         uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
         gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
@@ -493,7 +493,7 @@ def rpm(
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
-            distro_name = "RHEL/CentOS"
+            distro_name = "RHEL"
         else:
             distro_name = distro.capitalize()
 
@@ -785,9 +785,11 @@ def src(
         for hash_name in ("blake2b", "sha512", "sha3_512"):
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
@@ -904,7 +906,7 @@ def _create_onedir_based_repo(
         if distro == "onedir":
             if "-onedir-linux-" in dpath.name.lower():
                 release_os = "linux"
-            elif "-onedir-darwin-" in dpath.name.lower():
+            elif "-onedir-macos-" in dpath.name.lower():
                 release_os = "macos"
             elif "-onedir-windows-" in dpath.name.lower():
                 release_os = "windows"
@@ -925,9 +927,11 @@ def _create_onedir_based_repo(
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
             release_json[dpath.name][hash_name.upper()] = hexdigest
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():

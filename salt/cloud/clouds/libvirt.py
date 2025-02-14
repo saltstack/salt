@@ -258,7 +258,7 @@ def get_domain_ips(domain, ip_source):
         log.info("Exception polling address %s", error)
         return ips
 
-    for (name, val) in addresses.items():
+    for name, val in addresses.items():
         if val["addrs"]:
             for addr in val["addrs"]:
                 tp = to_ip_addr_type(addr["type"])
@@ -332,7 +332,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{}/creating".format(name),
+        f"salt/cloud/{name}/creating",
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -345,7 +345,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{}' does not exist".format(key_filename)
+            f"The defined key_filename '{key_filename}' does not exist"
         )
     vm_["key_filename"] = key_filename
     # wait_for_instance requires private_key
@@ -374,7 +374,7 @@ def create(vm_):
             __utils__["cloud.fire_event"](
                 "event",
                 "requesting instance",
-                "salt/cloud/{}/requesting".format(name),
+                f"salt/cloud/{name}/requesting",
                 args={
                     "kwargs": __utils__["cloud.filter_event"](
                         "requesting", kwargs, list(kwargs)
@@ -392,7 +392,7 @@ def create(vm_):
                 description_elem = ElementTree.Element("description")
                 domain_xml.insert(0, description_elem)
             description = domain_xml.find("./description")
-            description.text = "Cloned from {}".format(base)
+            description.text = f"Cloned from {base}"
             domain_xml.remove(domain_xml.find("./uuid"))
 
             for iface_xml in domain_xml.findall("./devices/interface"):
@@ -426,9 +426,7 @@ def create(vm_):
                     # see if there is a path element that needs rewriting
                     if source_element and "path" in source_element.attrib:
                         path = source_element.attrib["path"]
-                        new_path = path.replace(
-                            "/domain-{}/".format(base), "/domain-{}/".format(name)
-                        )
+                        new_path = path.replace(f"/domain-{base}/", f"/domain-{name}/")
                         log.debug("Rewriting agent socket path to %s", new_path)
                         source_element.attrib["path"] = new_path
 
@@ -471,7 +469,7 @@ def create(vm_):
                     disk.find("./source").attrib["file"] = new_volume.path()
                 else:
                     raise SaltCloudExecutionFailure(
-                        "Disk type '{}' not supported".format(disk_type)
+                        f"Disk type '{disk_type}' not supported"
                     )
 
             clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
@@ -515,7 +513,7 @@ def create(vm_):
         __utils__["cloud.fire_event"](
             "event",
             "created instance",
-            "salt/cloud/{}/created".format(name),
+            f"salt/cloud/{name}/created",
             args=__utils__["cloud.filter_event"](
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -617,15 +615,15 @@ def destroy(name, call=None):
             pass
 
     if not found:
-        return "{} doesn't exist and can't be deleted".format(name)
+        return f"{name} doesn't exist and can't be deleted"
 
     if len(found) > 1:
-        return "{} doesn't identify a unique machine leaving things".format(name)
+        return f"{name} doesn't identify a unique machine leaving things"
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -636,7 +634,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -718,15 +716,15 @@ def find_pool_and_volume(conn, path):
         for v in sp.listAllVolumes():
             if v.path() == path:
                 return sp, v
-    raise SaltCloudNotFound("Could not find volume for path {}".format(path))
+    raise SaltCloudNotFound(f"Could not find volume for path {path}")
 
 
 def generate_new_name(orig_name):
     if "." not in orig_name:
-        return "{}-{}".format(orig_name, uuid.uuid1())
+        return f"{orig_name}-{uuid.uuid1()}"
 
     name, ext = orig_name.rsplit(".", 1)
-    return "{}-{}.{}".format(name, uuid.uuid1(), ext)
+    return f"{name}-{uuid.uuid1()}.{ext}"
 
 
 def get_domain_volumes(conn, domain):

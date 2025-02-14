@@ -70,9 +70,9 @@ def _get_url(ssl, url, port, path):
     Returns the URL of the endpoint
     """
     if ssl:
-        return "https://{}:{}/management/domain/{}".format(url, port, path)
+        return f"https://{url}:{port}/management/domain/{path}"
     else:
-        return "http://{}:{}/management/domain/{}".format(url, port, path)
+        return f"http://{url}:{port}/management/domain/{path}"
 
 
 def _get_server(server):
@@ -126,6 +126,7 @@ def _api_get(path, server=None):
         auth=_get_auth(server["user"], server["password"]),
         headers=_get_headers(),
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 
@@ -141,6 +142,7 @@ def _api_post(path, data, server=None):
         headers=_get_headers(),
         data=salt.utils.json.dumps(data),
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 
@@ -156,6 +158,7 @@ def _api_delete(path, data, server=None):
         headers=_get_headers(),
         params=data,
         verify=True,
+        timeout=120,
     )
     return _api_response(response)
 
@@ -180,7 +183,7 @@ def _get_element_properties(name, element_type, server=None):
     Get an element's properties
     """
     properties = {}
-    data = _api_get("{}/{}/property".format(element_type, name), server)
+    data = _api_get(f"{element_type}/{name}/property", server)
 
     # Get properties into a dict
     if any(data["extraProperties"]["properties"]):
@@ -196,7 +199,7 @@ def _get_element(name, element_type, server=None, with_properties=True):
     """
     element = {}
     name = urllib.parse.quote(name, safe="")
-    data = _api_get("{}/{}".format(element_type, name), server)
+    data = _api_get(f"{element_type}/{name}", server)
 
     # Format data, get properties if asked, and return the whole thing
     if any(data["extraProperties"]["entity"]):
@@ -239,7 +242,7 @@ def _update_element(name, element_type, data, server=None):
         properties = []
         for key, value in data["properties"].items():
             properties.append({"name": key, "value": value})
-        _api_post("{}/{}/property".format(element_type, name), properties, server)
+        _api_post(f"{element_type}/{name}/property", properties, server)
         del data["properties"]
 
         # If the element only contained properties
@@ -252,10 +255,10 @@ def _update_element(name, element_type, data, server=None):
         update_data.update(data)
     else:
         __context__["retcode"] = salt.defaults.exitcodes.SALT_BUILD_FAIL
-        raise CommandExecutionError("Cannot update {}".format(name))
+        raise CommandExecutionError(f"Cannot update {name}")
 
     # Finally, update the element
-    _api_post("{}/{}".format(element_type, name), _clean_data(update_data), server)
+    _api_post(f"{element_type}/{name}", _clean_data(update_data), server)
     return urllib.parse.unquote(name)
 
 
@@ -691,4 +694,4 @@ def delete_system_properties(name, server=None):
     """
     Delete a system property
     """
-    _api_delete("system-properties/{}".format(name), None, server)
+    _api_delete(f"system-properties/{name}", None, server)

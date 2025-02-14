@@ -33,6 +33,7 @@ Connection module for Amazon IAM
 
 :depends: boto
 """
+
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
@@ -1733,7 +1734,7 @@ def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
         return name
 
     account_id = get_account_id(region=region, key=key, keyid=keyid, profile=profile)
-    return "arn:aws:iam::{}:policy/{}".format(account_id, name)
+    return f"arn:aws:iam::{account_id}:policy/{name}"
 
 
 def policy_exists(policy_name, region=None, key=None, keyid=None, profile=None):

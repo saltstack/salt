@@ -1,7 +1,10 @@
 """
 Template render systems
 """
+
 import codecs
+import importlib.machinery
+import importlib.util
 import logging
 import os
 import sys
@@ -27,20 +30,10 @@ import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.loader.context import NamedLoaderContext
+from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
-
-if sys.version_info[:2] >= (3, 5):
-    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-    import importlib.util  # pylint: disable=no-name-in-module,import-error
-
-    USE_IMPORTLIB = True
-else:
-    import imp
-
-    USE_IMPORTLIB = False
-
 
 log = logging.getLogger(__name__)
 
@@ -123,9 +116,9 @@ def generate_sls_context(tmplpath, sls):
         # Determine proper template name without root
         if not sls:
             template = template.rsplit("/", 1)[-1]
-        elif template.endswith("{}.sls".format(slspath)):
+        elif template.endswith(f"{slspath}.sls"):
             template = template[-(4 + len(slspath)) :]
-        elif template.endswith("{}/init.sls".format(slspath)):
+        elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
             # Something went wrong
@@ -322,14 +315,14 @@ def _get_jinja_error(trace, context=None):
     # error log place at the beginning
     if add_log:
         if template_path:
-            out = "\n{}\n".format(msg.splitlines()[0])
+            out = f"\n{msg.splitlines()[0]}\n"
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = salt.utils.stringutils.to_unicode(fp_.read())
             out += salt.utils.stringutils.get_context(
                 template_contents, line, marker="    <======================"
             )
         else:
-            out = "\n{}\n".format(msg)
+            out = f"\n{msg}\n"
         line = 0
     return line, out
 
@@ -351,7 +344,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     saltenv = context["saltenv"]
     loader = None
     newline = False
-    file_client = context.get("fileclient", None)
 
     if tmplstr and not isinstance(tmplstr, str):
         # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
@@ -371,7 +363,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 opts,
                 saltenv,
                 pillar_rend=context.get("_pillar_rend", False),
-                _file_client=file_client,
+                _file_client=context.get("fileclient", __file_client__.value()),
             )
 
         env_args = {"extensions": [], "loader": loader}
@@ -479,7 +471,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             line, out = _get_jinja_error(trace, context=decoded_context)
             if not line:
                 tmplstr = ""
-            raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
+            raise SaltRenderError(f"Jinja variable {exc}{out}", line, tmplstr)
         except (
             jinja2.exceptions.TemplateRuntimeError,
             jinja2.exceptions.TemplateSyntaxError,
@@ -489,9 +481,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             line, out = _get_jinja_error(trace, context=decoded_context)
             if not line:
                 tmplstr = ""
-            raise SaltRenderError(
-                "Jinja syntax error: {}{}".format(exc, out), line, tmplstr
-            )
+            raise SaltRenderError(f"Jinja syntax error: {exc}{out}", line, tmplstr)
         except (SaltInvocationError, CommandExecutionError) as exc:
             trace = traceback.extract_tb(sys.exc_info()[2])
             line, out = _get_jinja_error(trace, context=decoded_context)
@@ -511,7 +501,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if not line:
                 tmplstr = ""
             else:
-                tmplstr += "\n{}".format(tracestr)
+                tmplstr += f"\n{tracestr}"
             log.debug("Jinja Error")
             log.debug("Exception:", exc_info=True)
             log.debug("Out: %s", out)
@@ -520,7 +510,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             log.debug("TraceStr: %s", tracestr)
 
             raise SaltRenderError(
-                "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
+                f"Jinja error: {exc}{out}", line, tmplstr, trace=tracestr
             )
     finally:
         if loader and isinstance(loader, salt.utils.jinja.SaltCacheLoader):
@@ -676,25 +666,20 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     base_fname = os.path.basename(sfn)
     name = base_fname.split(".")[0]
 
-    if USE_IMPORTLIB:
-        # pylint: disable=no-member
-        loader = importlib.machinery.SourceFileLoader(name, sfn)
-        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
-        if spec is None:
-            raise ImportError()
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        # pylint: enable=no-member
-        sys.modules[name] = mod
-    else:
-        mod = imp.load_source(name, sfn)
+    loader = importlib.machinery.SourceFileLoader(name, sfn)
+    spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
+    if spec is None:
+        raise ImportError()
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    sys.modules[name] = mod
 
     # File templates need these set as __var__
     if "__env__" not in kwargs and "saltenv" in kwargs:
         setattr(mod, "__env__", kwargs["saltenv"])
         builtins = ["salt", "grains", "pillar", "opts"]
         for builtin in builtins:
-            arg = "__{}__".format(builtin)
+            arg = f"__{builtin}__"
             setattr(mod, arg, kwargs[builtin])
 
     for kwarg in kwargs:

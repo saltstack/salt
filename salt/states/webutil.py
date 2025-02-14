@@ -14,7 +14,6 @@ Support for htpasswd module. Requires the apache2-utils package for Debian-based
 
 """
 
-
 import salt.utils.path
 
 __virtualname__ = "webutil"
@@ -67,9 +66,7 @@ def user_exists(
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     if __salt__["file.file_exists"](htpasswd_file):
-        exists = (
-            __salt__["file.grep"](htpasswd_file, "^{}:".format(name))["retcode"] == 0
-        )
+        exists = __salt__["file.grep"](htpasswd_file, f"^{name}:")["retcode"] == 0
     else:
         exists = False
 
@@ -127,7 +124,7 @@ def user_absent(name, htpasswd_file=None, runas=None):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
-    exists = __salt__["file.grep"](htpasswd_file, "^{}:".format(name))["retcode"] == 0
+    exists = __salt__["file.grep"](htpasswd_file, f"^{name}:")["retcode"] == 0
 
     if not exists:
         if __opts__["test"]:

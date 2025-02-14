@@ -47,7 +47,7 @@ def test_dead():
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     with patch.dict(supervisord.__opts__, {"test": True}):
-        comt = "Service {} is set to be stopped".format(name)
+        comt = f"Service {name} is set to be stopped"
         ret.update({"comment": comt})
         assert supervisord.dead(name) == ret
 

@@ -16,9 +16,8 @@ def test_pip_install(install_salt, salt_call_cli):
     """
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--versions-report"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+        capture_output=True,
+        text=True,
         check=True,
         shell=False,
     )
@@ -49,7 +48,7 @@ def test_pip_install(install_salt, salt_call_cli):
             pytest.fail(f"Failed to find {dep} in the versions report output")
 
         if dep_version == installed_version:
-            log.warning(f"The {dep} dependency is already latest")
+            log.warning("The %s dependency is already latest", dep)
         else:
             found_new = True
             break
@@ -69,9 +68,8 @@ def test_pip_install(install_salt, salt_call_cli):
 
             ret = subprocess.run(
                 install_salt.binary_paths["salt"] + ["--versions-report"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
+                capture_output=True,
+                text=True,
                 check=True,
                 shell=False,
             )
@@ -88,7 +86,7 @@ def test_pip_install(install_salt, salt_call_cli):
             else:
                 pytest.fail(f"Failed to find {dep} in the versions report output")
         finally:
-            log.info(f"Uninstalling {dep_version}")
+            log.info("Uninstalling %s", dep_version)
             assert salt_call_cli.run(
                 "--local", "pip.uninstall", f"{dep}=={dep_version}"
             )

@@ -469,9 +469,9 @@ def test_split_not_mirror(utils_patch):
     """
     ret = {}
     ret["stdout"] = ""
-    ret[
-        "stderr"
-    ] = "Unable to split datapool: Source pool must be composed only of mirrors"
+    ret["stderr"] = (
+        "Unable to split datapool: Source pool must be composed only of mirrors"
+    )
     ret["retcode"] = 1
     mock_cmd = MagicMock(return_value=ret)
 

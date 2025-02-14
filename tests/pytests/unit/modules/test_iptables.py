@@ -433,9 +433,7 @@ def test_check():
     mock_rule = "m state --state RELATED,ESTABLISHED -j ACCEPT"
     mock_chain = "INPUT"
     mock_uuid = 31337
-    mock_cmd_rule = MagicMock(
-        return_value="-A {}\n-A {}".format(mock_chain, hex(mock_uuid))
-    )
+    mock_cmd_rule = MagicMock(return_value=f"-A {mock_chain}\n-A {hex(mock_uuid)}")
     mock_cmd_nooutput = MagicMock(return_value="")
     mock_has = MagicMock(return_value=True)
     mock_not = MagicMock(return_value=False)

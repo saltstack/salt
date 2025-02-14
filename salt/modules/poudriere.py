@@ -84,19 +84,15 @@ def make_pkgng_aware(jname):
     if not os.path.isdir(cdir):
         os.makedirs(cdir)
         if os.path.isdir(cdir):
-            ret["changes"] = "Created poudriere make file dir {}".format(cdir)
+            ret["changes"] = f"Created poudriere make file dir {cdir}"
         else:
-            return "Could not create or find required directory {}".format(cdir)
+            return f"Could not create or find required directory {cdir}"
 
     # Added args to file
-    __salt__["file.write"](
-        "{}-make.conf".format(os.path.join(cdir, jname)), "WITH_PKGNG=yes"
-    )
+    __salt__["file.write"](f"{os.path.join(cdir, jname)}-make.conf", "WITH_PKGNG=yes")
 
     if os.path.isfile(os.path.join(cdir, jname) + "-make.conf"):
-        ret["changes"] = "Created {}".format(
-            os.path.join(cdir, "{}-make.conf".format(jname))
-        )
+        ret["changes"] = "Created {}".format(os.path.join(cdir, f"{jname}-make.conf"))
         return ret
     else:
         return "Looks like file {} could not be created".format(
@@ -124,7 +120,7 @@ def parse_config(config_file=None):
                 ret[key] = val
         return ret
 
-    return "Could not find {} on file system".format(config_file)
+    return f"Could not find {config_file} on file system"
 
 
 def version():
@@ -190,9 +186,9 @@ def create_jail(name, arch, version="9.0-RELEASE"):
 
     # Check if the jail is there
     if is_jail(name):
-        return "{} already exists".format(name)
+        return f"{name} already exists"
 
-    cmd = "poudriere jails -c -j {} -v {} -a {}".format(name, version, arch)
+    cmd = f"poudriere jails -c -j {name} -v {version} -a {arch}"
     __salt__["cmd.run"](cmd)
 
     # Make jail pkgng aware
@@ -200,9 +196,9 @@ def create_jail(name, arch, version="9.0-RELEASE"):
 
     # Make sure the jail was created
     if is_jail(name):
-        return "Created jail {}".format(name)
+        return f"Created jail {name}"
 
-    return "Issue creating jail {}".format(name)
+    return f"Issue creating jail {name}"
 
 
 def update_jail(name):
@@ -216,11 +212,11 @@ def update_jail(name):
         salt '*' poudriere.update_jail freebsd:10:x86:64
     """
     if is_jail(name):
-        cmd = "poudriere jail -u -j {}".format(name)
+        cmd = f"poudriere jail -u -j {name}"
         ret = __salt__["cmd.run"](cmd)
         return ret
     else:
-        return "Could not find jail {}".format(name)
+        return f"Could not find jail {name}"
 
 
 def delete_jail(name):
@@ -234,18 +230,18 @@ def delete_jail(name):
         salt '*' poudriere.delete_jail 90amd64
     """
     if is_jail(name):
-        cmd = "poudriere jail -d -j {}".format(name)
+        cmd = f"poudriere jail -d -j {name}"
         __salt__["cmd.run"](cmd)
 
         # Make sure jail is gone
         if is_jail(name):
-            return "Looks like there was an issue deleting jail {}".format(name)
+            return f"Looks like there was an issue deleting jail {name}"
     else:
         # Could not find jail.
-        return "Looks like jail {} has not been created".format(name)
+        return f"Looks like jail {name} has not been created"
 
     # clean up pkgng make info in config dir
-    make_file = os.path.join(_config_dir(), "{}-make.conf".format(name))
+    make_file = os.path.join(_config_dir(), f"{name}-make.conf")
     if os.path.isfile(make_file):
         try:
             os.remove(make_file)
@@ -255,7 +251,7 @@ def delete_jail(name):
             )
         __salt__["file.remove"](make_file)
 
-    return "Deleted jail {}".format(name)
+    return f"Deleted jail {name}"
 
 
 def info_jail(name):
@@ -269,11 +265,11 @@ def info_jail(name):
         salt '*' poudriere.info_jail head-amd64
     """
     if is_jail(name):
-        cmd = "poudriere jail -i -j {}".format(name)
+        cmd = f"poudriere jail -i -j {name}"
         ret = __salt__["cmd.run"](cmd).splitlines()
         return ret
     else:
-        return "Could not find jail {}".format(name)
+        return f"Could not find jail {name}"
 
 
 def create_ports_tree():
@@ -298,7 +294,7 @@ def update_ports_tree(ports_tree):
     """
     _check_config_exists()
     if ports_tree:
-        cmd = "poudriere ports -u -p {}".format(ports_tree)
+        cmd = f"poudriere ports -u -p {ports_tree}"
     else:
         cmd = "poudriere ports -u"
     ret = __salt__["cmd.run"](cmd)
@@ -320,15 +316,15 @@ def bulk_build(jail, pkg_file, keep=False):
     """
     # make sure `pkg file` and jail is on file system
     if not os.path.isfile(pkg_file):
-        return "Could not find file {} on filesystem".format(pkg_file)
+        return f"Could not find file {pkg_file} on filesystem"
     if not is_jail(jail):
-        return "Could not find jail {}".format(jail)
+        return f"Could not find jail {jail}"
 
     # Generate command
     if keep:
-        cmd = "poudriere bulk -k -f {} -j {}".format(pkg_file, jail)
+        cmd = f"poudriere bulk -k -f {pkg_file} -j {jail}"
     else:
-        cmd = "poudriere bulk -f {} -j {}".format(pkg_file, jail)
+        cmd = f"poudriere bulk -f {pkg_file} -j {jail}"
 
     # Bulk build this can take some time, depending on pkg_file ... hours
     res = __salt__["cmd.run"](cmd)

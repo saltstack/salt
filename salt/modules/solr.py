@@ -58,7 +58,6 @@ verbose : True
     Get verbose output
 """
 
-
 import os
 import urllib.request
 
@@ -206,7 +205,7 @@ def _format_url(handler, host=None, core_name=None, extra=None):
     baseurl = __salt__["config.option"]("solr.baseurl")
     if _get_none_or_value(core_name) is None:
         if extra is None or len(extra) == 0:
-            return "http://{}:{}{}/{}?wt=json".format(host, port, baseurl, handler)
+            return f"http://{host}:{port}{baseurl}/{handler}?wt=json"
         else:
             return "http://{}:{}{}/{}?wt=json&{}".format(
                 host, port, baseurl, handler, "&".join(extra)
@@ -261,7 +260,7 @@ def _http_request(url, request_timeout=None):
         data = salt.utils.json.load(urllib.request.urlopen(url, **kwargs))
         return _get_return_dict(True, data, [])
     except Exception as err:  # pylint: disable=broad-except
-        return _get_return_dict(False, {}, ["{} : {}".format(url, err)])
+        return _get_return_dict(False, {}, [f"{url} : {err}"])
 
 
 def _replication_request(command, host=None, core_name=None, params=None):
@@ -287,7 +286,7 @@ def _replication_request(command, host=None, core_name=None, params=None):
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     """
     params = [] if params is None else params
-    extra = ["command={}".format(command)] + params
+    extra = [f"command={command}"] + params
     url = _format_url("replication", host=host, core_name=core_name, extra=extra)
     return _http_request(url)
 
@@ -312,7 +311,7 @@ def _get_admin_info(command, host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     """
-    url = _format_url("admin/{}".format(command), host, core_name=core_name)
+    url = _format_url(f"admin/{command}", host, core_name=core_name)
     resp = _http_request(url)
     return resp
 
@@ -391,10 +390,10 @@ def _pre_index_check(handler, host=None, core_name=None):
             warn = ["An indexing process is already running."]
             return _get_return_dict(True, warnings=warn)
         if status != "idle":
-            errors = ['Unknown status: "{}"'.format(status)]
+            errors = [f'Unknown status: "{status}"']
             return _get_return_dict(False, data=resp["data"], errors=errors)
     else:
-        errors = ["Status check failed. Response details: {}".format(resp)]
+        errors = [f"Status check failed. Response details: {resp}"]
         return _get_return_dict(False, data=resp["data"], errors=errors)
 
     return resp
@@ -422,7 +421,7 @@ def _find_value(ret_dict, key, path=None):
     if path is None:
         path = key
     else:
-        path = "{}:{}".format(path, key)
+        path = f"{path}:{key}"
 
     ret = []
     for ikey, val in ret_dict.items():
@@ -740,7 +739,7 @@ def match_index_versions(host=None, core_name=None):
             if "ERROR" in slave:
                 error = slave["ERROR"]
                 success = False
-                err = "{}: {} - {}".format(core, error, master_url)
+                err = f"{core}: {error} - {master_url}"
                 resp["errors"].append(err)
                 # if there was an error return the entire response so the
                 # alterer can get what it wants
@@ -865,8 +864,8 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             params = []
             if path is not None:
                 path = path + name if append_core_to_path else path
-                params.append("&location={}".format(path + name))
-            params.append("&numberToKeep={}".format(num_backups))
+                params.append(f"&location={path + name}")
+            params.append(f"&numberToKeep={num_backups}")
             resp = _replication_request(
                 "backup", host=host, core_name=name, params=params
             )
@@ -882,8 +881,8 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             if append_core_to_path:
                 path += core_name
         if path is not None:
-            params = ["location={}".format(path)]
-        params.append("&numberToKeep={}".format(num_backups))
+            params = [f"location={path}"]
+        params.append(f"&numberToKeep={num_backups}")
         resp = _replication_request(
             "backup", host=host, core_name=core_name, params=params
         )
@@ -1059,7 +1058,7 @@ def reload_core(host=None, core_name=None):
                 ret, success, data, resp["errors"], resp["warnings"]
             )
         return ret
-    extra = ["action=RELOAD", "core={}".format(core_name)]
+    extra = ["action=RELOAD", f"core={core_name}"]
     url = _format_url("admin/cores", host=host, core_name=None, extra=extra)
     return _http_request(url)
 
@@ -1100,7 +1099,7 @@ def core_status(host=None, core_name=None):
                 ret, success, data, resp["errors"], resp["warnings"]
             )
         return ret
-    extra = ["action=STATUS", "core={}".format(core_name)]
+    extra = ["action=STATUS", f"core={core_name}"]
     url = _format_url("admin/cores", host=host, core_name=None, extra=extra)
     return _http_request(url)
 
@@ -1242,7 +1241,7 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
             return _get_return_dict(False, errors=errors)
     params = ["command=full-import"]
     for key, val in options.items():
-        params.append("&{}={}".format(key, val))
+        params.append(f"&{key}={val}")
     url = _format_url(handler, host=host, core_name=core_name, extra=params + extra)
     return _http_request(url)
 
@@ -1295,7 +1294,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
             return _get_return_dict(False, errors=errors)
     params = ["command=delta-import"]
     for key, val in options.items():
-        params.append("{}={}".format(key, val))
+        params.append(f"{key}={val}")
     url = _format_url(handler, host=host, core_name=core_name, extra=params + extra)
     return _http_request(url)
 

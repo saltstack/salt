@@ -175,20 +175,20 @@ def _match(names):
         cver = pkgs.get(name)
         if cver is not None:
             if len(cver) == 1:
-                matches.append("{}-{}".format(name, cver[0]))
+                matches.append(f"{name}-{cver[0]}")
             else:
                 ambiguous.append(name)
                 errors.append(
                     "Ambiguous package '{}'. Full name/version required. "
                     "Possible matches: {}".format(
-                        name, ", ".join(["{}-{}".format(name, x) for x in cver])
+                        name, ", ".join([f"{name}-{x}" for x in cver])
                     )
                 )
 
     # Find packages that did not match anything
     not_matched = set(names) - set(matches) - set(full_matches) - set(ambiguous)
     for name in not_matched:
-        errors.append("Package '{}' not found".format(name))
+        errors.append(f"Package '{name}' not found")
 
     return matches + full_matches, errors
 

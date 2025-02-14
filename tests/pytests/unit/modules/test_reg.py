@@ -207,7 +207,7 @@ def test_list_keys_non_existing(fake_key):
     """
     Test the list_keys function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(fake_key))
+    expected = (False, f"Cannot find key: HKLM\\{fake_key}")
     result = reg.list_keys(hive="HKLM", key=fake_key)
     assert result == expected
 
@@ -249,7 +249,7 @@ def test_list_values_non_existing(fake_key):
     """
     Test the list_values function using a non existing registry key
     """
-    expected = (False, "Cannot find key: HKLM\\{}".format(fake_key))
+    expected = (False, f"Cannot find key: HKLM\\{fake_key}")
     result = reg.list_values(hive="HKLM", key=fake_key)
     assert result == expected
 
@@ -326,7 +326,7 @@ def test_read_value_non_existing_key(fake_key):
     Test the read_value function using a non existing registry key
     """
     expected = {
-        "comment": "Cannot find key: HKLM\\{}".format(fake_key),
+        "comment": f"Cannot find key: HKLM\\{fake_key}",
         "vdata": None,
         "vtype": None,
         "vname": "fake_name",

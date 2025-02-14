@@ -4,7 +4,6 @@
     Test cases for salt.states.gnomedesktop
 """
 
-
 import pytest
 
 import salt.states.gnomedesktop as gnomedesktop

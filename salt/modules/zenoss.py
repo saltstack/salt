@@ -203,7 +203,7 @@ def set_prod_state(prod_state, device=None):
     device_object = find_device(device)
 
     if not device_object:
-        return "Unable to find a device in Zenoss for {}".format(device)
+        return f"Unable to find a device in Zenoss for {device}"
 
     log.info("Setting prodState to %d on %s device", prod_state, device)
     data = dict(

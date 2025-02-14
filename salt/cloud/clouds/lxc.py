@@ -179,7 +179,7 @@ def _salt(fun, *args, **kw):
                     ping_retries += 1
                     log.error("%s unreachable, retrying", target)
             if not ping:
-                raise SaltCloudSystemExit("Target {} unreachable".format(target))
+                raise SaltCloudSystemExit(f"Target {target} unreachable")
             jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **rkwargs)
             cret = conn.cmd(
                 tgt=target, fun="saltutil.find_job", arg=[jid], timeout=10, **kwargs
@@ -224,9 +224,7 @@ def _salt(fun, *args, **kw):
                 time.sleep(0.5)
             try:
                 if "is not available." in ret:
-                    raise SaltCloudSystemExit(
-                        "module/function {} is not available".format(fun)
-                    )
+                    raise SaltCloudSystemExit(f"module/function {fun} is not available")
             except SaltCloudSystemExit:  # pylint: disable=try-except-raise
                 raise
             except TypeError:
@@ -367,12 +365,12 @@ def destroy(vm_, call=None):
         )
     if not get_configured_provider():
         return
-    ret = {"comment": "{} was not found".format(vm_), "result": False}
+    ret = {"comment": f"{vm_} was not found", "result": False}
     if _salt("lxc.info", vm_, path=path):
         __utils__["cloud.fire_event"](
             "event",
             "destroying instance",
-            "salt/cloud/{}/destroying".format(vm_),
+            f"salt/cloud/{vm_}/destroying",
             args={"name": vm_, "instance_id": vm_},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -380,11 +378,11 @@ def destroy(vm_, call=None):
         cret = _salt("lxc.destroy", vm_, stop=True, path=path)
         ret["result"] = cret["result"]
         if ret["result"]:
-            ret["comment"] = "{} was destroyed".format(vm_)
+            ret["comment"] = f"{vm_} was destroyed"
             __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
-                "salt/cloud/{}/destroyed".format(vm_),
+                f"salt/cloud/{vm_}/destroyed",
                 args={"name": vm_, "instance_id": vm_},
                 sock_dir=__opts__["sock_dir"],
                 transport=__opts__["transport"],
@@ -506,14 +504,14 @@ def get_configured_provider(vm_=None):
     matched = False
     # --list-images level
     if img_provider:
-        tgt = "provider: {}".format(img_provider)
+        tgt = f"provider: {img_provider}"
         if dalias == img_provider:
             data = get_provider(img_provider)
             matched = True
     # providers are set in configuration
     if not data and "profile" not in __opts__ and arg_providers:
         for name in arg_providers:
-            tgt = "provider: {}".format(name)
+            tgt = f"provider: {name}"
             if dalias == name:
                 data = get_provider(name)
             if data:
@@ -523,13 +521,13 @@ def get_configured_provider(vm_=None):
     elif "profile" in __opts__:
         curprof = __opts__["profile"]
         profs = __opts__["profiles"]
-        tgt = "profile: {}".format(curprof)
+        tgt = f"profile: {curprof}"
         if (
             curprof in profs
             and profs[curprof]["provider"] == _get_active_provider_name()
         ):
             prov, cdriver = profs[curprof]["provider"].split(":")
-            tgt += " provider: {}".format(prov)
+            tgt += f" provider: {prov}"
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__

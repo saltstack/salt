@@ -48,7 +48,7 @@ def log_nameToLevel(name):
 
 def test_lowest_log_level():
     ret = log_impl.get_lowest_log_level()
-    assert ret is None
+    assert ret is not None
 
     log_impl.set_lowest_log_level(log_nameToLevel("DEBUG"))
     ret = log_impl.get_lowest_log_level()

@@ -143,7 +143,7 @@ class EtcdBase:
         ca=None,
         client_key=None,
         client_cert=None,
-        **kwargs
+        **kwargs,
     ):
         if not kwargs.get("has_etcd_opts", False):
             etcd_opts = _get_etcd_opts(opts, profile)
@@ -201,7 +201,7 @@ class EtcdBase:
         wait=False,
         timeout=None,
         start_revision=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Read a value of a key.
@@ -242,9 +242,9 @@ class EtcdBase:
         for k, v in data.items():
             k = k.strip("/")
             if path:
-                p = "/{}/{}".format(path, k)
+                p = f"/{path}/{k}"
             else:
-                p = "/{}".format(k)
+                p = f"/{k}"
             if isinstance(v, dict):
                 ret = self._flatten(v, p)
                 flat.update(ret)
@@ -441,7 +441,7 @@ class EtcdClient(EtcdBase):
         wait=False,
         timeout=None,
         start_revision=None,
-        **kwargs
+        **kwargs,
     ):
         recursive = kwargs.pop("recursive", None)
         wait_index = kwargs.pop("waitIndex", None)
@@ -487,7 +487,7 @@ class EtcdClient(EtcdBase):
             if wait:
                 # Wait timeouts will throw ReadTimeoutError, which isn't bad
                 log.debug("etcd: Timed out while executing a wait")
-                raise EtcdUtilWatchTimeout("Watch on {} timed out".format(key))
+                raise EtcdUtilWatchTimeout(f"Watch on {key} timed out")
             log.error("etcd: Timed out")
             raise etcd.EtcdConnectionFailed("Connection failed")
         except MaxRetryError as err:
@@ -601,7 +601,7 @@ class EtcdClient(EtcdBase):
             if item.dir is True:
                 if item.key == path:
                     continue
-                dir_name = "{}/".format(item.key)
+                dir_name = f"{item.key}/"
                 ret[dir_name] = {}
             else:
                 ret[item.key] = item.value
@@ -677,7 +677,7 @@ class EtcdClientV3(EtcdBase):
         raw_keys=False,
         raw_values=False,
         unicode_errors=None,
-        **kwargs
+        **kwargs,
     ):
         if not HAS_ETCD_V3:
             raise EtcdLibraryNotInstalled("Don't have etcd3-py, need to install it.")
@@ -780,7 +780,7 @@ class EtcdClientV3(EtcdBase):
         wait=False,
         timeout=None,
         start_revision=None,
-        **kwargs
+        **kwargs,
     ):
         recursive = kwargs.pop("recursive", None)
         wait_index = kwargs.pop("waitIndex", None)

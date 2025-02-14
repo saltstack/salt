@@ -952,7 +952,7 @@ def call(function, *args, **kwargs):
                 function,
             ]
             + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+            + [f"{k}={v}" for (k, v) in safe_kwargs.items()]
         )
 
         try:
@@ -1062,7 +1062,7 @@ def sls(mods, activate_transaction=False, queue=False, **kwargs):
         mods,
         activate_transaction=activate_transaction,
         concurrent=concurrent,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1102,7 +1102,7 @@ def highstate(activate_transaction=False, queue=False, **kwargs):
         "state.highstate",
         activate_transaction=activate_transaction,
         concurrent=True,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1145,5 +1145,5 @@ def single(fun, name, activate_transaction=False, queue=False, **kwargs):
         name=name,
         activate_transaction=activate_transaction,
         concurrent=True,
-        **kwargs
+        **kwargs,
     )

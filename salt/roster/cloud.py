@@ -17,7 +17,6 @@ usually located at /etc/salt/cloud. For example, add the following:
     sudo: True
 """
 
-
 import copy
 import os
 

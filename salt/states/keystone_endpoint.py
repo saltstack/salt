@@ -36,7 +36,6 @@ Example States
         - service_name: glance
 """
 
-
 __virtualname__ = "keystone_endpoint"
 
 

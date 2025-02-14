@@ -43,7 +43,7 @@ def install(module):
 
     old_info = show(module)
 
-    cmd = "cpan -i {}".format(module)
+    cmd = f"cpan -i {module}"
     out = __salt__["cmd.run"](cmd)
 
     if "don't know what it is" in out:
@@ -153,7 +153,7 @@ def show(module):
     ret["name"] = module
 
     # This section parses out details from CPAN, if possible
-    cmd = "cpan -D {}".format(module)
+    cmd = f"cpan -D {module}"
     out = __salt__["cmd.run"](cmd).splitlines()
     mode = "skip"
     info = []

@@ -41,7 +41,6 @@ ARGS = None
 # The below line is where OPTIONS can be redefined with internal options
 # (rather than cli arguments) when the shim is bundled by
 # client.ssh.Single._cmd_str()
-# pylint: disable=block-comment-should-start-with-cardinal-space
 #%%OPTS
 
 
@@ -170,7 +169,7 @@ def unpack_thin(thin_path):
     """
     tfile = tarfile.TarFile.gzopen(thin_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    tfile.extractall(path=OPTIONS.saltdir)
+    tfile.extractall(path=OPTIONS.saltdir)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     try:
@@ -197,7 +196,7 @@ def unpack_ext(ext_path):
     )
     tfile = tarfile.TarFile.gzopen(ext_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    tfile.extractall(path=modcache)
+    tfile.extractall(path=modcache)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     os.unlink(ext_path)
@@ -230,7 +229,9 @@ def get_executable():
     Find executable which matches supported python version in the thin
     """
     pymap = {}
-    with open(os.path.join(OPTIONS.saltdir, "supported-versions")) as _fp:
+    with open(
+        os.path.join(OPTIONS.saltdir, "supported-versions"), encoding="utf-8"
+    ) as _fp:
         for line in _fp.readlines():
             ns, v_maj, v_min = line.strip().split(":")
             pymap[ns] = (int(v_maj), int(v_min))
@@ -314,7 +315,7 @@ def main(argv):  # pylint: disable=W0613
                 )
             )
             need_deployment()
-        with open(code_checksum_path, "r") as vpo:
+        with open(code_checksum_path, "r", encoding="utf-8") as vpo:
             cur_code_cs = vpo.readline().strip()
         if cur_code_cs != OPTIONS.code_checksum:
             sys.stderr.write(
@@ -330,7 +331,7 @@ def main(argv):  # pylint: disable=W0613
         sys.stderr.write('ERROR: thin is missing "{0}"\n'.format(salt_call_path))
         need_deployment()
 
-    with open(os.path.join(OPTIONS.saltdir, "minion"), "w") as config:
+    with open(os.path.join(OPTIONS.saltdir, "minion"), "w", encoding="utf-8") as config:
         config.write(OPTIONS.config + "\n")
     if OPTIONS.ext_mods:
         ext_path = os.path.join(OPTIONS.saltdir, EXT_ARCHIVE)
@@ -340,7 +341,7 @@ def main(argv):  # pylint: disable=W0613
             version_path = os.path.join(OPTIONS.saltdir, "ext_version")
             if not os.path.exists(version_path) or not os.path.isfile(version_path):
                 need_ext()
-            with open(version_path, "r") as vpo:
+            with open(version_path, "r", encoding="utf-8") as vpo:
                 cur_version = vpo.readline().strip()
             if cur_version != OPTIONS.ext_mods:
                 need_ext()

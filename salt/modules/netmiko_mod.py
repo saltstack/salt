@@ -486,7 +486,7 @@ def send_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Send configuration commands down the SSH channel.
@@ -564,7 +564,7 @@ def send_config(
     if config_file:
         file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError("Source file {} not found".format(config_file))
+            raise CommandExecutionError(f"Source file {config_file} not found")
     elif config_commands:
         if isinstance(config_commands, ((str,), str)):
             config_commands = [config_commands]

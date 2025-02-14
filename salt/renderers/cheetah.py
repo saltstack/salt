@@ -2,7 +2,6 @@
 Cheetah Renderer for Salt
 """
 
-
 try:
     from Cheetah.Template import Template
 

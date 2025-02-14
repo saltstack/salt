@@ -15,6 +15,7 @@ Kapacitor state module.
 
 .. versionadded:: 2016.11.0
 """
+
 import difflib
 
 import salt.utils.files
@@ -74,7 +75,7 @@ def task_present(
     if not dbrps:
         dbrps = []
     if database and retention_policy:
-        dbrp = "{}.{}".format(database, retention_policy)
+        dbrp = f"{database}.{retention_policy}"
         dbrps.append(dbrp)
     task_dbrps = [
         {"db": dbrp[0], "rp": dbrp[1]} for dbrp in (dbrp.split(".") for dbrp in dbrps)
