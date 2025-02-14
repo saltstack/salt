@@ -264,11 +264,13 @@ jobs:
 
       ## DGM Debug  Python 1
       - name: DGM debug python 1
+        shell: bash
         run: |
           ls -alrth /home/runner/work/salt/salt/.relenv
 
       ## DGM Debug  Python 2
       - name: DGM debug python 2
+        shell: bash
         run: |
          find / -name python3 | xargs ls -alrth
 
