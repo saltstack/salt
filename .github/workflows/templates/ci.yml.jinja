@@ -69,11 +69,10 @@
         with:
           python-version: "3.10"
 
-
       ## DGM Debug Python 1
       - name: DGM debug python 1
         shell: bash
-        if: /home/runner/work/salt/salt/.relenv
+        if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
         run: |
           ls -alrth /home/runner/work/salt/salt/.relenv
 
@@ -231,7 +230,7 @@
 
       ## DGM Debug Python 1
       - name: DGM debug python 1
-        if: /home/runner/work/salt/salt/.relenv
+        if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
         shell: bash
         run: |
           ls -alrth /home/runner/work/salt/salt/.relenv
@@ -348,7 +347,7 @@
       ## DGM Debug Python 1
       - name: DGM debug python 1
         shell: bash
-        if: /home/runner/work/salt/salt/.relenv
+        if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
         run: |
           ls -alrth /home/runner/work/salt/salt/.relenv
 
