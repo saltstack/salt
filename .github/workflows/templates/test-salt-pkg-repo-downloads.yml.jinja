@@ -6,13 +6,12 @@
     <%- do conclusion_needs.append(job_name) %>
     name: Package Downloads
     <%- if gh_environment == "staging" %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg-download'] }}
     <%- else %>
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     <%- endif %>
     needs:
       - prepare-workflow
-      - publish-repositories
       - build-ci-deps
     <%- if gh_environment == "release" %>
       - download-onedir-artifact

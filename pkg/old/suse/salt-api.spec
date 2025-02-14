@@ -20,7 +20,7 @@ Version:        0.8.3
 Release:        0
 License:        Apache-2.0
 Summary:        The api for Salt a parallel remote execution system
-Url:            http://saltstack.org/
+Url:            http://saltproject.io/
 Group:          System/Monitoring
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1:		salt-api
