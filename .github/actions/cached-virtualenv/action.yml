@@ -31,7 +31,7 @@ runs:
       id: get-python-version
       uses: ./.github/actions/get-python-version
       with:
-        python-binary: /opt/hostedtool/cache/Python/3.10.6/x64/bin/python3
+        python-binary: $pythonLocation/bin/python3
         ## DGM python-binary: python3
 
     - name: Setup Cache Key
