@@ -80,7 +80,13 @@
       - name: DGM debug python 2
         shell: bash
         run: |
-         find -L /opt/hostedtoolcache/Python -name python3 -print0 | xargs ls -alrth
+         find -L /opt/hostedtoolcache/Python/3.10.16 -name python3 -print | xargs ls -alrth
+
+      ## DGM Debug Python 3
+      - name: DGM debug python 3
+        shell: bash
+        run: |
+         find -L /opt/hostedtoolcache/Python -name python3 -print | xargs ls -alrth
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -239,7 +245,13 @@
       - name: DGM debug python 2
         shell: bash
         run: |
-         find -L /opt/hostedtoolcache/Python -name python3 -print0 | xargs ls -alrth
+         find -L /opt/hostedtoolcache/Python/3.10.16 -name python3 -print | xargs ls -alrth
+
+      ## DGM Debug Python 3
+      - name: DGM debug python 3
+        shell: bash
+        run: |
+         find -L /opt/hostedtoolcache/Python -name python3 -print | xargs ls -alrth
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -355,7 +367,13 @@
       - name: DGM debug python 2
         shell: bash
         run: |
-         find -L /opt/hostedtoolcache/Python -name python3 -print0 | xargs ls -alrth
+         find -L /opt/hostedtoolcache/Python/3.10.16 -name python3 -print | xargs ls -alrth
+
+      ## DGM Debug Python 3
+      - name: DGM debug python 3
+        shell: bash
+        run: |
+         find -L /opt/hostedtoolcache/Python -name python3 -print | xargs ls -alrth
 
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
