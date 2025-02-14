@@ -1,0 +1,60 @@
+title: "[Bug]"
+labels: []
+body:
+  - type: markdown
+    id: description
+    attributes:
+      label: Description
+      description: |
+        A clear and concise description of what the bug is.
+  - type: markdown
+    id: setup
+    attributes:
+      description: |
+        Relevant configs and/or SLS files (be sure to remove sensitive info.
+        There is no general set-up of Salt. Please be as specific as possible
+        and give set-up details.
+  - type: checkboxes
+    attributes:
+      label: Check all that apply
+      options:
+        - label: on-prem machine
+        - label: VM (Virtualbox, KVM, etc. please specify)
+        - label: VM running on a cloud service, please be explicit and add details
+        - label: container (Kubernetes, Docker, containerd, etc. please specify)
+        - label: or a combination, please be explicit
+        - label: jails if it is FreeBSD
+        - label: classic packaging
+        - label: onedir packaging
+        - label: used bootstrap to install
+  - type: markdown
+    id: steps
+    attributes:
+      label: Steps to reproduce the behavior
+      description: |
+         Steps to reproduce the behaviour. Include debug logs if possible and relevant
+  - type: markdown
+    id: expected
+    attributes:
+      label: Expected behavior.
+      description: A clear and concise description of what you expected to happen.
+  - type: markdown
+    id: screenshots
+    attributes:
+      label: Screenshots
+      descrption: If applicable, add screenshots to help explain your problem.
+  - type: markdown
+    id: versions
+    attributes:
+      label: Versions Report(s)
+      description: Versions reports for any affected components (master, minsions, ect).
+      value: |
+          `salt --versions-report`
+          ```yaml
+          PASTE HERE
+          ```
+  - type: markdown
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.
