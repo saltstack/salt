@@ -101,7 +101,7 @@ permissions:
       ## DGM Debug Python 1
       - name: DGM debug python 1
         shell: bash
-        if: /home/runner/work/salt/salt/.relenv
+        if: ${{ hashFiles('/home/runner/work/salt/salt/.relenv/') != '' }}
         run: |
           ls -alrth /home/runner/work/salt/salt/.relenv
 
