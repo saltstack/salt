@@ -33,7 +33,8 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       uses: ./.github/actions/get-python-version
       with:
-        python-binary: $pythonLocation\bin\python3.exe
+        python-binary: python3
+        ## python-binary: $pythonLocation\bin\python3.exe
         ## DGM python-binary: python3
 
     ## DGM - name: Get Python Version
