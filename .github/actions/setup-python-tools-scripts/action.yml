@@ -52,6 +52,8 @@ runs:
           VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
             steps.get-python-version-win.outputs.version-sha256sum }}|${{
             hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+
+          ls -alrth "$pythonLocation/"
         else
           VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
             steps.get-python-version.outputs.version-sha256sum }}|${{
