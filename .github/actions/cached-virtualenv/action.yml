@@ -27,46 +27,53 @@ runs:
 
   steps:
 
-    ## DGM - name: Get Python Version not Windows
-    ## DGM   id: get-python-version
-    ## DGM   if: ${{ runner.os != 'Windows' }}
-    ## DGM   uses: ./.github/actions/get-python-version
-    ## DGM   with:
-    ## DGM     python-binary: $pythonLocation/bin/python3
-    ## DGM     ## DGM python-binary: python3
-
-    ## DGM - name: Get Python Version Windows
-    ## DGM   id: get-python-version
-    ## DGM   if: ${{ runner.os == 'Windows' }}
-    ## DGM   uses: ./.github/actions/get-python-version
-    ## DGM   with:
-    ## DGM     python-binary: $pythonLocation\bin\python3.exe
-    ## DGM     ## DGM python-binary: python3
-
-    - name: Get Python Version
-      id: get-python-version
+    - name: Get Python Version not Windows
+      id: get-python-version-win
+      if: ${{ runner.os != 'Windows' }}
       uses: ./.github/actions/get-python-version
       with:
-        if: ${{ runner.os != 'Windows' }}
-          python-binary: $pythonLocation/bin/python3
-        if: ${{ runner.os == 'Windows' }}
-          python-binary: python3
+        python-binary: $pythonLocation/bin/python3
         ## DGM python-binary: python3
+
+    - name: Get Python Version Windows
+      id: get-python-version
+      if: ${{ runner.os == 'Windows' }}
+      uses: ./.github/actions/get-python-version
+      with:
+        ## DGM python-binary: $pythonLocation\bin\python3.exe
+        python-binary: python3
+
+    ## DGM - name: Get Python Version
+    ## DGM   id: get-python-version
+    ## DGM   uses: ./.github/actions/get-python-version
+    ## DGM   with:
+    ## DGM     python-binary: python3
+    ## DGM     ## DGM python-binary: python3
 
     - name: Setup Cache Key
       shell: bash
       id: setup-cache-key
       run: |
-        echo "cache-key=${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|cached-venv|${{ steps.get-python-version.outputs.version }}|${{ inputs.name }}" >> "${GITHUB_OUTPUT}"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          echo "cache-key=${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|cached-venv|${{ steps.get-python-version-win.outputs.version }}|${{ inputs.name }}" >> "${GITHUB_OUTPUT}"
+        else
+          echo "cache-key=${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|cached-venv|${{ steps.get-python-version.outputs.version }}|${{ inputs.name }}" >> "${GITHUB_OUTPUT}"
+        fi
 
     - name: Define VirtualEnv path
       shell: bash
       id: virtualenv-path
       run: |
         cd ${{ github.workspace }} > /dev/null 2>&1 || true
-        VENVS_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
-        echo "venvs-path=$VENVS_PATH" | tee -a "$GITHUB_OUTPUT"
-        VENV_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          VENVS_PATH=$(echo ".venvs/py${{ steps.get-python-version-win.outputs.version }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+          echo "venvs-path=$VENVS_PATH" | tee -a "$GITHUB_OUTPUT"
+          VENV_PATH=$(echo ".venvs/py${{ steps.get-python-version-win.outputs.version }}/${{ inputs.name }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+        else
+          VENVS_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+          echo "venvs-path=$VENVS_PATH" | tee -a "$GITHUB_OUTPUT"
+          VENV_PATH=$(echo ".venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}" | python3 -c 'import sys, pathlib; sys.stdout.write(pathlib.Path.cwd().joinpath(sys.stdin.read()).as_posix())')
+        fi
         echo "venv-path=$VENV_PATH" | tee -a "$GITHUB_OUTPUT"
 
     - name: Cache VirtualEnv
