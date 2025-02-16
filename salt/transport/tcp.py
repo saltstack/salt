@@ -317,8 +317,8 @@ class PublishClient(salt.transport.base.PublishClient):
                     exc,
                     self.backoff,
                 )
-                if not timeout:
-                    raise
+                #if not timeout:
+                #    raise
                 if timeout and time.monotonic() - start > timeout:
                     break
                 await asyncio.sleep(self.backoff)
