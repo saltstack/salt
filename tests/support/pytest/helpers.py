@@ -513,6 +513,8 @@ class FakeSaltExtension:
             setup_requires =
               wheel
               setuptools>=50.3.2
+            install_requires =
+              distro
 
             [options.entry_points]
             salt.loader=

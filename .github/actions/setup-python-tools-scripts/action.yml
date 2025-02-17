@@ -54,10 +54,13 @@ runs:
       working-directory: ${{ inputs.cwd }}
       run: |
         PYTHON_EXE=${{ steps.tools-virtualenv.outputs.python-executable }}
+        ${PYTHON_EXE} -m ensurepip --upgrade
         (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
         if [ $exitcode -eq 0 ]; then
+          ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
           ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
         else
+          ${PYTHON_EXE} -m pip install --upgrade setuptools
           ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
         fi
 

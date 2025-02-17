@@ -2,7 +2,6 @@ import pytest
 
 import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
-import salt.utils.win_functions as win_functions
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -20,14 +19,15 @@ def configure_loader_modules():
 
 @pytest.fixture
 def temp_path(tmp_path):
-    # We need to create a directory that doesn't inherit permissions from the test suite
+
+    # Ownership is not inherited but permissions are, so we shouldn't have to
+    # set ownership. Ownership is determined by the user creating the directory.
+    # An administrator account will set the owner as the Administrators group.
+    # A non-administrator account will set the user itself as the owner.
+
+    # Create a directory and set the permissions to make sure they're the only
+    # ones (reset_perms=True) and not inherited (protected=True)
     tmp_path.mkdir(parents=True, exist_ok=True)
-    win_dacl.set_owner(obj_name=str(tmp_path), principal="Administrators")
-    assert win_dacl.get_owner(obj_name=str(tmp_path)) == "Administrators"
-    # We don't want the parent test directory to inherit permissions
-    win_dacl.set_inheritance(obj_name=str(tmp_path), enabled=False)
-    assert not win_dacl.get_inheritance(obj_name=str(tmp_path))
-    # Set these permissions and make sure they're the only ones
     win_dacl.set_permissions(
         obj_name=str(tmp_path),
         principal="Administrators",
@@ -47,16 +47,20 @@ def temp_path(tmp_path):
             }
         },
     }
+    # Verify perms and inheritance
     assert win_dacl.get_permissions(obj_name=str(tmp_path)) == perms
+    assert not win_dacl.get_inheritance(obj_name=str(tmp_path))
 
-    # Now we create a directory for testing that does inherit those permissions from the above, new parent directory
+    # Now we create a directory for testing that does inherit those permissions
+    # from the above, new parent directory
     test_dir = tmp_path / "test_dir"
     test_dir.mkdir()
-    current_user = win_functions.get_current_user(with_domain=False)
-    assert win_dacl.get_owner(obj_name=str(test_dir)) == current_user
-    # We do want the test directory to inherit permissions from the parent directory
+
+    # We want to make sure inheritance is enabled
     assert win_dacl.get_inheritance(obj_name=str(test_dir))
-    # Make sure the permissions are inherited from the parent
+
+    # We want to make sure the test directory inherited permissions from the
+    # parent directory
     perms = {
         "Inherited": {
             "Administrators": {

@@ -226,15 +226,15 @@ def test_sidConversion_no_conversion(pol_info):
     assert pol_info._sidConversion([val]) == expected
 
 
-def test_sidConversion_everyone(pol_info):
+def test_sidConversion_sid(pol_info):
     val = ws.ConvertStringSidToSid("S-1-1-0")
     expected = ["Everyone"]
     assert pol_info._sidConversion([val]) == expected
 
 
-def test_sidConversion_administrator(pol_info):
-    val = ws.LookupAccountName("", "Administrator")[0]
-    expected = [f"{socket.gethostname()}\\Administrator"]
+def test_sidConversion_name(pol_info):
+    val = ws.LookupAccountName("", "DefaultAccount")[0]
+    expected = [f"{socket.gethostname()}\\DefaultAccount"]
     assert pol_info._sidConversion([val]) == expected
 
 
@@ -250,8 +250,8 @@ def test_usernamesToSidObjects_empty_value(pol_info, val, expected):
 
 
 def test_usernamesToSidObjects_string_list(pol_info):
-    val = "Administrator,Guest"
-    admin_sid = ws.LookupAccountName("", "Administrator")[0]
+    val = "DefaultAccount,Guest"
+    admin_sid = ws.LookupAccountName("", "DefaultAccount")[0]
     guest_sid = ws.LookupAccountName("", "Guest")[0]
     expected = [admin_sid, guest_sid]
     assert pol_info._usernamesToSidObjects(val) == expected

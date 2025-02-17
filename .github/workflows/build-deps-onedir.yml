@@ -8,12 +8,6 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      github-hosted-runners:
-        type: boolean
-        required: true
-      self-hosted-runners:
-        type: boolean
-        required: true
       cache-seed:
         required: true
         type: string
@@ -26,6 +20,14 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -41,20 +43,15 @@ jobs:
 
   build-deps-linux:
     name: Linux
-    if: ${{ inputs.self-hosted-runners }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - arm64
-    runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - ${{ matrix.arch }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     steps:
 
       - name: "Throttle Builds"
@@ -63,6 +60,10 @@ jobs:
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -89,18 +90,22 @@ jobs:
 
   build-deps-macos:
     name: macOS
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch: ${{ github.event.repository.fork && fromJSON('["x86_64"]') || fromJSON('["x86_64", "arm64"]') }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-13-xlarge' || 'macos-12' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
     env:
       USE_S3_CACHE: 'false'
       PIP_INDEX_URL: https://pypi.org/simple
     steps:
+
+      - name: "Check cores"
+        shell: bash
+        run: sysctl -n hw.ncpu
 
       - name: "Throttle Builds"
         shell: bash
@@ -139,14 +144,12 @@ jobs:
 
   build-deps-windows:
     name: Windows
-    if: ${{ inputs.github-hosted-runners }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        arch:
-          - x86
-          - amd64
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on: windows-latest
     env:
       USE_S3_CACHE: 'false'

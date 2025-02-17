@@ -5,7 +5,7 @@ def test_pillar_using_http_query(salt_master, salt_minion, salt_cli, tmp_path):
         - http_pillar_test
     """
     my_pillar = """
-    {%- set something = salt['http.query']('https://raw.githubusercontent.com/saltstack/salt/master/.pre-commit-config.yaml', raise_error=False, verify_ssl=False, status=True, timeout=5).status %}
+    {%- set something = salt['http.query']('https://raw.githubusercontent.com/saltstack/salt/master/.pre-commit-config.yaml', raise_error=False, verify_ssl=False, status=True, timeout=15).status %}
     http_query_test: {{ something }}
     """
 

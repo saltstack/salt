@@ -487,11 +487,15 @@ class GitProvider:
             ).replace(
                 "/", "_"
             )  # replace "/" with "_" to not cause trouble with file system
+
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
-                self._cache_basename = self.get_checkout_target()
+                self._cache_basename = self.get_checkout_target().replace(
+                    "/", "-"
+                )  # replace '/' with '-' to not cause trouble with file-system
+
             except AttributeError:
                 log.critical(
                     "__env__ cant generate basename: %s %s", self.role, self.id
@@ -529,7 +533,6 @@ class GitProvider:
         if HAS_PSUTIL:
             cur_pid = os.getpid()
             process = psutil.Process(cur_pid)
-            dgm_process_dir = dir(process)
             cache_dir = self.opts.get("cachedir", None)
             gitfs_active = self.opts.get("gitfs_remotes", None)
             if cache_dir and gitfs_active:
@@ -1567,12 +1570,14 @@ class GitPython(GitProvider):
         local copy was already up-to-date, return False.
         """
         origin = self.repo.remotes[0]
+
         try:
             fetch_results = origin.fetch()
         except AssertionError:
             fetch_results = origin.fetch()
 
         new_objs = False
+
         for fetchinfo in fetch_results:
             if fetchinfo.old_commit is not None:
                 log.debug(
@@ -1781,7 +1786,7 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = self.peel(local_head).hex
+            head_sha = str(self.peel(local_head).id)
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1840,7 +1845,10 @@ class Pygit2(GitProvider):
                     self.repo.create_reference(local_ref, pygit2_id)
 
                 try:
-                    target_sha = self.peel(self.repo.lookup_reference(remote_ref)).hex
+                    target_sha = str(
+                        self.peel(self.repo.lookup_reference(remote_ref)).id
+                    )
+
                 except KeyError:
                     log.error(
                         "pygit2 was unable to get SHA for %s in %s remote '%s'",
@@ -1853,6 +1861,7 @@ class Pygit2(GitProvider):
 
                 # Only perform a checkout if HEAD and target are not pointing
                 # at the same SHA1.
+
                 if head_sha != target_sha:
                     # Check existence of the ref in refs/heads/ which
                     # corresponds to the local HEAD. Checking out local_ref
@@ -1921,10 +1930,11 @@ class Pygit2(GitProvider):
                 else:
                     try:
                         # If no AttributeError raised, this is an annotated tag
-                        tag_sha = tag_obj.target.hex
+                        tag_sha = str(tag_obj.target.id)
+
                     except AttributeError:
                         try:
-                            tag_sha = tag_obj.hex
+                            tag_sha = str(tag_obj.id)
                         except AttributeError:
                             # Shouldn't happen, but could if a future pygit2
                             # API change breaks things.
@@ -2106,6 +2116,7 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
+
         # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs["callbacks"] = self.remotecallbacks
@@ -2119,6 +2130,7 @@ class Pygit2(GitProvider):
             pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
+
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()
             if "unsupported url protocol" in exc_str and isinstance(
@@ -2157,6 +2169,7 @@ class Pygit2(GitProvider):
             # pygit2.Remote.fetch() returns a class instance in
             # pygit2 >= 0.21.0
             received_objects = fetch_results.received_objects
+
         if received_objects != 0:
             log.debug(
                 "%s received %s objects for remote '%s'",
@@ -2168,6 +2181,7 @@ class Pygit2(GitProvider):
             log.debug("%s remote '%s' is up-to-date", self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
+
         return True if (received_objects or refs_pre != refs_post or cleaned) else None
 
     def file_list(self, tgt_env):
@@ -2278,7 +2292,7 @@ class Pygit2(GitProvider):
                 blob = None
                 break
         if isinstance(blob, pygit2.Blob):
-            return blob, blob.hex, mode
+            return blob, str(blob.id), mode
         return None, None, None
 
     def get_tree_from_branch(self, ref):
@@ -3481,6 +3495,7 @@ class GitPillar(GitBase):
         """
         self.pillar_dirs = OrderedDict()
         self.pillar_linked_dirs = []
+
         for repo in self.remotes:
             cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
