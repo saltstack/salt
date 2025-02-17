@@ -12,6 +12,7 @@ import logging
 import os
 import pathlib
 import shutil
+import time
 
 import tornado.gen
 
@@ -156,7 +157,10 @@ class ReqServerChannel:
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise tornado.gen.Return(self._auth(payload["load"], sign_messages))
+            start = time.time()
+            ret = self._auth(payload["load"], sign_messages)
+            yield self.payload_handler({"cmd": "_auth", "_start": start})
+            raise tornado.gen.Return(ret)
 
         nonce = None
         if version > 1:
