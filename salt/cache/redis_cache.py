@@ -300,7 +300,7 @@ def _get_bank_redis_key(bank):
 def _get_timestamp_key(bank, key):
     opts = _get_redis_keys_opts()
     return "{}{}{}/{}".format(
-        opts["timestamp_prefix"], opts["separator"], {bank}, {key}
+        opts["timestamp_prefix"], opts["separator"], bank, key
     )
     # Use this line when we can use modern python
     # return f"{opts['timestamp_prefix']}{opts['separator']}{bank}/{key}"
@@ -340,10 +340,20 @@ def _build_bank_hier(bank, redis_pipe):
     def joinbanks(*banks):
         return "/".join(banks)
 
-    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
-        bank_set = _get_bank_redis_key(bank_path)
-        log.debug("Adding %s to %s", bank, bank_set)
-        redis_pipe.sadd(bank_set, ".")
+    bank_names = bank.split("/")
+    full_paths = list(itertools.accumulate(bank_names, joinbanks))
+
+    for parent_path, bank_name in zip(full_paths, bank_names[1:]):
+        parent_bank_redis_key = _get_bank_redis_key(parent_path)
+        log.debug("Adding %s to %s", bank_name, parent_bank_redis_key)
+        redis_pipe.sadd(parent_bank_redis_key, bank_name)
+
+    for bank_path in full_paths:
+        bank_redis_key = _get_bank_redis_key(bank_path)
+        log.debug("Adding a '.' to %s", bank_redis_key)
+        redis_pipe.sadd(bank_redis_key, ".")
+
+    return True
 
 
 def _get_banks_to_remove(redis_server, bank, path=""):
@@ -531,7 +541,7 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_redis_key = _get_bank_redis_key(bank)
     try:
         banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
