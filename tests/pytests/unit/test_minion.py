@@ -163,12 +163,27 @@ def test_send_req_fires_completion_event(event, minion_opts):
 
 
 async def test_send_req_async_regression_62453(minion_opts):
-    event_enter = MagicMock()
-    event_enter.send.side_effect = (
-        lambda data, tag, cb=None, timeout=60: tornado.gen.maybe_future(True)
-    )
-    event = MagicMock()
-    event.__enter__.return_value = event_enter
+
+    class MockEvent:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        @tornado.gen.coroutine
+        def fire_event_async(self, *args, **kwargs):
+            return
+
+        def get_event(self, *args, **kwargs):
+            return
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return
+
+    def get_event(*args, **kwargs):
+        return MockEvent()
 
     minion_opts["random_startup_delay"] = 0
     minion_opts["return_retry_tries"] = 5
@@ -180,9 +195,10 @@ async def test_send_req_async_regression_62453(minion_opts):
         load = {"load": "value"}
         timeout = 1
 
-        # We are just validating no exception is raised
-        with pytest.raises(TimeoutError):
-            rtn = await minion._send_req_async(load, timeout)
+        with patch("salt.utils.event.get_event", get_event):
+            # We are just validating no exception is raised
+            with pytest.raises(TimeoutError):
+                rtn = await minion._send_req_async(load, timeout)
 
 
 def test_mine_send_tries(minion_opts):
