@@ -4,10 +4,14 @@ run-name: Workflow Finished ${{ github.event.workflow_run.display_title }} (${{ 
 on:
   workflow_run:
     workflows:
-     - CI
-     - Nightly
-     - Scheduled
-     - Stage Release
+      - CI
+      - Nightly
+      - Scheduled
+      - Stage Release
+    branches:
+      - master
+      - 3007.x
+      - 3006.x
     types:
      - completed
 
