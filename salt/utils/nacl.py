@@ -182,12 +182,12 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         with salt.utils.files.fopen(sk_file, "rb") as keyf:
             sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
             sk = base64.b64decode(sk)
-        kp = nacl.public.PublicKey(sk)
+        kp = nacl.public.PrivateKey(sk)
         with salt.utils.files.fopen(pk_file, "wb") as keyf:
-            keyf.write(base64.b64encode(kp.encode()))
+            keyf.write(base64.b64encode(kp.public_key.encode()))
         return f"saved pk_file: {pk_file}"
 
-    kp = nacl.public.PublicKey.generate()
+    kp = nacl.public.PrivateKey.generate()
     with salt.utils.files.fopen(sk_file, "wb") as keyf:
         keyf.write(base64.b64encode(kp.encode()))
     if salt.utils.platform.is_windows():
@@ -200,7 +200,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         # chmod 0600 file
         os.chmod(sk_file, 1536)
     with salt.utils.files.fopen(pk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.encode()))
+        keyf.write(base64.b64encode(kp.public_key.encode()))
     return f"saved sk_file:{sk_file}  pk_file: {pk_file}"
 
 

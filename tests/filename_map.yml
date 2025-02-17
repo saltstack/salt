@@ -133,7 +133,7 @@ salt/engines/*:
   - pytests.unit.engines.test_engines
 
 salt/grains/*:
-  - integration.grains.test_custom
+  - pytests.integration.grains.test_custom
 
 salt/matchers/*:
   - integration.states.test_match

@@ -4,3 +4,6 @@ opt/saltstack/salt/salt-cp /usr/bin/salt-cp
 opt/saltstack/salt/salt-key /usr/bin/salt-key
 opt/saltstack/salt/salt-run /usr/bin/salt-run
 opt/saltstack/salt/spm /usr/bin/spm
+usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt
+usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-cp
+usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-key

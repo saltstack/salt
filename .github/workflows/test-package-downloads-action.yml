@@ -88,9 +88,7 @@ jobs:
     needs:
       - generate-matrix
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'true'
     environment: ${{ inputs.environment }}
@@ -287,7 +285,7 @@ jobs:
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
-            artifacts
+            artifacts/
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
@@ -485,7 +483,7 @@ jobs:
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
-            artifacts
+            artifacts/
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
@@ -497,9 +495,7 @@ jobs:
     env:
       USE_S3_CACHE: 'true'
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - ubuntu-latest
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
@@ -688,6 +684,6 @@ jobs:
         with:
           name: pkg-testrun-artifacts-${{ matrix.distro-slug }}-${{ matrix.arch }}-${{ matrix.pkg-type }}
           path: |
-            artifacts
+            artifacts/
             !artifacts/salt/*
             !artifacts/salt-*.tar.*

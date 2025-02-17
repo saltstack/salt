@@ -5,6 +5,7 @@ Module for managing locales on POSIX-like systems.
 import logging
 import os
 import re
+import subprocess
 
 import salt.utils.locales
 import salt.utils.path
@@ -67,6 +68,10 @@ def _localectl_status():
     """
     if salt.utils.path.which("localectl") is None:
         raise CommandExecutionError('Unable to find "localectl"')
+    else:
+        proc = subprocess.run(["localectl"], check=False, capture_output=True)
+        if b"Failed to connect to bus: No such file or directory" in proc.stderr:
+            raise CommandExecutionError('Command "localectl" is in a degraded state.')
 
     ret = {}
     locale_ctl_out = (__salt__["cmd.run"]("localectl status") or "").strip()

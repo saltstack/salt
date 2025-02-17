@@ -29,7 +29,7 @@ def pkg(modules):
 
 def test_refresh_db(pkg, pkg_def_contents, state_tree, minion_opts):
     assert len(pkg.get_package_info("my-software")) == 0
-    repo_dir = state_tree / "win" / "repo-ng"
+    repo_dir = state_tree / "winrepo_ng"
     with pytest.helpers.temp_file("my-software.sls", pkg_def_contents, repo_dir):
         pkg.refresh_db()
     assert len(pkg.get_package_info("my-software")) == 1

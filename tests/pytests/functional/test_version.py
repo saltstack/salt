@@ -25,6 +25,11 @@ def salt_extension(tmp_path_factory):
 
 def test_salt_extensions_in_versions_report(tmp_path, salt_extension):
     with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as venv:
+        # These are required for the test to pass, why are they not already
+        # installed?
+        venv.install("pyyaml")
+        venv.install("looseversion")
+        venv.install("packaging")
         # Install our extension into the virtualenv
         venv.install(str(salt_extension.srcdir))
         installed_packages = venv.get_installed_packages()
@@ -47,6 +52,12 @@ def test_salt_extensions_absent_in_versions_report(tmp_path, salt_extension):
     Ensure that the 'Salt Extensions' header does not show up when no extension is installed
     """
     with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as venv:
+        # These are required for the test to pass, why are they not already
+        # installed?
+        venv.install("pyyaml")
+        venv.install("looseversion")
+        venv.install("packaging")
+        venv.install("distro")
         installed_packages = venv.get_installed_packages()
         assert salt_extension.name not in installed_packages
         ret = venv.run_code(

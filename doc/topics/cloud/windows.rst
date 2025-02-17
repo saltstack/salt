@@ -30,6 +30,21 @@ which Salt Cloud is running. See
 `Windows - Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/topics/install-by-operating-system/windows.html>`_ for information about downloading
 and using the Salt Minion Windows installer.
 
+Optionally WinRM can be used instead of `winexe` if the python module `pywinrm`
+is available and WinRM is supported on the target Windows version. Information
+on pywinrm can be found at the project home:
+
+* `pywinrm project home`__
+
+.. __: https://github.com/diyan/pywinrm
+
+Additionally, a copy of the Salt Minion Windows installer must be present on
+the system on which Salt Cloud is running. This installer may be downloaded
+from saltstack.com:
+
+* `SaltStack Download Area`__
+
+.. __: https://packages.broadcom.com/artifactory/saltproject-generic/windows/
 
 .. _new-pywinrm:
 

@@ -1,0 +1,67 @@
+---
+name: Test NSIS Installer
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+
+jobs:
+  Test-NSIS-Logic:
+    name: Logic Tests
+    runs-on:
+      - windows-latest
+    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
+
+    steps:
+
+    - name: Checkout Salt
+      uses: actions/checkout@v4
+
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install NSIS
+      run: .\pkg\windows\install_nsis.cmd -CICD
+      shell: cmd
+
+    - name: Build Test Installer
+      run: .\pkg\windows\nsis\tests\setup.cmd -CICD
+      shell: cmd
+
+    - name: Run Config Tests
+      run: .\pkg\windows\nsis\tests\test.cmd -CICD .\config_tests
+      shell: cmd
+
+  Test-NSIS-Stress:
+    name: Stress Tests
+    runs-on:
+      - windows-latest
+    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
+
+    steps:
+
+      - name: Checkout Salt
+        uses: actions/checkout@v4
+
+      - name: Set Up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install NSIS
+        run: .\pkg\windows\install_nsis.cmd -CICD
+        shell: cmd
+
+      - name: Build Test Installer
+        run: .\pkg\windows\nsis\tests\setup.cmd -CICD
+        shell: cmd
+
+      - name: Run Stress Test
+        run: .\pkg\windows\nsis\tests\test.cmd -CICD .\stress_tests
+        shell: cmd

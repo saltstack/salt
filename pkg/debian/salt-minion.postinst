@@ -1,0 +1,41 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+  configure)
+    db_get salt-minion/user
+    if [ "$RET" != "root" ]; then
+      if [ ! -e "/var/log/salt/minion" ]; then
+        touch /var/log/salt/minion
+        chmod 640 /var/log/salt/minion
+      fi
+      if [ ! -e "/var/log/salt/key" ]; then
+        touch /var/log/salt/key
+        chmod 640 /var/log/salt/key
+      fi
+      chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+    fi
+    if command -v systemctl; then
+        db_get salt-minion/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
+            if [ "$RESLT" = "active" ]; then
+                systemctl restart salt-minion
+            fi
+            db_get salt-minion/enabled
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
+                systemctl disable salt-minion
+            else
+                systemctl enable salt-minion
+            fi
+        else
+            systemctl daemon-reload
+            systemctl restart salt-minion
+            systemctl enable salt-minion
+        fi
+    fi
+  ;;
+esac

@@ -1,9 +1,10 @@
 
   build-ci-deps:
     <%- do test_salt_needs.append("build-ci-deps") %>
+    <%- do test_salt_linux_needs.append("build-ci-deps") %>
     name: CI Deps
     <%- if workflow_slug != 'release' %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
     <%- endif %>
     needs:
       - prepare-workflow
@@ -20,3 +21,5 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}

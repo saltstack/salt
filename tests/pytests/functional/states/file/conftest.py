@@ -39,7 +39,13 @@ def holy(state_tree_prod):
 
 @pytest.fixture
 def grail_scene33_file(grail):
-    return grail / "scene33"
+    signed_file = grail / "scene33"
+    hash_file = signed_file.with_suffix(".SHA256")
+    for test_file in (signed_file, hash_file):
+        content = test_file.read_bytes()
+        content = content.replace(b"\r\n", b"\n")
+        test_file.write_bytes(content)
+    return signed_file
 
 
 @pytest.fixture

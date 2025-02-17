@@ -231,11 +231,10 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         await asyncio.sleep(0.03)
         ctx.term()
     elif transport == "tcp":
-
         client = salt.transport.tcp.PublishClient(opts, io_loop, host=host, port=port)
         # XXX: This is an implimentation detail of the tcp transport.
         # await client.connect(port)
-        io_loop.spawn_callback(client.connect)
+        io_loop.spawn_callback(client.connect, timeout=120)
         assert client._stream is None
         await asyncio.sleep(2)
 

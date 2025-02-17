@@ -35,10 +35,12 @@ def pillar_name(salt_master):
         yield name
 
 
-def test_salt_pillar(salt_cli, salt_minion, pillar_name):
+def test_salt_pillar(salt_cli, salt_minion, salt_master, pillar_name):
     """
     Test pillar.items
     """
+    assert salt_master.is_running()
+
     ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
     assert ret.returncode == 0
     assert pillar_name in ret.data
