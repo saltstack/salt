@@ -8,12 +8,8 @@ on:
       - Nightly
       - Scheduled
       - Stage Release
-    branches:
-      - master
-      - 3007.x
-      - 3006.x
     types:
-     - completed
+      - completed
 
 permissions:
   contents: read
