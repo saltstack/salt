@@ -1,5 +1,6 @@
 import ctypes
 import multiprocessing
+import time
 import uuid
 
 import pytest
@@ -553,3 +554,41 @@ async def test_handle_message_exceptions(temp_salt_master):
                     {"version": 3, "enc": "clear", "load": {}}
                 )
                 assert ret == "Server-side exception handling payload"
+
+
+async def test__auth_cmd_stats_passing(auth_master_opts):
+    opts = auth_master_opts.copy()
+    opts.update(
+        {
+            "master_stats": True,
+        }
+    )
+    req = server.ReqServerChannel(opts, None)
+
+    fake_ret = {"enc": "clear", "load": b"FAKELOAD"}
+
+    def _auth_mock(*_, **__):
+        time.sleep(0.03)
+        return fake_ret
+
+    with patch.object(req, "_auth", _auth_mock), patch(
+        "salt.channel.server.ReqServerChannel.payload_handler",
+        AsyncMock(return_value=(None, {"fun": "send"})),
+        create=True,
+    ) as payload_handler:
+        ret = await req.handle_message(
+            {
+                "enc": "clear",
+                "version": 3,
+                "load": {
+                    "cmd": "_auth",
+                    "id": "minion",
+                },
+            }
+        )
+        cur_time = time.time()
+        payload_handler.assert_called_once()
+        assert payload_handler.call_args[0][0]["cmd"] == "_auth"
+        auth_call_duration = cur_time - payload_handler.call_args[0][0]["_start"]
+        assert auth_call_duration >= 0.03
+        assert auth_call_duration < 0.05
