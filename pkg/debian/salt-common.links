@@ -1,2 +1,9 @@
+# permissions on /var/log/salt to permit adm group ownership
+salt-common: non-standard-dir-perm
+
+# minor formatting error in table in man page
+salt-common: manpage-has-errors-from-man
+
 opt/saltstack/salt/salt-pip /usr/bin/salt-pip
 opt/saltstack/salt/salt-call /usr/bin/salt-call
+usr/share/bash-completion/completions/salt-common usr/share/bash-completion/completions/salt-call

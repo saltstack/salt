@@ -57,21 +57,20 @@ def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
     """
-    with patch("salt.utils.pycrypto.methods", {}):
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-        )
-        assert ret == expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+    )
+    assert ret == expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=None, password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=None, password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")

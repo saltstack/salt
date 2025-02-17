@@ -73,6 +73,20 @@ def test_keygen_keyfile(test_keygen):
 
         ret = nacl.keygen(keyfile=fpath)
         assert f"saved pk_file: {fpath}.pub" == ret
+        with salt.utils.files.fopen(str(fpath) + ".pub", "rb") as rfh:
+            assert test_keygen["pk"] == rfh.read()
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_keygen_nonexistent_sk_file():
+    """
+    test nacl.keygen function
+    with nonexistent/new sk_file
+    """
+    with pytest.helpers.temp_file("test_keygen_sk_file") as fpath:
+        salt.utils.files.remove(str(fpath))
+        ret = nacl.keygen(sk_file=str(fpath))
+        assert f"saved sk_file:{fpath}  pk_file: {fpath}.pub" == ret
         salt.utils.files.remove(str(fpath) + ".pub")
 
 

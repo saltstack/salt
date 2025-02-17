@@ -16,9 +16,11 @@ def test__get_connected_ips():
     conns = psutil.net_connections()
     for conn in conns:
         if conn.status == psutil.CONN_ESTABLISHED:
-            ip = conn.laddr.ip
-            port = conn.laddr.port
+            ip = conn.raddr.ip
+            port = conn.raddr.port
             break
     assert port is not None
     assert ip is not None
-    assert win_status._get_connected_ips(port) == {ip}
+    # Since this may return more than one IP, let's make sure our test IP is in
+    # the list of IPs
+    assert ip in win_status._get_connected_ips(port)

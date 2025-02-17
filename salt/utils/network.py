@@ -1740,7 +1740,13 @@ def _netlink_tool_remote_on(port, which_end):
             continue
         if which_end == "local_port" and int(local_port) != int(port):
             continue
-        remotes.add(remote_host.strip("[]"))
+
+        # Interpret IPv4-mapped IPv6 addresses as IPv4 (strip prefix)
+        remote_host = remote_host.strip("[]").lower()
+        if remote_host.startswith("::ffff:"):
+            remote_host = remote_host[7:]
+
+        remotes.add(remote_host)
 
     if valid is False:
         remotes = None

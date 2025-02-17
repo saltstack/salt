@@ -52,10 +52,10 @@ cachetools==5.3.1
     # via google-auth
 cassandra-driver==3.28.0
     # via -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 cffi==1.16.0
@@ -281,7 +281,7 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cherrypy
-psutil==5.9.6
+psutil==5.9.6 ; python_version <= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -314,7 +314,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
-pymssql==2.2.7 ; sys_platform == "win32"
+pymssql==2.3.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -344,10 +344,13 @@ pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
 pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.8.0
-    # via pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-shell-utilities==1.8.0 ; python_version <= "3.9"
     # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
+    # via
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -417,11 +420,10 @@ pyzmq==25.1.2 ; python_version < "3.13"
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   docker
     #   etcd3-py
     #   kubernetes

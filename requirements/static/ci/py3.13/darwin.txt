@@ -53,10 +53,10 @@ cachetools==5.5.0
     # via google-auth
 cassandra-driver==3.29.2
     # via -r requirements/static/ci/common.in
-certifi==2024.8.30
+certifi==2024.8.30 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 cffi==1.17.1
@@ -300,7 +300,7 @@ propcache==0.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   yarl
-psutil==6.1.0
+psutil==6.1.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -353,10 +353,13 @@ pytest-httpserver==1.1.0
     # via -r requirements/pytest.txt
 pytest-salt-factories==1.0.4
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.9.7
-    # via pytest-salt-factories
-pytest-skip-markers==1.5.2
+pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
+    # via
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -420,11 +423,10 @@ referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   apache-libcloud
     #   docker
     #   etcd3-py

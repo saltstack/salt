@@ -176,7 +176,7 @@ to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 **Ubuntu**
 
 Salt installs firewall rules in :blob:`/etc/ufw/applications.d/salt.ufw
-<pkg/salt.ufw>`. Enable with:
+<pkg/common/salt.ufw>`. Enable with:
 
 .. code-block:: bash
 

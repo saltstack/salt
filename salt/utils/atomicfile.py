@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 
+import salt.utils.files
 import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
@@ -128,15 +129,19 @@ class _AtomicWFile:
         if self._fh.closed:
             return
         self._fh.close()
-        if os.path.isfile(self._filename):
-            if salt.utils.win_dacl.HAS_WIN32:
+        if salt.utils.win_dacl.HAS_WIN32:
+            if os.path.isfile(self._filename):
                 salt.utils.win_dacl.copy_security(
                     source=self._filename, target=self._tmp_filename
                 )
-            else:
+        else:
+            if os.path.isfile(self._filename):
                 shutil.copymode(self._filename, self._tmp_filename)
                 st = os.stat(self._filename)
                 os.chown(self._tmp_filename, st.st_uid, st.st_gid)
+            else:
+                # chmod file to default mode based on umask
+                os.chmod(self._tmp_filename, 0o666 & ~salt.utils.files.get_umask())
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):

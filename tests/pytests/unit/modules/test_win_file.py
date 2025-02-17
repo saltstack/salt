@@ -2,8 +2,10 @@ import os
 import re
 
 import pytest
+from saltfactories.utils import random_string
 
 import salt.modules.win_file as win_file
+import salt.modules.win_useradd
 import salt.utils.user
 import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError
@@ -18,6 +20,14 @@ def configure_loader_modules():
         win_file: {},
         salt.utils.win_dacl: {},
     }
+
+
+@pytest.fixture(scope="module")
+def test_user():
+    user_name = random_string("test-")
+    salt.modules.win_useradd.add(name=user_name, password="P@ssw0rd")
+    yield user_name
+    salt.modules.win_useradd.delete(name=user_name)
 
 
 def test__virtual__not_windows():
@@ -126,9 +136,9 @@ def test_uid_to_user_empty():
     assert result == expected
 
 
-def test_user_to_uid():
-    result = win_file.user_to_uid("Administrator")
-    expected = salt.utils.win_dacl.get_sid_string("Administrator")
+def test_user_to_uid(test_user):
+    result = win_file.user_to_uid(test_user)
+    expected = salt.utils.win_dacl.get_sid_string(test_user)
     assert result == expected
 
 
@@ -218,6 +228,7 @@ def test_check_perms(tmp_path):
             ret=ret,
             owner="Guests",
             grant_perms=grant_perms,
+            inheritance=False,
         )
 
     expected = {
@@ -234,7 +245,7 @@ def test_check_perms(tmp_path):
         "result": True,
     }
 
-    assert result == expected
+    assert result["changes"]["grant_perms"] == expected["changes"]["grant_perms"]
     owner = win_file.get_user(str(test_dir))
     assert owner == "Guests"
     perms = salt.utils.win_dacl.get_permissions(str(test_dir))

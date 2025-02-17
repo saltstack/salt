@@ -16,8 +16,10 @@ attrs==23.2.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.07.22
-    # via requests
+certifi==2023.07.22 ; python_version < "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==1.16.0
     # via cryptography
 charset-normalizer==3.2.0
@@ -93,7 +95,7 @@ packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.9.6
+psutil==5.9.6 ; python_version <= "3.9"
     # via -r requirements/base.txt
 pycparser==2.21
     # via cffi
@@ -119,7 +121,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2 ; python_version < "3.13"
     # via -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.31.0 ; python_version < "3.10"
     # via -r requirements/base.txt
 setproctitle==1.3.2
     # via -r requirements/base.txt

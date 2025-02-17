@@ -5,22 +5,24 @@ import pytest
 
 @pytest.fixture(scope="module")
 def inst_dir():
-    return r"C:\custom_location"
+    return "C:\\custom_location"
 
 
 @pytest.fixture(scope="module")
 def install(inst_dir):
-    pytest.helpers.clean_env(inst_dir)
-
+    pytest.helpers.clean_env()
     # Create an existing config
     pytest.helpers.existing_config()
-
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", f"/install-dir={inst_dir}"])
-    yield
+    args = ["/S", f"/install-dir={inst_dir}"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env(inst_dir)
 
 
 def test_binaries_present(install, inst_dir):
+    # This will show the contents of the directory on failure
+    inst_dir_exists = os.path.exists(inst_dir)
+    dir_contents = os.listdir(inst_dir)
     assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 

@@ -2,8 +2,6 @@
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
 
-import textwrap
-
 import pytest
 
 import salt.grains.disks as disks
@@ -17,63 +15,58 @@ def configure_loader_modules():
     }
 
 
-def test__windows_disks():
+def test__windows_disks_dict():
     """
-    Test grains._windows_disks, normal return
-    Should return a populated dictionary
+    Test grains._windows_disks with a single disk returned as a dict
+    Should return 1 disk and no ssds
     """
-    mock_which = MagicMock(return_value="C:\\Windows\\System32\\wbem\\WMIC.exe")
-    wmic_result = textwrap.dedent(
-        """
-        DeviceId  MediaType
-        0         4
-        1         0
-        2         3
-        3         5
-    """
-    )
-    mock_run_all = MagicMock(return_value={"stdout": wmic_result, "retcode": 0})
+    devices = {"DeviceID": 0, "MediaType": "HDD"}
+    mock_powershell = MagicMock(return_value=devices)
 
-    with patch("salt.utils.path.which", mock_which), patch.dict(
-        disks.__salt__, {"cmd.run_all": mock_run_all}
-    ):
+    with patch.dict(disks.__salt__, {"cmd.powershell": mock_powershell}):
+        result = disks._windows_disks()
+        expected = {"disks": ["\\\\.\\PhysicalDrive0"], "ssds": []}
+        assert result == expected
+
+
+def test__windows_disks_list():
+    """
+    test grains._windows_disks with multiple disks and types as a list of dicts
+    Should return 4 disks and 1 ssd
+    """
+    devices = [
+        {"DeviceID": 0, "MediaType": "SSD"},
+        {"DeviceID": 1, "MediaType": "HDD"},
+        {"DeviceID": 2, "MediaType": "HDD"},
+        {"DeviceID": 3, "MediaType": "HDD"},
+    ]
+    mock_powershell = MagicMock(return_value=devices)
+
+    with patch.dict(disks.__salt__, {"cmd.powershell": mock_powershell}):
         result = disks._windows_disks()
         expected = {
-            "ssds": ["\\\\.\\PhysicalDrive0"],
             "disks": [
                 "\\\\.\\PhysicalDrive0",
                 "\\\\.\\PhysicalDrive1",
                 "\\\\.\\PhysicalDrive2",
                 "\\\\.\\PhysicalDrive3",
             ],
+            "ssds": ["\\\\.\\PhysicalDrive0"],
         }
         assert result == expected
-        cmd = " ".join(
-            [
-                "C:\\Windows\\System32\\wbem\\WMIC.exe",
-                "/namespace:\\\\root\\microsoft\\windows\\storage",
-                "path",
-                "MSFT_PhysicalDisk",
-                "get",
-                "DeviceID,MediaType",
-                "/format:table",
-            ]
-        )
-        mock_run_all.assert_called_once_with(cmd)
 
 
-def test__windows_disks_retcode():
+def test__windows_disks_empty():
     """
-    Test grains._windows_disks, retcode 1
+    Test grains._windows_disks when nothing is returned
     Should return empty lists
     """
-    mock_which = MagicMock(return_value="C:\\Windows\\System32\\wbem\\WMIC.exe")
-    mock_run_all = MagicMock(return_value={"stdout": "", "retcode": 1})
-    with patch("salt.utils.path.which", mock_which), patch.dict(
-        disks.__salt__, {"cmd.run_all": mock_run_all}
-    ):
+    devices = {}
+    mock_powershell = MagicMock(return_value=devices)
+
+    with patch.dict(disks.__salt__, {"cmd.powershell": mock_powershell}):
+        expected = {"disks": [], "ssds": []}
         result = disks._windows_disks()
-        expected = {"ssds": [], "disks": []}
         assert result == expected
 
 

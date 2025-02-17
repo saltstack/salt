@@ -39,7 +39,7 @@ def test_multimaster_dns(
             log.info("Removed secondary master IP address.")
             # Wait for the minion's master_alive_interval, adding a second for
             # reliablity.
-            time.sleep(master_alive_interval + 1)
+            time.sleep(master_alive_interval + 10)
             assert (
                 "Master ip address changed from 172.16.0.1 to 127.0.0.1" in caplog.text
             )

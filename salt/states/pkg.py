@@ -2964,7 +2964,7 @@ def _uninstall(
 
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, normalize=normalize
+            name, pkgs, normalize=normalize, version=version, **kwargs
         )[0]
     except MinionError as exc:
         return {
@@ -3031,7 +3031,7 @@ def _uninstall(
     new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
     for param in pkg_params:
-        if __grains__["os_family"] in ["Suse", "RedHat"]:
+        if __grains__["os_family"] in ["Suse", "RedHat", "Windows"]:
             # Check if the package version set to be removed is actually removed:
             if param in new and not pkg_params[param]:
                 failed.append(param)

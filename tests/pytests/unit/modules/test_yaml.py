@@ -13,7 +13,7 @@ try:
     import salt.modules.yaml
     import salt.utils.yamllint
 
-    YAMLLINT_AVAILABLE = True
+    YAMLLINT_AVAILABLE = salt.utils.yamllint.has_yamllint()
 except ImportError:
     YAMLLINT_AVAILABLE = False
 
