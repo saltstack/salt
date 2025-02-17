@@ -20,12 +20,15 @@ import types
 import zipfile
 
 import distro
+import idna
 import jinja2
 import looseversion
 import msgpack
 import networkx
 import packaging
+import requests
 import tornado
+import urllib3
 import yaml
 
 import salt
@@ -282,6 +285,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "tornado",
         "msgpack",
         "networkx",
+        "requests",
+        "idna",
+        "urllib3",
         "certifi",
         "singledispatch",
         "concurrent",
@@ -441,6 +447,9 @@ def get_tops(extra_mods="", so_mods=""):
         backports_abc,
         looseversion,
         packaging,
+        requests,
+        idna,
+        urllib3,
     ]
     modules = find_site_modules("contextvars")
     if modules:
