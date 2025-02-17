@@ -761,7 +761,7 @@ def test_fstab_present_test_present():
     """
     ret = {
         "name": "/dev/sda1",
-        "result": None,
+        "result": True,
         "changes": {},
         "comment": ["/home entry is already in /etc/fstab."],
     }
