@@ -46,6 +46,11 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             self.config["extension_modules"] = os.path.join(cache_dir, "extmods")
             prepend_root_dir(self.config, ["cachedir", "extension_modules"])
 
+        if self.config["fun"].split(".")[0] == "pillar":
+            if self.options.skip_init_pillar:
+                self.options.skip_init_pillar = False
+                self.config["skip_init_pillar"] = False
+
         caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
