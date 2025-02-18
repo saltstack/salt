@@ -226,7 +226,7 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          brew install tree
+          brew install tree pkg-config mysql
 
       - name: List Packages
         run: |
