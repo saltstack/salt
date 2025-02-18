@@ -40,7 +40,7 @@ def test_get_tops_python(version):
     patch_which = patch("salt.utils.path.which", return_value=True)
 
     with patch_proc, patch_which:
-        salt.utils.thin.get_tops_python("python2", ext_py_ver=version)
+        salt.utils.thin.get_tops_python("python3", ext_py_ver=version)
         cmds = [x[0][0] for x in mock_popen.call_args_list]
         assert [x for x in cmds if "jinja2" in x[2]]
         if python3:
