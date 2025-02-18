@@ -64,14 +64,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     )
 
     # Test pip install before a downgrade
-    dep = "PyGithub==1.56.0"
+    dep = "mysqlclient==2.2.7"
     install = salt_call_cli.run("--local", "pip.install", dep)
     assert install.returncode == 0
 
     # Verify we can use the module dependent on the installed package
     repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-    assert "Authentication information could" in use_lib.stderr
+    use_lib = salt_call_cli.run("--local", "mysql", "mydb", "file=/tmp/query.sql")
+    assert "does not exist" in use_lib.stderr
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
@@ -110,7 +110,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
             bin_file = install_salt.install_dir / "salt-call.exe"
     elif platform.is_darwin() and install_salt.classic:
         bin_file = install_salt.bin_dir / "salt-call"
-
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
