@@ -35,6 +35,28 @@ try:
 except ImportError:
     HAS_APTSOURCES = False
 
+HAS_DEB822 = False
+
+if HAS_APT:
+    try:
+        from aptsources.sourceslist import (  # pylint: disable=unused-import
+            Deb822SourceEntry,
+            _deb822,
+        )
+
+        HAS_DEB822 = True
+    except ImportError:
+        pass
+
+HAS_APT_PKG = False
+
+try:
+    import apt_pkg
+
+    HAS_APT_PKG = True
+except ImportError:
+    pass
+
 log = logging.getLogger(__name__)
 
 
@@ -209,6 +231,8 @@ class MockSourceEntry:
         self.comps = []
         self.architectures = []
         self.signedby = ""
+        if HAS_DEB822:
+            self.types = []
 
     def mysplit(self, line):
         return line.split()
@@ -228,6 +252,115 @@ class MockSourceList:
 @pytest.fixture
 def configure_loader_modules():
     return {aptpkg: {"__grains__": {}}}
+
+
+@pytest.fixture
+def deb822_repo_content():
+    return """
+Types: deb
+URIs: http://cz.archive.ubuntu.com/ubuntu/
+Suites: noble noble-updates noble-backports
+Components: main
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+"""
+
+
+@pytest.fixture
+def deb822_repo_file(tmp_path: pathlib.Path, deb822_repo_content: str):
+    """
+    Create a Debian-style repository in the deb822 format and return
+    the path of the repository file.
+    """
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(deb822_repo_content.strip(), encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture
+def mock_apt_config(deb822_repo_file: pathlib.Path):
+    """
+    Mocking common to deb822 testing so that apt_pkg uses the
+    tmp_path/sources.list.d as the Dir::Etc::sourceparts location
+    """
+    with patch.dict(
+        aptpkg.__salt__,
+        {"config.option": MagicMock()},
+    ), patch.object(apt_pkg, "config") as mock_config:
+        mock_config.find_file.return_value = "/etc/apt/sources.list"
+        mock_config.find_dir.return_value = os.path.dirname(str(deb822_repo_file))
+        yield mock_config
+
+
+@pytest.mark.skipif(not HAS_DEB822, reason="Requires deb822 support")
+@pytest.mark.skipif(
+    not HAS_APT_PKG, reason="Requires debian/ubuntu apt_pkg system library"
+)
+def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can modify an existing repository in the deb822 format.
+    In this test, we match the repository by name and disable it.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    aptpkg.mod_repo(repo, enabled=False, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert "Enabled: no" in repo_file
+    assert f"URIs: {uri}" in repo_file
+
+
+@pytest.mark.skipif(not HAS_DEB822, reason="Requires deb822 support")
+@pytest.mark.skipif(
+    not HAS_APT_PKG, reason="Requires debian/ubuntu apt_pkg system library"
+)
+def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can add a repository in the deb822 format.
+    """
+    uri = "http://security.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble-security main"
+
+    aptpkg.mod_repo(repo, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert f"URIs: {uri}" in repo_file
+    assert "URIs: http://cz.archive.ubuntu.com/ubuntu/" in repo_file
+
+
+@pytest.mark.skipif(not HAS_DEB822, reason="Requires deb822 support")
+@pytest.mark.skipif(
+    not HAS_APT_PKG, reason="Requires debian/ubuntu apt_pkg system library"
+)
+def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can delete a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    with patch.object(aptpkg, "refresh_db"):
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+
+    assert not os.path.isfile(str(deb822_repo_file))
+
+
+@pytest.mark.skipif(not HAS_DEB822, reason="Requires deb822 support")
+@pytest.mark.skipif(
+    not HAS_APT_PKG, reason="Requires debian/ubuntu apt_pkg system library"
+)
+def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can match a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result) == True
+    assert result["uri"] == uri
 
 
 def test_version(lowpkg_info_var):

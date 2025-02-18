@@ -59,6 +59,16 @@ try:
 except ImportError:
     HAS_APT = False
 
+HAS_DEB822 = False
+
+if HAS_APT:
+    try:
+        from aptsources.sourceslist import Deb822SourceEntry, _deb822
+
+        HAS_DEB822 = True
+    except ImportError:
+        pass
+
 try:
     import apt_pkg
 
@@ -1934,8 +1944,11 @@ def list_repos(**kwargs):
        salt '*' pkg.list_repos disabled=True
     """
     repos = {}
-    sources = SourcesList()
-    for source in sources.list:
+    if HAS_DEB822:
+        sources = SourcesList(deb822=True)
+    else:
+        sources = SourcesList()
+    for source in sources:
         if _skip_source(source):
             continue
         if not HAS_APT:
@@ -1946,18 +1959,40 @@ def list_repos(**kwargs):
                 signedby = opts["signedby"].get("value", "")
             else:
                 signedby = ""
+        if HAS_DEB822:
+            try:
+                signedby = source.section.tags.get("Signed-By", signedby)
+            except AttributeError:
+                pass
 
         repo = {}
         repo["file"] = source.file
-        repo["comps"] = getattr(source, "comps", [])
+        repo_comps = getattr(source, "comps", [])
+        repo_dists = source.dist.split(" ")
+        repo["comps"] = repo_comps
         repo["disabled"] = source.disabled
-        repo["dist"] = source.dist
+        repo["enabled"] = not repo["disabled"]  # compatibility with the other modules
+        repo["dist"] = repo_dists.pop(0)
         repo["type"] = source.type
         repo["uri"] = source.uri
-        repo["line"] = source.line.strip()
+        if "Types: " in source.line and "\n" in source.line:
+            repo["line"] = (
+                f"{source.type} {source.uri} {repo['dist']} {' '.join(repo_comps)}"
+            )
+        else:
+            repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
         repo["signedby"] = signedby
         repos.setdefault(source.uri, []).append(repo)
+        if len(repo_dists):
+            for dist in repo_dists:
+                repo_copy = repo.copy()
+                repo_copy["dist"] = dist
+                if "Types: " in source.line and "\n" in source.line:
+                    repo_copy["line"] = (
+                        f"{source.type} {source.uri} {repo_copy['dist']} {' '.join(repo_comps)}"
+                    )
+                repos[source.uri].append(repo_copy)
     return repos
 
 
@@ -1966,12 +2001,17 @@ def get_repo(repo, **kwargs):
     Display a repo from the sources.list / sources.list.d
 
     The repo passed in needs to be a complete repo entry.
+    When system uses repository in the deb822 format,
+    get_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo "myrepo definition"
+        salt '*' pkg.get_repo "deb URL noble main"
     """
     ppa_auth = kwargs.get("ppa_auth", None)
     # we have to be clever about this since the repo definition formats
@@ -2043,11 +2083,17 @@ def del_repo(repo, **kwargs):
     The repo passed in must be a fully formed repository definition
     string.
 
+    When system uses repository in the deb822 format,
+    del_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
+
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo "myrepo definition"
+        salt '*' pkg.del_repo "deb URL noble main"
     """
     is_ppa = False
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
@@ -2069,7 +2115,10 @@ def del_repo(repo, **kwargs):
             else:
                 repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
-    sources = SourcesList()
+    if HAS_DEB822:
+        sources = SourcesList(deb822=True)
+    else:
+        sources = SourcesList()
     repos = [s for s in sources.list if not s.invalid]
     if repos:
         deleted_from = dict()
@@ -2085,7 +2134,7 @@ def del_repo(repo, **kwargs):
                 source.type == repo_entry["type"]
                 and source.architectures == repo_entry["architectures"]
                 and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-                and source.dist == repo_entry["dist"]
+                and repo_entry["dist"] in source.dist
             ):
 
                 s_comps = set(source.comps)
@@ -2564,6 +2613,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     ``ppa:<project>/repo`` format is acceptable. ``ppa:`` format can only be
     used to create a new repository.
 
+    When system uses repository in the deb822 format, mod_repo uses a partial
+    match of distributions.
+
+    In that case, include any distribution of the deb822 repository in the
+    repo definition to match that repo.
+
     The following options are available to modify a repo definition:
 
     architectures
@@ -2618,8 +2673,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
-        salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
+        salt '*' pkg.mod_repo 'deb URL noble main' uri=http://new/uri
+        salt '*' pkg.mod_repo 'deb URL noble main' comps=main,universe
     """
     if "refresh_db" in kwargs:
         refresh = kwargs["refresh_db"]
@@ -2739,7 +2794,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 f'cannot parse "ppa:" style repo definitions: {repo}'
             )
 
-    sources = SourcesList()
+    if HAS_DEB822:
+        sources = SourcesList(deb822=True)
+    else:
+        sources = SourcesList()
     if kwargs.get("consolidate", False):
         # attempt to de-dup and consolidate all sources
         # down to entries in sources.list
@@ -2756,11 +2814,14 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repos = []
     for source in sources:
-        if HAS_APT:
+        if HAS_APT and not HAS_DEB822:
             _, invalid, _, _ = _invalid(source.line)
             if not invalid:
                 repos.append(source)
         else:
+            if HAS_DEB822 and source.types == [""]:
+                # most probably invalid or comment line
+                continue
             repos.append(source)
 
     mod_source = None
@@ -2916,10 +2977,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
+        apt_source_dists = apt_source.dist.split(" ")
         repo_matches = (
             apt_source.type == repo_entry["type"]
             and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-            and apt_source.dist == repo_entry["dist"]
+            and repo_entry["dist"] in apt_source_dists
         )
         kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
 
@@ -2939,14 +3001,25 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
-        mod_source = SourceEntry(repo)
+        if HAS_DEB822:
+            apt_source_file = kwargs.get("file")
+            section = _deb822.Section("")
+            section["Types"] = repo_type
+            section["URIs"] = repo_uri
+            section["Suites"] = repo_dist
+            section["Components"] = " ".join(repo_comps)
+            if kwargs.get("trusted") == True or kwargs.get("Trusted") == True:
+                section["Trusted"] = "yes"
+            mod_source = Deb822SourceEntry(section, apt_source_file)
+        else:
+            mod_source = SourceEntry(repo)
         if "comments" in kwargs:
             mod_source.comment = kwargs["comments"]
         sources.list.append(mod_source)
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    mod_source.line = repo_source_entry.line
+    mod_source.line = repo_source_entry.line  # TODO: Check
     if not mod_source.line.endswith("\n"):
         mod_source.line = mod_source.line + "\n"
 
@@ -2956,7 +3029,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_entry["uri"]:
         mod_source.uri = repo_entry["uri"]
-        mod_source.line = mod_source.str()
+        if not HAS_DEB822:
+            mod_source.line = mod_source.str()
 
     sources.save()
     # on changes, explicitly refresh
@@ -2972,15 +3046,20 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         else:
             signedby = ""
 
+    repo_source_line = mod_source.line
+    if "Types: " in repo_source_line and "\n" in repo_source_line:
+        repo_source_line = f"{mod_source.type} {mod_source.uri} {repo_dist} {' '.join(mod_source.comps)}"
+
     return {
         repo: {
             "architectures": getattr(mod_source, "architectures", []),
+            "dist": mod_source.dist,
             "comps": mod_source.comps,
             "disabled": mod_source.disabled,
             "file": mod_source.file,
             "type": mod_source.type,
             "uri": mod_source.uri,
-            "line": mod_source.line,
+            "line": repo_source_line,
             "signedby": signedby,
         }
     }
@@ -3065,7 +3144,10 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
 
-    source_list = SourcesList()
+    if HAS_DEB822:
+        source_list = SourcesList(deb822=True)
+    else:
+        source_list = SourcesList()
     kwargs = {}
     if not HAS_APT:
         signedby = source_entry.signedby
@@ -3097,7 +3179,7 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
     sanitized["dist"] = _source_entry.dist
     sanitized["type"] = _source_entry.type
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = _source_entry.line.strip()
+    sanitized["line"] = getattr(_source_entry, "line", "").strip()
     sanitized["architectures"] = getattr(_source_entry, "architectures", [])
     sanitized["signedby"] = signedby
     if HAS_APT and signedby:
