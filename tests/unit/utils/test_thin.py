@@ -1295,8 +1295,11 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
-                    (bts("looseversion.py"), bts("")),
-                    (bts("packaging/__init__.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
                 ],
             ),
         )
