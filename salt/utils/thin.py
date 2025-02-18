@@ -19,7 +19,7 @@ import tempfile
 import types
 import zipfile
 
-import distro
+import distro  # pylint: disable=unused-import
 import idna
 import jinja2
 import looseversion
@@ -280,7 +280,6 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
     """
     files = {}
     mods = [
-        "distro",
         "jinja2",
         "yaml",
         "tornado",
@@ -433,7 +432,6 @@ def get_tops(extra_mods="", so_mods=""):
     tops = []
     mods = [
         salt,
-        distro,
         jinja2,
         yaml,
         tornado,
