@@ -139,11 +139,8 @@ jobs:
           docker pull ${{ matrix.container }}
 
       - name: "Create container ${{ matrix.container }}"
-        #run: |
-        #  tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test-pkg --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
-
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -167,11 +164,6 @@ jobs:
       - name: Run Package Tests
         run: |
           docker exec \
-          -e SKIP_REQUIREMENTS_INSTALL=1 \
-          -e RERUN_FAILURES=1 \
-          -e GITHUB_ACTIONS_PIPELINE=1 \
-          -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-          -e COVERAGE_CONTEXT=${{ matrix.slug }} \
           ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}

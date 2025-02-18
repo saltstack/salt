@@ -79,8 +79,6 @@ def create(ctx: Context, image: str, name: str = ""):
         "create",
         f"--name={name}",
         "--privileged",
-        # "--ulimit",
-        # "\"nofile=262144:262144\"",
         f"--workdir={workdir}",
         "-v",
         "/tmp/:/var/lib/docker",
