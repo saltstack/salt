@@ -64,13 +64,15 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     )
 
     # Test pip install before a downgrade
-    dep = "mysqlclient==2.2.7"
-    install = salt_call_cli.run("--local", "pip.install", dep)
+    dep = ["mysqlclient==2.2.7", "sqlparse"]
+    install = salt_call_cli.run("--local", "pip.install", *dep)
     assert install.returncode == 0
 
     # Verify we can use the module dependent on the installed package
     repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run("--local", "mysql", "mydb", "file=/tmp/query.sql")
+    use_lib = salt_call_cli.run(
+        "--local", "mysql.file_query", "mydb", "file_name=/tmp/query.sql"
+    )
     assert "does not exist" in use_lib.stderr
 
     # Verify there is a running minion by getting its PID
