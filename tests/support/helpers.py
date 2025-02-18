@@ -1777,6 +1777,10 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        self.install(
+            "-r", code_dir / "requirements" / "static" / "pkg" / "py3.10" / "linux.txt"
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):

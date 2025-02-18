@@ -280,6 +280,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
     """
     files = {}
     mods = [
+        "distro",
         "jinja2",
         "yaml",
         "tornado",
