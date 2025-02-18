@@ -1,16 +1,10 @@
-name: Workflow Finished
-run-name: Workflow Finished ${{ github.event.workflow_run.display_title }} (${{ github.event.workflow_run.conclusion }})
+name: Workflow PR Finished
+run-name: Workflow PR Finished ${{ github.event.workflow_run.display_title }} (${{ github.event.workflow_run.conclusion }})
 
 on:
   workflow_run:
     workflows:
-      - Nightly
-      - Scheduled
-      - Stage Release
-    branches:
-      - 3006.x
-      - 3007.x
-      - master
+      - CI
     types:
       - completed
 
