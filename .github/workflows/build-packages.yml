@@ -163,6 +163,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      ## DGM try setting up version of Python to use
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      ## DGM try setting up version of Python to use
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v4
         with:
