@@ -282,7 +282,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -300,7 +300,7 @@ jobs:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
     needs:
       - prepare-workflow
     steps:
@@ -412,7 +412,7 @@ jobs:
 
   build-docs:
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -423,7 +423,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -454,7 +454,7 @@ jobs:
 
   build-deps-onedir:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -468,7 +468,7 @@ jobs:
 
   build-salt-onedir:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir
@@ -578,7 +578,7 @@ jobs:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     environment: nightly
     needs:
