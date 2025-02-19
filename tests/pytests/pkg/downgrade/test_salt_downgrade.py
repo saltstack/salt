@@ -73,7 +73,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     use_lib = salt_call_cli.run(
         "--local", "mysql.file_query", "mydb", "file_name=/tmp/query.sql"
     )
-    assert "does not exist" in use_lib.stderr
+    # The should will fail with false in the output because the databse and
+    # file do not exist.
+    assert "false" in use_lib.stdout
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
