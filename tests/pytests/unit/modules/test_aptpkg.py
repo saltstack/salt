@@ -359,7 +359,7 @@ def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
 
     result = aptpkg.get_repo(repo)
 
-    assert bool(result) == True
+    assert bool(result)
     assert result["uri"] == uri
 
 

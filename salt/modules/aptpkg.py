@@ -3004,11 +3004,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if HAS_DEB822:
             apt_source_file = kwargs.get("file")
             section = _deb822.Section("")
-            section["Types"] = repo_type
-            section["URIs"] = repo_uri
-            section["Suites"] = repo_dist
-            section["Components"] = " ".join(repo_comps)
-            if kwargs.get("trusted") == True or kwargs.get("Trusted") == True:
+            section["Types"] = repo_entry["type"]
+            section["URIs"] = repo_entry["uri"]
+            section["Suites"] = repo_entry["dist"]
+            section["Components"] = " ".join(repo_entry["comps"])
+            if kwargs.get("trusted") or kwargs.get("Trusted"):
                 section["Trusted"] = "yes"
             mod_source = Deb822SourceEntry(section, apt_source_file)
         else:
@@ -3019,7 +3019,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    mod_source.line = repo_source_entry.line  # TODO: Check
+    mod_source.line = repo_source_entry.line
     if not mod_source.line.endswith("\n"):
         mod_source.line = mod_source.line + "\n"
 
@@ -3048,7 +3048,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_line = mod_source.line
     if "Types: " in repo_source_line and "\n" in repo_source_line:
-        repo_source_line = f"{mod_source.type} {mod_source.uri} {repo_dist} {' '.join(mod_source.comps)}"
+        repo_source_line = f"{mod_source.type} {mod_source.uri} {repo_entry['dist']} {' '.join(mod_source.comps)}"
 
     return {
         repo: {
