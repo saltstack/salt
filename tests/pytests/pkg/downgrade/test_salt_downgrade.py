@@ -64,7 +64,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     )
 
     # Test pip install before a downgrade
-    for dep in  ["mysqlclient==2.2.7", "sqlparser"]:
+    for dep in ["mysqlclient==2.2.7", "sqlparser"]:
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
