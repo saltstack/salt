@@ -1,25 +1,13 @@
 import json
-import subprocess
 
-import packaging
 import pytest
 
-
-def check_system_python_version():
-    try:
-        ret = subprocess.run(
-            ["/usr/bin/python3", "--version"], capture_output=True, check=True
-        )
-    except FileNotFoundError:
-        return None
-    ver = ret.stdout.decode().split(" ", 1)[-1]
-    return packaging.version.Version(ver) >= packaging.version.Version("3.8")
-
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.8"
+        not check_system_python_version(), reason="Needs system python >= 3.9"
     ),
 ]
 

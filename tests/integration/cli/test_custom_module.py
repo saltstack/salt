@@ -45,7 +45,7 @@ pytestmark = [
         # backports.ssl-match-hostname which is not installed on the system.
     ),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.8"
+        not check_system_python_version(), reason="Needs system python >= 3.9"
     ),
 ]
 

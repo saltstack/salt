@@ -84,7 +84,6 @@ class SSHThinTestCase(TestCase):
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
         self.exp_ret = {
             "certifi": str(code_dir / "certifi"),
-            "distro": str(code_dir / "distro.py"),
             "idna": str(code_dir / "idna"),
             "jinja2": str(code_dir / "jinja2"),
             "msgpack": str(code_dir / "msgpack"),
@@ -479,7 +478,6 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
             "jinja2",
             "yaml",
@@ -592,7 +590,6 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
             "jinja2",
             "yaml",
@@ -715,7 +712,6 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
             "jinja2",
             "yaml",
@@ -1184,7 +1180,6 @@ class SSHThinTestCase(TestCase):
             self._popen(
                 None,
                 side_effect=[
-                    (bts("distro.py"), bts("")),
                     (bts("jinja2/__init__.py"), bts("")),
                     (bts("yaml/__init__.py"), bts("")),
                     (bts("tornado/__init__.py"), bts("")),
@@ -1233,7 +1228,7 @@ class SSHThinTestCase(TestCase):
             self._popen(
                 None,
                 side_effect=[
-                    (bts("distro.py"), bts("")),
+                    # (bts("distro.py"), bts("")),
                     #    (bts("jinja2/__init__.py"), bts("")),
                     #    (bts("yaml/__init__.py"), bts("")),
                     (bts("tornado/__init__.py"), bts("")),

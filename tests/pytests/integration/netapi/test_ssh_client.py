@@ -4,6 +4,7 @@ import pytest
 
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.helpers import SaveRequestsPostHandler, Webserver
 from tests.support.mock import patch
 
@@ -19,6 +20,9 @@ pytestmark = [
         # backports.ssl-match-hostname which is not installed on the system.
     ),
     pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 log = logging.getLogger(__name__)
