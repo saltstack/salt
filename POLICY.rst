@@ -14,7 +14,7 @@ Issue management
 ================
 
 .. warning::
-   **Effective immidiatly.**
+   **Effective immediately.**
 
    - All opened but un-assigned bugs will be migrated to discussions.
    - All new bugs should be opened as a discussion.
