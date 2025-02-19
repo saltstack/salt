@@ -479,6 +479,7 @@ class SSHThinTestCase(TestCase):
         """
         base_tops = [
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",
@@ -591,6 +592,7 @@ class SSHThinTestCase(TestCase):
         """
         base_tops = [
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",
@@ -713,6 +715,7 @@ class SSHThinTestCase(TestCase):
         """
         base_tops = [
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",

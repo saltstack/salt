@@ -19,7 +19,7 @@ import tempfile
 import types
 import zipfile
 
-import distro  # pylint: disable=unused-import
+import distro
 import idna
 import jinja2
 import looseversion
@@ -432,6 +432,7 @@ def get_tops(extra_mods="", so_mods=""):
     tops = []
     mods = [
         salt,
+        distro,
         jinja2,
         yaml,
         tornado,
