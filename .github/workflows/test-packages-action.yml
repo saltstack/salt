@@ -65,7 +65,7 @@ jobs:
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
-    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
@@ -192,7 +192,7 @@ jobs:
   test-macos:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.runner }}
-    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
     strategy:
       fail-fast: false
@@ -311,7 +311,7 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
-    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       matrix:
