@@ -2982,7 +2982,10 @@ class Minion(MinionBase):
                     log.info("Minion is ready to receive requests!")
 
                     # update scheduled job to run with the new master addr
-                    if self.opts["transport"] != "tcp":
+                    if (
+                        self.opts["transport"] != "tcp"
+                        and self.opts["master_alive_interval"] > 0
+                    ):
                         schedule = {
                             "function": "status.master",
                             "seconds": self.opts["master_alive_interval"],
@@ -3031,7 +3034,10 @@ class Minion(MinionBase):
                 self.connected = True
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
-                if self.opts["transport"] != "tcp":
+                if (
+                    self.opts["transport"] != "tcp"
+                    and self.opts["master_alive_interval"] > 0
+                ):
                     schedule = {
                         "function": "status.master",
                         "seconds": self.opts["master_alive_interval"],
