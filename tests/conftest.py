@@ -803,7 +803,6 @@ def salt_factories_default_root_dir(salt_factories_default_root_dir):
         dictionary, then that's the value used, and not the one returned by
         this fixture.
     """
-    print(f"WTF {salt_factories_default_root_dir}")
     if os.environ.get("CI") and pytestskipmarkers.utils.platform.is_windows():
         tempdir = pathlib.Path(
             os.environ.get("RUNNER_TEMP", r"C:\Windows\Temp")
