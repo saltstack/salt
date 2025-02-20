@@ -449,10 +449,10 @@ def test_gnu_slash_linux_in_os_name():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     # - Skip the first if statement
     # - Skip the selinux/systemd stuff (not pertinent)
@@ -526,10 +526,10 @@ def test_suse_os_from_cpe_data():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     distro_mock = MagicMock(
         return_value=("SUSE Linux Enterprise Server ", "12", "x86_64")
@@ -595,10 +595,10 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     suse_release_file = os_release_map.get("suse_release_file")
 
@@ -1151,6 +1151,48 @@ def test_almalinux_8_os_grains():
         "osrelease_info": (8, 5),
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_almalinux_kitten_os_grains():
+    """
+    Test that 'os' grain will properly detect AlmaLinux Kitten
+    """
+    # /etc/os-release data taken from an AlmaLinux Kitten VM, install ISO
+    # AlmaLinux-Kitten-10-20241018.0-x86_64_v2-minimal.iso. At the time of
+    # writting, there was no docker image for Kitten
+    _os_release_data = {
+        "NAME": "AlmaLinux Kitten",
+        "VERSION": "10 (Lion Cub)",
+        "ID": "almalinux",
+        "ID_LIKE": "rhel centos fedora",
+        "VERSION_ID": "10",
+        "PLATFORM_ID": "platform:el10",
+        "PRETTY_NAME": "AlmaLinux Kitten 10 (Lion Cub)",
+        "ANSI_COLOR": "0;34",
+        "LOGO": "fedora-logo-icon",
+        "CPE_NAME": "cpe:/o:almalinux:almalinux:10::baseos",
+        "HOME_URL": "https://almalinux.org/",
+        "DOCUMENTATION_URL": "https://wiki.almalinux.org/",
+        "VENDOR_NAME": "AlmaLinux",
+        "VENDOR_URL": "https://almalinux.org/",
+        "BUG_REPORT_URL": "https://bugs.almalinux.org/",
+        "ALMALINUX_MANTISBT_PROJECT": "AlmaLinux-10",
+        "ALMALINUX_MANTISBT_PROJECT_VERSION": "10",
+        "REDHAT_SUPPORT_PRODUCT": "AlmaLinux",
+        "REDHAT_SUPPORT_PRODUCT_VERSION": "10",
+    }
+    expectation = {
+        "os": "AlmaLinux",
+        "os_family": "RedHat",
+        "oscodename": "Lion Cub",
+        "osfullname": "AlmaLinux Kitten",
+        "osrelease": "10",
+        "osrelease_info": (10,),
+        "osmajorrelease": 10,
+        "osfinger": "AlmaLinux-10",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 

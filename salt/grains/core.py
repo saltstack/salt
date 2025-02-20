@@ -1781,6 +1781,7 @@ _OS_NAME_MAP = {
     "cloudlinux": "CloudLinux",
     "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
+    "almalinuxk": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1852,6 +1853,7 @@ _OS_FAMILY_MAP = {
     "CloudLinux": "RedHat",
     "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
+    "AlmaLinux Kitten": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -2499,7 +2501,15 @@ def _osrelease_data(os, osfullname, osrelease):
             grains["osrelease_info"],
         )
 
-    if os in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian"):
+    if os in (
+        "Debian",
+        "FreeBSD",
+        "OpenBSD",
+        "NetBSD",
+        "Mac",
+        "Raspbian",
+        "AlmaLinux",
+    ):
         os_name = os
     else:
         os_name = osfullname
