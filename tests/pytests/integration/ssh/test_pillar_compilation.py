@@ -7,8 +7,15 @@ import textwrap
 import pytest
 from pytestshellutils.utils.processes import ProcessResult
 
+from tests.pytests.integration.ssh import check_system_python_version
+
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
+]
 
 # The following fixtures are copied from pytests/functional/pillar/test_gpg.py
 

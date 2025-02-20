@@ -6,9 +6,14 @@ sls files importing them.
 
 import pytest
 
+from tests.pytests.integration.ssh import check_system_python_version
+
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 

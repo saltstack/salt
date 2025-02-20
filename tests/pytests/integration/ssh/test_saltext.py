@@ -11,7 +11,7 @@ from tests.support.pytest.helpers import FakeSaltExtension
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.8"
+        not check_system_python_version(), reason="Needs system python >= 3.9"
     ),
 ]
 

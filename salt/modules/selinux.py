@@ -490,7 +490,7 @@ def fcontext_get_policy(
         "[[:alpha:] ]+" if filetype is None else filetype_id_to_string(filetype)
     )
     cmd = (
-        "semanage fcontext -l | egrep "
+        "semanage fcontext -l | grep -E "
         + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
             **cmd_kwargs
         )
@@ -616,7 +616,7 @@ def _fcontext_add_or_delete_policy(
     if "add" == action:
         # need to use --modify if context for name file exists, otherwise ValueError
         filespec = re.escape(name)
-        cmd = f"semanage fcontext -l | egrep '{filespec}'"
+        cmd = f"semanage fcontext -l | grep -E '{filespec} '"
         current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
         if current_entry_text != "":
             action = "modify"
@@ -762,7 +762,7 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
         "port": port,
     }
     cmd = (
-        "semanage port -l | egrep "
+        "semanage port -l | grep -E "
         + "'^{sel_type}{spacer}{protocol}{spacer}((.*)*)[ ]{port}($|,)'".format(
             **cmd_kwargs
         )

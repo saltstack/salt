@@ -197,6 +197,15 @@ class RemotePillarMixin:
         log.trace("ext_pillar_extra_data = %s", extra_data)
         return extra_data
 
+    def validate_return(self, data):
+        if not isinstance(data, dict):
+            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
+                type(data).__name__, data
+            )
+            log.error(msg)
+            # raise an exception! Pillar isn't empty, we can't sync it!
+            raise SaltClientError(msg)
+
 
 class AsyncRemotePillar(RemotePillarMixin):
     """
@@ -276,14 +285,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
-
-        if not isinstance(ret_pillar, dict):
-            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
-                type(ret_pillar).__name__, ret_pillar
-            )
-            log.error(msg)
-            # raise an exception! Pillar isn't empty, we can't sync it!
-            raise SaltClientError(msg)
+        self.validate_return(ret_pillar)
         raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
@@ -374,14 +376,7 @@ class RemotePillar(RemotePillarMixin):
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
-
-        if not isinstance(ret_pillar, dict):
-            log.error(
-                "Got a bad pillar from master, type %s, expecting dict: %s",
-                type(ret_pillar).__name__,
-                ret_pillar,
-            )
-            return {}
+        self.validate_return(ret_pillar)
         return ret_pillar
 
     def destroy(self):

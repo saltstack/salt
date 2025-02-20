@@ -532,7 +532,7 @@ def clean_path(root, path, subdir=False, realpath=True):
     Pass realpath=False if filesystem links should not be resolved.
     """
     if not os.path.isabs(root):
-        return ""
+        root = os.path.join(os.getcwd(), root)
     root = os.path.normpath(root)
     if not os.path.isabs(path):
         path = os.path.join(root, path)

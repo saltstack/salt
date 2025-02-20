@@ -28,9 +28,10 @@ autocommand==2.2.2
     #   jaraco.text
 babel==2.16.0
     # via sphinx
-certifi==2024.8.30
+certifi==2024.8.30 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   requests
 cffi==1.17.1
     # via
@@ -172,7 +173,7 @@ propcache==0.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   yarl
-psutil==6.1.0
+psutil==6.1.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -215,7 +216,7 @@ pyzmq==26.2.0 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

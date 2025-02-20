@@ -1059,7 +1059,14 @@ def test_prep_powershell_cmd_no_powershell():
         )
 
 
-def test_prep_powershell_cmd():
+@pytest.mark.parametrize(
+    "cmd, parsed",
+    [
+        ("Write-Host foo", "& Write-Host foo"),
+        ("$PSVersionTable", "$PSVersionTable"),
+    ],
+)
+def test_prep_powershell_cmd(cmd, parsed):
     """
     Tests _prep_powershell_cmd returns correct cmd
     """
@@ -1068,7 +1075,7 @@ def test_prep_powershell_cmd():
         "salt.utils.path.which", return_value="C:\\powershell.exe"
     ):
         ret = cmdmod._prep_powershell_cmd(
-            win_shell="powershell", cmd="$PSVersionTable", encoded_cmd=False
+            win_shell="powershell", cmd=cmd, encoded_cmd=False
         )
         expected = [
             "C:\\powershell.exe",
@@ -1077,7 +1084,7 @@ def test_prep_powershell_cmd():
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            "& {$PSVersionTable}",
+            parsed,
         ]
         assert ret == expected
 

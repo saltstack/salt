@@ -301,7 +301,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
 
         .. code-block:: jinja
 
-            {% set minion_ips = salt.saltutil.runner('mine.get',
+            {% set minion_ips = salt['saltutil.runner']('mine.get',
                 tgt='*',
                 fun='network.ip_addrs',
                 tgt_type='glob') %}

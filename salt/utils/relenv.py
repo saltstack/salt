@@ -49,10 +49,20 @@ def get_tarball(kernel, arch):
     :param arch: The detected architecture (e.g., 'amd64', 'x86_64', 'arm64').
     :return: The URL of the latest tarball.
     """
-    base_url = "https://repo.saltproject.io/salt/py3/onedir/latest/"
+    base_url = "https://packages.broadcom.com/artifactory/saltproject-generic/onedir"
     try:
         # Request the page listing
         response = requests.get(base_url, timeout=60)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        log.error(f"Failed to retrieve tarball listing: {e}")
+        raise ValueError("Unable to fetch tarball list from repository")
+
+    latest = sorted(re.findall(r"3\d\d\d\.\d", response.text))[-1]
+
+    try:
+        # Request the page listing
+        response = requests.get(f"{base_url}/{latest}", timeout=60)
         response.raise_for_status()
     except requests.RequestException as e:
         log.error(f"Failed to retrieve tarball listing: {e}")
@@ -68,7 +78,7 @@ def get_tarball(kernel, arch):
     # Return the latest tarball URL
     matches.sort()
     latest_tarball = matches[-1]
-    return base_url + latest_tarball
+    return f"{base_url}/{latest}/{latest_tarball}"
 
 
 def download(cachedir, url, destination):

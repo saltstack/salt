@@ -282,6 +282,7 @@ import difflib
 import itertools
 import logging
 import os
+import pathlib
 import posixpath
 import re
 import shutil
@@ -557,7 +558,26 @@ def _gen_recurse_managed_files(
             managed_directories.add(mdest)
             keep.add(mdest)
 
-    return managed_files, managed_directories, managed_symlinks, keep
+    # Sets are randomly ordered. We need to use a list so we can make sure
+    # symlinks are always at the end. This is necessary because the file must
+    # exist before we can create a symlink to it. See issue:
+    # https://github.com/saltstack/salt/issues/64630
+    new_managed_files = list(managed_files)
+    # Now let's move all the symlinks to the end
+    for link_src_relpath, _ in managed_symlinks:
+        for file_dest, file_src in managed_files:
+            # We need to convert relpath to fullpath. We're using pathlib to
+            # be platform-agnostic
+            symlink_full_path = pathlib.Path(f"{name}{os.sep}{link_src_relpath}")
+            file_dest_full_path = pathlib.Path(file_dest)
+            if symlink_full_path == file_dest_full_path:
+                new_managed_files.append(
+                    new_managed_files.pop(
+                        new_managed_files.index((file_dest, file_src))
+                    )
+                )
+
+    return new_managed_files, managed_directories, managed_symlinks, keep
 
 
 def _gen_keep_files(name, require, walk_d=None):
@@ -4645,18 +4665,26 @@ def recurse(
                                 or immediate subdirectories
 
     keep_symlinks
-        Keep symlinks when copying from the source. This option will cause
-        the copy operation to terminate at the symlink. If desire behavior
-        similar to rsync, then set this to True. This option is not taken
-        in account if ``fileserver_followsymlinks`` is set to False.
+
+        Determines how symbolic links (symlinks) are handled during the copying
+        process. When set to ``True``, the copy operation will copy the symlink
+        itself, rather than the file or directory it points to. When set to
+        ``False``, the operation will follow the symlink and copy the target
+        file or directory. If you want behavior similar to rsync, set this
+        option to ``True``.
+
+        However, if the ``fileserver_followsymlinks`` option is set to ``False``,
+        the ``keep_symlinks`` setting will be ignored, and symlinks will not be
+        copied at all.
 
     force_symlinks
-        Force symlink creation. This option will force the symlink creation.
-        If a file or directory is obstructing symlink creation it will be
-        recursively removed so that symlink creation can proceed. This
-        option is usually not needed except in special circumstances. This
-        option is not taken in account if ``fileserver_followsymlinks`` is
-        set to False.
+
+        Controls the creation of symlinks when using ``keep_symlinks``. When set
+        to ``True``, it forces the creation of symlinks by removing any existing
+        files or directories that might be obstructing their creation. This
+        removal is done recursively if a directory is blocking the symlink. This
+        option is only used when ``keep_symlinks`` is passed and is ignored if
+        ``fileserver_followsymlinks`` is set to ``False``.
 
     win_owner
         The owner of the symlink and directories if ``makedirs`` is True. If
@@ -8877,7 +8905,7 @@ def decode(
             - name: /tmp/new_file
             - encoding_type: base64
             - encoded_data: |
-                {{ salt.pillar.get('path:to:data') | indent(8) }}
+                {{ salt['pillar.get']('path:to:data') | indent(8) }}
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 

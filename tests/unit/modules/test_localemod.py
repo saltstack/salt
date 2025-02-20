@@ -2,6 +2,8 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
+import subprocess
+
 import pytest
 
 import salt.modules.localemod as localemod
@@ -9,6 +11,15 @@ from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
+
+
+def _check_localectl():
+    if not hasattr(_check_localectl, "memo"):
+        proc = subprocess.run(["localectl"], check=False, capture_output=True)
+        _check_localectl.memo = (
+            b"Failed to connect to bus: No such file or directory" in proc.stderr
+        )
+    return _check_localectl.memo
 
 
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
@@ -55,6 +66,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.list_avail() == ["A", "B"]
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     @patch(
         "salt.modules.localemod.__salt__",
@@ -87,6 +99,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert "data" in out["x11_model"]
         assert out["x11_model"]["data"] == "pc105"
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     @patch(
         "salt.modules.localemod.__salt__",
@@ -165,6 +178,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert 'Unable to find "localectl"' in str(exc_info.value)
         assert not localemod.log.debug.called
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     @patch(
         "salt.modules.localemod.__salt__",
@@ -175,6 +189,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in str(exc_info.value)
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     @patch(
         "salt.modules.localemod.__salt__",
@@ -185,6 +200,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in str(exc_info.value)
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     @patch(
         "salt.modules.localemod.__salt__",
@@ -831,6 +847,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8", verbose=True) == ret
 
+    @pytest.mark.skipif(_check_localectl, reason="localectl is in degraded state")
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
     def test_parse_localectl(self):
         localectl_out = (

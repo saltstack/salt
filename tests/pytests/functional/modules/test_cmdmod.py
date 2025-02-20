@@ -481,7 +481,13 @@ def test_runas(cmdmod, usermod, runas_usr):
     """
     Ensure that the env is the runas user's
     """
-    out = cmdmod.run("env", runas=runas_usr).splitlines()
+    # photon os sets the nobody user's home directory to /dev/null. This causes
+    # runas to fail because the /dev/null is not a directory.
+    cwd = None
+    if os.path.expanduser(f"~{runas_usr}") == "/dev/null":
+        cwd = "/"
+
+    out = cmdmod.run("env", runas=runas_usr, cwd=cwd).splitlines()
     assert f"USER={runas_usr}" in out
 
 

@@ -19,7 +19,7 @@ permissions:
 jobs:
   update-winrepo:
     name: Update Winrepo
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 
     - name: Checkout Salt

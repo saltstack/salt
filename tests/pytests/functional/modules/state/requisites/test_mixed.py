@@ -116,7 +116,7 @@ def test_requisites_mixed_require_prereq_use_2(state, state_tree):
     # C (2) <--+ <-----p-------+
     #          |           |   |
     # B (3) -p-+ <-+ <-+ --+   |
-    #              |   |       |
+    #              |   |       |
     # E (4) ---r---|---+ <-+   |
     #              |       |   |
     # A (5) --r----+ ---r--+ --+

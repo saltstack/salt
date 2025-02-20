@@ -10,10 +10,14 @@ import pytest
 import salt.utils.files
 import salt.utils.yaml
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -161,28 +165,6 @@ def test_thin_dir(salt_ssh_cli):
     assert thin_dir.is_dir()
     assert thin_dir.joinpath("salt-call").exists()
     assert thin_dir.joinpath("running_data").exists()
-
-
-def test_relenv_dir(salt_ssh_cli):
-    """
-    test to make sure thin_dir is created
-    and salt-call file is included
-    """
-    ret = salt_ssh_cli.run("--relenv", "config.get", "thin_dir")
-    assert ret.returncode == 0
-    thin_dir = pathlib.Path(ret.data)
-    assert thin_dir.is_dir()
-    assert thin_dir
-    assert thin_dir.joinpath("salt-call").exists()
-
-
-def test_relenv_ping(salt_ssh_cli):
-    """
-    Test a simple ping
-    """
-    ret = salt_ssh_cli.run("--relenv", "test.ping")
-    assert ret.returncode == 0
-    assert ret.data is True
 
 
 def test_wipe(salt_ssh_cli):

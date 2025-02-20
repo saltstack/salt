@@ -544,6 +544,11 @@ Section -install_vcredist_2022
     # Only install 64bit VCRedist on 64bit machines
     # Use RunningX64 here to get the Architecture for the system running the
     # installer.
+    # 2013 >= 21005
+    # 2015 >= 23026
+    # 2017 >= 25008
+    # 2019 >= 27508
+    # 2022 >= 30704
     ${If} ${RunningX64}
         StrCpy $VcRedistName "vcredist_x64_2022"
         StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64"
@@ -554,9 +559,10 @@ Section -install_vcredist_2022
 
     # Detecting VCRedist Installation
     detailPrint "Checking for $VcRedistName..."
-    ReadRegDword $0 HKLM $VcRedistReg "Installed"
-    StrCmp $0 "1" +2 0
-    Call InstallVCRedist
+    ReadRegDword $0 HKLM $VcRedistReg "Bld"
+    ${If} $0 < 30704
+        Call InstallVCRedist
+    ${EndIf}
 
 SectionEnd
 

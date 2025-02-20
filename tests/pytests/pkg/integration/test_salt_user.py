@@ -2,6 +2,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 
 import packaging.version
 import psutil
@@ -9,16 +10,31 @@ import pytest
 from saltfactories.utils.tempfiles import temp_directory
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
-    pytest.mark.skip_on_darwin,
-    pytest.mark.skipif(
-        True,
-        reason=(
-            "Package permissions are getting reworked in "
-            "https://github.com/saltstack/salt/pull/66218"
-        ),
-    ),
+    pytest.mark.skip_unless_on_linux,
 ]
+
+
+@pytest.fixture
+def salt_systemd_setup(
+    install_salt,
+    salt_call_cli,
+):
+    """
+    Fixture to set systemd for salt packages to enabled and active
+    Note: assumes Salt packages already installed
+    """
+    install_salt.install()
+
+    # ensure known state, enabled and active
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl enable {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
 
 @pytest.fixture
@@ -52,8 +68,12 @@ def pkg_paths_salt_user():
         "/var/log/salt/master",
         "/var/log/salt/api",
         "/var/log/salt/key",
+        "/var/log/salt/syndic",
         "/var/cache/salt/master",
         "/var/run/salt/master",
+        "/run/salt-master.pid",
+        "/run/salt-syndic.pid",
+        "/run/salt-api.pid",
     ]
 
 
@@ -68,16 +88,18 @@ def pkg_paths_salt_user_exclusions():
     return paths
 
 
-@pytest.fixture(autouse=True)
-def _skip_on_non_relenv(install_salt):
-    if not install_salt.relenv:
-        pytest.skip("The salt user only exists on relenv versions of salt")
-
-
-def test_salt_user_master(salt_master, install_salt):
+def test_salt_user_master(install_salt, salt_master):
     """
     Test the correct user is running the Salt Master
     """
+    for count in range(0, 30):
+        if salt_master.is_running():
+            break
+        else:
+            time.sleep(2)
+
+    assert salt_master.is_running()
+
     match = False
     for proc in psutil.Process(salt_master.pid).children():
         assert proc.username() == "salt"
@@ -86,10 +108,12 @@ def test_salt_user_master(salt_master, install_salt):
     assert match
 
 
-def test_salt_user_home(install_salt):
+def test_salt_user_home(install_salt, salt_master):
     """
     Test the salt user's home is /opt/saltstack/salt
     """
+    assert salt_master.is_running()
+
     proc = subprocess.run(
         ["getent", "passwd", "salt"], check=False, capture_output=True
     )
@@ -102,10 +126,12 @@ def test_salt_user_home(install_salt):
     assert home == "/opt/saltstack/salt"
 
 
-def test_salt_user_group(install_salt):
+def test_salt_user_group(install_salt, salt_master):
     """
     Test the salt user is in the salt group
     """
+    assert salt_master.is_running()
+
     proc = subprocess.run(["id", "salt"], check=False, capture_output=True)
     assert proc.returncode == 0
     in_group = False
@@ -118,10 +144,12 @@ def test_salt_user_group(install_salt):
     assert in_group is True
 
 
-def test_salt_user_shell(install_salt):
+def test_salt_user_shell(install_salt, salt_master):
     """
     Test the salt user's login shell
     """
+    assert salt_master.is_running()
+
     proc = subprocess.run(
         ["getent", "passwd", "salt"], check=False, capture_output=True
     )
@@ -137,7 +165,11 @@ def test_salt_user_shell(install_salt):
 
 
 def test_pkg_paths(
-    install_salt, pkg_paths, pkg_paths_salt_user, pkg_paths_salt_user_exclusions
+    install_salt,
+    pkg_paths,
+    pkg_paths_salt_user,
+    pkg_paths_salt_user_exclusions,
+    salt_call_cli,
 ):
     """
     Test package paths ownership
@@ -146,12 +178,15 @@ def test_pkg_paths(
         "3006.4"
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
+
     salt_user_subdirs = []
+
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
         assert pkg_path.exists()
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
+
             # Directories owned by salt:salt or their subdirs/files
             if (
                 str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
@@ -171,6 +206,8 @@ def test_pkg_paths(
                 assert path.owner() == "root"
                 assert path.group() == "root"
                 for file in files:
+                    if file.endswith("ipc"):
+                        continue
                     file_path = path.joinpath(file)
                     # Individual files owned by salt user
                     if str(file_path) in pkg_paths_salt_user:
@@ -182,7 +219,11 @@ def test_pkg_paths(
 
 @pytest.mark.skip_if_binaries_missing("logrotate")
 def test_paths_log_rotation(
-    salt_master, salt_minion, salt_call_cli, install_salt, pkg_tests_account
+    install_salt,
+    salt_master,
+    salt_minion,
+    salt_call_cli,
+    pkg_tests_account,
 ):
     """
     Test the correct ownership is assigned when log rotation occurs
@@ -207,8 +248,6 @@ def test_paths_log_rotation(
             "Only tests RedHat family packages till logrotation paths are resolved on Ubuntu/Debian, see issue 65231"
         )
 
-    # check that the salt_master is running
-    assert salt_master.is_running()
     match = False
     for proc in psutil.Process(salt_master.pid).children():
         assert proc.username() == "salt"
@@ -375,3 +414,7 @@ def test_paths_log_rotation(
 
                                 bkup_count += 1
                                 assert ret.returncode == 0
+
+    # ensure leave salt_master running
+    salt_master.start()
+    assert salt_master.is_running() is True

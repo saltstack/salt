@@ -228,7 +228,11 @@ def is_aarch64():
     """
     Simple function to return if host is AArch64 or not
     """
-    return platform.machine().startswith("aarch64")
+    if is_darwin():
+        # Allow for MacOS Arm64 platform returning differently from Linux
+        return platform.machine().startswith("arm64")
+    else:
+        return platform.machine().startswith("aarch64")
 
 
 def spawning_platform():
