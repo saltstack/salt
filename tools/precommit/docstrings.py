@@ -345,7 +345,6 @@ MISSING_DOCSTRINGS = {
         "get_pillars",
         "expand_variables",
         "render_jinja",
-        "expand_classes_in_order",
         "dict_search_and_replace",
         "expanded_dict_from_minion",
         "find_value_to_expand",

@@ -497,8 +497,16 @@ def _get_connected_ips(port):
 
     for conn in conns:
         if conn.status == psutil.CONN_ESTABLISHED:
-            if conn.laddr.port == port:
-                connected_ips.add(conn.laddr.ip)
+            if conn.raddr.port == port:
+                log.debug(
+                    "%s %s:%s --> %s:%s",
+                    conn.status,
+                    conn.laddr.ip,
+                    conn.laddr.port,
+                    conn.raddr.ip,
+                    conn.raddr.port,
+                )
+                connected_ips.add(conn.raddr.ip)
 
     return connected_ips
 

@@ -83,17 +83,19 @@ class SSHThinTestCase(TestCase):
 
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
         self.exp_ret = {
-            "distro": str(code_dir / "distro.py"),
+            "certifi": str(code_dir / "certifi"),
+            "idna": str(code_dir / "idna"),
             "jinja2": str(code_dir / "jinja2"),
-            "yaml": str(code_dir / "yaml"),
-            "tornado": str(code_dir / "tornado"),
             "msgpack": str(code_dir / "msgpack"),
             "networkx": str(code_dir / "networkx"),
-            "certifi": str(code_dir / "certifi"),
-            "singledispatch": str(code_dir / "singledispatch.py"),
-            "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
+            "requests": str(code_dir / "requests"),
+            "singledispatch": str(code_dir / "singledispatch.py"),
+            "tornado": str(code_dir / "tornado"),
+            "urllib3": str(code_dir / "urllib3"),
+            "yaml": str(code_dir / "yaml"),
         }
+
         self.exc_libs = ["jinja2", "yaml"]
 
     def tearDown(self):
@@ -476,8 +478,8 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",
@@ -493,6 +495,9 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "requests",
+            "idna",
+            "urllib3",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -586,8 +591,8 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",
@@ -603,6 +608,9 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "requests",
+            "idna",
+            "urllib3",
             "foo",
             "bar.py",
         ]
@@ -706,8 +714,8 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "distro",
             "salt",
+            "distro",
             "jinja2",
             "yaml",
             "tornado",
@@ -723,6 +731,9 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
+            "requests",
+            "idna",
+            "urllib3",
             "foo.so",
             "bar.so",
         ]
@@ -1177,6 +1188,9 @@ class SSHThinTestCase(TestCase):
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
                     (bts("networkx/__init__.py"), bts("")),
+                    (bts("requests/__init__.py"), bts("")),
+                    (bts("idna/__init__.py"), bts("")),
+                    (bts("urllib3/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
@@ -1184,9 +1198,9 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
-                    (bts("looseversion.py"), bts("")),
+                    (bts(""), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
-                    (bts("distro.py"), bts("")),
+                    (bts(""), bts("")),
                 ],
             ),
         )
@@ -1217,9 +1231,15 @@ class SSHThinTestCase(TestCase):
             self._popen(
                 None,
                 side_effect=[
+                    # (bts("distro.py"), bts("")),
+                    #    (bts("jinja2/__init__.py"), bts("")),
+                    #    (bts("yaml/__init__.py"), bts("")),
                     (bts("tornado/__init__.py"), bts("")),
                     (bts("msgpack/__init__.py"), bts("")),
                     (bts("networkx/__init__.py"), bts("")),
+                    (bts("requests/__init__.py"), bts("")),
+                    (bts("idna/__init__.py"), bts("")),
+                    (bts("urllib3/__init__.py"), bts("")),
                     (bts("certifi/__init__.py"), bts("")),
                     (bts("singledispatch.py"), bts("")),
                     (bts(""), bts("")),
@@ -1227,9 +1247,9 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
-                    (bts("looseversion.py"), bts("")),
+                    (bts(""), bts("")),
                     (bts("packaging/__init__.py"), bts("")),
-                    (bts("distro.py"), bts("")),
+                    (bts(""), bts("")),
                 ],
             ),
         )
@@ -1273,8 +1293,11 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
-                    (bts("looseversion.py"), bts("")),
-                    (bts("packaging/__init__.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
                 ],
             ),
         )

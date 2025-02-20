@@ -211,6 +211,14 @@ def ipc_publish_client(node, opts, io_loop):
 
 
 def ipc_publish_server(node, opts):
+    """
+    Create an IPC publish server.
+
+    With the exception of a master's pull_path, all ipc path permission have
+    user read/write permissions. On a master the ipc publish server's pull_path
+    permissions are also group read/write. This is done to facilitate non root
+    users running the salt cli to execute jobs on a master.
+    """
     # Default to TCP for now
     kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
@@ -233,6 +241,7 @@ def ipc_publish_server(node, opts):
             kwargs.update(
                 pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
                 pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+                pub_path_perms=0o660,
             )
         else:
             id_hash = _minion_hash(

@@ -162,8 +162,11 @@ def salt_minion():
     """
     import signal
 
+    import salt.utils.debug
     import salt.utils.platform
     import salt.utils.process
+
+    salt.utils.debug.enable_sigusr1_handler()
 
     salt.utils.process.notify_systemd()
 

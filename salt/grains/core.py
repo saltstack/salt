@@ -287,7 +287,12 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
+    gpu_classes = (
+        "3d controller",
+        "display controller",
+        "processing accelerators",
+        "vga compatible controller",
+    )
 
     devs = []
     try:
@@ -1276,6 +1281,7 @@ def _virtual(osdata):
             "cannot execute it. Grains output might not be "
             "accurate.",
             command,
+            once=True,
         )
     return grains
 
@@ -1870,6 +1876,7 @@ _OS_FAMILY_MAP = {
     "SLES_SAP": "Suse",
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
+    "Manjaro ARM": "Arch",
     "Antergos": "Arch",
     "EndeavourOS": "Arch",
     "ALT": "RedHat",
@@ -2518,10 +2525,31 @@ def _systemd():
     """
     Return the systemd grain
     """
-    systemd_info = __salt__["cmd.run"]("systemctl --version").splitlines()
+    systemd_version = "UNDEFINED"
+    systemd_features = ""
+    try:
+        systemd_output = __salt__["cmd.run_all"]("systemctl --version")
+    except Exception:  # pylint: disable=broad-except
+        log.error("Exception while executing `systemctl --version`", exc_info=True)
+        return {
+            "version": systemd_version,
+            "features": systemd_features,
+        }
+    if systemd_output.get("retcode") == 0:
+        systemd_info = systemd_output.get("stdout", "").splitlines()
+        try:
+            if systemd_info[0].startswith("systemd "):
+                systemd_version = systemd_info[0].split()[1]
+                systemd_features = systemd_info[1]
+        except IndexError:
+            pass
+    if systemd_version == "UNDEFINED" or systemd_features == "":
+        log.error(
+            "Unexpected output returned by `systemctl --version`: %s", systemd_output
+        )
     return {
-        "version": systemd_info[0].split()[1],
-        "features": systemd_info[1],
+        "version": systemd_version,
+        "features": systemd_features,
     }
 
 

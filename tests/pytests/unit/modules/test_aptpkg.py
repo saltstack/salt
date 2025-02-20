@@ -450,7 +450,7 @@ def test_get_http_proxy_url_username_passwd():
     """
     Test _get_http_proxy_url when username and passwod set
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = "user"
     passwd = "password"
@@ -466,7 +466,7 @@ def test_get_http_proxy_url():
     """
     Test basic functionality for _get_http_proxy_url
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = ""
     passwd = ""

@@ -349,6 +349,9 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
+            # Though not set here, we're verifying there were set
             "Specify settings for optional component installation and component repair",
             "Disabled",
             [
@@ -358,6 +361,8 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
             "Specify settings for optional component installation and component repair",
             {
                 "Alternate source file path": "",
@@ -371,6 +376,8 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
             "Specify settings for optional component installation and component repair",
             {
                 "Alternate source file path": r"\\some\fake\server",
@@ -757,3 +764,16 @@ def test_set_computer_policy_multiple_policies(clean_comp, lgpo_bin, shell):
             r"\\AU[\s]*AllowMUUpdateService[\s]*DELETE",
         ],
     )
+
+
+def test__encode_xmlns_url():
+    """
+    Tests the _encode_xmlns_url function.
+    Spaces in the xmlns url should be converted to %20
+    """
+    line = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity intelligence">'
+    result = re.sub(
+        r'(.*)(\bxmlns(?::\w+)?)\s*=\s*"([^"]+)"(.*)', win_lgpo._encode_xmlns_url, line
+    )
+    expected = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity%20intelligence">'
+    assert result == expected

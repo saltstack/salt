@@ -266,7 +266,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     win_shell = salt.utils.path.which(win_shell)
 
     if not win_shell:
-        raise CommandExecutionError("PowerShell binary not found")
+        raise CommandExecutionError(f"PowerShell binary not found: {win_shell}")
 
     new_cmd = [win_shell, "-NonInteractive", "-NoProfile", "-ExecutionPolicy", "Bypass"]
 
@@ -290,7 +290,17 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         # Strip whitespace
         if isinstance(cmd, list):
             cmd = " ".join(cmd)
-        new_cmd.extend(["-Command", f"& {{{cmd.strip()}}}"])
+
+        # Commands that are a specific keyword behave differently. They fail if
+        # you add a "&" to the front. Add those here as we find them:
+        keywords = ["$", "&", ".", "Configuration"]
+
+        for keyword in keywords:
+            if cmd.startswith(keyword):
+                new_cmd.extend(["-Command", f"{cmd.strip()}"])
+                break
+        else:
+            new_cmd.extend(["-Command", f"& {cmd.strip()}"])
 
     log.debug(new_cmd)
     return new_cmd
@@ -2689,11 +2699,15 @@ def script(
 
     :param str args: String of command line args to pass to the script. Only
         used if no args are specified as part of the `name` argument. To pass a
-        string containing spaces in YAML, you will need to doubly-quote it:
+        string containing spaces in YAML, you will need to doubly-quote it.
+        Additionally, if you need to pass falsey values (e.g., "0", "", "False"),
+        you should doubly-quote them to ensure they are correctly interpreted:
 
         .. code-block:: bash
 
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
+            salt myminion cmd.script salt://foo.sh "''0''"
+            salt myminion cmd.script salt://foo.sh "''False''"
 
     :param str cwd: The directory from which to execute the command. Defaults
         to the directory returned from Python's tempfile.mkstemp.
@@ -2835,6 +2849,10 @@ def script(
 
       .. versionadded:: 2019.2.0
 
+    :return: The return value of the script execution, including stdout, stderr,
+        and the exit code. If the script returns a falsey string value, it should be
+        doubly-quoted to ensure it is correctly interpreted by Salt.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2919,8 +2937,11 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if salt.utils.platform.is_windows() and shell.lower() != "powershell":
-        cmd_path = _cmd_quote(path, escape=False)
+    if salt.utils.platform.is_windows():
+        if shell.lower() not in ["powershell", "pwsh"]:
+            cmd_path = _cmd_quote(path, escape=False)
+        else:
+            cmd_path = path
     else:
         cmd_path = _cmd_quote(path)
 
@@ -4096,6 +4117,7 @@ def powershell(
         cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
+        cmd = f"{{{cmd}}}"
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'

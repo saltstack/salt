@@ -834,18 +834,19 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
-        if exc is not None:
-            # Wait to raise the exception until euid/egid are restored to avoid
-            # permission errors in writing to minion log.
-            if exc == zipfile.LargeZipFile:
-                raise CommandExecutionError(
-                    "Resulting zip file too large, would require ZIP64 support"
-                    "which has not been enabled. Rerun command with zip64=True"
-                )
-            else:
-                raise CommandExecutionError(
-                    f"Exception encountered creating zipfile: {exc}"
-                )
+        if "exc" in vars() or "exc" in globals():
+            if exc is not None:
+                # Wait to raise the exception until euid/egid are restored to avoid
+                # permission errors in writing to minion log.
+                if exc == zipfile.LargeZipFile:
+                    raise CommandExecutionError(
+                        "Resulting zip file too large, would require ZIP64 support"
+                        "which has not been enabled. Rerun command with zip64=True"
+                    )
+                else:
+                    raise CommandExecutionError(
+                        f"Exception encountered creating zipfile: {exc}"
+                    )
 
     return archived_files
 

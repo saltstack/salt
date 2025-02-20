@@ -34,11 +34,6 @@ def test_directory_symlink_dry_run(file, tmp_path):
     Ensure that symlinks are followed when file.directory is run with
     test=True
     """
-    if IS_WINDOWS and not os.environ.get("GITHUB_ACTIONS_PIPELINE"):
-        pytest.xfail(
-            "This test fails when running from Jenkins but not on the GitHub "
-            "Actions Pipeline"
-        )
     tmp_dir = tmp_path / "pgdata"
     sym_dir = tmp_path / "pg_data"
 
@@ -57,7 +52,22 @@ def test_directory_symlink_dry_run(file, tmp_path):
     ret = file.directory(
         test=True, name=str(sym_dir), follow_symlinks=True, **extra_kwds
     )
-    assert ret.result is True
+
+    expected = True
+
+    if IS_WINDOWS:
+        # On Windows the result is None because there would have been changes
+        # made to the directory (making Administrator the Owner)
+        # https://docs.saltproject.io/en/latest/ref/states/writing.html#return-data
+        expected = None
+
+    assert ret.result is expected
+
+
+def _kernel_check(lookfor):
+    with salt.utils.files.fopen("/proc/version") as fp:
+        versioninfo = fp.read().lower()
+    return lookfor in versioninfo
 
 
 @pytest.mark.skip_if_not_root
@@ -83,7 +93,10 @@ def test_directory_max_depth(file, tmp_path):
     initial_mode = "0111"
     changed_mode = "0555"
 
-    if salt.utils.platform.is_photonos():
+    # Check that we are not just running photon but the kernel matches. This
+    # check should fail if we are in a photon container running on and os other
+    # than photon.
+    if salt.utils.platform.is_photonos() and _kernel_check("photon"):
         initial_modes = {
             0: {sub: "0750", subsub: "0110"},
             1: {sub: "0110", subsub: "0110"},

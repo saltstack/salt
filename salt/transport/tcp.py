@@ -309,13 +309,13 @@ class PublishClient(salt.transport.base.PublishClient):
                     _connect_to = self.path
                 else:
                     _connect_to = f"{self.host}:{self.port}"
-                log.warning(
-                    "TCP Publish Client encountered an exception while connecting to"
-                    " %s: %r, will reconnect in %d seconds - %s",
+                log.debug(
+                    "%s encountered an exception while connecting to"
+                    " %s: %r, will reconnect in %d seconds",
+                    self,
                     _connect_to,
                     exc,
                     self.backoff,
-                    self._trace,
                 )
                 if timeout and time.monotonic() - start > timeout:
                     break
@@ -428,18 +428,22 @@ class PublishClient(salt.transport.base.PublishClient):
         while not self._stream:
             # Retry quickly, we may want to increase this if it's hogging cpu.
             await asyncio.sleep(0.003)
+        tasks = []
         while True:
             msg = await self.recv()
             if msg:
                 try:
                     # XXX This is handled better in the websocket transport work
-                    await callback(msg)
+                    tasks.append(asyncio.create_task(callback(msg)))
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
                         exc_info=True,
                     )
+            for task in tasks[:]:
+                if task.done():
+                    tasks.remove(task)
 
     def on_recv(self, callback):
         """
@@ -1149,7 +1153,13 @@ class TCPPuller:
     """
 
     def __init__(
-        self, host=None, port=None, path=None, io_loop=None, payload_handler=None
+        self,
+        host=None,
+        port=None,
+        path=None,
+        mode=0o600,
+        io_loop=None,
+        payload_handler=None,
     ):
         """
         Create a new Tornado IPC server
@@ -1169,6 +1179,7 @@ class TCPPuller:
         self.host = host
         self.port = port
         self.path = path
+        self.mode = mode
         self._started = False
         self.payload_handler = payload_handler
 
@@ -1186,7 +1197,7 @@ class TCPPuller:
         # Start up the ioloop
         if self.path:
             log.trace("IPCServer: binding to socket: %s", self.path)
-            self.sock = tornado.netutil.bind_unix_socket(self.path)
+            self.sock = tornado.netutil.bind_unix_socket(self.path, self.mode)
         else:
             log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1327,7 +1338,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
         ssl=None,
+        started=None,
     ):
         self.opts = opts
         self.pub_sock = None
@@ -1337,7 +1351,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pull_path_perms = pull_path_perms
+        self.pub_path_perms = pub_path_perms
         self.ssl = ssl
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     @property
     def topic_support(self):
@@ -1355,6 +1375,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_host": self.pull_host,
             "pull_port": self.pull_port,
             "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
+            "ssl": self.ssl,
+            "started": self.started,
         }
 
     def publish_daemon(
@@ -1406,7 +1430,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug(
                 "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
             )
-            sock = tornado.netutil.bind_unix_socket(self.pub_path)
+            with salt.utils.files.set_umask(0o177):
+                sock = tornado.netutil.bind_unix_socket(
+                    self.pub_path, self.pub_path_perms
+                )
         else:
             log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
@@ -1435,17 +1462,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pull_host = self.pull_host
             pull_port = self.pull_port
 
-        self.pull_sock = TCPPuller(
-            host=self.pull_host,
-            port=self.pull_port,
-            path=self.pull_path,
-            io_loop=io_loop,
-            payload_handler=publish_payload,
-        )
-
-        # Securely create socket
         with salt.utils.files.set_umask(0o177):
+            self.pull_sock = TCPPuller(
+                host=self.pull_host,
+                port=self.pull_port,
+                path=self.pull_path,
+                mode=self.pull_path_perms,
+                io_loop=io_loop,
+                payload_handler=publish_payload,
+            )
+            # Securely create socket
             self.pull_sock.start()
+        self.started.set()
 
     def pre_fork(self, process_manager):
         """
@@ -1701,10 +1729,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._tcp_client = TCPClientKeepAlive(opts)
         self.source_ip = opts.get("source_ip")
         self.source_port = opts.get("source_ret_port")
-        self._mid = 1
-        self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
         # TODO: max queue size
-        self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
 
         self._read_until_future = None
@@ -1826,18 +1851,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._stream_return_running = False
 
     def _message_id(self):
-        wrap = False
-        while self._mid in self.send_future_map:
-            if self._mid >= self._max_messages:
-                if wrap:
-                    # this shouldn't ever happen, but just in case
-                    raise Exception("Unable to find available messageid")
-                self._mid = 1
-                wrap = True
-            else:
-                self._mid += 1
-
-        return self._mid
+        return str(uuid.uuid4())
 
     def timeout_message(self, message_id, msg):
         if message_id not in self.send_future_map:

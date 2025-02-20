@@ -6,19 +6,21 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create a custom config
     pytest.helpers.custom_config()
-
-    pytest.helpers.run_command(
-        [pytest.INST_BIN, "/S", "/custom-config=custom_conf", "/master=cli_master"]
-    )
-    yield
+    # Install salt with custom config
+    args = ["/S", "/custom-config=custom_conf", "/master=cli_master"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
 def test_binaries_present(install):
-    assert os.path.exists(rf"{pytest.INST_DIR}\ssm.exe")
+    # This will show the contents of the directory on failure
+    inst_dir = pytest.INST_DIR
+    inst_dir_exists = os.path.exists(inst_dir)
+    dir_contents = os.listdir(inst_dir)
+    assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 
 def test_config_present(install):

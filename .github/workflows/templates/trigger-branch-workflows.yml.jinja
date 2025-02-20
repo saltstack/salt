@@ -6,7 +6,7 @@
   <%- do conclusion_needs.append(job_name) %>
     name: Trigger Branch Workflows
     if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - workflow-requirements
 
