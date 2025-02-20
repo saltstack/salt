@@ -27,6 +27,9 @@ pytestmark = [
 
 @pytest.fixture
 def pkgrepo(states, grains):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     if grains["os_family"] != "Debian":
         raise pytest.skip.Exception(
             "Test only for debian based platforms", _use_item_location=True
@@ -661,8 +664,8 @@ class Repo:
     @alt_repo.default
     def _default_alt_repo(self):
         """
-        Use an alternative repo, packages do not
-        exist for the OS on repo.saltproject.io
+        Use an alternative repo, packages do not exist for the OS on
+        packages.broadcom.com
         """
         if (
             self.grains["osfullname"] == "Ubuntu"
@@ -690,7 +693,7 @@ class Repo:
 
     @repo_url.default
     def _default_repo_url(self):
-        return f"https://repo.saltproject.io/py3/{self.fullname}/{self.grains['osrelease']}/{self.grains['osarch']}/latest"
+        return "https://packages.broadcom.com/artifactory/saltproject-deb/"
 
     @repo_content.default
     def _default_repo_content(self):
@@ -863,7 +866,7 @@ def test_adding_repo_file_signedby_alt_file(pkgrepo, states, repo):
     assert repo.repo_content in ret.comment
 
     key_file = repo.key_file.parent / "salt-alt-key.gpg"
-    repo_content = "deb [arch=amd64 signed-by={}] https://repo.saltproject.io/py3/debian/10/amd64/latest buster main".format(
+    repo_content = "deb [arch=amd64 signed-by={}] https://packages.broadcom.com/artifactory/saltproject-deb/ buster main".format(
         str(key_file)
     )
     ret = states.pkgrepo.managed(
@@ -925,7 +928,7 @@ def test_adding_repo_file_signedby_fail_key_keyurl(
                 name=repo.repo_content,
                 file=str(repo.repo_file),
                 clean_file=True,
-                key_url="https://repo.saltproject.io/salt/py3/ubuntu/20.04/amd64/latest/SALT-PROJECT-GPG-PUBKEY-2023.pub",
+                key_url="https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
                 aptkey=False,
             )
 

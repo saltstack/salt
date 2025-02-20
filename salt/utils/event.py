@@ -76,6 +76,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
+from salt.exceptions import SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
@@ -550,6 +551,9 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
+                if not self._run_io_loop_sync:
+                    log.error("Trying to get event with async subscriber")
+                    raise SaltInvocationError("get_event needs synchronous subscriber")
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break

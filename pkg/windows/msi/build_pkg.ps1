@@ -77,7 +77,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 #-------------------------------------------------------------------------------
 
 $WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL       = "https://repo.saltproject.io/windows/dependencies"
+$DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/vcredist"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -169,12 +169,12 @@ if ( ! "$env:WIX" ) {
 #-------------------------------------------------------------------------------
 
 $RUNTIMES = @(
-    ("Microsoft_VC143_CRT_x64.msm", "64", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
-    ("Microsoft_VC143_CRT_x86.msm", "32", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
+    ("Microsoft_VC143_CRT_x64.msm", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
+    ("Microsoft_VC143_CRT_x86.msm", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
 )
 $RUNTIMES | ForEach-Object {
-    $name, $arch, $hash = $_
-    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$arch/$name" "$hash"
+    $name, $hash = $_
+    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$name" "$hash"
 }
 
 #-------------------------------------------------------------------------------

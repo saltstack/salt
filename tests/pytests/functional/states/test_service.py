@@ -3,6 +3,7 @@ Tests for the service state
 """
 
 import os
+import subprocess
 
 import pytest
 
@@ -19,6 +20,20 @@ pytestmark = [
 INIT_DELAY = 5
 STOPPED = False
 RUNNING = True
+
+
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+            _check_systemctl.memo = (
+                b"Failed to get D-Bus connection: No such file or directory"
+                in proc.stderr
+                or b"Failed to connect to bus: No such file or directory" in proc.stderr
+            )
+    return _check_systemctl.memo
 
 
 @pytest.fixture
@@ -86,6 +101,7 @@ def check_service_status(exp_return, modules, service_name):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_running(service_name, modules, states):
     """
     test service.running state module
@@ -105,6 +121,7 @@ def test_service_running(service_name, modules, states):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_dead(service_name, modules, states):
     """
     test service.dead state module
@@ -119,6 +136,7 @@ def test_service_dead(service_name, modules, states):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_dead_init_delay(service_name, modules, states):
     """
     test service.dead state module
