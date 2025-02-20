@@ -193,12 +193,21 @@ By default, PRs run a limited subset of the test suite against the following
 operating systems:
 
 * Linux:
+    - Latest ``Amazon Linux Arm64``
+    - Latest ``Amazon Linux x86_64``
+    - Latest ``Debian Linux Arm64``
+    - Latest ``Debian Linux x86_64``
+    - Latest ``Photon OS Arm64``
+    - Latest ``Photon OS x86_64``
+    - Latest ``Rocky Linux Arm64``
     - Latest ``Rocky Linux x86_64``
-    - Latest ``Amazon Linux aarch64``
-    - Latest ``Ubuntu LTS arm64``
-    - Latest ``Arch Linux x86_64``
-* Latest ``Windows Server x86_64``
-* Latest ``MacOS arm64``
+    - Latest ``Ubuntu LTS Arm64``
+    - Latest ``Ubuntu LTS x86_64``
+* Windows Server:
+    - Latest ``Windows Server x86_64``
+* macOS:
+    - Latest ``MacOS Arm64``
+    - Latest ``MacOS x86_64``
 
 Optional OS additions
 ---------------------

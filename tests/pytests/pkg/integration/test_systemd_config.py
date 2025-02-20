@@ -3,7 +3,7 @@ import subprocess
 import pytest
 
 pytestmark = [
-    pytest.mark.skip_on_windows(reason="Linux test only"),
+    pytest.mark.skip_unless_on_linux,
 ]
 
 

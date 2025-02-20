@@ -77,7 +77,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 #-------------------------------------------------------------------------------
 
 $WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL       = "https://repo.saltproject.io/windows/dependencies"
+$DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/vcredist"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -89,6 +89,11 @@ $BUILD_ARCH     = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $RUNTIME_DIR    = [System.Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
 $CSC_BIN        = "$RUNTIME_DIR\csc.exe"
+
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$TIME_STAMP     = $origin.AddSeconds($hash_time)
+
 
 if ( $BUILD_ARCH -eq "64bit" ) {
     $BUILD_ARCH    = "AMD64"
@@ -164,12 +169,12 @@ if ( ! "$env:WIX" ) {
 #-------------------------------------------------------------------------------
 
 $RUNTIMES = @(
-    ("Microsoft_VC143_CRT_x64.msm", "64", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
-    ("Microsoft_VC143_CRT_x86.msm", "32", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
+    ("Microsoft_VC143_CRT_x64.msm", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
+    ("Microsoft_VC143_CRT_x86.msm", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
 )
 $RUNTIMES | ForEach-Object {
-    $name, $arch, $hash = $_
-    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$arch/$name" "$hash"
+    $name, $hash = $_
+    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$name" "$hash"
 }
 
 #-------------------------------------------------------------------------------
@@ -515,34 +520,23 @@ $remove | ForEach-Object {
 #-------------------------------------------------------------------------------
 # Set timestamps on Files
 #-------------------------------------------------------------------------------
-# We're doing this on the dlls that were created abive
-
-Write-Host "Getting commit time stamp: " -NoNewline
-[DateTime]$origin = "1970-01-01 00:00:00"
-$hash_time = $(git show -s --format=%at)
-$time_stamp = $origin.AddSeconds($hash_time)
-if ( $hash_time ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
+# We're doing this on the dlls that were created above
 
 Write-Host "Setting time stamp on all files: " -NoNewline
 $found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
 $found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
+    $_.CreationTime = $TIME_STAMP
+    $_.LastAccessTime = $TIME_STAMP
+    $_.LastWriteTime = $TIME_STAMP
 }
 Write-Result "Success" -ForegroundColor Green
 
 Write-Host "Setting time stamp on installer dlls: " -NoNewline
 $found = Get-ChildItem -Path $SCRIPT_DIR -Filter "*.dll" -Recurse
 $found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
+    $_.CreationTime = $TIME_STAMP
+    $_.LastAccessTime = $TIME_STAMP
+    $_.LastWriteTime = $TIME_STAMP
 }
 Write-Result "Success" -ForegroundColor Green
 

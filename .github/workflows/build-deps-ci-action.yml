@@ -34,6 +34,14 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 
 env:
@@ -48,52 +56,22 @@ env:
 
 jobs:
 
-  generate-matrix:
-    name: Generate Matrix
-    runs-on: ubuntu-latest
-    outputs:
-      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
-    env:
-      PIP_INDEX_URL: https://pypi.org/simple
-    steps:
-
-      - name: "Throttle Builds"
-        shell: bash
-        run: |
-          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
-
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-        env:
-          PIP_INDEX_URL: https://pypi.org/simple
-
-      - name: Generate Test Matrix
-        id: generate-matrix
-        run: |
-          tools ci deps-matrix
-
-
   linux-dependencies:
     name: Linux
-    needs:
-      - generate-matrix
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['linux'] }}
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: "Throttle Builds"
         shell: bash
@@ -102,6 +80,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -136,53 +118,34 @@ jobs:
         with:
           cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
 
-      - name: Get Salt Project GitHub Actions Bot Environment
+      - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+          echo true
 
-      - name: Start VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        id: spin-up-vm
-        run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
-
-      - name: List Free Space
+      - name: Install Nox
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PRINT_TEST_SELECTION: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RELENV_BUILDENV: "1"
         run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ matrix.distro-slug }}
+          nox --install-only -e ${{ inputs.nox-session }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm pre-archive-cleanup ${{ matrix.distro-slug }}
+          nox --force-color -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm compress-dependencies ${{ matrix.distro-slug }}
-
-      - name: Download Compressed .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm download-dependencies ${{ matrix.distro-slug }}
-
-      - name: Destroy VM
-        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
+          nox --force-color -e compress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v4
@@ -192,14 +155,13 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    needs:
-      - generate-matrix
-    runs-on: ${{ matrix.distro-slug == 'macos-13-arm64' && 'macos-13-xlarge' || matrix.distro-slug }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'macos-13' || 'macos-14' }}
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['macos'] }}
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     steps:
@@ -278,27 +240,29 @@ jobs:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.macos.${{ matrix.arch }}.tar.*
 
+
   windows-dependencies:
-    needs:
-      - generate-matrix
     name: Windows
-    runs-on:
-      - self-hosted
-      - linux
-      - bastion
+    runs-on: windows-latest
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
+      GITHUB_WORKSPACE: 'C:\Windows\Temp\testing'
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include)['windows'] }}
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
 
       - name: "Throttle Builds"
         shell: bash
         run: |
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: "Show environment"
+        run: |
+          env
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -325,10 +289,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: PyPi Proxy
+      - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -336,53 +301,33 @@ jobs:
         with:
           cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
 
-      - name: Get Salt Project GitHub Actions Bot Environment
+      - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+          echo true
 
-      - name: Start VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        id: spin-up-vm
-        run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ matrix.distro-slug }}
-
-      - name: List Free Space
+      - name: Install Nox
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm ssh ${{ matrix.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm rsync ${{ matrix.distro-slug }}
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PRINT_TEST_SELECTION: "0"
+          PRINT_SYSTEM_INFO: "0"
         run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ matrix.distro-slug }}
+          nox --install-only -e ${{ inputs.nox-session }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm pre-archive-cleanup ${{ matrix.distro-slug }}
+          nox --force-color -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm compress-dependencies ${{ matrix.distro-slug }}
-
-      - name: Download Compressed .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm download-dependencies ${{ matrix.distro-slug }}
-
-      - name: Destroy VM
-        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ matrix.distro-slug }}
+          nox --force-color -e compress-dependencies -- windows ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v4

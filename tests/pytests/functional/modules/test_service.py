@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import pytest
 
@@ -12,6 +13,19 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.slow_test,
 ]
+
+
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+            _check_systemctl.memo = (
+                b"Failed to get D-Bus connection: No such file or directory"
+                in proc.stderr
+            )
+    return _check_systemctl.memo
 
 
 @pytest.fixture
@@ -68,6 +82,7 @@ def setup_service(service_name, modules):
                 modules.service.disable(service_name)
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_status_running(modules, service_name):
     """
     test service.status execution module
@@ -88,6 +103,7 @@ def test_service_status_dead(modules, service_name):
     assert not check_service
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_restart(modules, service_name):
     """
     test service.restart
@@ -95,6 +111,7 @@ def test_service_restart(modules, service_name):
     assert modules.service.stop(service_name)
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_enable(modules, service_name):
     """
     test service.get_enabled and service.enable module
@@ -106,6 +123,7 @@ def test_service_enable(modules, service_name):
     assert service_name in modules.service.get_enabled()
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_disable(modules, service_name):
     """
     test service.get_disabled and service.disable module
