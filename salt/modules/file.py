@@ -4201,9 +4201,10 @@ def stats(path, hash_type=None, follow_symlinks=True):
         salt '*' file.stats /etc/passwd
     """
     path = os.path.expanduser(path)
+    exists = os.path.exists if follow_symlinks else os.path.lexists
 
     ret = {}
-    if not os.path.exists(path):
+    if not exists(path):
         try:
             # Broken symlinks will return False for os.path.exists(), but still
             # have a uid and gid
@@ -4247,7 +4248,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
         ret["type"] = "pipe"
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
-    ret["target"] = os.path.realpath(path)
+    ret["target"] = os.path.realpath(path) if follow_symlinks else os.path.abspath(path)
     return ret
 
 
