@@ -126,6 +126,13 @@ try:
 except ImportError:
     pass
 
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import (
+    BestAvailableEncryption,
+    NoEncryption,
+    load_pem_private_key,
+    pkcs12,
+)
 
 log = logging.getLogger(__name__)
 
@@ -1591,42 +1598,44 @@ def create_pkcs12(ca_name, CN, passphrase="", cacert_path=None, replace=False):
 
     try:
         with salt.utils.files.fopen(
-            "{0}/{1}/{1}_ca_cert.crt".format(cert_base_path(), ca_name)
+            "{0}/{1}/{1}_ca_cert.crt".format(cert_base_path(), ca_name), "rb"
         ) as fhr:
-            ca_cert = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM, fhr.read()
-            )
+            # ca_cert = OpenSSL.crypto.load_certificate(
+            #    OpenSSL.crypto.FILETYPE_PEM, fhr.read()
+            # )
+            ca_cert = x509.load_pem_x509_certificate(fhr.read())
     except OSError:
         return f'There is no CA named "{ca_name}"'
 
     try:
         with salt.utils.files.fopen(
-            f"{cert_base_path()}/{ca_name}/certs/{CN}.crt"
+            f"{cert_base_path()}/{ca_name}/certs/{CN}.crt", "rb"
         ) as fhr:
-            cert = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM, fhr.read()
-            )
+            cert = x509.load_pem_x509_certificate(fhr.read())
         with salt.utils.files.fopen(
-            f"{cert_base_path()}/{ca_name}/certs/{CN}.key"
+            f"{cert_base_path()}/{ca_name}/certs/{CN}.key", "rb"
         ) as fhr:
-            key = OpenSSL.crypto.load_privatekey(
-                OpenSSL.crypto.FILETYPE_PEM, fhr.read()
-            )
+            key = load_pem_private_key(fhr.read(), None)
     except OSError:
         return f'There is no certificate that matches the CN "{CN}"'
 
-    pkcs12 = OpenSSL.crypto.PKCS12()
+    if passphrase:
+        enc = BestAvailableEncryption(passphrase.encode())
+    else:
+        enc = NoEncryption()
 
-    pkcs12.set_certificate(cert)
-    pkcs12.set_ca_certificates([ca_cert])
-    pkcs12.set_privatekey(key)
+    blob = pkcs12.serialize_key_and_certificates(
+        CN.encode(),
+        key,
+        cert,
+        [ca_cert],
+        enc,
+    )
 
     with salt.utils.files.fopen(
         f"{cert_base_path()}/{ca_name}/certs/{CN}.p12", "wb"
     ) as ofile:
-        ofile.write(
-            pkcs12.export(passphrase=salt.utils.stringutils.to_bytes(passphrase))
-        )
+        ofile.write(blob)
 
     return 'Created PKCS#12 Certificate for "{0}": "{1}/{2}/certs/{0}.p12"'.format(
         CN,

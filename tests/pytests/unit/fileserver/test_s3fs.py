@@ -67,6 +67,7 @@ def verify_cache(bucket, expected):
 
         with salt.utils.files.fopen(cache_file) as f:
             content = f.read()
+            _, content, _ = content.split('\r\n', 2)
             assert correct_content == content
 
 
