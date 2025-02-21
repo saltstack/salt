@@ -136,12 +136,11 @@ croniter==2.0.5 ; sys_platform != "win32"
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==44.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   etcd3-py
     #   moto
     #   paramiko
@@ -255,7 +254,7 @@ jaraco.text==3.5.1
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -474,7 +473,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.0.0
+pyopenssl==25.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -701,11 +700,13 @@ twilio==7.9.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
-typing-extensions==4.8.0
+typing-extensions==4.12.2
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   astroid
     #   pylint
+    #   pyopenssl
 tzlocal==3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -714,6 +715,7 @@ urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes

@@ -4,8 +4,9 @@
 --constraint=../pkg/py{py_version}/{platform}.txt
 
 apache-libcloud>=1.5.0; sys_platform != 'win32'
-boto3>=1.17.67
-boto>=2.46.0
+boto3
+#boto3>=1.36.25; python_version >= '3.10'
+boto>=2.49.0
 cassandra-driver>=2.0
 cffi>=1.14.6
 cherrypy>=17.4.1
@@ -19,7 +20,8 @@ junos-eznc; sys_platform != 'win32' and python_version <= '3.10'
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
-kubernetes<4.0
+#kubernetes>=32.0.0
+kubernetes<4
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
 moto>=2.0.0
 # Napalm pulls in pyeapi which does not work on Py3.10

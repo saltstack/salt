@@ -1,6 +1,6 @@
 --constraint=constraints.txt
 
-Jinja2
+Jinja2>=3.1.5
 jmespath
 msgpack>=1.0.0
 PyYAML
@@ -15,6 +15,8 @@ psutil>=5.0.0; python_version >= '3.10'
 packaging>=21.3
 looseversion
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+urllib3
+urllib3>=2.3.0; python_version >= '3.10'
 # We need contextvars for salt-ssh
 contextvars
-cryptography>=42.0.0
+cryptography>=44.0.1

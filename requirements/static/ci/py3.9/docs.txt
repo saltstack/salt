@@ -37,7 +37,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==44.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -79,7 +79,7 @@ jaraco.text==3.5.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -204,7 +204,7 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
-typing-extensions==4.8.0
+typing-extensions==4.12.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils
@@ -213,6 +213,7 @@ uc-micro-py==1.0.1
 urllib3==1.26.18
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   requests
 zc.lockfile==1.4
     # via
