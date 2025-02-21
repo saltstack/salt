@@ -20,10 +20,9 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
-cryptography==42.0.5
+cryptography==44.0.1
     # via
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
     #   pyopenssl
 distro==1.5.0
     # via
@@ -46,7 +45,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -76,7 +75,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pyopenssl==24.0.0
+pyopenssl==25.0.0
     # via -r requirements/static/pkg/freebsd.in
 python-dateutil==2.8.1
     # via
@@ -105,8 +104,12 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/freebsd.in
+typing-extensions==4.12.2
+    # via pyopenssl
 urllib3==1.26.18
-    # via requests
+    # via
+    #   -r requirements/base.txt
+    #   requests
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0
