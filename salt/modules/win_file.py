@@ -494,13 +494,14 @@ def get_group(path, follow_symlinks=True):
 
 def uid_to_user(uid):
     """
-    Convert a uid to a user name
+    Convert a User ID (uid) to a username
 
     Args:
         uid (str): The user id to lookup
 
     Returns:
-        str: The name of the user
+        str: The name of the user. The ``uid`` will be returned if there is no
+             corresponding username
 
     CLI Example:
 
