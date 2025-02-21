@@ -504,6 +504,7 @@ def _gen_recurse_managed_files(
         return os.path.join(name, _salt_to_os_path(master_relpath))
 
     # Check whether we want to consider a path at all.
+    # If so, return the path relative to the recurse root.
     def check_relative_path(fileserver_path, fs_recurse_base_dir):
         if not fileserver_path.strip():
             return False
@@ -537,8 +538,11 @@ def _gen_recurse_managed_files(
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames):
+        # Returns a dict where keys are paths relative to the fileserver root
+        # and values the symlink targets (exactly as specified, relative or absolute)
         symlinks = __salt__["cp.list_master_symlinks"](senv, recurse_root)
         for lname, ltarget in symlinks.items():
+            # This is the symlink's path relative to the recursed directory (still using POSIX pathsep)
             relative_path = check_relative_path(lname, recurse_root)
             if relative_path is False:
                 continue
@@ -559,27 +563,32 @@ def _gen_recurse_managed_files(
             # file.managed in the first place.
             target_was_dir = False
             for filename in list(filenames):
-                if filename == lname or filename.startswith(lname + os.sep):
+                if filename == lname or filename.startswith(lname + posixpath.sep):
                     filenames.remove(filename)
                     if filename != lname:
                         log.debug(
                             "** skipping file ** %s, it intersects a symlink", filename
                         )
                         target_was_dir = True
+            # This is the path on the minion where the symlink should be placed (using OS-specific pathsep)
             dest = full_path(relative_path)
             if is_occupied(dest):
                 continue
-            tdest = full_path(ltarget)
+            # This is the path the symlink points to on the minion (using OS-specific pathsep).
+            local_symlink_target = full_path(ltarget)
             # Ensure symlink targets don't change type because of merging,
-            # otherwise drop the symlink.
-            if target_was_dir and tdest in managed_files:
+            # otherwise drop the symlink. This can only happen for relative symlinks.
+            if target_was_dir and local_symlink_target in managed_files:
                 # We need to ignore it explicitly (when include_empty is true),
                 # otherwise the directory would be detected as an empty one.
                 ignored_directories.add(dest)
                 continue
-            if not target_was_dir and tdest in managed_directories:
+            if not target_was_dir and local_symlink_target in managed_directories:
                 continue
-            managed_symlinks[dest] = ltarget
+            # If we're here, the symlink target is not managed as part of this recurse,
+            # is the same as the symlink pointed to originally or has the same type.
+            # We need to ensure the target spec respects the host pathsep.
+            managed_symlinks[dest] = _salt_to_os_path(ltarget)
 
             # Add the path to the keep set in case clean is set to True
             keep.add(dest)
@@ -594,7 +603,8 @@ def _gen_recurse_managed_files(
             recurse_root += posixpath.sep
 
         # Fetch a list of all files in the current source.
-        # Includes resolved symlinks.
+        # Paths are relative to the fileserver root and use the POSIX path separator (/).
+        # Includes resolved symlinks (i.e. directory symlinks are resolved).
         fns_ = __salt__["cp.list_master"](senv, recurse_root)
 
         # If we are instructed to keep symlinks, then process them.

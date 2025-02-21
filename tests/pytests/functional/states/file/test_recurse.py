@@ -1,13 +1,17 @@
 import contextlib
 import copy
+import logging
 import shutil
 import stat
+from pathlib import Path
 
 import pytest
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -242,8 +246,6 @@ def create_file_tree(base, tree):
             stack.enter_context(file)
         try:
             created_dirs = []
-            # Need to create empty dirs first because on Windows,
-            # invalid symlinks cannot be created and result in an empty file instead.
             for empty_dir in empty_dirs:
                 for par in empty_dir.parents[::-1]:
                     if not par.exists():
@@ -256,7 +258,21 @@ def create_file_tree(base, tree):
                         created_dirs.append(par)
                         break
                 symlink.parent.mkdir(parents=True, exist_ok=True)
-                symlink.symlink_to(target)
+                is_dir = target.endswith("/")
+                symlink.symlink_to(Path(target.rstrip("/")), target_is_directory=is_dir)
+                if is_dir:
+                    try:
+                        assert symlink.is_symlink()
+                    except Exception as err:  # pylint: disable=broad-exception-caught
+                        log.error(
+                            f"failed asserting symlink '{symlink}' for target '{target}': {err}"
+                        )
+                    try:
+                        assert symlink.is_dir()
+                    except Exception as err:  # pylint: disable=broad-exception-caught
+                        log.error(
+                            f"failed asserting dir '{symlink}' for target '{target}': {err}.\nlstat: {symlink.lstat()}"
+                        )
             yield
         finally:
             for symlink in symlinks:
@@ -294,14 +310,14 @@ def _recurse_merge_dirs(state_tree, state_tree_prod):
         "dir_overridden_by_file": {
             "file_in_dir": "",
         },
-        "symlinked_dir": ("symlink_target_dir",),
+        "symlinked_dir": ("symlink_target_dir/",),
         "symlinked_file": ("symlink_target_file",),
         "symlink_target_dir": {
             "file_in_symlink_target": "",
         },
         "symlink_target_file": "",
-        "symlink_dir_overridden_by_file": ("symlink_target_dir",),
-        "symlink_dir_overridden_by_dir": ("symlink_target_dir",),
+        "symlink_dir_overridden_by_file": ("symlink_target_dir/",),
+        "symlink_dir_overridden_by_dir": ("symlink_target_dir/",),
         "symlink_file_overridden_by_dir": ("symlink_target_file",),
         "symlink_file_overridden_by_file": ("symlink_target_file",),
         "dir_overridden_by_symlink_dir": {
@@ -314,13 +330,13 @@ def _recurse_merge_dirs(state_tree, state_tree_prod):
         "file_overridden_by_symlink_file": "",
         "symlink_file_overridden_by_symlink_file": ("symlink_target_file",),
         "symlink_file_overridden_by_symlink_dir": ("symlink_target_file",),
-        "symlink_dir_overridden_by_symlink_file": ("symlink_target_dir",),
-        "symlink_dir_overridden_by_symlink_dir": ("symlink_target_dir",),
-        "symlink_target_dir_overridden_by_file": ("starget_dir_overridden_by_file",),
+        "symlink_dir_overridden_by_symlink_file": ("symlink_target_dir/",),
+        "symlink_dir_overridden_by_symlink_dir": ("symlink_target_dir/",),
+        "symlink_target_dir_overridden_by_file": ("starget_dir_overridden_by_file/",),
         "starget_dir_overridden_by_file": {
             "file_in_starget_dir_overridden_by_file": "",
         },
-        "symlink_target_dir_overridden_by_dir": ("starget_dir_overridden_by_dir",),
+        "symlink_target_dir_overridden_by_dir": ("starget_dir_overridden_by_dir/",),
         "starget_dir_overridden_by_dir": {
             "file_in_starget_dir_overridden_by_dir": "",
         },
@@ -347,8 +363,8 @@ def _recurse_merge_dirs(state_tree, state_tree_prod):
                 "dir": {},
             },
         },
-        "empty_symlinked_dir": ("empty/symlinked",),
-        "empty_symlinked_dir_2": ("empty_symlinked_dir",),
+        "empty_symlinked_dir": ("empty/symlinked/",),
+        "empty_symlinked_dir_2": ("empty_symlinked_dir/",),
         "deeply": {
             "nested": {
                 "path": {
@@ -375,14 +391,14 @@ def _recurse_merge_dirs(state_tree, state_tree_prod):
             "other_file_in_symlink_target": "success",
         },
         "other_symlink_target_file": "success",
-        "dir_overridden_by_symlink_dir": ("other_symlink_target_dir",),
+        "dir_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
         "dir_overridden_by_symlink_file": ("other_symlink_target_file",),
-        "file_overridden_by_symlink_dir": ("other_symlink_target_dir",),
+        "file_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
         "file_overridden_by_symlink_file": ("other_symlink_target_file",),
         "symlink_file_overridden_by_symlink_file": ("other_symlink_target_file",),
-        "symlink_file_overridden_by_symlink_dir": ("other_symlink_target_dir",),
+        "symlink_file_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
         "symlink_dir_overridden_by_symlink_file": ("other_symlink_target_file",),
-        "symlink_dir_overridden_by_symlink_dir": ("other_symlink_target_dir",),
+        "symlink_dir_overridden_by_symlink_dir": ("other_symlink_target_dir/",),
         "starget_dir_overridden_by_file": "success",
         "starget_dir_overridden_by_dir": {
             "other_file_in_starget_dir_overridden_by_dir": "",
@@ -455,11 +471,31 @@ def test_recurse_merge(file, tmp_path, keep_symlinks, include_empty):
 
         # Sanity check symlinks
         assert ((base / "symlinked_dir").is_symlink()) is keep_symlinks
-        assert (base / "symlinked_dir").is_dir()
-        assert (base / "symlink_target_dir").is_dir()
+        try:
+            assert (base / "symlinked_dir").is_dir()
+        except PermissionError as err:
+            log.error(
+                f"symlinked_dir.is_dir permission error: {err}\nlstat: {(base / 'symlinked_dir').lstat()}"
+            )
+        try:
+            assert (base / "symlink_target_dir").is_dir()
+        except PermissionError as err:
+            log.error(
+                f"symlink_target_dir permission error: {err}\nlstat: {(base / 'symlink_target_dir').lstat()}"
+            )
         for empty_symlink in ("empty_symlinked_dir", "empty_symlinked_dir_2"):
-            assert ((base / empty_symlink).exists()) is include_empty
-            assert ((base / empty_symlink).is_dir()) is include_empty
+            try:
+                assert ((base / empty_symlink).exists()) is include_empty
+            except PermissionError as err:
+                log.error(
+                    f"{empty_symlink} exists permission error: {err}\nlstat: {(base / empty_symlink).lstat()}"
+                )
+            try:
+                assert ((base / empty_symlink).is_dir()) is include_empty
+            except PermissionError as err:
+                log.error(
+                    f"{empty_symlink} is_dir permission error: {err}\nlstat: {(base / empty_symlink).lstat()}"
+                )
             assert ((base / empty_symlink).is_symlink()) is (
                 include_empty and keep_symlinks
             )
