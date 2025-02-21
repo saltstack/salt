@@ -1265,9 +1265,10 @@ def get_name(principal):
             # Return the SID
             else:
                 log.debug(
-                    f"Could not resolve SID: %s\nThe user has either been removed"
-                    " from the system or is a domain user and the system is not"
-                    " connected to the domain"
+                    "Could not resolve SID: %s\nThe user has either been removed "
+                    "from the system or is a domain user and the system is not "
+                    "connected to the domain",
+                    str_sid,
                 )
                 return str_sid
 
