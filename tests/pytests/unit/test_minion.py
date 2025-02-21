@@ -634,7 +634,7 @@ async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodi
             try:
                 minion.connected = MagicMock(side_effect=(False, True))
                 minion._fire_master_minion_start = MagicMock()
-                await minion.tune_in(start=False)
+                minion.tune_in(start=False)
             except RuntimeError:
                 pass
 
