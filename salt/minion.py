@@ -2506,7 +2506,7 @@ class Minion(MinionBase):
                 else:
                     data["fun"] = "state.highstate"
                     data["arg"] = []
-                self._handle_decoded_payload(data)
+                self.io_loop.add_callback(self._handle_decoded_payload, data)
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         """
