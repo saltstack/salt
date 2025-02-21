@@ -337,14 +337,16 @@ def _build_bank_hier(bank, redis_pipe):
     so there will be only one interaction with the remote server.
     """
 
-    def joinbanks(*banks):
-        return "/".join(banks)
-
-    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
-        bank_set = _get_bank_redis_key(bank_path)
-        log.debug("Adding %s to %s", bank, bank_set)
-        redis_pipe.sadd(bank_set, ".")
-
+    bank_list = bank.split("/")
+    parent_bank_path = bank_list[0]
+    for bank_name in bank_list[1:]:
+        prev_bank_redis_key = _get_bank_redis_key(parent_bank_path)
+        redis_pipe.sadd(prev_bank_redis_key, bank_name)
+        log.debug("Adding %s to %s", bank_name, prev_bank_redis_key)
+        parent_bank_path = "{curr_path}/{bank_name}".format(
+            curr_path=parent_bank_path, bank_name=bank_name
+        )  # this becomes the parent of the next
+    return True
 
 def _get_banks_to_remove(redis_server, bank, path=""):
     """
@@ -531,7 +533,7 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_redis_key = _get_bank_redis_key(bank)
     try:
         banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
