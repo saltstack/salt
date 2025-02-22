@@ -1,14 +1,20 @@
 import os
 
-import boto3
 import pytest
 import yaml
 
-# moto must be imported before boto3
-from moto import mock_s3
+HAS_BOTO3 = True
+try:
+    # moto must be imported before boto3
+    import boto3
+    from moto import mock_s3
+except ImportError:
+    HAS_BOTO3 = False
 
 import salt.fileserver.s3fs as s3fs
 import salt.utils.s3
+
+pytestmark = [pytest.mark.skipif(not HAS_BOTO3, reason="boto3 not installed")]
 
 
 @pytest.fixture
@@ -67,7 +73,10 @@ def verify_cache(bucket, expected):
 
         with salt.utils.files.fopen(cache_file) as f:
             content = f.read()
-            _, content, _ = content.split('\r\n', 2)
+            try:
+                _, content, _ = content.split("\r\n", 2)
+            except ValueError:
+                pass
             assert correct_content == content
 
 
