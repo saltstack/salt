@@ -1,3 +1,6 @@
+import os.path
+import posixpath
+
 import pytest
 
 import salt.fileserver.roots as roots
@@ -20,7 +23,7 @@ def test_symlink_list(state_tree):
         link = state_tree / "link"
         link.symlink_to(str(target))
         ret = roots.symlink_list({"saltenv": "base"})
-        assert ret == {"link": str(target)}
+        assert ret == {"link": str(target).replace(os.path.sep, posixpath.sep)}
 
 
 @pytest.mark.parametrize(

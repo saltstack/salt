@@ -1462,7 +1462,7 @@ def symlink(src, link, force=False, atomic=False, follow_symlinks=True):
     src = os.path.normpath(src)
     link = os.path.normpath(link)
 
-    is_dir = os.path.isdir(src)
+    is_dir = os.path.isdir(os.path.join(os.path.dirname(link), src))
 
     # Elevate the token from the current process
     desired_access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
