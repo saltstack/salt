@@ -384,45 +384,41 @@ WRAPPER_CALLS = {
 # FIXTURES
 # -----------------------------------------------------------------------------
 @pytest.fixture(scope="module")
-def master_opts():
-    """
-    In Salt's internal test suite, we often use something like
-    `AdaptedConfigurationTestCaseMixin.get_temp_config("master")`.
-    Replace this with however you retrieve your config opts in your own code/tests.
-    """
+def react_master_opts(master_opts):
     opts = {
         # Minimal stand-in for a real master config
         "file_roots": {"base": []},
         "renderer": "jinja|yaml",
     }
+    master_opts.update(opts)
     # Optionally parse the reactor config for convenience
     reactor_config = salt.utils.yaml.safe_load(REACTOR_CONFIG)
-    opts.update(reactor_config)
-    return opts
+    master_opts.update(reactor_config)
+    return master_opts
 
 
 @pytest.fixture(scope="module")
-def test_reactor(master_opts):
+def test_reactor(react_master_opts):
     """
     Create a Reactor instance for testing
     """
-    return reactor.Reactor(master_opts)
+    return reactor.Reactor(react_master_opts)
 
 
 @pytest.fixture(scope="module")
-def reaction_map(master_opts):
+def reaction_map(react_master_opts):
     """
     Reaction map from the configured reactor
     """
-    return salt.utils.data.repack_dictlist(master_opts["reactor"])
+    return salt.utils.data.repack_dictlist(react_master_opts["reactor"])
 
 
 @pytest.fixture(scope="module")
-def render_pipe(master_opts):
+def render_pipe(react_master_opts):
     """
     Render pipeline
     """
-    renderers = salt.loader.render(master_opts, {})
+    renderers = salt.loader.render(react_master_opts, {})
     return [(renderers[x], "") for x in ("jinja", "yaml")]
 
 
@@ -472,11 +468,11 @@ def test_list_reactors(test_reactor, reaction_map):
 # FIXTURE for Reactor Wrap
 # -----------------------------------------------------------------------------
 @pytest.fixture(scope="module")
-def react_wrap(master_opts):
+def react_wrap(react_master_opts):
     """
     Create a ReactWrap instance
     """
-    return reactor.ReactWrap(master_opts)
+    return reactor.ReactWrap(react_master_opts)
 
 
 # -----------------------------------------------------------------------------
