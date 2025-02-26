@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - workflow-requirements
+    environment: workflow-restart
     strategy:
       matrix:
         branch: [3006.x, 3007.x, master]
