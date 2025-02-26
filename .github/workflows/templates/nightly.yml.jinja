@@ -2,7 +2,6 @@
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("true") %>
 <%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
 <%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
-<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block name %>
