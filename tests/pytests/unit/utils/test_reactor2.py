@@ -558,3 +558,27 @@ def test_caller(schema, react_wrap):
     client_cache["caller"].cmd.assert_called_with(
         *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
     )
+
+
+@pytest.mark.parametrize("file_client", ["runner", "wheel", "local", "caller"])
+def test_client_cache_missing_key(file_client, react_wrap):
+    """
+    Test client_cache file_client missing, gets repopulated
+    """
+    client_cache = {}
+    tag = f"new_{file_client}"
+    chunk = LOW_CHUNKS[tag][0]
+    thread_pool = Mock()
+    thread_pool.fire_async = Mock()
+    with patch.object(react_wrap, "client_cache", client_cache):
+        with patch.object(react_wrap, "pool", thread_pool):
+            react_wrap.run(chunk)
+    thread_pool.fire_async.assert_called_with(
+        react_wrap.client_cache[file_client].low,
+        args=WRAPPER_CALLS[tag],
+    )
+
+
+## DGM     client_cache[file_client].cmd.assert_called_with(
+## DGM         *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
+## DGM     )
