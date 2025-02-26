@@ -383,7 +383,7 @@ WRAPPER_CALLS = {
 # -----------------------------------------------------------------------------
 # FIXTURES
 # -----------------------------------------------------------------------------
-@pytest.fixture(scope="module")
+@pytest.fixture
 def react_master_opts(master_opts):
     opts = {
         # Minimal stand-in for a real master config
@@ -397,7 +397,7 @@ def react_master_opts(master_opts):
     return master_opts
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_reactor(react_master_opts):
     """
     Create a Reactor instance for testing
@@ -405,7 +405,7 @@ def test_reactor(react_master_opts):
     return reactor.Reactor(react_master_opts)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def reaction_map(react_master_opts):
     """
     Reaction map from the configured reactor
@@ -413,7 +413,7 @@ def reaction_map(react_master_opts):
     return salt.utils.data.repack_dictlist(react_master_opts["reactor"])
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def render_pipe(react_master_opts):
     """
     Render pipeline
@@ -467,7 +467,7 @@ def test_list_reactors(test_reactor, reaction_map):
 # -----------------------------------------------------------------------------
 # FIXTURE for Reactor Wrap
 # -----------------------------------------------------------------------------
-@pytest.fixture(scope="module")
+@pytest.fixture
 def react_wrap(react_master_opts):
     """
     Create a ReactWrap instance
