@@ -6,9 +6,16 @@ name: Scheduled
 run-name: "Scheduled (branch: ${{ github.ref_name }})"
 
 on:
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 */8 * * *'  # Run every 8 hours
+  workflow_dispatch:
+    inputs:
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
 
 env:
   COLUMNS: 190
@@ -20,7 +27,6 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-  actions: write  # to trigger branch scheduled builds
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
@@ -28,65 +34,11 @@ concurrency:
 
 jobs:
 
-  workflow-requirements:
-    name: Check Workflow Requirements
-    runs-on: ubuntu-22.04
-    outputs:
-      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
-    steps:
-      - name: Check Requirements
-        id: check-requirements
-        run: |
-          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
-            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.private }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a private repository"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          else
-            MSG="Running workflow because ${{ github.repository }} is not a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          fi
-
-  trigger-branch-scheduled-builds:
-    name: Trigger Branch Workflows
-    if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on: ubuntu-22.04
-    needs:
-      - workflow-requirements
-
-    steps:
-
-      - name: Trigger 3006.x branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3006.x
-
-      - name: Trigger 3007.x branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3007.x
-
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
     environment: ci
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    needs:
-      - workflow-requirements
     outputs:
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -556,8 +508,6 @@ jobs:
     if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     needs:
-      - workflow-requirements
-      - trigger-branch-scheduled-builds
       - prepare-workflow
       - pre-commit
       - lint
