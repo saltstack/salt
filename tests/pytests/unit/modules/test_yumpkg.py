@@ -78,7 +78,7 @@ def list_repos_var():
 
 
 @pytest.fixture(
-    ids=["yum", "dnf"],
+    ids=["yum", "dnf", "dnf5"],
     params=[
         {
             "context": {"yum_bin": "yum"},
@@ -89,6 +89,11 @@ def list_repos_var():
             "context": {"yum_bin": "dnf"},
             "grains": {"os": "Fedora", "osrelease": 27},
             "cmd": ["dnf", "-y", "--best", "--allowerasing"],
+        },
+        {
+            "context": {"yum_bin": "dnf5"},
+            "grains": {"os": "Fedora", "osrelease": 39},
+            "cmd": ["dnf5", "-y"],
         },
     ],
 )
@@ -3193,7 +3198,10 @@ def test_59705_version_as_accidental_float_should_become_text(
     new, full_pkg_string, yum_and_dnf
 ):
     name = "fnord"
-    expected_cmd = yum_and_dnf + ["install", full_pkg_string]
+    expected_cmd = yum_and_dnf + ["install"]
+    if expected_cmd[0] == "dnf5":
+        expected_cmd += ["--best", "--allowerasing"]
+    expected_cmd += [full_pkg_string]
     cmd_mock = MagicMock(
         return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
     )
