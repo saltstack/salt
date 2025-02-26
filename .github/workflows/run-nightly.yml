@@ -67,4 +67,4 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
-          gh workflow run nigthly.yml --repo ${{ github.repository }} --ref ${{ matrix.branch }}
+          gh workflow run nightly.yml --repo ${{ github.repository }} --ref ${{ matrix.branch }}
