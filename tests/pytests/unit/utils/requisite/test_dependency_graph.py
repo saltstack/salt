@@ -20,10 +20,54 @@ def test_ordering():
     env = "base"
     chunks = [
         {
+            "__id__": "success-last-1",
+            "name": "success-last-1",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "order": "last",
+        },
+        {
+            "__id__": "success-last-3",
+            "name": "success-last-3",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "require": [{"test": "success-last-2"}],
+            "order": "last",
+        },
+        {
+            "__id__": "success-last-2",
+            "name": "success-last-2",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "order": "last",
+        },
+        {
             "__id__": "success-6",
             "name": "success-6",
             "state": "test",
             "fun": "succeed_with_changes",
+        },
+        {
+            "__id__": "success-first-1",
+            "name": "success-first-1",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "order": "first",
+        },
+        {
+            "__id__": "success-first-3",
+            "name": "success-first-3",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "require": [{"test": "success-first-2"}],
+            "order": "first",
+        },
+        {
+            "__id__": "success-first-2",
+            "name": "success-first-2",
+            "state": "test",
+            "fun": "succeed_with_changes",
+            "order": "first",
         },
         {
             "__id__": "fail-0",
@@ -123,6 +167,9 @@ def test_ordering():
         chunk["__id__"] for chunk in depend_graph.aggregate_and_order_chunks(100)
     ]
     expected_order = [
+        "success-first-1",
+        "success-first-2",
+        "success-first-3",
         "success-1",
         "success-2",
         "success-a",
@@ -136,6 +183,9 @@ def test_ordering():
         "success-5",
         "success-6",
         "success-d",
+        "success-last-1",
+        "success-last-2",
+        "success-last-3",
     ]
     assert expected_order == ordered_chunk_ids
 
