@@ -50,7 +50,7 @@ import shutil
 
 import salt.utils.path
 import salt.utils.platform
-import tests.support.paths as paths
+import support.paths as paths
 
 try:
     import pwd
