@@ -2907,6 +2907,21 @@ class SaltCallOptionParser(
             help="Do not load grains.",
         )
         self.add_option(
+            "--no-skip-init-pillar",
+            default=True,
+            action="store_false",
+            dest="skip_init_pillar",
+            help=(
+                "Explicitly load pillar on minion startup (overrides any skip_init_pillar in /etc/salt/minion)"
+            ),
+        )
+        self.add_option(
+            "--skip-pillars",
+            default=False,
+            action="store_true",
+            help=("Do not load pillars."),
+        )
+        self.add_option(
             "--refresh-grains-cache",
             default=False,
             action="store_true",
