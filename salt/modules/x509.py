@@ -42,6 +42,7 @@ from salt.utils.odict import OrderedDict
 
 try:
     import M2Crypto
+    from M2Crypto import ASN1, BIO, EVP, RSA, X509, m2
 
     HAS_M2 = True
 except ImportError:
