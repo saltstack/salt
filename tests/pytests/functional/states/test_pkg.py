@@ -58,7 +58,7 @@ def refresh_keys(grains, modules):
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
-        _PKG_TARGETS = ["npp_x64", "winrar"]
+        _PKG_TARGETS = ["npp_x64", "putty"]
     elif grains["os"] == "Amazon":
         if grains["osfinger"] == "Amazon Linux-2023":
             _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
@@ -223,6 +223,29 @@ def install_7zip(modules):
         versions = modules.pkg.version("7zip")
         assert "19.00.00.0" not in versions
         assert "22.01.00.0" not in versions
+
+
+@pytest.fixture(scope="module")
+def pkg_def_contents(state_tree):
+    return r"""
+    my-software:
+      '1.0.1':
+        full_name: 'My Software'
+        installer: 'C:\files\mysoftware101.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'C:\files\mysoftware101.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        reboot: False
+      '1.0.2':
+        full_name: 'My Software'
+        installer: 'C:\files\mysoftware102.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'C:\files\mysoftware102.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        reboot: False
+    """
 
 
 @pytest.mark.requires_salt_modules("pkg.version")
@@ -1126,3 +1149,14 @@ def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
     assert ret.result is True
     current = modules.pkg.version("7zip")
     assert "22.01.00.0" in current
+
+
+@pytest.mark.skip_unless_on_windows()
+def test_pkg_latest_test_true(states, modules, state_tree, pkg_def_contents):
+    repo_dir = state_tree / "winrepo_ng"
+    with pytest.helpers.temp_file("my-software.sls", pkg_def_contents, repo_dir):
+        modules.pkg.refresh_db()
+    assert len(modules.pkg.get_package_info("my-software")) == 2
+    result = states.pkg.latest("my-software", test=True)
+    expected = {"my-software": {"new": "1.0.2", "old": ""}}
+    assert result.changes == expected

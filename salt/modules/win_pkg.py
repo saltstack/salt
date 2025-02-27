@@ -45,6 +45,7 @@ import re
 import sys
 import time
 import urllib.parse
+from fnmatch import fnmatch
 from functools import cmp_to_key
 
 import salt.fileserver
@@ -275,6 +276,11 @@ def list_available(*names, **kwargs):
         return_dict_always (bool):
             Default ``False`` dict when a single package name is queried.
 
+        reverse_sort (bool):
+            Sort the versions for latest to oldest
+
+            .. versionadded:: 3007.2
+
     Returns:
         dict: The package name with its available versions
 
@@ -298,12 +304,15 @@ def list_available(*names, **kwargs):
     return_dict_always = salt.utils.data.is_true(
         kwargs.get("return_dict_always", False)
     )
+    reverse_sort = salt.utils.data.is_true(kwargs.get("reverse_sort", False))
     if len(names) == 1 and not return_dict_always:
         pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:
             return ""
         versions = sorted(
-            list(pkginfo.keys()), key=cmp_to_key(_reverse_cmp_pkg_versions)
+            list(pkginfo.keys()),
+            key=cmp_to_key(_reverse_cmp_pkg_versions),
+            reverse=reverse_sort,
         )
     else:
         versions = {}
@@ -314,9 +323,68 @@ def list_available(*names, **kwargs):
             verlist = sorted(
                 list(pkginfo.keys()) if pkginfo else [],
                 key=cmp_to_key(_reverse_cmp_pkg_versions),
+                reverse=reverse_sort,
             )
             versions[name] = verlist
     return versions
+
+
+def list_repo_pkgs(*args, saltenv="base", **kwargs):
+    """
+    .. versionadded:: 3007.2
+
+    This function was added to match a similar function in Linux. It will
+    return all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. For example:
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+    """
+
+    # Get all the repo data
+    pkgs = get_repo_data(saltenv=saltenv).get("repo", {})
+
+    # Generate a list of packages and their available versions
+    repo_pkgs = {}
+    for pkg in pkgs:
+        repo_pkgs.update({pkg: list(pkgs[pkg].keys())})
+
+    # If no args passed, just return everything
+    if not args:
+        return repo_pkgs
+
+    # Loop through the args and return info for each specified package
+    ret = {}
+    for arg in args:
+        for pkg in repo_pkgs:
+            if fnmatch(pkg, arg):
+                ret.update({pkg: repo_pkgs[pkg]})
+
+    # If ret is empty, return everything
+    if not ret:
+        ret = repo_pkgs
+
+    return ret
 
 
 def version(*names, **kwargs):
