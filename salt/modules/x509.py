@@ -41,7 +41,7 @@ from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.utils.odict import OrderedDict
 
 try:
-    import M2Crypto
+    from M2Crypto import ASN1, BIO, EVP, RSA, X509, m2
 
     HAS_M2 = True
 except ImportError:
@@ -153,27 +153,27 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     value = salt.utils.stringutils.to_str(value)
 
     try:
-        ctx = M2Crypto.m2.x509v3_set_nconf()
+        ctx = m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
         if ctx is None:
             raise MemoryError("Not enough memory when creating a new X509 extension")
-        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(None, ctx, name, value)
+        x509_ext_ptr = m2.x509v3_ext_conf(None, ctx, name, value)
         lhash = None
     except AttributeError:
-        lhash = M2Crypto.m2.x509v3_lhash()
-        ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)
+        lhash = m2.x509v3_lhash()
+        ctx = m2.x509v3_set_conf_lhash(lhash)
         # ctx not zeroed
         _fix_ctx(ctx, issuer)
-        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
+        x509_ext_ptr = m2.x509v3_ext_conf(lhash, ctx, name, value)
     # ctx,lhash freed
 
     if x509_ext_ptr is None:
-        raise M2Crypto.X509.X509Error(
+        raise X509.X509Error(
             "Cannot create X509_Extension with name '{}' and value '{}'".format(
                 name, value
             )
         )
-    x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
+    x509_ext = X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
 
@@ -369,11 +369,11 @@ def _get_certificate_obj(cert):
     """
     Returns a certificate object based on PEM text.
     """
-    if isinstance(cert, M2Crypto.X509.X509):
+    if isinstance(cert, X509.X509):
         return cert
     text = _text_or_file(cert)
     text = get_pem_entry(text, pem_type="CERTIFICATE")
-    return M2Crypto.X509.load_cert_string(text)
+    return X509.load_cert_string(text)
 
 
 def _get_private_key_obj(private_key, passphrase=None):
@@ -382,10 +382,10 @@ def _get_private_key_obj(private_key, passphrase=None):
     """
     private_key = _text_or_file(private_key)
     private_key = get_pem_entry(private_key, pem_type="(?:RSA )?PRIVATE KEY")
-    rsaprivkey = M2Crypto.RSA.load_key_string(
+    rsaprivkey = RSA.load_key_string(
         private_key, callback=_passphrase_callback(passphrase)
     )
-    evpprivkey = M2Crypto.EVP.PKey()
+    evpprivkey = EVP.PKey()
     evpprivkey.assign_rsa(rsaprivkey)
     return evpprivkey
 
@@ -407,7 +407,7 @@ def _get_request_obj(csr):
     """
     text = _text_or_file(csr)
     text = get_pem_entry(text, pem_type="CERTIFICATE REQUEST")
-    return M2Crypto.X509.load_request_string(text)
+    return X509.load_request_string(text)
 
 
 def _get_pubkey_hash(cert):
@@ -717,7 +717,7 @@ def get_public_key(key, passphrase=None, asObj=False):
         salt '*' x509.get_public_key /etc/pki/mycert.cer
     """
 
-    if isinstance(key, M2Crypto.X509.X509):
+    if isinstance(key, X509.X509):
         rsa = key.get_pubkey().get_rsa()
         text = b""
     else:
@@ -727,26 +727,24 @@ def get_public_key(key, passphrase=None, asObj=False):
     if text.startswith(b"-----BEGIN PUBLIC KEY-----"):
         if not asObj:
             return text
-        bio = M2Crypto.BIO.MemoryBuffer()
+        bio = BIO.MemoryBuffer()
         bio.write(text)
-        rsa = M2Crypto.RSA.load_pub_key_bio(bio)
+        rsa = RSA.load_pub_key_bio(bio)
 
-    bio = M2Crypto.BIO.MemoryBuffer()
+    bio = BIO.MemoryBuffer()
     if text.startswith(b"-----BEGIN CERTIFICATE-----"):
-        cert = M2Crypto.X509.load_cert_string(text)
+        cert = X509.load_cert_string(text)
         rsa = cert.get_pubkey().get_rsa()
     if text.startswith(b"-----BEGIN CERTIFICATE REQUEST-----"):
-        csr = M2Crypto.X509.load_request_string(text)
+        csr = X509.load_request_string(text)
         rsa = csr.get_pubkey().get_rsa()
     if text.startswith(b"-----BEGIN PRIVATE KEY-----") or text.startswith(
         b"-----BEGIN RSA PRIVATE KEY-----"
     ):
-        rsa = M2Crypto.RSA.load_key_string(
-            text, callback=_passphrase_callback(passphrase)
-        )
+        rsa = RSA.load_key_string(text, callback=_passphrase_callback(passphrase))
 
     if asObj:
-        evppubkey = M2Crypto.EVP.PKey()
+        evppubkey = EVP.PKey()
         evppubkey.assign_rsa(rsa)
         return evppubkey
 
@@ -876,12 +874,12 @@ def create_private_key(
         )
 
     if verbose:
-        _callback_func = M2Crypto.RSA.keygen_callback
+        _callback_func = RSA.keygen_callback
     else:
         _callback_func = _keygen_callback
 
-    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4, _callback_func)
-    bio = M2Crypto.BIO.MemoryBuffer()
+    rsa = RSA.gen_key(bits, m2.RSA_F4, _callback_func)
+    bio = BIO.MemoryBuffer()
     if passphrase is None:
         cipher = None
     rsa.save_key_bio(bio, cipher=cipher, callback=_passphrase_callback(passphrase))
@@ -1506,7 +1504,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         if prop not in kwargs:
             kwargs[prop] = default
 
-    cert = M2Crypto.X509.X509()
+    cert = X509.X509()
 
     # X509 Version 3 has a value of 2 in the field.
     # Version 2 has a value of 1.
@@ -1545,8 +1543,8 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         # If we do not set an explicit timezone to this naive datetime object,
         # the M2Crypto code will assume it is from the local machine timezone
         # and will try to adjust the time shift.
-        time = time.replace(tzinfo=M2Crypto.ASN1.UTC)
-        asn1_not_before = M2Crypto.ASN1.ASN1_UTCTIME()
+        time = time.replace(tzinfo=ASN1.UTC)
+        asn1_not_before = ASN1.ASN1_UTCTIME()
         asn1_not_before.set_datetime(time)
         cert.set_not_before(asn1_not_before)
 
@@ -1561,8 +1559,8 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             )
 
         # Forcing the datetime to have an explicit tzinfo here as well.
-        time = time.replace(tzinfo=M2Crypto.ASN1.UTC)
-        asn1_not_after = M2Crypto.ASN1.ASN1_UTCTIME()
+        time = time.replace(tzinfo=ASN1.UTC)
+        asn1_not_after = ASN1.ASN1_UTCTIME()
         asn1_not_after.set_datetime(time)
         cert.set_not_after(asn1_not_after)
 
@@ -1571,15 +1569,15 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     # if no 'not_before' or 'not_after' dates are setup, both of the following
     # dates will be the date of today. then the days_valid offset makes sense.
 
-    not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
-    not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
+    not_before = m2.x509_get_not_before(cert.x509)
+    not_after = m2.x509_get_not_after(cert.x509)
 
     # Only process the dynamic dates if start and end are not specified.
     if "not_before" not in kwargs:
-        M2Crypto.m2.x509_gmtime_adj(not_before, 0)
+        m2.x509_gmtime_adj(not_before, 0)
     if "not_after" not in kwargs:
         valid_seconds = 60 * 60 * 24 * kwargs["days_valid"]  # 60s * 60m * 24 * days
-        M2Crypto.m2.x509_gmtime_adj(not_after, valid_seconds)
+        m2.x509_gmtime_adj(not_after, valid_seconds)
 
     # If neither public_key or csr are included, this cert is self-signed
     if "public_key" not in kwargs and "csr" not in kwargs:
@@ -1744,7 +1742,7 @@ def create_csr(path=None, text=False, **kwargs):
             "Either path or text must be specified, not both."
         )
 
-    csr = M2Crypto.X509.Request()
+    csr = X509.Request()
     subject = csr.get_subject()
 
     for prop, default in CERT_DEFAULTS.items():
@@ -1786,7 +1784,7 @@ def create_csr(path=None, text=False, **kwargs):
         if entry in kwargs:
             setattr(subject, entry, kwargs[entry])
 
-    extstack = M2Crypto.X509.X509_Extension_Stack()
+    extstack = X509.X509_Extension_Stack()
     for extname, extlongname in EXT_NAME_MAPPINGS.items():
         if extname not in kwargs and extlongname not in kwargs:
             continue
