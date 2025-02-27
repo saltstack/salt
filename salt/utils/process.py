@@ -59,7 +59,7 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle(f"{current.rstrip()} {name}")
+        setproctitle.setproctitle(f"{current.rstrip()}{name}")
 
 
 def daemonize(redirect_out=True):
