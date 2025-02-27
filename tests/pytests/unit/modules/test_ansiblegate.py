@@ -188,6 +188,125 @@ def test_ansible_targets(minion_opts):
             assert len(ret["ungrouped"]["hosts"]) == 2
 
 
+def test_ansible_targets_multiple_inventories(minion_opts):
+    """
+    Test ansible.targets execution module function with multiple inventories.
+    :return:
+    """
+    ansible_inventory1_ret = """
+{
+    "_meta": {
+        "hostvars": {
+            "uyuni-stable-ansible-centos7-1.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            },
+            "uyuni-stable-ansible-centos7-2.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            }
+        }
+    },
+    "all": {
+        "children": [
+            "ungrouped"
+        ]
+    },
+    "ungrouped": {
+        "hosts": [
+            "uyuni-stable-ansible-centos7-1.tf.local",
+            "uyuni-stable-ansible-centos7-2.tf.local"
+        ]
+    }
+}
+    """
+    ansible_inventory2_ret = """
+{
+    "_meta": {
+        "hostvars": {
+            "uyuni-stable-ansible-alma9-1.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            },
+            "uyuni-stable-ansible-alma9-2.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            }
+        }
+    },
+    "all": {
+        "children": [
+            "ungrouped"
+        ]
+    },
+    "ungrouped": {
+        "hosts": [
+            "uyuni-stable-ansible-alma9-1.tf.local",
+            "uyuni-stable-ansible-alma9-2.tf.local"
+        ]
+    }
+}
+    """
+    ansible_inventory_mock = MagicMock(
+        side_effect=[ansible_inventory1_ret, ansible_inventory2_ret]
+    )
+    with patch("salt.utils.path.which", MagicMock(return_value=True)):
+        utils = salt.loader.utils(minion_opts, whitelist=["ansible"])
+        with patch("salt.modules.cmdmod.run", ansible_inventory_mock), patch.dict(
+            ansiblegate.__utils__, utils
+        ), patch("os.path.isfile", MagicMock(return_value=True)):
+            ret = ansiblegate.targets(
+                inventories=["/etc/ansible/hosts1", "/etc/ansible/hosts2"]
+            )
+            assert ansible_inventory_mock.call_args
+            assert ansible_inventory_mock.call_args
+            assert len(ret.keys()) == 2
+            assert "/etc/ansible/hosts1" in ret.keys()
+            assert "/etc/ansible/hosts2" in ret.keys()
+            assert "_meta" in ret["/etc/ansible/hosts1"]
+            assert "_meta" in ret["/etc/ansible/hosts2"]
+            assert (
+                "uyuni-stable-ansible-centos7-1.tf.local"
+                in ret["/etc/ansible/hosts1"]["_meta"]["hostvars"]
+            )
+            assert (
+                "uyuni-stable-ansible-centos7-2.tf.local"
+                in ret["/etc/ansible/hosts1"]["_meta"]["hostvars"]
+            )
+            assert (
+                "uyuni-stable-ansible-alma9-1.tf.local"
+                in ret["/etc/ansible/hosts2"]["_meta"]["hostvars"]
+            )
+            assert (
+                "uyuni-stable-ansible-alma9-2.tf.local"
+                in ret["/etc/ansible/hosts2"]["_meta"]["hostvars"]
+            )
+            assert (
+                "ansible_ssh_private_key_file"
+                in ret["/etc/ansible/hosts1"]["_meta"]["hostvars"][
+                    "uyuni-stable-ansible-centos7-1.tf.local"
+                ]
+            )
+            assert (
+                "ansible_ssh_private_key_file"
+                in ret["/etc/ansible/hosts1"]["_meta"]["hostvars"][
+                    "uyuni-stable-ansible-centos7-2.tf.local"
+                ]
+            )
+            assert (
+                "ansible_ssh_private_key_file"
+                in ret["/etc/ansible/hosts2"]["_meta"]["hostvars"][
+                    "uyuni-stable-ansible-alma9-1.tf.local"
+                ]
+            )
+            assert (
+                "ansible_ssh_private_key_file"
+                in ret["/etc/ansible/hosts2"]["_meta"]["hostvars"][
+                    "uyuni-stable-ansible-alma9-2.tf.local"
+                ]
+            )
+            assert "all" in ret["/etc/ansible/hosts1"]
+            assert "all" in ret["/etc/ansible/hosts2"]
+            assert len(ret["/etc/ansible/hosts1"]["ungrouped"]["hosts"]) == 2
+            assert len(ret["/etc/ansible/hosts2"]["ungrouped"]["hosts"]) == 2
+
+
 def test_ansible_discover_playbooks_single_path():
     playbooks_dir = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/playbooks/example_playbooks/"
