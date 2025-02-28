@@ -51,14 +51,11 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
     $filename = Split-Path $local_file -leaf
     if ( Test-Path -Path $local_file ) {
         Write-Host "Verifying hash for $filename`: " -NoNewline
-        $hash = (Get-FileHash $local_file).Hash
-        if ( $hash -eq $SHA256 ) {
+        if ( (Get-FileHash $local_file).Hash -eq $SHA256 ) {
             Write-Result "Verified" -ForegroundColor Green
             return
         } else {
             Write-Result "Failed Hash" -ForegroundColor Red
-            Write-Host "Found Hash: $hash"
-            Write-Host "Expected Hash: $SHA256"
             Remove-Item -Path $local_file -Force
         }
     }
@@ -89,11 +86,6 @@ $BUILD_ARCH     = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $RUNTIME_DIR    = [System.Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
 $CSC_BIN        = "$RUNTIME_DIR\csc.exe"
-
-[DateTime]$origin = "1970-01-01 00:00:00"
-$hash_time = $(git show -s --format=%at)
-$TIME_STAMP     = $origin.AddSeconds($hash_time)
-
 
 if ( $BUILD_ARCH -eq "64bit" ) {
     $BUILD_ARCH    = "AMD64"
@@ -478,71 +470,6 @@ $states | ForEach-Object {
     }
 }
 Write-Result "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Remove compiled files
-#-------------------------------------------------------------------------------
-# We have to do this again because we use the Relenv Python to get the build
-# architecture. This recreates some of the pycache files that were removed
-# in the prep_salt script
-Write-Host "Removing __pycache__ directories: " -NoNewline
-$found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter "__pycache__" -Recurse
-$found | ForEach-Object {
-    Remove-Item -Path "$($_.FullName)" -Recurse -Force
-    if ( Test-Path -Path "$($_.FullName)" ) {
-        Write-Result "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $($_.FullName)"
-        exit 1
-    }
-}
-Write-Result "Success" -ForegroundColor Green
-
-# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
-# __pycache__ directories, it won't be able to find them because they are no
-# longer present
-# This probably won't find any *.pyc files, but just in case
-$remove = "*.pyc",
-          "*.chm"
-$remove | ForEach-Object {
-    Write-Host "Removing unneeded $_ files: " -NoNewline
-    $found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter $_ -Recurse
-    $found | ForEach-Object {
-        Remove-Item -Path "$($_.FullName)" -Recurse -Force
-        if ( Test-Path -Path "$($_.FullName)" ) {
-            Write-Result "Failed" -ForegroundColor Red
-            Write-Host "Failed to remove: $($_.FullName)"
-            exit 1
-        }
-    }
-    Write-Result "Success" -ForegroundColor Green
-}
-
-#-------------------------------------------------------------------------------
-# Set timestamps on Files
-#-------------------------------------------------------------------------------
-# We're doing this on the dlls that were created above
-
-Write-Host "Setting time stamp on all files: " -NoNewline
-$found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $TIME_STAMP
-    $_.LastAccessTime = $TIME_STAMP
-    $_.LastWriteTime = $TIME_STAMP
-}
-Write-Result "Success" -ForegroundColor Green
-
-Write-Host "Setting time stamp on installer dlls: " -NoNewline
-$found = Get-ChildItem -Path $SCRIPT_DIR -Filter "*.dll" -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $TIME_STAMP
-    $_.LastAccessTime = $TIME_STAMP
-    $_.LastWriteTime = $TIME_STAMP
-}
-Write-Result "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Let's start building the MSI
-#-------------------------------------------------------------------------------
 
 # move conf folder up one dir because it must not be discovered twice and xslt is difficult
 Write-Host "Remove configs from discovery: " -NoNewline
