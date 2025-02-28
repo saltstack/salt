@@ -56,7 +56,7 @@ def parse():
     	"   execute salt-call on the first minion using the default values for\n"
     	"   temp-dir and name use -c /tmp/sroot/minion-0. The commands salt-api,\n"
     	"   salt-cloud, salt-extend, salt-master, salt-minion, salt-proxy,\n"
-    	"   salt-ssh, salt-syndic and spm are not supoported."
+    	"   salt-ssh, salt-syndic and spm are not supported."
     )
     usage = "usage: python %prog [options]" + guidance
     parser = optparse.OptionParser(usage)
@@ -79,18 +79,18 @@ def parse():
         "--master",
         dest="master",
         default="localhost",
-        help="The location of the salt master that this swarm will serve. (default = localhost)",
+        help="The location of the salt master that this swarm will serve. (default = localhost) "
+             "The standard port used by daemon masters is 4506. Masters can be specified using "
+             "<IP address>:<port>. For example, 192.168.1.2:4506",
     )
     parser.add_option(
         "--name",
         "-n",
         dest="name",
         default="minion",
-        help=(
-            "Give the minions an alternative id prefix, this is used "
+        help="Give the minions an alternative id prefix, this is used "
             "when minions from many systems are being aggregated onto "
-            "a single master. (default = minion)"
-        ),
+            "a single master. (default = minion)",
     )
     parser.add_option(
         "--rand-os",
@@ -149,7 +149,7 @@ def parse():
              "If specified, you must manually recursively delete "
              "the swarm root (see --temp-dir) before running "
              "minionswarm again, e.g., using the default swarm "
-             "root, rm -fr /tmp/srooot"
+             "root, rm -fr /tmp/srooot",
     )
     parser.add_option(
         "--root-dir",
@@ -161,7 +161,10 @@ def parse():
         "--transport",
         dest="transport",
         default="zeromq",
-        help="Declare which transport to use, (default = zeromq)",
+        help="Declare which transport to use, (default = zeromq). Currently, "
+             "tcp/TLS and ws/TLS are not supported, since they require the "
+             "establishment of a certificate infrastructure and use of PKI "
+             "keys manaaged by that infrastructure."
     )
     parser.add_option(
         "--start-delay",
@@ -174,13 +177,16 @@ def parse():
         "-c",
         "--config-dir",
         default="",
-        help="Pass in a configuration directory containing base configuration.",
+        help="Pass in a configuration directory containing base configuration. "
+             "If a configuration directory is specified, at a minimum, it must "
+             "have a master and minion configuration file and these files "
+             "must not be empty. For example, each could have a user: <username> "
+             "entry."
     )
     parser.add_option(
         "--open-mode",
         dest="open_mode",
         default=True,
-        action="store_true",
         help="Turn off authentication at the Master. Default is True to align "
              "this version of minionswarm with previous version."
     )
