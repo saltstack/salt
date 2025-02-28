@@ -2479,8 +2479,12 @@ class ClearFuncs(TransportMethods):
                     },
                 }
         jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if jid is None or isinstance(jid, dict):
+            if jid and "error" in jid:
+                load = jid
+            else:
+                load = {"error": "Master failed to assign jid"}
+            return load
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         if self.opts.get("order_masters"):
