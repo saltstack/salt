@@ -391,7 +391,7 @@ class MinionSwarm(Swarm):
             data["grains"]["machine_id"] = hashlib.md5(minion_id_encode).hexdigest()
         if self.opts["rand_uuid"]:
             data["grains"]["uuid"] = str(uuid.uuid4())
-            
+
         data = self._update_minion_conf(data)
 
         with salt.utils.files.fopen(path, "w+") as fp_:
@@ -405,12 +405,12 @@ class MinionSwarm(Swarm):
         respectively, which generally will not exist. Also, specify the extmods directory path and the
         pki/minion directory path.
         """
- 
+
         cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/minion")
         sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
         extension_modules_dir_path = os.path.join(self.swarm_root, "var/cache/salt/minion/extmods")
         pki_dir_path = os.path.join(self.swarm_root, "etc/salt/pki/minion")
-        
+
         try:
             os.makedirs(cachdir_path)
         except FileExistsError:
@@ -421,7 +421,7 @@ class MinionSwarm(Swarm):
         except FileExistsError:
             # directory already exists
             pass
-                             
+
         data.update(
             {
                 "cachedir": cachdir_path,
@@ -466,7 +466,7 @@ class MasterSwarm(Swarm):
         """
         Do the master start.. Run the master as the user under which minionswarm runs.
 	"""
-        
+
         username = getpass.getuser()
         cmd = "salt-master '--config-dir={}' --user={} --pid-file {}".format(self.conf, username, f"{self.conf}.pid")
         if self.opts["foreground"]:
@@ -479,7 +479,7 @@ class MasterSwarm(Swarm):
         """
         Make the config file with standard values
         """
-        
+
         data = {}
         if self.opts["config_dir"]:
             spath = os.path.join(self.opts["config_dir"], "master")
@@ -495,29 +495,29 @@ class MasterSwarm(Swarm):
             }
         )
         data.update({"open_mode": self.opts["open_mode"]})
-            
+
         # TODO Pre-seed keys
-  
+
         os.makedirs(self.conf)
         path = os.path.join(self.conf, "master")
-        
+
         data = self._update_master_conf(data)
-  
+
         with salt.utils.files.fopen(path, "w+") as fp_:
             salt.utils.yaml.safe_dump(data, fp_)
-            
+
     def _update_master_conf(self, data):  # pylint: disable=W0221
         """
         Modify the master config to contain cachedir and sock_dir definitions. Unless cachedir and sock_dir
         are modified as indicated, alt-master will think they are /var/cache/salt and /var/run/salt/master,
         respectively, which generally will not exist.
         """
-        
+
         key_logfile_path = os.path.join(self.swarm_root, "var/log/salt/key")
         cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
         sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
         sqlite_queue_dir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
-        
+
         try:
             os.makedirs(cachdir_path)
         except FileExistsError:
@@ -527,8 +527,8 @@ class MasterSwarm(Swarm):
             os.makedirs(sock_dir_path)
         except FileExistsError:
             # directory already exists
-            pass 
-    
+            pass
+
         data.update(
             {
                 "key_logfile": key_logfile_path,
@@ -537,14 +537,14 @@ class MasterSwarm(Swarm):
                 "sqlite_queue_dir" : sqlite_queue_dir_path,
             }
         )
-        
+
         return data
-        
+
     def shutdown(self):
         """
         Shutdown master
         """
-        
+
         print("Killing master")
         subprocess.call('pkill -KILL -f "python.*salt-master"', shell=True)
         print("Master killed")
