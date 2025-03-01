@@ -14,9 +14,17 @@ run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
 <%- block on %>
 
 on:
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 */8 * * *'  # Run every 8 hours
+  workflow_dispatch:
+    inputs:
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
+
 
 <%- endblock %>
 
@@ -31,14 +39,9 @@ concurrency:
 
 <%- block permissions %>
 <{- super() }>
-<%- if workflow_slug == "scheduled" %>
-  actions: write  # to trigger branch scheduled builds
-<%- endif %>
 <%- endblock permissions %>
 
 <%- block pre_jobs %>
 
-  <%- include "workflow-requirements-check.yml.jinja" %>
-  <%- include "trigger-branch-workflows.yml.jinja" %>
 
 <%- endblock pre_jobs %>
