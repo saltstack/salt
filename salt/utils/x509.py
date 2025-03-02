@@ -701,7 +701,7 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
                 return pk, "pem", None
             return pk
         except ValueError as err:
-            if "Bad decrypt" in str(err):
+            if "Bad decrypt" in str(err) or "password may be incorrect" in str(err):
                 raise SaltInvocationError(
                     "Bad decrypt - is the password correct?"
                 ) from err
@@ -725,7 +725,7 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
             return pk, "der", None
         return pk
     except ValueError as err:
-        if "Bad decrypt" in str(err):
+        if "Bad decrypt" in str(err) or "password may be incorrect" in str(err):
             raise SaltInvocationError("Bad decrypt - is the password correct?") from err
     except TypeError as err:
         if "private key is encrypted" in str(err):
@@ -744,7 +744,7 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
             return loaded.key, "pkcs12", loaded
         return loaded.key
     except ValueError as err:
-        if "Bad decrypt" in str(err):
+        if "Bad decrypt" in str(err) or "password may be incorrect" in str(err):
             raise SaltInvocationError("Bad decrypt - is the password correct?") from err
     except TypeError as err:
         if "private key is encrypted" in str(err):

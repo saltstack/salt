@@ -44,7 +44,7 @@ bcrypt==4.1.2
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.21.46
+boto3==1.36.25
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -53,7 +53,7 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-botocore==1.24.46
+botocore==1.36.25
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   boto3
@@ -123,12 +123,11 @@ croniter==2.0.5 ; sys_platform != "win32"
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==44.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   etcd3-py
     #   moto
     #   paramiko
@@ -250,7 +249,7 @@ jaraco.text==3.5.1
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.5
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -437,7 +436,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.0.0
+pyopenssl==25.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -598,7 +597,7 @@ rsa==4.7.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   google-auth
-s3transfer==0.5.2
+s3transfer==0.11.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   boto3
@@ -687,14 +686,17 @@ trustme==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/pytest.txt
-typing-extensions==4.8.0
-    # via
-    #   -c requirements/static/ci/py3.10/linux.txt
-    #   pytest-system-statistics
-urllib3==1.26.18
+typing-extensions==4.12.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   pyopenssl
+    #   pytest-system-statistics
+urllib3==2.3.0 ; python_version >= "3.10"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes
