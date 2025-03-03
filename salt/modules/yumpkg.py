@@ -3534,12 +3534,17 @@ def services_need_restart(**kwargs):
 
         salt '*' pkg.services_need_restart
     """
-    if _yum() != "dnf":
-        raise CommandExecutionError("dnf is required to list outdated services.")
+    if _yum() in ("dnf", "dnf5"):
+        raise CommandExecutionError(
+            "dnf or dnf5 is required to list outdated services."
+        )
     if not salt.utils.systemd.booted(__context__):
         raise CommandExecutionError("systemd is required to list outdated services.")
 
-    cmd = ["dnf", "--quiet", "needs-restarting"]
+    if _yum() == "dnf5":
+        cmd = ["dnf5", "--quiet", "needs-restarting"]
+    else:
+        cmd = ["dnf", "--quiet", "needs-restarting"]
     dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     if not dnf_output:
         return []

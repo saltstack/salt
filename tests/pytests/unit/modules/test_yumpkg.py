@@ -3158,6 +3158,15 @@ def test_services_need_restart_no_dnf_output():
         assert yumpkg.services_need_restart() == []
 
 
+def test_services_need_restart_no_dnf5_output():
+    patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf5"))
+    patch_booted = patch("salt.utils.systemd.booted", Mock(return_value=True))
+    mock_run_stdout = MagicMock(return_value="")
+    patch_run_stdout = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_run_stdout})
+    with patch_yum, patch_booted, patch_run_stdout:
+        assert yumpkg.services_need_restart() == []
+
+
 def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():
     patch_list_pkgs = patch(
         "salt.modules.yumpkg.list_pkgs", return_value={}, autospec=True
