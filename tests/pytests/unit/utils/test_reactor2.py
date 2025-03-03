@@ -568,6 +568,10 @@ def test_client_cache_missing_key(file_client, react_wrap):
     client_cache = {}
     tag = f"new_{file_client}"
     chunk = LOW_CHUNKS[tag][0]
+    print(
+        f"DGM test_client_cache_missing_key, file_client '{file_client}', tag '{tag}', chunk '{chunk}'",
+        flush=True,
+    )
     thread_pool = Mock()
     thread_pool.fire_async = Mock()
     with patch.object(react_wrap, "client_cache", client_cache):
