@@ -3541,7 +3541,7 @@ def services_need_restart(**kwargs):
 
         salt '*' pkg.services_need_restart
     """
-    if _yum() in ("dnf", "dnf5"):
+    if _yum() not in ("dnf", "dnf5"):
         raise CommandExecutionError(
             "dnf or dnf5 is required to list outdated services."
         )
