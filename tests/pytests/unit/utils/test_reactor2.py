@@ -585,7 +585,7 @@ def test_client_cache_missing_key(file_client, react_wrap):
                 f"DGM test_client_cache_missing_key patch pool, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
                 flush=True,
             )
-            del react_wrap.client_cache[f"{file_client}"]
+            ## DGM del react_wrap.client_cache[f"{file_client}"]
             print(
                 f"DGM test_client_cache_missing_key post del key, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
                 flush=True,

@@ -6,6 +6,7 @@ import fnmatch
 import glob
 import logging
 import os
+import traceback
 
 import salt.client
 import salt.defaults.exitcodes
@@ -341,7 +342,12 @@ class ReactWrap:
         """
         Execute a reaction by invoking the proper wrapper func
         """
+        print(f"DGM class ReactWrap entry run, low '{low}'", flush=True)
         self.populate_client_cache(low)
+        print(
+            f"DGM class ReactWrap run, self.client_cache '{self.client_cache}'",
+            flush=True,
+        )
         try:
             l_fun = getattr(self, low["state"])
         except AttributeError:
@@ -464,11 +470,14 @@ class ReactWrap:
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
+        stk_summary = traceback.format_stack()
+        print(f"DGM class ReactWrap runner entry, backtrace '{stk_summary}'")
         # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
         print(
             f"DGM class ReactWrap runner, client_cache '{self.client_cache}', fun '{fun}', kwargs '{kwargs}'",
             flush=True,
         )
+
         if "runner" not in self.client_cache:
             log.debug("reactor edge case: re-populating client_cache for runner")
             low = {"state": "runner"}
