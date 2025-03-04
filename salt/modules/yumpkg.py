@@ -3340,12 +3340,12 @@ def download(*packages, **kwargs):
     .. versionadded:: 2015.5.0
 
     Download packages to the local disk. Requires ``yumdownloader`` from
-    ``yum-utils`` package.
+    ``yum-utils`` or ``dnf-utils`` package.
 
     .. note::
 
-        ``yum-utils`` will already be installed on the minion if the package
-        was installed from the Fedora / EPEL repositories.
+        ``yum-utils`` or ``dnf-utils`` will already be installed on the minion
+        if the package was installed from the EPEL / Fedora repositories.
 
     CLI Example:
 
@@ -3360,7 +3360,10 @@ def download(*packages, **kwargs):
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
-    CACHE_DIR = "/var/cache/yum/packages"
+    ## DGM CACHE_DIR = "/var/cache/yum/packages"
+    CACHE_DIR = os.path.join("/var/cache/", _yum(), "/packages")
+    print(f"DGM download CACHE_DIR, '{CACHE_DIR}'", flush=True)
+
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     cached_pkgs = os.listdir(CACHE_DIR)
