@@ -76,10 +76,11 @@ def test_list_available(pkg, repo, as_dict, reverse, expected):
 @pytest.mark.parametrize(
     "pkg_name, expected",
     [
-        ("my-software", {"my-software": ["1.0.1", "1.0.2"]}),
-        ("my-soft*", {"my-software": ["1.0.1", "1.0.2"]}),
+        ("my-software", {"my-software": ["1.0.2", "1.0.1"]}),
+        ("my-software=1.0.1", {"my-software": ["1.0.1"]}),
+        ("my-soft*", {"my-software": ["1.0.2", "1.0.1"]}),
         ("your-software", {"your-software": ["1.0.0"]}),
-        (None, {"my-software": ["1.0.1", "1.0.2"], "your-software": ["1.0.0"]}),
+        (None, {"my-software": ["1.0.2", "1.0.1"], "your-software": ["1.0.0"]}),
     ],
 )
 def test_list_repo_pkgs(pkg, repo, pkg_name, expected):

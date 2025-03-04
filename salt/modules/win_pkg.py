@@ -367,7 +367,15 @@ def list_repo_pkgs(*args, saltenv="base", **kwargs):
     # Generate a list of packages and their available versions
     repo_pkgs = {}
     for pkg in pkgs:
-        repo_pkgs.update({pkg: list(pkgs[pkg].keys())})
+        repo_pkgs.update(
+            {
+                pkg: sorted(
+                    list(pkgs[pkg].keys()),
+                    key=cmp_to_key(_reverse_cmp_pkg_versions),
+                    reverse=True,
+                )
+            }
+        )
 
     # If no args passed, just return everything
     if not args:
@@ -376,13 +384,17 @@ def list_repo_pkgs(*args, saltenv="base", **kwargs):
     # Loop through the args and return info for each specified package
     ret = {}
     for arg in args:
+        if "=" in arg:
+            pkg_name, pkg_version = arg.split("=")
+        else:
+            pkg_name = arg
+            pkg_version = ""
         for pkg in repo_pkgs:
-            if fnmatch(pkg, arg):
-                ret.update({pkg: repo_pkgs[pkg]})
-
-    # If ret is empty, return everything
-    if not ret:
-        ret = repo_pkgs
+            if fnmatch(pkg, pkg_name):
+                if pkg_version and pkg_version in repo_pkgs[pkg]:
+                    ret.setdefault(pkg, []).append(pkg_version)
+                else:
+                    ret.setdefault(pkg, []).extend(repo_pkgs[pkg])
 
     return ret
 
