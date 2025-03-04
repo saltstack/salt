@@ -241,7 +241,7 @@ def _versionlock_pkg(grains=None):
     """
     if grains is None:
         grains = __grains__
-    if _yum() == "dnf":
+    if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
                 "python3-dnf-plugin-versionlock"
@@ -1988,7 +1988,7 @@ def upgrade(
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
     if _yum() in ("dnf", "dnf5") and not obsoletes:
-        # for dnf we can just disable obsoletes
+        # for dnf[5] we can just disable obsoletes
         _setopt = [
             opt
             for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
