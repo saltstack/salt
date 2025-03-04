@@ -1060,7 +1060,7 @@ def list_downloaded(**kwargs):
 
         salt '*' pkg.list_downloaded
     """
-    CACHE_DIR = os.path.join("/var/cache/", _yum())
+    CACHE_DIR = os.path.join("/var/cache", _yum())
 
     ret = {}
     for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
@@ -3360,10 +3360,7 @@ def download(*packages, **kwargs):
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
-    ## DGM CACHE_DIR = "/var/cache/yum/packages"
-    CACHE_DIR = os.path.join("/var/cache/", _yum(), "/packages")
-    print(f"DGM download CACHE_DIR, '{CACHE_DIR}'", flush=True)
-
+    CACHE_DIR = os.path.join("/var/cache", _yum(), "packages")
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     cached_pkgs = os.listdir(CACHE_DIR)
