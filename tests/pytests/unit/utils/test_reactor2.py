@@ -572,11 +572,11 @@ def test_client_cache_missing_key(file_client, react_wrap):
         if f"{file_client}" == "runner":
             react_wrap.runner(chunk)
         elif f"{file_client}" == "wheel":
-            react_wrap.runner(chunk)
+            react_wrap.wheel(chunk)
         elif f"{file_client}" == "local":
-            react_wrap.local(chunk)
+            react_wrap.local(chunk["fun"], chunk["tgt"])
         elif f"{file_client}" == "caller":
-            react_wrap.caller(chunk)
+            react_wrap.caller(chunk["fun"], chunk["args"])
         else:
             assert f"{file_client}" == "bad parameterization"
 
