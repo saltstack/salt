@@ -560,54 +560,7 @@ def test_caller(schema, react_wrap):
     )
 
 
-## DGM ## DGM @pytest.mark.parametrize("file_client", ["runner", "wheel", "local", "caller"])
-## DGM @pytest.mark.parametrize("file_client", ["runner"])
-## DGM def test_client_cache_missing_key(file_client, react_wrap):
-## DGM     """
-## DGM     Test client_cache file_client missing, gets repopulated
-## DGM     """
-## DGM     client_cache = {}
-## DGM     tag = f"new_{file_client}"
-## DGM     chunk = LOW_CHUNKS[tag][0]
-## DGM     print(
-## DGM         f"DGM test_client_cache_missing_key, file_client '{file_client}', tag '{tag}', chunk '{chunk}'",
-## DGM         flush=True,
-## DGM     )
-## DGM     thread_pool = Mock()
-## DGM     thread_pool.fire_async = Mock()
-## DGM     with patch.object(react_wrap, "client_cache", client_cache):
-## DGM         print(
-## DGM             f"DGM test_client_cache_missing_key patch client_cache, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-## DGM             flush=True,
-## DGM         )
-## DGM         with patch.object(react_wrap, "pool", thread_pool):
-## DGM             print(
-## DGM                 f"DGM test_client_cache_missing_key patch pool, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-## DGM                 flush=True,
-## DGM             )
-## DGM             ## DGM del react_wrap.client_cache[f"{file_client}"]
-## DGM             print(
-## DGM                 f"DGM test_client_cache_missing_key post del key, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-## DGM                 flush=True,
-## DGM             )
-## DGM             react_wrap.run(chunk)
-## DGM
-## DGM     print(
-## DGM         f"DGM test_client_cache_missing_key post patch, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-## DGM         flush=True,
-## DGM     )
-## DGM
-## DGM     thread_pool.fire_async.assert_called_with(
-## DGM         react_wrap.client_cache[file_client].low,
-## DGM         args=WRAPPER_CALLS[tag],
-## DGM     )
-## DGM     client_cache[file_client].cmd.assert_called_with(
-## DGM         *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
-## DGM     )
-
-
-## DGM @pytest.mark.parametrize("file_client", ["runner", "wheel", "local", "caller"])
-@pytest.mark.parametrize("file_client", ["runner"])
+@pytest.mark.parametrize("file_client", ["runner", "wheel", "local", "caller"])
 def test_client_cache_missing_key(file_client, react_wrap):
     """
     Test client_cache file_client missing, gets repopulated
@@ -615,37 +568,11 @@ def test_client_cache_missing_key(file_client, react_wrap):
     client_cache = {}
     tag = f"new_{file_client}"
     chunk = LOW_CHUNKS[tag][0]
-    print(
-        f"DGM test_client_cache_missing_key, file_client '{file_client}', tag '{tag}', chunk '{chunk}'",
-        flush=True,
-    )
-    thread_pool = Mock()
-    thread_pool.fire_async = Mock()
     with patch.object(react_wrap, "client_cache", client_cache):
-        print(
-            f"DGM test_client_cache_missing_key patch client_cache, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-            flush=True,
-        )
         react_wrap.runner(chunk)
-        print(
-            f"DGM test_client_cache_missing_key post runner, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
-            flush=True,
-        )
-        ## DGM dgm_key = react_wrap.client_cache.get(f"{file_client}")
-        ## DGM dgm_key = [key for key in react_wrap.client_cache.keys() if key == f"{file_client}"]
-        ## DGM dgm_key = None
-        ## DGM dgm_key = [key if key == f"{file_client}" for key in react_wrap.client_cache.keys()]
-        dgm_keys = None
+        file_client_key = None
         for key in react_wrap.client_cache.keys():
             if key == f"{file_client}":
-                dgm_key = key
-                print(
-                    f"DGM test_client_cache_missing_key check key, file_client '{file_client}', dgm_key '{dgm_key}', react_wrap.client_cache.keys '{react_wrap.client_cache.keys()}'",
-                    flush=True,
-                )
+                file_client_key = key
 
-        print(
-            f"DGM test_client_cache_missing_key post get key, file_client '{file_client}', dgm_key '{dgm_key}', react_wrap.client_cache '{react_wrap.client_cache}'",
-            flush=True,
-        )
-        assert dgm_key == f"{file_client}"
+        assert file_client_key == f"{file_client}"
