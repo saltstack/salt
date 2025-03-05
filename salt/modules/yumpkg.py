@@ -1036,7 +1036,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
+    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
