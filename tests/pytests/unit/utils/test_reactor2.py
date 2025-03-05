@@ -569,7 +569,17 @@ def test_client_cache_missing_key(file_client, react_wrap):
     tag = f"new_{file_client}"
     chunk = LOW_CHUNKS[tag][0]
     with patch.object(react_wrap, "client_cache", client_cache):
-        react_wrap.runner(chunk)
+        if f"{file_client}" == "runner":
+            react_wrap.runner(chunk)
+        elif f"{file_client}" == "wheel":
+            react_wrap.runner(chunk)
+        elif f"{file_client}" == "local":
+            react_wrap.local(chunk)
+        elif f"{file_client}" == "caller":
+            react_wrap.caller(chunk)
+        else:
+            assert f"{file_client}" == "bad parameterization"
+
         file_client_key = None
         for key in react_wrap.client_cache.keys():
             if key == f"{file_client}":
