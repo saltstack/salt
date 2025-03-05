@@ -18,21 +18,39 @@ def user():
         yield account
 
 
-def test_compound_runas(user):
-    cmd = "hostname && whoami"
+@pytest.mark.parametrize(
+    "cmd, expected",
+    [
+        ("hostname && whoami", "username"),
+        ("hostname && echo foo", "foo"),
+        ("hostname && python --version", "Python"),
+    ],
+)
+def test_compound_runas(user, cmd, expected):
+    if expected == "username":
+        expected = user.username
     result = win_runas.runas(
         cmdLine=cmd,
         username=user.username,
         password=user.password,
     )
-    assert user.username in result["stdout"]
+    assert expected in result["stdout"]
 
 
-def test_compound_runas_unpriv(user):
-    cmd = "hostname && whoami"
+@pytest.mark.parametrize(
+    "cmd, expected",
+    [
+        ("hostname && whoami", "username"),
+        ("hostname && echo foo", "foo"),
+        ("hostname && python --version", "Python"),
+    ],
+)
+def test_compound_runas_unpriv(user, cmd, expected):
+    if expected == "username":
+        expected = user.username
     result = win_runas.runas_unpriv(
         cmd=cmd,
         username=user.username,
         password=user.password,
     )
-    assert user.username in result["stdout"]
+    assert expected in result["stdout"]

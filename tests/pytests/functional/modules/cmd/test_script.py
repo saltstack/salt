@@ -13,6 +13,17 @@ def cmd(modules):
     return modules.cmd
 
 
+@pytest.fixture(scope="module")
+def exitcode_script(state_tree):
+    exit_code = 12345
+    script_contents = f"""
+    Write-Host "Expected exit code: {exit_code}"
+    exit {exit_code}
+    """
+    with pytest.helpers.temp_file("exit_code.ps1", script_contents, state_tree):
+        yield exit_code
+
+
 @pytest.fixture(params=["powershell", "pwsh"])
 def shell(request):
     """
@@ -85,3 +96,9 @@ def test_windows_script_args_powershell_runas(cmd, shell, account, issue_56195):
     )
 
     assert ret["stdout"] == password
+
+
+@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
+def test_windows_script_exitcode(cmd, shell, exitcode_script):
+    ret = cmd.script("salt://exit_code.ps1", shell=shell, saltenv="base")
+    assert ret["retcode"] == exitcode_script
