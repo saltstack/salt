@@ -631,7 +631,18 @@ def test_client_cache_missing_key(file_client, react_wrap):
             f"DGM test_client_cache_missing_key post runner, file_client '{file_client}', react_wrap.client_cache '{react_wrap.client_cache}'",
             flush=True,
         )
-        dgm_key = react_wrap.client_cache.get(f"{file_client}")
+        ## DGM dgm_key = react_wrap.client_cache.get(f"{file_client}")
+        ## DGM dgm_key = [key for key in react_wrap.client_cache.keys() if key == f"{file_client}"]
+        ## DGM dgm_key = None
+        ## DGM dgm_key = [key if key == f"{file_client}" for key in react_wrap.client_cache.keys()]
+        dgm_keys = None
+        for key in react_wrap.client_cache.keys():
+            if key == f"{file_client}":
+                dgm_key = key
+                print(
+                    f"DGM test_client_cache_missing_key check key, file_client '{file_client}', dgm_key '{dgm_key}', react_wrap.client_cache.keys '{react_wrap.client_cache.keys()}'",
+                    flush=True,
+                )
 
         print(
             f"DGM test_client_cache_missing_key post get key, file_client '{file_client}', dgm_key '{dgm_key}', react_wrap.client_cache '{react_wrap.client_cache}'",
