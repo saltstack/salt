@@ -6,7 +6,6 @@ import fnmatch
 import glob
 import logging
 import os
-import traceback
 
 import salt.client
 import salt.defaults.exitcodes
@@ -342,12 +341,7 @@ class ReactWrap:
         """
         Execute a reaction by invoking the proper wrapper func
         """
-        print(f"DGM class ReactWrap entry run, low '{low}'", flush=True)
         self.populate_client_cache(low)
-        print(
-            f"DGM class ReactWrap run, self.client_cache '{self.client_cache}'",
-            flush=True,
-        )
         try:
             l_fun = getattr(self, low["state"])
         except AttributeError:
@@ -470,21 +464,10 @@ class ReactWrap:
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
-        stk_summary = traceback.format_stack()
-        print(f"DGM class ReactWrap runner entry, backtrace '{stk_summary}'")
         # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
-        print(
-            f"DGM class ReactWrap runner, client_cache '{self.client_cache}', fun '{fun}', kwargs '{kwargs}'",
-            flush=True,
-        )
-
         if "runner" not in self.client_cache:
             log.debug("reactor edge case: re-populating client_cache for runner")
             low = {"state": "runner"}
-            print(
-                f"DGM class ReactWrap runner not in client_cache, low '{low}'",
-                flush=True,
-            )
             self.populate_client_cache(low)
         return self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
 
@@ -493,17 +476,9 @@ class ReactWrap:
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         """
         # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
-        print(
-            f"DGM class ReactWrap wheel, client_cache '{self.client_cache}', fun '{fun}', kwargs '{kwargs}'",
-            flush=True,
-        )
         if "wheel" not in self.client_cache:
             log.debug("reactor edge case: re-populating client_cache for wheel")
             low = {"state": "wheel"}
-            print(
-                f"DGM class ReactWrap wheel not in client_cache, low '{low}'",
-                flush=True,
-            )
             self.populate_client_cache(low)
         return self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
 
@@ -512,17 +487,9 @@ class ReactWrap:
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         """
         # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
-        print(
-            f"DGM class ReactWrap local, client_cache '{self.client_cache}', fun '{fun}', kwargs '{kwargs}'",
-            flush=True,
-        )
         if "local" not in self.client_cache:
             log.debug("reactor edge case: re-populating client_cache for local")
             low = {"state": "local"}
-            print(
-                f"DGM class ReactWrap local not in client_cache, low '{low}'",
-                flush=True,
-            )
             self.populate_client_cache(low)
         self.client_cache["local"].cmd_async(tgt, fun, **kwargs)
 
@@ -531,16 +498,8 @@ class ReactWrap:
         Wrap LocalCaller to execute remote exec functions locally on the Minion
         """
         # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
-        print(
-            f"DGM class ReactWrap caller, client_cache '{self.client_cache}', fun '{fun}', kwargs '{kwargs}'",
-            flush=True,
-        )
         if "caller" not in self.client_cache:
             log.debug("reactor edge case: re-populating client_cache for caller")
             low = {"state": "caller"}
-            print(
-                f"DGM class ReactWrap caller not in client_cache, low '{low}'",
-                flush=True,
-            )
             self.populate_client_cache(low)
         self.client_cache["caller"].cmd(fun, *kwargs["arg"], **kwargs["kwarg"])
