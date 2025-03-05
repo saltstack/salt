@@ -79,8 +79,7 @@ Package: salt-minion
 Architecture: amd64 arm64
 Replaces: salt-common (<= 3006.4)
 Breaks: salt-common (<= 3006.4)
-Depends: bsdmainutils,
-         dctrl-tools,
+Depends: dctrl-tools,
          salt-common (= ${source:Version}),
          ${misc:Depends}
 Recommends: debconf-utils, dmidecode, net-tools
