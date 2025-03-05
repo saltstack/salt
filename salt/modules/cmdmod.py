@@ -283,7 +283,10 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         new_cmd.append("-Command")
         if isinstance(cmd, list):
             cmd = " ".join(cmd)
-        new_cmd.append(f"& {cmd.strip()}")
+        # We need to append $LASTEXITCODE here to return the actual exit code
+        # from the script. Otherwise, it will always return 1 on any non-zero
+        # exit code failure. Issue: #60884
+        new_cmd.append(f"& {cmd.strip()}; exit $LASTEXITCODE")
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", f"{cmd}"])
     else:
