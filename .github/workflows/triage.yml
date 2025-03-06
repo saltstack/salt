@@ -38,7 +38,7 @@ jobs:
 
       - name: Download last assignment cache
         continue-on-error: true
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v8
         with:
           workflow: triage.yml
           name: last-assignment

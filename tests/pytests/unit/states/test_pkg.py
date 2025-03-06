@@ -546,7 +546,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,

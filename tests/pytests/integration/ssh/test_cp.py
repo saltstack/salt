@@ -6,11 +6,15 @@ from pathlib import Path
 import pytest
 from saltfactories.utils import random_string
 
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -368,7 +372,7 @@ def test_get_url_nonexistent_source(salt_ssh_cli, caplog):
 
 def test_get_url_https(salt_ssh_cli, tmp_path, cachedir):
     tgt = tmp_path / "index.html"
-    res = salt_ssh_cli.run("cp.get_url", "https://repo.saltproject.io/index.html", tgt)
+    res = salt_ssh_cli.run("cp.get_url", "https://saltproject.io/index.html", tgt)
     assert res.returncode == 0
     assert res.data
     assert res.data == str(tgt)
@@ -378,23 +382,20 @@ def test_get_url_https(salt_ssh_cli, tmp_path, cachedir):
         / salt_ssh_cli.get_minion_tgt()
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "index.html"
     )
     for path in (tgt, master_path):
         assert path.exists()
         data = path.read_text(encoding="utf-8")
         assert "Salt Project" in data
-        assert "Package" in data
-        assert "Repo" in data
-        assert "AYBABTU" not in data
 
 
 def test_get_url_https_dest_empty(salt_ssh_cli, tmp_path, cachedir):
     """
     https:// source given and destination omitted, should still cache the file
     """
-    res = salt_ssh_cli.run("cp.get_url", "https://repo.saltproject.io/index.html")
+    res = salt_ssh_cli.run("cp.get_url", "https://saltproject.io/index.html")
     assert res.returncode == 0
     assert res.data
     master_path = (
@@ -403,7 +404,7 @@ def test_get_url_https_dest_empty(salt_ssh_cli, tmp_path, cachedir):
         / salt_ssh_cli.get_minion_tgt()
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "index.html"
     )
     tgt = _convert(salt_ssh_cli, cachedir, master_path)
@@ -412,9 +413,6 @@ def test_get_url_https_dest_empty(salt_ssh_cli, tmp_path, cachedir):
         assert path.exists()
         data = path.read_text(encoding="utf-8")
         assert "Salt Project" in data
-        assert "Package" in data
-        assert "Repo" in data
-        assert "AYBABTU" not in data
 
 
 def test_get_url_https_no_dest(salt_ssh_cli):
@@ -425,21 +423,16 @@ def test_get_url_https_no_dest(salt_ssh_cli):
     start = time.time()
     sleep = 5
     while time.time() - start <= timeout:
-        res = salt_ssh_cli.run(
-            "cp.get_url", "https://repo.saltproject.io/index.html", None
-        )
+        res = salt_ssh_cli.run("cp.get_url", "https://saltproject.io/index.html", None)
         if isinstance(res.data, str) and res.data.find("HTTP 599") == -1:
             break
         time.sleep(sleep)
     if isinstance(res.data, str) and res.data.find("HTTP 599") != -1:
-        raise Exception("https://repo.saltproject.io/index.html returned 599 error")
+        raise Exception("https://saltproject.io/index.html returned 599 error")
     assert res.returncode == 0
     assert res.data
     assert isinstance(res.data, str)
     assert "Salt Project" in res.data
-    assert "Package" in res.data
-    assert "Repo" in res.data
-    assert "AYBABTU" not in res.data
 
 
 @pytest.mark.parametrize("scheme", ("file://", ""))
@@ -523,24 +516,18 @@ def test_get_file_str_nonexistent_source(salt_ssh_cli, caplog):
 
 
 def test_get_file_str_https(salt_ssh_cli, cachedir):
-    src = "https://repo.saltproject.io/index.html"
+    src = "https://saltproject.io/index.html"
     res = salt_ssh_cli.run("cp.get_file_str", src)
     assert res.returncode == 0
     assert res.data
     assert isinstance(res.data, str)
     assert "Salt Project" in res.data
-    assert "Package" in res.data
-    assert "Repo" in res.data
-    assert "AYBABTU" not in res.data
-    tgt = cachedir / "extrn_files" / "base" / "repo.saltproject.io" / "index.html"
+    tgt = cachedir / "extrn_files" / "base" / "saltproject.io" / "index.html"
     master_path = _convert(salt_ssh_cli, cachedir, tgt, master=True)
     for path in (tgt, master_path):
         assert path.exists()
         text = path.read_text(encoding="utf-8")
         assert "Salt Project" in text
-        assert "Package" in text
-        assert "Repo" in text
-        assert "AYBABTU" not in text
 
 
 def test_get_file_str_local(salt_ssh_cli, cachedir, caplog):
@@ -577,7 +564,7 @@ def test_cache_file(salt_ssh_cli, suffix, cachedir):
 def _cache_twice(salt_master, request, salt_ssh_cli, cachedir):
 
     # ensure the cache is clean
-    tgt = cachedir / "extrn_files" / "base" / "repo.saltproject.io" / "index.html"
+    tgt = cachedir / "extrn_files" / "base" / "saltproject.io" / "index.html"
     tgt.unlink(missing_ok=True)
     master_tgt = _convert(salt_ssh_cli, cachedir, tgt, master=True)
     master_tgt.unlink(missing_ok=True)
@@ -585,7 +572,7 @@ def _cache_twice(salt_master, request, salt_ssh_cli, cachedir):
     # create a template that will cause a file to get cached twice
     # within the same context
     name = "cp_cache"
-    src = "https://repo.saltproject.io/index.html"
+    src = "https://saltproject.io/index.html"
     remove = getattr(request, "param", False)
     contents = f"""
 {{%- set cache = salt["cp.cache_file"]("{src}") %}}

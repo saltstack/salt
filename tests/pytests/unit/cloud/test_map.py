@@ -100,6 +100,7 @@ def salt_cloud_config_file(salt_master_factory):
 
 
 # The cloud map merge uses python's multiprocessing manager which authenticates using HMAC and MD5
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_map_merge_conf(salt_cloud_config_file):
     """

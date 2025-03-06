@@ -31,6 +31,7 @@
 
 import pytest
 
+from tests.pytests.integration.ssh.test_slsutil import check_system_python_version
 from tests.support.case import SSHCase
 
 pytestmark = [
@@ -42,6 +43,9 @@ pytestmark = [
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
     ),
 ]
 

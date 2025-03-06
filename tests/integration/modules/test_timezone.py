@@ -4,8 +4,11 @@ Integration tests for timezone module
 Linux and Solaris are supported
 """
 
+import subprocess
+
 import pytest
 
+import salt.utils.platform
 from tests.support.case import ModuleCase
 
 try:
@@ -16,6 +19,17 @@ except ImportError:
     HAS_TZLOCAL = False
 
 
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["timedatectl"], capture_output=True, check=False)
+            _check_systemctl.memo = b"No such file or directory" in proc.stderr
+    return _check_systemctl.memo
+
+
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 class TimezoneLinuxModuleTest(ModuleCase):
     def setUp(self):
         """
@@ -32,6 +46,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
         self.assertIn(ret, timescale)
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 class TimezoneSolarisModuleTest(ModuleCase):
     def setUp(self):
         """

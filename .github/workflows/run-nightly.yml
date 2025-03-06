@@ -1,0 +1,70 @@
+name: Run Nightly Builds
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 0 * * *'  # Every day at 0AM
+
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+  actions: write  # to trigger branch nightly builds
+
+jobs:
+
+  workflow-requirements:
+    name: Check Workflow Requirements
+    runs-on: ubuntu-22.04
+    outputs:
+      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
+    steps:
+      - name: Check Requirements
+        id: check-requirements
+        run: |
+          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
+            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          else
+            MSG="Running workflow because ${{ github.repository }} is not a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+  trigger-branch-nightly-builds:
+    name: Trigger Branch Workflows
+    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
+    runs-on: ubuntu-24.04
+    needs:
+      - workflow-requirements
+    environment: workflow-restart
+    strategy:
+      matrix:
+        branch: [3006.x, 3007.x, master]
+    steps:
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Trigger ${{ matrix.branch }} branch
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          gh workflow run nightly.yml --repo ${{ github.repository }} --ref ${{ matrix.branch }}

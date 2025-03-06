@@ -88,9 +88,7 @@ jobs:
     needs:
       - generate-matrix
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - ubuntu-latest
     env:
       USE_S3_CACHE: 'true'
     environment: ${{ inputs.environment }}
@@ -497,9 +495,7 @@ jobs:
     env:
       USE_S3_CACHE: 'true'
     runs-on:
-      - self-hosted
-      - linux
-      - bastion
+      - ubuntu-latest
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:

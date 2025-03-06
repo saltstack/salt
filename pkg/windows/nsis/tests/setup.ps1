@@ -47,7 +47,7 @@ $NSIS_DIR      = "$WINDOWS_DIR\nsis"
 $BUILDENV_DIR  = "$WINDOWS_DIR\buildenv"
 $PREREQS_DIR   = "$WINDOWS_DIR\prereqs"
 $NSIS_BIN      = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
-$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/64"
+$SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64/"
 
 #-------------------------------------------------------------------------------
 # Script Start

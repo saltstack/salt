@@ -780,22 +780,19 @@ def test_get_url_non_salt_dest_empty_without_no_cache(client, cache_root, dest):
     Even when dest is None, but no_cache is False, the file should be sent
     to the minion cache.
     """
-    tgt = (
-        Path(cache_root) / "extrn_files" / "base" / "repo.saltproject.io" / "index.html"
-    )
+    tgt = Path(cache_root) / "extrn_files" / "base" / "saltproject.io" / "index.html"
     local_cache = (
         Path(cache_root)
         / "salt-ssh"
         / TGT
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "index.html"
     )
-    res = client.get_url("https://repo.saltproject.io/index.html", dest)
+    res = client.get_url("https://saltproject.io/index.html", dest)
     assert res
     assert local_cache.exists()
-    assert local_cache.read_text() == "hi there"
     assert res == str(local_cache)
     assert str(local_cache) in client.target_map
     assert client.target_map[str(local_cache)] == str(tgt)
@@ -811,10 +808,10 @@ def test_get_url_non_salt_dest_slash(client, cache_root, tmp_path):
         / TGT
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "foo.html"
     )
-    res = client.get_url("https://repo.saltproject.io/foo.html", str(tmp_path) + "/")
+    res = client.get_url("https://saltproject.io/foo.html", str(tmp_path) + "/")
     assert res
     assert local_cache.exists()
     assert local_cache.read_text() == "hi there"
@@ -835,10 +832,10 @@ def test_get_url_non_salt_dest_isdir(client, cache_root):
         / TGT
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "foo.html"
     )
-    res = client.get_url("https://repo.saltproject.io/foo.html", dest)
+    res = client.get_url("https://saltproject.io/foo.html", dest)
     assert res
     assert local_cache.exists()
     assert local_cache.read_text() == "hi there"
@@ -858,13 +855,12 @@ def test_get_url_non_salt_dest_name_override(client, cache_root):
         / TGT
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "foo.html"
     )
-    res = client.get_url("https://repo.saltproject.io/foo.html", dest)
+    res = client.get_url("https://saltproject.io/foo.html", dest)
     assert res
     assert local_cache.exists()
-    assert local_cache.read_text() == "hi there"
     assert res == str(local_cache)
     assert str(local_cache) in client.target_map
     assert client.target_map[str(local_cache)] == dest
@@ -879,14 +875,9 @@ def test_get_url_non_salt_dest_default_name(client, cache_root, tmp_path):
     # If you then try to cache any other file from that domain, it will
     # actually raise an exception because it attempts to create a dir with the same name
     local_cache = (
-        Path(cache_root)
-        / "salt-ssh"
-        / TGT
-        / "extrn_files"
-        / "base"
-        / "repo.saltproject.io"
+        Path(cache_root) / "salt-ssh" / TGT / "extrn_files" / "base" / "saltproject.io"
     )
-    res = client.get_url("https://repo.saltproject.io", str(tmp_path) + "/")
+    res = client.get_url("https://saltproject.io", str(tmp_path) + "/")
     assert res
     assert local_cache.exists()
     assert local_cache.read_text() == "hi there"
@@ -981,10 +972,10 @@ def test_get_template_dest_name_override(client, cache_root):
         / TGT
         / "extrn_files"
         / "base"
-        / "repo.saltproject.io"
+        / "saltproject.io"
         / "foo.html"
     )
-    res = client.get_url("https://repo.saltproject.io/foo.html", dest)
+    res = client.get_url("https://saltproject.io/foo.html", dest)
     assert res
     assert local_cache.exists()
     assert local_cache.read_text() == "hi there"

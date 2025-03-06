@@ -912,6 +912,7 @@ def test_run_func(maintenance):
     mocked_clean_old_jobs = MockTimedFunc()
     mocked_clean_expired_tokens = MockTimedFunc()
     mocked_clean_pub_auth = MockTimedFunc()
+    mocked_clean_proc_dir = MockTimedFunc()
     mocked_handle_git_pillar = MockTimedFunc()
     mocked_handle_schedule = MockTimedFunc()
     mocked_handle_key_cache = MockTimedFunc()
@@ -927,6 +928,8 @@ def test_run_func(maintenance):
         "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
     ), patch(
         "salt.daemons.masterapi.clean_pub_auth", mocked_clean_pub_auth
+    ), patch(
+        "salt.utils.master.clean_proc_dir", mocked_clean_proc_dir
     ), patch(
         "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
     ), patch(
@@ -949,6 +952,7 @@ def test_run_func(maintenance):
         assert mocked_clean_old_jobs.call_times == [0, 120, 180]
         assert mocked_clean_expired_tokens.call_times == [0, 120, 180]
         assert mocked_clean_pub_auth.call_times == [0, 120, 180]
+        assert mocked_clean_proc_dir.call_times == [0, 120, 180]
         assert mocked_handle_git_pillar.call_times == [0]
         assert mocked_handle_schedule.call_times == [0, 60, 120, 180]
         assert mocked_handle_key_cache.call_times == [0, 60, 120, 180]

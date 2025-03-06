@@ -5,7 +5,7 @@ description: Setup actionlint
 inputs:
   version:
     description: The version of actionlint
-    default: 1.6.26
+    default: 1.7.7
   cache-seed:
     required: true
     description: Seed used to invalidate caches

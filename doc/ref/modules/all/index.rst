@@ -22,7 +22,6 @@ execution modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    acme
     aix_group
     aix_shadow
     aixpkg
@@ -30,93 +29,31 @@ execution modules
     alternatives
     ansiblegate
     apache
-    apcups
     apf
-    apkpkg
-    aptly
     aptpkg
     archive
     arista_pyeapi
     artifactory
+    asymmetric
     at
     at_solaris
-    augeas_cfg
-    aws_sqs
-    bamboohr
     baredoc
     bcache
     beacons
-    bigip
-    bluez_bluetooth
-    boto3_elasticache
-    boto3_elasticsearch
-    boto3_route53
-    boto3_sns
-    boto_apigateway
-    boto_asg
-    boto_cfn
-    boto_cloudfront
-    boto_cloudtrail
-    boto_cloudwatch
-    boto_cloudwatch_event
-    boto_cognitoidentity
-    boto_datapipeline
-    boto_dynamodb
-    boto_ec2
-    boto_efs
-    boto_elasticache
-    boto_elasticsearch_domain
-    boto_elb
-    boto_elbv2
-    boto_iam
-    boto_iot
-    boto_kinesis
-    boto_kms
-    boto_lambda
-    boto_rds
-    boto_route53
-    boto_s3
-    boto_s3_bucket
-    boto_secgroup
-    boto_sns
-    boto_sqs
-    boto_ssm
-    boto_vpc
-    bower
     bridge
-    bsd_shadow
-    btrfs
-    cabal
-    capirca_acl
     cassandra_cql
     celery
-    ceph
-    chassis
     chef
     chocolatey
     chronos
     chroot
-    cimc
-    ciscoconfparse_mod
-    cisconso
     cloud
     cmdmod
-    composer
     config
-    consul
-    container_resource
     cp
-    cpan
     cron
     cryptdev
-    csf
-    cyg
-    daemontools
     data
-    datadog_api
-    ddns
-    deb_apache
-    deb_postgres
     debconfmod
     debian_ip
     debian_service
@@ -126,118 +63,39 @@ execution modules
     devmap
     dig
     disk
-    djangomod
-    dnsmasq
     dnsutil
-    dockercompose
-    dockermod
     dpkg_lowpkg
-    drac
-    dracr
-    drbd
     dummyproxy_pkg
     dummyproxy_service
-    ebuildpkg
-    eix
-    elasticsearch
     environ
-    eselect
-    esxcluster
-    esxdatacenter
-    esxi
-    esxvm
     etcd_mod
     ethtool
     event
     extfs
     file
     firewalld
-    freebsd_sysctl
-    freebsd_update
-    freebsdjail
-    freebsdkmod
-    freebsdpkg
-    freebsdports
-    freebsdservice
-    freezer
-    gcp_addon
-    gem
-    genesis
-    gentoo_service
-    gentoolkitmod
     git
-    github
-    glanceng
-    glassfish
-    glusterfs
-    gnomedesktop
-    google_chat
     gpg
-    grafana4
     grains
     groupadd
-    grub_legacy
-    guestfs
-    hadoop
-    haproxyconn
     hashutil
-    heat
-    helm
-    hg
     highstate_doc
     hosts
     http
-    icinga2
     idem
-    ifttt
-    ilo
     incron
-    influxdb08mod
-    influxdbmod
-    infoblox
     ini_manage
-    inspectlib
-    inspectlib.collector
-    inspectlib.dbhandle
-    inspectlib.entities
-    inspectlib.exceptions
-    inspectlib.fsdb
-    inspectlib.kiwiproc
-    inspectlib.query
-    inspector
-    introspect
     iosconfig
-    ipmi
     ipset
     iptables
     iwtools
-    jboss7
-    jboss7_cli
-    jenkinsmod
     jinja
-    jira_mod
     junos
-    k8s
-    kapacitor
-    kerberos
     kernelpkg_linux_apt
     kernelpkg_linux_yum
     key
     keyboard
-    keystone
-    keystoneng
-    keystore
     kmod
-    kubeadm
-    kubernetesmod
-    launchctl_service
-    layman
-    ldap3
-    ldapmod
-    libcloud_compute
-    libcloud_dns
-    libcloud_loadbalancer
-    libcloud_storage
     linux_acl
     linux_ip
     linux_lvm
@@ -246,12 +104,8 @@ execution modules
     linux_sysctl
     localemod
     locate
-    logadm
     logmod
     logrotate
-    lvs
-    lxc
-    lxd
     mac_assistive
     mac_brew_pkg
     mac_desktop
@@ -270,34 +124,14 @@ execution modules
     mac_xattr
     macdefaults
     macpackage
-    makeconf
-    mandrill
-    marathon
     match
-    mattermost
     mdadm_raid
-    mdata
-    memcached
     mine
     minion
     mod_random
-    modjk
-    mongodb
-    monit
-    moosefs
     mount
-    mssql
-    msteams
-    munin
     mysql
     nacl
-    nagios
-    nagios_rpc
-    namecheap_domains
-    namecheap_domains_dns
-    namecheap_domains_ns
-    namecheap_ssl
-    namecheap_users
     napalm_bgp
     napalm_formula
     napalm_mod
@@ -310,103 +144,48 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
-    netbox
-    netbsd_sysctl
-    netbsdservice
-    netmiko_mod
-    netscaler
     network
-    neutron
-    neutronng
-    nexus
     nfs3
     nftables
-    nginx
-    nilrt_ip
-    nix
-    nova
     npm
-    nspawn
     nxos
     nxos_api
     nxos_upgrade
-    omapi
-    openbsd_sysctl
-    openbsdpkg
-    openbsdrcctl_service
-    openbsdservice
-    openscap
-    openstack_config
-    openstack_mng
-    openvswitch
-    opkg
-    opsgenie
     oracle
     osquery
     out
     pacmanpkg
-    pagerduty
-    pagerduty_util
     pam
-    panos
-    parallels
     parted_partition
-    pcs
-    pdbedit
-    pecl
-    peeringdb
-    pf
-    philips_hue
     pillar
     pip
     pkg_resource
     pkgin
     pkgng
     pkgutil
-    portage_config
-    postfix
     postgres
-    poudriere
-    powerpath
     proxy
     ps
     publish
     puppet
-    purefa
-    purefb
-    pushbullet
-    pushover_notify
     pw_group
     pw_user
     pyenv
-    qemu_img
-    qemu_nbd
     quota
     rabbitmq
-    rallydev
-    random_org
     rbac_solaris
-    rbenv
     rdp
-    rebootmgr
-    redismod
     reg
     rest_pkg
     rest_sample_utils
     rest_service
     restartcheck
-    restconf
     ret
     rh_ip
     rh_service
-    riak
     rpm_lowpkg
     rpmbuild_pkgbuild
     rsync
-    runit
-    rvm
-    s3
-    s6
     salt_proxy
     salt_version
     saltcheck
@@ -418,20 +197,10 @@ execution modules
     sdb
     seed
     selinux
-    sensehat
-    sensors
-    serverdensity_device
-    servicenow
     slack_notify
-    slackware_service
     slsutil
-    smartos_imgadm
-    smartos_nictagadm
-    smartos_virt
-    smartos_vmadm
     smbios
     smf_service
-    smtp
     snapper
     solaris_fmadm
     solaris_group
@@ -440,61 +209,29 @@ execution modules
     solaris_user
     solarisipspkg
     solarispkg
-    solr
-    solrcloud
-    splunk
-    splunk_search
     sqlite3
     ssh
     ssh_pkg
     ssh_service
     state
     status
-    statuspage
     supervisord
-    suse_apache
-    suse_ip
-    svn
-    swarm
-    swift
-    sysbench
     sysfs
     syslog_ng
     sysmod
-    sysrc
     system
-    system_profiler
     systemd_service
-    telegram
-    telemetry
     temp
     test
     test_virtual
-    testinframod
     textfsm_mod
     timezone
     tls
-    tomcat
-    trafficserver
-    transactional_update
-    travisci
-    tuned
-    twilio_notify
     udev
     upstart_service
-    uptime
     useradd
-    uwsgi
     vagrant
-    varnish
-    vault
-    vbox_guest
-    vboxmanage
-    vcenter
-    victorops
-    virt
     virtualenv_mod
-    vmctl
     vsphere
     webutil
     win_appx
@@ -536,24 +273,12 @@ execution modules
     win_wua
     win_wusa
     winrepo
-    wordpress
     x509
     x509_v2
-    xapi_virt
-    xbpspkg
     xfs
     xml
-    xmpp
     yaml
     yumpkg
-    zabbix
-    zcbuildout
-    zenoss
-    zfs
     zk_concurrency
-    znc
     zoneadm
     zonecfg
-    zookeeper
-    zpool
-    zypperpkg

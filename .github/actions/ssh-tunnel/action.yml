@@ -1,0 +1,107 @@
+name: ssh-tunnel
+description: SSH Reverse Tunnel
+
+inputs:
+  public_key:
+    required: true
+    type: string
+    description: Public key to accept for reverse tunnel. Warning, this should not be the public key for the 'private_key' input.
+  offer:
+    required: true
+    type: string
+    description: RTC offer
+  debug:
+    required: false
+    type: bool
+    default: false
+    description: Run sshd with debug enabled.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install ssh
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      run: |
+          python3.exe -m pip install requests
+          python3.exe .github/actions/ssh-tunnel/installssh.py
+
+    - name: Start SSH
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          powershell.exe -command "Start-Service sshd"
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+        else
+          sudo systemctl start ssh
+        fi
+
+    - name: Show sshd configuration
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          cat /etc/ssh/sshd_config
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          cat /private/etc/ssh/sshd_config
+        else
+          cat "C:\ProgramData\ssh\sshd_config"
+        fi
+
+    - name: Add ssh public key
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          mkdir -p /home/runner/.ssh
+          chmod 700 /home/runner/.ssh
+          touch /home/runner/.ssh/authorized_keys
+          echo "${{ inputs.public_key }}" | tee -a /home/runner/.ssh/authorized_keys
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          mkdir -p /Users/runner/.ssh
+          chmod 700 /Users/runner/.ssh
+          touch /Users/runner/.ssh/authorized_keys
+          echo "${{ inputs.public_key }}" | tee -a /Users/runner/.ssh/authorized_keys
+        else
+          echo "${{ inputs.public_key }}" | tee -a "C:\ProgramData\ssh\administrators_authorized_keys"
+        fi
+
+    - name: Stop SSHD
+      if: ${{ inputs.debug }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.debug }}" = "true" ]; then
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell.exe -command "Stop-Service sshd"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo launchctl unload  /System/Library/LaunchDaemons/ssh.plist
+          else
+            sudo systemctl stop ssh
+          fi
+        fi
+
+    - name: Create rtc tunnel
+      shell: bash
+      run: |
+        if [ "${{ inputs.debug }}" = "true" ]; then
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./OpenSSH-Win64/sshd.exe -d &
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo /usr/sbin/sshd -d &
+          else
+            sudo mkdir -p /run/sshd
+            sudo chmod 755 /run/sshd
+            sudo /usr/sbin/sshd -d &
+          fi
+        fi
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          python3 -m pip install aiortc
+        else
+          python3 -m pip install aiortc uvloop
+        fi
+        echo '${{ inputs.offer }}' | python .github/actions/ssh-tunnel/rtcforward.py --port 22 answer

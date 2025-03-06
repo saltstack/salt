@@ -131,7 +131,11 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+            "Recursive requisites were found: "
+            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
+            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
             in ret.errors
         )
 
@@ -616,6 +620,7 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "

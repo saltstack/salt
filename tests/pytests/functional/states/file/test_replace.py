@@ -367,11 +367,10 @@ def test_file_replace_prerequired_issues_55775(modules, state_tree, tmp_path):
     test changes:
       test.succeed_with_changes:
         - name: changes
-        - require:
-          - test: test no changes
     """
     with pytest.helpers.temp_file("file-replace.sls", sls_contents, state_tree):
         ret = modules.state.sls("file-replace")
+        assert not ret.failed
         for state_run in ret:
             assert state_run.result is True
 

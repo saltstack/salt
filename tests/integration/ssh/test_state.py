@@ -8,6 +8,7 @@ import time
 import pytest
 from saltfactories.utils.tempfiles import temp_file
 
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS
 
@@ -21,6 +22,9 @@ pytestmark = [
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
     ),
 ]
 
@@ -118,6 +122,16 @@ class SSHStateTest(SSHCase):
         """
         ret = self.run_function("state.show_sls", [SSH_SLS])
         self._check_dict_ret(ret=ret, val="__sls__", exp_ret=SSH_SLS)
+
+        check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
+        self.assertFalse(check_file)
+
+    def test_state_sls_exists(self):
+        """
+        test state.sls_exists with salt-ssh
+        """
+        ret = self.run_function("state.sls_exists", [SSH_SLS])
+        self.assertTrue(ret)
 
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)

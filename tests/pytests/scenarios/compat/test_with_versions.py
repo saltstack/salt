@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 
 pytestmark = [
+    pytest.mark.skip("GREAT MODULE MIGRATION"),
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("docker"),
     pytest.mark.skipif(

@@ -38,7 +38,7 @@ rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
-vcert; sys_platform != 'win32'
+vcert; sys_platform != 'win32' and python_version < '3.13.0'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4

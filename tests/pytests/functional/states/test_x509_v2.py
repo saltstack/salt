@@ -75,9 +75,6 @@ def minion_config_overrides(ca_key_file, ca_cert_file):
                 "signing_private_key": str(ca_key_file),
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
     }
 
 
