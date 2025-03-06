@@ -24,6 +24,11 @@ from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 
+pytestmark = [
+    pytest.mark.core_test,
+    pytest.mark.windows_whitelisted,
+]
+
 DEFAULT_SHELL = "foo/bar"
 MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
@@ -1134,7 +1139,7 @@ def test_prep_powershell_cmd_script():
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            f"& {script}",
+            f"& {script}; exit $LASTEXITCODE",
         ]
         assert ret == expected
 
