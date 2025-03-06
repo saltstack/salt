@@ -19,6 +19,7 @@ looseversion
 tornado>=6.3.3
 aiohttp>=3.9.0
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+passlib
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
