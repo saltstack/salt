@@ -249,6 +249,7 @@ def service(name, ports=None, protocols=None):
     """
     return service_present(name, ports, protocols)
 
+
 def service_absent(name):
     """
     Ensure the service does not exists.
@@ -275,6 +276,7 @@ def service_absent(name):
         return ret
 
     return ret
+
 
 def service_present(name, ports=None, protocols=None):
     """
@@ -314,16 +316,16 @@ def service_present(name, ports=None, protocols=None):
 
     if ports:
         ports = ports or []
-    
+
         try:
             _current_ports = __salt__["firewalld.get_service_ports"](name)
         except CommandExecutionError as err:
             ret["comment"] = f"Error: {err}"
             return ret
-    
+
         new_ports = set(ports) - set(_current_ports)
         old_ports = set(_current_ports) - set(ports)
-    
+
         for port in new_ports:
             if not __opts__["test"]:
                 try:
@@ -331,7 +333,7 @@ def service_present(name, ports=None, protocols=None):
                 except CommandExecutionError as err:
                     ret["comment"] = f"Error: {err}"
                     return ret
-    
+
         for port in old_ports:
             if not __opts__["test"]:
                 try:
@@ -344,37 +346,37 @@ def service_present(name, ports=None, protocols=None):
             ret["changes"].update({"ports": {"old": _current_ports, "new": ports}})
 
     if protocols:
-       protocols = protocols or []
-   
-       try:
-           _current_protocols = __salt__["firewalld.get_service_protocols"](name)
-       except CommandExecutionError as err:
-           ret["comment"] = f"Error: {err}"
-           return ret
-   
-       new_protocols = set(protocols) - set(_current_protocols)
-       old_protocols = set(_current_protocols) - set(protocols)
-   
-       for protocol in new_protocols:
-           if not __opts__["test"]:
-               try:
-                   __salt__["firewalld.add_service_protocol"](name, protocol)
-               except CommandExecutionError as err:
-                   ret["comment"] = f"Error: {err}"
-                   return ret
-   
-       for protocol in old_protocols:
-           if not __opts__["test"]:
-               try:
-                   __salt__["firewalld.remove_service_protocol"](name, protocol)
-               except CommandExecutionError as err:
-                   ret["comment"] = f"Error: {err}"
-                   return ret
-   
-       if new_protocols or old_protocols:
-           ret["changes"].update(
-               {"protocols": {"old": _current_protocols, "new": protocols}}
-           )
+        protocols = protocols or []
+
+        try:
+            _current_protocols = __salt__["firewalld.get_service_protocols"](name)
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
+
+        new_protocols = set(protocols) - set(_current_protocols)
+        old_protocols = set(_current_protocols) - set(protocols)
+
+        for protocol in new_protocols:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_service_protocol"](name, protocol)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        for protocol in old_protocols:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_service_protocol"](name, protocol)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        if new_protocols or old_protocols:
+            ret["changes"].update(
+                {"protocols": {"old": _current_protocols, "new": protocols}}
+            )
 
     ret["result"] = True
     if ret["changes"] == {}:
@@ -428,7 +430,15 @@ def _normalize_rich_rules(rich_rules):
         normalized_rules.append(normalized_rule.lstrip())
     return normalized_rules
 
+
 def zone_absent(name):
+    """
+    Ensure the zone does not exists.
+
+    name
+        The zone to delete.
+
+    """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     if name in __salt__["firewalld.get_zones"](permanent=True):
@@ -447,6 +457,7 @@ def zone_absent(name):
         return ret
 
     return ret
+
 
 def zone_present(
     name,
@@ -565,12 +576,12 @@ def zone_present(
                     ret["comment"] = f"Error: {err}"
                     return ret
             ret["changes"].update(
-                    {
-                        "target": {
-                            "old": target_ret,
-                            "new": target,
-                        }
+                {
+                    "target": {
+                        "old": target_ret,
+                        "new": target,
                     }
+                }
             )
 
     if block_icmp or prune_block_icmp:
@@ -649,7 +660,6 @@ def zone_present(
                     ret["comment"] = f"Error: {err}"
                     return ret
             ret["changes"].update({"default": {"old": default_zone, "new": name}})
-
 
     if masquerade is not None:
         try:
@@ -1020,7 +1030,7 @@ def ipset_absent(name):
     return ret
 
 
-def ipset_present(name, ipset_type, family=None, options={}, entries=[]):
+def ipset_present(name, ipset_type, family=None, options=None, entries=None):
     """
     Ensure the ipset exists and encompasses the specified entries.
 
@@ -1033,10 +1043,10 @@ def ipset_present(name, ipset_type, family=None, options={}, entries=[]):
     family: None
         Address family, can be inet or inet6.
 
-    options: {}
+    options: None
         List of options to add to the ipset, can be timeout, maxelen or hashsize.
 
-    entries: []
+    entries: None
         List of entry to add to the ipset.
     """
 
@@ -1052,17 +1062,17 @@ def ipset_present(name, ipset_type, family=None, options={}, entries=[]):
 
     if entries:
         entries = entries or []
-    
+
         try:
             info_ipset = __salt__["firewalld.info_ipset"](name)[name]
         except CommandExecutionError as err:
             ret["comment"] = f"Error: {err}"
             return ret
-    
-        _current_entries = info_ipset.get('entries', [])
+
+        _current_entries = info_ipset.get("entries", [])
         new_entries = set(entries) - set(_current_entries)
         old_entries = set(_current_entries) - set(entries)
-    
+
         for entry in new_entries:
             if not __opts__["test"]:
                 try:
@@ -1070,7 +1080,7 @@ def ipset_present(name, ipset_type, family=None, options={}, entries=[]):
                 except CommandExecutionError as err:
                     ret["comment"] = f"Error: {err}"
                     return ret
-    
+
         for entry in old_entries:
             if not __opts__["test"]:
                 try:
@@ -1080,7 +1090,9 @@ def ipset_present(name, ipset_type, family=None, options={}, entries=[]):
                     return ret
 
         if new_entries or old_entries:
-            ret["changes"].update({"entries": {"old": _current_entries, "new": entries}})
+            ret["changes"].update(
+                {"entries": {"old": _current_entries, "new": entries}}
+            )
 
     ret["result"] = True
     if ret["changes"] == {}:
