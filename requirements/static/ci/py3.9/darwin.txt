@@ -99,7 +99,6 @@ cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   etcd3-py
     #   moto
     #   paramiko
@@ -191,7 +190,7 @@ jaraco.text==3.5.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/base.txt
@@ -523,6 +522,7 @@ typing-extensions==4.2.0
 urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes
