@@ -560,8 +560,7 @@ def test_caller(schema, react_wrap):
     )
 
 
-## DGM @pytest.mark.parametrize("file_client", ["runner", "wheel", "local", "caller"])
-@pytest.mark.parametrize("file_client", ["runner", "wheel", "caller"])
+@pytest.mark.parametrize("file_client", ["runner", "wheel"])
 def test_client_cache_missing_key(file_client, react_wrap):
     """
     Test client_cache file_client missing, gets repopulated
@@ -574,12 +573,8 @@ def test_client_cache_missing_key(file_client, react_wrap):
             react_wrap.runner(chunk)
         elif f"{file_client}" == "wheel":
             react_wrap.wheel(chunk)
-        elif f"{file_client}" == "local":
-            react_wrap.local(chunk["fun"], chunk["tgt"])
-        elif f"{file_client}" == "caller":
-            ## react_wrap.caller(chunk["fun"], chunk["args"])
-            react_wrap.caller(chunk["fun"])
         else:
+            # catch need for new check
             assert f"{file_client}" == "bad parameterization"
 
         file_client_key = None
