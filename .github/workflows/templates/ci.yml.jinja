@@ -233,27 +233,6 @@
 
   <%- endif %>
 
-
-  <%- set job_name = "build-deps-onedir" %>
-  <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Onedir Dependencies
-    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "<{ relenv_version }>"
-      python-version: "<{ python_version }>"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
-      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-
-  <%- endif %>
-
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
 
@@ -263,7 +242,6 @@
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
