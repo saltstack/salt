@@ -29,25 +29,8 @@ runs:
 
   steps:
 
-    #- name: Download Cached Deps Onedir Package Directory
-    #  id: onedir-bare-cache
-    #  uses: ./.github/actions/cache
-    #  with:
-    #    path: artifacts/${{ inputs.package-name }}
-    #    key: >
-    #      ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
-    #        hashFiles(
-    #          format('{0}/.relenv/**/*.xz', github.workspace),
-    #          'requirements/static/pkg/*/*.txt',
-    #          '.github/actions/build-onedir-deps/action.yml',
-    #          '.github/workflows/build-deps-onedir-*.yml',
-    #          'cicd/shared-gh-workflows-context.yml'
-    #        )
-    #      }}
-
     - name: Install Salt Packaging Dependencies into Relenv Onedir
       uses: ./.github/actions/build-onedir-deps
-    #  if: steps.onedir-bare-cache.outputs.cache-hit != 'true'
       with:
         platform: ${{ inputs.platform }}
         arch: ${{ inputs.arch }}
