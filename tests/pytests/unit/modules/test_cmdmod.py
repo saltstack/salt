@@ -1057,6 +1057,7 @@ def test_runas_env_sudo_group(bundled):
                                         )
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_no_powershell():
     with pytest.raises(CommandExecutionError):
         cmdmod._prep_powershell_cmd(
@@ -1072,6 +1073,7 @@ def test_prep_powershell_cmd_no_powershell():
         ("try {this} catch {that}", "try {this} catch {that}"),
     ],
 )
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd(cmd, parsed):
     """
     Tests _prep_powershell_cmd returns correct cmd
@@ -1095,6 +1097,7 @@ def test_prep_powershell_cmd(cmd, parsed):
         assert ret == expected
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_encoded():
     """
     Tests _prep_powershell_cmd returns correct cmd when encoded_cmd=True
@@ -1120,6 +1123,7 @@ def test_prep_powershell_cmd_encoded():
         assert ret == expected
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_script():
     """
     Tests _prep_powershell_cmd returns correct cmd when called from cmd.script
@@ -1153,6 +1157,7 @@ def test_prep_powershell_cmd_script():
         ('{"foo": "bar"}', '{"foo": "bar"}'),  # Should leave unchanged
     ],
 )
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_json(text, expected):
     """
     Make sure the output is valid json
