@@ -1042,6 +1042,7 @@ def remove_rich_rule(zone, rule, permanent=True):
 
     return __firewall_cmd(cmd)
 
+
 def get_target(zone):
     """
     Get zone's target
@@ -1101,7 +1102,9 @@ def __parse_ipset(cmd):
                         else:
                             _ipset[ipset_name].update({id_: val.strip().split(" ")})
                     elif id_ == "options":
-                        _ipset[ipset_name].update({id_: dict(item.split("=") for item in val.split())})
+                        _ipset[ipset_name].update(
+                            {id_: dict(item.split("=") for item in val.split())}
+                        )
                     else:
                         _ipset[ipset_name].update({id_: [val.strip()]})
                 else:
@@ -1142,7 +1145,7 @@ def info_ipset(ipset):
     return __parse_ipset(cmd)
 
 
-def new_ipset(ipset, ipset_type, family=None, options={}, restart=False):
+def new_ipset(ipset, ipset_type, family=None, options=None, restart=False):
     """
     Add a new ipset
 
@@ -1159,7 +1162,7 @@ def new_ipset(ipset, ipset_type, family=None, options={}, restart=False):
 
         salt '*' firewalld.new_ipset my_ipset False
     """
-    cmd = f'--permanent --new-ipset={ipset} --type={ipset_type}'
+    cmd = f"--permanent --new-ipset={ipset} --type={ipset_type}"
 
     if family:
         cmd += f" --family={family}"
