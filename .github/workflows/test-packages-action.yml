@@ -65,7 +65,7 @@ jobs:
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
-    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     strategy:
       fail-fast: false
@@ -86,6 +86,16 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
       - name: Download Packages
         uses: actions/download-artifact@v4
         with:
@@ -104,11 +114,6 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
@@ -135,7 +140,7 @@ jobs:
 
       - name: "Create container ${{ matrix.container }}"
         run: |
-          /usr/bin/docker create --name ${{ github.run_id }}_salt-test-pkg --workdir /__w/salt/salt --privileged -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "/usr/lib/systemd/systemd" ${{ matrix.container }} --systemd --unit rescue.target
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -145,31 +150,21 @@ jobs:
         run: |
           docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ inputs.cache-prefix }}
-
       - name: List Free Space
         run: |
           df -h || true
 
       - name: Show System Info
-        env:
-          SKIP_REQUIREMENTS_INSTALL: "1"
-          PRINT_SYSTEM_INFO_ONLY: "1"
         run: |
-          docker exec ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          docker exec \
+          -e SKIP_REQUIREMENTS_INSTALL=1 \
+          -e PRINT_SYSTEM_INFO_ONLY=1 \
+          ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
-        env:
-          SKIP_REQUIREMENTS_INSTALL: "1"
-          RERUN_FAILURES: "1"
-          GITHUB_ACTIONS_PIPELINE: "1"
-          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          COVERAGE_CONTEXT: ${{ matrix.slug }}
         run: |
-          /usr/bin/docker exec ${{ github.run_id }}_salt-test-pkg \
+          docker exec \
+          ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -197,7 +192,7 @@ jobs:
   test-macos:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.runner }}
-    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
     strategy:
       fail-fast: false
@@ -316,7 +311,7 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
     runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
-    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       matrix:

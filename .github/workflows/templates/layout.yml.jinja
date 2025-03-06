@@ -5,7 +5,7 @@
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
-<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set gh_actions_workflows_python_version = "3.10" %>
@@ -89,9 +89,7 @@ jobs:
       <%- endfor %>
     <%- endif %>
     outputs:
-      jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
@@ -101,6 +99,8 @@ jobs:
       config: ${{ steps.workflow-config.outputs.config }}
     env:
       LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
+      FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
+      PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -251,13 +251,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Jobs To Run
-        id: define-jobs
-        run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
-            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
-          }> ${{ github.event_name }} changed-files.json
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
@@ -272,11 +265,6 @@ jobs:
         run: |
           tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Define Testrun
-        id: define-testrun
-        run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
-
       - name: Define workflow config
         id: workflow-config
         run: |
@@ -285,12 +273,12 @@ jobs:
           }> ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
@@ -299,18 +287,18 @@ jobs:
 {#  We can't yet use tokenless uploads with the codecov CLI
 
       - name: Install Codecov CLI
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           python3 -m pip install codecov-cli
 
       - name: Save Commit Metadata In Codecov
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             create-commit --git-service github --sha ${{ github.sha }}
 
       - name: Create Codecov Coverage Report
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             create-report --git-service github --sha ${{ github.sha }}
@@ -321,12 +309,11 @@ jobs:
   <%- endif %>
 
 <%- endblock jobs %>
-
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>
@@ -367,8 +354,3 @@ jobs:
           else
             exit 0
           fi
-
-      - name: Done
-        if: always()
-        run:
-          echo "All worflows finished"

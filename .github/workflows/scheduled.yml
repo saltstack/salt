@@ -80,9 +80,7 @@ jobs:
     needs:
       - workflow-requirements
     outputs:
-      jobs: ${{ steps.define-jobs.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
@@ -92,6 +90,8 @@ jobs:
       config: ${{ steps.workflow-config.outputs.config }}
     env:
       LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
+      FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
+      PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -228,11 +228,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Jobs To Run
-        id: define-jobs
-        run: |
-          tools ci define-jobs ${{ github.event_name }} changed-files.json
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
@@ -247,23 +242,18 @@ jobs:
         run: |
           tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Define Testrun
-        id: define-testrun
-        run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
-
       - name: Define workflow config
         id: workflow-config
         run: |
           tools ci workflow-config ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
@@ -282,7 +272,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -300,7 +290,7 @@ jobs:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
     needs:
       - prepare-workflow
     steps:
@@ -407,7 +397,7 @@ jobs:
 
   build-docs:
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -418,7 +408,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -449,7 +439,7 @@ jobs:
 
   build-deps-onedir:
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -463,7 +453,7 @@ jobs:
 
   build-salt-onedir:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir
@@ -479,7 +469,7 @@ jobs:
 
   build-pkgs-onedir:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -494,7 +484,7 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
   build-ci-deps:
     name: CI Deps
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -537,7 +527,7 @@ jobs:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
       python-version: "3.10"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
       skip-code-coverage: true
@@ -545,12 +535,11 @@ jobs:
       default-timeout: 360
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     needs:
       - workflow-requirements
@@ -578,8 +567,3 @@ jobs:
           else
             exit 0
           fi
-
-      - name: Done
-        if: always()
-        run:
-          echo "All worflows finished"

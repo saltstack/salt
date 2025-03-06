@@ -418,12 +418,11 @@ jobs:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
           tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     needs:
       - check-requirements
@@ -454,8 +453,3 @@ jobs:
           else
             exit 0
           fi
-
-      - name: Done
-        if: always()
-        run:
-          echo "All worflows finished"

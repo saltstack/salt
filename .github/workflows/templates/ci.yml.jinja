@@ -29,7 +29,7 @@
   lint:
     <%- do conclusion_needs.append('lint') %>
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -58,7 +58,7 @@
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     steps:
@@ -185,7 +185,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -202,7 +202,7 @@
 
   <{ job_name }>:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -240,7 +240,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -260,7 +260,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir
@@ -301,7 +301,7 @@
   combine-all-code-coverage:
     <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] == false }}
     runs-on: ubuntu-22.04
     env:
       PIP_INDEX_URL: https://pypi.org/simple

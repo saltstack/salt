@@ -486,11 +486,13 @@ class GitProvider:
             ).replace(
                 "/", "_"
             )  # replace "/" with "_" to not cause trouble with file system
+
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
             try:
                 self._cache_basename = self.get_checkout_target()
+
             except AttributeError:
                 log.critical(
                     "__env__ cant generate basename: %s %s", self.role, self.id
@@ -1565,12 +1567,14 @@ class GitPython(GitProvider):
         local copy was already up-to-date, return False.
         """
         origin = self.repo.remotes[0]
+
         try:
             fetch_results = origin.fetch()
         except AssertionError:
             fetch_results = origin.fetch()
 
         new_objs = False
+
         for fetchinfo in fetch_results:
             if fetchinfo.old_commit is not None:
                 log.debug(
@@ -1854,6 +1858,7 @@ class Pygit2(GitProvider):
 
                 # Only perform a checkout if HEAD and target are not pointing
                 # at the same SHA1.
+
                 if head_sha != target_sha:
                     # Check existence of the ref in refs/heads/ which
                     # corresponds to the local HEAD. Checking out local_ref
@@ -2108,6 +2113,7 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
+
         # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs["callbacks"] = self.remotecallbacks
@@ -2121,6 +2127,7 @@ class Pygit2(GitProvider):
             pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
+
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()
             if "unsupported url protocol" in exc_str and isinstance(
@@ -2159,6 +2166,7 @@ class Pygit2(GitProvider):
             # pygit2.Remote.fetch() returns a class instance in
             # pygit2 >= 0.21.0
             received_objects = fetch_results.received_objects
+
         if received_objects != 0:
             log.debug(
                 "%s received %s objects for remote '%s'",
@@ -2170,6 +2178,7 @@ class Pygit2(GitProvider):
             log.debug("%s remote '%s' is up-to-date", self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
+
         return True if (received_objects or refs_pre != refs_post or cleaned) else None
 
     def file_list(self, tgt_env):
@@ -2789,6 +2798,33 @@ class GitBase:
                 try:
                     # Find and place fetch_request file for all the other branches for this repo
                     repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
+                    branches = [
+                        os.path.relpath(path, repo_work_hash)
+                        for (path, subdirs, files) in os.walk(repo_work_hash)
+                        if not subdirs
+                    ]
+
+                    for branch in branches:
+                        # Don't place fetch request in current branch being updated
+                        if branch == repo.get_cache_basename():
+                            continue
+                        branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
+                        fetch_path = salt.utils.path.join(
+                            branch_salt_dir, "fetch_request"
+                        )
+                        if os.path.isdir(branch_salt_dir):
+                            try:
+                                with salt.utils.files.fopen(fetch_path, "w"):
+                                    pass
+                            except OSError as exc:  # pylint: disable=broad-except
+                                log.error(
+                                    "Failed to make fetch request: %s %s",
+                                    fetch_path,
+                                    exc,
+                                    exc_info=True,
+                                )
+                        else:
+                            log.error("Failed to make fetch request: %s", fetch_path)
                     for branch in os.listdir(repo_work_hash):
                         # Don't place fetch request in current branch being updated
                         if branch == repo.get_cache_basename():
@@ -3483,6 +3519,7 @@ class GitPillar(GitBase):
         """
         self.pillar_dirs = OrderedDict()
         self.pillar_linked_dirs = []
+
         for repo in self.remotes:
             cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
