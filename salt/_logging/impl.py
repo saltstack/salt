@@ -299,6 +299,8 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         except TypeError:
             # Python < 3.8 - We still need this for salt-ssh since it will use
             # the system python, and not out onedir.
+            # stacklevel was introduced in Py 3.8
+            # must be running on old OS with Python 3.6 or 3.7
             LOGGING_LOGGER_CLASS._log(
                 self,
                 level,

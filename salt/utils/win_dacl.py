@@ -125,7 +125,7 @@ should match what you see when you look at the properties for an object.
         - subfolders_only: Applies to all containers beneath this object
         - files_only: Applies to all file objects beneath this object
 
-    .. NOTE::
+    .. note::
 
         'applies to' properties can only be modified on directories. Files
         will always be ``this_folder_only``.
@@ -883,10 +883,7 @@ def dacl(obj_name=None, obj_type="file"):
             """
             # Get the principal from the sid (object sid)
             sid = win32security.ConvertSidToStringSid(ace[2])
-            try:
-                principal = get_name(sid)
-            except CommandExecutionError:
-                principal = sid
+            principal = get_name(sid)
 
             # Get the ace type
             ace_type = self.ace_type[ace[0][0]]
@@ -1194,14 +1191,17 @@ def get_name(principal):
 
         principal (str):
             Find the Normalized name based on this. Can be a PySID object, a SID
-            string, or a user name in any capitalization.
+            string, or a username in any capitalization.
 
             .. note::
-                Searching based on the user name can be slow on hosts connected
+                Searching based on the username can be slow on hosts connected
                 to large Active Directory domains.
 
     Returns:
-        str: The name that corresponds to the passed principal
+        str: The username that corresponds to the passed principal. If there is
+             no corresponding username, the string SID will be returned.
+             Capability SIDs will return ``None``.
+
 
     Usage:
 
@@ -1246,7 +1246,7 @@ def get_name(principal):
             name = f"NT Service\\{name}"
 
         return name
-    except (pywintypes.error, TypeError) as exc:
+    except pywintypes.error as exc:
         # Microsoft introduced the concept of Capability SIDs in Windows 8
         # https://docs.microsoft.com/en-us/windows/security/identity-protection/access-control/security-identifiers#capability-sids
         # https://support.microsoft.com/en-us/help/4502539/some-sids-do-not-resolve-into-friendly-names
@@ -1254,11 +1254,27 @@ def get_name(principal):
         # These types of SIDs do not resolve, so we'll just ignore them for this
         # All capability SIDs begin with `S-1-15-3`, so we'll only throw an
         # error when the sid does not begin with `S-1-15-3`
-        if not str_sid.startswith("S-1-15-3"):
-            message = f'Error resolving "{principal}"'
-            if type(exc) == pywintypes.error:
-                win_error = win32api.FormatMessage(exc.winerror).rstrip("\n")
-                message = f"{message}: {win_error}"
+        # 1332: No mapping between account names and security IDs was done
+        if exc.winerror == 1332:
+            # Capability SID, return None
+            if str_sid.startswith("S-1-15-3"):
+                log.debug("Name mapping not available for capability SID: %s", str_sid)
+                return None
+
+            # User does not exist on the system or is on a disconnected domain
+            # Return the SID
+            else:
+                log.debug(
+                    "Could not resolve SID: %s\nThe user has either been removed "
+                    "from the system or is a domain user and the system is not "
+                    "connected to the domain",
+                    str_sid,
+                )
+                return str_sid
+
+        # Some other unknown error
+        else:
+            message = f'Error resolving "{principal}: {exc.strerror}"'
             log.exception(message)
             raise CommandExecutionError(message, exc)
 
@@ -2242,13 +2258,19 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
     cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
     changes = {}
     for user in new_perms:
-        applies_to_text = ""
         # Check that user exists:
-        try:
-            user_name = get_name(principal=user)
-        except CommandExecutionError:
+        user_name = get_name(principal=user)
+        # username will be the SID if there is no corresponding username
+        if user_name == get_sid_string(principal=user):
             ret["comment"].append(
-                '{} Perms: User "{}" missing from Target System'.format(
+                "{} Perms: Could not find a corresponding username for: {}".format(
+                    access_mode.capitalize(), user
+                )
+            )
+            continue
+        if user_name is None:
+            ret["comment"].append(
+                "{} Perms: Skipping Capability SID: {}".format(
                     access_mode.capitalize(), user
                 )
             )
@@ -2471,7 +2493,7 @@ def check_perms(
         log.debug("Resetting permissions for %s", obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms["Not Inherited"]:
-            # case insensitive dictionary search
+            # case-insensitive dictionary search
             if user_name not in {get_name(k) for k in (grant_perms or {})}:
                 if "grant" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
@@ -2489,7 +2511,7 @@ def check_perms(
                         ret["changes"]["remove_perms"].update(
                             {user_name: cur_perms["Not Inherited"][user_name]}
                         )
-            # case insensitive dictionary search
+            # case-insensitive dictionary search
             if user_name not in {get_name(k) for k in (deny_perms or {})}:
                 if "deny" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
@@ -2541,7 +2563,7 @@ def check_perms(
         log.debug("Resetting permissions for %s", obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms["Not Inherited"]:
-            # case insensitive dictionary search
+            # case-insensitive dictionary search
             if user_name not in {get_name(k) for k in (grant_perms or {})}:
                 if "grant" in cur_perms["Not Inherited"][user_name]:
                     rm_permissions(
@@ -2550,7 +2572,7 @@ def check_perms(
                         ace_type="grant",
                         obj_type=obj_type,
                     )
-            # case insensitive dictionary search
+            # case-insensitive dictionary search
             if user_name not in {get_name(k) for k in (deny_perms or {})}:
                 if "deny" in cur_perms["Not Inherited"][user_name]:
                     rm_permissions(
@@ -2582,14 +2604,9 @@ def _set_perms(obj_dacl, obj_type, new_perms, cur_perms, access_mode):
     ret = {}
     for user in new_perms:
         # Check that user exists:
-        try:
-            user_name = get_name(user)
-        except CommandExecutionError:
-            log.debug(
-                '%s Perms: User "%s" missing from Target System',
-                access_mode.capitalize(),
-                user,
-            )
+        user_name = get_name(user)
+        # We want to skip unmapped usernames
+        if user_name == get_sid_string(user):
             continue
 
         # Get applies_to
