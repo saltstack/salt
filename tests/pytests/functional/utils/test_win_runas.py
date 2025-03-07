@@ -32,15 +32,6 @@ def int_user():
         yield account
 
 
-@pytest.fixture
-def configure_loader_modules(minion_opts):
-    return {
-        win_useradd: {
-            "__opts__": minion_opts,
-        },
-    }
-
-
 @pytest.mark.parametrize(
     "cmd, expected",
     [
