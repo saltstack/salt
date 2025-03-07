@@ -2529,7 +2529,7 @@ class Minion(MinionBase):
                 }
             )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _fire_master_minion_start(self):
         include_grains = False
         if self.opts["start_event_grains"]:
