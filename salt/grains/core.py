@@ -1920,6 +1920,7 @@ _OS_FAMILY_MAP = {
     "Alinux": "RedHat",
     "Mendel": "Debian",
     "OSMC": "Debian",
+    "openEuler": "RedHat",
 }
 
 
