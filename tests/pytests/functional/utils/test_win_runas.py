@@ -2,14 +2,12 @@
 Test the win_runas util
 """
 
-import re
 from random import randint
 
 import pytest
 
 import salt.modules.win_useradd as win_useradd
 import salt.utils.win_runas as win_runas
-from salt.modules.win_network import interfaces_names
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
