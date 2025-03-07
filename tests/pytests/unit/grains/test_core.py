@@ -1580,6 +1580,33 @@ def test_astralinuxse_os_grains():
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_openeuler_os_grains():
+    """
+    Test that OS grains are parsed correctly for openEuler
+    """
+    # /etc/os-release data taken from openEuler 24.03 (LTS-SP1)
+    _os_release_data = {
+        "PRETTY_NAME": "openEuler 24.03 (LTS-SP1)",
+        "NAME": "openEuler",
+        "ID": "openEuler",
+        "ANSI_COLOR": "0;31",
+        "VERSION": "24.03 (LTS-SP1)",
+        "VERSION_ID": "24.03",
+    }
+    expectation = {
+        "os": "openEuler",
+        "os_family": "RedHat",
+        "oscodename": "openEuler 24.03 (LTS-SP1)",
+        "osfullname": "openEuler",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "openEuler-24",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
 @pytest.mark.skip_unless_on_windows
 def test_windows_platform_data():
     """
