@@ -10,7 +10,6 @@ import ast
 import itertools
 import logging
 import os
-from typing import Dict, List
 
 import salt.utils.doc
 import salt.utils.files
@@ -36,7 +35,7 @@ def _get_module_name(tree, filename: str) -> str:
     return module_name
 
 
-def _get_func_aliases(tree) -> Dict:
+def _get_func_aliases(tree) -> dict:
     """
     Get __func_alias__ dict for mapping function names
     """
@@ -54,7 +53,7 @@ def _get_func_aliases(tree) -> Dict:
     return fun_aliases
 
 
-def _get_args(function: str) -> Dict:
+def _get_args(function: str) -> dict:
     """
     Given a function def, returns arguments and defaults
     """
@@ -128,7 +127,7 @@ def _parse_module_docs(module_path, mod_name=None):
     return salt.utils.doc.strip_rst(ret)
 
 
-def _parse_module_functions(module_py: str, return_type: str) -> Dict:
+def _parse_module_functions(module_py: str, return_type: str) -> dict:
     """
     Parse module files for proper module_name and function name, then gather
     functions and possibly arguments
@@ -161,7 +160,7 @@ def _parse_module_functions(module_py: str, return_type: str) -> Dict:
     return ret
 
 
-def _get_files(name=False, type="states", return_type="args") -> List:
+def _get_files(name=False, type="states", return_type="args") -> list:
     """
     Determine if modules/states directories or files are requested
 

@@ -473,22 +473,42 @@ class ReactWrap:
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
+        if "runner" not in self.client_cache:
+            log.debug("reactor edge case: re-populating client_cache for runner")
+            low = {"state": "runner"}
+            self.populate_client_cache(low)
         return self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         """
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         """
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
+        if "wheel" not in self.client_cache:
+            log.debug("reactor edge case: re-populating client_cache for wheel")
+            low = {"state": "wheel"}
+            self.populate_client_cache(low)
         return self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         """
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         """
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
+        if "local" not in self.client_cache:
+            log.debug("reactor edge case: re-populating client_cache for local")
+            low = {"state": "local"}
+            self.populate_client_cache(low)
         self.client_cache["local"].cmd_async(tgt, fun, **kwargs)
 
     def caller(self, fun, **kwargs):
         """
         Wrap LocalCaller to execute remote exec functions locally on the Minion
         """
+        # pylint: disable=unsupported-membership-test,unsupported-assignment-operation
+        if "caller" not in self.client_cache:
+            log.debug("reactor edge case: re-populating client_cache for caller")
+            low = {"state": "caller"}
+            self.populate_client_cache(low)
         self.client_cache["caller"].cmd(fun, *kwargs["arg"], **kwargs["kwarg"])

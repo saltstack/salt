@@ -8,7 +8,7 @@ import re
 import shutil
 import textwrap
 import time
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 import attr
 import distro
@@ -50,7 +50,7 @@ class SaltPkgInstall:
     ssm_bin: pathlib.Path = attr.ib(default=None)
     bin_dir: pathlib.Path = attr.ib(default=None)
     install_dir: pathlib.Path = attr.ib(init=False)
-    binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
+    binary_paths: dict[str, list[pathlib.Path]] = attr.ib(init=False)
     config_path: str = attr.ib(init=False)
     conf_dir: pathlib.Path = attr.ib()
 
@@ -79,8 +79,8 @@ class SaltPkgInstall:
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
     dbg_pkg: str = attr.ib(init=False)
-    salt_pkgs: List[str] = attr.ib(init=False)
-    pkgs: List[str] = attr.ib(factory=list)
+    salt_pkgs: list[str] = attr.ib(init=False)
+    pkgs: list[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
 
@@ -1564,7 +1564,7 @@ class ApiRequest:
     account: TestAccount = attr.ib(repr=False)
     session: requests.Session = attr.ib(init=False, repr=False)
     api_uri: str = attr.ib(init=False)
-    auth_data: Dict[str, str] = attr.ib(init=False)
+    auth_data: dict[str, str] = attr.ib(init=False)
 
     @session.default
     def _default_session(self):
