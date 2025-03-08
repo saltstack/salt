@@ -21,6 +21,7 @@ aiohttp>=3.9.0
 urllib3>=1.26.18
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+passlib
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
