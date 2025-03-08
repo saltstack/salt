@@ -283,12 +283,24 @@ class PrivateKey(BaseKey):
 
 
 class PublicKey(BaseKey):
-    def __init__(self, path):
-        with salt.utils.files.fopen(path, "rb") as fp:
-            try:
-                self.key = serialization.load_pem_public_key(fp.read())
-            except ValueError as exc:
-                raise InvalidKeyError("Invalid key")
+    def __init__(self, *, path=None, key=None):
+        if path:
+            with salt.utils.files.fopen(path, "rb") as fp:
+                pub = fp.read()
+        elif key:
+            if isinstance(key, str):
+                pub = key.encode("utf-8")
+            elif isinstance(key, bytes):
+                pub = key
+            else:
+                raise InvalidKeyError("No key provided")
+        else:
+            raise InvalidKeyError("No key provided")
+
+        try:
+            self.key = serialization.load_pem_public_key(pub)
+        except (ValueError, AttributeError) as exc:
+            raise InvalidKeyError("Invalid key")
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
@@ -386,13 +398,13 @@ def sign_message(privkey_path, message, passphrase=None, algorithm=PKCS1v15_SHA1
     return PrivateKey(privkey_path, passphrase).sign(message, algorithm)
 
 
-def verify_signature(pubkey_path, message, signature, algorithm=PKCS1v15_SHA1):
+def verify_signature(key, message, signature, algorithm=PKCS1v15_SHA1):
     """
     Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     """
     log.debug("salt.crypt.verify_signature: Loading public key")
-    return PublicKey(pubkey_path).verify(message, signature, algorithm)
+    return PublicKey(path=key).verify(message, signature, algorithm)
 
 
 def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
@@ -993,7 +1005,7 @@ class AsyncAuth:
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
         if os.path.exists(master_pubkey_path) and not PublicKey(
-            master_pubkey_path
+            path=master_pubkey_path
         ).verify(
             clear_signed_data,
             clear_signature,
@@ -1122,7 +1134,7 @@ class AsyncAuth:
             payload["autosign_grains"] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-            pub = PublicKey(pubkey_path)
+            pub = PublicKey(path=pubkey_path)
             payload["token"] = pub.encrypt(
                 self.token, self.opts["encryption_algorithm"]
             )
@@ -1168,8 +1180,9 @@ class AsyncAuth:
             m_path = os.path.join(self.opts["pki_dir"], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    mkey = PublicKey(m_path)
+                    mkey = PublicKey(path=m_path)
                 except Exception:  # pylint: disable=broad-except
+                    log.exception("Something unexpected occured loading master pub-key")
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
                 digest = salt.utils.stringutils.to_bytes(digest)
