@@ -998,13 +998,13 @@ class SaltPkgInstall:
         if platform.is_windows():
             self.update_process_path()
 
-        if not self.no_install:
-            if self.upgrade:
-                self.install_previous()
-            else:
-                # assume downgrade, since no_install only used in these two cases
-                self.install()
+        if self.no_install:
+            return self
+
+        if self.upgrade:
+            self.install_previous()
         else:
+            # assume downgrade, since no_install only used in these two cases
             self.install()
 
         return self
