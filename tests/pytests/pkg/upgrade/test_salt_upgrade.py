@@ -5,8 +5,6 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
-pytestmark = [pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")]
-
 
 @pytest.fixture
 def salt_systemd_setup(
