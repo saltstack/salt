@@ -502,7 +502,7 @@ def create(vm_):
             ),
         )
 
-        log.info("Address = %s", address)
+        log.info("Address = %s | Name = %s", address, name)
 
         vm_["ssh_host"] = address
 
