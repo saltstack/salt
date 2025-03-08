@@ -111,7 +111,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -284,6 +284,7 @@ uc-micro-py==1.0.1
 urllib3==1.26.18
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   requests
 yarl==1.9.4
     # via

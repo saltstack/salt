@@ -646,7 +646,7 @@ def query(
                 decode_body=decode_body,
             )
             return ret
-        except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
+        except (socket.herror, OSError, TimeoutError, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
             ret["error"] = str(exc)
