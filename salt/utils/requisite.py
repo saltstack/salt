@@ -202,6 +202,16 @@ class DependencyGraph:
                                 .get("chunk", {})
                                 .get("order", float("inf"))
                             )
+                            if child_order is None or not isinstance(
+                                child_order, (int, float)
+                            ):
+                                if child_order == "last":
+                                    child_order = cap + 1000000
+                                elif child_order == "first":
+                                    child_order = 0
+                                else:
+                                    child_order = cap
+                                dag.nodes[child]["chunk"]["order"] = child_order
                             child_min = min(child_min, child_order)
                     node_data["child_min"] = child_min
                     if order > child_min:
