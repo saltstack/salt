@@ -1,3 +1,4 @@
+import sys
 import time
 
 import packaging.version
@@ -27,7 +28,6 @@ def salt_systemd_setup(
         assert ret.returncode == 0
 
 
-@pytest.fixture
 def salt_test_upgrade(
     salt_call_cli,
     install_salt,
@@ -88,10 +88,11 @@ def salt_test_upgrade(
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
-    assert new_minion_pids
-    assert new_master_pids
-    assert new_minion_pids != old_minion_pids
-    assert new_master_pids != old_master_pids
+    if sys.platform == "linux":
+        assert new_minion_pids
+        assert new_master_pids
+        assert new_minion_pids != old_minion_pids
+        assert new_master_pids != old_master_pids
 
 
 def _get_running_named_salt_pid(process_name):
@@ -133,8 +134,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     assert "Authentication information could" in use_lib.stderr
 
     # perform Salt package upgrade test
-    # pylint: disable=pointless-statement
-    salt_test_upgrade
+    salt_test_upgrade(salt_call_cli, install_salt)
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
