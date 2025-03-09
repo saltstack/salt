@@ -45,6 +45,8 @@ def salt_test_upgrade(
 
     # Verify previous install version salt-master is setup correctly and works
     bin_file = "salt"
+    if sys.platform == "windows":
+        bin_file = "salt.exe"
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
     assert packaging.version.parse(
