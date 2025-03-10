@@ -19,13 +19,13 @@ try:
 except ImportError:
     HAS_RPM = False
 
-try:
-    import rpm_vercmp
-
-    HAS_PY_RPM = True
-except ImportError:
-    HAS_PY_RPM = False
-# pylint: enable=unused-import
+## DGM try:
+## DGM     import rpm_vercmp
+## DGM
+## DGM     HAS_PY_RPM = True
+## DGM except ImportError:
+## DGM     HAS_PY_RPM = False
+## DGM # pylint: enable=unused-import
 
 
 def _called_with_root(mock):
@@ -244,7 +244,8 @@ def test_checksum_root():
         assert _called_with_root(mock)
 
 
-@pytest.mark.parametrize("rpm_lib", ["HAS_RPM", "HAS_PY_RPM", "rpmdev-vercmp"])
+## DGM @pytest.mark.parametrize("rpm_lib", ["HAS_RPM", "HAS_PY_RPM", "rpmdev-vercmp"])
+@pytest.mark.parametrize("rpm_lib", ["HAS_RPM", "rpmdev-vercmp"])
 def test_version_cmp_rpm_all_libraries(rpm_lib):
     """
     Test package version when each library is installed
@@ -254,23 +255,26 @@ def test_version_cmp_rpm_all_libraries(rpm_lib):
     if rpm_lib == "rpmdev-vercmp":
         if rpmdev:
             patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-            patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+            ## DGM patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
         else:
             pytest.skip("The rpmdev-vercmp binary is not installed")
     elif rpm_lib == "HAS_RPM":
         if HAS_RPM:
             patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", True)
-            patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+            ## DGM patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
         else:
             pytest.skip("The RPM lib is not installed, skipping")
-    elif rpm_lib == "HAS_PY_RPM":
-        if HAS_PY_RPM:
-            patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-            patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", True)
-        else:
-            pytest.skip("The Python RPM lib is not installed, skipping")
+    ## DGM     elif rpm_lib == "HAS_PY_RPM":
+    ## DGM         if HAS_PY_RPM:
+    ## DGM             patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
+    ## DGM             patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", True)
+    ## DGM         else:
+    ## DGM             pytest.skip("The Python RPM lib is not installed, skipping")
+    else:
+        pytest.skip("The Python RPM lib is not installed, skipping")
 
-    with patch_rpm, patch_py_rpm, patch_cmd:
+    ## DGM with patch_rpm, patch_py_rpm, patch_cmd:
+    with patch_rpm, patch_cmd:
         assert rpm.version_cmp("1", "2") == -1
         assert rpm.version_cmp("2.9.1-6.el7_2.3", "2.9.1-6.el7.4") == -1
         assert rpm.version_cmp("3.2", "3.0") == 1
@@ -303,26 +307,26 @@ def test_version_cmp_rpm():
         assert mock_label.called
 
 
-def test_version_cmp_rpmutils():
-    """
-    Test package version if rpmUtils.miscutils called
-
-    :return:
-    """
-    mock_log = MagicMock()
-    mock_rpmUtils = MagicMock()
-    mock_rpmUtils.miscutils = MagicMock()
-    mock_rpmUtils.miscutils.compareEVR = MagicMock(return_value=-1)
-    patch_utils = patch("salt.modules.rpm_lowpkg.rpmUtils", mock_rpmUtils, create=True)
-    patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-    patch_utils_lib = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", True)
-    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
-    patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
-
-    with patch_utils, patch_rpm, patch_py_rpm, patch_utils_lib, patch_log:
-        assert -1 == rpm.version_cmp("1", "2")
-        assert mock_log.warning.called
-        assert mock_rpmUtils.miscutils.compareEVR.called
+## DGM def test_version_cmp_rpmutils():
+## DGM     """
+## DGM     Test package version if rpmUtils.miscutils called
+## DGM
+## DGM     :return:
+## DGM     """
+## DGM     mock_log = MagicMock()
+## DGM     mock_rpmUtils = MagicMock()
+## DGM     mock_rpmUtils.miscutils = MagicMock()
+## DGM     mock_rpmUtils.miscutils.compareEVR = MagicMock(return_value=-1)
+## DGM     patch_utils = patch("salt.modules.rpm_lowpkg.rpmUtils", mock_rpmUtils, create=True)
+## DGM     patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
+## DGM     patch_utils_lib = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", True)
+## DGM     patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+## DGM     patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
+## DGM
+## DGM     with patch_utils, patch_rpm, patch_py_rpm, patch_utils_lib, patch_log:
+## DGM         assert -1 == rpm.version_cmp("1", "2")
+## DGM         assert mock_log.warning.called
+## DGM         assert mock_rpmUtils.miscutils.compareEVR.called
 
 
 def test_version_cmp_rpmdev_vercmp():
@@ -334,12 +338,13 @@ def test_version_cmp_rpmdev_vercmp():
     mock__salt__ = MagicMock(return_value={"retcode": 12})
     mock_log = MagicMock()
     patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-    patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
-    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+    ## DGM     patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
+    ## DGM     patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
     patch_which = patch("salt.utils.path.which", return_value=True)
     patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
 
-    with patch_rpm, patch_rpmutils, patch_py_rpm, patch_which, patch_log:
+    ## DGM with patch_rpm, patch_rpmutils, patch_py_rpm, patch_which, patch_log:
+    with patch_rpm, patch_which, patch_log:
         with patch.dict(rpm.__salt__, {"cmd.run_all": mock__salt__}):
             assert -1 == rpm.version_cmp("1", "2")
             assert mock__salt__.called
@@ -362,14 +367,15 @@ def test_version_cmp_python():
     """
     mock_log = MagicMock()
     patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-    patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
+    ## DGM     patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
     mock_version_cmp = MagicMock(return_value=-1)
-    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+    ## DGM     patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
     patch_cmp = patch("salt.utils.versions.version_cmp", mock_version_cmp)
     patch_which = patch("salt.utils.path.which", return_value=False)
     patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
 
-    with patch_rpm, patch_rpmutils, patch_py_rpm, patch_cmp, patch_which, patch_log:
+    ## DGM with patch_rpm, patch_rpmutils, patch_py_rpm, patch_cmp, patch_which, patch_log:
+    with patch_rpm, patch_cmp, patch_which, patch_log:
         assert -1 == rpm.version_cmp("1", "2")
         assert mock_version_cmp.called
         assert mock_log.warning.called
