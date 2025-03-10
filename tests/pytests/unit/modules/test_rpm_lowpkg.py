@@ -283,6 +283,7 @@ def test_version_cmp_rpm_all_libraries(rpm_lib):
         assert rpm.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4") == 1
         assert rpm.version_cmp("3.23-6.el9", "3.23") == 0
         assert rpm.version_cmp("3.23", "3.23-6.el9") == 0
+        assert rpm.version_cmp("release_web_294-6", "release_web_294_applepay-1") == -1
 
 
 def test_version_cmp_rpm():
