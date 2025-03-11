@@ -14,8 +14,10 @@ attrs==24.2.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco.text
-certifi==2024.8.30
-    # via requests
+certifi==2024.8.30 ; python_version >= "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==1.17.1
     # via cryptography
 charset-normalizer==3.4.0
@@ -57,7 +59,7 @@ jaraco.functools==4.1.0
     #   tempora
 jaraco.text==4.0.0
     # via jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -89,7 +91,7 @@ portend==3.2.0
     # via cherrypy
 propcache==0.2.0
     # via yarl
-psutil==6.1.0
+psutil==6.1.0 ; python_version >= "3.10"
     # via -r requirements/base.txt
 pycparser==2.22
     # via cffi
@@ -110,7 +112,7 @@ pyyaml==6.0.2
     # via -r requirements/base.txt
 pyzmq==26.2.0 ; python_version >= "3.13"
     # via -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.32.3 ; python_version >= "3.10"
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2 ; sys_platform == "linux"
     # via -r requirements/base.txt
@@ -125,7 +127,9 @@ timelib==0.3.0
 tornado==6.4.1
     # via -r requirements/base.txt
 urllib3==2.2.3
-    # via requests
+    # via
+    #   -r requirements/base.txt
+    #   requests
 yarl==1.16.0
     # via aiohttp
 zc.lockfile==3.0.post1

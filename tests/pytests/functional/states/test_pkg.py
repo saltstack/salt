@@ -20,12 +20,17 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
-    pytest.mark.timeout_unless_on_windows(650),
+    pytest.mark.windows_whitelisted,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
 @pytest.fixture(scope="module", autouse=True)
 def refresh_db(grains, modules):
+
+    if salt.utils.platform.is_windows():
+        modules.winrepo.update_git_repos()
+
     modules.pkg.refresh_db()
 
     # If this is Arch Linux, check if pacman is in use by another process
@@ -43,7 +48,7 @@ def refresh_db(grains, modules):
 def refresh_keys(grains, modules):
     if grains["os_family"] == "Arch":
         # We should be running this periodically when building new test runner
-        # images, otherwise this could take several minuets to complete.
+        # images, otherwise this could take several minutes to complete.
         proc = subprocess.run(["pacman-key", "--refresh-keys"], check=False)
         if proc.returncode != 0:
             pytest.fail("pacman-key --refresh-keys command failed.")
@@ -53,7 +58,7 @@ def refresh_keys(grains, modules):
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
-        _PKG_TARGETS = ["vlc", "putty"]
+        _PKG_TARGETS = ["npp_x64", "putty"]
     elif grains["os"] == "Amazon":
         if grains["osfinger"] == "Amazon Linux-2023":
             _PKG_TARGETS = ["lynx", "gnuplot-minimal"]
@@ -62,9 +67,9 @@ def PKG_TARGETS(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             if grains["osmajorrelease"] >= 5:
-                _PKG_TARGETS = ["wget", "zsh"]
+                _PKG_TARGETS = ["ctags", "zsh"]
             else:
-                _PKG_TARGETS = ["wget", "zsh-html"]
+                _PKG_TARGETS = ["ctags", "zsh-html"]
         elif (
             grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
             and grains["osmajorrelease"] == 9
@@ -108,7 +113,12 @@ def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
     if grains["os_family"] == "RedHat" and grains["oscodename"] != "Photon":
         if grains["os"] == "CentOS":
-            _PKG_32_TARGETS.append("xz-devel.i686")
+            if grains["osmajorrelease"] == 5:
+                _PKG_32_TARGETS = ["xz-devel.i386"]
+            else:
+                _PKG_32_TARGETS.append("xz-devel.i686")
+    elif grains["os"] == "Windows":
+        _PKG_32_TARGETS = ["npp", "putty"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
@@ -198,6 +208,46 @@ def latest_version(ctx, modules):
     return run_command
 
 
+@pytest.fixture(scope="function")
+def install_7zip(modules):
+    try:
+        modules.pkg.install(name="7zip", version="22.01.00.0")
+        modules.pkg.install(name="7zip", version="19.00.00.0")
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" in versions
+        assert "22.01.00.0" in versions
+        yield
+    finally:
+        modules.pkg.remove(name="7zip", version="19.00.00.0")
+        modules.pkg.remove(name="7zip", version="22.01.00.0")
+        versions = modules.pkg.version("7zip")
+        assert "19.00.00.0" not in versions
+        assert "22.01.00.0" not in versions
+
+
+@pytest.fixture(scope="module")
+def pkg_def_contents(state_tree):
+    return r"""
+    my-software:
+      '1.0.1':
+        full_name: 'My Software'
+        installer: 'C:\files\mysoftware101.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'C:\files\mysoftware101.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        reboot: False
+      '1.0.2':
+        full_name: 'My Software'
+        installer: 'C:\files\mysoftware102.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'C:\files\mysoftware102.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        reboot: False
+    """
+
+
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
@@ -261,7 +311,8 @@ def test_pkg_003_installed_multipkg(caplog, PKG_TARGETS, modules, states, grains
     try:
         ret = states.pkg.installed(name=None, pkgs=PKG_TARGETS, refresh=False)
         assert ret.result is True
-        assert "WARNING" not in caplog.text
+        if not salt.utils.platform.is_windows():
+            assert "WARNING" not in caplog.text
     finally:
         ret = states.pkg.removed(name=None, pkgs=PKG_TARGETS)
         assert ret.result is True
@@ -1084,3 +1135,28 @@ def test_pkg_purged_with_removed_pkg(grains, PKG_TARGETS, states, modules):
         "installed": {},
         "removed": {target: {"new": "", "old": version}},
     }
+
+
+@pytest.mark.skip_unless_on_windows()
+def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
+    """
+    This tests removing a specific version of a package when multiple versions
+    are installed. This is specific to Windows. The only version I could find
+    that allowed multiple installs of differing versions was 7zip, so we'll use
+    that.
+    """
+    ret = states.pkg.removed(name="7zip", version="19.00.00.0")
+    assert ret.result is True
+    current = modules.pkg.version("7zip")
+    assert "22.01.00.0" in current
+
+
+@pytest.mark.skip_unless_on_windows()
+def test_pkg_latest_test_true(states, modules, state_tree, pkg_def_contents):
+    repo_dir = state_tree / "winrepo_ng"
+    with pytest.helpers.temp_file("my-software.sls", pkg_def_contents, repo_dir):
+        modules.pkg.refresh_db()
+    assert len(modules.pkg.get_package_info("my-software")) == 2
+    result = states.pkg.latest("my-software", test=True)
+    expected = {"my-software": {"new": "1.0.2", "old": ""}}
+    assert result.changes == expected

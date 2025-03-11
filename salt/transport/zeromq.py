@@ -7,6 +7,7 @@ import asyncio.exceptions
 import errno
 import hashlib
 import logging
+import multiprocessing
 import os
 import signal
 import sys
@@ -776,7 +777,7 @@ class ZeroMQSocketMonitor:
     async def consume(self):
         while self._running.is_set():
             try:
-                if self._monitor_socket.poll():
+                if await self._monitor_socket.poll():
                     msg = await self._monitor_socket.recv_multipart()
                     self.monitor_callback(msg)
                 else:
@@ -852,6 +853,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        started=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -864,6 +868,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pub_path_perms = pub_path_perms
+        self.pull_path_perms = pull_path_perms
         if pull_path:
             self.pull_uri = f"ipc://{pull_path}"
         else:
@@ -874,9 +880,30 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.daemon_pub_sock = None
         self.daemon_pull_sock = None
         self.daemon_monitor = None
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
+
+    def __setstate__(self, state):
+        self.__init__(**state)
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "pub_host": self.pub_host,
+            "pub_port": self.pub_port,
+            "pub_path": self.pub_path,
+            "pull_host": self.pull_host,
+            "pull_port": self.pull_port,
+            "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
+            "started": self.started,
+        }
 
     def publish_daemon(
         self,
@@ -930,14 +957,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             if self.pub_path:
                 os.chmod(  # nosec
                     self.pub_path,
-                    0o600,
+                    self.pub_path_perms,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
             if self.pull_path:
                 os.chmod(  # nosec
                     self.pull_path,
-                    0o600,
+                    self.pull_path_perms,
                 )
         return pull_sock, pub_sock, monitor
 
@@ -950,6 +977,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_pub_sock,
             self.daemon_monitor,
         ) = self._get_sockets(self.daemon_context, ioloop)
+        self.started.set()
         while True:
             try:
                 package = await self.daemon_pull_sock.recv()

@@ -874,7 +874,7 @@ def test_list_upgrades_dnf():
                     "--enablerepo=good",
                     "--branch=foo",
                     "list",
-                    "upgrades",
+                    "--upgrades",
                 ],
                 env={},
                 output_loglevel="trace",
@@ -899,7 +899,7 @@ def test_list_upgrades_dnf():
                     "--enablerepo=good",
                     "--branch=foo",
                     "list",
-                    "upgrades",
+                    "--upgrades",
                 ],
                 env={},
                 output_loglevel="trace",
@@ -926,7 +926,7 @@ def test_list_downloaded():
     mock_walk = MagicMock(
         return_value=[
             (
-                "/var/cache/yum",
+                os.path.join("/var/cache", yumpkg._yum()),
                 [],
                 ["pkg1-3.1-16.1.x86_64.rpm", "pkg2-1.2-13.2.x86_64.rpm"],
             )
@@ -955,7 +955,9 @@ def test_list_downloaded():
             "3.1": {
                 "creation_date_time": "2023-10-05T14:01:22",
                 "creation_date_time_t": 1696536082,
-                "path": "/var/cache/yum/pkg1-3.1-16.1.x86_64.rpm",
+                "path": os.path.join(
+                    "/var/cache", yumpkg._yum(), "pkg1-3.1-16.1.x86_64.rpm"
+                ),
                 "size": 75701688,
             },
         },
@@ -963,7 +965,9 @@ def test_list_downloaded():
             "1.2": {
                 "creation_date_time": "2023-10-05T14:01:22",
                 "creation_date_time_t": 1696536082,
-                "path": "/var/cache/yum/pkg2-1.2-13.2.x86_64.rpm",
+                "path": os.path.join(
+                    "/var/cache", yumpkg._yum(), "pkg2-1.2-13.2.x86_64.rpm"
+                ),
                 "size": 75701688,
             },
         },
@@ -1150,11 +1154,12 @@ def test_download():
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
     with patch_which, patch_exists, patch_makedirs, patch_listdir, patch_salt:
         result = yumpkg.download("spongebob")
-        cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
+        cache_dir = os.path.join("/var/cache", yumpkg._yum(), "packages")
+        cmd = ["yumdownloader", "-q", f"--destdir={cache_dir}", "spongebob"]
         mock_run.assert_called_once_with(
             cmd, output_loglevel="trace", python_shell=False
         )
-        expected = {"spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm"}
+        expected = {"spongebob": f"{cache_dir}/spongebob-1.2.rpm"}
         assert result == expected
 
 
@@ -1171,10 +1176,11 @@ def test_download_failed():
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
     with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
         result = yumpkg.download("spongebob", "patrick")
+        cache_dir = os.path.join("/var/cache", yumpkg._yum(), "packages")
         cmd = [
             "yumdownloader",
             "-q",
-            "--destdir=/var/cache/yum/packages",
+            f"--destdir={cache_dir}",
             "spongebob",
             "patrick",
         ]
@@ -1183,7 +1189,7 @@ def test_download_failed():
         )
         expected = {
             "_error": "The following package(s) failed to download: patrick",
-            "spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm",
+            "spongebob": f"{cache_dir}/spongebob-1.2.rpm",
         }
         assert result == expected
 
@@ -1207,11 +1213,12 @@ def test_download_to_purge():
     patch_salt = patch.dict(yumpkg.__salt__, dict_salt)
     with patch_which, patch_exists, patch_listdir, patch_unlink, patch_salt:
         result = yumpkg.download("spongebob")
-        cmd = ["yumdownloader", "-q", "--destdir=/var/cache/yum/packages", "spongebob"]
+        cache_dir = os.path.join("/var/cache", yumpkg._yum(), "packages")
+        cmd = ["yumdownloader", "-q", f"--destdir={cache_dir}", "spongebob"]
         mock_run.assert_called_once_with(
             cmd, output_loglevel="trace", python_shell=False
         )
-        expected = {"spongebob": "/var/cache/yum/packages/spongebob-1.2.rpm"}
+        expected = {"spongebob": f"{cache_dir}/spongebob-1.2.rpm"}
         assert result == expected
 
 
@@ -1428,10 +1435,8 @@ def test_install_with_options():
                     "--disablerepo=*",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "install",
                     "foo",
                 ],
@@ -1459,10 +1464,8 @@ def test_install_with_options():
                     "--disablerepo=bad",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "install",
                     "foo",
                 ],
@@ -1857,10 +1860,8 @@ def test_upgrade_with_options():
                     "--disablerepo=*",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "--exclude=kernel*",
                     "--nogpgcheck",
                     "upgrade",
@@ -1902,10 +1903,8 @@ def test_upgrade_with_options():
                     "--disablerepo=bad",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "--setopt",
-                    "obsoletes=0",
-                    "--setopt",
-                    "plugins=0",
+                    "--setopt=obsoletes=0",
+                    "--setopt=plugins=0",
                     "--exclude=kernel*",
                     "upgrade",
                 ],
@@ -3051,10 +3050,8 @@ def test_pkg_update_dnf():
                 "dnf",
                 "--quiet",
                 "-y",
-                "--setopt",
-                "plugins=0",
-                "--setopt",
-                "obsoletes=False",
+                "--setopt=plugins=0",
+                "--setopt=obsoletes=False",
                 "upgrade",
                 "foo",
             ],
@@ -3166,6 +3163,15 @@ def test_services_need_restart_requires_dnf():
 
 def test_services_need_restart_no_dnf_output():
     patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    patch_booted = patch("salt.utils.systemd.booted", Mock(return_value=True))
+    mock_run_stdout = MagicMock(return_value="")
+    patch_run_stdout = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_run_stdout})
+    with patch_yum, patch_booted, patch_run_stdout:
+        assert yumpkg.services_need_restart() == []
+
+
+def test_services_need_restart_no_dnf5_output():
+    patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf5"))
     patch_booted = patch("salt.utils.systemd.booted", Mock(return_value=True))
     mock_run_stdout = MagicMock(return_value="")
     patch_run_stdout = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_run_stdout})

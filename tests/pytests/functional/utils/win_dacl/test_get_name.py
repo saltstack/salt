@@ -9,9 +9,11 @@ import pytest
 
 import salt.exceptions
 import salt.utils.win_dacl
+from tests.support.mock import patch
 
 # Third-party libs
 try:
+    import pywintypes
     import win32security
 
     HAS_WIN32 = True
@@ -84,12 +86,22 @@ def test_get_name_capability_sid():
     assert salt.utils.win_dacl.get_name(sid_obj) is None
 
 
-def test_get_name_error():
+def test_get_name_unmapped_sid():
     """
-    Test get_name with an un mapped SID, should throw a CommandExecutionError
+    Test get_name with an un mapped SID, should return the passed sid
     """
     test_sid = "S-1-2-3-4"
     sid_obj = win32security.ConvertStringSidToSid(test_sid)
-    with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
-        salt.utils.win_dacl.get_name(sid_obj)
-    assert "No mapping between account names" in exc.value.message
+    assert salt.utils.win_dacl.get_name(sid_obj) == test_sid
+
+
+def test_get_name_error():
+    """
+    Test get_name with an unexpected error, should throw a CommandExecutionError
+    """
+    test_sid = "S-1-2-3-4"
+    sid_obj = win32security.ConvertStringSidToSid(test_sid)
+    with patch("win32security.LookupAccountSid", side_effect=pywintypes.error):
+        with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+            salt.utils.win_dacl.get_name(sid_obj)
+    assert "Error resolving" in exc.value.message

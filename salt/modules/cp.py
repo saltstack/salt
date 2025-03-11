@@ -21,7 +21,13 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.loader.dunder import __file_client__
+from salt.loader.dunder import (
+    __context__,
+    __file_client__,
+    __grains__,
+    __opts__,
+    __pillar__,
+)
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +174,7 @@ def _client():
     """
     if __file_client__:
         return __file_client__.value()
-    return salt.fileclient.get_file_client(__opts__)
+    return salt.fileclient.get_file_client(__opts__.value())
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):

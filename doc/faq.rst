@@ -30,7 +30,7 @@ SaltStack the company does make proprietary products which use Salt and its libr
 I think I found a bug! What should I do?
 ----------------------------------------
 
-The salt-users mailing list as well as the salt IRC channel can both be helpful
+The salt-users mailing list as well as the Community Discord can both be helpful
 resources to confirm if others are seeing the issue and to assist with
 immediate debugging.
 

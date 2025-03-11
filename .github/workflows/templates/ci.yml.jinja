@@ -12,7 +12,6 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Pre-Commit
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/pre-commit-action.yml
     needs:
       - prepare-workflow
@@ -30,7 +29,7 @@
   lint:
     <%- do conclusion_needs.append('lint') %>
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -39,36 +38,36 @@
 
   <%- endif %>
 
+  <%- set job_name = "nsis-tests" %>
+  <%- if includes.get(job_name, True) %>
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: NSIS Tests
+    uses: ./.github/workflows/nsis-tests.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+
+  <%- endif %>
 
   <%- set job_name = "prepare-release" %>
   <%- if includes.get(job_name, True) %>
 
   <{ job_name }>:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
-    <%- if prepare_actual_release %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
-    <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    runs-on: ubuntu-latest
-    <%- endif %>
+      - ubuntu-22.04
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
     steps:
       - uses: actions/checkout@v4
 
-    <%- if not prepare_actual_release %>
-
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
-    <%- endif %>
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -191,7 +190,7 @@
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -208,11 +207,11 @@
 
   <{ job_name }>:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -239,50 +238,26 @@
 
   <%- endif %>
 
-
-  <%- set job_name = "build-deps-onedir" %>
-  <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Dependencies Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "<{ relenv_version }>"
-      python-version: "<{ python_version }>"
-
-  <%- endif %>
-
-
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
 
   <{ job_name }>:
     <%- do conclusion_needs.append(job_name) %>
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   <%- endif %>
-
 
   <%- set job_name = "build-pkgs" %>
   <%- if includes.get(job_name, True) %>
@@ -309,8 +284,8 @@
   combine-all-code-coverage:
     <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
-    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] == false }}
+    runs-on: ubuntu-22.04
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
@@ -362,8 +337,9 @@
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
-          name: all-testrun-coverage-artifacts
           path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: tree -a artifacts/
@@ -416,6 +392,7 @@
           path: artifacts/coverage/html/salt
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Report Combined Code Coverage
         run: |
@@ -432,6 +409,7 @@
           path: artifacts/coverage/coverage.json
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Create Combined Code Coverage HTML Report
         run: |
@@ -444,6 +422,7 @@
           path: artifacts/coverage/html/full
           retention-days: 7
           if-no-files-found: error
+          include-hidden-files: true
   <%- endif %>
 
 <%- endblock jobs %>

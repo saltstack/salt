@@ -333,8 +333,9 @@ class TestAccount:
         if salt.utils.platform.is_windows():
             log.debug("Configuring system account: %s", self)
             ret = self.sminion.functions.user.update(
-                self.username, password_never_expires=True
+                self.username, expired=False, password_never_expires=True
             )
+            assert ret is True
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
         else:
@@ -516,6 +517,8 @@ class FakeSaltExtension:
             setup_requires =
               wheel
               setuptools>=50.3.2
+            install_requires =
+              distro
 
             [options.packages.find]
             where = src

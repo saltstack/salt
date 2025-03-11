@@ -762,4 +762,6 @@ allowed-3rd-party-modules=msgpack,
                           cryptography,
                           aiohttp,
                           pytest_timeout,
-                          networkx
+                          networkx,
+                          urllib3,
+                          idna

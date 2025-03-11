@@ -62,3 +62,8 @@ class DefaultOrderedDict(OrderedDict):
         return "DefaultOrderedDict({}, {})".format(
             self.default_factory, super().__repr__()
         )
+
+
+class HashableOrderedDict(OrderedDict):
+    def __hash__(self):
+        return id(self)

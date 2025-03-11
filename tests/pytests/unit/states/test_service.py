@@ -3,6 +3,7 @@
 """
 
 import logging
+import subprocess
 
 import pytest
 
@@ -14,6 +15,20 @@ from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
+
+
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            proc = subprocess.run(["systemctl"], capture_output=True, check=False)
+            _check_systemctl.memo = (
+                b"Failed to get D-Bus connection: No such file or directory"
+                in proc.stderr
+                or b"Failed to connect to bus: No such file or directory" in proc.stderr
+            )
+    return _check_systemctl.memo
 
 
 def func(name):
@@ -679,6 +694,7 @@ def test_mod_beacon(tmp_path):
                         assert ret == expected
 
 
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl is in a degraded state")
 @pytest.mark.skip_on_darwin(reason="service.running is currently failing on OSX")
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
