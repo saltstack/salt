@@ -45,18 +45,20 @@ HAProxy:
             mode tcp
             bind 10.27.5.116:4505
             option tcplog
-            timeout client  1m
+            # This timeout is equal to the publish_session setting of the
+            # masters.
+            timeout client 86400s
             default_backend salt-master-pub-backend
 
         backend salt-master-pub-backend
             mode tcp
-            option tcplog
             #option log-health-checks
             log global
-            #balance source
             balance roundrobin
             timeout connect 10s
-            timeout server 1m
+            # This timeout is equal to the publish_session setting of the
+            # masters.
+            timeout server 86400s
             server rserve1 10.27.12.13:4505 check
             server rserve2 10.27.7.126:4505 check
             server rserve3 10.27.3.73:4505 check
@@ -70,11 +72,8 @@ HAProxy:
 
         backend salt-master-req-backend
             mode tcp
-            option tcplog
-            #option log-health-checks
             log global
             balance roundrobin
-            #balance source
             timeout connect 10s
             timeout server 1m
             server rserve1 10.27.12.13:4506 check
@@ -93,6 +92,8 @@ Master Config:
         cluster_pki_dir: /my/gluster/share/pki
         cachedir: /my/gluster/share/cache
         file_roots:
+          base:
             - /my/gluster/share/srv/salt
         pillar_roots:
+          base:
             - /my/gluster/share/srv/pillar

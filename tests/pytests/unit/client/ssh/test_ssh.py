@@ -341,7 +341,8 @@ def test_extra_filerefs(tmp_path, opts):
         assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
 
 
-def test_key_deploy_permission_denied_scp(tmp_path, opts):
+@pytest.mark.parametrize("user_choice", ("y", "n"))
+def test_key_deploy_permission_denied_scp(tmp_path, opts, user_choice):
     """
     test "key_deploy" function when
     permission denied authentication error
@@ -375,19 +376,23 @@ def test_key_deploy_permission_denied_scp(tmp_path, opts):
     patch_roster_file = patch("salt.roster.get_roster_file", MagicMock(return_value=""))
     with patch_roster_file:
         client = ssh.SSH(opts)
-    patch_input = patch("builtins.input", side_effect=["y"])
+    patch_input = patch("builtins.input", side_effect=[user_choice])
     patch_getpass = patch("getpass.getpass", return_value=["password"])
     mock_key_run = MagicMock(return_value=key_run_ret)
     patch_key_run = patch("salt.client.ssh.SSH._key_deploy_run", mock_key_run)
     with patch_input, patch_getpass, patch_key_run:
         ret = client.key_deploy(host, ssh_ret)
-    assert mock_key_run.call_args_list[0][0] == (
-        host,
-        {"passwd": [passwd], "host": host, "user": usr},
-        True,
-    )
-    assert ret == key_run_ret
-    assert mock_key_run.call_count == 1
+    if user_choice == "y":
+        assert mock_key_run.call_args_list[0][0] == (
+            host,
+            {"passwd": [passwd], "host": host, "user": usr},
+            True,
+        )
+        assert ret == key_run_ret
+        assert mock_key_run.call_count == 1
+    else:
+        mock_key_run.assert_not_called()
+        assert ret == (ssh_ret, None)
 
 
 def test_key_deploy_permission_denied_file_scp(tmp_path, opts):

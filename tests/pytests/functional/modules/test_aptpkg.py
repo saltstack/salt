@@ -14,6 +14,7 @@ import salt.modules.gpg as gpg
 import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
+from salt.loader.dunder import __opts__
 from tests.support.mock import Mock, patch
 
 pytestmark = [
@@ -86,7 +87,7 @@ def configure_loader_modules(minion_opts, grains):
         },
         gpg: {},
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         config: {
             "__opts__": minion_opts,
@@ -99,6 +100,9 @@ def configure_loader_modules(minion_opts, grains):
 
 @pytest.fixture()
 def revert_repo_file(tmp_path):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -116,7 +120,7 @@ def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
         test_repos = [
-            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ jammy main",
             "deb http://dist.list stable/all/",
         ]
         with salt.utils.files.fopen(source_path, "w+") as fp:

@@ -497,13 +497,14 @@ def get_group(path, follow_symlinks=True):
 
 def uid_to_user(uid):
     """
-    Convert a uid to a user name
+    Convert a User ID (uid) to a username
 
     Args:
         uid (str): The user id to lookup
 
     Returns:
-        str: The name of the user
+        str: The name of the user. The ``uid`` will be returned if there is no
+             corresponding username
 
     CLI Example:
 
@@ -1366,10 +1367,13 @@ def remove(path, force=False):
             # A file and a symlinked file are removed the same way
             path.unlink()
         else:
+            # Twangboy: This is for troubleshooting
+            is_dir = os.path.isdir(path)
+            exists = os.path.exists(path)
+            # This is a directory, list its contents and remove them recursively
             for child in path.iterdir():
                 # If it's a normal directory, recurse to remove its contents
                 remove(str(child), force)
-
             # rmdir will work now because the directory is empty
             path.rmdir()
     except OSError as exc:

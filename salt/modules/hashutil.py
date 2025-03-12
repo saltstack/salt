@@ -135,7 +135,7 @@ def base64_encodefile(fname):
         path:
           to:
             data: |
-              {{ salt.hashutil.base64_encodefile('/path/to/binary_file') | indent(6) }}
+              {{ salt['hashutil.base64_encodefile']('/path/to/binary_file') | indent(6) }}
 
     The :py:func:`file.decode <salt.states.file.decode>` state function can be
     used to decode this data and write it to disk.

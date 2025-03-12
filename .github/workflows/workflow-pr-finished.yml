@@ -1,0 +1,27 @@
+name: Workflow PR Finished
+run-name: Workflow PR Finished ${{ github.event.workflow_run.display_title }} (${{ github.event.workflow_run.conclusion }})
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+jobs:
+
+  restart-failed-jobs:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 5 }}
+    steps:
+      - name: Restart failed jobs
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run rerun ${{ github.event.workflow_run.id }} --failed

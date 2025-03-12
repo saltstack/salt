@@ -28,9 +28,10 @@ autocommand==2.2.2
     #   jaraco.text
 babel==2.12.1
     # via sphinx
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   requests
 cffi==1.16.0
     # via
@@ -110,7 +111,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -172,7 +173,7 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   cherrypy
-psutil==5.9.6
+psutil==5.9.6 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -223,7 +224,7 @@ pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.8"
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -288,6 +289,7 @@ uc-micro-py==1.0.1
 urllib3==1.26.18
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   requests
 yarl==1.9.4
     # via
