@@ -325,6 +325,7 @@ jobs:
 
       - name: Enable WMIC
         run: |
+          DISM /Online /Cleanup-Image /RestoreHealth
           DISM /Online /Get-Capabilities
           DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
 
