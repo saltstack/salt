@@ -324,7 +324,9 @@ jobs:
           python-version: "${{ inputs.python-version }}"
 
       - name: Enable WMIC
-        run: DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
+        run: |
+          DISM /Online /Get-Capabilities
+          DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
 
       - name: "Throttle Builds"
         shell: bash
