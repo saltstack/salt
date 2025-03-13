@@ -25,7 +25,6 @@ croniter==2.0.5 ; sys_platform != "win32"
 cryptography==42.0.5
     # via
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
@@ -52,7 +51,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -120,7 +119,9 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/darwin.txt
 urllib3==1.26.18
-    # via requests
+    # via
+    #   -r requirements/base.txt
+    #   requests
 vultr==1.0.1
     # via -r requirements/darwin.txt
 zc.lockfile==2.0

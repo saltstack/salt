@@ -2506,7 +2506,7 @@ class Minion(MinionBase):
                 else:
                     data["fun"] = "state.highstate"
                     data["arg"] = []
-                self._handle_decoded_payload(data)
+                self.io_loop.add_callback(self._handle_decoded_payload, data)
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         """
@@ -2527,6 +2527,7 @@ class Minion(MinionBase):
                 }
             )
 
+    @salt.ext.tornado.gen.coroutine
     def _fire_master_minion_start(self):
         include_grains = False
         if self.opts["start_event_grains"]:
@@ -2534,13 +2535,13 @@ class Minion(MinionBase):
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
             # Old style event. Defaults to False in 3001 release.
-            self._fire_master_main(
+            yield self._fire_master_main(
                 "Minion {} started at {}".format(self.opts["id"], time.asctime()),
                 "minion_start",
                 include_startup_grains=include_grains,
             )
         # send name spaced event
-        self._fire_master_main(
+        yield self._fire_master_main(
             "Minion {} started at {}".format(self.opts["id"], time.asctime()),
             tagify([self.opts["id"], "start"], "minion"),
             include_startup_grains=include_grains,
@@ -2975,7 +2976,7 @@ class Minion(MinionBase):
                     # make the schedule to use the new 'functions' loader
                     self.schedule.functions = self.functions
                     self.pub_channel.on_recv(self._handle_payload)
-                    self._fire_master_minion_start()
+                    yield self._fire_master_minion_start()
                     log.info("Minion is ready to receive requests!")
 
                     # update scheduled job to run with the new master addr
@@ -3224,7 +3225,7 @@ class Minion(MinionBase):
                 self.setup_scheduler(before_connect=True)
             self.sync_connect_master()
         if self.connected:
-            self._fire_master_minion_start()
+            self.io_loop.add_callback(self._fire_master_minion_start)
             log.info("Minion is ready to receive requests!")
 
         # Make sure to gracefully handle SIGUSR1
@@ -3267,7 +3268,8 @@ class Minion(MinionBase):
                                     "minion is running under an init system."
                                 )
 
-                    self._fire_master_main(
+                    self.io_loop.add_callback(
+                        self._fire_master_main,
                         "ping",
                         "minion_ping",
                         timeout_handler=ping_timeout_handler,
