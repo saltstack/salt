@@ -272,7 +272,7 @@ jaraco.text==4.0.0
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -745,6 +745,7 @@ urllib3==2.2.3
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes

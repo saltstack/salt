@@ -1,6 +1,6 @@
 --constraint=constraints.txt
 
-Jinja2
+Jinja2>=3.1.5
 jmespath
 msgpack>=1.0.0 ; python_version < '3.13'
 msgpack>=1.1.0 ; python_version >= '3.13'
@@ -18,6 +18,8 @@ packaging>=21.3
 looseversion
 tornado>=6.3.3
 aiohttp>=3.9.0
+urllib3>=1.26.18
+
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
 # We need contextvars for salt-ssh.

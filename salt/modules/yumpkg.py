@@ -15,6 +15,9 @@ Support for YUM/DNF
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
 
+.. versionadded:: 3006.10
+    Support for ``dnf5``` on Fedora 41
+
 .. versionadded:: 3007.0
     Support for ``dnf5``` on Fedora 39
 """
@@ -1034,7 +1037,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
+    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -1058,7 +1061,7 @@ def list_downloaded(**kwargs):
 
         salt '*' pkg.list_downloaded
     """
-    CACHE_DIR = os.path.join("/var/cache/", _yum())
+    CACHE_DIR = os.path.join("/var/cache", _yum())
 
     ret = {}
     for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
@@ -1428,8 +1431,8 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
-    if (version := kwargs.get("version")) is not None:
-        kwargs["version"] = str(version)
+    if kwargs.get("version") is not None:
+        kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1987,7 +1990,7 @@ def upgrade(
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
     if _yum() in ("dnf", "dnf5") and not obsoletes:
-        # for dnf we can just disable obsoletes
+        # for dnf[5] we can just disable obsoletes
         _setopt = [
             opt
             for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
@@ -2079,7 +2082,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -2183,7 +2186,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -3329,12 +3332,12 @@ def download(*packages, **kwargs):
     .. versionadded:: 2015.5.0
 
     Download packages to the local disk. Requires ``yumdownloader`` from
-    ``yum-utils`` package.
+    ``yum-utils`` or ``dnf-utils`` package.
 
     .. note::
 
-        ``yum-utils`` will already be installed on the minion if the package
-        was installed from the Fedora / EPEL repositories.
+        ``yum-utils`` or ``dnf-utils`` will already be installed on the minion
+        if the package was installed from the EPEL / Fedora repositories.
 
     CLI Example:
 
@@ -3349,7 +3352,7 @@ def download(*packages, **kwargs):
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
-    CACHE_DIR = "/var/cache/yum/packages"
+    CACHE_DIR = os.path.join("/var/cache", _yum(), "packages")
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     cached_pkgs = os.listdir(CACHE_DIR)
@@ -3530,12 +3533,17 @@ def services_need_restart(**kwargs):
 
         salt '*' pkg.services_need_restart
     """
-    if _yum() != "dnf":
-        raise CommandExecutionError("dnf is required to list outdated services.")
+    if _yum() not in ("dnf", "dnf5"):
+        raise CommandExecutionError(
+            "dnf or dnf5 is required to list outdated services."
+        )
     if not salt.utils.systemd.booted(__context__):
         raise CommandExecutionError("systemd is required to list outdated services.")
 
-    cmd = ["dnf", "--quiet", "needs-restarting"]
+    if _yum() == "dnf5":
+        cmd = ["dnf5", "--quiet", "needs-restarting"]
+    else:
+        cmd = ["dnf", "--quiet", "needs-restarting"]
     dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     if not dnf_output:
         return []

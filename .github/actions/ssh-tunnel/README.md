@@ -92,3 +92,9 @@ OkZFOjhCOjI3OjFDOjFBOkJEOjUxOjQ2OjE4OjBBOjhFOjVBOjI1OjQzOjQzOjZGOkRBXHJcbmE9c2V0
 dXA6YWN0aXZlXHJcbiIsICJ0eXBlIjogImFuc3dlciJ9
 -- Message received --
 ```
+
+SSH to your local port.
+
+```
+ssh -o StrictHostKeychecking=no -o TCPKeepAlive=no -o StrictHostKeyChecking=no -vv -p 5222 runner@localhost
+```
