@@ -163,7 +163,6 @@ if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
-    Write-Host $SSM_URL
 }
 
 # Copy the multiminion scripts to the Build directory

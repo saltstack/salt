@@ -71,7 +71,7 @@ jobs:
   test-linux:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
-    if: toJSON(fromJSON(inputs.matrix)['linux-x86_64']) != '[]'
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux-x86_64']) != '[]' }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -80,10 +80,6 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux-x86_64'] }}
     steps:
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -97,6 +93,16 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Free Disk Space Before Build
         run: |
@@ -154,39 +160,28 @@ jobs:
           free -h
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          GITHUB_ACTIONS: true
+          CI: true
+          SKIP_REQUIREMENTS_INSTALL: 1
+          PRINT_TEST_SELECTION: 0
+          PRINT_TEST_PLAN_ONLY: 0
+          PRINT_SYSTEM_INFO: 0
+          RERUN_FAILURES: 1
+          GITHUB_ACTIONS_PIPELINE: 1
+          SKIP_INITIAL_ONEDIR_FAILURES: 1
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: 1
+          SKIP_CODE_COVERAGE: ${{ inputs.skip-code-coverage && '1' || '0' }}
+          CONVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: "${{ vars.PIP_INDEX_URL }}"
+          PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
+          PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 1
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          /usr/bin/docker \
-          create --name ${{ github.run_id }}_salt-test \
-          --workdir /__w/salt/salt \
-          --privileged \
-          --ulimit="nofile=262144:262144" \
-          -e "HOME=/github/home" \
-          -e GITHUB_ACTIONS=true \
-          -e CI=true \
-          -e SKIP_REQUIREMENTS_INSTALL=1 \
-          -e PRINT_TEST_SELECTION=0 \
-          -e PRINT_TEST_PLAN_ONLY=0 \
-          -e PRINT_SYSTEM_INFO=0 \
-          -e RERUN_FAILURES=1 \
-          -e GITHUB_ACTIONS_PIPELINE=1 \
-          -e SKIP_INITIAL_ONEDIR_FAILURES=1 \
-          -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-          -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-          -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-          -e COLUMNS=190 \
-          -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-          -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-          -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-          -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-          -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-          -e SALT_TRANSPORT=${{ matrix.transport }} \
-          -e LANG="en_US.UTF-8" \
-          -e SHELL=/bin/bash \
-          -v "/home/runner/work":"/__w" \
-          -v "/tmp/":"/var/lib/docker" \
-          --entrypoint "/usr/lib/systemd/systemd" \
-          ${{ matrix.container }} \
-          --systemd --unit rescue.target
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -387,7 +382,7 @@ jobs:
   test-linux-arm64:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.fips && '(fips)' || '' }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || inputs.linux_arm_runner }}
-    if: toJSON(fromJSON(inputs.matrix)['linux-arm64']) != '[]'
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux-arm64']) != '[]' }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
@@ -396,10 +391,6 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux-arm64'] }}
     steps:
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -411,8 +402,24 @@ jobs:
         run: |
           echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Free Disk Space Before Build
         run: |
@@ -470,39 +477,28 @@ jobs:
           free -h
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          GITHUB_ACTIONS: true
+          CI: true
+          SKIP_REQUIREMENTS_INSTALL: 1
+          PRINT_TEST_SELECTION: 0
+          PRINT_TEST_PLAN_ONLY: 0
+          PRINT_SYSTEM_INFO: 0
+          RERUN_FAILURES: 1
+          GITHUB_ACTIONS_PIPELINE: 1
+          SKIP_INITIAL_ONEDIR_FAILURES: 1
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: 1
+          SKIP_CODE_COVERAGE: ${{ inputs.skip-code-coverage && '1' || '0' }}
+          CONVERAGE_CONTEXT: ${{ matrix.slug }}
+          COLUMNS: 190
+          PIP_INDEX_URL: "${{ vars.PIP_INDEX_URL }}"
+          PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
+          PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 1
+          SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
-          /usr/bin/docker \
-          create --name ${{ github.run_id }}_salt-test \
-          --workdir /__w/salt/salt \
-          --privileged \
-          --ulimit="nofile=262144:262144" \
-          -e "HOME=/github/home" \
-          -e GITHUB_ACTIONS=true \
-          -e CI=true \
-          -e SKIP_REQUIREMENTS_INSTALL=1 \
-          -e PRINT_TEST_SELECTION=0 \
-          -e PRINT_TEST_PLAN_ONLY=0 \
-          -e PRINT_SYSTEM_INFO=0 \
-          -e RERUN_FAILURES=1 \
-          -e GITHUB_ACTIONS_PIPELINE=1 \
-          -e SKIP_INITIAL_ONEDIR_FAILURES=1 \
-          -e SKIP_INITIAL_GH_ACTIONS_FAILURES=1 \
-          -e SKIP_CODE_COVERAGE=${{ inputs.skip-code-coverage && '1' || '0' }} \
-          -e CONVERAGE_CONTEXT=${{ matrix.slug }} \
-          -e COLUMNS=190 \
-          -e PIP_INDEX_URL=${{ vars.PIP_INDEX_URL }} \
-          -e PIP_TRUSTED_HOST=${{ vars.PIP_TRUSTED_HOST }} \
-          -e PIP_EXTRA_INDEX_URL=${{ vars.PIP_EXTRA_INDEX_URL }} \
-          -e PIP_DISABLE_PIP_VERSION_CHECK="1" \
-          -e RAISE_DEPRECATIONS_RUNTIME_ERRORS="1" \
-          -e SALT_TRANSPORT=${{ matrix.transport }} \
-          -e LANG="en_US.UTF-8" \
-          -e SHELL=/bin/bash \
-          -v "/home/runner/work":"/__w" \
-          -v "/tmp/":"/var/lib/docker" \
-          --entrypoint "/usr/lib/systemd/systemd" \
-          ${{ matrix.container }} \
-          --systemd --unit rescue.target
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
 
       - name: "Start container ${{ matrix.container }}"
         run: |
@@ -705,7 +701,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
-    if: toJSON(fromJSON(inputs.matrix)['macos']) != '[]'
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}
     strategy:
       fail-fast: false
@@ -725,6 +721,11 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
 
       - name: Setup Salt Version
         run: |
@@ -751,12 +752,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
-
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
@@ -983,7 +978,7 @@ jobs:
   test-windows:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
 
-    if: toJSON(fromJSON(inputs.matrix)['windows']) != '[]'
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     runs-on: ${{ matrix.slug }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
@@ -1031,7 +1026,7 @@ jobs:
         run: |
           echo true
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"
@@ -1349,7 +1344,7 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: "${{ inputs.python-version }}"

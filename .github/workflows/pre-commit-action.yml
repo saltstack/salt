@@ -48,14 +48,14 @@ jobs:
           cache-seed: ${{ inputs.cache-seed }}
 
       - name: Check ALL Files On Branch
-        if: github.event_name != 'pull_request'
+        if:  ${{ !cancelled() && github.event_name != 'pull_request' }}
         env:
           SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo']
+        if: ${{ !cancelled() &&  github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] }}
         env:
           SKIP: lint-salt,lint-tests
           GH_ACTIONS_ANNOTATE: "1"
@@ -63,6 +63,6 @@ jobs:
           pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
 
       - name: Check Docs On Deleted Files
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['deleted']
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['deleted'] }}
         run: |
           pre-commit run --show-diff-on-failure --color=always check-docs --files ${{ join(fromJSON(inputs.changed-files)['deleted_files'], ' ') }}
