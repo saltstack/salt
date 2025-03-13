@@ -278,7 +278,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['lint'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -296,7 +296,7 @@ jobs:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     runs-on:
       - ubuntu-22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['prepare-release'] }}
     needs:
       - prepare-workflow
     steps:
@@ -419,7 +419,7 @@ jobs:
 
   build-docs:
     name: Documentation
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -430,7 +430,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-source-tarball'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -459,33 +459,18 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-  build-deps-onedir:
-    name: Build Onedir Dependencies
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-onedir'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
-      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-
   build-salt-onedir:
     name: Build Salt Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
+      relenv-version: "0.18.1"
+      python-version: "3.10.16"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -499,8 +484,8 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
+      relenv-version: "0.18.1"
+      python-version: "3.10.16"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -519,8 +504,8 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.0"
-      python-version: "3.10.15"
+      relenv-version: "0.18.1"
+      python-version: "3.10.16"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -540,7 +525,7 @@ jobs:
       nox-version: 2022.8.7
       python-version: "3.10"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -557,7 +542,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
       python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
@@ -575,7 +560,7 @@ jobs:
       python-version: "3.10"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.15
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
       skip-code-coverage: true
       workflow-slug: staging
       default-timeout: 180
@@ -616,7 +601,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi(test)
-    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
+    if: ${{ !cancelled() && inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
@@ -670,11 +655,10 @@ jobs:
 
   draft-release:
     name: Draft Github Release
-    if: |
-      always() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
       (needs.test-packages.result == 'success' || needs.test-packages.result == 'skipped') &&
       needs.prepare-workflow.result == 'success' && needs.build-salt-onedir.result == 'success' &&
-      needs.build-pkgs-onedir.result == 'success' && needs.pre-commit.result == 'success'
+      needs.build-pkgs-onedir.result == 'success' && needs.pre-commit.result == 'success' }}
     needs:
       - prepare-workflow
       - pre-commit
@@ -695,7 +679,7 @@ jobs:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     needs:
       - check-requirements
@@ -704,7 +688,6 @@ jobs:
       - lint
       - nsis-tests
       - build-docs
-      - build-deps-onedir
       - build-salt-onedir
       - build-pkgs-src
       - upload-release-artifacts
