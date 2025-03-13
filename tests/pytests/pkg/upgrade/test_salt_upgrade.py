@@ -1,3 +1,4 @@
+import logging
 import sys
 import time
 
@@ -5,6 +6,8 @@ import packaging.version
 import psutil
 import pytest
 from pytestskipmarkers.utils import platform
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -35,6 +38,7 @@ def salt_test_upgrade(
     """
     Test upgrade of Salt packages for Minion and Master
     """
+    log.info("**** salt_test_upgrade - start *****")
     # Verify previous install version salt-minion is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -45,8 +49,8 @@ def salt_test_upgrade(
 
     # Verify previous install version salt-master is setup correctly and works
     bin_file = "salt"
-    if sys.platform == "windows":
-        bin_file = "salt.exe"
+    if sys.platform == "win32":
+        bin_file = "salt-call.exe"
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
     assert packaging.version.parse(
@@ -54,10 +58,11 @@ def salt_test_upgrade(
     ) < packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running minion and master by getting there PIDs
-    process_master_name = "salt-master"
     if platform.is_windows():
+        process_master_name = "cli_salt_master.py"
         process_minion_name = "salt-minion.exe"
     else:
+        process_master_name = "salt-master"
         process_minion_name = "salt-minion"
 
     old_minion_pids = _get_running_named_salt_pid(process_minion_name)
@@ -96,6 +101,8 @@ def salt_test_upgrade(
         assert new_minion_pids != old_minion_pids
         assert new_master_pids != old_master_pids
 
+    log.info("**** salt_test_upgrade - end *****")
+
 
 def _get_running_named_salt_pid(process_name):
 
@@ -109,7 +116,10 @@ def _get_running_named_salt_pid(process_name):
 
     pids = []
     for proc in psutil.process_iter():
-        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        try:
+            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        except psutil.AccessDenied:
+            continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 

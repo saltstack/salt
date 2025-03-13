@@ -323,17 +323,10 @@ jobs:
         with:
           python-version: "${{ inputs.python-version }}"
 
-      - name: Enable WMIC
-        run: |
-          DISM /Online /Cleanup-Image /RestoreHealth
-          DISM /Online /Get-Capabilities
-          DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
-
       - name: "Throttle Builds"
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
-
 
       - name: "Set `TIMESTAMP` environment variable"
         shell: bash
