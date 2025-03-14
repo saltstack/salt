@@ -231,7 +231,7 @@ def install_salt(request, salt_factories_root_dir):
     if platform.is_windows():
         conf_dir = "c:/salt/etc/salt"
     else:
-        conf_dir = (salt_factories_root_dir / "etc" / "salt",)
+        conf_dir = salt_factories_root_dir / "etc" / "salt"
     with SaltPkgInstall(
         conf_dir=conf_dir,
         pkg_system_service=request.config.getoption("--pkg-system-service"),
@@ -257,7 +257,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        config = "C:/salt/etc/salt"
         state_tree = "C:/salt/srv/salt"
         pillar_tree = "C:/salt/srv/pillar"
     elif platform.is_darwin():
@@ -310,7 +309,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
         "open_mode": True,
-        "verify_master_pubkey_sign": False,
     }
     salt_user_in_config_file = False
     master_config = install_salt.config_path / "master"
@@ -392,7 +390,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
             factory_class=SaltMaster,
             salt_pkg_install=install_salt,
         )
-    # factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
+    factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     if salt_user_in_config_file:
         # Salt factories calls salt.utils.verify.verify_env
         # which sets root perms on /etc/salt/pki/master since we are running
@@ -416,7 +414,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
                 if os.path.exists(path) is False:
                     continue
                 subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
-    # shutil.rmtree("C:/salt/etc/salt/pki")
 
     with factory.started(start_timeout=start_timeout):
         yield factory
@@ -445,7 +442,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-        # "open_mode": True,
     }
     if platform.is_windows():
         config_overrides["winrepo_dir"] = (
