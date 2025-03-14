@@ -15,6 +15,7 @@ import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
+from salt.utils.dynamic_dict import DynamicDict
 
 try:
     from yaml import CDumper as Dumper
@@ -97,6 +98,14 @@ OrderedDumper.add_representer(
 )
 SafeOrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", SafeOrderedDumper.represent_scalar
+)
+
+Dumper.add_representer(DynamicDict, Dumper.represent_dict)
+SafeDumper.add_representer(DynamicDict, SafeDumper.represent_dict)
+OrderedDumper.add_representer(DynamicDict, OrderedDumper.represent_dict)
+SafeOrderedDumper.add_representer(DynamicDict, SafeOrderedDumper.represent_dict)
+IndentedSafeOrderedDumper.add_representer(
+    DynamicDict, IndentedSafeOrderedDumper.represent_dict
 )
 
 
