@@ -2746,7 +2746,7 @@ class State:
                     "interval": 30,
                 }
         else:
-            log.debug(
+            log.warning(
                 "State is set to retry, but retry: True or a valid dict for "
                 "retry configuration was not found.  Using retry defaults"
             )
