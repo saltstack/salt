@@ -2736,7 +2736,9 @@ class State:
             if retry_data:
                 validated_retry_data = retry_defaults
             else:
-                log.debug("State is set with explicit retry: False so using default retry configuration with 0 attempts")
+                log.debug(
+                    "State is set with explicit retry: False so using default retry configuration with 0 attempts"
+                )
                 validated_retry_data = {
                     "until": True,
                     "attempts": 0,
