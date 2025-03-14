@@ -17,6 +17,7 @@ import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
 from salt.utils.optsdict import DictProxy, ListProxy, OptsDict
 from salt.utils.secret import MaskedDict, MaskedList
+from salt.utils.dynamic_dict import DynamicDict
 
 try:
     from yaml import CDumper as Dumper
@@ -132,6 +133,10 @@ yaml.Dumper.add_representer(MaskedList, yaml.representer.SafeRepresenter.represe
 yaml.SafeDumper.add_representer(
     MaskedList, yaml.representer.SafeRepresenter.represent_list
 )
+
+for D in (yaml.Dumper, yaml.SafeDumper, OrderedDumper, SafeOrderedDumper, IndentedSafeOrderedDumper):
+    D.add_representer(DynamicDict, yaml.representer.SafeRepresenter.represent_dict)
+del D
 
 
 def get_dumper(dumper_name):
