@@ -4,14 +4,17 @@ import logging
 import os
 import textwrap
 
+import pytest
+
 import salt.loader
+import salt.template
 import salt.utils.data
 import salt.utils.files
 import salt.utils.reactor as reactor
 import salt.utils.yaml
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 REACTOR_CONFIG = """\
 reactor:
@@ -143,9 +146,6 @@ SLS = {
 }
 
 LOW_CHUNKS = {
-    # Note that the "name" value in the chunk has been overwritten by the
-    # "name" argument in the SLS. This is one reason why the new schema was
-    # needed.
     "old_runner": [
         {
             "state": "runner",
@@ -183,7 +183,7 @@ LOW_CHUNKS = {
     ],
     "old_cmd": [
         {
-            "state": "local",  # 'cmd' should be aliased to 'local'
+            "state": "local",
             "__id__": "install_zsh",
             "name": "install_zsh",
             "__sls__": "/srv/reactor/old_cmd.sls",
@@ -379,173 +379,207 @@ WRAPPER_CALLS = {
     "new_caller": {"args": ("file.touch",), "kwargs": {"name": "/tmp/foo"}},
 }
 
-log = logging.getLogger(__name__)
+
+# -----------------------------------------------------------------------------
+# FIXTURES
+# -----------------------------------------------------------------------------
+@pytest.fixture
+def react_master_opts(master_opts):
+    opts = {
+        # Minimal stand-in for a real master config
+        "file_roots": {"base": []},
+        "renderer": "jinja|yaml",
+    }
+    master_opts.update(opts)
+    # Optionally parse the reactor config for convenience
+    reactor_config = salt.utils.yaml.safe_load(REACTOR_CONFIG)
+    master_opts.update(reactor_config)
+    return master_opts
 
 
-class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
+@pytest.fixture
+def test_reactor(react_master_opts):
     """
-    Tests for constructing the low chunks to be executed via the Reactor
+    Create a Reactor instance for testing
     """
-
-    @classmethod
-    def setUpClass(cls):
-        """
-        Load the reactor config for mocking
-        """
-        cls.opts = cls.get_temp_config("master")
-        reactor_config = salt.utils.yaml.safe_load(REACTOR_CONFIG)
-        cls.opts.update(reactor_config)
-        cls.reactor = reactor.Reactor(cls.opts)
-        cls.reaction_map = salt.utils.data.repack_dictlist(reactor_config["reactor"])
-        renderers = salt.loader.render(cls.opts, {})
-        cls.render_pipe = [(renderers[x], "") for x in ("jinja", "yaml")]
-
-    @classmethod
-    def tearDownClass(cls):
-        del cls.opts
-        del cls.reactor
-        del cls.render_pipe
-
-    def test_list_reactors(self):
-        """
-        Ensure that list_reactors() returns the correct list of reactor SLS
-        files for each tag.
-        """
-        for schema in ("old", "new"):
-            for rtype in REACTOR_DATA:
-                tag = "_".join((schema, rtype))
-                self.assertEqual(
-                    self.reactor.list_reactors(tag), self.reaction_map[tag]
-                )
-
-    def test_reactions(self):
-        """
-        Ensure that the correct reactions are built from the configured SLS
-        files and tag data.
-        """
-        for schema in ("old", "new"):
-            for rtype in REACTOR_DATA:
-                tag = "_".join((schema, rtype))
-                log.debug("test_reactions: processing %s", tag)
-                reactors = self.reactor.list_reactors(tag)
-                log.debug("test_reactions: %s reactors: %s", tag, reactors)
-                # No globbing in our example SLS, and the files don't actually
-                # exist, so mock glob.glob to just return back the path passed
-                # to it.
-                with patch.object(glob, "glob", MagicMock(side_effect=lambda x: [x])):
-                    # The below four mocks are all so that
-                    # salt.template.compile_template() will read the templates
-                    # we've mocked up in the SLS global variable above.
-                    with patch.object(os.path, "isfile", MagicMock(return_value=True)):
-                        with patch.object(
-                            salt.utils.files, "is_empty", MagicMock(return_value=False)
-                        ):
-                            with patch.object(
-                                codecs, "open", mock_open(read_data=SLS[reactors[0]])
-                            ):
-                                with patch.object(
-                                    salt.template,
-                                    "template_shebang",
-                                    MagicMock(return_value=self.render_pipe),
-                                ):
-                                    reactions = self.reactor.reactions(
-                                        tag,
-                                        REACTOR_DATA[rtype],
-                                        reactors,
-                                    )
-                                    log.debug(
-                                        "test_reactions: %s reactions: %s",
-                                        tag,
-                                        reactions,
-                                    )
-                                    self.assertEqual(reactions, LOW_CHUNKS[tag])
+    return reactor.Reactor(react_master_opts)
 
 
-class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
+@pytest.fixture
+def reaction_map(react_master_opts):
     """
-    Tests that we are formulating the wrapper calls properly
+    Reaction map from the configured reactor
     """
+    return salt.utils.data.repack_dictlist(react_master_opts["reactor"])
 
-    @classmethod
-    def setUpClass(cls):
-        cls.wrap = reactor.ReactWrap(cls.get_temp_config("master"))
 
-    @classmethod
-    def tearDownClass(cls):
-        del cls.wrap
+@pytest.fixture
+def render_pipe(react_master_opts):
+    """
+    Render pipeline
+    """
+    renderers = salt.loader.render(react_master_opts, {})
+    return [(renderers[x], "") for x in ("jinja", "yaml")]
 
-    def test_runner(self):
-        """
-        Test runner reactions using both the old and new config schema
-        """
-        for schema in ("old", "new"):
-            tag = "_".join((schema, "runner"))
-            chunk = LOW_CHUNKS[tag][0]
-            thread_pool = Mock()
-            thread_pool.fire_async = Mock()
-            with patch.object(self.wrap, "pool", thread_pool):
-                self.wrap.run(chunk)
-            thread_pool.fire_async.assert_called_with(
-                self.wrap.client_cache["runner"].low, args=WRAPPER_CALLS[tag]
-            )
 
-    def test_wheel(self):
-        """
-        Test wheel reactions using both the old and new config schema
-        """
-        for schema in ("old", "new"):
-            tag = "_".join((schema, "wheel"))
-            chunk = LOW_CHUNKS[tag][0]
-            thread_pool = Mock()
-            thread_pool.fire_async = Mock()
-            with patch.object(self.wrap, "pool", thread_pool):
-                self.wrap.run(chunk)
-            thread_pool.fire_async.assert_called_with(
-                self.wrap.client_cache["wheel"].low, args=WRAPPER_CALLS[tag]
-            )
+# -----------------------------------------------------------------------------
+# TESTS for Reactor building the low chunks
+# -----------------------------------------------------------------------------
+@pytest.mark.parametrize("schema", ["old", "new"])
+@pytest.mark.parametrize("rtype", list(REACTOR_DATA.keys()))
+def test_reactor_reactions(schema, rtype, test_reactor, render_pipe):
+    """
+    Ensure correct reactions are built from the configured SLS files and tag data.
+    """
+    tag = f"{schema}_{rtype}"
+    reactors_list = test_reactor.list_reactors(tag)
 
-    def test_local(self):
-        """
-        Test local reactions using both the old and new config schema
-        """
-        for schema in ("old", "new"):
-            tag = "_".join((schema, "local"))
-            chunk = LOW_CHUNKS[tag][0]
-            client_cache = {"local": Mock()}
-            client_cache["local"].cmd_async = Mock()
-            with patch.object(self.wrap, "client_cache", client_cache):
-                self.wrap.run(chunk)
-            client_cache["local"].cmd_async.assert_called_with(
-                *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
-            )
+    # Patch out globbing since these SLS files don't actually exist on disk
+    with patch.object(glob, "glob", MagicMock(side_effect=lambda x: [x])):
+        with patch.object(os.path, "isfile", MagicMock(return_value=True)):
+            with patch.object(
+                salt.utils.files, "is_empty", MagicMock(return_value=False)
+            ):
+                with patch.object(
+                    codecs, "open", mock_open(read_data=SLS[reactors_list[0]])
+                ):
+                    with patch.object(
+                        salt.template,
+                        "template_shebang",
+                        MagicMock(return_value=render_pipe),
+                    ):
+                        reactions = test_reactor.reactions(
+                            tag, REACTOR_DATA[rtype], reactors_list
+                        )
+    assert reactions == LOW_CHUNKS[tag], f"Reactions did not match for tag: {tag}"
 
-    def test_cmd(self):
-        """
-        Test cmd reactions (alias for 'local') using both the old and new
-        config schema
-        """
-        for schema in ("old", "new"):
-            tag = "_".join((schema, "cmd"))
-            chunk = LOW_CHUNKS[tag][0]
-            client_cache = {"local": Mock()}
-            client_cache["local"].cmd_async = Mock()
-            with patch.object(self.wrap, "client_cache", client_cache):
-                self.wrap.run(chunk)
-            client_cache["local"].cmd_async.assert_called_with(
-                *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
-            )
 
-    def test_caller(self):
-        """
-        Test caller reactions using both the old and new config schema
-        """
-        for schema in ("old", "new"):
-            tag = "_".join((schema, "caller"))
-            chunk = LOW_CHUNKS[tag][0]
-            client_cache = {"caller": Mock()}
-            client_cache["caller"].cmd = Mock()
-            with patch.object(self.wrap, "client_cache", client_cache):
-                self.wrap.run(chunk)
-            client_cache["caller"].cmd.assert_called_with(
-                *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
-            )
+def test_list_reactors(test_reactor, reaction_map):
+    """
+    Ensure list_reactors() returns the correct list of reactor SLS files for each tag.
+    """
+    for schema in ("old", "new"):
+        for rtype in REACTOR_DATA:
+            tag = f"{schema}_{rtype}"
+            assert test_reactor.list_reactors(tag) == reaction_map[tag]
+
+
+# -----------------------------------------------------------------------------
+# FIXTURE for Reactor Wrap
+# -----------------------------------------------------------------------------
+@pytest.fixture
+def react_wrap(react_master_opts):
+    """
+    Create a ReactWrap instance
+    """
+    return reactor.ReactWrap(react_master_opts)
+
+
+# -----------------------------------------------------------------------------
+# TESTS for ReactWrap
+# -----------------------------------------------------------------------------
+@pytest.mark.parametrize("schema", ["old", "new"])
+def test_runner(schema, react_wrap):
+    """
+    Test runner reactions using both the old and new config schema
+    """
+    tag = f"{schema}_runner"
+    chunk = LOW_CHUNKS[tag][0]
+    thread_pool = Mock()
+    thread_pool.fire_async = Mock()
+    with patch.object(react_wrap, "pool", thread_pool):
+        react_wrap.run(chunk)
+    thread_pool.fire_async.assert_called_with(
+        react_wrap.client_cache["runner"].low,
+        args=WRAPPER_CALLS[tag],
+    )
+
+
+@pytest.mark.parametrize("schema", ["old", "new"])
+def test_wheel(schema, react_wrap):
+    """
+    Test wheel reactions using both the old and new config schema
+    """
+    tag = f"{schema}_wheel"
+    chunk = LOW_CHUNKS[tag][0]
+    thread_pool = Mock()
+    thread_pool.fire_async = Mock()
+    with patch.object(react_wrap, "pool", thread_pool):
+        react_wrap.run(chunk)
+    thread_pool.fire_async.assert_called_with(
+        react_wrap.client_cache["wheel"].low,
+        args=WRAPPER_CALLS[tag],
+    )
+
+
+@pytest.mark.parametrize("schema", ["old", "new"])
+def test_local(schema, react_wrap):
+    """
+    Test local reactions using both the old and new config schema
+    """
+    tag = f"{schema}_local"
+    chunk = LOW_CHUNKS[tag][0]
+    client_cache = {"local": Mock()}
+    client_cache["local"].cmd_async = Mock()
+    with patch.object(react_wrap, "client_cache", client_cache):
+        react_wrap.run(chunk)
+    client_cache["local"].cmd_async.assert_called_with(
+        *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
+    )
+
+
+@pytest.mark.parametrize("schema", ["old", "new"])
+def test_cmd(schema, react_wrap):
+    """
+    Test cmd reactions (alias for 'local') using both the old and new config schema
+    """
+    tag = f"{schema}_cmd"
+    chunk = LOW_CHUNKS[tag][0]
+    client_cache = {"local": Mock()}
+    client_cache["local"].cmd_async = Mock()
+    with patch.object(react_wrap, "client_cache", client_cache):
+        react_wrap.run(chunk)
+    client_cache["local"].cmd_async.assert_called_with(
+        *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
+    )
+
+
+@pytest.mark.parametrize("schema", ["old", "new"])
+def test_caller(schema, react_wrap):
+    """
+    Test caller reactions using both the old and new config schema
+    """
+    tag = f"{schema}_caller"
+    chunk = LOW_CHUNKS[tag][0]
+    client_cache = {"caller": Mock()}
+    client_cache["caller"].cmd = Mock()
+    with patch.object(react_wrap, "client_cache", client_cache):
+        react_wrap.run(chunk)
+    client_cache["caller"].cmd.assert_called_with(
+        *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
+    )
+
+
+@pytest.mark.parametrize("file_client", ["runner", "wheel"])
+def test_client_cache_missing_key(file_client, react_wrap):
+    """
+    Test client_cache file_client missing, gets repopulated
+    """
+    client_cache = {}
+    tag = f"new_{file_client}"
+    chunk = LOW_CHUNKS[tag][0]
+    with patch.object(react_wrap, "client_cache", client_cache):
+        if f"{file_client}" == "runner":
+            react_wrap.runner(chunk)
+        elif f"{file_client}" == "wheel":
+            react_wrap.wheel(chunk)
+        else:
+            # catch need for new check
+            assert f"{file_client}" == "bad parameterization"
+
+        file_client_key = None
+        for key in react_wrap.client_cache.keys():
+            if key == f"{file_client}":
+                file_client_key = key
+
+        assert file_client_key == f"{file_client}"
