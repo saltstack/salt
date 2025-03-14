@@ -2879,7 +2879,9 @@ def apply_sdb(opts, sdb_opts=None, _visited=None):
 
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        is_dyn_dict = isinstance(sdb_opts, salt.utils.dynamic_dict.DynamicDict)
+        from salt.utils.dynamic_dict import DynamicDict as _DynamicDict
+
+        is_dyn_dict = isinstance(sdb_opts, _DynamicDict)
         # Create a list of items to avoid modifying dict during iteration
         # This is especially important for OptsDict which has special iteration behavior
         items = list(sdb_opts.items())

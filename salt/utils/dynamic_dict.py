@@ -75,6 +75,12 @@ class DynamicDict(dict):
 
         return rdd
 
+    def static_dict(self):
+        new_dict = {}
+        for key in super().keys():
+            new_dict[key] = self[key]
+        return new_dict
+
     def is_dyn_key(self, key):
         return key in self._func_dict
 
