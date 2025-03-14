@@ -134,9 +134,13 @@ yaml.SafeDumper.add_representer(
     MaskedList, yaml.representer.SafeRepresenter.represent_list
 )
 
-for D in (yaml.Dumper, yaml.SafeDumper, OrderedDumper, SafeOrderedDumper, IndentedSafeOrderedDumper):
-    D.add_representer(DynamicDict, yaml.representer.SafeRepresenter.represent_dict)
+for D in (SafeOrderedDumper, OrderedDumper, IndentedSafeOrderedDumper):
+    D.add_representer(DynamicDict, represent_ordereddict)
 del D
+yaml.Dumper.add_representer(DynamicDict, yaml.representer.SafeRepresenter.represent_dict)
+yaml.SafeDumper.add_representer(
+    DynamicDict, yaml.representer.SafeRepresenter.represent_dict
+)
 
 
 def get_dumper(dumper_name):
