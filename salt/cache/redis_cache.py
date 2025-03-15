@@ -336,14 +336,14 @@ def _build_bank_hier(bank, redis_pipe):
     It's using the Redis pipeline,
     so there will be only one interaction with the remote server.
     """
-
-    def joinbanks(*banks):
-        return "/".join(banks)
-
-    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
-        bank_set = _get_bank_redis_key(bank_path)
-        log.debug("Adding %s to %s", bank, bank_set)
-        redis_pipe.sadd(bank_set, ".")
+    for child in bank.split("/"):
+        try:
+            bank_set = _get_bank_redis_key(parent)
+            log.debug("Adding %s to %s", child, bank_set)
+            redis_pipe.sadd(bank_set, child)
+            parent = f"{parent}/{child}"
+        except:
+            parent = child
 
 
 def _get_banks_to_remove(redis_server, bank, path=""):
@@ -531,9 +531,12 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_redis_key = _get_bank_redis_key(bank)
+    bank_keys_redis_key = _get_bank_keys_redis_key(bank)
     try:
         banks = redis_server.smembers(bank_redis_key)
+        if not banks:
+            banks = redis_server.smembers(bank_keys_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot list the Redis cache key {rkey}: {rerr}".format(
             rkey=bank_redis_key, rerr=rerr
