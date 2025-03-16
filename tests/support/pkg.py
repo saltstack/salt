@@ -439,7 +439,6 @@ class SaltPkgInstall:
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        p = self.pkgs[0]
         pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
@@ -776,6 +775,7 @@ class SaltPkgInstall:
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
             self.ssm_bin = self.install_dir / "ssm.exe"
+            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
 
             if self.file_ext == "exe":
                 win_pkg = (
@@ -794,16 +794,19 @@ class SaltPkgInstall:
             download_file(win_pkg_url, pkg_path)
 
             if self.file_ext == "msi":
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+
+                # XXX: Both packages end up installed, should we uninstall the old one?
+                # ret = subprocess.run(f"msiexec.exe /qn /x {pkg} /norestart", shell=True)
+                # assert ret.returncode == 0
+
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg_path} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
                 self._check_retcode(ret)
@@ -811,6 +814,9 @@ class SaltPkgInstall:
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
+
+            # Add installation to the path
+            self.update_process_path()
 
             if self.pkg_system_service:
                 self._install_ssm_service()
