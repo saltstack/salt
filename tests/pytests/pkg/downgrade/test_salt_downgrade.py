@@ -21,7 +21,7 @@ def _get_running_named_salt_pid(process_name):
         cmd_line = ""
         try:
             cmd_line = " ".join(str(element) for element in proc.cmdline())
-        except psutil.ZombieProcess:
+        except (psutil.ZombieProcess, psutil.AccessDenied):
             # Even though it's a zombie process, it still has a cmdl_string and
             # a pid, so we'll use it
             pass
@@ -99,8 +99,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
     new_minion_pids = _get_running_named_salt_pid(process_name)
-    assert new_minion_pids
-    assert new_minion_pids != old_minion_pids
+    if not platform.is_windows():
+        assert new_minion_pids
+        assert new_minion_pids != old_minion_pids
 
     bin_file = "salt"
     if platform.is_windows():

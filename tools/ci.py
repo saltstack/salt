@@ -889,10 +889,6 @@ def workflow_config(
                     for _ in TEST_SALT_PKG_LISTING[platform]
                     if _.slug in requested_slugs
                 ]
-                # Skipping downgrade tests on windows. These tests have never
-                # been run and currently fail. This should be fixed.
-                if platform == "windows":
-                    continue
                 pkg_test_matrix[platform] += [
                     dict(
                         {
