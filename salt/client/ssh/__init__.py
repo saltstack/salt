@@ -1110,6 +1110,10 @@ class Single:
         self.minion_opts.update(opts.get("ssh_minion_opts", {}))
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
+        if opts.get("module_executors") is not None:
+            self.minion_opts.update({"module_executors": opts.get("module_executors")})
+        if opts.get("executor_opts") is not None:
+            self.minion_opts.update({"executor_opts": opts.get("executor_opts")})
         # Post apply system needed defaults
         self.minion_opts.update(
             {
