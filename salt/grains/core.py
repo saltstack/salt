@@ -30,6 +30,7 @@ import salt.exceptions
 import salt.modules.cmdmod
 import salt.modules.network
 import salt.modules.smbios
+import salt.modules.file as file
 import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
@@ -3586,3 +3587,13 @@ def kernelparams():
             log.debug("Failed to read /proc/cmdline: %s", exc)
 
         return grains
+
+
+def check_fc_host():
+  """
+  Determine whether the minion is a fiber channel host
+  """
+  grains = {'fc_host': False}
+  if file.directory_exists('/sys/class/fc_host'):
+    grains['fc_host'] = True
+  return grains
