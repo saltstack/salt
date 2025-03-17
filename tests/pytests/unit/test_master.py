@@ -1057,3 +1057,28 @@ def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
     )
     assert not (cachedir / "syndics").exists()
     assert not (cachedir / "mamajama").exists()
+
+
+def test_collect__auth_to_master_stats():
+    """
+    Check if master stats is collecting _auth calls while not calling neither _handle_aes nor _handle_clear
+    """
+    opts = {
+        "master_stats": True,
+        "master_stats_event_iter": 10,
+    }
+    req_channel_mock = MagicMock()
+    mworker = salt.master.MWorker(opts, {}, {}, [req_channel_mock])
+    with patch.object(mworker, "_handle_aes") as handle_aes_mock, patch.object(
+        mworker, "_handle_clear"
+    ) as handle_clear_mock:
+        mworker._handle_payload({"cmd": "_auth", "_start": time.time() - 0.02})
+        assert mworker.stats["_auth"]["runs"] == 1
+        assert mworker.stats["_auth"]["mean"] >= 0.02
+        assert mworker.stats["_auth"]["mean"] < 0.04
+        mworker._handle_payload({"cmd": "_auth", "_start": time.time() - 0.02})
+        assert mworker.stats["_auth"]["runs"] == 2
+        assert mworker.stats["_auth"]["mean"] >= 0.02
+        assert mworker.stats["_auth"]["mean"] < 0.04
+        handle_aes_mock.assert_not_called()
+        handle_clear_mock.assert_not_called()
