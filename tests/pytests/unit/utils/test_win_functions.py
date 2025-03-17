@@ -1,7 +1,9 @@
 import platform
 
 import pytest
+from saltfactories.utils import random_string
 
+import salt.modules.win_useradd
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
 
@@ -34,6 +36,14 @@ try:
 
 except ImportError:
     HAS_PYWIN = False
+
+
+@pytest.fixture(scope="module")
+def test_user():
+    user_name = random_string("test-")
+    salt.modules.win_useradd.add(name=user_name, password="P@ssw0rd")
+    yield user_name
+    salt.modules.win_useradd.delete(name=user_name)
 
 
 # Test cases for salt.utils.win_functions.
@@ -176,7 +186,7 @@ def test_get_sam_name_everyone():
 
 
 @pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
-def test_get_sam_name():
-    expected = "\\".join([platform.node()[:15], "Administrator"])
-    result = win_functions.get_sam_name("Administrator")
-    assert result == expected
+def test_get_sam_name(test_user):
+    expected = "\\".join([platform.node()[:15], test_user])
+    result = win_functions.get_sam_name(test_user)
+    assert result.lower() == expected.lower()

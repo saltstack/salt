@@ -130,7 +130,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -259,7 +259,7 @@ jaraco.text==3.11.1
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -349,7 +349,7 @@ moto==4.1.11
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -385,6 +385,12 @@ netutils==1.6.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   napalm
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 ntc-templates==4.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -605,7 +611,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamlordereddictloader
-pyzmq==25.1.2
+pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -764,13 +770,14 @@ urllib3==1.26.18
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes
     #   python-etcd
     #   requests
     #   responses
-vcert==0.7.4 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32" and python_version < "3.13.0"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in

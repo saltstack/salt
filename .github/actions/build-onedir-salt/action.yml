@@ -29,21 +29,13 @@ runs:
 
   steps:
 
-    - name: Download Cached Deps Onedir Package Directory
-      id: onedir-bare-cache
-      uses: ./.github/actions/cache
+    - name: Install Salt Packaging Dependencies into Relenv Onedir
+      uses: ./.github/actions/build-onedir-deps
       with:
-        path: artifacts/${{ inputs.package-name }}
-        key: >
-          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
-            hashFiles(
-              format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
-              '.github/actions/build-onedir-deps/action.yml',
-              '.github/workflows/build-deps-onedir-*.yml',
-              'cicd/shared-gh-workflows-context.yml'
-            )
-          }}
+        platform: ${{ inputs.platform }}
+        arch: ${{ inputs.arch }}
+        python-version: "${{ inputs.python-version }}"
+        cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ inputs.salt-version }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@v4

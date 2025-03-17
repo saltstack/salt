@@ -304,6 +304,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.utils.master.clean_proc_dir(self.opts)
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
@@ -1275,11 +1276,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             start = time.time()
             self.stats[cmd]["runs"] += 1
 
-        def run_func(data):
-            return self.aes_funcs.run_func(data["cmd"], data)
-
         with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = run_func(data)
+            ret = self.aes_funcs.run_func(data["cmd"], data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)

@@ -18,23 +18,6 @@ from salt.exceptions import (
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, Mock, call, patch
 
-try:
-    from aptsources.sourceslist import (  # pylint: disable=unused-import
-        SourceEntry,
-        SourcesList,
-    )
-
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    from aptsources import sourceslist  # pylint: disable=unused-import
-
-    HAS_APTSOURCES = True
-except ImportError:
-    HAS_APTSOURCES = False
-
 log = logging.getLogger(__name__)
 
 
@@ -380,12 +363,9 @@ def test_get_repo_keys(repo_keys_var):
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
 
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        if not HAS_APT:
-            with patch("os.listdir", return_value="/tmp/keys"):
-                with patch("pathlib.Path.is_dir", return_value=True):
-                    assert aptpkg.get_repo_keys() == repo_keys_var
-        else:
-            assert aptpkg.get_repo_keys() == repo_keys_var
+        with patch("os.listdir", return_value="/tmp/keys"):
+            with patch("pathlib.Path.is_dir", return_value=True):
+                assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -470,7 +450,7 @@ def test_get_http_proxy_url_username_passwd():
     """
     Test _get_http_proxy_url when username and passwod set
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = "user"
     passwd = "password"
@@ -486,7 +466,7 @@ def test_get_http_proxy_url():
     """
     Test basic functionality for _get_http_proxy_url
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = ""
     passwd = ""
@@ -1201,7 +1181,7 @@ def test__expand_repo_def():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1240,7 +1220,7 @@ def test__expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1278,7 +1258,7 @@ def test_expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian", repo=repo, file=source_file, architectures="amd64"
@@ -1558,21 +1538,17 @@ def _test_sourceslist_multiple_comps_fs(fs):
     yield
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 @pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    with patch.object(aptpkg, "HAS_APT", return_value=True):
-        sources = aptpkg.SourcesList()
-        for source in sources:
-            assert source.type == "deb"
-            assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-            assert source.comps == ["main", "restricted"]
-            assert source.dist == "focal-updates"
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
 
 
 @pytest.fixture(
@@ -1592,9 +1568,6 @@ def repo_line(request, fs):
     yield request.param
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
@@ -2329,39 +2302,3 @@ def test_latest_version_calls_aptcache_once_per_run():
         ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
     mock_apt_cache.assert_called_once()
     assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}
-
-
-@pytest.mark.parametrize(
-    "oneline,result",
-    (
-        (
-            "deb [signed-by=/etc/apt/keyrings/example.key arch=amd64] https://example.com/pub/repos/apt xenial main",
-            {
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        ),
-        (
-            "deb [arch=amd64 signed-by=/etc/apt/keyrings/example.key]  https://example.com/pub/repos/apt xenial main",
-            {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-            },
-        ),
-        (
-            "deb [arch=amd64]  https://example.com/pub/repos/apt xenial main",
-            {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        ),
-    ),
-)
-def test__get_opts(oneline, result):
-    ret = aptpkg._get_opts(oneline)
-    assert ret == result

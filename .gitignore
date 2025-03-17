@@ -23,8 +23,7 @@ Pipfile.lock
 #   top of salt such as
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
-/env/
-/.env/
+/.?env/
 /bin/
 /etc/
 /include/
@@ -37,7 +36,7 @@ Pipfile.lock
 /tests/cachedir/
 /tests/unit/templates/roots/
 /var/
-/venv/
+/.?venv/
 
 # setuptools stuff
 *.egg-info

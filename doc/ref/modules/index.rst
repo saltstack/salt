@@ -539,8 +539,6 @@ the module using the following field lists:
 
 .. code-block:: text
 
-    :maintainer:    Thomas Hatch <thatch@saltstack.com, Seth House <shouse@saltstack.com>
-    :maturity:      new
     :depends:       python-mysqldb
     :platform:      all
 

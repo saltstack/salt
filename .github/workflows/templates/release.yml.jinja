@@ -52,7 +52,7 @@ permissions:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -71,11 +71,9 @@ permissions:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     environment: <{ gh_environment }>
     <%- if prepare_workflow_needs %>
     needs:
@@ -89,6 +87,7 @@ permissions:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -147,6 +146,14 @@ permissions:
         run: |
           echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
 
+      - name: Define workflow config
+        id: workflow-config
+        run: |
+          tools ci workflow-config<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
+
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 
@@ -156,9 +163,7 @@ permissions:
   download-onedir-artifact:
     name: Download Staging Onedir Artifact
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     environment: <{ gh_environment }>
@@ -211,9 +216,7 @@ permissions:
   backup:
     name: Backup
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     needs:
       - prepare-workflow
     env:
@@ -245,9 +248,7 @@ permissions:
     <%- do conclusion_needs.append('publish-repositories') %>
     name: Publish Repositories
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -277,18 +278,12 @@ permissions:
         run: |
           tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
-  <%- endif %>
-
   release:
     <%- do conclusion_needs.append('release') %>
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -402,9 +397,7 @@ permissions:
     name: Restore Release Bucket From Backup
     if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     needs:
@@ -445,9 +438,7 @@ permissions:
       - restore #}
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - linux-x86_64
     env:
       USE_S3_CACHE: 'true'
     steps:
@@ -507,3 +498,5 @@ permissions:
             echo '```' >> "${GITHUB_STEP_SUMMARY}"
           fi
 <%- endblock set_pipeline_exit_status_extra_steps %>
+<%- block retry %>
+<%- endblock retry %>

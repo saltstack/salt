@@ -52,6 +52,7 @@ class ShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_binaries_missing("passwd")
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -61,8 +62,9 @@ class ShadowModuleTest(ModuleCase):
 
         # Correct Functionality
         self.assertTrue(self.run_function("shadow.del_password", [self._test_user]))
-        self.assertEqual(
-            self.run_function("shadow.info", [self._test_user])["passwd"], ""
+        self.assertIn(
+            self.run_function("shadow.info", [self._test_user])["passwd"],
+            ["", "!", "!!"],
         )
 
         # User does not exist

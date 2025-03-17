@@ -400,7 +400,7 @@ def _check_min_patch_version(shell):
     min_patch_ver = "2.6"
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
-    version = ret.stdout.strip().split()[2]
+    version = ret.stdout.splitlines()[0].split()[-1]
     if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
@@ -1190,6 +1190,66 @@ def test_issue_62611(
         assert state_run["result"] is True
 
 
+def test_state_skip_req(
+    salt_master,
+    salt_call_cli,
+    tmp_path,
+    salt_minion,
+):
+    target_path = tmp_path / "skip-req-file-target.txt"
+    target_path.write_text(
+        textwrap.dedent(
+            """
+            foo=bar
+            # some comment
+            fizz=buzz
+            """
+        )
+    )
+    name = "test_skip_req/skip_req"
+
+    sls_contents = """
+    modify_contents_with_ignore_params_to_skip:
+      file.managed:
+        - name: {}
+        - ignore_ordering: True
+        - ignore_whitespace: True
+        - ignore_comment_characters: '#'
+        - contents: |
+            fizz=buzz
+            foo=bar
+
+    this_req_should_not_trigger:
+      cmd.run:
+        - name: echo NEVER
+        - onchanges:
+          - file: modify_contents_with_ignore_params_to_skip
+    """.format(
+        target_path
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents)
+
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.apply", name.replace("/", "."))
+        assert ret.returncode == 0
+        assert ret.data
+        state_runs = list(ret.data.values())
+        # file.managed returns changes but doesn't trigger reqs
+        assert state_runs[0]["name"] == str(target_path)
+        assert state_runs[0]["result"] is True
+        assert state_runs[0]["changes"]
+        assert state_runs[0]["skip_req"] is True
+        # cmd.run is not run
+        assert state_runs[1]["name"] == "echo NEVER"
+        assert state_runs[1]["result"] is True
+        assert not state_runs[1]["changes"]
+        assert (
+            state_runs[1]["comment"]
+            == "State was not run because requisites were skipped by another state"
+        )
+
+
 def test_contents_file(salt_master, salt_call_cli, tmp_path):
     """
     test calling file.managed multiple times
@@ -1230,6 +1290,7 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
 
     target_file = target_dir / "test-file"
     target_file.write_text("this is a test file")
+    file_perms = target_file.stat().st_mode
 
     target_link = target_dir / "test-link"
     target_link.symlink_to(target_file)
@@ -1238,7 +1299,6 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
     ret = subprocess.run(["chown", "-h", "nobody", str(target_link)], check=False)
     assert ret.returncode == 0
 
-    file_perms = stat.S_IFREG | stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP
     if grains["os"] != "VMware Photon OS":
         file_perms |= stat.S_IROTH
 

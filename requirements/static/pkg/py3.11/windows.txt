@@ -32,7 +32,7 @@ clr-loader==0.2.6
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -67,7 +67,7 @@ jaraco.functools==3.7.0
     #   tempora
 jaraco.text==3.11.1
     # via jaraco.collections
-jinja2==3.1.4
+jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -85,12 +85,16 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via -r requirements/base.txt
 multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
 packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
@@ -115,7 +119,7 @@ python-dateutil==2.8.2
     # via -r requirements/base.txt
 python-gnupg==0.5.2
     # via -r requirements/base.txt
-pythonnet==3.0.3 ; sys_platform == "win32"
+pythonnet==3.0.4 ; sys_platform == "win32" and python_version < "3.13"
     # via -r requirements/base.txt
 pytz==2024.1
     # via tempora
@@ -125,7 +129,7 @@ pywin32==306 ; sys_platform == "win32"
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==25.1.2 ; python_version < "3.13"
     # via -r requirements/zeromq.txt
 requests==2.32.3 ; python_version >= "3.10"
     # via -r requirements/base.txt
@@ -147,7 +151,9 @@ typing-extensions==4.8.0
     #   pydantic
     #   pydantic-core
 urllib3==1.26.18
-    # via requests
+    # via
+    #   -r requirements/base.txt
+    #   requests
 wmi==1.5.1 ; sys_platform == "win32"
     # via -r requirements/base.txt
 xmltodict==0.13.0 ; sys_platform == "win32"

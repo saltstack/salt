@@ -231,12 +231,15 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given
         """
-        self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
+        self.run_function(
+            "cp.get_url",
+            ["https://packages.broadcom.com/artifactory/saltproject-generic/", tgt],
+        )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Index of saltproject", data)
+        self.assertIn("onedir", data)
+        self.assertIn("Artifactory Online Server", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -245,14 +248,15 @@ class CPModuleTest(ModuleCase):
         cp.get_url with https:// source given and destination omitted.
         """
         ret = self.run_function(
-            "cp.get_url", ["https://repo.saltproject.io/index.html"]
+            "cp.get_url",
+            ["https://packages.broadcom.com/artifactory/saltproject-generic/"],
         )
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Index of saltproject", data)
+        self.assertIn("onedir", data)
+        self.assertIn("Artifactory Online Server", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -266,16 +270,19 @@ class CPModuleTest(ModuleCase):
         tgt = None
         while time.time() - start <= timeout:
             ret = self.run_function(
-                "cp.get_url", ["https://repo.saltproject.io/index.html", tgt]
+                "cp.get_url",
+                ["https://packages.broadcom.com/artifactory/saltproject-generic/", tgt],
             )
             if ret.find("HTTP 599") == -1:
                 break
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
-            raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+            raise Exception(
+                "https://packages.broadcom.com/artifactory/saltproject-generic/ returned 599 error"
+            )
+        self.assertIn("Index of saltproject", ret)
+        self.assertIn("onedir", ret)
+        self.assertIn("Artifactory Online Server", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -344,11 +351,11 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_file_str with https:// source given
         """
-        src = "https://repo.saltproject.io/index.html"
+        src = "https://packages.broadcom.com/artifactory/saltproject-generic/"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+        self.assertIn("Index of saltproject", ret)
+        self.assertIn("onedir", ret)
+        self.assertIn("Artifactory Online Server", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test

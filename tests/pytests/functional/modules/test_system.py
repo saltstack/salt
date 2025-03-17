@@ -20,6 +20,21 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
+def check_hostnamectl():
+    if not hasattr(check_hostnamectl, "memo"):
+        if not salt.utils.platform.is_linux():
+            check_hostnamectl.memo = False
+        else:
+            proc = subprocess.run(["hostnamectl"], capture_output=True, check=False)
+            check_hostnamectl.memo = (
+                b"Failed to connect to bus: No such file or directory" in proc.stderr
+                or b"Failed to create bus connection: No such file or directory"
+                in proc.stderr
+                or b"Failed to query system properties" in proc.stderr
+            )
+    return check_hostnamectl.memo
+
+
 @pytest.fixture(scope="module")
 def cmdmod(modules):
     return modules.cmd
@@ -52,6 +67,7 @@ def fmt_str():
 
 @pytest.fixture(scope="function")
 def setup_teardown_vars(file, service, system):
+    _systemd_timesyncd_available_ = None
     _orig_time = datetime.datetime.utcnow()
 
     if os.path.isfile("/etc/machine-info"):
@@ -183,6 +199,7 @@ def _test_hwclock_sync(system, hwclock_has_compare):
         log.error("Failed to check hwclock sync")
 
 
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_get_system_date_time(setup_teardown_vars, system, fmt_str):
     """
     Test we are able to get the correct time
@@ -194,6 +211,7 @@ def test_get_system_date_time(setup_teardown_vars, system, fmt_str):
     assert _same_times(t1, t2, seconds_diff=3), msg
 
 
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_get_system_date_time_utc(setup_teardown_vars, system, fmt_str):
     """
     Test we are able to get the correct time with utc
@@ -205,9 +223,9 @@ def test_get_system_date_time_utc(setup_teardown_vars, system, fmt_str):
     assert _same_times(t1, t2, seconds_diff=3), msg
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_date_time(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test changing the system clock. We are only able to set it up to a
@@ -226,9 +244,9 @@ def test_set_system_date_time(setup_teardown_vars, system, hwclock_has_compare):
     _test_hwclock_sync(system, hwclock_has_compare)
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_date_time_utc(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test changing the system clock. We are only able to set it up to a
@@ -247,9 +265,9 @@ def test_set_system_date_time_utc(setup_teardown_vars, system, hwclock_has_compa
     _test_hwclock_sync(system, hwclock_has_compare)
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_date_time_utcoffset_east(
     setup_teardown_vars, system, hwclock_has_compare
 ):
@@ -271,9 +289,9 @@ def test_set_system_date_time_utcoffset_east(
     _test_hwclock_sync(system, hwclock_has_compare)
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_date_time_utcoffset_west(
     setup_teardown_vars, system, hwclock_has_compare
 ):
@@ -295,10 +313,10 @@ def test_set_system_date_time_utcoffset_west(
     _test_hwclock_sync(system, hwclock_has_compare)
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.flaky(max_runs=4)
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_time(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test setting the system time without adjusting the date.
@@ -317,9 +335,9 @@ def test_set_system_time(setup_teardown_vars, system, hwclock_has_compare):
     _test_hwclock_sync(system, hwclock_has_compare)
 
 
-@pytest.mark.skip_on_env("ON_DOCKER", eq="1")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_system_date(setup_teardown_vars, system, hwclock_has_compare):
     """
     Test setting the system date without adjusting the time.
@@ -340,6 +358,7 @@ def test_set_system_date(setup_teardown_vars, system, hwclock_has_compare):
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_get_computer_desc(setup_teardown_vars, system, cmdmod):
     """
     Test getting the system hostname
@@ -361,6 +380,7 @@ def test_get_computer_desc(setup_teardown_vars, system, cmdmod):
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_computer_desc(setup_teardown_vars, system):
     """
     Test setting the computer description
@@ -375,6 +395,7 @@ def test_set_computer_desc(setup_teardown_vars, system):
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_set_computer_desc_multiline(setup_teardown_vars, system):
     """
     Test setting the computer description with a multiline string with tabs
@@ -394,6 +415,7 @@ def test_set_computer_desc_multiline(setup_teardown_vars, system):
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(check_hostnamectl(), reason="hostnamctl degraded.")
 def test_has_hwclock(setup_teardown_vars, system, grains, hwclock_has_compare):
     """
     Verify platform has a settable hardware clock, if possible.

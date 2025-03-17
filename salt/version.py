@@ -704,6 +704,7 @@ def dependency_information(include_salt_cloud=False):
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
         ("msgpack-pure", "msgpack_pure", "version"),
+        ("networkx", "networkx", "__version__"),
         ("pycrypto", "Crypto", "__version__"),
         ("pycryptodome", "Cryptodome", "version_info"),
         ("cryptography", "cryptography", "__version__"),

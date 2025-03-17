@@ -412,18 +412,17 @@ def present(
             Not supported on Windows.
 
     password
-        A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
-        argument is set to ``True`` then ``password`` is ignored.
-        For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
+        A password hash to set for the user. Updating a password on an existing
+        account is only supported on Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+        If the ``empty_password`` argument is set to ``True`` then ``password``
+        is ignored. For Windows this is the plain text password. For Linux, the
+        hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
 
     hash_password
         Set to True to hash the clear text password. Default is ``False``.
-
 
     enforce_password
         Set to False to keep the password from being changed if it has already

@@ -309,13 +309,13 @@ class PublishClient(salt.transport.base.PublishClient):
                     _connect_to = self.path
                 else:
                     _connect_to = f"{self.host}:{self.port}"
-                log.warning(
-                    "TCP Publish Client encountered an exception while connecting to"
-                    " %s: %r, will reconnect in %d seconds - %s",
+                log.debug(
+                    "%s encountered an exception while connecting to"
+                    " %s: %r, will reconnect in %d seconds",
+                    self,
                     _connect_to,
                     exc,
                     self.backoff,
-                    self._trace,
                 )
                 if timeout and time.monotonic() - start > timeout:
                     break
@@ -428,18 +428,22 @@ class PublishClient(salt.transport.base.PublishClient):
         while not self._stream:
             # Retry quickly, we may want to increase this if it's hogging cpu.
             await asyncio.sleep(0.003)
+        tasks = []
         while True:
             msg = await self.recv()
             if msg:
                 try:
                     # XXX This is handled better in the websocket transport work
-                    await callback(msg)
+                    tasks.append(asyncio.create_task(callback(msg)))
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
                         exc_info=True,
                     )
+            for task in tasks[:]:
+                if task.done():
+                    tasks.remove(task)
 
     def on_recv(self, callback):
         """

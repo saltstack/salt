@@ -1156,6 +1156,36 @@ def test_almalinux_8_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_virtuozzo_7_os_grains():
+    """
+    Test if OS grains are parsed correctly in Virtuozzo 7
+    """
+    _os_release_data = {
+        "NAME": "Virtuozzo",
+        "ID": "virtuozzo",
+        "PRETTY_NAME": "Virtuozzo release 7.5.4",
+        "VERSION": "7.5.4",
+        "ID_LIKE": "rhel fedora",
+        "VERSION_ID": "7",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:virtuozzoproject:vz:7",
+        "HOME_URL": "http://www.virtuozzo.com",
+        "BUG_REPORT_URL": "https://bugs.openvz.org",
+    }
+    expectation = {
+        "os": "Virtuozzo",
+        "os_family": "RedHat",
+        "osfullname": "Virtuozzo",
+        "oscodename": "Virtuozzo release 7.5.4",
+        "osrelease": "7",
+        "osrelease_info": (7,),
+        "osmajorrelease": 7,
+        "osfinger": "Virtuozzo-7",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_endeavouros_os_grains():
     """
     Test if OS grains are parsed correctly in EndeavourOS
@@ -1845,6 +1875,37 @@ def test_lxc_virtual_with_virt_what():
         ret = core._virtual(osdata)
         assert ret["virtual"] == "container"
         assert ret["virtual_subtype"] == "LXC"
+
+
+@pytest.mark.skip_on_windows
+def test_podman_virtual_with_systemd_detect_virt():
+    """
+    Test if virtual grains are parsed correctly in Podman using systemd-detect-virt.
+    """
+
+    def _which_side_effect(path):
+        if path == "systemd-detect-virt":
+            return "/usr/bin/systemd-detect-virt"
+        return None
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path,
+        "which",
+        MagicMock(return_value=True, side_effect=_which_side_effect),
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "podman"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Podman"
 
 
 @pytest.mark.skip_on_windows
@@ -3377,6 +3438,12 @@ def test_linux_gpus(caplog):
             "VGA compatible controller",
             "Advanced Micro Devices, Inc. [AMD/ATI]",
             "Vega [Radeon RX Vega]]",
+            "amd",
+        ],  # AMD
+        [
+            "Processing accelerators",
+            "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "Device X",
             "amd",
         ],  # AMD
         [

@@ -287,7 +287,12 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
+    gpu_classes = (
+        "3d controller",
+        "display controller",
+        "processing accelerators",
+        "vga compatible controller",
+    )
 
     devs = []
     try:
@@ -924,6 +929,10 @@ def _virtual(osdata):
             elif "lxc" in output:
                 grains["virtual"] = "container"
                 grains["virtual_subtype"] = "LXC"
+                break
+            elif "podman" in output:
+                grains["virtual"] = "container"
+                grains["virtual_subtype"] = "Podman"
                 break
             elif "amazon" in output:
                 grains["virtual"] = "Nitro"
@@ -1774,6 +1783,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
@@ -1844,6 +1854,7 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",

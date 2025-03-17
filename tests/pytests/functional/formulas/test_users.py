@@ -10,6 +10,10 @@ pytestmark = [
     pytest.mark.skip_on_windows,
     pytest.mark.destructive_test,
     pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    ),
 ]
 
 

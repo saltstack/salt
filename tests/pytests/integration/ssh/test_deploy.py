@@ -10,10 +10,14 @@ import pytest
 import salt.utils.files
 import salt.utils.yaml
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -276,9 +280,10 @@ def test_wrapper_unwrapped_command_exception(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_exception.failure")
     assert ret.returncode == EX_AGGREGATE
+    # "Probably got garbage" would be returned as a string (the module return),
+    # so no need to check
     assert isinstance(ret.data, dict)
     assert ret.data
-    assert "Probably got garbage" not in ret.data["stderr"]
     assert (
         "Error running 'disk.usage': Invalid flag passed to disk.usage"
         in ret.data["stderr"]
@@ -292,9 +297,8 @@ def test_wrapper_unwrapped_command_parsing_failure(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoops")
     assert ret.returncode == EX_AGGREGATE
-    assert ret.data
-    assert "Probably got garbage" not in ret.data["stderr"]
     assert isinstance(ret.data, dict)
+    assert ret.data
     assert ret.data["_error"] == "Failed to return clean data"
     assert ret.data["retcode"] == 0
     assert (
@@ -310,9 +314,8 @@ def test_wrapper_unwrapped_command_invalid_return(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoopsiedoodle")
     assert ret.returncode == EX_AGGREGATE
-    assert ret.data
-    assert "Probably got garbage" not in ret.data
     assert isinstance(ret.data, dict)
+    assert ret.data
     assert ret.data["_error"] == "Return dict was malformed"
     assert ret.data["retcode"] == 0
     assert (

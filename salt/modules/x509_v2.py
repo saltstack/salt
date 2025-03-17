@@ -9,6 +9,10 @@ Manage X.509 certificates
     This module represents a complete rewrite of the original ``x509`` modules
     and is named ``x509_v2`` since it introduces breaking changes.
 
+.. versionchanged:: 3008.0
+
+    This module is now the default ``x509`` module and therefore does not need
+    to be enabled explicitly anymore.
 
 .. note::
 
@@ -19,19 +23,6 @@ Manage X.509 certificates
 
 Configuration
 -------------
-Explicit activation
-~~~~~~~~~~~~~~~~~~~
-Since this module uses the same virtualname as the previous ``x509`` modules,
-but is incompatible with them, it needs to be explicitly activated on each
-minion by including the following line in the minion configuration:
-
-.. code-block:: yaml
-
-    # /etc/salt/minion.d/x509.conf
-
-    features:
-      x509_v2: true
-
 Peer communication
 ~~~~~~~~~~~~~~~~~~
 To be able to remotely sign certificates, it is required to configure the Salt
@@ -163,6 +154,18 @@ Breaking changes versus the previous ``x509`` modules
 
 Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
+Revert to old modules
+~~~~~~~~~~~~~~~~~~~~~
+Until they are removed, you can still revert to the deprecated ``x509`` modules
+by setting the following minion configuration value:
+
+.. code-block:: yaml
+
+    # /etc/salt/minion.d/x509.conf
+
+    features:
+      x509_v2: false
+
 .. _x509-setup:
 """
 
@@ -201,12 +204,8 @@ def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
     # salt.features appears to not be setup when invoked via peer publishing
-    if not __opts__.get("features", {}).get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
+    if not __opts__.get("features", {}).get("x509_v2", True):
+        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 

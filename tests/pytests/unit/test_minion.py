@@ -2,6 +2,7 @@ import asyncio
 import copy
 import logging
 import os
+import uuid
 
 import pytest
 import tornado
@@ -102,12 +103,15 @@ def test_minion_load_grains_default(minion_opts):
     ],
 )
 def test_send_req_fires_completion_event(event, minion_opts):
+    req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    with patch("salt.utils.event.get_event", return_value=event):
+    with patch("salt.utils.event.get_event", return_value=event), patch(
+        "uuid.uuid4", return_value=req_id
+    ):
         minion_opts["random_startup_delay"] = 0
         minion_opts["return_retry_tries"] = 30
         minion_opts["grains"] = {}
@@ -132,7 +136,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                         condition_event_tag = (
                             len(call.args) > 1
                             and call.args[1]
-                            == f"__master_req_channel_payload/{minion_opts['master']}"
+                            == f"__master_req_channel_payload/{req_id}/{minion_opts['master']}"
                         )
                         condition_event_tag_error = (
                             "{} != {}; Call(number={}): {}".format(
@@ -159,26 +163,42 @@ def test_send_req_fires_completion_event(event, minion_opts):
 
 
 async def test_send_req_async_regression_62453(minion_opts):
-    event_enter = MagicMock()
-    event_enter.send.side_effect = (
-        lambda data, tag, cb=None, timeout=60: tornado.gen.maybe_future(True)
-    )
-    event = MagicMock()
-    event.__enter__.return_value = event_enter
+
+    class MockEvent:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        @tornado.gen.coroutine
+        def fire_event_async(self, *args, **kwargs):
+            return
+
+        def get_event(self, *args, **kwargs):
+            return
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return
+
+    def get_event(*args, **kwargs):
+        return MockEvent()
 
     minion_opts["random_startup_delay"] = 0
-    minion_opts["return_retry_tries"] = 30
+    minion_opts["return_retry_tries"] = 5
     minion_opts["grains"] = {}
     minion_opts["ipc_mode"] = "tcp"
     with patch("salt.loader.grains"):
         minion = salt.minion.Minion(minion_opts)
 
         load = {"load": "value"}
-        timeout = 60
+        timeout = 1
 
-        # We are just validating no exception is raised
-        rtn = await minion._send_req_async(load, timeout)
-        assert rtn is False
+        with patch("salt.utils.event.get_event", get_event):
+            # We are just validating no exception is raised
+            with pytest.raises(TimeoutError):
+                rtn = await minion._send_req_async(load, timeout)
 
 
 def test_mine_send_tries(minion_opts):
@@ -495,7 +515,7 @@ async def test_process_count_max(minion_opts, io_loop):
 
 
 @pytest.mark.slow_test
-def test_beacons_before_connect(minion_opts):
+async def test_beacons_before_connect(minion_opts):
     """
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
     """
@@ -515,7 +535,7 @@ def test_beacons_before_connect(minion_opts):
         try:
 
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -527,7 +547,7 @@ def test_beacons_before_connect(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_scheduler_before_connect(minion_opts):
+async def test_scheduler_before_connect(minion_opts):
     """
     Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
     """
@@ -546,7 +566,7 @@ def test_scheduler_before_connect(minion_opts):
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -616,7 +636,7 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
+async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
     minion_opts,
 ):
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(

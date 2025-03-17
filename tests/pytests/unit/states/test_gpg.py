@@ -82,7 +82,7 @@ def gpg_trust(request):
         yield trust
 
 
-@pytest.fixture()
+@pytest.fixture
 def gpg_receive(request):
     recv = Mock(spec="salt.modules.gpg.receive_keys")
     recv.return_value = getattr(
@@ -90,6 +90,22 @@ def gpg_receive(request):
     )
     with patch.dict(gpg.__salt__, {"gpg.receive_keys": recv}):
         yield recv
+
+
+@pytest.fixture
+def gpg_get_key(keys_list):
+    def _get_key(keyid=None, **kwargs):
+        if keyid == "new":
+            ret = keys_list[3].copy()
+            ret["keyid"] = "new"
+            return ret
+        return next(iter(x for x in keys_list if x["keyid"] == keyid))
+
+    getkey = Mock(spec="salt.modules.gpg.get_key")
+    getkey.side_effect = _get_key
+
+    with patch.dict(gpg.__salt__, {"gpg.get_key": getkey}):
+        yield getkey
 
 
 @pytest.mark.usefixtures("gpg_list_keys")
@@ -109,7 +125,7 @@ def test_gpg_present_trust_change(gpg_receive, gpg_trust, expected):
     gpg_receive.assert_not_called()
 
 
-@pytest.mark.usefixtures("gpg_list_keys")
+@pytest.mark.usefixtures("gpg_list_keys", "gpg_get_key")
 @pytest.mark.parametrize(
     "gpg_receive,expected",
     [
@@ -134,7 +150,7 @@ def test_gpg_present_new_key(gpg_receive, gpg_trust, expected):
     gpg_trust.assert_not_called()
 
 
-@pytest.mark.usefixtures("gpg_list_keys")
+@pytest.mark.usefixtures("gpg_list_keys", "gpg_get_key")
 @pytest.mark.parametrize(
     "gpg_trust,expected",
     [

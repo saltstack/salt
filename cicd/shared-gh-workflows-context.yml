@@ -1,13 +1,17 @@
 nox_version: "2022.8.7"
-python_version: "3.10.15"
-relenv_version: "0.17.3"
+python_version: "3.10.16"
+relenv_version: "0.18.1"
 release_branches:
   - "3006.x"
   - "3007.x"
-mandatory_os_slugs:
+pr-testrun-slugs:
+  - ubuntu-24.04-pkg
+  - ubuntu-24.04
   - rockylinux-9
-  - amazonlinux-2023-arm64
-  - photonos-5-arm64
-  - macos-12
-  - ubuntu-24.04-arm64
+  - rockylinux-9-pkg
   - windows-2022
+  - windows-2022-pkg
+  - macos-15
+  - macos-15-pkg
+full-testrun-slugs:
+  - all

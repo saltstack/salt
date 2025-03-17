@@ -2,6 +2,8 @@
 Tests for the salt-run command
 """
 
+import os
+
 import pytest
 
 pytestmark = [
@@ -10,13 +12,25 @@ pytestmark = [
 ]
 
 
-def test_master(salt_run_cli, salt_minion):
+def test_master(salt_run_cli, salt_master):
     """
     jobs.master
     """
     ret = salt_run_cli.run("jobs.master")
-    assert ret.data == []
-    assert ret.stdout.strip() == "[]"
+    assert os.listdir(os.path.join(salt_master.config["cachedir"], "proc")) == []
+    assert len(ret.data) == 1
+    assert sorted(ret.data[0].keys()) == [
+        "_stamp",
+        "fun",
+        "fun_args",
+        "jid",
+        "pid",
+        "user",
+    ]
+    fun = "runner.jobs.master"
+    assert ret.data[0]["fun"] == fun
+    assert ret.data[0]["fun_args"] == []
+    assert fun in ret.stdout
 
 
 def test_active(salt_run_cli, salt_minion):

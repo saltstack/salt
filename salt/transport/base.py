@@ -416,7 +416,7 @@ class PublishClient(Transport):
         self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
     ):
         """
-        Create a network connection to the the PublishServer or broker.
+        Create a network connection to the PublishServer or broker.
         """
         raise NotImplementedError
 
