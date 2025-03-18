@@ -795,9 +795,14 @@ class SaltPkgInstall:
 
             if self.file_ext == "msi":
 
-                # XXX: Both packages end up installed, should we uninstall the old one?
-                # ret = subprocess.run(f"msiexec.exe /qn /x {pkg} /norestart", shell=True)
-                # assert ret.returncode == 0
+                # MSI can not be downgraded, we must remove the newer version
+                # before installing the old one.
+                ret = subprocess.run(
+                    f"msiexec.exe /qn /x {pkg} /norestart",
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode == 0
 
                 # self.proc.run always makes the command a list even when shell
                 # is true, meaning shell being true will never work correctly.
