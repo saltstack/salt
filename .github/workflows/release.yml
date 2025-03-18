@@ -57,7 +57,6 @@ jobs:
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
-      config: ${{ steps.workflow-config.outputs.config }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,8 +123,6 @@ jobs:
       USE_S3_CACHE: 'true'
     needs:
       - prepare-workflow
-      - backup
-      - publish-repositories
     environment: release
     steps:
       - name: Clone The Salt Repository
@@ -152,7 +149,6 @@ jobs:
           SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
         run: |
-          export GPG_TTY=$(tty)
           sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
           export GNUPGHOME="$(mktemp -d -p /run/gpg)"
           echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
