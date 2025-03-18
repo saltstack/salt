@@ -913,7 +913,12 @@ def workflow_config(
         "unit": 4,
     }
 
-    test_matrix: dict[str, list] = {}
+    test_matrix: dict[str, list] = {
+        "linux-x86_64": [],
+        "linux-arm64": [],
+        "macos": [],
+        "windows": [],
+    }
     if not skip_tests:
         for platform in platforms:
             for transport in ("zeromq", "tcp"):
