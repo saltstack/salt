@@ -56,6 +56,14 @@ jobs:
       - name: Release Output
         run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
 
+  upload-release-patch:
+    needs:
+      - create-github-release
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}.patch
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
   upload-source-tarball:
     needs:
       - create-github-release
