@@ -216,11 +216,11 @@ jobs:
             -p 'salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz' \
             v${{ needs.prepare-workflow.outputs.salt-version }}
 
-      - name: Publish to PyPi
-        env:
-          TWINE_PASSWORD: "${{ secrets.TWINE_PASSWORD }}"
-        run: |
-          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+      #- name: Publish to PyPi
+      #  env:
+      #    TWINE_PASSWORD: "${{ secrets.TWINE_PASSWORD }}"
+      #  run: |
+      #    tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
   publish-draft:
     name: Publish Relase v${{ needs.prepare-workflow.outputs.salt-version }}
