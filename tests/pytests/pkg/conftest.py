@@ -228,8 +228,12 @@ def salt_factories_config(salt_factories_root_dir):
 
 @pytest.fixture(scope="session")
 def install_salt(request, salt_factories_root_dir):
+    if platform.is_windows():
+        conf_dir = "c:/salt/etc/salt"
+    else:
+        conf_dir = salt_factories_root_dir / "etc" / "salt"
     with SaltPkgInstall(
-        conf_dir=salt_factories_root_dir / "etc" / "salt",
+        conf_dir=conf_dir,
         pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
@@ -371,7 +375,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
-            random_string("master-"),
+            "pkg-test-master",
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMasterWindows,
@@ -380,7 +384,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         salt_factories.system_service = True
     else:
         factory = salt_factories.salt_master_daemon(
-            random_string("master-"),
+            "pkg-test-master",
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMaster,
@@ -438,7 +442,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-        "open_mode": True,
     }
     if platform.is_windows():
         config_overrides["winrepo_dir"] = (
@@ -474,6 +477,16 @@ def salt_minion(salt_factories, salt_master, install_salt):
                 if os.path.exists(path) is False:
                     continue
                 subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
+
+    if platform.is_windows():
+        minion_pki = pathlib.Path("c:/salt/etc/salt/pki")
+        if minion_pki.exists():
+            salt.utils.files.rm_rf(minion_pki)
+
+        # Work around missing WMIC until 3008.10 has been released.
+        grainsdir = pathlib.Path("c:/salt/etc/grains")
+        grainsdir.mkdir(exist_ok=True)
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
 
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id

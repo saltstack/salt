@@ -6,6 +6,7 @@ import pathlib
 import pprint
 import re
 import shutil
+import subprocess
 import textwrap
 import time
 from typing import TYPE_CHECKING
@@ -438,7 +439,7 @@ class SaltPkgInstall:
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        pkg = self.pkgs[0]
+        pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
@@ -446,22 +447,20 @@ class SaltPkgInstall:
                 self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
+                log.info("Installing: %s", str(pkg))
                 ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+                log.info("Installing: %s", str(pkg))
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
@@ -517,12 +516,13 @@ class SaltPkgInstall:
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
             assert ret.returncode == 0
             assert "/saltstack/salt/run" not in ret.stdout
-        log.info(ret)
-        self._check_retcode(ret)
+            log.info(ret)
+            self._check_retcode(ret)
 
     def _install_ssm_service(self, service="minion"):
         """
@@ -775,6 +775,7 @@ class SaltPkgInstall:
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
             self.ssm_bin = self.install_dir / "ssm.exe"
+            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
 
             if self.file_ext == "exe":
                 win_pkg = (
@@ -793,16 +794,19 @@ class SaltPkgInstall:
             download_file(win_pkg_url, pkg_path)
 
             if self.file_ext == "msi":
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+
+                # XXX: Both packages end up installed, should we uninstall the old one?
+                # ret = subprocess.run(f"msiexec.exe /qn /x {pkg} /norestart", shell=True)
+                # assert ret.returncode == 0
+
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg_path} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
                 self._check_retcode(ret)
@@ -810,6 +814,9 @@ class SaltPkgInstall:
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
+
+            # Add installation to the path
+            self.update_process_path()
 
             if self.pkg_system_service:
                 self._install_ssm_service()
@@ -998,13 +1005,13 @@ class SaltPkgInstall:
         if platform.is_windows():
             self.update_process_path()
 
-        if not self.no_install:
-            if self.upgrade:
-                self.install_previous()
-            else:
-                # assume downgrade, since no_install only used in these two cases
-                self.install()
+        if self.no_install:
+            return self
+
+        if self.upgrade:
+            self.install_previous()
         else:
+            # assume downgrade, since no_install only used in these two cases
             self.install()
 
         return self
@@ -1225,7 +1232,7 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     "processes",
                     self.get_service_name(),
                 )
-                log.warning(ret)
+                log.debug("process result %s", ret)
                 if not ret.stdout or (ret.stdout and not ret.stdout.strip()):
                     if n >= 120:
                         return False
@@ -1238,7 +1245,11 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     mainpid = line.strip().split()[0]
                     self._process = psutil.Process(int(mainpid))
                     break
-        return self._process.is_running()
+        ret = self._process.is_running()
+        if not hasattr(self, "logged_running"):
+            log.error("SSM processs is running %s", ret)
+            self.logged_running = True
+        return ret
 
     def _terminate(self):
         """

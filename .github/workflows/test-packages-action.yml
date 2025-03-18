@@ -328,7 +328,6 @@ jobs:
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
-
       - name: "Set `TIMESTAMP` environment variable"
         shell: bash
         run: |

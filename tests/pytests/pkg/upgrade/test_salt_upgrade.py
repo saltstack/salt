@@ -1,3 +1,5 @@
+import logging
+import sys
 import time
 
 import packaging.version
@@ -5,7 +7,7 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
-pytestmark = [pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family")]
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -29,7 +31,6 @@ def salt_systemd_setup(
         assert ret.returncode == 0
 
 
-@pytest.fixture
 def salt_test_upgrade(
     salt_call_cli,
     install_salt,
@@ -37,6 +38,7 @@ def salt_test_upgrade(
     """
     Test upgrade of Salt packages for Minion and Master
     """
+    log.info("**** salt_test_upgrade - start *****")
     # Verify previous install version salt-minion is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -47,6 +49,8 @@ def salt_test_upgrade(
 
     # Verify previous install version salt-master is setup correctly and works
     bin_file = "salt"
+    if sys.platform == "win32":
+        bin_file = "salt-call.exe"
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
     assert packaging.version.parse(
@@ -54,10 +58,11 @@ def salt_test_upgrade(
     ) < packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running minion and master by getting there PIDs
-    process_master_name = "salt-master"
     if platform.is_windows():
+        process_master_name = "cli_salt_master.py"
         process_minion_name = "salt-minion.exe"
     else:
+        process_master_name = "salt-master"
         process_minion_name = "salt-minion"
 
     old_minion_pids = _get_running_named_salt_pid(process_minion_name)
@@ -90,10 +95,13 @@ def salt_test_upgrade(
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
-    assert new_minion_pids
-    assert new_master_pids
-    assert new_minion_pids != old_minion_pids
-    assert new_master_pids != old_master_pids
+    if sys.platform == "linux":
+        assert new_minion_pids
+        assert new_master_pids
+        assert new_minion_pids != old_minion_pids
+        assert new_master_pids != old_master_pids
+
+    log.info("**** salt_test_upgrade - end *****")
 
 
 def _get_running_named_salt_pid(process_name):
@@ -108,7 +116,10 @@ def _get_running_named_salt_pid(process_name):
 
     pids = []
     for proc in psutil.process_iter():
-        cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        try:
+            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        except psutil.AccessDenied:
+            continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
@@ -135,8 +146,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     assert "Authentication information could" in use_lib.stderr
 
     # perform Salt package upgrade test
-    # pylint: disable=pointless-statement
-    salt_test_upgrade
+    salt_test_upgrade(salt_call_cli, install_salt)
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
