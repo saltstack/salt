@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import time
 
@@ -6,6 +7,8 @@ import packaging.version
 import psutil
 import pytest
 from pytestskipmarkers.utils import platform
+
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -100,6 +103,15 @@ def salt_test_upgrade(
         assert new_master_pids
         assert new_minion_pids != old_minion_pids
         assert new_master_pids != old_master_pids
+
+    if sys.platform == "linux" and salt.utils.path.which("apt"):
+        for test_pkg_name in ("salt-minion", "salt-master"):
+            test_file_name = f"/etc/init.d/{test_pkg_name}"
+            print(
+                f"DGM test_pkg_install entry, test_file_name '{test_file_name}'",
+                flush=True,
+            )
+            assert os.path.isfile(test_file_name)
 
     log.info("**** salt_test_upgrade - end *****")
 
