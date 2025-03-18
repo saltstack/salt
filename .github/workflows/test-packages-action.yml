@@ -294,6 +294,15 @@ jobs:
           rm -rf artifacts/salt*
           tree -a artifacts
 
+      - name: Upload Test Run Log Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/logs
+          include-hidden-files: true
+
       - name: Upload Test Run Artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -432,7 +441,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -441,7 +450,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/
             !artifacts/pkg/*
