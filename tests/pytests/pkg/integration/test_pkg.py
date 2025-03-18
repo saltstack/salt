@@ -1,7 +1,10 @@
+import os
 import sys
 import time
 
 import pytest
+
+import salt.utils.path
 
 
 @pytest.fixture(scope="module")
@@ -32,5 +35,27 @@ def pkg_name(salt_call_cli, grains):
 
 
 def test_pkg_install(salt_call_cli, pkg_name):
+    print(f"DGM test_pkg_install entry, pkg_name '{pkg_name}'", flush=True)
     ret = salt_call_cli.run("--local", "state.single", "pkg.installed", pkg_name)
     assert ret.returncode == 0
+
+
+@pytest.mark.skipif(not salt.utils.path.which("apt"), reason="apt is not installed")
+def test_pkg_install_debian(salt_call_cli, pkg_name):
+    print(f"DGM test_pkg_install entry, pkg_name '{pkg_name}'", flush=True)
+
+    ret = salt_call_cli.run("--local", "state.single", "pkg.installed", pkg_name)
+    assert ret.returncode == 0
+
+    test_pkg_name = pkg_name.split("_")[0]
+    if test_pkg_name in (
+        "salt-api",
+        "salt-syndic",
+        "salt-minion",
+        "salt-master",
+    ):
+        test_file_name = f"/etc/init.d/{test_pkg_name}"
+        print(
+            f"DGM test_pkg_install entry, test_file_name '{test_file_name}'", flush=True
+        )
+        assert os.path.isfile(test_file_name)
