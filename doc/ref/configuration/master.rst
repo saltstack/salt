@@ -3234,7 +3234,7 @@ is equivalent to this static configuration:
       prod:
         - /srv/prod/salt
 
-As of 3007.0, the ``file_roots`` option is dynamically expanded on each use,
+As of 3008.0, the ``file_roots`` option is dynamically expanded on each use,
 meaning directories or files may be added without restarting the Salt master.
 For instance, this configuration:
 
@@ -4411,7 +4411,7 @@ is equivalent to this static configuration:
       prod:
         - /srv/prod/pillar
 
-As of 3007.0, the ``pillar_roots`` option is dynamically expanded on each use,
+As of 3008.0, the ``pillar_roots`` option is dynamically expanded on each use,
 meaning directories or files may be added without restarting the Salt master.
 For instance, this configuration:
 
