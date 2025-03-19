@@ -23,6 +23,7 @@ in the :ref:`execution module docs <x509-setup>`.
     Operations with encrypted private keys additionally require the ``bcrypt``
     Python module.
 """
+
 import copy
 import logging
 
