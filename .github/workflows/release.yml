@@ -93,12 +93,6 @@ jobs:
             tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
           fi
 
-      - name: Check Release Staged
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
