@@ -162,10 +162,20 @@ jobs:
           echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
           echo "${SIGNING_GPG_KEY}" | gpg --import -
 
+      - name: Download Release Patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/release
+          gh release download \
+            -D artifacts/release \
+            -p 'salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch' \
+            v${{ needs.prepare-workflow.outputs.salt-version }}
+
       - name: Apply The Release Patch
         run: |
           git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
-          rm release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          rm artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
         run: |
