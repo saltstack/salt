@@ -151,6 +151,7 @@ the SSH server to use it.
           - ssh_pki: /etc/ssh/ssh_host_rsa_key
           - ssh_pki: /etc/ssh/ssh_host_rsa_key.pub
 """
+
 import logging
 import os.path
 
@@ -336,9 +337,9 @@ def certificate_managed(
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -549,9 +550,9 @@ def private_key_managed(
 
         if file_managed_test["result"] is False:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Problem while testing file.managed changes, see its output"
+            ret["comment"] = (
+                "Problem while testing file.managed changes, see its output"
+            )
             _add_sub_state_run(ret, file_managed_test)
             return ret
 
@@ -576,12 +577,12 @@ def private_key_managed(
         if file_exists and not new:
             try:
                 current = sshpki.load_privkey(real_name, passphrase=passphrase)
+                current_has_passphrase = False
                 if passphrase:
                     try:
                         # The SSH key logic does not complain when a
                         # passphrase was specified, but the key is not encrypted
                         sshpki.load_privkey(real_name, passphrase=None)
-                        current_has_passphrase = False
                     except (
                         CommandExecutionError,
                         SaltInvocationError,
@@ -890,9 +891,9 @@ def _file_managed(name, test=None, **kwargs):
 def _check_file_ret(fret, ret, current):
     if fret["result"] is False:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = f"Could not {'create' if not current else 'update'} file, see file.managed output"
+        ret["comment"] = (
+            f"Could not {'create' if not current else 'update'} file, see file.managed output"
+        )
         ret["changes"] = {}
         return False
     return True
