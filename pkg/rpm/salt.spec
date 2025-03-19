@@ -308,6 +308,12 @@ install -p -m 0644 %{_salt_src}/doc/man/salt-api.1 %{buildroot}%{_mandir}/man1/s
 install -p -m 0644 %{_salt_src}/doc/man/salt-cloud.1 %{buildroot}%{_mandir}/man1/salt-cloud.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-ssh.1 %{buildroot}%{_mandir}/man1/salt-ssh.1
 
+# Sys V service files
+install -p -m 0755 %{_salt_src}/pkg/rpm/salt-minion %{buildroot}%{_sysconfdir}/init.d/salt-minion
+install -p -m 0755 %{_salt_src}/pkg/rpm/salt-master %{buildroot}%{_sysconfdir}/init.d/salt-master
+install -p -m 0755 %{_salt_src}/pkg/rpm/salt-syndic %{buildroot}%{_sysconfdir}/init.d/salt-syndic
+install -p -m 0755 %{_salt_src}/pkg/rpm/salt-api %{buildroot}%{_sysconfdir}/init.d/salt-api
+
 
 %clean
 rm -rf %{buildroot}
@@ -360,7 +366,6 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/roots/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
-install -p -m 0755 %{_salt_src}/pkg/rpm/salt-master %{buildroot}%{_sysconfdir}/init.d/salt-master
 
 
 %files minion
@@ -378,14 +383,12 @@ install -p -m 0755 %{_salt_src}/pkg/rpm/salt-master %{buildroot}%{_sysconfdir}/i
 %config(noreplace) %{_sysconfdir}/salt/pki/minion
 %dir %{_sysconfdir}/salt/minion.d
 %dir %attr(0750, root, root) %{_var}/cache/salt/minion/
-install -p -m 0755 %{_salt_src}/pkg/rpm/salt-minion %{buildroot}%{_sysconfdir}/init.d/salt-minion
 
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
 %{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
-install -p -m 0755 %{_salt_src}/pkg/rpm/salt-syndic %{buildroot}%{_sysconfdir}/init.d/salt-syndic
 
 
 %files api
@@ -393,7 +396,6 @@ install -p -m 0755 %{_salt_src}/pkg/rpm/salt-syndic %{buildroot}%{_sysconfdir}/i
 %doc %{_mandir}/man1/salt-api.1*
 %{_bindir}/salt-api
 %{_unitdir}/salt-api.service
-install -p -m 0755 %{_salt_src}/pkg/rpm/salt-api %{buildroot}%{_sysconfdir}/init.d/salt-api
 
 
 %files cloud
