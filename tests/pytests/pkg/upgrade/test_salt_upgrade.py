@@ -158,16 +158,26 @@ def test_salt_upgrade(salt_call_cli, install_salt):
         use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
         assert "Authentication information could" in use_lib.stderr
 
-    ## DGM
-    print(f"DGM salt_test_upgrade install_salt, '{install_salt}'", flush=True)
+
+def test_salt_sysv_service_files(salt_call_cli, install_salt):
+    """
+    Test an upgrade of Salt, Minion and Master
+    """
+    print(
+        f"DGM test_salt_sysv_service_files entry install_salt, '{install_salt}'",
+        flush=True,
+    )
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
     if sys.platform == "linux" and salt.utils.path.which("dpkg"):
         test_pkgs = install_salt.config_path.pkgs
-        print(f"DGM salt_test_upgrade test_pkgs, '{test_pkgs}'", flush=True)
+        print(f"DGM test_salt_sysv_service_files test_pkgs, '{test_pkgs}'", flush=True)
         for test_pkg_name in test_pkgs:
             test_pkg_basename = os.path.bashname(test_pkg_name)
             test_pkg_basename_adj = test_pkg_basename.split("_")
             print(
-                f"DGM salt_test_upgrade test_pkg_basename_adj '{test_pkg_basename_adj}' from name test_pkg_basename '{test_pkg_basename}'",
+                f"DGM test_salt_sysv_service_files test_pkg_basename_adj '{test_pkg_basename_adj}' from name test_pkg_basename '{test_pkg_basename}'",
                 flush=True,
             )
             if test_pkg_basename_adj in (
@@ -188,7 +198,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
                     if line == test_initd_name:
                         found_line = True
                         print(
-                            f"DGM salt_test_upgrade test_initd_name, '{test_initd_name}' was FOUND",
+                            f"DGM test_salt_sysv_service_files test_initd_name, '{test_initd_name}' was FOUND",
                             flush=True,
                         )
 
