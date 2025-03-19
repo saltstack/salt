@@ -1641,11 +1641,10 @@ class Minion(MinionBase):
                 tag=f"__master_req_channel_return/{request_id}",
                 wait=timeout,
             )
-            log.trace("Reply from main %s", request_id)
-            if ret is None:
-                log.error("Timeout waiting for response")
-                return
-            return ret["ret"]
+            if ret:
+                log.trace("Reply from main %s", request_id)
+                return ret["ret"]
+            raise TimeoutError("Request timed out")
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):

@@ -27,10 +27,48 @@ def __split(raw):
 def find_json(raw):
     """
     Pass in a raw string and load the json when it starts. This allows for a
-    string to start with garbage and end with json but be cleanly loaded
+    string to start or end with garbage but the JSON be cleanly loaded
     """
     ret = {}
     lines = __split(raw)
+    lengths = list(map(len, lines))
+    starts = []
+    ends = []
+
+    # Search for possible starts and ends of the json fragments
+    for ind, line in enumerate(lines):
+        line = line.lstrip()
+        line = line[0] if line else line
+        if line == "{" or line == "[":
+            starts.append((ind, line))
+        if line == "}" or line == "]":
+            ends.append((ind, line))
+
+    # List all the possible pairs of starts and ends,
+    # and fill the length of each block to sort by size after
+    starts_ends = []
+    for start, start_char in starts:
+        for end, end_br in reversed(ends):
+            if end > start and (
+                (start_char == "{" and end_br == "}")
+                or (start_char == "[" and end_br == "]")
+            ):
+                starts_ends.append((start, end, sum(lengths[start : end + 1])))
+
+    # Iterate through all the possible pairs starting from the largest
+    starts_ends.sort(key=lambda x: (x[2], x[1] - x[0], x[0]), reverse=True)
+    for start, end, _ in starts_ends:
+        # Try filtering non-JSON text right after the last closing character
+        end_str = lines[end].lstrip()[0]
+        working = "\n".join(lines[start:end]) + end_str
+        try:
+            ret = json.loads(working)
+            return ret
+        except ValueError:
+            continue
+
+    # Fall back to old implementation for backward compatibility
+    # expecting json after the text
     for ind, _ in enumerate(lines):
         try:
             working = "\n".join(lines[ind:])
