@@ -752,14 +752,21 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
                 # workaround https://github.com/saltstack/salt/issues/31802
                 __salt__["file.remove"](name)
 
-        public_key = __salt__["ssh_pki.get_public_key"](
-            public_key_source, passphrase=passphrase
-        )
+        try:
+            public_key = __salt__["ssh_pki.get_public_key"](
+                public_key_source, passphrase=passphrase
+            )
+        except CommandExecutionError as err:
+            if not __opts__["test"] or "Could not load key as" not in str(err):
+                raise
+            public_key = None
         file_exists = __salt__["file.file_exists"](real_name)
 
         if file_exists:
             current = sshpki.load_pubkey(real_name)
-            if x509util.match_pubkey(sshpki.load_pubkey(public_key), current):
+            if public_key and x509util.match_pubkey(
+                sshpki.load_pubkey(public_key), current
+            ):
                 replace = False
             else:
                 verb = "update"
@@ -769,6 +776,11 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = f"The public key would have been {verb}d"
+                if not public_key:
+                    ret["comment"] += (
+                        ". Note that the source could not be loaded, so this "
+                        "assessment relies on the source being created beforehand"
+                    )
                 return ret
         file_managed_ret = _file_managed(
             name, contents=public_key if replace else None, replace=replace, **file_args
