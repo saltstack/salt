@@ -174,7 +174,7 @@ jobs:
 
       - name: Apply The Release Patch
         run: |
-          git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          git am --committer-date-is-author-date artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           rm artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
