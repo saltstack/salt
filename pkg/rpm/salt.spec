@@ -309,6 +309,7 @@ install -p -m 0644 %{_salt_src}/doc/man/salt-cloud.1 %{buildroot}%{_mandir}/man1
 install -p -m 0644 %{_salt_src}/doc/man/salt-ssh.1 %{buildroot}%{_mandir}/man1/salt-ssh.1
 
 # Sys V service files
+install -d -m 0755 %{buildroot}%{_sysconfdir}/init.d
 install -p -m 0755 %{_salt_src}/pkg/rpm/salt-minion %{buildroot}%{_sysconfdir}/init.d/salt-minion
 install -p -m 0755 %{_salt_src}/pkg/rpm/salt-master %{buildroot}%{_sysconfdir}/init.d/salt-master
 install -p -m 0755 %{_salt_src}/pkg/rpm/salt-syndic %{buildroot}%{_sysconfdir}/init.d/salt-syndic
