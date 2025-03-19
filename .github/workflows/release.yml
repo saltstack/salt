@@ -46,7 +46,7 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on:
-      - linux-x86_64
+      - ubuntu-24.04
     env:
       USE_S3_CACHE: 'false'
     environment: release
