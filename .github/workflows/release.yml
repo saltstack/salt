@@ -115,7 +115,7 @@ jobs:
     if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on: ubuntu-24.04
     env:
-      USE_S3_CACHE: 'true'
+      USE_S3_CACHE: 'false'
     needs:
       - prepare-workflow
     environment: release
