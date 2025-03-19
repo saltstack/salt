@@ -490,16 +490,6 @@ def generate_workflows(ctx: Context):
         "Scheduled": {
             "template": "scheduled.yml",
         },
-        "Release": {
-            "template": "release.yml",
-            "includes": {
-                "pre-commit": False,
-                "lint": False,
-                "pkg-tests": False,
-                "salt-tests": False,
-                "test-pkg-downloads": True,
-            },
-        },
     }
     test_salt_pkg_listing = TEST_SALT_PKG_LISTING
 

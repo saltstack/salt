@@ -56,6 +56,48 @@ def test_ssh_shell_exec_cmd(caplog):
         assert passwd not in caplog.text
 
 
+@pytest.mark.parametrize(
+    "text, sanitize, expected",
+    [
+        ("-oServerAliveInterval=60", "Server", "-oServerAliveInterval=60"),
+        (
+            "-o ServerAliveInterval=60 --password Server",
+            "Server",
+            "-o ServerAliveInterval=60 --password ******",
+        ),
+    ],
+)
+def test_ssh_shell_sanitize(text, sanitize, expected):
+    """
+    Test that _sanitize_str doesn't replace strings inside of other words.
+    """
+    shl = shell.Shell({}, "localhost")
+    res = shl._sanitize_str(text, sanitize)
+
+    assert res == expected
+
+
+def test_run_cmd_password_prompt():
+    """
+    When using a password that has the same value as the shell
+    buffer, test that the sanitization is done after internal
+    matching, e.g. with "SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE".
+    """
+    passwd = "password"
+    shl = shell.Shell({}, "localhost", passwd=passwd)
+    mock_ssh_re = MagicMock()
+
+    mock_term = MagicMock()
+    mock_term.recv.return_value = (passwd, None)
+
+    with patch.object(shell, "SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE", mock_ssh_re), patch(
+        "salt.utils.vt.Terminal", return_value=mock_term
+    ):
+        shl._run_cmd("test_cmd")
+
+    mock_ssh_re.search.assert_called_once_with(passwd)
+
+
 def test_ssh_shell_exec_cmd_waits_for_term_close_before_reading_exit_status():
     """
     Ensure that the terminal is always closed before accessing its exitstatus.

@@ -21,8 +21,9 @@ def configure_loader_modules():
 
 @pytest.fixture
 def tmp_cache_file(tmp_path):
-    with patch.dict(localfs.__opts__, {"cachedir": tmp_path}):
-        localfs.store(bank="bank", key="key", data="payload data", cachedir=tmp_path)
+    cachedir = str(tmp_path)
+    with patch.dict(localfs.__opts__, {"cachedir": cachedir}):
+        localfs.store(bank="bank", key="key", data="payload data", cachedir=cachedir)
         yield tmp_path
 
 
@@ -31,9 +32,10 @@ def _create_tmp_cache_file(self, tmp_dir):
     Helper function that creates a temporary cache file using localfs.store. This
     is to used to create DRY unit tests for the localfs cache.
     """
+    cachedir = str(tmp_dir)
     self.addCleanup(shutil.rmtree, tmp_dir)
-    with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-        localfs.store(bank="bank", key="key", data="payload data", cachedir=tmp_dir)
+    with patch.dict(localfs.__opts__, {"cachedir": cachedir}):
+        localfs.store(bank="bank", key="key", data="payload data", cachedir=cachedir)
 
 
 # 'store' function tests: 5
@@ -125,7 +127,7 @@ def test_fetch_success(tmp_cache_file):
     Tests that the fetch function is able to read the cache file and return its data.
     """
     assert "payload data" in localfs.fetch(
-        bank="bank", key="key", cachedir=tmp_cache_file
+        bank="bank", key="key", cachedir=str(tmp_cache_file)
     )
 
 
@@ -160,7 +162,7 @@ def test_updated_success(tmp_cache_file):
         "os.path.join", MagicMock(return_value=str(tmp_cache_file / "bank" / "key.p"))
     ):
         assert isinstance(
-            localfs.updated(bank="bank", key="key", cachedir=tmp_cache_file), int
+            localfs.updated(bank="bank", key="key", cachedir=str(tmp_cache_file)), int
         )
 
 
@@ -191,7 +193,9 @@ def test_flush_success(tmp_cache_file):
     the target key exists in the cache bank.
     """
     with patch("os.path.isfile", MagicMock(return_value=True)):
-        assert localfs.flush(bank="bank", key="key", cachedir=tmp_cache_file) is True
+        assert (
+            localfs.flush(bank="bank", key="key", cachedir=str(tmp_cache_file)) is True
+        )
 
 
 def test_flush_error_raised():
@@ -232,7 +236,7 @@ def test_list_success(tmp_cache_file):
     """
     Tests the return of the ls function containing bank entries.
     """
-    assert localfs.list_(bank="bank", cachedir=tmp_cache_file) == ["key"]
+    assert localfs.list_(bank="bank", cachedir=str(tmp_cache_file)) == ["key"]
 
 
 # # 'contains' function tests: 1
@@ -243,8 +247,10 @@ def test_contains(tmp_cache_file):
     Test the return of the contains function when key=None and when a key
     is provided.
     """
-    assert localfs.contains(bank="bank", key=None, cachedir=tmp_cache_file) is True
-    assert localfs.contains(bank="bank", key="key", cachedir=tmp_cache_file) is True
+    assert localfs.contains(bank="bank", key=None, cachedir=str(tmp_cache_file)) is True
+    assert (
+        localfs.contains(bank="bank", key="key", cachedir=str(tmp_cache_file)) is True
+    )
 
 
 def test_mix_of_utf8_and_non_utf8_can_be_round_tripped(tmp_cache_file):
@@ -257,7 +263,7 @@ def test_mix_of_utf8_and_non_utf8_can_be_round_tripped(tmp_cache_file):
     bank = "bank"
     key = "key"
 
-    localfs.store(bank, key, data, tmp_cache_file)
-    actual = localfs.fetch(bank, key, tmp_cache_file)
+    localfs.store(bank, key, data, str(tmp_cache_file))
+    actual = localfs.fetch(bank, key, str(tmp_cache_file))
 
     assert data == actual

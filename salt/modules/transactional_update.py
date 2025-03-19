@@ -973,7 +973,7 @@ def call(function, *args, **kwargs):
                 return local.get("return", local)
             else:
                 return local
-        except ValueError:
+        except (ValueError, AttributeError):
             return {"result": False, "retcode": 1, "comment": ret_stdout}
     finally:
         # Check if reboot is needed
