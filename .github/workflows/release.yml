@@ -125,6 +125,11 @@ jobs:
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
@@ -185,6 +190,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
@@ -227,6 +237,7 @@ jobs:
       - release
       - publish-pypi
     steps:
+      - uses: actions/checkout@v4
       - name: Publish Release v${{ needs.prepare-workflow.outputs.salt-version }}
         env:
           GH_TOKEN: ${{ github.token }}
