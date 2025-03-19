@@ -117,6 +117,7 @@ or compound matcher (for the latter, see the notes above).
 
 .. _sshcert-setup:
 """
+
 import base64
 import copy
 import logging
@@ -587,9 +588,11 @@ def read_certificate(certificate):
 
     ret = {
         "cert_type": cert_type,
-        "valid_principals": "all"
-        if cert.valid_principals == []
-        else [p.decode() for p in cert.valid_principals],
+        "valid_principals": (
+            "all"
+            if cert.valid_principals == []
+            else [p.decode() for p in cert.valid_principals]
+        ),
         "key_id": cert.key_id.decode(),
         "key_size": cert.public_key().key_size if key_type in ["ec", "rsa"] else None,
         "key_type": key_type,
