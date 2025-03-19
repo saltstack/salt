@@ -27,7 +27,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import networkx as nx
 
@@ -800,7 +800,7 @@ class State:
         self.global_state_conditions = None
         self.dependency_dag = DependencyGraph()
         # a mapping of state tag (unique id) to the return result dict
-        self.disabled_states: Optional[dict[str, dict[str, Any]]] = None
+        self.disabled_states: dict[str, dict[str, Any]] | None = None
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1458,7 +1458,7 @@ class State:
                 )
 
     def compile_high_data(
-        self, high: dict[str, Any], orchestration_jid: Union[str, int, None] = None
+        self, high: dict[str, Any], orchestration_jid: str | int | None = None
     ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
@@ -2022,7 +2022,7 @@ class State:
         self,
         cdata: dict[str, Any],
         low: LowChunk,
-        inject_globals: Optional[dict[Any, Any]],
+        inject_globals: dict[Any, Any] | None,
     ):
         """
         Call the state defined in the given cdata in parallel
@@ -2084,8 +2084,8 @@ class State:
     def call(
         self,
         low: LowChunk,
-        chunks: Optional[Sequence[LowChunk]] = None,
-        running: Optional[dict[str, dict]] = None,
+        chunks: Sequence[LowChunk] | None = None,
+        running: dict[str, dict] | None = None,
         retries: int = 1,
     ):
         """
@@ -2508,7 +2508,7 @@ class State:
     def call_chunks(
         self,
         chunks: Sequence[LowChunk],
-        disabled_states: Optional[dict[str, dict[str, Any]]] = None,
+        disabled_states: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """
         Iterate over a list of chunks and call them, checking for requires.
@@ -2579,7 +2579,7 @@ class State:
             return not running[tag]["result"]
         return False
 
-    def check_pause(self, low: LowChunk) -> Optional[str]:
+    def check_pause(self, low: LowChunk) -> str | None:
         """
         Check to see if this low chunk has been paused
         """
@@ -2787,7 +2787,7 @@ class State:
         return status, reqs
 
     def event(
-        self, chunk_ret: dict, length: int, fire_event: Union[bool, str] = False
+        self, chunk_ret: dict, length: int, fire_event: bool | str = False
     ) -> None:
         """
         Fire an event on the master bus
@@ -3191,8 +3191,8 @@ class State:
         return running
 
     def call_high(
-        self, high: HighData, orchestration_jid: Union[str, int, None] = None
-    ) -> Union[dict, list]:
+        self, high: HighData, orchestration_jid: str | int | None = None
+    ) -> dict | list:
         """
         Process a high data call and ensure the defined states.
         """
@@ -3376,7 +3376,7 @@ class LazyAvailStates:
 
     def __init__(self, hs: BaseHighState):
         self._hs = hs
-        self._avail: dict[Hashable, Optional[list[str]]] = {"base": None}
+        self._avail: dict[Hashable, list[str] | None] = {"base": None}
         self._filled = False
 
     def _fill(self) -> None:
