@@ -231,28 +231,28 @@ jobs:
             -p 'salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz' \
             v${{ needs.prepare-workflow.outputs.salt-version }}
 
-      #- name: Publish to PyPi
-      #  env:
-      #    TWINE_PASSWORD: "${{ secrets.TWINE_PASSWORD }}"
-      #  run: |
-      #    tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+      - name: Publish to PyPi
+        env:
+          TWINE_PASSWORD: "${{ secrets.TWINE_PASSWORD }}"
+        run: |
+          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
-  # publish-draft:
-  #   name: Publish Relase v${{ needs.prepare-workflow.outputs.salt-version }}
-  #   if: ${{ !cancelled() && always() }}
-  #   runs-on: ubuntu-22.04
-  #   needs:
-  #     - check-requirements
-  #     - prepare-workflow
-  #     - release
-  #     - publish-pypi
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Publish Release v${{ needs.prepare-workflow.outputs.salt-version }}
-  #       env:
-  #         GH_TOKEN: ${{ github.token }}
-  #       run: |
-  #         gh release edit v${{ inputs.salt-version }} --draft=false
+  publish-draft:
+    name: Publish Relase v${{ needs.prepare-workflow.outputs.salt-version }}
+    if: ${{ !cancelled() && always() }}
+    runs-on: ubuntu-22.04
+    needs:
+      - check-requirements
+      - prepare-workflow
+      - release
+      - publish-pypi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish Release v${{ needs.prepare-workflow.outputs.salt-version }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit v${{ inputs.salt-version }} --draft=false
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
@@ -265,7 +265,7 @@ jobs:
       - prepare-workflow
       - release
       - publish-pypi
-  #    - publish-draft
+      - publish-draft
     steps:
       - name: Get workflow information
         id: get-workflow-info
