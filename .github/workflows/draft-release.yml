@@ -49,7 +49,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_name: "Release v${{ inputs.salt-version }}"
+          release_name: "v${{ inputs.salt-version }}"
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
