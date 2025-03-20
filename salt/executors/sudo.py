@@ -12,7 +12,7 @@ __virtualname__ = "sudo"
 
 
 def __virtual__():
-    if salt.utils.path.which("sudo") and __opts__.get("sudo_user"):
+    if (salt.utils.path.which(__opts__.get("sudo_cmd")) or salt.utils.path.which("sudo")) and __opts__.get("sudo_user"):
         return __virtualname__
     return False
 
@@ -47,7 +47,7 @@ def execute(opts, data, func, args, kwargs):
     being run on ``sudo_minion``.
     """
     cmd = [
-        "sudo",
+        opts.get("sudo_cmd") if opts.get("sudo_cmd") else "sudo",
         "-u",
         opts.get("sudo_user"),
         "salt-call",
