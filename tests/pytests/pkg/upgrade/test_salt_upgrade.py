@@ -163,14 +163,18 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
     """
     Test an upgrade of Salt, Minion and Master
     """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
+    if sys.platform != "linux":
+        pytest.skip("Not testing on a Linux platform, do not run")
+
     print(
         f"DGM test_salt_sysv_service_files entry install_salt, '{install_salt}'",
         flush=True,
     )
-    if not install_salt.upgrade:
-        pytest.skip("Not testing an upgrade, do not run")
 
-    if sys.platform == "linux" and salt.utils.path.which("dpkg"):
+    if salt.utils.path.which("dpkg"):
         test_pkgs = install_salt.config_path.pkgs
         print(f"DGM test_salt_sysv_service_files test_pkgs, '{test_pkgs}'", flush=True)
         for test_pkg_name in test_pkgs:
