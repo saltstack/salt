@@ -277,12 +277,11 @@ install -p -m 0644 %{_salt_src}/pkg/common/salt-syndic.service %{buildroot}%{_un
 install -p -m 0644 %{_salt_src}/pkg/common/salt-proxy@.service %{buildroot}%{_unitdir}/
 
 # Logrotate
-#install -p %{SOURCE10} .
-mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
+mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
 install -p -m 0644 %{_salt_src}/pkg/common/logrotate/salt-common %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
 # Bash completion
-mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
+mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
 install -p -m 0644 %{_salt_src}/pkg/rpm/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
 
 # Fish completion (TBD remove -v)
@@ -335,7 +334,6 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt
 %dir %{_sysconfdir}/salt/pki
 
-
 %files master
 %defattr(-,root,root)
 %doc %{_mandir}/man7/salt.7*
@@ -367,6 +365,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/roots/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
+%{_sysconfdir}/init.d/salt-master
 
 
 %files minion
@@ -384,12 +383,14 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/salt/pki/minion
 %dir %{_sysconfdir}/salt/minion.d
 %dir %attr(0750, root, root) %{_var}/cache/salt/minion/
+%{_sysconfdir}/init.d/salt-minion
 
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
 %{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
+%{_sysconfdir}/init.d/salt-syndic
 
 
 %files api
@@ -397,6 +398,7 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-api.1*
 %{_bindir}/salt-api
 %{_unitdir}/salt-api.service
+%{_sysconfdir}/init.d/salt-api
 
 
 %files cloud
