@@ -1879,6 +1879,58 @@ def test_podman_virtual_with_systemd_detect_virt():
 
 
 @pytest.mark.skip_on_windows
+def test_docker_virtual_with_systemd_detect_virt():
+    """
+    Test if virtual grains are parsed correctly in Docker using systemd-detect-virt.
+    """
+
+    def _which_side_effect(path):
+        if path == "systemd-detect-virt":
+            return "/usr/bin/systemd-detect-virt"
+        return None
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path,
+        "which",
+        MagicMock(return_value=True, side_effect=_which_side_effect),
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "docker"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Docker"
+
+
+@pytest.mark.skip_on_windows
+def test_docker_virtual_with_virt_what():
+    """
+    Test if virtual grains are parsed correctly in Docker using virt-what.
+    """
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(salt.utils.path, "which", MagicMock(return_value=True)), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "docker"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Docker"
+
+
+@pytest.mark.skip_on_windows
 def test_container_inside_virtual_machine():
     """
     Test if a container inside an hypervisor is shown as a container
