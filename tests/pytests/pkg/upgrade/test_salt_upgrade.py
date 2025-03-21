@@ -157,7 +157,7 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
     test_pkgs = install_salt.pkgs
     print(f"DGM test_salt_sysv_service_files test_pkgs, '{test_pkgs}'", flush=True)
     for test_pkg_name in test_pkgs:
-        test_pkg_basename = os.path.bashname(test_pkg_name)
+        test_pkg_basename = os.path.basename(test_pkg_name)
         test_pkg_basename_adj = test_pkg_basename.split("_")
         print(
             f"DGM test_salt_sysv_service_files test_pkg_basename_adj '{test_pkg_basename_adj}' from name test_pkg_basename '{test_pkg_basename}'",
