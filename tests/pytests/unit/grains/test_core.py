@@ -1552,7 +1552,7 @@ def test_windows_platform_data():
         "2016Server",
         "2019Server",
         "2022Server",
-        "2025Server"
+        "2025Server",
     ]
     assert returned_grains["osrelease"] in valid_releases
 
@@ -3058,19 +3058,17 @@ def test_osdata_virtual_key_win():
 @pytest.mark.parametrize(
     "osrelease, expected",
     [
-        ("2025Server", (2025, )),
+        ("2025Server", (2025,)),
         ("2012ServerR2", (2012, 2)),
-        ("11", (11, )),
-        ("8.1", (8, 1))
-    ]
+        ("11", (11,)),
+        ("8.1", (8, 1)),
+    ],
 )
 def test_windows_osdata_osrelease_info(osrelease, expected):
     platform_data = core._windows_platform_data()
     platform_data["osrelease"] = osrelease
     mock_platform_data = MagicMock(return_value=platform_data)
-    with patch.object(
-        core, "_windows_platform_data", mock_platform_data
-    ):
+    with patch.object(core, "_windows_platform_data", mock_platform_data):
         os_data = core.os_data()
         assert os_data["osrelease_info"] == expected
 
