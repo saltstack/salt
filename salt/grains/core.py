@@ -2693,6 +2693,7 @@ def os_data():
             osrelease_info[1] = osrelease_info[1].lstrip("R")
         else:
             osrelease_info = grains["osrelease"].split(".")
+        osrelease_info = [s for s in osrelease_info if s]
 
         for idx, value in enumerate(osrelease_info):
             if not value.isdigit():

@@ -1552,12 +1552,17 @@ def test_windows_platform_data():
         "2016Server",
         "2019Server",
         "2022Server",
+        "2025Server"
     ]
     assert returned_grains["osrelease"] in valid_releases
 
 
 def test__windows_os_release_grain(subtests):
     versions = {
+        "Windows 11 Enterprise": "11",
+        "Windows 11 Pro": "11",
+        "Windows 11 Home": "11",
+        "Windows 11 Education": "11",
         "Windows 10 Home": "10",
         "Windows 10 Pro": "10",
         "Windows 10 Pro for Workstations": "10",
@@ -2985,6 +2990,7 @@ def test_virtual_has_virtual_grain():
 
 
 def test__windows_platform_data():
+
     pass
 
 
@@ -3098,6 +3104,27 @@ def test_windows_virtual_has_virtual_grain():
 def test_osdata_virtual_key_win():
     osdata_grains = core.os_data()
     assert "virtual" in osdata_grains
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    "osrelease, expected",
+    [
+        ("2025Server", (2025, )),
+        ("2012ServerR2", (2012, 2)),
+        ("11", (11, )),
+        ("8.1", (8, 1))
+    ]
+)
+def test_windows_osdata_osrelease_info(osrelease, expected):
+    platform_data = core._windows_platform_data()
+    platform_data["osrelease"] = osrelease
+    mock_platform_data = MagicMock(return_value=platform_data)
+    with patch.object(
+        core, "_windows_platform_data", mock_platform_data
+    ):
+        os_data = core.os_data()
+        assert os_data["osrelease_info"] == expected
 
 
 @pytest.mark.skip_unless_on_linux
