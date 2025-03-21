@@ -108,6 +108,28 @@ def salt_test_upgrade(
     log.info("**** salt_test_upgrade - end *****")
 
 
+def _get_running_named_salt_pid(process_name):
+
+    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
+    #
+    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
+    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
+    #
+    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
+    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
+
+    pids = []
+    for proc in psutil.process_iter():
+        try:
+            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+        except psutil.AccessDenied:
+            continue
+        if process_name in cmdl_strg:
+            pids.append(proc.pid)
+
+    return pids
+
+
 def test_salt_sysv_service_files(salt_call_cli, install_salt):
     """
     Test an upgrade of Salt, Minion and Master
@@ -165,28 +187,6 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
                     )
 
             assert found_line
-
-
-def _get_running_named_salt_pid(process_name):
-
-    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
-    #
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    #
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-
-    pids = []
-    for proc in psutil.process_iter():
-        try:
-            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except psutil.AccessDenied:
-            continue
-        if process_name in cmdl_strg:
-            pids.append(proc.pid)
-
-    return pids
 
 
 def test_salt_upgrade(salt_call_cli, install_salt):
