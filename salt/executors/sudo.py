@@ -45,6 +45,15 @@ def execute(opts, data, func, args, kwargs):
         sudo -u saltdev salt-call cmd.run 'cat /etc/sudoers'
 
     being run on ``sudo_minion``.
+
+    .. code-block:: yaml
+
+        sudo_cmd: doas
+
+    Once this setting is made, any execution module call done by the minion will be
+    run using an alternative command to ``sudo``. For example, with the above
+    minion config, all commands will be run with ``doas ...`` instead of
+    ``sudo ...``.
     """
     cmd = [
         opts.get("sudo_cmd") if opts.get("sudo_cmd") else "sudo",
