@@ -130,7 +130,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_sysv_service_files(salt_call_cli, install_salt):
+def test_salt_sysv_service_files(install_salt):
     """
     Test an upgrade of Salt, Minion and Master
     """
