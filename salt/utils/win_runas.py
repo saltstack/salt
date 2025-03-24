@@ -8,7 +8,6 @@ import logging
 import os
 import time
 
-import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -204,18 +203,6 @@ def runas(cmd, username, password=None, cwd=None):
     # Create the environment for the user
     env = create_env(user_token, False)
 
-    # Because we're launching runas commands using the Windows API they are run in a
-    # process instead of a cmd or powershell prompt. Built-in commands, such as echo,
-    # are not available. So, let's check for the binary in the path. If it does not
-    # exist, let's assume it's a built-in and requires us to run it in a cmd prompt.
-    first_cmd = cmd.split(" ", 1)[0]
-    if salt.utils.path.which(first_cmd) is None:
-        cmd = f'cmd /c "{cmd}"'
-
-    # The "&&" is a function of CMD.
-    if "&&" in cmd and not cmd.startswith("cmd"):
-        cmd = f'cmd /c "{cmd}"'
-
     hProcess = None
     try:
         # Start the process in a suspended state.
@@ -317,18 +304,6 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdOutput=c2pwrite,
         hStdError=errwrite,
     )
-
-    # Because we're launching runas commands using the Windows API they are run in a
-    # process instead of a cmd or powershell prompt. Built-in commands, such as echo,
-    # are not available. So, let's check for the binary in the path. If it does not
-    # exist, let's assume it's a built-in and requires us to run it in a cmd prompt.
-    first_cmd = cmd.split(" ", 1)[0]
-    if salt.utils.path.which(first_cmd) is None:
-        cmd = f'cmd /c "{cmd}"'
-
-    # The "&&" is a function of CMD.
-    if "&&" in cmd and not cmd.startswith("cmd"):
-        cmd = f'cmd /c "{cmd}"'
 
     try:
         # Run command and return process info structure
