@@ -152,9 +152,12 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
     print(f"DGM test_salt_sysv_service_files test_pkgs, '{test_pkgs}'", flush=True)
     for test_pkg_name in test_pkgs:
         test_pkg_basename = os.path.basename(test_pkg_name)
-        test_pkg_basename_adj = test_pkg_basename.split("_")
+        # Debian/Ubuntu name typically salt-minion_300xxxxxx
+        # Redhat name typically salt-minion-300xxxxxx
+        test_pkg_basename_dash_underscore = test_pkg_basename.split("300")[0]
+        test_pkg_basename_adj = test_pkg_basename_dash_underscore[:-1]
         print(
-            f"DGM test_salt_sysv_service_files test_pkg_basename_adj '{test_pkg_basename_adj}' from name test_pkg_basename '{test_pkg_basename}'",
+            f"DGM test_salt_sysv_service_files test_pkg_basename_dash_underscore '{test_pkg_basename_dash_underscore}', test_pkg_basename_adj '{test_pkg_basename_adj}' from name test_pkg_basename '{test_pkg_basename}'",
             flush=True,
         )
         if test_pkg_basename_adj in (
@@ -164,6 +167,10 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
             "salt-api",
         ):
             test_initd_name = f"/etc/init.d/{test_pkg_basename_adj}"
+            print(
+                f"DGM test_salt_sysv_service_files test_initd_name, '{test_initd_name}' to check against",
+                flush=True,
+            )
             if salt.utils.path.which("dpkg"):
                 proc = subprocess.run(
                     ["dpkg", "-q", "-c", f"{test_pkg_name}"],
@@ -179,12 +186,17 @@ def test_salt_sysv_service_files(salt_call_cli, install_salt):
             found_line = False
             for line in proc.stdout.decode().splitlines():
                 # If test_initd_name not present we should fail.
+                print(
+                    f"DGM test_salt_sysv_service_files check line, '{line}'",
+                    flush=True,
+                )
                 if line == test_initd_name:
                     found_line = True
                     print(
                         f"DGM test_salt_sysv_service_files test_initd_name, '{test_initd_name}' was FOUND",
                         flush=True,
                     )
+                    break
 
             assert found_line
 
