@@ -8,6 +8,7 @@ import logging
 import os
 import time
 
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -88,7 +89,7 @@ def create_env(user_token, inherit, timeout=1):
         raise exc
 
 
-def runas(cmdLine, username, password=None, cwd=None):
+def runas(cmd, username, password=None, cwd=None):
     """
     Run a command as another user. If the process is running as an admin or
     system account this method does not require a password. Other non
@@ -131,7 +132,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     # runas.
     if not impersonation_token:
         log.debug("No impersonation token, using unprivileged runas")
-        return runas_unpriv(cmdLine, username, password, cwd)
+        return runas_unpriv(cmd, username, password, cwd)
 
     if domain == "NT AUTHORITY":
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
@@ -203,8 +204,17 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Create the environment for the user
     env = create_env(user_token, False)
 
-    if "&&" in cmdLine:
-        cmdLine = f'cmd /c "{cmdLine}"'
+    # Because we're launching runas commands using the Windows API they are run in a
+    # process instead of a cmd or powershell prompt. Built-in commands, such as echo,
+    # are not available. So, let's check for the binary in the path. If it does not
+    # exist, let's assume it's a built-in and requires us to run it in a cmd prompt.
+    first_cmd = cmd.split(" ", 1)[0]
+    if salt.utils.path.which(first_cmd) is None:
+        cmd = f'cmd /c "{cmd}"'
+
+    # The "&&" is a function of CMD.
+    if "&&" in cmd and not cmd.startswith("cmd"):
+        cmd = f'cmd /c "{cmd}"'
 
     hProcess = None
     try:
@@ -213,7 +223,7 @@ def runas(cmdLine, username, password=None, cwd=None):
             int(user_token),
             logonflags=1,
             applicationname=None,
-            commandline=cmdLine,
+            commandline=cmd,
             currentdirectory=cwd,
             creationflags=creationflags,
             startupinfo=startup_info,
@@ -308,7 +318,16 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdError=errwrite,
     )
 
-    if "&&" in cmd:
+    # Because we're launching runas commands using the Windows API they are run in a
+    # process instead of a cmd or powershell prompt. Built-in commands, such as echo,
+    # are not available. So, let's check for the binary in the path. If it does not
+    # exist, let's assume it's a built-in and requires us to run it in a cmd prompt.
+    first_cmd = cmd.split(" ", 1)[0]
+    if salt.utils.path.which(first_cmd) is None:
+        cmd = f'cmd /c "{cmd}"'
+
+    # The "&&" is a function of CMD.
+    if "&&" in cmd and not cmd.startswith("cmd"):
         cmd = f'cmd /c "{cmd}"'
 
     try:
