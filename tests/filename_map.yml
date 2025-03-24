@@ -50,6 +50,9 @@ salt/modules/*apache.py:
 salt/modules/augeas_cfg.py:
   - pytests.unit.states.test_augeas
 
+salt/platform/win.py:
+  - pytests.unit.platform.test_win
+
 salt/modules/cp.py:
   - pytests.functional.modules.file.test_replace
   - pytests.unit.modules.file.test_file_basics

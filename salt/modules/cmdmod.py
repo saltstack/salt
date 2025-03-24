@@ -20,6 +20,7 @@ import time
 import traceback
 
 import salt.grains.extra
+import salt.platform.win
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -450,13 +451,16 @@ def _run(
         )
         log.info(log_callback(msg))
 
-    if runas and salt.utils.platform.is_windows():
-        if not HAS_WIN_RUNAS:
-            msg = "missing salt/utils/win_runas.py"
-            raise CommandExecutionError(msg)
+    if salt.utils.platform.is_windows():
+        if runas:
+            if not HAS_WIN_RUNAS:
+                msg = "missing salt/utils/win_runas.py"
+                raise CommandExecutionError(msg)
 
         if isinstance(cmd, (list, tuple)):
             cmd = " ".join(cmd)
+
+        cmd = salt.platform.win.prepend_cmd(cmd)
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not
