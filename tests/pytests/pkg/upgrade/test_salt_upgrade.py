@@ -173,7 +173,7 @@ def test_salt_sysv_service_files(install_salt):
             )
             if salt.utils.path.which("dpkg"):
                 proc = subprocess.run(
-                    ["dpkg", "-q", "-c", f"{test_pkg_name}"],
+                    ["dpkg", "-c", f"{test_pkg_name}"],
                     capture_output=True,
                     check=True,
                 )
