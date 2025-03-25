@@ -1090,7 +1090,7 @@ def test_prep_powershell_cmd(cmd, parsed):
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            parsed,
+            f'"{parsed}"',
         ]
         assert ret == expected
 
@@ -1116,7 +1116,7 @@ def test_prep_powershell_cmd_encoded():
             "-ExecutionPolicy",
             "Bypass",
             "-EncodedCommand",
-            f"{e_cmd}",
+            f'"{e_cmd}"'
         ]
         assert ret == expected
 
@@ -1141,7 +1141,7 @@ def test_prep_powershell_cmd_script():
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            f"& {script}; exit $LASTEXITCODE",
+            f'"& {script}; exit $LASTEXITCODE"',
         ]
         assert ret == expected
 
