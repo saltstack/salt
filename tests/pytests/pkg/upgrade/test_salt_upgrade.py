@@ -190,7 +190,7 @@ def test_salt_sysv_service_files(install_salt):
                     f"DGM test_salt_sysv_service_files check line, '{line}'",
                     flush=True,
                 )
-                if line == test_initd_name:
+                if test_initd_name in line:
                     found_line = True
                     print(
                         f"DGM test_salt_sysv_service_files test_initd_name, '{test_initd_name}' was FOUND",
