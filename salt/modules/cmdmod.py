@@ -2949,6 +2949,10 @@ def script(
             }
         shutil.copyfile(fn_, path)
     if not salt.utils.platform.is_windows():
+        # Let's make sure the user exists first
+        if not __salt__["user.info"](runas):
+            msg = f"Invalid user: {runas}"
+            raise CommandExecutionError(msg)
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
