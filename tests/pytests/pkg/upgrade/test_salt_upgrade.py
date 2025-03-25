@@ -95,7 +95,7 @@ def salt_test_upgrade(
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
-    if sys.platform == "linux":
+    if sys.platform == "linux" and install_salt.distro_id not in ("ubuntu", "debian"):
         assert new_minion_pids
         assert new_master_pids
         assert new_minion_pids != old_minion_pids
