@@ -1911,7 +1911,7 @@ def ci_test_onedir_pkgs(session):
     except CommandFailed:
         if os.environ.get("RERUN_FAILURES", "0") == "0":
             # Don't rerun on failures
-            sys.exit(1)
+            return
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
@@ -1947,7 +1947,7 @@ def ci_test_onedir_pkgs(session):
             common_pytest_args[:]
             + cmd_args[:]
             + [
-                "--no-uninstall",
+                "--no-install",
                 "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 "--log-file=artifacts/logs/runtests-install.log",
             ]
@@ -1962,7 +1962,7 @@ def ci_test_onedir_pkgs(session):
         except CommandFailed:
             if os.environ.get("RERUN_FAILURES", "0") == "0":
                 # Don't rerun on failures
-                sys.exit(1)
+                return
             cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
