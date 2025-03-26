@@ -60,7 +60,7 @@ def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
         **st_kwargs,
     )
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
-    stdout, stderr, retcode = single.cmd_block()
+    stdout, stderr, retcode = single.cmd_block(print_output=True)
 
     # Clean up our tar
     try:
@@ -234,7 +234,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, retcode = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block(print_output=True)
 
         # Clean up our tar
         try:
@@ -372,7 +372,7 @@ def low(data, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
-        stdout, stderr, retcode = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block(print_output=True)
 
         # Clean up our tar
         try:
@@ -465,7 +465,7 @@ def high(data, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, retcode = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block(print_output=True)
 
         # Clean up our tar
         try:
@@ -716,7 +716,7 @@ def highstate(test=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, retcode = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block(print_output=True)
 
         # Clean up our tar
         try:
@@ -807,7 +807,7 @@ def top(topfn, test=None, **kwargs):
             **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
-        stdout, stderr, retcode = single.cmd_block()
+        stdout, stderr, retcode = single.cmd_block(print_output=True)
 
         # Clean up our tar
         try:
@@ -1247,7 +1247,7 @@ def single(fun, name, test=None, **kwargs):
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
 
     # Run the state.pkg command on the target
-    stdout, stderr, retcode = single.cmd_block()
+    stdout, stderr, retcode = single.cmd_block(print_output=True)
 
     # Clean up our tar
     try:
