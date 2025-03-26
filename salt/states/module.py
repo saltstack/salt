@@ -665,9 +665,15 @@ def _legacy_run(name, **kwargs):
 
 def _get_result(func_ret, changes):
     res = True
-    # if mret is a dict and there is retcode and its non-zero
-    if isinstance(func_ret, dict) and func_ret.get("retcode", 0) != 0:
-        res = False
+    # if func_ret is a dict and there is retcode and its non-zero or func_ret contains result with False value
+    if isinstance(func_ret, dict):
+        retcode = func_ret.get("retcode", 0)
+        result = func_ret.get("result", True)
+
+        if (isinstance(retcode, int) and retcode != 0) or (
+            isinstance(result, bool) and result is False
+        ):
+            res = False
         # if its a boolean, return that as the result
     elif isinstance(func_ret, bool):
         res = func_ret
