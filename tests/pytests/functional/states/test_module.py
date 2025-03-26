@@ -135,3 +135,99 @@ def test_issue_62988_b(tmp_path, modules, state_tree, caplog):
             for k in ret.raw:
                 assert ret.raw[k]["result"] is True
             assert "Using new style module.run syntax: run_new" in caplog.messages
+
+
+@pytest.mark.core_test
+def test_issue_65842_result_false(tmp_path, modules, state_tree):
+
+    sls_contents = dedent(
+        """
+    failed_state_new_syntax_False_result:
+      module.run:
+        - test.kwarg:
+          - result: False
+          - comment: "My Failure"
+          - retcode: 0
+    """
+    )
+    with pytest.helpers.temp_file("issue-65842.sls", sls_contents, state_tree):
+        ret = modules.state.sls(
+            mods="issue-65842",
+        )
+        assert len(ret.raw) == 1
+        for k in ret.raw:
+            assert isinstance(ret.raw[k]["result"], bool)
+            assert ret.raw[k]["result"] is False
+            assert ret.raw[k]["comment"] == "'test.kwarg' failed: My Failure"
+
+
+@pytest.mark.core_test
+def test_issue_65842_should_ok(tmp_path, modules, state_tree):
+
+    sls_contents = dedent(
+        """
+    success_state_new_syntax:
+      module.run:
+        - test.kwarg:
+          - result: True
+          - comment: "This should be success"
+          - retcode: 0
+    """
+    )
+    with pytest.helpers.temp_file("issue-65842.sls", sls_contents, state_tree):
+        ret = modules.state.sls(
+            mods="issue-65842",
+        )
+        assert len(ret.raw) == 1
+        for k in ret.raw:
+            assert isinstance(ret.raw[k]["result"], bool)
+            assert ret.raw[k]["result"] is True
+            assert ret.raw[k]["comment"] == "test.kwarg: This should be success"
+
+
+@pytest.mark.core_test
+def test_issue_65842_retcode_1(tmp_path, modules, state_tree):
+
+    sls_contents = dedent(
+        """
+    failed_state_new_syntax_1_retcode:
+      module.run:
+        - test.kwarg:
+          - result: True
+          - comment: "My Failure"
+          - retcode: 1
+    """
+    )
+    with pytest.helpers.temp_file("issue-65842.sls", sls_contents, state_tree):
+        ret = modules.state.sls(
+            mods="issue-65842",
+        )
+        assert len(ret.raw) == 1
+        for k in ret.raw:
+            assert isinstance(ret.raw[k]["result"], bool)
+            assert ret.raw[k]["result"] is False
+            assert ret.raw[k]["comment"] == "'test.kwarg' failed: My Failure"
+
+
+@pytest.mark.core_test
+def test_issue_65842_test_result_non_boolean_ok(tmp_path, modules, state_tree):
+
+    sls_contents = dedent(
+        """
+    success_state_new_syntax_wrong_result_type:
+      module.run:
+        - test.kwarg:
+          - result: "OK"
+          - comment: "This should be success"
+          - retcode: 0
+    """
+    )
+    with pytest.helpers.temp_file("issue-65842.sls", sls_contents, state_tree):
+        ret = modules.state.sls(
+            mods="issue-65842",
+        )
+        assert len(ret.raw) == 1
+        for k in ret.raw:
+            assert isinstance(ret.raw[k]["result"], bool)
+            assert ret.raw[k]["result"] is True
+            assert ret.raw[k]["comment"] == "test.kwarg: This should be success"
