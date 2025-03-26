@@ -768,6 +768,7 @@ class SaltPkgInstall:
                 < packaging.version.parse("3006.0")
             ):
                 self._check_retcode(ret)
+            if downgrade:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
