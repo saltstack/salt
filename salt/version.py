@@ -456,7 +456,7 @@ class SaltStackVersion:
             version_string += f".{self.mbugfix}"
         if self.pre_type:
             version_string += f"{self.pre_type}{self.pre_num}"
-        if self.noc is not None and self.sha:
+        if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
                 noc = "0na"
