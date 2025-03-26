@@ -214,6 +214,10 @@ class CkMinions:
             self.acc = "minions"
         else:
             self.acc = "accepted"
+        if self.opts.get("cluster_id", None) is not None:
+            self.pki_dir = self.opts.get("cluster_pki_dir", "")
+        else:
+            self.pki_dir = self.opts.get("pki_dir", "")
 
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
@@ -255,11 +259,11 @@ class CkMinions:
 
     def _pki_minions(self):
         """
-        Retreive complete minion list from PKI dir.
+        Retrieve complete minion list from PKI dir.
         Respects cache if configured
         """
         minions = []
-        pki_cache_fn = os.path.join(self.opts["pki_dir"], self.acc, ".key_cache")
+        pki_cache_fn = os.path.join(self.pki_dir, self.acc, ".key_cache")
         try:
             os.makedirs(os.path.dirname(pki_cache_fn))
         except OSError:
@@ -271,11 +275,9 @@ class CkMinions:
                     return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
-                    os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
+                    os.listdir(os.path.join(self.pki_dir, self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         minions.append(fn_)
             return minions
         except OSError as exc:
@@ -301,11 +303,9 @@ class CkMinions:
         if greedy:
             minions = []
             for fn_ in salt.utils.data.sorted_ignorecase(
-                os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
+                os.listdir(os.path.join(self.pki_dir, self.acc))
             ):
-                if not fn_.startswith(".") and os.path.isfile(
-                    os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                ):
+                if not fn_.startswith("."):
                     minions.append(fn_)
         elif cache_enabled:
             minions = list_cached_minions()
@@ -449,11 +449,9 @@ class CkMinions:
             if greedy:
                 mlist = []
                 for fn_ in salt.utils.data.sorted_ignorecase(
-                    os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
+                    os.listdir(os.path.join(self.pki_dir, self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         mlist.append(fn_)
                 return {"minions": mlist, "missing": []}
             elif cache_enabled:
@@ -681,11 +679,9 @@ class CkMinions:
         """
         mlist = []
         for fn_ in salt.utils.data.sorted_ignorecase(
-            os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
+            os.listdir(os.path.join(self.pki_dir, self.acc))
         ):
-            if not fn_.startswith(".") and os.path.isfile(
-                os.path.join(self.opts["pki_dir"], self.acc, fn_)
-            ):
+            if not fn_.startswith("."):
                 mlist.append(fn_)
         return {"minions": mlist, "missing": []}
 

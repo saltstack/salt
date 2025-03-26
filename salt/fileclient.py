@@ -14,6 +14,8 @@ import time
 import urllib.error
 import urllib.parse
 
+from tornado.httputil import HTTPHeaders, HTTPInputError, parse_response_start_line
+
 import salt.channel.client
 import salt.client
 import salt.crypt
@@ -35,11 +37,6 @@ import salt.utils.verify
 import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import CommandExecutionError, MinionError, SaltClientError
-from salt.ext.tornado.httputil import (
-    HTTPHeaders,
-    HTTPInputError,
-    parse_response_start_line,
-)
 from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
@@ -1183,10 +1180,7 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
-        if not salt.utils.platform.is_windows():
-            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-        else:
-            hash_server = self.hash_file(path, saltenv)
+        hash_server = self.hash_file(path, saltenv)
 
         # Check if file exists on server, before creating files and
         # directories
@@ -1227,10 +1221,7 @@ class RemoteClient(Client):
         )
 
         if dest2check and os.path.isfile(dest2check):
-            if not salt.utils.platform.is_windows():
-                hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
-            else:
-                hash_local = self.hash_file(dest2check, saltenv)
+            hash_local = self.hash_file(dest2check, saltenv)
 
             if hash_local == hash_server:
                 return dest2check

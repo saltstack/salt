@@ -65,6 +65,7 @@ class SSHClient:
             ("ssh_scan_timeout", int),
             ("ssh_timeout", int),
             ("ssh_log_file", str),
+            ("ssh_pre_hook", str),
             ("raw_shell", bool),
             ("refresh_cache", bool),
             ("roster", str),

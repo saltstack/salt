@@ -1,6 +1,9 @@
 nox_version: "2022.8.7"
-python_version: "3.10.15"
-relenv_version: "0.18.0"
+python_version: "3.10.16"
+relenv_version: "0.18.1"
+release_branches:
+  - "3006.x"
+  - "3007.x"
 pr-testrun-slugs:
   - ubuntu-24.04-pkg
   - ubuntu-24.04

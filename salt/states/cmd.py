@@ -229,6 +229,51 @@ To use it, one may pass it like this. Example:
       cmd.run:
         - env: {{ salt['pillar.get']('example:key', {}) }}
 
+Better yet, use the slots feature to insert the data at runtime and minimize pillar data exposure:
+
+.. code-block:: yaml
+
+    printenv:
+      cmd.run:
+        - env: __slot__:salt:pillar.get(example:key)
+
+How do I pass sensitive data to a command?
+------------------------------------------
+
+Passing sensitive data to commands using command line arguments
+or environment variables is a well-known security loophole and is not recommended.
+
+If your command can read from stdin, use the stdin option
+in combination with the slots feature. Example:
+
+.. code-block:: yaml
+
+    my-command --read-secret-from-stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(example:secret)
+
+Some commands read from stdin when "-" is passed as an input file:
+
+.. code-block:: yaml
+
+    gcc - -x c -o ./myprogram:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(example:my_super_secret_c_code)
+
+If your command can read from a file and is running on a Unix-ish system,
+pass /dev/stdin as the file and feed the data to stdin. Example:
+
+.. code-block:: yaml
+
+    step ca certificate server.example.com cert.pem key.pem --provisioner JWK --provisioner-password-file /dev/stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(server:provisioner_password)
+        - unless: step certificate needs-renewal cert.pem 2>&1 | grep "certificate does not need renewal"
+
+Note: The use of the runas option or sudo will cause permission errors when reading /dev/stdin.
+If you need to run as a specific user the command will have to read from the usual internal stdin file descriptor.
+
+The use of the slots feature keeps minions who can render the state file from stealing the password.
 """
 
 import copy

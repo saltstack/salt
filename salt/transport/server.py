@@ -26,7 +26,7 @@ class ReqServerChannel:
         import salt.channel.server
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.server instead.",
         )
         return salt.channel.server.ReqServerChannel.factory(opts, **kwargs)
@@ -42,7 +42,7 @@ class PubServerChannel:
         import salt.channel.server
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.server instead.",
         )
         return salt.channel.server.PubServerChannel.factory(opts, **kwargs)

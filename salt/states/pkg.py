@@ -10,7 +10,7 @@ Installation of packages using OS package managers such as yum or apt-get
     Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
     manpage for more information). If desired, usage of `systemd-run(1)`_ can
     be suppressed by setting a :mod:`config option <salt.modules.config.get>`
-    called ``systemd.use_scope``, with a value of ``False`` (no quotes).
+    called ``systemd.scope``, with a value of ``False`` (no quotes).
 
 .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
@@ -991,6 +991,61 @@ def _resolve_capabilities(pkgs, refresh=False, **kwargs):
     return ret, False
 
 
+def _get_installable_versions(targets, current=None):
+    """
+    .. versionadded:: 3007.0
+
+    Return a dictionary of changes that will be made to install a version of
+    each target package specified in the ``targets`` dictionary.  If ``current``
+    is specified, it should be a dictionary of package names to currently
+    installed versions. The function returns a dictionary of changes, where the
+    keys are the package names and the values are dictionaries with two keys:
+    "old" and "new". The value for "old" is the currently installed version (if
+    available) or an empty string, and the value for "new" is the latest
+    available version of the package or "installed".
+
+    :param targets: A dictionary where the keys are package names and the
+                    values indicate a specific version or ``None`` if the
+                    latest should be used.
+    :type targets: dict
+    :param current: A dictionary where the keys are package names and the
+                    values are currently installed versions.
+    :type current: dict or None
+    :return: A dictionary of changes to be made to install a version of
+             each package.
+    :rtype: dict
+    """
+    if current is None:
+        current = {}
+    changes = installable_versions = {}
+    latest_targets = [_get_desired_pkg(x, targets) for x, y in targets.items() if not y]
+    latest_versions = __salt__["pkg.latest_version"](*latest_targets)
+    if latest_targets:
+        # single pkg returns str
+        if isinstance(latest_versions, str):
+            installable_versions = {latest_targets[0]: latest_versions}
+        elif isinstance(latest_versions, dict):
+            installable_versions = latest_versions
+    explicit_targets = [
+        _get_desired_pkg(x, targets) for x in targets if x not in latest_targets
+    ]
+    if explicit_targets:
+        explicit_versions = __salt__["pkg.list_repo_pkgs"](*explicit_targets)
+        for tgt, ver_list in explicit_versions.items():
+            if ver_list:
+                installable_versions[tgt] = ver_list[0]
+    changes.update(
+        {
+            x: {
+                "new": installable_versions.get(x) or "installed",
+                "old": current.get(x, ""),
+            }
+            for x in targets
+        }
+    )
+    return changes
+
+
 def installed(
     name,
     version=None,
@@ -1009,6 +1064,8 @@ def installed(
     **kwargs,
 ):
     """
+    .. versionchanged:: 3007.0
+
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
@@ -1032,6 +1089,12 @@ def installed(
 
         Any argument that is passed through to the ``install`` function, which
         is not defined for that function, will be silently ignored.
+
+    .. note::
+        In Windows, some packages are installed using the task manager. The Salt
+        minion installer does this. In that case, there is no way to know if the
+        package installs correctly. All that can be reported is that the task
+        that launches the installer started successfully.
 
     :param str name:
         The name of the package to be installed. This parameter is ignored if
@@ -1807,11 +1870,13 @@ def installed(
     if __opts__["test"]:
         if targets:
             if sources:
-                _targets = targets
+                installable_versions = {
+                    x: {"new": "installed", "old": ""} for x in targets
+                }
             else:
-                _targets = [_get_desired_pkg(x, targets) for x in targets]
+                installable_versions = _get_installable_versions(targets)
+            changes.update(installable_versions)
             summary = ", ".join(targets)
-            changes.update({x: {"new": "installed", "old": ""} for x in targets})
             comment.append(
                 f"The following packages would be installed/updated: {summary}"
             )
@@ -1975,12 +2040,25 @@ def installed(
             new_caps = __salt__["pkg.list_provides"](**kwargs)
         else:
             new_caps = {}
+
         _ok, failed = _verify_install(
             desired, new_pkgs, ignore_epoch=ignore_epoch, new_caps=new_caps
         )
         modified = [x for x in _ok if x in targets]
         not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
+
+    # When installing packages that use the task scheduler, we can only know
+    # that the task was started, not that it installed successfully. This is
+    # especially the case when upgrading the Salt minion on Windows as the
+    # installer kills and unregisters the Salt minion service. We will only know
+    # that the installation was successful if the minion comes back up. So, we
+    # just want to report success in that scenario
+    for item in failed:
+        if item in changes and isinstance(changes[item], dict):
+            if changes[item].get("install status", "") == "task started":
+                modified.append(item)
+                failed.remove(item)
 
     if modified:
         if sources:
@@ -2456,6 +2534,8 @@ def latest(
     **kwargs,
 ):
     """
+    .. versionchanged:: 3007.0
+
     Ensure that the named package is installed and the latest available
     package. If the package can be updated, this state function will update
     the package. Generally it is better for the
@@ -2732,10 +2812,10 @@ def latest(
                     comments.append(
                         f"{up_to_date_count} packages are already up-to-date"
                     )
-
+            changes = _get_installable_versions(targets, cur)
             return {
                 "name": name,
-                "changes": {},
+                "changes": changes,
                 "result": None,
                 "comment": "\n".join(comments),
             }
@@ -3517,8 +3597,6 @@ def mod_aggregate(low, chunks, running):
     The mod_aggregate function which looks up all packages in the available
     low chunks and merges them into a single pkgs ref in the present low data
     """
-    pkgs = []
-    pkg_type = None
     agg_enabled = [
         "installed",
         "latest",
@@ -3527,6 +3605,9 @@ def mod_aggregate(low, chunks, running):
     ]
     if low.get("fun") not in agg_enabled:
         return low
+    is_sources = "sources" in low
+    # use a dict instead of a set to maintain insertion order
+    pkgs = {}
     for chunk in chunks:
         tag = __utils__["state.gen_tag"](chunk)
         if tag in running:
@@ -3541,40 +3622,50 @@ def mod_aggregate(low, chunks, running):
             # Check for the same repo
             if chunk.get("fromrepo") != low.get("fromrepo"):
                 continue
+            # If hold exists in the chunk, do not add to aggregation
+            # otherwise all packages will be held or unheld.
+            # setting a package to be held/unheld is not as
+            # time consuming as installing/uninstalling.
+            if "hold" in chunk:
+                continue
             # Check first if 'sources' was passed so we don't aggregate pkgs
             # and sources together.
-            if "sources" in chunk:
-                if pkg_type is None:
-                    pkg_type = "sources"
-                if pkg_type == "sources":
-                    pkgs.extend(chunk["sources"])
+            if is_sources and "sources" in chunk:
+                _combine_pkgs(pkgs, chunk["sources"])
+                chunk["__agg__"] = True
+            elif not is_sources:
+                # Pull out the pkg names!
+                if "pkgs" in chunk:
+                    _combine_pkgs(pkgs, chunk["pkgs"])
                     chunk["__agg__"] = True
-            else:
-                # If hold exists in the chunk, do not add to aggregation
-                # otherwise all packages will be held or unheld.
-                # setting a package to be held/unheld is not as
-                # time consuming as installing/uninstalling.
-                if "hold" not in chunk:
-                    if pkg_type is None:
-                        pkg_type = "pkgs"
-                    if pkg_type == "pkgs":
-                        # Pull out the pkg names!
-                        if "pkgs" in chunk:
-                            pkgs.extend(chunk["pkgs"])
-                            chunk["__agg__"] = True
-                        elif "name" in chunk:
-                            version = chunk.pop("version", None)
-                            if version is not None:
-                                pkgs.append({chunk["name"]: version})
-                            else:
-                                pkgs.append(chunk["name"])
-                            chunk["__agg__"] = True
-    if pkg_type is not None and pkgs:
-        if pkg_type in low:
-            low[pkg_type].extend(pkgs)
-        else:
-            low[pkg_type] = pkgs
+                elif "name" in chunk:
+                    version = chunk.pop("version", None)
+                    pkgs.setdefault(chunk["name"], set()).add(version)
+                    chunk["__agg__"] = True
+    if pkgs:
+        pkg_type = "sources" if is_sources else "pkgs"
+        low_pkgs = {}
+        _combine_pkgs(low_pkgs, low.get(pkg_type, []))
+        for pkg, values in pkgs.items():
+            low_pkgs.setdefault(pkg, {None}).update(values)
+        # the value is the version for pkgs and
+        # the URI for sources
+        low_pkgs_list = [
+            name if value is None else {name: value}
+            for name, values in pkgs.items()
+            for value in values
+        ]
+        low[pkg_type] = low_pkgs_list
     return low
+
+
+def _combine_pkgs(pkgs_dict, additional_pkgs_list):
+    for item in additional_pkgs_list:
+        if isinstance(item, str):
+            pkgs_dict.setdefault(item, {None})
+        else:
+            for pkg, version in item:
+                pkgs_dict.setdefault(pkg, {None}).add(version)
 
 
 def mod_watch(name, **kwargs):
@@ -3941,7 +4032,7 @@ def unheld(name, version=None, pkgs=None, all=False, **kwargs):
                 comments.append(
                     "The following package would be unheld: {}{}".format(
                         pkg_name,
-                        ("" if not dpkgs.get(pkg_name) else f" (version = {lock_ver})"),
+                        "" if not dpkgs.get(pkg_name) else f" (version = {lock_ver})",
                     )
                 )
             else:

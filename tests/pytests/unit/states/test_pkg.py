@@ -96,13 +96,13 @@ def test_uptodate_with_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == pkgs
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -159,13 +159,13 @@ def test_uptodate_no_changes():
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
@@ -329,6 +329,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a pkg
@@ -545,7 +546,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,
@@ -560,18 +561,21 @@ def test_installed_with_changes_test_true(list_pkgs):
     Test pkg.installed with simulated changes
     """
 
+    latest_pkgs = MagicMock(return_value="some version here")
     list_pkgs = MagicMock(return_value=list_pkgs)
 
     with patch.dict(
         pkg.__salt__,
         {
+            "pkg.latest_version": latest_pkgs,
             "pkg.list_pkgs": list_pkgs,
         },
     ):
-        expected = {"dummy": {"new": "installed", "old": ""}}
+
+        expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.installed("dummy", test=True)
+            ret = pkg.installed("dummy")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
@@ -625,7 +629,7 @@ def test_removed_purged_with_changes_test_true(list_pkgs, action):
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg_actions[action]("pkga", test=True)
+            ret = pkg_actions[action]("pkga")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
@@ -1046,6 +1050,77 @@ def test_installed_with_single_normalize_32bit():
         )
         call_yum_mock.assert_called_once()
         assert "xz-devel.i686" in call_yum_mock.mock_calls[0].args[0]
+        assert ret["result"]
+        assert ret["changes"] == expected
+
+
+def test__get_installable_versions_no_version_found():
+    mock_latest_versions = MagicMock(return_value={})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "installed", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
+
+
+def test__get_installable_versions_version_found():
+    mock_latest_versions = MagicMock(return_value={"dummy": "1.0.1"})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "1.0.1", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
+
+
+def test_installed_salt_minion_windows():
+    mock_list_pkgs = MagicMock(
+        return_value={
+            "git": "1.34.1",
+            "salt-minion-py3": "3006.0",
+            "vim": "1.6",
+        }
+    )
+    mock_install = MagicMock(
+        return_value={
+            "salt-minion-py3": {"install status": "task started"},
+        }
+    )
+    mock_find_install_targets = MagicMock(
+        return_value=(
+            {"salt-minion-py3": "3006.1"},
+            {"salt-minion-py3": "3006.1"},
+            [],
+            {},
+            {},
+            [],
+            True,
+        )
+    )
+    salt_dict = {
+        "pkg.install": mock_install,
+        "pkg.list_pkgs": mock_list_pkgs,
+        "pkg_resource.check_extra_requirements": pkg_resource.check_extra_requirements,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.object(
+        pkg, "_find_install_targets", mock_find_install_targets
+    ):
+        expected = {
+            "salt-minion-py3": {"install status": "task started"},
+        }
+        ret = pkg.installed(name="salt-minion-py3", version="3006.1")
         assert ret["result"]
         assert ret["changes"] == expected
 

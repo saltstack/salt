@@ -45,6 +45,7 @@ $SCRIPT_DIR    = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").Directo
 $WINDOWS_DIR   = "$PROJECT_DIR\pkg\windows"
 $NSIS_DIR      = "$WINDOWS_DIR\nsis"
 $BUILDENV_DIR  = "$WINDOWS_DIR\buildenv"
+$PREREQS_DIR   = "$WINDOWS_DIR\prereqs"
 $NSIS_BIN      = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
 $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64/"
 
@@ -60,7 +61,8 @@ Write-Host $("-" * 80)
 # Setup Directories
 #-------------------------------------------------------------------------------
 
-$directories = "$BUILDENV_DIR",
+$directories = "$PREREQS_DIR",
+               "$BUILDENV_DIR",
                "$BUILDENV_DIR\configs"
 $directories | ForEach-Object {
     if ( ! (Test-Path -Path "$_") ) {
@@ -78,6 +80,19 @@ $directories | ForEach-Object {
 #-------------------------------------------------------------------------------
 # Create binaries
 #-------------------------------------------------------------------------------
+
+$prereq_files = "vcredist_x86_2022.exe",
+                "vcredist_x64_2022.exe"
+$prereq_files | ForEach-Object {
+    Write-Host "Creating $_`: " -NoNewline
+    Set-Content -Path "$PREREQS_DIR\$_" -Value "binary"
+    if ( Test-Path -Path "$PREREQS_DIR\$_" ) {
+        Write-Result "Success"
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
 
 $binary_files = @("python.exe")
 $binary_files | ForEach-Object {

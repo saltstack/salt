@@ -3,12 +3,21 @@ import hashlib
 import os
 import shutil
 import stat
+import subprocess
 import types
 
+import psutil
 import pytest
 
 import salt.utils.files
 import salt.utils.platform
+
+try:
+    import gnupg as gnupglib
+
+    HAS_GNUPG = True
+except ImportError:
+    HAS_GNUPG = False
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -19,12 +28,141 @@ BINARY_FILE = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\
 
 
 @pytest.fixture
-def remote_grail_scene33(webserver, grail_scene33_file, grail_scene33_file_hash):
+def remote_grail_scene33(
+    webserver,
+    grail_scene33_file,
+    grail_scene33_file_hash,
+    grail_scene33_clearsign_file,
+    grail_scene33_clearsign_file_hash,
+):
     return types.SimpleNamespace(
         file=grail_scene33_file,
+        file_clearsign=grail_scene33_clearsign_file,
         hash=grail_scene33_file_hash,
+        hash_clearsign=grail_scene33_clearsign_file_hash,
+        hash_file=grail_scene33_file.with_suffix(".SHA256"),
         url=webserver.url("grail/scene33"),
+        url_hash=webserver.url("grail/scene33.SHA256"),
     )
+
+
+@pytest.fixture
+def gpghome(tmp_path):
+    root = tmp_path / "gpghome"
+    root.mkdir(mode=0o0700)
+    try:
+        yield root
+    finally:
+        # Make sure we don't leave any gpg-agents running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+
+@pytest.fixture
+def gnupg(gpghome):
+    return gnupglib.GPG(gnupghome=str(gpghome))
+
+
+@pytest.fixture
+def a_pubkey():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4fxHQEEAJvXEaaw+o/yZCwMOJbt5FQHbVMMDX/0YI8UdzsE5YCC4iKnoC3x
+FwFdkevKj3qp+45iBGLLnalfXIcVGXJGACB+tPHgsfHaXSDQPSfmX6jbZ6pHosSm
+v1tTixY+NTJzGL7hDLz2sAXTbYmTbXeE9ifWWk6NcIwZivUbhNRBM+KxABEBAAG0
+LUtleSBBIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5YUBleGFtcGxlPojR
+BBMBCAA7FiEE7wN2X1nukEkwyKeBVTqCoFjAx5UFAmOH8R0CGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQVTqCoFjAx5XURAQAguOwI+49lG0Kby+Bsyv3
+of3GgxvhS1Qa7+ysj088az5GVt0pqVe3SbRVvn/jyC6yZvWuv94KdL3R7hCeEz2/
+JakCRJ4wxEsdeASE8t9H/oTqD0I5asMa9EMvn5ICEGeLsTeQb7OYYihTQj7HJLG6
+pDEmK8EhJDvV/9o0lnhm/9w=
+=Wc0O
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def a_fp():
+    return "EF03765F59EE904930C8A781553A82A058C0C795"
+
+
+@pytest.fixture
+def b_pubkey():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY4fxNQEEAOgAzbpheJrOq4il5BrMVtP1G1kU94QX2+xLXEgW/wPdE4HD6Zbg
+vliIg18v7Na4x8ubWy/7CkXC83EJ8SoSqcCccvuKjIWsm6tfeCidNstNCjewFMUR
+7ZOQmAe/I2JAlz2SgNxS3ZDiCZpGkxqE0GZ+1N7Mz2WHImnExG149RVHABEBAAG0
+LUtleSBCIChHZW5lcmF0ZWQgYnkgU2FsdFN0YWNrKSA8a2V5YkBleGFtcGxlPojR
+BBMBCAA7FiEEEYtPq3gDjLLfe2niD2xCJkdGXJMFAmOH8TUCGy8FCwkIBwICIgIG
+FQoJCAsCBBYCAwECHgcCF4AACgkQD2xCJkdGXJNR3AQAk5ZoN+/ViIX3vA/LbXPn
+2VE1E7ETTeIGqsb5f98UfjIbYfkNE8+OtnPxnDbSOPWBEOT+XPPjmxnE0a2UNTfn
+ECO71/ZUiyC3ZN50IZ0vgzwBH+DeIV6PDAAun5FGx4RI7v6n0CPlrUcWKYe8wY1F
+COflOxnEyLVHXnX8wUIzZwo=
+=Hq0X
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def b_fp():
+    return "118B4FAB78038CB2DF7B69E20F6C422647465C93"
+
+
+@pytest.fixture
+def pub_ec():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEACXBqu2ndMLUS/Z0X/fKUGAgRUfe
+nYBie3erw/QNOYfQpgDIjNu+6xVxMLRRvSYGrQ2JREwUVXR0SR5pERAnoQ==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def pub_ec2():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErtBZ3qL5m97SzlSwOoxFzzG/1v5a
+sLzOIrXykh4yO8tDn4h6JMOe+P0HuoUbENxk4+f/1D9hTEI88rj70bi7Ig==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def _gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
+    pubkeys = [a_pubkey, b_pubkey]
+    fingerprints = [a_fp, b_fp]
+    gnupg.import_keys("\n".join(pubkeys))
+    present_keys = gnupg.list_keys()
+    for fp in fingerprints:
+        assert any(x["fingerprint"] == fp for x in present_keys)
+    yield
+    # cleanup is taken care of by gpghome and tmp_path
 
 
 def _format_ids(key, value):
@@ -800,6 +938,211 @@ def test_verify_ssl_https_source(file, tmp_path, ssl_webserver, verify_ssl):
         assert name.exists()
 
 
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("_gpg_keys_present")
+@pytest.mark.parametrize("signature", [True, ".asc"])
+def test_file_managed_signature(
+    file, tmp_path, signature, remote_grail_scene33, gpghome
+):
+    name = tmp_path / "test_file_managed_signature.txt"
+    source = remote_grail_scene33.url
+    if signature is True:
+        source += ".clearsign.asc"
+        contents_file = remote_grail_scene33.file_clearsign
+        source_hash = remote_grail_scene33.hash_clearsign
+    else:
+        signature = source + signature
+        contents_file = remote_grail_scene33.file
+        source_hash = remote_grail_scene33.hash
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=signature,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_file_managed_signature_sig_backend(
+    file, tmp_path, remote_grail_scene33, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_file_managed_signature.txt"
+    source = remote_grail_scene33.url
+    signature = source + ".sig"
+    contents_file = remote_grail_scene33.file
+    source_hash = remote_grail_scene33.hash
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("_gpg_keys_present")
+def test_file_managed_signature_fail(
+    file, tmp_path, remote_grail_scene33, gpghome, modules
+):
+    name = tmp_path / "test_file_managed_signature_fail.txt"
+    source = remote_grail_scene33.url
+    signature = source + ".asc"
+    source_hash = remote_grail_scene33.hash
+    # although there are valid signatures, this will be denied since the one below is required
+    signed_by_all = ["DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"]
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=signature,
+        gnupghome=str(gpghome),
+        signed_by_all=signed_by_all,
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    # Ensure that a new state run will attempt to redownload the source
+    # instead of verifying the invalid signature again
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_file_managed_signature_sig_backend_fail(
+    file, tmp_path, remote_grail_scene33, pub_ec2, modules
+):
+    name = tmp_path / "test_file_managed_signature.txt"
+    source = remote_grail_scene33.url
+    signature = source + ".sig"
+    source_hash = remote_grail_scene33.hash
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=[signature],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    # Ensure that a new state run will attempt to redownload the source
+    # instead of verifying the invalid signature again
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("_gpg_keys_present")
+@pytest.mark.parametrize("sig", [True, ".asc"])
+def test_file_managed_source_hash_sig(
+    file, tmp_path, sig, remote_grail_scene33, gpghome
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    contents_file = remote_grail_scene33.file
+    if sig is True:
+        source_hash += ".clearsign.asc"
+    else:
+        sig = source_hash + sig
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=sig,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_file_managed_source_hash_sig_sig_backend(
+    file, tmp_path, remote_grail_scene33, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    contents_file = remote_grail_scene33.file
+    signature = source_hash + ".sig"
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("_gpg_keys_present")
+def test_file_managed_source_hash_sig_fail(
+    file, tmp_path, remote_grail_scene33, gpghome
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    sig = source_hash + ".asc"
+    signed_by_all = ["DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"]
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=sig,
+        gnupghome=str(gpghome),
+        signed_by_all=signed_by_all,
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_file_managed_source_hash_sig_sig_backend_fail(
+    file, tmp_path, remote_grail_scene33, pub_ec2
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    signature = source_hash + ".sig"
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=[signature],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+
+
 def test_issue_60203(
     file,
     tmp_path,
@@ -815,6 +1158,18 @@ def test_issue_60203(
     assert "Unable to manage file" in ret.comment
     assert "/files/test.tar.gz.sha256" in ret.comment
     assert "dontshowme" not in ret.comment
+
+
+def test_file_managed_new_file_diff(file, tmp_path):
+    name = tmp_path / "new_file_diff.txt"
+    ret = file.managed(str(name), contents="EITR", new_file_diff=True, test=True)
+    assert ret.changes == {
+        "diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}",
+    }
+    assert not name.exists()
+    ret = file.managed(str(name), contents="EITR", new_file_diff=True)
+    assert ret.changes == {"diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}"}
+    assert name.exists()
 
 
 def test_file_managed_remote_source_does_not_refetch_existing_file_with_correct_digest(

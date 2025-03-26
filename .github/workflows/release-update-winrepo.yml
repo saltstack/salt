@@ -31,7 +31,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: winrepo
-        repository: twangboy/salt-winrepo-ng
+        repository: saltstack/salt-winrepo-ng
 
     - name: Set Up Python 3.10
       uses: actions/setup-python@v5
@@ -59,7 +59,7 @@ jobs:
 
     - name: Create Pull Request
       id: cpr
-      uses: peter-evans/create-pull-request@v4
+      uses: peter-evans/create-pull-request@v7
       with:
         path: winrepo
         push-to-fork: saltbot-open/salt-winrepo-ng

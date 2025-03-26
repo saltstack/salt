@@ -14,26 +14,23 @@ log = logging.getLogger(__name__)
 def _install_salt_extension(shell):
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
         yield
-    else:
-        script_name = "salt-pip"
-        if salt.utils.platform.is_windows():
-            script_name += ".exe"
+        return
 
-        script_path = CODE_DIR / "artifacts" / "salt" / script_name
-        assert script_path.exists()
-        try:
-            ret = shell.run(
-                str(script_path), "install", "salt-analytics-framework==0.1.0"
-            )
-            assert ret.returncode == 0
-            log.info(ret)
-            yield
-        finally:
-            ret = shell.run(
-                str(script_path), "uninstall", "-y", "salt-analytics-framework"
-            )
-            log.info(ret)
-            shutil.rmtree(script_path.parent / "extras-3.10", ignore_errors=True)
+    script_name = "salt-pip"
+    if salt.utils.platform.is_windows():
+        script_name += ".exe"
+
+    script_path = CODE_DIR / "artifacts" / "salt" / script_name
+    assert script_path.exists()
+    try:
+        ret = shell.run(str(script_path), "install", "salt-analytics-framework==0.1.0")
+        assert ret.returncode == 0
+        log.info(ret)
+        yield
+    finally:
+        ret = shell.run(str(script_path), "uninstall", "-y", "salt-analytics-framework")
+        log.info(ret)
+        shutil.rmtree(script_path.parent / "extras-3.10", ignore_errors=True)
 
 
 @pytest.mark.windows_whitelisted
@@ -83,10 +80,13 @@ def test_versions_report(salt_cli):
             assert key in expected_keys
             expected_keys.remove(key)
     assert not expected_keys
+
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        assert "pip" in ret_dict["Salt Package Information"]["Package Type"]
         # Stop any more testing
         return
 
+    assert "onedir" in ret_dict["Salt Package Information"]["Package Type"]
     assert "relenv" in ret_dict["Dependency Versions"]
     assert "Salt Extensions" in ret_dict
     assert "salt-analytics-framework" in ret_dict["Salt Extensions"]

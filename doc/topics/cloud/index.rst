@@ -106,8 +106,6 @@ Cloud Provider Specifics
     :maxdepth: 3
 
         Getting Started With Aliyun <aliyun>
-        Getting Started With Azure <azure>
-        Getting Started With Azure Arm <azurearm>
         Getting Started With CloudStack <cloudstack>
         Getting Started With DigitalOcean <digitalocean>
         Getting Started With Dimension Data <dimensiondata>

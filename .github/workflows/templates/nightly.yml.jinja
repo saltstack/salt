@@ -2,7 +2,6 @@
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("true") %>
 <%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
 <%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
-<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block name %>
@@ -25,9 +24,6 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt packages test suite.
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 0 * * *'  # Every day at 0AM
 
 <%- endblock on %>
 
@@ -47,9 +43,6 @@ concurrency:
 <%- endblock permissions %>
 
 <%- block pre_jobs %>
-
-  <%- include "workflow-requirements-check.yml.jinja" %>
-  <%- include "trigger-branch-workflows.yml.jinja" %>
 
 <%- endblock pre_jobs %>
 

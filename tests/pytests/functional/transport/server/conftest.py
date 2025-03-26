@@ -1,6 +1,7 @@
 import pytest
 from saltfactories.utils import random_string
 
+import salt.utils.process
 from tests.conftest import FIPS_TESTRUN
 
 
@@ -8,9 +9,18 @@ def transport_ids(value):
     return f"Transport({value})"
 
 
-@pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)
+@pytest.fixture(params=("zeromq", "tcp", "ws"), ids=transport_ids)
 def transport(request):
     return request.param
+
+
+@pytest.fixture
+def process_manager():
+    pm = salt.utils.process.ProcessManager()
+    try:
+        yield pm
+    finally:
+        pm.terminate()
 
 
 @pytest.fixture

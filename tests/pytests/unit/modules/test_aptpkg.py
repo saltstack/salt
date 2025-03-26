@@ -18,23 +18,6 @@ from salt.exceptions import (
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, Mock, call, patch
 
-try:
-    from aptsources.sourceslist import (  # pylint: disable=unused-import
-        SourceEntry,
-        SourcesList,
-    )
-
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    from aptsources import sourceslist  # pylint: disable=unused-import
-
-    HAS_APTSOURCES = True
-except ImportError:
-    HAS_APTSOURCES = False
-
 log = logging.getLogger(__name__)
 
 
@@ -380,12 +363,9 @@ def test_get_repo_keys(repo_keys_var):
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
 
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        if not HAS_APT:
-            with patch("os.listdir", return_value="/tmp/keys"):
-                with patch("pathlib.Path.is_dir", return_value=True):
-                    assert aptpkg.get_repo_keys() == repo_keys_var
-        else:
-            assert aptpkg.get_repo_keys() == repo_keys_var
+        with patch("os.listdir", return_value="/tmp/keys"):
+            with patch("pathlib.Path.is_dir", return_value=True):
+                assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -1201,7 +1181,7 @@ def test__expand_repo_def():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1240,7 +1220,7 @@ def test__expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1278,7 +1258,7 @@ def test_expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian", repo=repo, file=source_file, architectures="amd64"
@@ -1558,21 +1538,17 @@ def _test_sourceslist_multiple_comps_fs(fs):
     yield
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 @pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    with patch.object(aptpkg, "HAS_APT", return_value=True):
-        sources = aptpkg.SourcesList()
-        for source in sources:
-            assert source.type == "deb"
-            assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-            assert source.comps == ["main", "restricted"]
-            assert source.dist == "focal-updates"
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
 
 
 @pytest.fixture(
@@ -1592,9 +1568,6 @@ def repo_line(request, fs):
     yield request.param
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
@@ -1714,37 +1687,39 @@ def test_latest_version_fromrepo_multiple_names():
         "linux-cloud-tools-virtual": ["5.15.0.69.67"],
         "linux-generic": ["5.15.0.69.67"],
     }
-    apt_ret_cloud = {
+    apt_ret = {
         "pid": 4361,
         "retcode": 0,
-        "stdout": "linux-cloud-tools-virtual:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
-        f"table:\n     {version} 990\n 990"
-        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
-        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
-        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
-        "stderr": "",
-    }
-    apt_ret_generic = {
-        "pid": 4821,
-        "retcode": 0,
-        "stdout": "linux-generic:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n"
-        f"Version table:\n     {version} 990\n        990"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-updates/main amd64 Packages\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n *** 5.15.0.69.67"
-        "100\n        100 /var/lib/dpkg/status\n 5.15.0.25.27"
-        "500\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy/main amd64 Packages",
+        "stdout": textwrap.dedent(
+            f"""\
+            linux-cloud-tools-virtual:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Versiontable:
+                {version} 990
+            990https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64Packages
+                    500 https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            ***5.15.0.69.67 100
+            100 /var/lib/dpkg/status
+                5.15.0.25.27 500
+                    500https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages
+            linux-generic:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Version table:
+                {version} 990
+                    990https://mirrors.edge.kernel.org/ubuntujammy-updates/main amd64 Packages
+                    500https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            *** 5.15.0.69.67100
+                    100 /var/lib/dpkg/status
+            5.15.0.25.27500
+                    500 https://mirrors.edge.kernel.org/ubuntujammy/main amd64 Packages
+        """
+        ),
         "stderr": "",
     }
 
-    mock_apt = MagicMock()
-    mock_apt.side_effect = [apt_ret_cloud, apt_ret_generic]
+    mock_apt = MagicMock(return_value=apt_ret)
     patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
     mock_list_pkgs = MagicMock(return_value=list_ret)
     patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
@@ -1757,30 +1732,18 @@ def test_latest_version_fromrepo_multiple_names():
             show_installed=True,
         )
         assert ret == {"linux-cloud-tools-virtual": version, "linux-generic": version}
-        assert mock_apt.call_args_list == [
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-cloud-tools-virtual",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-generic",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-        ]
+        mock_apt.assert_called_once_with(
+            [
+                "apt-cache",
+                "-q",
+                "policy",
+                "linux-cloud-tools-virtual",
+                "linux-generic",
+                "-o",
+                "APT::Default-Release=jammy-updates",
+            ],
+            scope=False,
+        )
 
 
 def test_hold():
@@ -2305,36 +2268,37 @@ def test_set_selections_test():
     assert ret == {}
 
 
-def test__get_opts():
-    tests = [
-        {
-            "oneline": "deb [signed-by=/etc/apt/keyrings/example.key arch=amd64] https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        },
-        {
-            "oneline": "deb [arch=amd64 signed-by=/etc/apt/keyrings/example.key]  https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-            },
-        },
-        {
-            "oneline": "deb [arch=amd64]  https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        },
-    ]
-
-    for test in tests:
-        ret = aptpkg._get_opts(test["oneline"])
-        assert ret == test["result"]
+def test_latest_version_calls_aptcache_once_per_run():
+    """
+    Performance Test - don't call apt-cache once for each pkg, call once and parse output
+    """
+    mock_list_pkgs = MagicMock(return_value={"sudo": "1.8.27-1+deb10u5"})
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            """sudo:
+              Installed: 1.8.27-1+deb10u5
+              Candidate: 1.8.27-1+deb10u5
+              Version table:
+             *** 1.8.27-1+deb10u5 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                    100 /var/lib/dpkg/status
+                 1.8.27-1+deb10u3 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            unzip:
+              Installed: (none)
+              Candidate: 6.0-23+deb10u3
+              Version table:
+                 6.0-23+deb10u3 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                 6.0-23+deb10u2 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}

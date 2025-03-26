@@ -177,7 +177,10 @@ def test_refresh_matchers():
     assert ret is False
 
 
+@pytest.mark.skip_on_windows
 def test_refresh_modules_async_false():
+    # XXX: This test adds coverage but what is it really testing? Seems we'd be
+    # better off with at least a functional test here.
     kwargs = {"async": False}
     ret = saltutil.refresh_modules(**kwargs)
     assert ret is False

@@ -2,35 +2,14 @@
 Salt package
 """
 
+import asyncio
 import importlib
 import os
 import sys
 import warnings
 
-USE_VENDORED_TORNADO = True
-
-
-class TornadoImporter:
-    def find_module(self, module_name, package_path=None):
-        if USE_VENDORED_TORNADO:
-            if module_name.startswith("tornado"):
-                return self
-        else:  # pragma: no cover
-            if module_name.startswith("salt.ext.tornado"):
-                return self
-        return None
-
-    def create_module(self, spec):
-        if USE_VENDORED_TORNADO:
-            mod = importlib.import_module(f"salt.ext.{spec.name}")
-        else:  # pragma: no cover
-            # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(spec.name[9:])
-        sys.modules[spec.name] = mod
-        return mod
-
-    def exec_module(self, module):
-        return None
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class NaclImporter:
@@ -76,7 +55,7 @@ class NaclImporter:
 
 
 # Try our importer first
-sys.meta_path = [TornadoImporter(), NaclImporter()] + sys.meta_path
+sys.meta_path = [NaclImporter()] + sys.meta_path
 
 
 # All salt related deprecation warnings should be shown once each!
@@ -124,7 +103,6 @@ warnings.filterwarnings(
 
 
 def __define_global_system_encoding_variable__():
-
     import builtins
     import sys
 

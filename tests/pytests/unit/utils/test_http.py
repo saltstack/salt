@@ -1,3 +1,4 @@
+import sys
 import urllib
 
 import pytest
@@ -154,14 +155,18 @@ def test_query_null_response():
 
     url = f"http://{host}:{port}/"
     result = http.query(url, raise_error=False)
-    assert result == {"body": None}, result
+    if sys.platform.startswith("win"):
+        assert result == {"error": "[Errno 10061] Unknown error"}, result
+    else:
+        assert result == {"error": "[Errno 111] Connection refused"}
 
 
 def test_query_error_handling():
     ret = http.query("http://127.0.0.1:0")
     assert isinstance(ret, dict)
     assert isinstance(ret.get("error", None), str)
-    ret = http.query("http://myfoobardomainthatnotexist")
+    # use RFC6761 invalid domain that does not exist
+    ret = http.query("http://myfoobardomainthatnotexist.invalid")
     assert isinstance(ret, dict)
     assert isinstance(ret.get("error", None), str)
 

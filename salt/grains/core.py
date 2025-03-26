@@ -33,6 +33,7 @@ import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.network
 import salt.utils.path
 import salt.utils.pkg.rpm
@@ -1782,6 +1783,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
@@ -1852,6 +1854,7 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",

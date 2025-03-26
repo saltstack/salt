@@ -9,6 +9,7 @@
     Test support helpers
 """
 
+import asyncio
 import base64
 import builtins
 import errno
@@ -35,12 +36,12 @@ import types
 import attr
 import pytest
 import pytestskipmarkers.utils.platform
+import tornado.ioloop
+import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import ProcessResult
 
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
@@ -1279,7 +1280,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
+        class AuthenticatedHandler(tornado.web.RequestHandler):
             pass
     """
 
@@ -1423,9 +1424,7 @@ class Webserver:
 
         self.port = port
         self.wait = wait
-        self.handler = (
-            handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
-        )
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
         self.ssl_opts = ssl_opts
 
@@ -1433,16 +1432,14 @@ class Webserver:
         """
         Threading target which stands up the tornado application
         """
-        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
-        self.ioloop.make_current()
-        if self.handler == salt.ext.tornado.web.StaticFileHandler:
-            self.application = salt.ext.tornado.web.Application(
+        self.ioloop = tornado.ioloop.IOLoop()
+        asyncio.set_event_loop(self.ioloop.asyncio_loop)
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
             )
         else:
-            self.application = salt.ext.tornado.web.Application(
-                [(r"/(.*)", self.handler)]
-            )
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
         self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
@@ -1451,7 +1448,10 @@ class Webserver:
         if self.port is None:
             return False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        try:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        finally:
+            sock.close()
 
     def url(self, path):
         """
@@ -1517,7 +1517,7 @@ class Webserver:
         self.stop()
 
 
-class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
     """
     Save all requests sent to the server.
     """
@@ -1537,7 +1537,7 @@ class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
+class MirrorPostHandler(tornado.web.RequestHandler):
     """
     Mirror a POST body back to the client
     """
@@ -1673,9 +1673,9 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        if env:
-            env = self.environ.copy().update(env)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1777,11 +1777,14 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        self.install(
+            "-r", code_dir / "requirements" / "static" / "pkg" / "py3.10" / "linux.txt"
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)

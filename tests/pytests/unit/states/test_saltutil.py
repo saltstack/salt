@@ -36,6 +36,8 @@ def test_saltutil_sync_all_nochange():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {
@@ -71,6 +73,8 @@ def test_saltutil_sync_all_test():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {
@@ -107,6 +111,8 @@ def test_saltutil_sync_all_change():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
+        "tops": [],
     }
     state_id = "somename"
     state_result = {

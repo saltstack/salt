@@ -4862,8 +4862,8 @@ class CreateVirtualMachineTestCase(TestCase):
                 self.mock_folder_object,
                 self.mock_resourcepool_object,
             )
-        self.assertEqual(
-            exc.exception.strerror, "Not enough permissions. Required privilege: "
+        assert exc.exception.strerror.startswith(
+            "Not enough permissions. Required privilege: "
         )
 
     def test_create_vm_raise_vim_fault(self):
@@ -4953,8 +4953,8 @@ class RegisterVirtualMachineTestCase(TestCase):
                 self.mock_vmx_path,
                 self.mock_resourcepool_object,
             )
-        self.assertEqual(
-            exc.exception.strerror, "Not enough permissions. Required privilege: "
+        assert exc.exception.strerror.startswith(
+            "Not enough permissions. Required privilege: "
         )
 
     def test_register_vm_raise_vim_fault(self):

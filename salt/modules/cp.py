@@ -15,6 +15,7 @@ import salt.fileclient
 import salt.minion
 import salt.utils.data
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.gzip_util
 import salt.utils.path
 import salt.utils.templates
@@ -154,7 +155,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
             log.debug("Setting mode for %s to %s", dest, mode)
             try:
                 os.chmod(dest, mode)
-            except OSError:
+            except OSError as exc:
                 return _error(str(exc))
         return True
     finally:
@@ -571,6 +572,9 @@ def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=F
     return result
 
 
+cache_file_ssh = salt.utils.functools.alias_function(cache_file, "cache_file_ssh")
+
+
 def cache_dest(url, saltenv=None):
     """
     .. versionadded:: 3000
@@ -739,7 +743,7 @@ def list_states(saltenv=None):
     .. versionchanged:: 3005
         ``saltenv`` will use value from config if not explicitly set
 
-    List all of the available state modules in an environment
+    List all of the available state files in an environment
 
     CLI Example:
 
@@ -878,6 +882,9 @@ def hash_file(path, saltenv=None):
 
     with _client() as client:
         return client.hash_file(path, saltenv)
+
+
+hash_file_ssh = salt.utils.functools.alias_function(hash_file, "hash_file_ssh")
 
 
 def stat_file(path, saltenv=None, octal=True):

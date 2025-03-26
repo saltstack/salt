@@ -1156,6 +1156,36 @@ def test_almalinux_8_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_virtuozzo_7_os_grains():
+    """
+    Test if OS grains are parsed correctly in Virtuozzo 7
+    """
+    _os_release_data = {
+        "NAME": "Virtuozzo",
+        "ID": "virtuozzo",
+        "PRETTY_NAME": "Virtuozzo release 7.5.4",
+        "VERSION": "7.5.4",
+        "ID_LIKE": "rhel fedora",
+        "VERSION_ID": "7",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:virtuozzoproject:vz:7",
+        "HOME_URL": "http://www.virtuozzo.com",
+        "BUG_REPORT_URL": "https://bugs.openvz.org",
+    }
+    expectation = {
+        "os": "Virtuozzo",
+        "os_family": "RedHat",
+        "osfullname": "Virtuozzo",
+        "oscodename": "Virtuozzo release 7.5.4",
+        "osrelease": "7",
+        "osrelease_info": (7,),
+        "osmajorrelease": 7,
+        "osfinger": "Virtuozzo-7",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_endeavouros_os_grains():
     """
     Test if OS grains are parsed correctly in EndeavourOS
@@ -2390,7 +2420,7 @@ def test_fqdns_return():
 
 
 @pytest.mark.skip_unless_on_linux
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(60, func_only=True)
 def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain

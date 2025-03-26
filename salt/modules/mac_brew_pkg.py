@@ -1,6 +1,14 @@
 """
 Homebrew for macOS
 
+It is recommended for the ``salt-minion`` to have the ``HOMEBREW_PREFIX``
+environment variable set.
+
+This will ensure that Salt uses the correct path for the ``brew`` binary.
+
+Typically, this is set to ``/usr/local`` for Intel Macs and ``/opt/homebrew``
+for Apple Silicon Macs.
+
 .. important::
     If you feel that Salt should be using this module to manage packages on a
     minion, and it is using a different module (or gives an error similar to
@@ -10,6 +18,7 @@ Homebrew for macOS
 
 import copy
 import logging
+import os
 
 import salt.utils.data
 import salt.utils.functools
@@ -27,11 +36,11 @@ __virtualname__ = "pkg"
 
 def __virtual__():
     """
-    Confine this module to Mac OS with Homebrew.
+    Confine this module to macOS with Homebrew.
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not salt.utils.path.which("brew"):
+    if not _homebrew_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -93,12 +102,43 @@ def _tap(tap, runas=None):
     return True
 
 
+def _homebrew_os_bin():
+    """
+    Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
+    """
+
+    original_path = os.environ.get("PATH")
+    try:
+        # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
+        # the PATH does not include "/opt/homebrew"
+        current_path = original_path or ""
+        homebrew_path = "/opt/homebrew/bin"
+        if homebrew_path not in current_path.split(os.path.pathsep):
+            extended_path = os.path.pathsep.join([current_path, homebrew_path])
+            os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
+
+        # Search for the brew executable in the current PATH
+        brew = salt.utils.path.which("brew")
+    finally:
+        # Restore original PATH
+        if original_path is None:
+            del os.environ["PATH"]
+        else:
+            os.environ["PATH"] = original_path
+
+    return brew
+
+
 def _homebrew_bin():
     """
-    Returns the full path to the homebrew binary in the PATH
+    Returns the full path to the homebrew binary in the homebrew installation folder
     """
-    ret = __salt__["cmd.run"]("brew --prefix", output_loglevel="trace")
-    ret += "/bin/brew"
+    ret = homebrew_prefix()
+    if ret is not None:
+        ret += "/bin/brew"
+    else:
+        log.warning("Failed to find homebrew prefix")
+
     return ret
 
 
@@ -106,12 +146,14 @@ def _call_brew(*cmd, failhard=True):
     """
     Calls the brew command with the user account of brew
     """
-    user = __salt__["file.get_user"](_homebrew_bin())
+    brew_exec = _homebrew_bin()
+
+    user = __salt__["file.get_user"](brew_exec)
     runas = user if user != __opts__["user"] else None
     _cmd = []
     if runas:
         _cmd = [f"sudo -i -n -H -u {runas} -- "]
-    _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
+    _cmd = _cmd + [brew_exec] + list(cmd)
     _cmd = " ".join(_cmd)
 
     runas = None
@@ -136,6 +178,47 @@ def _list_pkgs_from_context(versions_as_list):
         ret = copy.deepcopy(__context__["pkg.list_pkgs"])
         __salt__["pkg_resource.stringify"](ret)
         return ret
+
+
+def homebrew_prefix():
+    """
+    Returns the full path to the homebrew prefix.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.homebrew_prefix
+    """
+
+    # If HOMEBREW_PREFIX env variable is present, use it
+    env_homebrew_prefix = "HOMEBREW_PREFIX"
+    if env_homebrew_prefix in os.environ:
+        log.debug("%s is set. Using it for homebrew prefix.", env_homebrew_prefix)
+        return os.environ[env_homebrew_prefix]
+
+    # Try brew --prefix otherwise
+    try:
+        log.debug("Trying to find homebrew prefix by running 'brew --prefix'")
+
+        brew = _homebrew_os_bin()
+        if brew is not None:
+            # Check if the found brew command is the right one
+            import salt.modules.cmdmod
+            import salt.modules.file
+
+            runas = salt.modules.file.get_user(brew)
+            ret = salt.modules.cmdmod.run(
+                "brew --prefix", runas=runas, output_loglevel="trace", raise_err=True
+            )
+
+            return ret
+    except CommandExecutionError as exc:
+        log.debug(
+            "Unable to find homebrew prefix by running 'brew --prefix'. Error: %s", exc
+        )
+
+    return None
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -216,7 +299,7 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def latest_version(*names, **kwargs):
+def latest_version(*names, options=None, **kwargs):
     """
     Return the latest version of the named package available for upgrade or
     installation
@@ -224,30 +307,49 @@ def latest_version(*names, **kwargs):
     Currently chooses stable versions, falling back to devel if that does not
     exist.
 
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
+        salt '*' pkg.latest_version <package name> options='["--cask"]'
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
     if refresh:
         refresh_db()
 
     def get_version(pkg_info):
-        # Perhaps this will need an option to pick devel by default
-        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
-        if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
-            version = "{}_{}".format(version, pkg_info["revision"])
-        return version
+        if "versions" in pkg_info.keys():
+            # Typically, formulae uses the 'versions' token
+            # Perhaps this will need an option to pick devel by default
+            pkg_version = (
+                pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+            )
+            if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
+                pkg_version = f"{pkg_version}_{pkg_info['revision']}"
+            return pkg_version
 
-    versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
+        if "version" in pkg_info.keys():
+            # Typically, casks use the 'version' token
+            return pkg_info["version"]
+
+        return None
+
+    versions_dict = {
+        key: get_version(val) for key, val in _info(*names, options=options).items()
+    }
 
     if len(names) == 1:
         return next(iter(versions_dict.values()))
-    else:
-        return versions_dict
+
+    return versions_dict
 
 
 # available_version is being deprecated
@@ -256,7 +358,7 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, options=None, **kwargs):
     """
     Removes packages with ``brew uninstall``.
 
@@ -270,6 +372,12 @@ def remove(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
+
     .. versionadded:: 0.16.0
 
 
@@ -282,6 +390,7 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+        salt '*' pkg.remove pkgs='["foo", "bar"]' options='["--cask"]'
     """
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
@@ -293,7 +402,12 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    out = _call_brew("uninstall", *targets)
+    cmd = ["uninstall"]
+    if options:
+        cmd.extend(options)
+    cmd.extend(list(targets))
+
+    out = _call_brew(*cmd)
     if out["retcode"] != 0 and out["stderr"]:
         errors = [out["stderr"]]
     else:
@@ -331,7 +445,7 @@ def refresh_db(**kwargs):
     return True
 
 
-def _info(*pkgs):
+def _info(*pkgs, options=None):
     """
     Get all info brew can provide about a list of packages.
 
@@ -343,16 +457,29 @@ def _info(*pkgs):
     On success, returns a dict mapping each item in pkgs to its corresponding
     object in the output of 'brew info'.
 
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
+
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    brew_result = _call_brew("info", "--json=v2", *pkgs)
+    cmd = ["info", "--json=v2"]
+    if options:
+        cmd.extend(options)
+
+    brew_result = _call_brew(*cmd, *pkgs)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
 
-    meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
+    meta_info = {
+        "formulae": ["name", "full_name", "aliases"],
+        "casks": ["token", "full_token"],
+    }
 
     pkgs_info = dict()
     for tap, keys in meta_info.items():
@@ -361,9 +488,14 @@ def _info(*pkgs):
             continue
 
         for _pkg in data:
+            pkg_names = []
             for key in keys:
-                if _pkg[key] in pkgs:
-                    pkgs_info[_pkg[key]] = _pkg
+                pkg_names.append(_pkg[key])
+            pkg_names = set(salt.utils.data.flatten(pkg_names))
+
+            for name in pkg_names:
+                if name in pkgs:
+                    pkgs_info[name] = _pkg
 
     return pkgs_info
 
@@ -398,7 +530,8 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         works, modifying chosen options requires a full uninstall followed by a
         fresh install. Note that if "pkgs" is used, all options will be passed
         to all packages. Unrecognized options for a package will be silently
-        ignored by brew.
+        ignored by brew. It can also be used to avoid conflicts between formulae
+        and casks.
 
         CLI Example:
 
@@ -406,6 +539,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
+            salt '*' pkg.install cdalvaro/tap/salt options='["--cask"]'
 
     Multiple Package Installation Options:
 
@@ -477,20 +611,40 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disable=W0613
+def list_upgrades(
+    refresh=True, include_casks=False, options=None, **kwargs
+):  # pylint: disable=W0613
     """
     Check whether or not an upgrade is available for all packages
+
+    refresh
+        Update the Homebrew's package repository before listing upgrades.
+
+    include_casks
+        Whether to include casks in the list of upgrades.
+
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
+        salt '*' pkg.list_upgrades include_casks=True
+        salt '*' pkg.list_upgrades include_casks=True options='["--greedy"]'
     """
     if refresh:
         refresh_db()
 
-    res = _call_brew("outdated", "--json=v2")
+    cmd = ["outdated", "--json=v2"]
+    if options:
+        cmd.extend(options)
+
+    res = _call_brew(*cmd)
     ret = {}
 
     try:
@@ -579,14 +733,21 @@ def info_installed(*names, **kwargs):
     names
         The names of the packages for which to return information.
 
+    options
+        List of string with additional options to pass to brew.
+        Useful to remove ambiguous packages that can conflict between formulae and casks.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> options='["--cask"]'
     """
-    return _info(*names)
+    return _info(*names, **kwargs)
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
@@ -647,17 +808,13 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                 if result:
                     changes = {"old": "install", "new": "hold"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target]["comment"] = "Package {} is now being held.".format(
-                        target
-                    )
+                    ret[target]["comment"] = f"Package {target} is now being held."
                 else:
                     ret[target].update(result=False)
                     ret[target]["comment"] = f"Unable to hold package {target}."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set to be held."
     return ret
 
 
@@ -717,9 +874,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif target in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be unheld.".format(
-                    target
-                )
+                ret[target]["comment"] = f"Package {target} is set to be unheld."
             else:
                 result = _unpin(target)
                 if result:
@@ -730,14 +885,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     ] = f"Package {target} is no longer being held."
                 else:
                     ret[target].update(result=False)
-                    ret[target]["comment"] = "Unable to unhold package {}.".format(
-                        target
-                    )
+                    ret[target]["comment"] = f"Unable to unhold package {target}."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set not to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set not to be held."
     return ret
 
 

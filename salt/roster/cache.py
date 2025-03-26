@@ -199,21 +199,15 @@ def _data_lookup(ref, lookup):
 def _minion_lookup(minion_id, key, minion):
     grains, pillar, addrs, mine = minion
 
-    def _data_lookup_ref(data_id):
-        if data_id == "pillar":
-            return pillar
-        if data_id == "grains":
-            return grains
-        if data_id == "mine":
-            return mine
-
     if key == "id":
         # Just paste in the minion ID
         return minion_id
     elif isinstance(key, dict):
         # Lookup the key in the dict
         for data_id, lookup in key.items():
-            for k in _data_lookup(_data_lookup_ref(data_id), lookup):
+            ref = {"pillar": pillar, "grain": grains, "mine": mine}
+
+            for k in _data_lookup(ref[data_id], lookup):
                 if k:
                     return k
 

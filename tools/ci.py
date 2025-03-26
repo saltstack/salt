@@ -16,6 +16,7 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
+import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -51,7 +52,7 @@ def print_gh_event(ctx: Context):
     try:
         gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
 
     ctx.info("GH Event Payload:")
@@ -239,7 +240,7 @@ def define_jobs(
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -392,6 +393,197 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
         ctx.exit(0)
 
 
+@ci.command(
+    name="get-release-changelog-target",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def get_release_changelog_target(ctx: Context, event_name: str):
+    """
+    Define which kind of release notes should be generated, next minor or major.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
+        ctx.exit(1)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
+    )
+    release_branches = shared_context["release_branches"]
+
+    release_changelog_target = "next-major-release"
+    if event_name == "pull_request":
+        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+            release_changelog_target = "next-minor-release"
+    elif event_name == "schedule":
+        branch_name = gh_event["repository"]["default_branch"]
+        if branch_name in release_branches:
+            release_changelog_target = "next-minor-release"
+    else:
+        for branch_name in release_branches:
+            if branch_name in gh_event["ref"]:
+                release_changelog_target = "next-minor-release"
+                break
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-changelog-target={release_changelog_target}\n")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="get-pr-test-labels",
+    arguments={
+        "pr": {
+            "help": "Pull request number",
+        },
+        "repository": {
+            "help": "Github repository.",
+        },
+    },
+)
+def get_pr_test_labels(
+    ctx: Context, repository: str = "saltstack/salt", pr: int = None
+):
+    """
+    Set the pull-request labels.
+    """
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
+    else:
+        if TYPE_CHECKING:
+            assert gh_event_path is not None
+
+        try:
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
+            )
+            ctx.exit(1)
+
+        if "pull_request" not in gh_event:
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
+            ctx.exit(1)
+
+        pr = gh_event["pull_request"]["number"]
+        labels = _get_pr_test_labels_from_event_payload(gh_event)
+
+    shared_context = tools.utils.get_cicd_shared_context()
+    mandatory_os_slugs = set(shared_context["mandatory_os_slugs"])
+    available = set(tools.utils.get_golden_images())
+    # Add MacOS provided by GitHub
+    available.update({"macos-12", "macos-13", "macos-13-arm64"})
+    # Remove mandatory OS'ss
+    available.difference_update(mandatory_os_slugs)
+    select_all = set(available)
+    selected = set()
+    test_labels = []
+    if labels:
+        ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
+        for name, description in sorted(labels):
+            ctx.info(
+                f" * [yellow]{name}[/yellow]: {description or '[red][No description][/red]'}"
+            )
+            if name.startswith("test:os:"):
+                slug = name.split("test:os:", 1)[-1]
+                if slug not in available and name != "test:os:all":
+                    ctx.warn(
+                        f"The '{slug}' slug exists as a label but not as an available OS."
+                    )
+                selected.add(slug)
+                if slug != "all" and slug in available:
+                    available.remove(slug)
+                continue
+            test_labels.append(name)
+
+    else:
+        ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    if "test:coverage" in test_labels:
+        ctx.info(
+            "Selecting ALL available OS'es because the label 'test:coverage' is set."
+        )
+        selected.add("all")
+        if github_step_summary is not None:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "Selecting ALL available OS'es because the label `test:coverage` is set.\n"
+                )
+
+    if "all" in selected:
+        selected = select_all
+        available.clear()
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.exit(0)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    ctx.info("Writing 'labels' to the github outputs file...")
+    ctx.info("Test Labels:")
+    if not test_labels:
+        ctx.info(" * None")
+    else:
+        for label in sorted(test_labels):
+            ctx.info(f" * [yellow]{label}[/yellow]")
+    ctx.info("* OS Labels:")
+    if not selected:
+        ctx.info(" * None")
+    else:
+        for slug in sorted(selected):
+            ctx.info(f" * [yellow]{slug}[/yellow]")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"os-labels={json.dumps([label for label in selected])}\n")
+        wfh.write(f"test-labels={json.dumps([label for label in test_labels])}\n")
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is not None:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Mandatory OS Test Runs:\n")
+            for slug in sorted(mandatory_os_slugs):
+                wfh.write(f"* `{slug}`\n")
+
+            wfh.write("\nOptional OS Test Runs(selected by label):\n")
+            if not selected:
+                wfh.write("* None\n")
+            else:
+                for slug in sorted(selected):
+                    wfh.write(f"* `{slug}`\n")
+
+            wfh.write("\nSkipped OS Tests Runs(NOT selected by label):\n")
+            if not available:
+                wfh.write("* None\n")
+            else:
+                for slug in sorted(available):
+                    wfh.write(f"* `{slug}`\n")
+
+    ctx.exit(0)
+
+
 def _get_pr_test_labels_from_api(
     ctx: Context, repository: str = "saltstack/salt", pr: int = None
 ) -> list[tuple[str, str]]:
@@ -534,7 +726,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -588,7 +780,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     if TYPE_CHECKING:
         assert commit_sha is not None
 
-    codecov_args = [
+    codecov_args: list[str] = [
         codecov,
         "--nonZero",
         "--sha",
@@ -607,7 +799,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
 
     sleep_time = 15

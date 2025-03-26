@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import os.path
 import pathlib
 import shutil
 import tarfile
@@ -89,6 +90,20 @@ def debian(
         for key, value in new_env.items():
             os.environ[key] = value
             env_args.extend(["-e", key])
+
+        cargo_home = os.environ.get("CARGO_HOME")
+        user_cargo_bin = os.path.expanduser("~/.cargo/bin")
+        if os.path.exists(user_cargo_bin):
+            ctx.info(
+                f"The path '{user_cargo_bin}' exists so adding --prepend-path={user_cargo_bin}"
+            )
+            env_args.append(f"--prepend-path={user_cargo_bin}")
+        elif cargo_home is not None:
+            cargo_home_bin = os.path.join(cargo_home, "bin")
+            ctx.info(
+                f"The 'CARGO_HOME' environment variable is set, so adding --prepend-path={cargo_home_bin}"
+            )
+            env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(
@@ -753,6 +768,12 @@ def salt_onedir(
         dst = pathlib.Path(site_packages) / fname
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
+
+    # Add package type file for package grain
+    with open(
+        pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w", encoding="utf-8"
+    ) as fp:
+        fp.write("onedir")
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):

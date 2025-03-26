@@ -13,9 +13,9 @@ Manage X509 certificates
     modules. For breaking changes between both versions,
     you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
 
-    They will become the default ``x509`` modules in Salt 3008 (Argon).
-    You can explicitly switch to the new modules before that release
-    by setting ``features: {x509_v2: true}`` in your minion configuration.
+    They have become the default ``x509`` modules in Salt 3008.0 (Argon).
+    Until they are removed, you can still revert to the deprecated modules
+    by setting ``features: {x509_v2: false}`` in your minion configuration.
 """
 
 import ast
@@ -92,11 +92,11 @@ def __virtual__():
     only load this module if m2crypto is available
     """
     # salt.features appears to not be setup when invoked via peer publishing
-    if __opts__.get("features", {}).get("x509_v2"):
+    if __opts__.get("features", {}).get("x509_v2", True):
         return (False, "Superseded, using x509_v2")
     if HAS_M2:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "The x509 modules are deprecated. Please migrate to the replacement "
             "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
         )

@@ -2,24 +2,28 @@
 Zeromq transport classes
 """
 
+import asyncio
+import asyncio.exceptions
 import errno
 import hashlib
 import logging
+import multiprocessing
 import os
 import signal
 import sys
 import threading
 from random import randint
 
+import tornado
+import tornado.concurrent
+import tornado.gen
+import tornado.ioloop
+import tornado.locks
+import zmq.asyncio
 import zmq.error
 import zmq.eventloop.future
 import zmq.eventloop.zmqstream
 
-import salt.ext.tornado
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.locks
 import salt.payload
 import salt.transport.base
 import salt.utils.files
@@ -109,20 +113,42 @@ class PublishClient(salt.transport.base.PublishClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop, **kwargs):
-        super().__init__(opts, io_loop, **kwargs)
-        self.opts = opts
-        self.io_loop = io_loop
-        self.hexid = hashlib.sha1(
-            salt.utils.stringutils.to_bytes(self.opts["id"])
-        ).hexdigest()
+    async_methods = [
+        "connect",
+        "connect_uri",
+        "recv",
+        # "close",
+    ]
+    close_methods = [
+        "close",
+    ]
+
+    def _legacy_setup(
+        self,
+        _id,
+        role,
+        zmq_filtering=False,
+        tcp_keepalive=True,
+        tcp_keepalive_idle=300,
+        tcp_keepalive_cnt=-1,
+        tcp_keepalive_intvl=-1,
+        recon_default=1000,
+        recon_max=10000,
+        recon_randomize=True,
+        ipv6=None,
+        master_ip="127.0.0.1",
+        zmq_monitor=False,
+        **extras,
+    ):
+        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(_id)).hexdigest()
         self._closing = False
-        self.context = zmq.Context()
+        self.context = zmq.asyncio.Context()
         self._socket = self.context.socket(zmq.SUB)
-        if self.opts["zmq_filtering"]:
+        self._socket.setsockopt(zmq.LINGER, -1)
+        if zmq_filtering:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b"broadcast")
-            if self.opts.get("__role") == "syndic":
+            if role == "syndic":
                 self._socket.setsockopt(zmq.SUBSCRIBE, b"syndic")
             else:
                 self._socket.setsockopt(
@@ -131,58 +157,75 @@ class PublishClient(salt.transport.base.PublishClient):
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b"")
 
-        self._socket.setsockopt(
-            zmq.IDENTITY, salt.utils.stringutils.to_bytes(self.opts["id"])
-        )
+        if _id:
+            self._socket.setsockopt(zmq.IDENTITY, salt.utils.stringutils.to_bytes(_id))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, "TCP_KEEPALIVE"):
-            self._socket.setsockopt(zmq.TCP_KEEPALIVE, self.opts["tcp_keepalive"])
-            self._socket.setsockopt(
-                zmq.TCP_KEEPALIVE_IDLE, self.opts["tcp_keepalive_idle"]
-            )
-            self._socket.setsockopt(
-                zmq.TCP_KEEPALIVE_CNT, self.opts["tcp_keepalive_cnt"]
-            )
-            self._socket.setsockopt(
-                zmq.TCP_KEEPALIVE_INTVL, self.opts["tcp_keepalive_intvl"]
-            )
+            self._socket.setsockopt(zmq.TCP_KEEPALIVE, tcp_keepalive)
+            self._socket.setsockopt(zmq.TCP_KEEPALIVE_IDLE, tcp_keepalive_idle)
+            self._socket.setsockopt(zmq.TCP_KEEPALIVE_CNT, tcp_keepalive_cnt)
+            self._socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, tcp_keepalive_intvl)
 
-        recon_delay = self.opts["recon_default"]
-
-        if self.opts["recon_randomize"]:
+        if recon_randomize:
             recon_delay = randint(
-                self.opts["recon_default"],
-                self.opts["recon_default"] + self.opts["recon_max"],
+                recon_default,
+                recon_default + recon_max,
             )
 
             log.debug(
                 "Generated random reconnect delay between '%sms' and '%sms' (%s)",
-                self.opts["recon_default"],
-                self.opts["recon_default"] + self.opts["recon_max"],
+                recon_delay,
+                recon_delay + recon_max,
                 recon_delay,
             )
 
-        log.debug("Setting zmq_reconnect_ivl to '%sms'", recon_delay)
-        self._socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+            log.debug("Setting zmq_reconnect_ivl to '%sms'", recon_delay)
+            self._socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
-        if hasattr(zmq, "RECONNECT_IVL_MAX"):
-            log.debug(
-                "Setting zmq_reconnect_ivl_max to '%sms'",
-                self.opts["recon_default"] + self.opts["recon_max"],
-            )
+            if hasattr(zmq, "RECONNECT_IVL_MAX"):
+                log.debug(
+                    "Setting zmq_reconnect_ivl_max to '%sms'",
+                    recon_delay + recon_max,
+                )
 
-            self._socket.setsockopt(zmq.RECONNECT_IVL_MAX, self.opts["recon_max"])
+                self._socket.setsockopt(zmq.RECONNECT_IVL_MAX, recon_max)
 
-        if (self.opts["ipv6"] is True or ":" in self.opts["master_ip"]) and hasattr(
-            zmq, "IPV4ONLY"
-        ):
+        if (ipv6 is True or ":" in master_ip) and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
+        self.poller = zmq.Poller()
+        self.poller.register(self._socket, zmq.POLLIN)
+
+        if HAS_ZMQ_MONITOR and zmq_monitor:
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
+
+    def __init__(self, opts, io_loop, **kwargs):
+        super().__init__(opts, io_loop, **kwargs)
+        self.opts = opts
+        self.io_loop = io_loop
+        self._legacy_setup(
+            _id=opts.get("id", ""),
+            role=opts.get("__role", ""),
+            **opts,
+        )
+        self.connect_called = False
+        self.callbacks = {}
+
+        self.host = kwargs.get("host", None)
+        self.port = kwargs.get("port", None)
+        self.path = kwargs.get("path", None)
+        self.source_ip = self.opts.get("source_ip")
+        self.source_port = self.opts.get("source_publish_port")
+        if self.host is None and self.port is None:
+            if self.path is None:
+                raise Exception("A host and port or a path must be provided")
+        elif self.host and self.port:
+            if self.path:
+                raise Exception("A host and port or a path must be provided, not both")
+        self.on_recv_task = None
 
     def close(self):
         if self._closing is True:
@@ -197,6 +240,11 @@ class PublishClient(salt.transport.base.PublishClient):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
+        callbacks = self.callbacks
+        self.callbacks = {}
+        for callback, (running, task) in callbacks.items():
+            running.clear()
+        return
 
     # pylint: enable=W1701
     def __enter__(self):
@@ -206,75 +254,117 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
-    @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    async def connect(
+        self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
+    ):
         self._connect_called = True
-        self.publish_port = publish_port
-        log.debug(
-            "Connecting the Minion to the Master publish port, using the URI: %s",
-            self.master_pub,
-        )
-        log.debug("%r connecting to %s", self, self.master_pub)
-        self._socket.connect(self.master_pub)
-        if connect_callback is not None:
-            connect_callback(True)
+        if port is not None:
+            self.port = port
+        if self.path:
+            pub_uri = f"ipc://{self.path}"
+            log.debug("Connecting the publisher client to: %s", pub_uri)
+            self._socket.connect(pub_uri)
+        else:
+            # host = self.opts["master_ip"],
+            if port is not None:
+                self.port = port
+            master_pub_uri = _get_master_uri(
+                self.host, self.port, self.source_ip, self.source_port
+            )
+            log.debug(
+                "Connecting the Minion to the Master publish port, using the URI: %s",
+                master_pub_uri,
+            )
+            self._socket.connect(master_pub_uri)
+        if connect_callback:
+            await connect_callback(True)
 
-    @property
-    def master_pub(self):
-        """
-        Return the master publish port
-        """
-        return _get_master_uri(
-            self.opts["master_ip"],
-            self.publish_port,
-            source_ip=self.opts.get("source_ip"),
-            source_port=self.opts.get("source_publish_port"),
-        )
+    async def connect_uri(self, uri, connect_callback=None, disconnect_callback=None):
+        self._connect_called = True
+        log.debug("Connecting the publisher client to: %s", uri)
+        # log.debug("%r connecting to %s", self, self.master_pub)
+        self.uri = uri
+        self._socket.connect(uri)
+        if connect_callback:
+            await connect_callback(True)
 
-    @salt.ext.tornado.gen.coroutine
     def _decode_messages(self, messages):
         """
         Take the zmq messages, decrypt/decode them into a payload
 
         :param list messages: A list of messages to be decoded
         """
-        messages_len = len(messages)
-        # if it was one message, then its old style
-        if messages_len == 1:
-            payload = salt.payload.loads(messages[0])
-        # 2 includes a header which says who should do it
-        elif messages_len == 2:
-            message_target = salt.utils.stringutils.to_str(messages[0])
-            if (
-                self.opts.get("__role") != "syndic"
-                and message_target not in ("broadcast", self.hexid)
-            ) or (
-                self.opts.get("__role") == "syndic"
-                and message_target not in ("broadcast", "syndic")
-            ):
-                log.debug("Publish received for not this minion: %s", message_target)
-                raise salt.ext.tornado.gen.Return(None)
-            payload = salt.payload.loads(messages[1])
-        else:
-            raise Exception(
-                "Invalid number of messages ({}) in zeromq pubmessage from master".format(
-                    len(messages_len)
+        if isinstance(messages, list):
+            messages_len = len(messages)
+            # if it was one message, then its old style
+            if messages_len == 1:
+                payload = salt.payload.loads(messages[0])
+            # 2 includes a header which says who should do it
+            elif messages_len == 2:
+                message_target = salt.utils.stringutils.to_str(messages[0])
+                if (
+                    self.opts.get("__role") != "syndic"
+                    and message_target not in ("broadcast", self.hexid)
+                ) or (
+                    self.opts.get("__role") == "syndic"
+                    and message_target not in ("broadcast", "syndic")
+                ):
+                    log.debug(
+                        "Publish received for not this minion: %s", message_target
+                    )
+                    return None
+                payload = salt.payload.loads(messages[1])
+            else:
+                raise Exception(
+                    "Invalid number of messages ({}) in zeromq pubmessage from master".format(
+                        len(messages_len)
+                    )
                 )
-            )
+        else:
+            payload = salt.payload.loads(messages)
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation
-        raise salt.ext.tornado.gen.Return(payload)
+        return payload
 
-    @property
-    def stream(self):
-        """
-        Return the current zmqstream, creating one if necessary
-        """
-        if not hasattr(self, "_stream"):
-            self._stream = zmq.eventloop.zmqstream.ZMQStream(
-                self._socket, io_loop=self.io_loop
-            )
-        return self._stream
+    async def recv(self, timeout=None):
+        if timeout == 0:
+            events = self.poller.poll(timeout=timeout)
+            if events:
+                return await self._socket.recv()
+        elif timeout:
+            try:
+                return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
+            except asyncio.exceptions.TimeoutError:
+                log.trace("PublishClient recieve timedout: %d", timeout)
+        else:
+            return await self._socket.recv()
+
+    async def send(self, msg):
+        return
+        # raise Exception("Send not supported")
+        # await self._socket.send(msg)
+
+    # async def on_recv_handler(self, callback):
+    #    while not self._socket:
+    #        # Retry quickly, we may want to increase this if it's hogging cpu.
+    #        await asyncio.sleep(0.003)
+    #    while True:
+    #        msg = await self.recv()
+    #        if msg:
+    #            await callback(msg)
+
+    # def on_recv(self, callback):
+    #    """
+    #    Register a callback for received messages (that we didn't initiate)
+    #    """
+    #    if self.on_recv_task:
+    #        # XXX: We are not awaiting this canceled task. This still needs to
+    #        # be addressed.
+    #        self.on_recv_task.cancel()
+    #    if callback is None:
+    #        self.on_recv_task = None
+    #    else:
+    #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
         """
@@ -282,16 +372,37 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
-        try:
-            return self.stream.on_recv(callback)
-        except OSError as exc:
-            if callback is None and str(exc) == "Stream is closed":
-                return
-            raise
+        if callback is None:
+            callbacks = self.callbacks
+            self.callbacks = {}
+            for callback, (running, task) in callbacks.items():
+                running.clear()
+            return
 
-    @salt.ext.tornado.gen.coroutine
-    def send(self, msg):
-        self.stream.send(msg, noblock=True)
+        running = asyncio.Event()
+        running.set()
+
+        async def consume(running):
+            try:
+                while running.is_set():
+                    try:
+                        msg = await self.recv(timeout=None)
+                    except zmq.error.ZMQError as exc:
+                        # We've disconnected just die
+                        break
+                    if msg:
+                        try:
+                            await callback(msg)
+                        except Exception:  # pylint: disable=broad-except
+                            log.error("Exception while running callback", exc_info=True)
+                    # log.debug("Callback done %r", callback)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Exception while consuming%s %s", self.uri, exc, exc_info=True
+                )
+
+        task = self.io_loop.spawn_callback(consume, running)
+        self.callbacks[callback] = running, task
 
 
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
@@ -300,6 +411,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._closing = False
         self._monitor = None
         self._w_monitor = None
+        self.tasks = set()
+        self._event = asyncio.Event()
 
     def zmq_device(self):
         """
@@ -364,6 +477,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             return
         log.info("MWorkerQueue under PID %s is closing", os.getpid())
         self._closing = True
+        self._event.set()
         if getattr(self, "_monitor", None) is not None:
             self._monitor.stop()
             self._monitor = None
@@ -380,6 +494,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
+        for task in list(self.tasks):
+            try:
+                task.cancel()
+            except RuntimeError:
+                log.error("IOLoop closed when trying to cancel task")
 
     def pre_fork(self, process_manager):
         """
@@ -412,8 +531,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
-        context = zmq.Context(1)
-        self._socket = context.socket(zmq.REP)
+        # context = zmq.Context(1)
+        self.context = zmq.asyncio.Context(1)
+        self._socket = self.context.socket(zmq.REP)
         # Linger -1 means we'll never discard messages.
         self._socket.setsockopt(zmq.LINGER, -1)
         self._start_zmq_monitor()
@@ -432,20 +552,33 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             os.path.join(self.opts["sock_dir"], "workers.ipc")
         ):
             os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
-        self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
         self.message_handler = message_handler
-        self.stream.on_recv_stream(self.handle_message)
 
-    @salt.ext.tornado.gen.coroutine
-    def handle_message(self, stream, payload):
+        async def callback():
+            task = asyncio.create_task(self.request_handler())
+            task.add_done_callback(self.tasks.discard)
+            self.tasks.add(task)
+
+        io_loop.add_callback(callback)
+
+    async def request_handler(self):
+        while not self._event.is_set():
+            try:
+                request = await asyncio.wait_for(self._socket.recv(), 0.3)
+                reply = await self.handle_message(None, request)
+                await self._socket.send(self.encode_payload(reply))
+            except asyncio.exceptions.TimeoutError:
+                continue
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Exception in request handler", exc_info=True)
+                break
+
+    async def handle_message(self, stream, payload):
         try:
             payload = self.decode_payload(payload)
         except salt.exceptions.SaltDeserializationError:
-            self.stream.send(self.encode_payload({"msg": "bad load"}))
-            return
-        # XXX: Is header really needed?
-        reply = yield self.message_handler(payload)
-        self.stream.send(self.encode_payload(reply))
+            return {"msg": "bad load"}
+        return await self.message_handler(payload)
 
     def encode_payload(self, payload):
         return salt.payload.dumps(payload)
@@ -466,7 +599,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def decode_payload(self, payload):
-        payload = salt.payload.loads(payload[0])
+        payload = salt.payload.loads(payload)
         return payload
 
 
@@ -494,7 +627,6 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
-# TODO: unit tests!
 class AsyncReqMessageClient:
     """
     This class wraps the underlying zeromq REQ socket and gives a future-based
@@ -514,11 +646,15 @@ class AsyncReqMessageClient:
                            http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         """
+        salt.utils.versions.warn_until(
+            3009,
+            "AsyncReqMessageClient has been deprecated and will be removed.",
+        )
         self.opts = opts
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -527,9 +663,7 @@ class AsyncReqMessageClient:
         self.send_queue = []
 
         self._closing = False
-        self._send_future_map = {}
-        self.lock = salt.ext.tornado.locks.Lock()
-        self.ident = threading.get_ident()
+        self.lock = tornado.locks.Lock()
 
     def connect(self):
         if hasattr(self, "socket") and self.socket:
@@ -565,12 +699,12 @@ class AsyncReqMessageClient:
         self.socket.setsockopt(zmq.LINGER, self.linger)
         self.socket.connect(self.addr)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
-        future = salt.ext.tornado.concurrent.Future()
+        future = tornado.concurrent.Future()
 
         message = salt.payload.dumps(message)
 
@@ -594,13 +728,13 @@ class AsyncReqMessageClient:
 
         recv = yield future
 
-        raise salt.ext.tornado.gen.Return(recv)
+        raise tornado.gen.Return(recv)
 
     def _timeout_message(self, future):
         if not future.done():
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _send_recv(self, message, future):
         try:
             with (yield self.lock.acquire()):
@@ -632,14 +766,29 @@ class ZeroMQSocketMonitor:
         """
         self._socket = socket
         self._monitor_socket = self._socket.get_monitor_socket()
-        self._monitor_stream = None
+        self._monitor_task = None
+        self._running = asyncio.Event()
 
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
-        self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(
-            self._monitor_socket, io_loop=io_loop
-        )
-        self._monitor_stream.on_recv(self.monitor_callback)
+        self._running.set()
+        io_loop.spawn_callback(self.consume)
+
+    async def consume(self):
+        while self._running.is_set():
+            try:
+                if await self._monitor_socket.poll():
+                    msg = await self._monitor_socket.recv_multipart()
+                    self.monitor_callback(msg)
+                else:
+                    await asyncio.sleep(0.3)
+            except zmq.error.ZMQError as exc:
+                log.error("ZmqMonitor, %s", exc)
+                # We've disconnected just die
+                break
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("ZmqMonitor, %s", exc)
+                break
 
     def start_poll(self):
         log.trace("Event monitor start!")
@@ -678,10 +827,8 @@ class ZeroMQSocketMonitor:
         except zmq.Error:
             pass
         self._socket = None
+        self._running.clear()
         self._monitor_socket = None
-        if self._monitor_stream is not None:
-            self._monitor_stream.close()
-            self._monitor_stream = None
         log.trace("Event monitor done!")
 
 
@@ -690,13 +837,73 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     Encapsulate synchronous operations for a publisher channel
     """
 
-    _sock_data = threading.local()
+    async_methods = [
+        "publish",
+    ]
+    close_methods = [
+        "close",
+    ]
 
-    def __init__(self, opts):
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        started=None,
+    ):
         self.opts = opts
+        self.pub_host = pub_host
+        self.pub_port = pub_port
+        self.pub_path = pub_path
+        if pub_path:
+            self.pub_uri = f"ipc://{pub_path}"
+        else:
+            self.pub_uri = f"tcp://{pub_host}:{pub_port}"
+        self.pull_host = pull_host
+        self.pull_port = pull_port
+        self.pull_path = pull_path
+        self.pub_path_perms = pub_path_perms
+        self.pull_path_perms = pull_path_perms
+        if pull_path:
+            self.pull_uri = f"ipc://{pull_path}"
+        else:
+            self.pull_uri = f"tcp://{pull_host}:{pull_port}"
+        self.ctx = None
+        self.sock = None
+        self.daemon_context = None
+        self.daemon_pub_sock = None
+        self.daemon_pull_sock = None
+        self.daemon_monitor = None
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
-    def connect(self):
-        return salt.ext.tornado.gen.sleep(5)
+    def __repr__(self):
+        return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
+
+    def __setstate__(self, state):
+        self.__init__(**state)
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "pub_host": self.pub_host,
+            "pub_port": self.pub_port,
+            "pub_path": self.pub_path,
+            "pull_host": self.pull_host,
+            "pull_port": self.pull_port,
+            "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
+            "started": self.started,
+        }
 
     def publish_daemon(
         self,
@@ -708,15 +915,19 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        ioloop = salt.ext.tornado.ioloop.IOLoop()
-        ioloop.make_current()
-        self.io_loop = ioloop
-        context = zmq.Context(1)
+        ioloop = tornado.ioloop.IOLoop()
+        ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)
+        try:
+            ioloop.start()
+        finally:
+            self.close()
+
+    def _get_sockets(self, context, ioloop):
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(ioloop)
         _set_tcp_keepalive(pub_sock, self.opts)
-        self.dpub_sock = pub_sock = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
+        self.dpub_sock = pub_sock  # = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get("pub_hwm", 1000))
@@ -729,62 +940,58 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+
         pub_sock.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         pub_sock.setsockopt(zmq.LINGER, -1)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
-        pull_sock = zmq.eventloop.zmqstream.ZMQStream(pull_sock)
+        pull_sock.setsockopt(zmq.LINGER, -1)
+        # pull_sock = zmq.eventloop.zmqstream.ZMQStream(pull_sock)
         pull_sock.setsockopt(zmq.LINGER, -1)
         salt.utils.zeromq.check_ipc_path_max_len(self.pull_uri)
         # Start the minion command publisher
-        log.info("Starting the Salt Publisher on %s", self.pub_uri)
-        pub_sock.bind(self.pub_uri)
         # Securely create socket
-        log.info("Starting the Salt Puller on %s", self.pull_uri)
         with salt.utils.files.set_umask(0o177):
+            log.info("Starting the Salt Publisher on %s", self.pub_uri)
+            pub_sock.bind(self.pub_uri)
+            if self.pub_path:
+                os.chmod(  # nosec
+                    self.pub_path,
+                    self.pub_path_perms,
+                )
+            log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
+            if self.pull_path:
+                os.chmod(  # nosec
+                    self.pull_path,
+                    self.pull_path_perms,
+                )
+        return pull_sock, pub_sock, monitor
 
-        @salt.ext.tornado.gen.coroutine
-        def on_recv(packages):
+    async def publisher(self, publish_payload, ioloop=None):
+        if ioloop is None:
+            ioloop = tornado.ioloop.IOLoop.current()
+        self.daemon_context = zmq.asyncio.Context()
+        (
+            self.daemon_pull_sock,
+            self.daemon_pub_sock,
+            self.daemon_monitor,
+        ) = self._get_sockets(self.daemon_context, ioloop)
+        self.started.set()
+        while True:
             try:
-                for package in packages:
-                    payload = salt.payload.loads(package)
-                    yield publish_payload(payload)
+                package = await self.daemon_pull_sock.recv()
+                await publish_payload(package)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Un-handled error in publisher %s",
+                    "Exception in publisher %s %s",
+                    self.pull_uri,
                     exc,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
 
-        pull_sock.on_recv(on_recv)
-        try:
-            ioloop.start()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            pub_sock.close()
-            pull_sock.close()
-
-    @property
-    def pull_uri(self):
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        return pull_uri
-
-    @property
-    def pub_uri(self):
-        return "tcp://{interface}:{publish_port}".format(**self.opts)
-
-    @salt.ext.tornado.gen.coroutine
-    def publish_payload(self, payload, topic_list=None):
-        payload = salt.payload.dumps(payload)
+    async def publish_payload(self, payload, topic_list=None):
+        log.trace("Publish payload %r", payload)
         if self.opts["zmq_filtering"]:
             if topic_list:
                 for topic in topic_list:
@@ -794,22 +1001,22 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     htopic = salt.utils.stringutils.to_bytes(
                         hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    yield self.dpub_sock.send_multipart([htopic, payload])
+                    await self.dpub_sock.send_multipart([htopic, payload])
                     log.trace("Filtered data has been sent")
                 # Syndic broadcast
                 if self.opts.get("order_masters"):
                     log.trace("Sending filtered data to syndic")
-                    yield self.dpub_sock.send_multipart([b"syndic", payload])
+                    await self.dpub_sock.send_multipart([b"syndic", payload])
                     log.trace("Filtered data has been sent to syndic")
             # otherwise its a broadcast
             else:
                 # TODO: constants file for "broadcast"
                 log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
-                yield self.dpub_sock.send_multipart([b"broadcast", payload])
+                await self.dpub_sock.send_multipart([b"broadcast", payload])
                 log.trace("Broadcasted data has been sent")
         else:
             log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)
-            yield self.dpub_sock.send(payload)
+            await self.dpub_sock.send(payload)
             log.trace("Unfiltered data has been sent")
 
     def pre_fork(self, process_manager):
@@ -825,69 +1032,58 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             args=(self.publish_payload,),
         )
 
-    @property
-    def pub_sock(self):
-        """
-        This thread's zmq publisher socket. This socket is stored on the class
-        so that multiple instantiations in the same thread will re-use a single
-        zmq socket.
-        """
-        try:
-            return self._sock_data.sock
-        except AttributeError:
-            pass
-
-    def pub_connect(self):
+    def connect(self, timeout=None):
         """
         Create and connect this thread's zmq socket. If a publisher socket
         already exists "pub_close" is called before creating and connecting a
         new socket.
         """
-        if self.pub_sock:
-            self.pub_close()
-        ctx = zmq.Context()
-        self._sock_data.sock = ctx.socket(zmq.PUSH)
-        self.pub_sock.setsockopt(zmq.LINGER, -1)
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        log.debug("Connecting to pub server: %s", pull_uri)
-        self.pub_sock.connect(pull_uri)
-        return self._sock_data.sock
+        log.debug("Connecting to pub server: %s", self.pull_uri)
+        self.ctx = zmq.asyncio.Context()
+        self.sock = self.ctx.socket(zmq.PUSH)
+        self.sock.setsockopt(zmq.LINGER, 300)
+        self.sock.connect(self.pull_uri)
+        return self.sock
 
-    def pub_close(self):
+    def close(self):
         """
         Disconnect an existing publisher socket and remove it from the local
         thread's cache.
         """
-        if hasattr(self._sock_data, "sock"):
-            self._sock_data.sock.close()
-            delattr(self._sock_data, "sock")
+        if self.sock is not None:
+            sock = self.sock
+            self.sock = None
+            sock.close()
+        if self.ctx and self.ctx.closed is False:
+            ctx = self.ctx
+            self.ctx = None
+            ctx.term()
+        if self.daemon_monitor:
+            self.daemon_monitor.stop()
+        if self.daemon_pub_sock:
+            self.daemon_pub_sock.close()
+        if self.daemon_pull_sock:
+            self.daemon_pull_sock.close()
+        if self.daemon_context:
+            self.daemon_context.destroy(1)
+            self.daemon_context.term()
 
-    def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
 
         :param dict load: A load to be sent across the wire to minions
         """
-        if not self.pub_sock:
-            self.pub_connect()
-        serialized = salt.payload.dumps(payload)
-        self.pub_sock.send(serialized)
-        log.debug("Sent payload to publish daemon.")
+        if not self.sock:
+            self.connect()
+        await self.sock.send(payload)
 
     @property
     def topic_support(self):
         return self.opts.get("zmq_filtering", False)
-
-    def close(self):
-        self.pub_close()
 
     def __enter__(self):
         return self
@@ -900,34 +1096,94 @@ class RequestClient(salt.transport.base.RequestClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop):  # pylint: disable=W0231
+    def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231
         super().__init__(opts, io_loop)
         self.opts = opts
-        master_uri = self.get_master_uri(opts)
-        self.message_client = AsyncReqMessageClient(
-            self.opts,
-            master_uri,
-            io_loop=io_loop,
-        )
+        # XXX Support host, port, path, instead of using get_master_uri
+        self.master_uri = self.get_master_uri(opts)
+        self.linger = linger
+        if io_loop is None:
+            self.io_loop = tornado.ioloop.IOLoop.current()
+        else:
+            self.io_loop = io_loop
+        self.context = None
+        self.send_queue = []
+        # mapping of message -> future
+        self.send_future_map = {}
         self._closing = False
-        self._connect_called = False
+        self.socket = None
+        self.sending = asyncio.Lock()
 
-    @salt.ext.tornado.gen.coroutine
-    def connect(self):
-        self._connect_called = True
-        self.message_client.connect()
+    async def connect(self):  # pylint: disable=invalid-overridden-method
+        if self.socket is None:
+            self._connect_called = True
+            self._closing = False
+            # wire up sockets
+            self._init_socket()
 
-    @salt.ext.tornado.gen.coroutine
-    def send(self, load, timeout=60):
-        yield self.connect()
-        ret = yield self.message_client.send(load, timeout=timeout)
-        raise salt.ext.tornado.gen.Return(ret)
+    def _init_socket(self):
+        if self.socket is not None:
+            self.context = zmq.asyncio.Context()
+            self.socket.close()  # pylint: disable=E0203
+            del self.socket
+        self.context = zmq.asyncio.Context()
+        self.socket = self.context.socket(zmq.REQ)
+        self.socket.setsockopt(zmq.LINGER, -1)
 
+        # socket options
+        if hasattr(zmq, "RECONNECT_IVL_MAX"):
+            self.socket.setsockopt(zmq.RECONNECT_IVL_MAX, 5000)
+
+        _set_tcp_keepalive(self.socket, self.opts)
+        if self.master_uri.startswith("tcp://["):
+            # Hint PF type if bracket enclosed IPv6 address
+            if hasattr(zmq, "IPV6"):
+                self.socket.setsockopt(zmq.IPV6, 1)
+            elif hasattr(zmq, "IPV4ONLY"):
+                self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        self.socket.linger = self.linger
+        self.socket.connect(self.master_uri)
+
+    # TODO: timeout all in-flight sessions, or error
     def close(self):
         if self._closing:
             return
         self._closing = True
-        self.message_client.close()
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+        if self.context and self.context.closed is False:
+            # This hangs if closing the stream causes an import error
+            self.context.term()
+            self.context = None
+
+    async def _send_recv(self, message):
+        message = salt.payload.dumps(message)
+        async with self.sending:
+            try:
+                await self.socket.send(message)
+                ret = await self.socket.recv()
+            except zmq.error.ZMQError:
+                self.close()
+                await self.connect()
+                await self.socket.send(message)
+                ret = await self.socket.recv()
+        return salt.payload.loads(ret)
+
+    async def send(self, load, timeout=60):
+        """
+        Return a future which will be completed when the message has a response
+        """
+        if not self.socket:
+            await self.connect()
+        try:
+            return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
+        except (asyncio.exceptions.TimeoutError, TimeoutError):
+            self.close()
+            raise SaltReqTimeoutError("Request client send timedout")
+        except Exception:
+            self.close()
+            raise
 
     @staticmethod
     def get_master_uri(opts):

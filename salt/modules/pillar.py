@@ -189,7 +189,7 @@ def get(
     return ret
 
 
-def items(*args, **kwargs):
+def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     """
     Calls the master for a fresh pillar and generates the pillar data on the
     fly
@@ -242,17 +242,15 @@ def items(*args, **kwargs):
     """
     # Preserve backwards compatibility
     if args:
-        return item(*args)
+        return item(*args, pillarenv=pillarenv, saltenv=saltenv)
 
-    pillarenv = kwargs.get("pillarenv")
     if pillarenv is None:
         if __opts__.get("pillarenv_from_saltenv", False):
-            pillarenv = kwargs.get("saltenv") or __opts__["saltenv"]
+            pillarenv = saltenv or __opts__["saltenv"]
         else:
             pillarenv = __opts__["pillarenv"]
 
-    pillar_override = kwargs.get("pillar")
-    pillar_enc = kwargs.get("pillar_enc")
+    pillar_override = pillar
 
     if pillar_override and pillar_enc:
         try:
@@ -277,7 +275,56 @@ def items(*args, **kwargs):
 
 
 # Allow pillar.data to also be used to return pillar data
-data = salt.utils.functools.alias_function(items, "data")
+def data(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+    """
+    Calls the master for a fresh pillar, generates the pillar data on the
+    fly (same as :py:func:`items`)
+
+    pillar
+        If specified, allows for a dictionary of pillar data to be made
+        available to pillar and ext_pillar rendering. these pillar variables
+        will also override any variables of the same name in pillar or
+        ext_pillar.
+
+    pillar_enc
+        If specified, the data passed in the ``pillar`` argument will be passed
+        through this renderer to decrypt it.
+
+        .. note::
+            This will decrypt on the minion side, so the specified renderer
+            must be set up on the minion for this to work. Alternatively,
+            pillar data can be decrypted master-side. For more information, see
+            the :ref:`Pillar Encryption <pillar-encryption>` documentation.
+            Pillar data that is decrypted master-side, is not decrypted until
+            the end of pillar compilation though, so minion-side decryption
+            will be necessary if the encrypted pillar data must be made
+            available in an decrypted state pillar/ext_pillar rendering.
+
+    pillarenv
+        Pass a specific pillar environment from which to compile pillar data.
+        If not specified, then the minion's :conf_minion:`pillarenv` option is
+        not used, and if that also is not specified then all configured pillar
+        environments will be merged into a single pillar dictionary and
+        returned.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pillar.data
+    """
+
+    return items(
+        *args,
+        pillar=pillar,
+        pillar_enc=pillar_enc,
+        pillarenv=pillarenv,
+        saltenv=saltenv,
+    )
 
 
 def _obfuscate_inner(var):
@@ -296,7 +343,7 @@ def _obfuscate_inner(var):
         return f"<{var.__class__.__name__}>"
 
 
-def obfuscate(*args, **kwargs):
+def obfuscate(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     """
     .. versionadded:: 2015.8.0
 
@@ -323,17 +370,56 @@ def obfuscate(*args, **kwargs):
         salt '*' pillar.obfuscate
 
     """
-    return _obfuscate_inner(items(*args, **kwargs))
+    return _obfuscate_inner(
+        items(
+            *args,
+            pillar=pillar,
+            pillar_enc=pillar_enc,
+            pillarenv=pillarenv,
+            saltenv=saltenv,
+        )
+    )
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
 # identifier rule.
-def ls(*args):
+def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     """
     .. versionadded:: 2015.8.0
 
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`), but only shows the available main keys.
+
+    pillar
+        If specified, allows for a dictionary of pillar data to be made
+        available to pillar and ext_pillar rendering. these pillar variables
+        will also override any variables of the same name in pillar or
+        ext_pillar.
+
+    pillar_enc
+        If specified, the data passed in the ``pillar`` argument will be passed
+        through this renderer to decrypt it.
+
+        .. note::
+            This will decrypt on the minion side, so the specified renderer
+            must be set up on the minion for this to work. Alternatively,
+            pillar data can be decrypted master-side. For more information, see
+            the :ref:`Pillar Encryption <pillar-encryption>` documentation.
+            Pillar data that is decrypted master-side, is not decrypted until
+            the end of pillar compilation though, so minion-side decryption
+            will be necessary if the encrypted pillar data must be made
+            available in an decrypted state pillar/ext_pillar rendering.
+
+    pillarenv
+        Pass a specific pillar environment from which to compile pillar data.
+        If not specified, then the minion's :conf_minion:`pillarenv` option is
+        not used, and if that also is not specified then all configured pillar
+        environments will be merged into a single pillar dictionary and
+        returned.
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     CLI Examples:
 
@@ -342,10 +428,18 @@ def ls(*args):
         salt '*' pillar.ls
     """
 
-    return list(items(*args))
+    return list(
+        items(
+            *args,
+            pillar=pillar,
+            pillar_enc=pillar_enc,
+            pillarenv=pillarenv,
+            saltenv=saltenv,
+        )
+    )
 
 
-def item(*args, **kwargs):
+def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     """
     .. versionadded:: 0.16.2
 
@@ -399,10 +493,12 @@ def item(*args, **kwargs):
         salt '*' pillar.item foo bar baz
     """
     ret = {}
-    default = kwargs.get("default", "")
-    delimiter = kwargs.get("delimiter", DEFAULT_TARGET_DELIM)
-    pillarenv = kwargs.get("pillarenv", None)
-    saltenv = kwargs.get("saltenv", None)
+
+    if default is None:
+        default = ""
+
+    if delimiter is None:
+        delimiter = DEFAULT_TARGET_DELIM
 
     pillar_dict = (
         __pillar__
@@ -413,7 +509,7 @@ def item(*args, **kwargs):
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
-                pillar_dict, arg, default, delimiter
+                data=pillar_dict, key=arg, default=default, delimiter=delimiter
             )
     except KeyError:
         pass

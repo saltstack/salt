@@ -125,6 +125,51 @@ class Master(
             self.master.process_manager._handle_signals(signum, sigframe)
         super()._handle_signals(signum, sigframe)
 
+    def verify_environment(self):
+        if not self.config["verify_env"]:
+            return
+        v_dirs = [
+            self.config["pki_dir"],
+            os.path.join(self.config["pki_dir"], "minions"),
+            os.path.join(self.config["pki_dir"], "minions_pre"),
+            os.path.join(self.config["pki_dir"], "minions_denied"),
+            os.path.join(self.config["pki_dir"], "minions_autosign"),
+            os.path.join(self.config["pki_dir"], "minions_rejected"),
+            self.config["cachedir"],
+            os.path.join(self.config["cachedir"], "jobs"),
+            os.path.join(self.config["cachedir"], "proc"),
+            self.config["sock_dir"],
+            self.config["token_dir"],
+            self.config["syndic_dir"],
+            self.config["sqlite_queue_dir"],
+        ]
+        pki_dir = self.config["pki_dir"]
+        if (
+            self.config["cluster_id"]
+            and self.config["cluster_pki_dir"]
+            and self.config["cluster_pki_dir"] != self.config["pki_dir"]
+        ):
+            v_dirs.extend(
+                [
+                    self.config["cluster_pki_dir"],
+                    os.path.join(self.config["cluster_pki_dir"], "peers"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_pre"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_denied"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_autosign"),
+                    os.path.join(self.config["cluster_pki_dir"], "minions_rejected"),
+                ]
+            )
+            pki_dir = [self.config["pki_dir"], self.config["cluster_pki_dir"]]
+
+        verify_env(
+            v_dirs,
+            self.config["user"],
+            permissive=self.config["permissive_pki_access"],
+            root_dir=self.config["root_dir"],
+            pki_dir=pki_dir,
+        )
+
     def prepare(self):
         """
         Run the preparation sequence required to start a salt master server.
@@ -136,32 +181,7 @@ class Master(
         super().prepare()
 
         try:
-            if self.config["verify_env"]:
-                v_dirs = [
-                    self.config["pki_dir"],
-                    os.path.join(self.config["pki_dir"], "minions"),
-                    os.path.join(self.config["pki_dir"], "minions_pre"),
-                    os.path.join(self.config["pki_dir"], "minions_denied"),
-                    os.path.join(self.config["pki_dir"], "minions_autosign"),
-                    os.path.join(self.config["pki_dir"], "minions_rejected"),
-                    self.config["cachedir"],
-                    os.path.join(self.config["cachedir"], "jobs"),
-                    os.path.join(self.config["cachedir"], "proc"),
-                    self.config["sock_dir"],
-                    self.config["token_dir"],
-                    self.config["syndic_dir"],
-                    self.config["sqlite_queue_dir"],
-                ]
-                verify_env(
-                    v_dirs,
-                    self.config["user"],
-                    permissive=self.config["permissive_pki_access"],
-                    root_dir=self.config["root_dir"],
-                    pki_dir=self.config["pki_dir"],
-                )
-                # Clear out syndics from cachedir
-                for syndic_file in os.listdir(self.config["syndic_dir"]):
-                    os.remove(os.path.join(self.config["syndic_dir"], syndic_file))
+            self.verify_environment()
         except OSError as error:
             self.environment_failure(error)
 

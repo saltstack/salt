@@ -1,15 +1,11 @@
 import logging
 import os
-import plistlib
-import pprint
 
 import msgpack
 import pytest
 
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 import salt.utils.files
@@ -32,9 +28,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -75,18 +69,6 @@ def test_serialize():
         assert salt.utils.json.loads(returner.returned) == dataset
         filestate.serialize("/tmp", dataset, formatter="json")
         assert salt.utils.json.loads(returner.returned) == dataset
-
-        # plist
-        filestate.serialize("/tmp", dataset, serializer="plist")
-        assert plistlib.loads(returner.returned) == dataset
-        filestate.serialize("/tmp", dataset, formatter="plist")
-        assert plistlib.loads(returner.returned) == dataset
-
-        # Python
-        filestate.serialize("/tmp", dataset, serializer="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
-        filestate.serialize("/tmp", dataset, formatter="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
 
         # msgpack
         filestate.serialize("/tmp", dataset, serializer="msgpack")
@@ -495,11 +477,11 @@ def test_serialize_into_managed_file():
     assert filestate.serialize(name) == ret
 
     with patch.object(os.path, "isfile", mock_t):
-        comt = "merge_if_exists is not supported for the python serializer"
+        comt = "merge_if_exists is not supported for the json serializer"
         ret.update({"comment": comt, "result": False})
         assert (
             filestate.serialize(
-                name, dataset=True, merge_if_exists=True, formatter="python"
+                name, dataset=True, merge_if_exists=True, formatter="json"
             )
             == ret
         )
@@ -518,7 +500,7 @@ def test_serialize_into_managed_file():
         with patch.dict(filestate.__opts__, {"test": True}):
             comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None, "changes": True})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # __opts__['test']=True without changes
     with patch.dict(
@@ -527,14 +509,14 @@ def test_serialize_into_managed_file():
         with patch.dict(filestate.__opts__, {"test": True}):
             comt = f"The file {name} is in the correct state"
             ret.update({"comment": comt, "result": True, "changes": False})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     mock = MagicMock(return_value=ret)
     with patch.dict(filestate.__opts__, {"test": False}):
         with patch.dict(filestate.__salt__, {"file.manage_file": mock}):
             comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # merge_if_exists deserialization error
     mock_exception = MagicMock(side_effect=TypeError("test"))

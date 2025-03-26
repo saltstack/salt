@@ -852,13 +852,12 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.6"
+        self.python_requires = ">=3.8"
         self.classifiers = [
             "Programming Language :: Python",
             "Programming Language :: Cython",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
@@ -1031,45 +1030,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 for reqfile in SALT_BASE_REQUIREMENTS:
                     install_requires += _parse_requirements_file(reqfile)
         return install_requires
-
-    @property
-    def _property_scripts(self):
-        # Scripts common to all scenarios
-        scripts = ["scripts/salt-call"]
-        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-            scripts.append("scripts/salt-ssh")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return scripts
-            scripts.extend(["scripts/salt-cloud", "scripts/spm"])
-            return scripts
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-            scripts.extend(
-                [
-                    "scripts/salt-cp",
-                    "scripts/salt-minion",
-                ]
-            )
-            return scripts
-
-        # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "scripts/salt",
-                "scripts/salt-api",
-                "scripts/salt-cloud",
-                "scripts/salt-cp",
-                "scripts/salt-key",
-                "scripts/salt-master",
-                "scripts/salt-minion",
-                "scripts/salt-proxy",
-                "scripts/salt-run",
-                "scripts/salt-ssh",
-                "scripts/salt-syndic",
-                "scripts/spm",
-            ]
-        )
-        return scripts
 
     @property
     def _property_entry_points(self):
@@ -1267,5 +1227,10 @@ class SaltDistribution(distutils.dist.Distribution):
 if __name__ == "__main__":
     warnings.warn(
         "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
+    warnings.warn(
+        "In Salt 3009, the `setup.py` file will be stripped of it's custom additions and migrated to a plain "
+        "`pyproject.toml` python package or whatever is found best during the process of removing the customizations. "
+        "If you're relying on these customizations please stop as your workflow will break in the future."
     )
     setup(distclass=SaltDistribution)

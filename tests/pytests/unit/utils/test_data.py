@@ -9,6 +9,7 @@ import pytest
 
 import salt.utils.data
 import salt.utils.stringutils
+from salt.exceptions import SaltException
 from salt.utils.odict import OrderedDict as SaltOrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM
@@ -714,6 +715,25 @@ def test_stringify():
         "4",
         "5",
     ]
+
+
+def test_to_entries():
+    data = {"a": 1, "b": 2}
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    data = ["monkey", "donkey"]
+    entries = [{"key": 0, "value": "monkey"}, {"key": 1, "value": "donkey"}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    with pytest.raises(SaltException):
+        salt.utils.data.to_entries("RAISE ON THIS")
+
+
+def test_from_entries():
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    data = {"a": 1, "b": 2}
+    assert salt.utils.data.from_entries(entries) == data
 
 
 def test_json_query():

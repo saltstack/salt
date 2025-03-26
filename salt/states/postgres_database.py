@@ -51,7 +51,12 @@ def present(
         Default tablespace for the database
 
     encoding
-        The character encoding scheme to be used in this database
+        The character encoding scheme to be used in this database. The encoding
+        has to be defined in the following format (without hyphen).
+
+        .. code-block:: yaml
+
+          - encoding: UTF8
 
     lc_collate
         The LC_COLLATE setting to be used in this database

@@ -246,6 +246,15 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
 
+    <!-- Install VC++ runtime -->
+    <DirectoryRef Id="TARGETDIR">
+    <!-- Visual C++ runtimes depend on the target platform -->
+    <?if $(var.WIN64)=yes ?>
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x64.msm" DiskId="1" Language="0" />
+    <?else ?>
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x86.msm" DiskId="1" Language="0" />
+    <?endif ?>
+    </DirectoryRef>
     <!-- Add INSTALLDIR to the system Path -->
     <DirectoryRef Id="TARGETDIR">
       <Component Id="INSTALLDIR_System_Path" Guid="A9F54641-91F8-4AFB-B812-9409E6EA0192">
@@ -258,6 +267,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Leaving registry keys would mean the product is still installed -->
     <Feature Id="ProductFeature" Title="Minion" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden"><MergeRef Id="MSM_VC143_CRT" /></Feature>
     </Feature>
 
     <!-- Get the config file template from the msi store only if no config is present -->

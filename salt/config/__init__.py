@@ -188,6 +188,14 @@ VALID_OPTS = immutabletypes.freeze(
         "pki_dir": str,
         # A unique identifier for this daemon
         "id": str,
+        # When defined we operate this master as a part of a cluster.
+        "cluster_id": str,
+        # Defines the other masters in the cluster.
+        "cluster_peers": list,
+        # Use this location instead of pki dir for cluster. This allows users
+        # to define where minion keys and the cluster private key will be
+        # stored.
+        "cluster_pki_dir": str,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -412,6 +420,8 @@ VALID_OPTS = immutabletypes.freeze(
         "permissive_pki_access": bool,
         # The passphrase of the master's private key
         "key_pass": (type(None), str),
+        # The passphrase of the master cluster's private key
+        "cluster_key_pass": (type(None), str),
         # The passphrase of the master's private signing key
         "signing_key_pass": (type(None), str),
         # The path to a directory to pull in configuration file includes
@@ -541,7 +551,6 @@ VALID_OPTS = immutabletypes.freeze(
         "proxy_keep_alive_interval": int,
         # Update intervals
         "roots_update_interval": int,
-        "azurefs_update_interval": int,
         "gitfs_update_interval": int,
         "git_pillar_update_interval": int,
         "hgfs_update_interval": int,
@@ -899,6 +908,9 @@ VALID_OPTS = immutabletypes.freeze(
         # Thin and minimal Salt extra modules
         "thin_extra_mods": str,
         "min_extra_mods": str,
+        "thin_exclude_saltexts": bool,
+        "thin_saltext_allowlist": (type(None), list),
+        "thin_saltext_blocklist": list,
         # Default returners minion should use. List or comma-delimited string
         "return": (str, list),
         # TLS/SSL connection options. This could be set to a dictionary containing arguments
@@ -1103,10 +1115,9 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
-        "gpg_decrypt_must_succeed": False,
+        "gpg_decrypt_must_succeed": True,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
-        "azurefs_update_interval": DEFAULT_INTERVAL,
         "gitfs_update_interval": DEFAULT_INTERVAL,
         "git_pillar_update_interval": DEFAULT_INTERVAL,
         "hgfs_update_interval": DEFAULT_INTERVAL,
@@ -1347,7 +1358,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
-        "gpg_decrypt_must_succeed": False,
+        "gpg_decrypt_must_succeed": True,
         "thoriumenv": None,
         "thorium_top": "top.sls",
         "thorium_interval": 0.5,
@@ -1362,7 +1373,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "local": True,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
-        "azurefs_update_interval": DEFAULT_INTERVAL,
         "gitfs_update_interval": DEFAULT_INTERVAL,
         "git_pillar_update_interval": DEFAULT_INTERVAL,
         "hgfs_update_interval": DEFAULT_INTERVAL,
@@ -1559,6 +1569,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "verify_env": True,
         "permissive_pki_access": False,
         "key_pass": None,
+        "cluster_key_pass": None,
         "signing_key_pass": None,
         "default_include": "master.d/*.conf",
         "winrepo_dir": os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo"),
@@ -1631,6 +1642,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "memcache_debug": False,
         "thin_extra_mods": "",
         "min_extra_mods": "",
+        "thin_exclude_saltexts": False,
+        "thin_saltext_allowlist": None,
+        "thin_saltext_blocklist": [],
         "ssl": None,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
@@ -1657,6 +1671,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "netapi_enable_clients": [],
         "maintenance_interval": 3600,
         "fileserver_interval": 3600,
+        "cluster_id": None,
+        "cluster_peers": [],
+        "cluster_pki_dir": None,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
     }
@@ -3268,7 +3285,9 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         # Let's get the value from the profile, if present
         if "profile" in vm_ and vm_["profile"] is not None:
             if name in opts["profiles"][vm_["profile"]]:
-                if isinstance(value, dict):
+                if isinstance(value, dict) and isinstance(
+                    opts["profiles"][vm_["profile"]][name], dict
+                ):
                     value.update(opts["profiles"][vm_["profile"]][name].copy())
                 else:
                     value = deepcopy(opts["profiles"][vm_["profile"]][name])
@@ -3782,7 +3801,9 @@ def apply_minion_config(
             )
             opts["fileserver_backend"][idx] = new_val
 
-    opts["__cli"] = salt.utils.stringutils.to_unicode(os.path.basename(sys.argv[0]))
+    opts["__cli"] = salt.utils.stringutils.to_unicode(
+        os.path.basename(salt.utils.path.expand(sys.argv[0]))
+    )
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
@@ -3878,6 +3899,11 @@ def apply_minion_config(
             f"The signging algorithm '{opts['signing_algorithm']}' is not valid. "
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
         )
+
+    # Store original `cachedir` value, before overriding,
+    # to make overriding more accurate.
+    if "__cachedir" not in opts:
+        opts["__cachedir"] = opts["cachedir"]
 
     return opts
 
@@ -4004,7 +4030,9 @@ def apply_master_config(overrides=None, defaults=None):
             )
         opts["keep_acl_in_token"] = True
 
-    opts["__cli"] = salt.utils.stringutils.to_unicode(os.path.basename(sys.argv[0]))
+    opts["__cli"] = salt.utils.stringutils.to_unicode(
+        os.path.basename(salt.utils.path.expand(sys.argv[0]))
+    )
 
     if "environment" in opts:
         if opts["saltenv"] is not None:
@@ -4087,6 +4115,27 @@ def apply_master_config(overrides=None, defaults=None):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
+
+    # When a cluster id is defined, make sure the other nessicery bits a
+    # defined.
+    if "cluster_id" not in opts:
+        opts["cluster_id"] = None
+    if opts["cluster_id"] is not None:
+        if not opts.get("cluster_peers", None):
+            log.warning("Cluster id defined without defining cluster peers")
+            opts["cluster_peers"] = []
+        if not opts.get("cluster_pki_dir", None):
+            log.warning(
+                "Cluster id defined without defining cluster pki, falling back to pki_dir"
+            )
+            opts["cluster_pki_dir"] = opts["pki_dir"]
+    else:
+        if opts.get("cluster_peers", None):
+            log.warning("Cluster peers defined without a cluster_id, ignoring.")
+            opts["cluster_peers"] = []
+        if opts.get("cluster_pki_dir", None):
+            log.warning("Cluster pki defined without a cluster_id, ignoring.")
+            opts["cluster_pki_dir"] = None
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!

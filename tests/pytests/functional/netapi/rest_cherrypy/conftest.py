@@ -1,6 +1,6 @@
 import pytest
+import tornado.wsgi
 
-import salt.ext.tornado.wsgi
 import salt.netapi.rest_cherrypy.app
 import tests.support.netapi as netapi
 from tests.support.mock import patch
@@ -23,13 +23,14 @@ def app(client_config, load_auth):
     with patch("salt.netapi.NetapiClient._is_master_running", return_value=True), patch(
         "salt.auth.Resolver.mk_token", load_auth.mk_token
     ):
-        yield salt.ext.tornado.wsgi.WSGIContainer(
+        yield tornado.wsgi.WSGIContainer(
             cherrypy.Application(app, "/", config=cherry_opts)
         )
 
 
+# The order of these fixtures matter, app before io_loop
 @pytest.fixture
-def http_server(io_loop, app, netapi_port):
+def http_server(app, netapi_port, io_loop):
     with netapi.TestsTornadoHttpServer(
         io_loop=io_loop, app=app, port=netapi_port
     ) as server:

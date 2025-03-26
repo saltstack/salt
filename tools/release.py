@@ -59,6 +59,8 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
         if "Contents" in ret:
             objects = []
             for entry in ret["Contents"]:
+                if entry["Key"].endswith(".release-backup-done"):
+                    continue
                 objects.append({"Key": entry["Key"]})
             to_delete_paths.extend(objects)
     except ClientError as exc:

@@ -154,6 +154,7 @@ def test_symlinks_created(version, symlink, install_salt):
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.skip_if_binaries_missing("rpmdev-vercmp")
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included

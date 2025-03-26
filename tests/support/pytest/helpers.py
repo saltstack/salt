@@ -21,6 +21,7 @@ from contextlib import contextmanager
 import attr
 import psutil
 import pytest
+import requests
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
 
@@ -332,8 +333,9 @@ class TestAccount:
         if salt.utils.platform.is_windows():
             log.debug("Configuring system account: %s", self)
             ret = self.sminion.functions.user.update(
-                self.username, password_never_expires=True
+                self.username, expired=False, password_never_expires=True
             )
+            assert ret is True
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
         else:
@@ -449,6 +451,7 @@ class FakeSaltExtension:
     name = attr.ib()
     pkgname = attr.ib(init=False)
     srcdir = attr.ib(init=False)
+    virtualname = attr.ib(default="foobar")
 
     @srcdir.default
     def _srcdir(self):
@@ -484,9 +487,9 @@ class FakeSaltExtension:
         if not setup_cfg.exists():
             setup_cfg.write_text(
                 textwrap.dedent(
-                    """\
+                    f"""\
             [metadata]
-            name = {0}
+            name = {self.name}
             version = 1.0
             description = Salt Extension Test
             author = Pedro
@@ -507,7 +510,9 @@ class FakeSaltExtension:
             [options]
             zip_safe = False
             include_package_data = True
-            packages = find:
+            package_dir =
+                =src
+            packages = find{'_namespace' if '.' in self.pkgname else ''}:
             python_requires = >= 3.5
             setup_requires =
               wheel
@@ -515,21 +520,22 @@ class FakeSaltExtension:
             install_requires =
               distro
 
+            [options.packages.find]
+            where = src
+
             [options.entry_points]
             salt.loader=
-              module_dirs = {1}
-              runner_dirs = {1}.loader:get_runner_dirs
-              states_dirs = {1}.loader:get_state_dirs
-              wheel_dirs = {1}.loader:get_new_style_entry_points
-            """.format(
-                        self.name, self.pkgname
-                    )
+              module_dirs = {self.pkgname}
+              runner_dirs = {self.pkgname}.loader:get_runner_dirs
+              states_dirs = {self.pkgname}.loader:get_state_dirs
+              wheel_dirs = {self.pkgname}.loader:get_new_style_entry_points
+            """
                 )
             )
 
-        extension_package_dir = self.srcdir / self.pkgname
+        extension_package_dir = self.srcdir.joinpath("src", *self.pkgname.split("."))
         if not extension_package_dir.exists():
-            extension_package_dir.mkdir()
+            extension_package_dir.mkdir(parents=True)
             extension_package_dir.joinpath("__init__.py").write_text("")
             extension_package_dir.joinpath("loader.py").write_text(
                 textwrap.dedent(
@@ -556,10 +562,10 @@ class FakeSaltExtension:
             runners1_dir = extension_package_dir / "runners1"
             runners1_dir.mkdir()
             runners1_dir.joinpath("__init__.py").write_text("")
-            runners1_dir.joinpath("foobar1.py").write_text(
+            runners1_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -573,10 +579,10 @@ class FakeSaltExtension:
             runners2_dir = extension_package_dir / "runners2"
             runners2_dir.mkdir()
             runners2_dir.joinpath("__init__.py").write_text("")
-            runners2_dir.joinpath("foobar2.py").write_text(
+            runners2_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -590,10 +596,10 @@ class FakeSaltExtension:
             modules_dir = extension_package_dir / "modules"
             modules_dir.mkdir()
             modules_dir.joinpath("__init__.py").write_text("")
-            modules_dir.joinpath("foobar1.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -603,10 +609,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            modules_dir.joinpath("foobar2.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -620,10 +626,10 @@ class FakeSaltExtension:
             wheel_dir = extension_package_dir / "the_wheel_modules"
             wheel_dir.mkdir()
             wheel_dir.joinpath("__init__.py").write_text("")
-            wheel_dir.joinpath("foobar1.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -633,10 +639,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            wheel_dir.joinpath("foobar2.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -650,16 +656,16 @@ class FakeSaltExtension:
             states_dir = extension_package_dir / "states1"
             states_dir.mkdir()
             states_dir.joinpath("__init__.py").write_text("")
-            states_dir.joinpath("foobar1.py").write_text(
+            states_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
 
             def echoed(string):
-                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                ret = {{"name": name, "changes": {{}}, "result": True, "comment": string}}
                 return ret
             """
                 )
@@ -668,10 +674,10 @@ class FakeSaltExtension:
             utils_dir = extension_package_dir / "utils"
             utils_dir.mkdir()
             utils_dir.joinpath("__init__.py").write_text("")
-            utils_dir.joinpath("foobar1.py").write_text(
+            utils_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -825,6 +831,20 @@ def change_cwd(path):
     finally:
         # Restore Old CWD
         os.chdir(old_cwd)
+
+
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    # NOTE the stream=True parameter below
+    with requests.get(
+        url, allow_redirects=True, stream=True, auth=auth, timeout=60
+    ) as r:
+        r.raise_for_status()
+        with salt.utils.files.fopen(dest, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+    return dest
 
 
 @contextmanager

@@ -92,7 +92,7 @@ class SaltNeutron(NeutronShell):
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The neutron module has been deprecated and will be removed in {version}.\n"
             "This includes\n"
             "* salt.utils.openstack.neutron\n"

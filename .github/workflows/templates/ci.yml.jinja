@@ -97,22 +97,27 @@
           tools changelog update-rpm --draft
           tools changelog update-rpm
 
+      - name: Create Release Notes Template
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
+            tools changelog update-release-notes --next-release --template-only
+          else
+            tools changelog update-release-notes --template-only
+          fi
+
       - name: Update Release Notes
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          <%- if gh_environment == 'nightly' %>
-          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
               tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
               tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
           else
               tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
               tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
           fi
-          <%- else %>
-          tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
-          tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
-          <%- endif %>
 
       - name: Generate MAN Pages
         shell: bash
@@ -233,27 +238,6 @@
 
   <%- endif %>
 
-
-  <%- set job_name = "build-deps-onedir" %>
-  <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Onedir Dependencies
-    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
-    needs:
-      - prepare-workflow
-    uses: ./.github/workflows/build-deps-onedir.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "<{ relenv_version }>"
-      python-version: "<{ python_version }>"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
-      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-
-  <%- endif %>
-
   <%- set job_name = "build-salt-onedir" %>
   <%- if includes.get(job_name, True) %>
 
@@ -263,7 +247,6 @@
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['<{ job_name }>'] }}
     needs:
       - prepare-workflow
-      - build-deps-onedir
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:

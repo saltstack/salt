@@ -159,7 +159,9 @@ def test_version_report_lines():
     line_lengths = {
         len(line.split(":")[0])
         for line in versions_report_ret[start_looking_index:]
-        if line != " " and line not in ("System Versions:", "Salt Extensions:")
+        if line != " "
+        and line
+        not in ("System Versions:", "Salt Extensions:", "Salt Package Information:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1

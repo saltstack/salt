@@ -11,8 +11,9 @@ import sys
 import time
 import traceback
 
+import tornado.gen
+
 import salt.channel.client
-import salt.ext.tornado.gen
 import salt.fileclient
 import salt.loader
 import salt.minion
@@ -249,7 +250,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = False
         self.clean_cache = clean_cache
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
@@ -285,7 +286,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        raise salt.ext.tornado.gen.Return(ret_pillar)
+        raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -1206,7 +1207,9 @@ class Pillar:
             for key, val in run.items():
                 if key not in self.ext_pillars:
                     log.critical(
-                        "Specified ext_pillar interface %s is unavailable", key
+                        "ext_pillar interface named %s is unavailable. Make sure it is placed in the correct "
+                        "directory/location. Check https://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules for details.",
+                        key,
                     )
                     continue
                 try:
@@ -1384,7 +1387,7 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self, ext=True):
         ret = super().compile_pillar(ext=ext)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)

@@ -219,7 +219,13 @@ def access_keys(opts):
     acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
-        key = mk_key(opts, user)
+
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
+        if os.path.exists(keyfile):
+            with salt.utils.files.fopen(keyfile, "r") as fp:
+                key = salt.utils.stringutils.to_unicode(fp.read())
+        else:
+            key = mk_key(opts, user)
         if key is not None:
             keys[user] = key
 
@@ -231,7 +237,11 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
-                keys[user] = mk_key(opts, user)
+                if os.path.exists(keyfile):
+                    with salt.utils.files.fopen(keyfile, "r") as fp:
+                        keys[user] = salt.utils.stringutils.to_unicode(fp.read())
+                else:
+                    keys[user] = mk_key(opts, user)
         log.profile("End pwd.getpwall() call in masterapi access_keys function")
 
     return keys
@@ -322,7 +332,11 @@ class AutoKey:
         """
         Check a keyid for membership in a autosign directory.
         """
-        autosign_dir = os.path.join(self.opts["pki_dir"], "minions_autosign")
+        if self.opts["cluster_id"]:
+            pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            pki_dir = self.opts["pki_dir"]
+        autosign_dir = os.path.join(pki_dir, "minions_autosign")
 
         # cleanup expired files
         expire_minutes = self.opts.get("autosign_timeout", 120)
@@ -366,7 +380,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 

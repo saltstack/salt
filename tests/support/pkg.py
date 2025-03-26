@@ -32,7 +32,7 @@ from saltfactories.utils import cli_scripts
 
 import salt.utils.files
 from tests.conftest import CODE_DIR
-from tests.support.pytest.helpers import TestAccount
+from tests.support.pytest.helpers import TestAccount, download_file
 
 ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 
@@ -447,7 +447,12 @@ class SaltPkgInstall:
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
+                batch_content = f'start "" /wait {str(pkg)} /start-minion=0 /S'
+                with salt.utils.files.fopen(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
@@ -804,7 +809,12 @@ class SaltPkgInstall:
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+                batch_file = pkg_path.parent / "install_nsis.cmd"
+                batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
+                with salt.utils.files.fopen(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
@@ -997,16 +1007,12 @@ class SaltPkgInstall:
     def __enter__(self):
         if platform.is_windows():
             self.update_process_path()
-
-        if not self.no_install:
-            if self.upgrade:
-                self.install_previous()
-            else:
-                # assume downgrade, since no_install only used in these two cases
-                self.install()
+        if self.no_install:
+            return self
+        if self.upgrade:
+            self.install_previous()
         else:
             self.install()
-
         return self
 
     def __exit__(self, *_):
@@ -1158,8 +1164,8 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
@@ -1589,15 +1595,3 @@ class ApiRequest:
 
     def __exit__(self, *args):
         self.session.__exit__(*args)
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth, timeout=60) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest

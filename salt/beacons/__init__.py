@@ -355,7 +355,7 @@ class Beacon:
             self.opts["beacons"].update(data)
 
         # Fire the complete event back along with updated list of beacons
-        with salt.utils.event.get_event("minion", opts=self.opts) as evt:
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
             evt.fire_event(
                 {
                     "complete": complete,

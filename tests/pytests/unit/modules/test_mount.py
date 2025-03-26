@@ -667,6 +667,21 @@ def test_umount():
         mock.assert_called_once_with("/mountpoint", disk="/path/to/my.qcow")
 
 
+def test_umount_lazy_true():
+    """
+    Attempt to lazy unmount a device by specifying the
+    directory it is mounted on
+    """
+    mock_mount_active = MagicMock(return_value={"name": "name"})
+    with patch.object(mount, "active", mock_mount_active):
+        mock_cmd = MagicMock(return_value={"retcode": True, "stderr": True})
+        with patch.dict(mount.__salt__, {"cmd.run_all": mock_cmd}):
+            mount.umount("name", lazy=True)
+            mock_cmd.assert_called_once_with(
+                "umount -l 'name'", runas=None, python_shell=False
+            )
+
+
 def test_is_fuse_exec():
     """
     Returns true if the command passed is a fuse mountable application

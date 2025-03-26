@@ -252,7 +252,7 @@ def get_function_argspec(func, is_class_method=None):
     defaults = []
     varargs = keywords = None
     for param in sig.parameters.values():
-        if param.kind == param.POSITIONAL_OR_KEYWORD:
+        if param.kind in [param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY]:
             args.append(param.name)
             if param.default is not inspect._empty:
                 defaults.append(param.default)
@@ -532,8 +532,8 @@ def parse_function(s):
             key = None
             word = []
         elif token in "]})":
-            _brackets = {"[": "]", "{": "}", "(": ")"}
-            if not brackets or token != _brackets[brackets.pop()]:
+            _tokens = {"[": "]", "{": "}", "(": ")"}
+            if not brackets or token != _tokens[brackets.pop()]:
                 break
             word.append(token)
         elif token == "=" and not brackets:

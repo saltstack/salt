@@ -219,6 +219,8 @@ def download_artifact(
         repository=repository,
         artifact_name=str(artifact_name),
     )
+    if TYPE_CHECKING:
+        assert succeeded is not None
     ctx.info(succeeded)
     if succeeded:
         ctx.info(f"Downloaded {artifact_name} to {dest}")

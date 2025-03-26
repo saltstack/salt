@@ -182,9 +182,6 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key_enc, rsa_privkey, ca_new_ce
                 "subjectKeyIdentifier": "hash",
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
     }
 
 
@@ -221,7 +218,6 @@ def x509_salt_minion(x509_salt_master, x509_minion_id):
         x509_minion_id,
         defaults={
             "open_mode": True,
-            "features": {"x509_v2": True},
             "grains": {"testgrain": "foo"},
         },
         overrides=config_overrides,
@@ -242,8 +238,10 @@ def x509_master_config(ca_minion_id):
             ".*": [
                 "x509.sign_remote_certificate",
             ],
+        },
+        "peer_run": {
             ca_minion_id: [
-                "match.compound",
+                "match.compound_matches",
             ],
         },
     }

@@ -189,7 +189,7 @@ def present(
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
-    masquerade=False,
+    masquerade=None,
     ports=None,
     prune_ports=False,
     port_fwd=None,
@@ -212,8 +212,8 @@ def present(
     default : None
         Set this zone as the default zone if ``True``.
 
-    masquerade : False
-        Enable or disable masquerade for a zone.
+    masquerade : None
+        Enable or disable masquerade for a zone. By default it will not change it.
 
     block_icmp : None
         List of ICMP types to block in the zone.
@@ -376,12 +376,48 @@ def service(name, ports=None, protocols=None):
     return ret
 
 
+def _normalize_rich_rules(rich_rules):
+    """
+    Make sure rich rules are normalized and attributes
+    are quoted with double quotes so it matches the output
+    from firewall-cmd
+
+    Example:
+
+    rule family="ipv4" source address="192.168.0.0/16" port port=22 protocol=tcp accept
+    rule family="ipv4" source address="192.168.0.0/16" port port='22' protocol=tcp accept
+    rule family='ipv4' source address='192.168.0.0/16' port port='22' protocol=tcp accept
+
+    normalized to:
+
+    rule family="ipv4" source address="192.168.0.0/16" port port="22" protocol="tcp" accept
+    """
+    normalized_rules = []
+    for rich_rule in rich_rules:
+        normalized_rule = ""
+        for cmd in rich_rule.split(" "):
+            cmd_components = cmd.split("=", 1)
+            if len(cmd_components) == 2:
+                assigned_component = cmd_components[1]
+                if not assigned_component.startswith(
+                    '"'
+                ) and not assigned_component.endswith('"'):
+                    if assigned_component.startswith(
+                        "'"
+                    ) and assigned_component.endswith("'"):
+                        assigned_component = assigned_component[1:-1]
+                    cmd_components[1] = f'"{assigned_component}"'
+            normalized_rule = f"{normalized_rule} {'='.join(cmd_components)}"
+        normalized_rules.append(normalized_rule.lstrip())
+    return normalized_rules
+
+
 def _present(
     name,
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
-    masquerade=False,
+    masquerade=None,
     ports=None,
     prune_ports=False,
     port_fwd=None,
@@ -500,27 +536,37 @@ def _present(
     except CommandExecutionError as err:
         ret["comment"] = f"Error: {err}"
         return ret
-
-    if masquerade and not masquerade_ret:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.add_masquerade"](name, permanent=True)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
-        ret["changes"].update(
-            {"masquerade": {"old": "", "new": "Masquerading successfully set."}}
-        )
-    elif not masquerade and masquerade_ret:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.remove_masquerade"](name, permanent=True)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
-        ret["changes"].update(
-            {"masquerade": {"old": "", "new": "Masquerading successfully disabled."}}
-        )
+    if masquerade is not None:
+        if masquerade and not masquerade_ret:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_masquerade"](name, permanent=True)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+            ret["changes"].update(
+                {
+                    "masquerade": {
+                        "old": masquerade_ret,
+                        "new": "Masquerading successfully set.",
+                    }
+                }
+            )
+        elif not masquerade and masquerade_ret:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_masquerade"](name, permanent=True)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+            ret["changes"].update(
+                {
+                    "masquerade": {
+                        "old": masquerade_ret,
+                        "new": "Masquerading successfully disabled.",
+                    }
+                }
+            )
 
     if ports or prune_ports:
         ports = ports or []
@@ -757,6 +803,7 @@ def _present(
 
     if rich_rules or prune_rich_rules:
         rich_rules = rich_rules or []
+        rich_rules = _normalize_rich_rules(rich_rules)
         try:
             _current_rich_rules = __salt__["firewalld.get_rich_rules"](
                 name, permanent=True

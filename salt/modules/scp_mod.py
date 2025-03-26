@@ -9,8 +9,6 @@ Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 
 import logging
 
-# Import salt modules
-
 try:
     import paramiko
     import scp

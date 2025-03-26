@@ -25,6 +25,8 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 import salt.defaults.exitcodes  # isort:skip  pylint: disable=unused-import
+import salt.utils.ctx
+
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
@@ -32,7 +34,6 @@ from salt._logging.handlers import SysLogHandler  # isort:skip
 from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
-from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.immutabletypes import freeze, ImmutableDict  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
 
@@ -238,18 +239,22 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         exc_info_on_loglevel=None,
         once=False,
     ):
-        if extra is None:
-            extra = {}
-
         if once:
             if str(args) in self.ONCECACHE:
                 return
             self.ONCECACHE.add(str(args))
 
-        # pylint: disable=no-member
-        current_jid = RequestContext.current.get("data", {}).get("jid", None)
-        log_fmt_jid = RequestContext.current.get("opts", {}).get("log_fmt_jid", None)
-        # pylint: enable=no-member
+        if extra is None:
+            extra = {}
+
+        current_jid = (
+            salt.utils.ctx.get_request_context().get("data", {}).get("jid", None)
+        )
+        log_fmt_jid = (
+            salt.utils.ctx.get_request_context()
+            .get("opts", {})
+            .get("log_fmt_jid", None)
+        )
 
         if current_jid is not None:
             extra["jid"] = current_jid
@@ -292,6 +297,8 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                 stacklevel=stacklevel,
             )
         except TypeError:
+            # Python < 3.8 - We still need this for salt-ssh since it will use
+            # the system python, and not out onedir.
             # stacklevel was introduced in Py 3.8
             # must be running on old OS with Python 3.6 or 3.7
             LOGGING_LOGGER_CLASS._log(
@@ -482,7 +489,15 @@ def setup_temp_handler(log_level=None):
             break
     else:
         handler = DeferredStreamHandler(sys.stderr)
-        atexit.register(handler.flush)
+
+        def tryflush():
+            try:
+                handler.flush()  # pylint: disable=cell-var-from-loop
+            except ValueError:
+                # File handle has already been closed.
+                pass
+
+        atexit.register(tryflush)
     handler.setLevel(log_level)
 
     # Set the default temporary console formatter config

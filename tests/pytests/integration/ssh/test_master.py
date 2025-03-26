@@ -10,10 +10,14 @@ from saltfactories.utils.functional import StateResult
 
 import salt.utils.platform
 import salt.utils.versions
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -96,6 +100,30 @@ def _state_tree(salt_master, tmp_path):
         yield
 
 
+@pytest.fixture
+def custom_wrapper(salt_run_cli, base_env_state_tree_root_dir):
+    module_contents = r"""\
+def __virtual__():
+    return "grains_custom"
+
+def items():
+    return __grains__.value()
+    """
+    module_dir = base_env_state_tree_root_dir / "_wrapper"
+    module_tempfile = pytest.helpers.temp_file(
+        "grains_custom.py", module_contents, module_dir
+    )
+    try:
+        with module_tempfile:
+            ret = salt_run_cli.run("saltutil.sync_wrapper")
+            assert ret.returncode == 0
+            assert "wrapper.grains_custom" in ret.data
+            yield
+    finally:
+        ret = salt_run_cli.run("saltutil.sync_wrapper")
+        assert ret.returncode == 0
+
+
 @pytest.mark.usefixtures("_state_tree")
 def test_state_apply(salt_ssh_cli):
     ret = salt_ssh_cli.run("state.apply", "core")
@@ -110,3 +138,14 @@ def test_state_highstate(salt_ssh_cli):
     assert ret.returncode == 0
     state_result = StateResult(ret.data)
     assert state_result.result is True
+
+
+@pytest.mark.usefixtures("custom_wrapper")
+def test_custom_wrapper(salt_ssh_cli):
+    ret = salt_ssh_cli.run(
+        "grains_custom.items",
+    )
+    assert ret.returncode == 0
+    assert ret.data
+    assert "id" in ret.data
+    assert ret.data["id"] in ("localhost", "127.0.0.1")

@@ -1,20 +1,5 @@
 # Darwin source distribution requirements
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are macOS specific, place "; sys_platform == 'darwin'" in front of the requirement.
 
 -r zeromq.txt
-
-apache-libcloud>=2.4.0
-cherrypy>=17.4.1
-cryptography>=41.0.3
-gitpython>=3.1.37
-idna>=2.8
-linode-python>=1.1.1
-pyasn1>=0.4.8
-pycparser>=2.21
-pyopenssl>=23.2.0
-python-dateutil>=2.8.0
-python-gnupg>=0.4.4
-setproctitle>=1.2.3
-timelib>=0.2.5
-vultr>=1.0.1
-
-importlib-metadata>=3.3.0

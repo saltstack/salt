@@ -8,7 +8,7 @@ from salt.cli.api import SaltAPI
 
 
 @pytest.mark.slow_test
-def test_start_shutdown(monkeypatch, tmp_path):
+def test_start_shutdown(monkeypatch, tmp_path, io_loop):
     pid_file = str(tmp_path / "pid_file")
     log_file = str(tmp_path / "log_file")
     api = SaltAPI()

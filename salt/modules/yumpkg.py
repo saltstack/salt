@@ -15,6 +15,11 @@ Support for YUM/DNF
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
 
+.. versionadded:: 3006.10
+    Support for ``dnf5``` on Fedora 41
+
+.. versionadded:: 3007.0
+    Support for ``dnf5``` on Fedora 39
 """
 
 import configparser
@@ -114,12 +119,12 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
     dnf ==> vim-enhanced-2:7.4.827-1.fc22.*
     """
     if full:
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             lock_re = rf"({pattern}-\S+)"
         else:
             lock_re = rf"(\d+:{pattern}-\S+)"
     else:
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             lock_re = rf"({pattern}-\S+)"
         else:
             lock_re = rf"\d+:({pattern}-\S+)"
@@ -137,7 +142,7 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 
 def _yum():
     """
-    Determine package manager name (yum or dnf),
+    Determine package manager name (yum or dnf[5]),
     depending on the executable existence in $PATH.
     """
 
@@ -160,7 +165,10 @@ def _yum():
     contextkey = "yum_bin"
     if contextkey not in context:
         for dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
-            if _check(os.path.join(dir, "dnf")):
+            if _check(os.path.join(dir, "dnf5")):
+                context[contextkey] = "dnf5"
+                break
+            elif _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
             elif _check(os.path.join(dir, "tdnf")):
@@ -237,7 +245,8 @@ def _versionlock_pkg(grains=None):
     """
     if grains is None:
         grains = __grains__
-    if _yum() == "dnf":
+
+    if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
                 "python3-dnf-plugin-versionlock"
@@ -250,11 +259,7 @@ def _versionlock_pkg(grains=None):
     elif _yum() == "tdnf":
         raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
-        return (
-            "yum-versionlock"
-            if int(grains.get("osmajorrelease")) == 5
-            else "yum-plugin-versionlock"
-        )
+        return "yum-plugin-versionlock"
 
 
 def _check_versionlock():
@@ -268,10 +273,11 @@ def _check_versionlock():
 
 def _get_options(**kwargs):
     """
-    Returns a list of options to be used in the yum/dnf command, based on the
+    Returns a list of options to be used in the yum/dnf[5] command, based on the
     kwargs passed.
     """
     # Get repo options from the kwargs
+    # dnf5 aliases dnf options, so no need to change
     fromrepo = kwargs.pop("fromrepo", "")
     repo = kwargs.pop("repo", "")
     disablerepo = kwargs.pop("disablerepo", "")
@@ -1031,7 +1037,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "upgrades" if _yum() == "dnf" else "updates"])
+    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -1055,7 +1061,7 @@ def list_downloaded(**kwargs):
 
         salt '*' pkg.list_downloaded
     """
-    CACHE_DIR = os.path.join("/var/cache/", _yum())
+    CACHE_DIR = os.path.join("/var/cache", _yum())
 
     ret = {}
     for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
@@ -1686,7 +1692,8 @@ def install(
         if skip_verify:
             cmd.append("--nogpgcheck")
         if downloadonly:
-            cmd.append("--downloadonly")
+            if _yum() != "dnf5":
+                cmd.append("--downloadonly")
 
     try:
         holds = list_holds(full=False)
@@ -1747,6 +1754,8 @@ def install(
                 cmd.extend(["--best", "--allowerasing"])
             _add_common_args(cmd)
             cmd.append("install" if pkg_type != "advisory" else "update")
+            if _yum() == "dnf5":
+                cmd.extend(["--best", "--allowerasing"])
             cmd.extend(targets)
             out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out["retcode"] != 0:
@@ -1980,8 +1989,8 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
-    if _yum() == "dnf" and not obsoletes:
-        # for dnf we can just disable obsoletes
+    if _yum() in ("dnf", "dnf5") and not obsoletes:
+        # for dnf[5] we can just disable obsoletes
         _setopt = [
             opt
             for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
@@ -2018,7 +2027,7 @@ def upgrade(
         cmd.append("upgrade" if not minimal else "upgrade-minimal")
     else:
         # do not force the removal of obsolete packages
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2073,7 +2082,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -2121,22 +2130,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
 
-    # Loop through pkg_params looking for any
-    # which contains a wildcard and get the
-    # real package names from the packages
-    # which are currently installed.
-    pkg_matches = {}
-    for pkg_param in list(pkg_params):
-        if "*" in pkg_param:
-            pkg_matches = {
-                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
-            }
-
-            # Remove previous pkg_param
-            pkg_params.pop(pkg_param)
-
-    # Update pkg_params with the matches
-    pkg_params.update(pkg_matches)
+    pkg_params = salt.utils.pkg.match_wildcard(old, pkg_params)
 
     for target in pkg_params:
         if target not in old:
@@ -2192,7 +2186,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -2374,7 +2368,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
-        if _yum() == "dnf":
+        if _yum() in ("dnf", "dnf5"):
             search_locks = [x for x in current_locks if x == target]
         else:
             # To accommodate yum versionlock's lack of support for removing
@@ -2993,10 +2987,13 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
+        .. versionadded:: 3008.0
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist, or metalink is required.
 
     Strict parsing of configuration files is the default, this can be disabled
     using the  ``strict_config`` keyword argument set to False
@@ -3007,16 +3004,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= metalink=http://host.com
     """
+    # set link types
+    link_types = ("baseurl", "mirrorlist", "metalink")
+
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False
@@ -3033,12 +3034,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
-    # specified in the repo_opts
-    if "mirrorlist" in repo_opts:
-        todelete.append("baseurl")
-    elif "baseurl" in repo_opts:
-        todelete.append("mirrorlist")
+    # Add what ever items in link_types is not in repo_opts to 'todelete' list
+    linkdict = {x: set(link_types) - {x} for x in link_types}
+    todelete.extend(
+        next(iter([y for x, y in linkdict.items() if x in repo_opts.keys()]), [])
+    )
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3069,7 +3069,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         if use_copr:
             # Is copr plugin installed?
             copr_plugin_name = ""
-            if _yum() == "dnf":
+            if _yum() in ("dnf", "dnf5"):
                 copr_plugin_name = "dnf-plugins-core"
             else:
                 copr_plugin_name = "yum-plugin-copr"
@@ -3101,10 +3101,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if all(x not in repo_opts.keys() for x in link_types):
                 raise SaltInvocationError(
-                    "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "The repo does not exist and needs to be created, but none of "
+                    f"{', '.join(link_types)} was given"
                 )
             filerepos[repo] = {}
     else:
@@ -3112,16 +3112,15 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = repos[repo]["file"]
         header, filerepos = _parse_repo_file(repofile, strict_parser)
 
-    # Error out if they tried to delete baseurl or mirrorlist improperly
-    if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+    # Error out if they tried to delete all linktypes
+    for link_type in link_types:
+        linklist = set(link_types) - {link_type}
+        if all(
+            x not in repo_opts and x not in filerepos[repo] and link_type in todelete
+            for x in linklist
+        ):
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
-            )
-    if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
-            raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                f"Cannot delete {link_type} without specifying {' or '.join(linklist)}"
             )
 
     # Delete anything in the todelete list
@@ -3333,12 +3332,12 @@ def download(*packages, **kwargs):
     .. versionadded:: 2015.5.0
 
     Download packages to the local disk. Requires ``yumdownloader`` from
-    ``yum-utils`` package.
+    ``yum-utils`` or ``dnf-utils`` package.
 
     .. note::
 
-        ``yum-utils`` will already be installed on the minion if the package
-        was installed from the Fedora / EPEL repositories.
+        ``yum-utils`` or ``dnf-utils`` will already be installed on the minion
+        if the package was installed from the EPEL / Fedora repositories.
 
     CLI Example:
 
@@ -3353,7 +3352,7 @@ def download(*packages, **kwargs):
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
-    CACHE_DIR = "/var/cache/yum/packages"
+    CACHE_DIR = os.path.join("/var/cache", _yum(), "packages")
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     cached_pkgs = os.listdir(CACHE_DIR)
@@ -3534,12 +3533,17 @@ def services_need_restart(**kwargs):
 
         salt '*' pkg.services_need_restart
     """
-    if _yum() != "dnf":
-        raise CommandExecutionError("dnf is required to list outdated services.")
+    if _yum() not in ("dnf", "dnf5"):
+        raise CommandExecutionError(
+            "dnf or dnf5 is required to list outdated services."
+        )
     if not salt.utils.systemd.booted(__context__):
         raise CommandExecutionError("systemd is required to list outdated services.")
 
-    cmd = ["dnf", "--quiet", "needs-restarting"]
+    if _yum() == "dnf5":
+        cmd = ["dnf5", "--quiet", "needs-restarting"]
+    else:
+        cmd = ["dnf", "--quiet", "needs-restarting"]
     dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     if not dnf_output:
         return []

@@ -61,6 +61,9 @@ The information which can be stored in a roster ``target`` is the following:
                      # components. Defaults to /tmp/salt-<hash>.
         cmd_umask:   # umask to enforce for the salt-call command. Should be in
                      # octal (so for 0o077 in YAML you would do 0077, or 63)
+        ssh_pre_hook:   # Path to a script that will run on the host before all other
+                        # salt-ssh commands. Runs every time salt-ssh is run.
+                        # Added in 3008 Release
         ssh_pre_flight: # Path to a script that will run before all other salt-ssh
                         # commands. Will only run the first time when the thin dir
                         # does not exist, unless --pre-flight is passed to salt-ssh
@@ -74,6 +77,25 @@ The information which can be stored in a roster ``target`` is the following:
                      # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
         ssh_options: # List of options (as 'option=argument') to pass to ssh.
 
+.. _ssh_pre_hook:
+
+ssh_pre_hook
+------------
+
+Introduced in the 3008 release, the `ssh_pre_hook` is an option in the Salt-SSH roster that allows the execution of a script on the origin server before any SSH connection attempts are made.
+This is particularly useful in environments where dynamic setup is required, such as signing SSH keys or configuring environment variables.
+
+The `ssh_pre_hook` script is specified in the roster file for each target or globally using `roster_defaults`. It runs every time `salt-ssh` is invoked, ensuring that all prerequisites are met before making an SSH connection.
+
+.. code-block:: yaml
+
+    test:
+        host: 257.25.17.66
+        ssh_pre_hook: /path/to/script param1 param2
+
+If the script specified in `ssh_pre_hook` fails (returns a non-zero exit code), `salt-ssh` will halt further execution, preventing connection attempts to the target server.
+
+Usage of `ssh_pre_hook` provides a flexible mechanism to perform necessary preparations and checks, ensuring that the environment conforms to required conditions before proceeding with SSH operations.
 
 .. _ssh_pre_flight:
 

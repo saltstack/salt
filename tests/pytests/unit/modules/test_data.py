@@ -32,14 +32,13 @@ def test_load():
     """
     Test if it return all of the data in the minion datastore
     """
-    with patch("salt.payload.Serial.load", MagicMock(return_value=True)):
-        mocked_fopen = MagicMock(return_value=True)
-        mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
-        mocked_fopen.__exit__ = MagicMock()
-        with patch("salt.utils.files.fopen", MagicMock(return_value=mocked_fopen)):
-            with patch("salt.payload.loads", MagicMock(return_value=True)):
-                with patch.dict(data.__opts__, {"cachedir": "/"}):
-                    assert data.load()
+    mocked_fopen = MagicMock(return_value=True)
+    mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
+    mocked_fopen.__exit__ = MagicMock()
+    with patch("salt.utils.files.fopen", MagicMock(return_value=mocked_fopen)):
+        with patch("salt.payload.loads", MagicMock(return_value=True)):
+            with patch.dict(data.__opts__, {"cachedir": "/"}):
+                assert data.load()
 
 
 # 'dump' function tests: 3

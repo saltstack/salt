@@ -2,12 +2,13 @@ import glob
 import logging
 import os
 
+import yaml
+
 import salt.utils
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.yaml
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ def config():
         log.debug("Loading static grains from %s", gfn)
         with salt.utils.files.fopen(gfn, "rb") as fp_:
             try:
-                return salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
+                return salt.utils.data.decode(yaml.safe_load(fp_))
             except Exception:  # pylint: disable=broad-except
                 log.warning("Bad syntax in grains file! Skipping.")
                 return {}
@@ -95,12 +96,19 @@ def get_secure_boot_path():
 
 def uefi():
     """Populate UEFI grains."""
-    efivars_dir = get_secure_boot_path()
-    grains = {
-        "efi": bool(efivars_dir),
-        "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
-    }
-
+    if salt.utils.platform.is_freebsd():
+        grains = {
+            "efi": os.path.exists("/dev/efi"),
+            # Needs a contributor with a secure boot system to implement this
+            # part.
+            "efi-secure-boot": False,
+        }
+    else:
+        efivars_dir = get_secure_boot_path()
+        grains = {
+            "efi": bool(efivars_dir),
+            "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
+        }
     return grains
 
 

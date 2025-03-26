@@ -1,11 +1,13 @@
+import asyncio
 import copy
 import logging
+import os
 import random
-import threading
 import time
 from contextlib import contextmanager
 
 import pytest
+import tornado.ioloop
 from saltfactories.utils import random_string
 
 import salt.transport.zeromq
@@ -35,9 +37,15 @@ class PubServerChannelSender:
         self.payload_list = payload_list
 
     def run(self):
+        loop = tornado.ioloop.IOLoop()
+        loop.add_callback(self._run, loop)
+        loop.start()
+
+    async def _run(self, loop):
         for payload in self.payload_list:
-            self.pub_server_channel.publish(payload)
-        time.sleep(2)
+            await self.pub_server_channel.publish(payload)
+        await asyncio.sleep(2)
+        loop.stop()
 
 
 def generate_msg_list(msg_cnt, minions_list, broadcast):
@@ -238,84 +246,110 @@ def test_zeromq_filtering_broadcast(salt_master, salt_minion):
         ), f"{len(results)}, != {len(expect)}, difference: {expect.difference(results)} {results}"
 
 
-def test_pub_channel(master_opts):
-    server = salt.transport.zeromq.PublishServer(master_opts)
+async def test_pub_channel(master_opts, io_loop):
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
 
     payloads = []
 
-    def publish_payload(payload):
-        server.publish_payload(payload)
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
 
-    server.publish({"meh": "bah"})
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
 
     start = time.monotonic()
+
     try:
         while not payloads:
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
                 assert False, "No message received after 30 seconds"
+        assert payloads
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)
 
 
-def test_pub_channel_filtering(master_opts):
+async def test_pub_channel_filtering(master_opts, io_loop):
     master_opts["zmq_filtering"] = True
-    server = salt.transport.zeromq.PublishServer(master_opts)
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
 
     payloads = []
 
-    def publish_payload(payload):
-        server.publish_payload(payload)
+    async def publish_payload(payload):
+        await server.publish_payload(payload)
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
 
-    server.publish({"meh": "bah"})
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
 
     start = time.monotonic()
     try:
         while not payloads:
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
                 assert False, "No message received after 30 seconds"
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)
 
 
-def test_pub_channel_filtering_topic(master_opts):
+async def test_pub_channel_filtering_topic(master_opts, io_loop):
     master_opts["zmq_filtering"] = True
-    server = salt.transport.zeromq.PublishServer(master_opts)
+
+    server = salt.transport.zeromq.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=4506,
+        pull_path=os.path.join(master_opts["sock_dir"], "publish_pull.ipc"),
+    )
 
     payloads = []
 
-    def publish_payload(payload):
-        server.publish_payload(payload, topic_list=["meh"])
+    async def publish_payload(payload):
+        await server.publish_payload(payload, topic_list=["meh"])
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    io_loop.add_callback(
+        server.publisher,
+        publish_payload,
+        ioloop=io_loop,
+    )
 
-    server.publish({"meh": "bah"})
+    await asyncio.sleep(3)
+
+    await server.publish(salt.payload.dumps({"meh": "bah"}))
 
     start = time.monotonic()
     try:
         while not payloads:
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
                 assert False, "No message received after 30 seconds"
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)

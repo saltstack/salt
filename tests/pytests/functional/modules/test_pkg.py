@@ -58,8 +58,8 @@ def _refresh_db(ctx, grains, modules):
             raise Exception("Package database locked after 60 seconds, bailing out")
 
 
-@pytest.fixture(autouse=True)
-def test_pkg(grains):
+@pytest.fixture
+def pkg_name(grains):
     _pkg = "figlet"
     if salt.utils.platform.is_windows():
         _pkg = "putty"
@@ -160,49 +160,51 @@ def test_mod_del_repo(grains, modules):
             modules.pkg.del_repo(repo)
 
 
+@pytest.fixture
+def _skip_on_untargetted_oses(grains):
+    if grains["os"] not in ["CentOS", "RedHat", "VMware Photon OS"]:
+        pytest.skip(f"Test is not targetting {grains['os']}")
+
+
 @pytest.mark.slow_test
-@pytest.mark.usefixtures("_refresh_db")
+@pytest.mark.usefixtures("_skip_on_untargetted_oses", "_refresh_db")
 def test_mod_del_repo_multiline_values(modules):
     """
     test modifying and deleting a software repository defined with multiline values
     """
-    os_grain = modules.grains.item("os")["os"]
     repo = None
     try:
-        if os_grain in ["CentOS", "RedHat", "VMware Photon OS"]:
-            my_baseurl = (
-                "http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/"
-            )
-            expected_get_repo_baseurl = (
-                "http://my.fake.repo/foo/bar/\nhttp://my.fake.repo.alt/foo/bar/"
-            )
-            repo = "fakerepo"
-            name = "Fake repo for RHEL/CentOS/SUSE"
-            baseurl = my_baseurl
-            gpgkey = "https://my.fake.repo/foo/bar/MY-GPG-KEY.pub"
-            failovermethod = "priority"
-            gpgcheck = 1
-            enabled = 1
-            ret = modules.pkg.mod_repo(
-                repo,
-                name=name,
-                baseurl=baseurl,
-                gpgkey=gpgkey,
-                gpgcheck=gpgcheck,
-                enabled=enabled,
-                failovermethod=failovermethod,
-            )
-            # return data from pkg.mod_repo contains the file modified at
-            # the top level, so use next(iter(ret)) to get that key
-            assert ret != {}
-            repo_info = ret[next(iter(ret))]
-            assert repo in repo_info
-            assert repo_info[repo]["baseurl"] == my_baseurl
-            ret = modules.pkg.get_repo(repo)
-            assert ret["baseurl"] == expected_get_repo_baseurl
-            modules.pkg.mod_repo(repo)
-            ret = modules.pkg.get_repo(repo)
-            assert ret["baseurl"] == expected_get_repo_baseurl
+        my_baseurl = "http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/"
+        expected_get_repo_baseurl = (
+            "http://my.fake.repo/foo/bar/\nhttp://my.fake.repo.alt/foo/bar/"
+        )
+        repo = "fakerepo"
+        name = "Fake repo for RHEL/CentOS/SUSE"
+        baseurl = my_baseurl
+        gpgkey = "https://my.fake.repo/foo/bar/MY-GPG-KEY.pub"
+        failovermethod = "priority"
+        gpgcheck = 1
+        enabled = 1
+        ret = modules.pkg.mod_repo(
+            repo,
+            name=name,
+            baseurl=baseurl,
+            gpgkey=gpgkey,
+            gpgcheck=gpgcheck,
+            enabled=enabled,
+            failovermethod=failovermethod,
+        )
+        # return data from pkg.mod_repo contains the file modified at
+        # the top level, so use next(iter(ret)) to get that key
+        assert ret != {}
+        repo_info = ret[next(iter(ret))]
+        assert repo in repo_info
+        assert repo_info[repo]["baseurl"] == my_baseurl
+        ret = modules.pkg.get_repo(repo)
+        assert ret["baseurl"] == expected_get_repo_baseurl
+        modules.pkg.mod_repo(repo)
+        ret = modules.pkg.get_repo(repo)
+        assert ret["baseurl"] == expected_get_repo_baseurl
     finally:
         if repo is not None:
             modules.pkg.del_repo(repo)
@@ -240,22 +242,22 @@ def test_which(modules, grains):
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_install_remove(modules, test_pkg):
+def test_install_remove(modules, pkg_name):
     """
     successfully install and uninstall a package
     """
-    version = modules.pkg.version(test_pkg)
+    version = modules.pkg.version(pkg_name)
 
     def test_install():
-        install_ret = modules.pkg.install(test_pkg)
-        assert test_pkg in install_ret
+        install_ret = modules.pkg.install(pkg_name)
+        assert pkg_name in install_ret
 
     def test_remove():
-        remove_ret = modules.pkg.remove(test_pkg)
-        assert test_pkg in remove_ret
+        remove_ret = modules.pkg.remove(pkg_name)
+        assert pkg_name in remove_ret
 
     if version and isinstance(version, dict):
-        version = version[test_pkg]
+        version = version[pkg_name]
 
     if version:
         test_remove()
@@ -281,7 +283,7 @@ def test_install_remove(modules, test_pkg):
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 @pytest.mark.requires_salt_states("pkg.installed")
-def test_hold_unhold(grains, modules, states, test_pkg):
+def test_hold_unhold(grains, modules, states, pkg_name):
     """
     test holding and unholding a package
     """
@@ -301,19 +303,19 @@ def test_hold_unhold(grains, modules, states, test_pkg):
         else:
             pytest.fail(f"Could not install versionlock package from {pkgs}")
 
-    modules.pkg.install(test_pkg)
+    modules.pkg.install(pkg_name)
 
     try:
-        hold_ret = modules.pkg.hold(test_pkg)
+        hold_ret = modules.pkg.hold(pkg_name)
         if versionlock_pkg and "-versionlock is not installed" in str(hold_ret):
             pytest.skip(f"{hold_ret}  `{versionlock_pkg}` is installed")
-        assert test_pkg in hold_ret
-        assert hold_ret[test_pkg]["result"] is True
+        assert pkg_name in hold_ret
+        assert hold_ret[pkg_name]["result"] is True
 
-        unhold_ret = modules.pkg.unhold(test_pkg)
-        assert test_pkg in unhold_ret
-        assert unhold_ret[test_pkg]["result"] is True
-        modules.pkg.remove(test_pkg)
+        unhold_ret = modules.pkg.unhold(pkg_name)
+        assert pkg_name in unhold_ret
+        assert unhold_ret[pkg_name]["result"] is True
+        modules.pkg.remove(pkg_name)
     except salt.exceptions.SaltInvocationError as err:
         if "versionlock is not installed" in err.message:
             pytest.skip("Correct versionlock package is not installed")
@@ -356,7 +358,7 @@ def test_refresh_db(grains, minion_opts):
 @pytest.mark.usefixtures("_refresh_db")
 @pytest.mark.requires_salt_modules("pkg.info_installed")
 @pytest.mark.slow_test
-def test_pkg_info(grains, modules, test_pkg):
+def test_pkg_info(grains, modules, pkg_name):
     """
     Test returning useful information on Ubuntu systems.
     """
@@ -376,9 +378,9 @@ def test_pkg_info(grains, modules, test_pkg):
         assert "less" in keys
         assert "zypper" in keys
     else:
-        ret = modules.pkg.info_installed(test_pkg)
+        ret = modules.pkg.info_installed(pkg_name)
         keys = ret.keys()
-        assert test_pkg in keys
+        assert pkg_name in keys
 
 
 @pytest.mark.usefixtures("_refresh_db")
@@ -469,26 +471,26 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
 @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
 @pytest.mark.slow_test
 @pytest.mark.requires_salt_states("pkg.removed")
-def test_pkg_latest_version(grains, modules, states, test_pkg):
+def test_pkg_latest_version(grains, modules, states, pkg_name):
     """
     Check that pkg.latest_version returns the latest version of the uninstalled package.
     The package is not installed. Only the package version is checked.
     """
-    states.pkg.removed(test_pkg)
+    states.pkg.removed(pkg_name)
 
     cmd_pkg = []
     if grains["os_family"] == "RedHat":
-        cmd_pkg = modules.cmd.run(f"yum list {test_pkg}")
+        cmd_pkg = modules.cmd.run(f"yum list {pkg_name}")
     elif salt.utils.platform.is_windows():
-        cmd_pkg = modules.pkg.list_available(test_pkg)
+        cmd_pkg = modules.pkg.list_available(pkg_name)
     elif grains["os_family"] == "Debian":
-        cmd_pkg = modules.cmd.run(f"apt list {test_pkg}")
+        cmd_pkg = modules.cmd.run(f"apt list {pkg_name}")
     elif grains["os_family"] == "Arch":
-        cmd_pkg = modules.cmd.run(f"pacman -Si {test_pkg}")
+        cmd_pkg = modules.cmd.run(f"pacman -Si {pkg_name}")
     elif grains["os_family"] == "FreeBSD":
-        cmd_pkg = modules.cmd.run(f"pkg search -S name -qQ version -e {test_pkg}")
+        cmd_pkg = modules.cmd.run(f"pkg search -S name -qQ version -e {pkg_name}")
     elif grains["os_family"] == "Suse":
-        cmd_pkg = modules.cmd.run(f"zypper info {test_pkg}")
+        cmd_pkg = modules.cmd.run(f"zypper info {pkg_name}")
     elif grains["os_family"] == "MacOS":
         brew_bin = salt.utils.path.which("brew")
         mac_user = modules.file.get_user(brew_bin)
@@ -498,10 +500,10 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
                     os.listdir("/Users/")
                 )
             )
-        cmd_pkg = modules.cmd.run(f"brew info {test_pkg}", run_as=mac_user)
+        cmd_pkg = modules.cmd.run(f"brew info {pkg_name}", run_as=mac_user)
     else:
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
-    pkg_latest = modules.pkg.latest_version(test_pkg)
+    pkg_latest = modules.pkg.latest_version(pkg_name)
     assert pkg_latest in cmd_pkg
 
 
@@ -549,30 +551,36 @@ def test_list_repos_duplicate_entries(grains, modules):
     assert str(exc_info.value) == expected
 
 
+@pytest.fixture
+def port_pkg_name(grains, modules):
+    if grains["os_family"] != "Debian":
+        pytest.skip(f"Test is not targetting {grains['os_family']} family")
+
+    pkg_name = "nano"
+    pkgs = modules.pkg.list_pkgs()
+    pkg_version = pkgs.get(pkg_name)
+    if pkg_version:
+        modules.pkg.remove(pkg_name)
+    try:
+        yield pkg_name
+    finally:
+        modules.pkg.remove(pkg_name)
+        if pkg_version:
+            # If nano existed on the machine before the test ran
+            # re-install that version
+            modules.pkg.install(f"{pkg_name}={pkg_version}")
+
+
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_pkg_install_port(grains, modules):
+def test_pkg_install_port(modules, port_pkg_name):
     """
     test install package with a port in the url
     """
-    pkgs = modules.pkg.list_pkgs()
-    nano = pkgs.get("nano")
-    if nano:
-        modules.pkg.remove("nano")
+    url = modules.cmd.run(f"apt download --print-uris {port_pkg_name}").split()[-4]
+    if url.startswith("'mirror+file"):
+        url = "http://ftp.debian.org/debian/pool/" + url.split("pool")[1].rstrip("'")
 
-    if grains["os_family"] == "Debian":
-        url = modules.cmd.run("apt download --print-uris nano").split()[-4]
-        if url.startswith("'mirror+file"):
-            url = "http://ftp.debian.org/debian/pool/" + url.split("pool")[1].rstrip(
-                "'"
-            )
-        try:
-            ret = modules.pkg.install(sources=f'[{{"nano":{url}}}]')
-            version = re.compile(r"\d\.\d")
-            assert version.search(url).group(0) in ret["nano"]["new"]
-        finally:
-            modules.pkg.remove("nano")
-            if nano:
-                # If nano existed on the machine before the test ran
-                # re-install that version
-                modules.pkg.install(f"nano={nano}")
+    ret = modules.pkg.install(sources=f'[{{"{port_pkg_name}":{url}}}]')
+    version = re.compile(r"\d\.\d")
+    assert version.search(url).group(0) in ret[port_pkg_name]["new"]

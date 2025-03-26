@@ -1,9 +1,12 @@
+import asyncio
 import os
 
 import pytest
 
 import salt.config
+import salt.transport.tcp
 from tests.conftest import FIPS_TESTRUN
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -36,7 +39,7 @@ def master_opts(tmp_path):
     Default master configuration with relative temporary paths to not require root permissions.
     """
     root_dir = tmp_path / "master"
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+    opts = salt.config.master_config(None)
     opts["__role"] = "master"
     opts["root_dir"] = str(root_dir)
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
@@ -69,3 +72,14 @@ def syndic_opts(tmp_path):
     opts["log_file"] = "logs/syndic.log"
     opts["conf_file"] = os.path.join(opts["conf_dir"], "syndic")
     return opts
+
+
+@pytest.fixture
+def mocked_tcp_pub_client():
+    transport = MagicMock(spec=salt.transport.tcp.PublishClient)
+    transport.connect = MagicMock()
+    future = asyncio.Future()
+    transport.connect.return_value = future
+    future.set_result(True)
+    with patch("salt.transport.tcp.PublishClient", transport):
+        yield

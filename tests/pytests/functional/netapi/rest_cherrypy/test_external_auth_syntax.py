@@ -277,8 +277,9 @@ def client_config(client_config, external_auth):
     return client_config
 
 
+# The order of these fixtures matter, io_loop must come after app
 @pytest.fixture
-def http_server(io_loop, app, netapi_port, content_type_map):
+def http_server(app, netapi_port, content_type_map, io_loop):
     with netapi.TestsTornadoHttpServer(
         io_loop=io_loop,
         app=app,

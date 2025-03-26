@@ -464,10 +464,8 @@ def fcontext_policy_applied(name, recursive=False):
         ret.update(
             {
                 "result": True,
-                "comment": (
-                    'SElinux policies are already applied for filespec "{}"'.format(
-                        name
-                    )
+                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
+                    name
                 ),
             }
         )
@@ -517,24 +515,31 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
             {
                 "result": True,
                 "comment": f'SELinux policy for "{name}" already present '
-                + 'with specified sel_type "{}", protocol "{}" and port "{}".'.format(
-                    sel_type, protocol, port
-                ),
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret
     if __opts__["test"]:
         ret.update({"result": None})
     else:
-        add_ret = __salt__["selinux.port_add_policy"](
+        old_state = __salt__["selinux.port_get_policy"](
+            name=name,
+            protocol=protocol,
+            port=port,
+        )
+        if old_state:
+            module_method = "selinux.port_modify_policy"
+        else:
+            module_method = "selinux.port_add_policy"
+        add_modify_ret = __salt__[module_method](
             name=name,
             sel_type=sel_type,
             protocol=protocol,
             port=port,
             sel_range=sel_range,
         )
-        if add_ret["retcode"] != 0:
-            ret.update({"comment": f"Error adding new policy: {add_ret}"})
+        if add_modify_ret["retcode"] != 0:
+            ret.update({"comment": f"Error adding new policy: {add_modify_ret}"})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
@@ -578,9 +583,7 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
             {
                 "result": True,
                 "comment": f'SELinux policy for "{name}" already absent '
-                + 'with specified sel_type "{}", protocol "{}" and port "{}".'.format(
-                    sel_type, protocol, port
-                ),
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret

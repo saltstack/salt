@@ -45,7 +45,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -85,7 +85,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10")
+_PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -188,10 +188,8 @@ def _get_session_python_version_info(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 5):
-        session.error("Only Python >= 3.5 is supported")
-    if IS_WINDOWS and version_info < (3, 6):
-        session.error("Only Python >= 3.6 is supported on Windows")
+    if version_info < (3, 8):
+        session.error("Only Python >= 3.8 is supported")
     return "py{}.{}".format(*version_info)
 
 
@@ -333,7 +331,7 @@ def _install_coverage_requirement(session):
                     "photonos-3",
                 ):
                     # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
+                    # Plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
@@ -920,11 +918,20 @@ def test_cloud(session, coverage):
         )
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, "linux.txt"
+        )
+        cloud_requirements_file = os.path.join(
             "requirements", "static", "ci", pydir, "cloud.txt"
         )
 
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "-r",
+            linux_requirements_file,
+            "-r",
+            cloud_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
@@ -1475,7 +1482,7 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        base_requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "linux.txt"
         )
         lint_requirements_file = os.path.join(
@@ -1484,7 +1491,7 @@ def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
         install_command = [
             "--progress-bar=off",
             "-r",
-            base_requirements_file,
+            linux_requirements_file,
             "-r",
             lint_requirements_file,
         ]
@@ -1617,10 +1624,25 @@ def docs_html(session, compress, clean):
     Build Salt's HTML Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
@@ -1640,10 +1662,25 @@ def docs_man(session, compress, update, clean):
     Build Salt's Manpages Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
@@ -1935,12 +1972,11 @@ def ci_test_onedir_pkgs(session):
         )
 
     if chunk not in ("install", "download-pkgs"):
-        cmd_args = chunks["install"]
+        cmd_args = chunks[chunk]
         pytest_args = (
             common_pytest_args[:]
             + cmd_args[:]
             + [
-                "--no-install",
                 "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 "--log-file=artifacts/logs/runtests-install.log",
             ]
@@ -1956,12 +1992,11 @@ def ci_test_onedir_pkgs(session):
             if os.environ.get("RERUN_FAILURES", "0") == "0":
                 # Don't rerun on failures
                 return
-            cmd_args = chunks["install"]
+            cmd_args = chunks[chunk]
             pytest_args = (
                 common_pytest_args[:]
                 + cmd_args[:]
                 + [
-                    "--no-install",
                     "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
                     "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",

@@ -14,9 +14,9 @@ log = logging.getLogger(__virtualname__)
 min_tornado_version = "4.0"
 has_tornado = False
 try:
-    import salt.ext.tornado
+    import tornado
 
-    if Version(salt.ext.tornado.version) >= Version(min_tornado_version):
+    if Version(tornado.version) >= Version(min_tornado_version):
         has_tornado = True
     else:
         log.error("rest_tornado requires at least tornado %s", min_tornado_version)
@@ -77,9 +77,7 @@ def get_application(opts):
             (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
         ]
 
-    application = salt.ext.tornado.web.Application(
-        paths, debug=mod_opts.get("debug", False)
-    )
+    application = tornado.web.Application(paths, mod_opts.get("debug", False))
 
     application.opts = opts
     application.mod_opts = mod_opts
@@ -120,11 +118,9 @@ def start():
             ssl_opts.update({"keyfile": mod_opts["ssl_key"]})
         kwargs["ssl_options"] = ssl_opts
 
-    import salt.ext.tornado.httpserver
+    import tornado.httpserver
 
-    http_server = salt.ext.tornado.httpserver.HTTPServer(
-        get_application(__opts__), **kwargs
-    )
+    http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(
             mod_opts["port"],
@@ -139,6 +135,6 @@ def start():
         raise SystemExit(1)
 
     try:
-        salt.ext.tornado.ioloop.IOLoop.current().start()
+        tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

@@ -222,8 +222,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             EauthAuthenticationError,
             SaltClientError,
         ) as exc:
-            ret = str(exc)
-            self._output_ret(ret, "", retcode=1)
+            self._output_ret(str(exc), "", retcode=1)
         finally:
             self.local_client.destroy()
 

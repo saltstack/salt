@@ -3,6 +3,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~
 """
 
+import asyncio
 import functools
 import inspect
 import logging
@@ -17,10 +18,10 @@ import types
 
 import attr
 import pytest
+import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
-import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -69,11 +70,6 @@ def salt_sub_minion_id():
 
 @pytest.fixture(scope="session")
 def sdb_etcd_port():
-    return ports.get_unused_localhost_port()
-
-
-@pytest.fixture(scope="session")
-def vault_port():
     return ports.get_unused_localhost_port()
 
 
@@ -127,7 +123,6 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
-    vault_port,
     reactor_event,
     master_id,
     salt_auth_account_1_factory,
@@ -175,11 +170,6 @@ def salt_master_factory(
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
-    }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
     }
 
     # Config settings to test `event_return`
@@ -303,7 +293,7 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -313,11 +303,6 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
-    }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
     }
 
     config_overrides = {
@@ -647,12 +632,15 @@ def pytest_pyfunc_call(pyfuncitem):
     try:
         loop = funcargs["io_loop"]
     except KeyError:
-        loop = salt.ext.tornado.ioloop.IOLoop.current()
+        loop = tornado.ioloop.IOLoop.current()
 
     __tracebackhide__ = True
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    loop.asyncio_loop.run_until_complete(
+        asyncio.wait_for(
+            CoroTestFunction(pyfuncitem.obj, testargs)(),
+            timeout=get_test_timeout(pyfuncitem),
+        )
     )
     return True
 
@@ -662,13 +650,14 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = salt.ext.tornado.ioloop.IOLoop()
-    loop.make_current()
+    asyncio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio_loop)
+    loop = tornado.ioloop.IOLoop.current()
     try:
         yield loop
     finally:
-        loop.clear_current()
-        loop.close(all_fds=True)
+        loop.close(all_fds=True)  # Also closes asyncio_loop
+        asyncio.set_event_loop(None)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

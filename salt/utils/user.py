@@ -37,6 +37,10 @@ try:
 except ImportError:
     HAS_WIN_FUNCTIONS = False
 
+if sys.platform == "win32":
+    import ctypes.wintypes
+
+
 log = logging.getLogger(__name__)
 
 
@@ -349,7 +353,11 @@ def get_group_dict(user=None, include_default=True):
     group_dict = {}
     group_names = get_group_list(user, include_default=include_default)
     for group in group_names:
-        group_dict.update({group: grp.getgrnam(group).gr_gid})
+        try:
+            group_dict.update({group: grp.getgrnam(group).gr_gid})
+        except KeyError:
+            # In case if imporer duplicate group was returned by get_group_list
+            pass
     return group_dict
 
 

@@ -49,6 +49,7 @@ Namespaced tag
 
 """
 
+import asyncio
 import atexit
 import contextlib
 import datetime
@@ -58,15 +59,15 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
+
+import tornado.ioloop
+import tornado.iostream
 
 import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.iostream
 import salt.payload
-import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
@@ -75,7 +76,8 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltDeserializationError, SaltInvocationError
+from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +108,6 @@ TAGS = {
 def get_event(
     node,
     sock_dir=None,
-    transport=None,
     opts=None,
     listen=True,
     io_loop=None,
@@ -121,13 +122,6 @@ def get_event(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
     """
-    if transport:
-        salt.utils.versions.warn_until(
-            "Chlorine",
-            "The 'transport' kwarg has been deprecated and it will be removed "
-            "in the Chlorine release, as such, its usage is no longer required.",
-        )
-
     sock_dir = sock_dir or opts["sock_dir"]
     # TODO: AIO core is separate from transport
     if node == "master":
@@ -192,17 +186,23 @@ def tagify(suffix="", prefix="", base=SALT):
 
     """
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    if isinstance(suffix, Iterable) and not isinstance(
+        suffix, str
+    ):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    str_parts = []
+    for part in parts:
+        part_str = None
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            part_str = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
-    return TAGPARTER.join([part for part in parts if part])
+            part_str = str(part)
+        if part_str:
+            str_parts.append(part_str)
+    return TAGPARTER.join(str_parts)
 
 
 class SaltEvent:
@@ -232,12 +232,13 @@ class SaltEvent:
                                is destroyed. This is useful when using event
                                loops from within third party asynchronous code
         """
+        self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
         else:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+            self.io_loop = None
             self._run_io_loop_sync = True
         self.cpub = False
         self.cpush = False
@@ -260,7 +261,6 @@ class SaltEvent:
 
         if salt.utils.platform.is_windows() and "ipc_mode" not in opts:
             self.opts["ipc_mode"] = "tcp"
-        self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_tags = []
         self.pending_events = []
         self.__load_cache_regex()
@@ -282,36 +282,6 @@ class SaltEvent:
         # The prepend='^' is to reduce differences in behavior between
         # the default 'startswith' and the optional 'regex' match_type
         cls.cache_regex = salt.utils.cache.CacheRegex(prepend="^")
-
-    def __load_uri(self, sock_dir, node):
-        """
-        Return the string URI for the location of the pull and pub sockets to
-        use for firing and listening to events
-        """
-        if node == "master":
-            if self.opts["ipc_mode"] == "tcp":
-                puburi = int(self.opts["tcp_master_pub_port"])
-                pulluri = int(self.opts["tcp_master_pull_port"])
-            else:
-                puburi = os.path.join(sock_dir, "master_event_pub.ipc")
-                pulluri = os.path.join(sock_dir, "master_event_pull.ipc")
-        else:
-            if self.opts["ipc_mode"] == "tcp":
-                puburi = int(self.opts["tcp_pub_port"])
-                pulluri = int(self.opts["tcp_pull_port"])
-            else:
-                hash_type = getattr(hashlib, self.opts["hash_type"])
-                # Only use the first 10 chars to keep longer hashes from exceeding the
-                # max socket path length.
-                minion_id = self.opts.get("hash_id", self.opts["id"])
-                id_hash = hash_type(
-                    salt.utils.stringutils.to_bytes(minion_id)
-                ).hexdigest()[:10]
-                puburi = os.path.join(sock_dir, f"minion_event_{id_hash}_pub.ipc")
-                pulluri = os.path.join(sock_dir, f"minion_event_{id_hash}_pull.ipc")
-        log.debug("%s PUB socket URI: %s", self.__class__.__name__, puburi)
-        log.debug("%s PULL socket URI: %s", self.__class__.__name__, pulluri)
-        return puburi, pulluri
 
     def subscribe(self, tag=None, match_type=None):
         """
@@ -355,36 +325,37 @@ class SaltEvent:
         """
         if self.cpub:
             return True
-
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.subscriber is None:
-                    self.subscriber = salt.utils.asynchronous.SyncWrapper(
-                        salt.transport.ipc.IPCMessageSubscriber,
-                        args=(self.puburi,),
-                        kwargs={"io_loop": self.io_loop},
-                        loop_kwarg="io_loop",
-                    )
-                try:
-                    self.subscriber.connect(timeout=timeout)
-                    self.cpub = True
-                except salt.ext.tornado.iostream.StreamClosedError:
-                    log.error("Encountered StreamClosedException")
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        raise
-                    log.error("Error opening stream, file does not exist")
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.info(
-                        "An exception occurred connecting publisher: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
+            if self.subscriber is None:
+                self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    salt.transport.ipc_publish_client,
+                    args=(
+                        self.node,
+                        self.opts,
+                    ),
+                    loop_kwarg="io_loop",
+                )
+            try:
+                self.subscriber.connect(timeout=timeout)
+                self.cpub = True
+            except tornado.iostream.StreamClosedError:
+                log.error("Encountered StreamClosedException")
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+                log.error("Error opening stream, file does not exist")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info(
+                    "An exception occurred connecting publisher: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
         else:
             if self.subscriber is None:
-                self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi, io_loop=self.io_loop
+                self.subscriber = salt.transport.ipc_publish_client(
+                    self.node, self.opts, io_loop=self.io_loop
                 )
+                self.io_loop.spawn_callback(self.subscriber.connect)
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -397,7 +368,6 @@ class SaltEvent:
         """
         if not self.cpub:
             return
-
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -412,29 +382,30 @@ class SaltEvent:
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.pusher is None:
-                    self.pusher = salt.utils.asynchronous.SyncWrapper(
-                        salt.transport.ipc.IPCMessageClient,
-                        args=(self.pulluri,),
-                        kwargs={"io_loop": self.io_loop},
-                        loop_kwarg="io_loop",
-                    )
-                try:
-                    self.pusher.connect(timeout=timeout)
-                    self.cpush = True
-                except salt.ext.tornado.iostream.StreamClosedError as exc:
-                    log.debug("Unable to connect pusher: %s", exc)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
-                        "Unable to connect pusher: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
+            if self.pusher is None:
+                self.pusher = salt.utils.asynchronous.SyncWrapper(
+                    salt.transport.ipc_publish_server,
+                    args=(
+                        self.node,
+                        self.opts,
+                    ),
+                )
+            try:
+                self.pusher.connect(timeout=timeout)
+                self.cpush = True
+            except tornado.iostream.StreamClosedError as exc:
+                log.debug("Unable to connect pusher: %s", exc)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Unable to connect pusher: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
         else:
             if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(
-                    self.pulluri, io_loop=self.io_loop
+                self.pusher = salt.transport.ipc_publish_server(
+                    self.node,
+                    self.opts,
                 )
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
@@ -447,7 +418,6 @@ class SaltEvent:
         """
         if not self.cpush:
             return
-
         self.pusher.close()
         self.pusher = None
         self.cpush = False
@@ -458,8 +428,33 @@ class SaltEvent:
             salt.utils.stringutils.to_bytes(TAGEND)
         )  # split tag from data
         mtag = salt.utils.stringutils.to_str(mtag)
-        data = salt.payload.loads(mdata, encoding="utf-8")
+        try:
+            data = salt.payload.loads(mdata, encoding="utf-8")
+        except SaltDeserializationError:
+            log.warning(
+                "SaltDeserializationError on unpacking data, the payload could be incomplete"
+            )
+            raise
         return mtag, data
+
+    @classmethod
+    def pack(cls, tag, data, max_size=None):
+        tagend = TAGEND
+        serialized_data = salt.payload.dumps(data, use_bin_type=True)
+        if max_size:
+            serialized_data = salt.utils.dicttrim.trim_dict(
+                serialized_data,
+                max_size,
+                is_msgpacked=True,
+                use_bin_type=True,
+            )
+        return b"".join(
+            [
+                salt.utils.stringutils.to_bytes(tag),
+                salt.utils.stringutils.to_bytes(tagend),
+                serialized_data,
+            ]
+        )
 
     def _get_match_func(self, match_type=None):
         if match_type is None:
@@ -571,18 +566,21 @@ class SaltEvent:
                 if not self._run_io_loop_sync:
                     log.error("Trying to get event with async subscriber")
                     raise SaltInvocationError("get_event needs synchronous subscriber")
-                raw = self.subscriber.read(timeout=wait)
+                raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
                 mtag, data = self.unpack(raw)
                 ret = {"data": data, "tag": mtag}
             except KeyboardInterrupt:
                 return {"tag": "salt/event/exit", "data": {}}
-            except salt.ext.tornado.iostream.StreamClosedError:
+            except tornado.iostream.StreamClosedError:
                 if self.raise_errors:
                     raise
                 else:
                     return None
+            except SaltDeserializationError:
+                log.error("Unable to deserialize received event")
+                return None
             except RuntimeError:
                 return None
 
@@ -664,21 +662,20 @@ class SaltEvent:
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if auto_reconnect:
-                    raise_errors = self.raise_errors
-                    self.raise_errors = True
-                    while True:
-                        try:
-                            ret = self._get_event(wait, tag, match_func, no_block)
-                            break
-                        except salt.ext.tornado.iostream.StreamClosedError:
-                            self.close_pub()
-                            self.connect_pub(timeout=wait)
-                            continue
-                    self.raise_errors = raise_errors
-                else:
-                    ret = self._get_event(wait, tag, match_func, no_block)
+            if auto_reconnect:
+                raise_errors = self.raise_errors
+                self.raise_errors = True
+                while True:
+                    try:
+                        ret = self._get_event(wait, tag, match_func, no_block)
+                        break
+                    except tornado.iostream.StreamClosedError:
+                        self.close_pub()
+                        self.connect_pub(timeout=wait)
+                        continue
+                self.raise_errors = raise_errors
+            else:
+                ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret
@@ -694,7 +691,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        raw = self.subscriber._read(timeout=0)
+        raw = self.subscriber.recv(timeout=0)
         if raw is None:
             return None
         mtag, data = self.unpack(raw)
@@ -710,7 +707,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        raw = self.subscriber._read(timeout=None)
+        raw = self.subscriber.recv(timeout=None)
         if raw is None:
             return None
         mtag, data = self.unpack(raw)
@@ -728,8 +725,7 @@ class SaltEvent:
                 continue
             yield data
 
-    @salt.ext.tornado.gen.coroutine
-    def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
@@ -754,32 +750,15 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug("Sending event: tag = %s; data = %s", tag, data)
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        ret = yield self.pusher.send(msg)
+        self.pusher.publish(msg)
         if cb is not None:
-            cb(ret)
+            warn_until(
+                3008,
+                "The cb argument to fire_event_async will be removed in 3008",
+            )
+            cb(None)
 
     def fire_event(self, data, tag, timeout=1000):
         """
@@ -806,42 +785,20 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug("Sending event: tag = %s; data = %s", tag, data)
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                try:
-                    self.pusher.send(msg)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.debug(
-                        "Publisher send failed with exception: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
-                    raise
+            try:
+                self.pusher.publish(msg)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug(
+                    "Publisher send failed with exception: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                raise
         else:
-            self.io_loop.spawn_callback(self.pusher.send, msg)
+            asyncio.create_task(self.pusher.publish(msg))
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -859,8 +816,6 @@ class SaltEvent:
             self.close_pub()
         if self.pusher is not None:
             self.close_pull()
-        if self._run_io_loop_sync and not self.keep_loop:
-            self.io_loop.close()
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -889,6 +844,14 @@ class SaltEvent:
             ret = load.get("return", {})
             retcode = load["retcode"]
 
+        if not isinstance(ret, dict):
+            log.error(
+                "Event with bad payload received from '%s': %s",
+                load.get("id", "UNKNOWN"),
+                "".join(ret) if isinstance(ret, list) else ret,
+            )
+            return
+
         try:
             for tag, data in ret.items():
                 data["retcode"] = retcode
@@ -908,7 +871,8 @@ class SaltEvent:
                     )
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Event iteration failed with exception: %s",
+                "Event from '%s' iteration failed with exception: %s",
+                load.get("id", "UNKNOWN"),
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -950,11 +914,10 @@ class SaltEvent:
         Invoke the event_handler callback each time an event arrives.
         """
         assert not self._run_io_loop_sync
-
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1061,11 +1024,18 @@ class AsyncEventPublisher:
     """
 
     def __init__(self, opts, io_loop=None):
+        warn_until(
+            3008,
+            "salt.utils.event.AsyncEventPublisher is deprecated. "
+            "Please use salt.transport.publish_server instead.",
+        )
+        import salt.transport.ipc
+
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
 
-        self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self._closing = False
         self.publisher = None
         self.puller = None
@@ -1161,6 +1131,11 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(self, opts, **kwargs):
+        warn_until(
+            3008,
+            "salt.utils.event.EventPublisher is deprecated. "
+            "Please use salt.transport.publish_server instead.",
+        )
         super().__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
@@ -1173,6 +1148,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         Bind the pub and pull sockets for events
         """
+        import salt.transport.ipc
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1183,7 +1160,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             )
             os.nice(self.opts["event_publisher_niceness"])
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts["ipc_mode"] == "tcp":
                 epub_uri = int(self.opts["tcp_master_pub_port"])
@@ -1350,7 +1327,11 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 if event["tag"] == "salt/event/exit":
                     # We're done eventing
                     self.stop = True
-                if self._filter(event):
+                if self._filter(
+                    event,
+                    allow=self.opts["event_return_whitelist"],
+                    deny=self.opts["event_return_blacklist"],
+                ):
                     # This event passed the filter, add it to the queue
                     self.event_queue.append(event)
                 too_long_in_queue = False
@@ -1398,23 +1379,40 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
 
                 self.flush_events()
 
-    def _filter(self, event):
+    @staticmethod
+    def _filter(event, allow=None, deny=None):
         """
         Take an event and run it through configured filters.
 
-        Returns True if event should be stored, else False
+        Returns True if event should be stored, else False.
+
+        Any event that has a "__peer_id" id key defined are denied outright
+        because they did not originate from this master in a clustered
+        configuration.
+
+        If no allow or deny lists are given the event is allowed. Otherwise the
+        event's tag will be checked against the allow list. Then the deny list.
         """
+
+        if "__peer_id" in event:
+            return False
+
+        if allow is None:
+            allow = []
+        if deny is None:
+            deny = []
         tag = event["tag"]
-        if self.opts["event_return_whitelist"]:
+
+        if allow:
             ret = False
         else:
             ret = True
-        for whitelist_match in self.opts["event_return_whitelist"]:
-            if fnmatch.fnmatch(tag, whitelist_match):
+        for allow_match in allow:
+            if fnmatch.fnmatch(tag, allow_match):
                 ret = True
                 break
-        for blacklist_match in self.opts["event_return_blacklist"]:
-            if fnmatch.fnmatch(tag, blacklist_match):
+        for deny_match in deny:
+            if fnmatch.fnmatch(tag, deny_match):
                 ret = False
                 break
         return ret

@@ -14,7 +14,6 @@ from collections.abc import Mapping, MutableMapping
 import salt._logging
 import salt.channel.client
 import salt.exceptions
-import salt.ext.tornado.stack_context
 import salt.minion
 import salt.output
 import salt.utils.args
@@ -379,29 +378,29 @@ class SyncClientMixin(ClientStateMixin):
                 data["fun_args"] = list(args) + ([kwargs] if kwargs else [])
                 func_globals["__jid_event__"].fire_event(data, "new")
 
-                # Initialize a context for executing the method.
-                with salt.ext.tornado.stack_context.StackContext(
-                    self.functions.context_dict.clone
-                ):
-                    func = self.functions[fun]
-                    try:
-                        data["return"] = func(*args, **kwargs)
-                    except TypeError as exc:
-                        data["return"] = (
-                            "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
-                                exc, func.__doc__
-                            )
+                proc_fn = os.path.join(self.opts["cachedir"], "proc", jid)
+                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                    fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
+
+                func = self.functions[fun]
+                try:
+                    data["return"] = func(*args, **kwargs)
+                except TypeError as exc:
+                    data["return"] = (
+                        "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
+                            exc, func.__doc__
                         )
-                    try:
-                        data["success"] = self.context.get("retcode", 0) == 0
-                    except AttributeError:
-                        # Assume a True result if no context attribute
-                        data["success"] = True
-                    if isinstance(data["return"], dict) and "data" in data["return"]:
-                        # some functions can return boolean values
-                        data["success"] = salt.utils.state.check_result(
-                            data["return"]["data"]
-                        )
+                    )
+                try:
+                    data["success"] = self.context.get("retcode", 0) == 0
+                except AttributeError:
+                    # Assume a True result if no context attribute
+                    data["success"] = True
+                if isinstance(data["return"], dict) and "data" in data["return"]:
+                    # some functions can return boolean values
+                    data["success"] = salt.utils.state.check_result(
+                        data["return"]["data"]
+                    )
             except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
@@ -413,6 +412,12 @@ class SyncClientMixin(ClientStateMixin):
                     )
                 data["success"] = False
                 data["retcode"] = 1
+            finally:
+                # Job has finished or issue found, so let's clean up after ourselves
+                try:
+                    os.remove(proc_fn)
+                except OSError as err:
+                    log.debug("Error attempting to remove master job tracker: %s", err)
 
             if self.store_job:
                 try:
