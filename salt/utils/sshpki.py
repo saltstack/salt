@@ -75,6 +75,71 @@ def build_crt(
     to sign the certificate or be inspected for changes.
 
     Also returns the signing private key (if available).
+
+    signing_private_key
+        The private key of the CA that should be used to sign the certificate. Required.
+
+    cert_type
+        The certificate type to generate. Either ``user`` or ``host``.
+
+    valid_principals
+        A list of valid principals.
+
+    all_principals
+        Allow any principals. Defaults to false.
+
+    skip_load_signing_private_key
+        Don't try to load the signing private key. Relevant when building a
+        CertificateBuilder that's only used to check for state changes
+        and the certificate is signed remotely. Defaults to false.
+
+    signing_private_key_passphrase
+        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
+
+    public_key
+        The public key the certificate should be issued for. Either this or
+        ``private_key`` is required.
+
+    private_key
+        The private key corresponding to the public key the certificate should
+        be issued for. Either this or ``public_key`` is required.
+
+    private_key_passphrase
+        If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
+
+    serial_number
+        A serial number to be embedded in the certificate. If unspecified, will
+        autogenerate one. This should be an integer, either in decimal or
+        hexadecimal notation.
+
+    key_id
+        Specify a string-valued key ID for the signed public key.
+        When the certificate is used for authentication, this value will be
+        logged in plaintext.
+
+    not_before
+        Set a specific date the certificate should not be valid before.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
+        Defaults to the time of issuance.
+
+    not_after
+        Set a specific date the certificate should not be valid after.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
+        If unspecified, defaults to the current time plus ``ttl``.
+
+    ttl
+        If ``not_after`` is unspecified, a time string (like ``30d`` or ``12h``)
+        or the number of seconds from the time of issuance the certificate
+        should be valid for. Defaults to ``30d`` for host certificates
+        and ``24h`` for client certificates.
+
+    critical_options
+        A mapping of critical option name to option value to set on the certificate.
+        If an option does not take a value, specify it as ``true``.
+
+    extensions
+        A mapping of extension name to extension value to set on the certificate.
+        If an extension does not take a value, specify it as ``true``.
     """
     if CERT_SUPPORT is False:
         raise CommandExecutionError(
@@ -191,6 +256,88 @@ def check_cert_changes(
     """
     Check if the on-disk certificate needs to be updated.
     Extracted from the state module to be able to use this in the SSH wrapper.
+
+    name
+        The path the certificate should be present at.
+
+    signing_policy_contents
+        The signing policy contents as returned by
+        :py:func:`ssh_pki.get_signing_policy <salt.modules.ssh_pki.get_signing_policy`.
+
+    ca_server
+        Optional minion ID of the minion acting as a CA server.
+
+    ttl
+        If ``not_after`` is unspecified, a time string (like ``30d`` or ``12h``)
+        or the number of seconds from the time of issuance the certificate
+        should be valid for. Defaults to ``30d`` for host certificates
+        and ``24h`` for client certificates.
+
+    ttl_remaining
+        The certificate will be recreated once the remaining certificate validity
+        period is less than this number of seconds. Can also be specified as a
+        time string like ``12d`` or ``1.5h``.
+        Defaults to ``30d`` for host keys and ``1h`` for user keys.
+
+    backend
+        Instead of using the ``ssh_pki`` execution module for certificate
+        creation, use this backend. It must provide a compatible API for
+        ``create_certificate`` and ``get_signing_policy``.
+
+    signing_private_key
+        The private key of the CA that should be used to sign the certificate. Required.
+
+    signing_private_key_passphrase
+        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
+
+    cert_type
+        The certificate type to generate. Either ``user`` or ``host``.
+        Required if not specified in the signing policy.
+
+    public_key
+        The public key the certificate should be issued for. Either this or
+        ``private_key`` is required.
+
+    private_key
+        The private key corresponding to the public key the certificate should
+        be issued for. Either this or ``public_key`` is required.
+
+    private_key_passphrase
+        If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
+
+    serial_number
+        A serial number to be embedded in the certificate. If unspecified, will
+        autogenerate one. This should be an integer, either in decimal or
+        hexadecimal notation.
+
+    not_before
+        Set a specific date the certificate should not be valid before.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
+        Defaults to the time of issuance.
+
+    not_after
+        Set a specific date the certificate should not be valid after.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
+        If unspecified, defaults to the current time plus ``ttl``.
+
+    critical_options
+        A mapping of critical option name to option value to set on the certificate.
+        If an option does not take a value, specify it as ``true``.
+
+    extensions
+        A mapping of extension name to extension value to set on the certificate.
+        If an extension does not take a value, specify it as ``true``.
+
+    valid_principals
+        A list of valid principals.
+
+    all_principals
+        Allow any principals. Defaults to false.
+
+    key_id
+        Specify a string-valued key ID for the signed public key.
+        When the certificate is used for authentication, this value will be
+        logged in plaintext.
     """
     if CERT_SUPPORT is False:
         raise CommandExecutionError(
@@ -548,11 +695,18 @@ def _get_serial_number(sn=None):
 
 def load_privkey(pk, passphrase=None):
     """
-    Return an SSH private key instance from
-    * a class instance
-    * a file path on the local system
-    * a string
-    * bytes
+    Load an SSH private key instance.
+
+    pk
+        Private key to load. Can be represented by:
+
+        * a class instance
+        * a file path on the local system
+        * a string
+        * bytes
+
+    passphrase
+        If the private key is encrypted, the passphrase as a string.
     """
     if hasattr(pk, "private_bytes"):
         if isinstance(pk, SSH_PRIVKEYS):
@@ -576,11 +730,15 @@ def load_privkey(pk, passphrase=None):
 
 def load_pubkey(pk):
     """
-    Return a public key instance from
-    * a class instance
-    * a file path on the local system
-    * a string
-    * bytes
+    Load an SSH public key instance.
+
+    pk
+        Public key to load. Can be represented by:
+
+        * a class instance
+        * a file path on the local system
+        * a string
+        * bytes
     """
     if hasattr(pk, "public_bytes"):
         if isinstance(pk, SSH_PUBKEYS):
@@ -599,7 +757,9 @@ def load_pubkey(pk):
 def load_file_or_bytes(fob):
     """
     Tries to load a reference and return its bytes.
-    Can be a file path on the local system, a string and bytes (hex/base64-encoded, raw)
+
+    fob
+        Can be a file path on the local system, a string and bytes (hex/base64-encoded, raw)
     """
     if x509.isfile(fob):
         with salt.utils.files.fopen(fob, "rb") as f:
@@ -616,11 +776,25 @@ def load_file_or_bytes(fob):
 
 def load_cert(cert, verify=True):
     """
-    Return a certificate instance from
-    * a class instance
-    * a file path on the local system
-    * a string
-    * bytes
+    Return an SSH certificate instance.
+
+    cert
+        Certificate to load. Can be represented by:
+
+        * a class instance
+        * a file path on the local system
+        * a string
+        * bytes
+
+    verify
+        After loading the certificate, verify that the signature
+        on the certificate was created by the private key associated
+        with the certificate’s signature key and that the certificate
+        has not been changed since signing. Defaults to true.
+
+        .. warning::
+            This does not verify anything about whether the signing key should
+            be trusted! It simply verifies the cryptographic validity.
     """
     if CERT_SUPPORT is False:
         raise CommandExecutionError(
@@ -649,10 +823,19 @@ def load_cert(cert, verify=True):
 
 def merge_signing_policy(policy, kwargs):
     """
-    Merge a signing policy.
+    Merge a signing policy with the requested parameters, ensuring
+    the signing policy has priority.
 
     This is found in utils since the state module needs
     access as well to check for expected changes.
+
+    policy
+        The signing policy contents as returned by
+        :py:func:`ssh_pki.get_signing_policy <salt.modules.ssh_pki.get_signing_policy`.
+
+    kwargs
+        Keyword arguments to the called module function, representing
+        certificate parameters such as ``critical_options`` or ``ttl``.
     """
     if not policy:
         return kwargs
