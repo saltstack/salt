@@ -77,6 +77,10 @@ def get_time_at(time_in=None, time_at=None, out_fmt="%Y-%m-%dT%H:%M:%S"):
 def timestring_map(val):
     """
     Turn a time string (like ``60m``) into a float with seconds as a unit.
+
+    val
+        A string representing a time interval (``60m``, ``1.5h``, ``7d``).
+        Floats and ``None`` are returned unmodified. Integers are cast to floats.
     """
     if val is None:
         return val

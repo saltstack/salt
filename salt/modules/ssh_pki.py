@@ -2,7 +2,7 @@
 Manage OpenSSH keys and certificates
 ====================================
 
-.. versionadded:: 3007.0
+.. versionadded:: 3008.0
 
 
 :depends: cryptography
@@ -248,9 +248,23 @@ def create_certificate(
         A mapping of critical option name to option value to set on the certificate.
         If an option does not take a value, specify it as ``true``.
 
+        Example:
+
+        .. code-block:: bash
+
+            salt-call ssh_pki.create_certificate [...] \
+              critical_options='{"force-command": "/usr/bin/id", "verify-required": true}'
+
     extensions
         A mapping of extension name to extension value to set on the certificate.
         If an extension does not take a value, specify it as ``true``.
+
+        Example:
+
+        .. code-block:: bash
+
+            salt-call ssh_pki.create_certificate [...] \
+              extensions='{"custom-option@my.org": "foobar", "permit-pty": true}'
 
     valid_principals
         A list of valid principals.

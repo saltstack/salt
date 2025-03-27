@@ -2,7 +2,7 @@
 Manage OpenSSH certificates
 ===========================
 
-.. versionadded:: 3007.0
+.. versionadded:: 3008.0
 
 
 :depends: cryptography
