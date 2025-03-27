@@ -130,7 +130,7 @@ def test_build_rule():
         command="add",
         icmpv6type="echo-request,echo-reply",
         jump="accept",
-        full=True,
+        full="True",
     ) == {
         "result": True,
         "rule": (
