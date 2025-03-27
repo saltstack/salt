@@ -106,7 +106,7 @@ def test_sign_remote_certificate_enc(ssh_salt_ssh_cli, cert_args, ca_key, rsa_pr
     cert_args["private_key"] += "_enc"
     cert_args["private_key_passphrase"] = "hunter1"
     ret = ssh_salt_ssh_cli.run("ssh_pki.create_certificate", **cert_args)
-    if ret.returncode != 0 and "Need bcrypt module" in ret.data:
+    if ret.returncode != 0 and "Need bcrypt module" in str(ret.data):
         pytest.skip("Test needs bcrypt module in the global Python PATH")
     assert ret.returncode == 0
     assert ret.data
