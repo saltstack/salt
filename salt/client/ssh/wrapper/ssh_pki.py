@@ -175,17 +175,15 @@ def create_certificate(
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
 
     if not ca_server:
-        return _check_ret(
-            __salt__["ssh_pki.create_certificate_ssh"](
-                signing_policy=signing_policy,
-                path=path,
-                overwrite=overwrite,
-                raw=raw,
-                **kwargs,
-            )
+        return __salt__["ssh_pki.create_certificate_ssh"](
+            signing_policy=signing_policy,
+            path=path,
+            overwrite=overwrite,
+            raw=raw,
+            **kwargs,
         )
 
-    if path and not overwrite and _check_ret(__salt__["file.file_exists"](path)):
+    if path and not overwrite and __salt__["file.file_exists"](path):
         raise CommandExecutionError(
             f"The file at {path} exists and overwrite was set to false"
         )
@@ -202,7 +200,7 @@ def create_certificate(
         if raw:
             return out
         return out.decode()
-    _check_ret(__salt__["file.write"](*out.decode().splitlines()))
+    __salt__["file.write"](*out.decode().splitlines())
     return f"Certificate written to {path}"
 
 
@@ -210,15 +208,11 @@ def _create_certificate_remote(
     ca_server, signing_policy, private_key=None, private_key_passphrase=None, **kwargs
 ):
     if private_key:
-        kwargs["public_key"] = _check_ret(
-            __salt__["ssh_pki.get_public_key"](
-                private_key, passphrase=private_key_passphrase
-            )
+        kwargs["public_key"] = __salt__["ssh_pki.get_public_key"](
+            private_key, passphrase=private_key_passphrase
         )
     elif kwargs.get("public_key"):
-        kwargs["public_key"] = _check_ret(
-            __salt__["ssh_pki.get_public_key"](kwargs["public_key"])
-        )
+        kwargs["public_key"] = __salt__["ssh_pki.get_public_key"](kwargs["public_key"])
 
     result = _query_remote(ca_server, signing_policy, kwargs)
     try:
@@ -254,14 +248,6 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
             "ca_server reported errors:\n" + "\n".join(result["errors"])
         )
     return result["data"]
-
-
-def _check_ret(ret):
-    # Failing unwrapped calls to the minion always return a result dict
-    # and do not throw exceptions currently.
-    if isinstance(ret, dict) and ret.get("stderr"):
-        raise CommandExecutionError(ret["stderr"])
-    return ret
 
 
 def get_signing_policy(signing_policy, ca_server=None):
@@ -459,7 +445,7 @@ def certificate_managed_wrapper(
         # Check if we have a source for a public key
         if pk_args:
             private_key = pk_args["name"]
-            if not _check_ret(__salt__["file.file_exists"](private_key)):
+            if not __salt__["file.file_exists"](private_key):
                 create_private_key = True
             elif __salt__["file.is_link"](private_key):
                 if not pk_args.get("overwrite"):
@@ -481,27 +467,25 @@ def certificate_managed_wrapper(
                     pk_args.get("overwrite", False),
                 )
         elif private_key:
-            if not _check_ret(__salt__["file.file_exists"](private_key)):
+            if not __salt__["file.file_exists"](private_key):
                 raise SaltInvocationError("Specified private key does not exist")
             public_key, _ = _load_privkey(private_key, private_key_passphrase)
         elif public_key:
             # todo usually can be specified as the key itself
-            if not _check_ret(__salt__["file.file_exists"](public_key)):
+            if not __salt__["file.file_exists"](public_key):
                 raise SaltInvocationError("Specified public key does not exist")
-            public_key = _check_ret(__salt__["ssh_pki.get_public_key"](public_key))
+            public_key = __salt__["ssh_pki.get_public_key"](public_key)
 
         if create_private_key:
             # A missing private key means we need to create a certificate regardless
             new_certificate = True
-        elif not _check_ret(__salt__["file.file_exists"](name)):
+        elif not __salt__["file.file_exists"](name):
             new_certificate = True
         else:
             # We check the certificate the same way the state does
-            crt = _check_ret(__salt__["file.read"](name))
-            signing_policy_contents = _check_ret(
-                __salt__[f"{backend}.get_signing_policy"](
-                    signing_policy, ca_server=ca_server, **(backend_args or {})
-                )
+            crt = __salt__["file.read"](name)
+            signing_policy_contents = __salt__[f"{backend}.get_signing_policy"](
+                signing_policy, ca_server=ca_server, **(backend_args or {})
             )
             current, cert_changes, replace = sshpki.check_cert_changes(
                 crt,
@@ -567,8 +551,8 @@ def certificate_managed_wrapper(
             return ret
 
         if create_private_key or recreate_private_key:
-            pk_temp_file = _check_ret(__salt__["temp.file"]())
-            _check_ret(__salt__["file.set_mode"](pk_temp_file, "0600"))
+            pk_temp_file = __salt__["temp.file"]()
+            __salt__["file.set_mode"](pk_temp_file, "0600")
             cpk_args = {"path": pk_temp_file, "overwrite": True}
             for arg in (
                 "algo",
@@ -577,11 +561,9 @@ def certificate_managed_wrapper(
             ):
                 if arg in pk_args:
                     cpk_args[arg] = pk_args[arg]
-            _check_ret(__salt__["ssh_pki.create_private_key"](**cpk_args))
-            public_key = _check_ret(
-                __salt__["ssh_pki.get_public_key"](
-                    pk_temp_file, pk_args.get("passphrase")
-                )
+            __salt__["ssh_pki.create_private_key"](**cpk_args)
+            public_key = __salt__["ssh_pki.get_public_key"](
+                pk_temp_file, pk_args.get("passphrase")
             )
         if pk_args:
             pk_ret = {
@@ -615,14 +597,12 @@ def certificate_managed_wrapper(
         }
         if new_certificate or cert_changes:
             pp = ("re" if current else "") + "created"
-            cert_ret["contents"] = _check_ret(
-                __salt__[f"{backend}.create_certificate"](
-                    **_filter_cert_managed_state_args(cert_args),
-                    **(backend_args or {}),
-                    ca_server=ca_server,
-                    signing_policy=signing_policy,
-                    public_key=public_key,
-                )
+            cert_ret["contents"] = __salt__[f"{backend}.create_certificate"](
+                **_filter_cert_managed_state_args(cert_args),
+                **(backend_args or {}),
+                ca_server=ca_server,
+                signing_policy=signing_policy,
+                public_key=public_key,
             )
             cert_ret["comment"] = f"The certificate has been {pp}"
             if not cert_changes:
@@ -641,10 +621,10 @@ def certificate_managed_wrapper(
         )
     except (CommandExecutionError, SaltInvocationError) as err:
         if pk_temp_file:
-            if _check_ret(__salt__["file.file_exists"](pk_temp_file)):
+            if __salt__["file.file_exists"](pk_temp_file):
                 try:
                     # otherwise, get rid of it
-                    _check_ret(__salt__["file.remove"](pk_temp_file))
+                    __salt__["file.remove"](pk_temp_file)
                 except Exception as err:  # pylint: disable=broad-except
                     log.error(str(err), exc_info_on_loglevel=logging.DEBUG)
         ret = {
@@ -678,11 +658,9 @@ def _load_privkey(pk, passphrase, overwrite=False):
     public_key = None
     create_private_key = False
     try:
-        public_key = _check_ret(
-            __salt__["ssh_pki.get_public_key"](
-                pk,
-                passphrase,
-            )
+        public_key = __salt__["ssh_pki.get_public_key"](
+            pk,
+            passphrase,
         )
     except CommandExecutionError as err:
         # All errors currently get mangled into this one.
