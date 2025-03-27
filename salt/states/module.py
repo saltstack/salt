@@ -670,17 +670,7 @@ def _get_result(func_ret):
         res = func_ret
     # if mret is a dict, check if certain keys exist
     elif isinstance(func_ret, dict):
-        # if return key exists and is boolean, return that as the result
-        if isinstance(func_ret.get("result", {}), bool):
-            res = func_ret.get("result", {})
-        # if retcode exists and it is non-zero, return False
-        elif func_ret.get("retcode", 0) != 0:
-            res = False
-        # Explore dict in depth to determine if there is a
-        # 'result' key set to False which sets the global
-        # state result.
-        else:
-            res = _get_dict_result(func_ret)
+        res = _get_dict_result(func_ret)
 
     return res
 
@@ -688,7 +678,7 @@ def _get_result(func_ret):
 def _get_dict_result(node):
     ret = True
     for key, val in node.items():
-        if key == "result" and val is False:
+        if (key == "result" and val is False) or (key == "retcode" and val != 0):
             ret = False
             break
         elif isinstance(val, dict):
