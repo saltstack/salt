@@ -6,10 +6,14 @@ when a state rendering fails because an execution module throws an exception.
 import pytest
 
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 

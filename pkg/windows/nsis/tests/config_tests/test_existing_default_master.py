@@ -6,19 +6,20 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create an existing config
     pytest.helpers.existing_config()
-
-    pytest.helpers.run_command(
-        [pytest.INST_BIN, "/S", "/default-config", "/master=cli_master"]
-    )
-    yield
+    args = ["/S", "/default-config", "/master=cli_master"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
 def test_binaries_present(install):
-    assert os.path.exists(rf"{pytest.INST_DIR}\ssm.exe")
+    # This will show the contents of the directory on failure
+    inst_dir = pytest.INST_DIR
+    inst_dir_exists = os.path.exists(inst_dir)
+    dir_contents = os.listdir(inst_dir)
+    assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 
 def test_config_present(install):

@@ -2,7 +2,6 @@
 Functions for adding yaml encoding to the jinja context
 """
 
-
 import io
 import sys
 

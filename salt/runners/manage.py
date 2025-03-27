@@ -3,7 +3,6 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 """
 
-
 import logging
 import operator
 import os
@@ -134,7 +133,7 @@ def key_regen():
             path = os.path.join(root, fn_)
             try:
                 os.remove(path)
-            except os.error:
+            except OSError:
                 pass
     msg = (
         "The minion and master keys have been deleted.  Restart the Salt\n"
@@ -540,10 +539,10 @@ def safe_accept(target, tgt_type="glob"):
             elif minion not in pending:
                 failures[minion] = f"Minion key {minion} not found by salt-key"
             elif pending[minion] != finger:
-                failures[
-                    minion
-                ] = "Minion key {} does not match the key in salt-key: {}".format(
-                    finger, pending[minion]
+                failures[minion] = (
+                    "Minion key {} does not match the key in salt-key: {}".format(
+                        finger, pending[minion]
+                    )
                 )
             else:
                 subprocess.call(["salt-key", "-qya", minion])
@@ -559,10 +558,7 @@ def safe_accept(target, tgt_type="glob"):
             print(message)
             print("")
 
-    __jid_event__.fire_event(
-        {"message": f"Accepted {len(ret):d} keys"},
-        "progress",
-    )
+    __jid_event__.fire_event({"message": f"Accepted {len(ret):d} keys"}, "progress")
     return ret, failures
 
 
@@ -627,7 +623,7 @@ def versions():
 
 def bootstrap(
     version="develop",
-    script="https://bootstrap.saltproject.io",
+    script="https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh",
     hosts="",
     script_args="",
     roster="flat",
@@ -643,7 +639,7 @@ def bootstrap(
     version : develop
         Git tag of version to install
 
-    script : https://bootstrap.saltproject.io/
+    script : https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh
         URL containing the script to execute
 
     hosts
@@ -703,8 +699,8 @@ def bootstrap(
     .. code-block:: bash
 
         salt-run manage.bootstrap hosts='host1,host2'
-        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2'
-        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2' script='https://bootstrap.saltproject.io/develop'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3006.2'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3006.2' script='https://github.com/saltstack/salt-bootstrap/develop'
     """
 
     client_opts = __opts__.copy()
@@ -773,7 +769,7 @@ def bootstrap_psexec(
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        https://repo.saltproject.io/windows/
+        https://packages.broadcom.com/artifactory/saltproject-generic/windows/
 
     username
         Optional user name for login on remote computer.
@@ -791,6 +787,9 @@ def bootstrap_psexec(
         salt-run manage.bootstrap_psexec hosts='host1,host2' installer_url='http://exampledomain/salt-installer.exe'
     """
 
+    # TODO: Need to make this gets the latest version from the new repo location
+    # TODO: Similar to tests/support/win_installer.py
+    # TODO: Maybe need to move that ^^^^ to a salt util
     if not installer_url:
         base_url = "https://repo.saltproject.io/windows/"
         source = urllib.request.urlopen(base_url).read()

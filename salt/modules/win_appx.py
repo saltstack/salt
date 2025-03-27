@@ -42,6 +42,7 @@ Not all packages can be found this way, but it seems like most of them can.
 
 Use the ``appx.install`` function to provision the new app.
 """
+
 import fnmatch
 import logging
 
@@ -269,7 +270,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
                     remove_package(item)
             else:
                 if bundle and bundle["IsBundle"]:
-                    log.debug(f'Found bundle: {bundle["PackageFullName"]}')
+                    log.debug("Found bundle: %s", bundle["PackageFullName"])
                     remove_name = bundle["PackageFullName"]
         if deprovision_only:
             log.debug("Deprovisioning package: %s", remove_name)
@@ -287,7 +288,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
             # The old one will not have an installer and will throw an error
             # We should be safe just logging the message
             # This is really hard to replicate
-            log.debug(f"There was an error removing package: {remove_name}")
+            log.debug("There was an error removing package: %s", remove_name)
             log.debug(exc)
 
     if isinstance(packages, list):

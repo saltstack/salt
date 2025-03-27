@@ -4,6 +4,7 @@
 
     Test the salt aws functions
 """
+
 import io
 import os
 import time
@@ -21,7 +22,7 @@ pytestmark = [
     # Skip testing on windows since it does not support signal.SIGALRM
     # which is what the timeout marker is using by default.
     pytest.mark.skip_on_windows,
-    pytest.mark.timeout(60, method=DEFAULT_METHOD),
+    pytest.mark.timeout(60, method=DEFAULT_METHOD, func_only=True),
 ]
 
 

@@ -21,7 +21,13 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.loader.dunder import __file_client__
+from salt.loader.dunder import (
+    __context__,
+    __file_client__,
+    __grains__,
+    __opts__,
+    __pillar__,
+)
 
 log = logging.getLogger(__name__)
 
@@ -116,7 +122,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
                 if os.path.isfile(dest):
                     return "Path exists and is a file"
             else:
-                return _error(exc.__str__())
+                return _error(str(exc))
         return True
 
     chunk = base64.b64decode(chunk)
@@ -127,12 +133,12 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
-            return _error(exc.__str__())
+            return _error(str(exc))
         try:
             os.makedirs(os.path.dirname(dest))
         except OSError as makedirs_exc:
             # Failed to make directory
-            return _error(makedirs_exc.__str__())
+            return _error(str(makedirs_exc))
         fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
 
     try:
@@ -140,7 +146,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
         fh_.write(salt.utils.gzip_util.uncompress(chunk) if compressed else chunk)
     except OSError as exc:
         # Write failed
-        return _error(exc.__str__())
+        return _error(str(exc))
     else:
         # Write successful
         if not append and mode is not None:
@@ -150,7 +156,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
             try:
                 os.chmod(dest, mode)
             except OSError as exc:
-                return _error(exc.__str__())
+                return _error(str(exc))
         return True
     finally:
         try:
@@ -168,7 +174,7 @@ def _client():
     """
     if __file_client__:
         return __file_client__.value()
-    return salt.fileclient.get_file_client(__opts__)
+    return salt.fileclient.get_file_client(__opts__.value())
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):

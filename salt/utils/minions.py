@@ -3,13 +3,11 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
-
 import fnmatch
 import logging
 import os
 import re
 
-import salt.auth.ldap
 import salt.cache
 import salt.payload
 import salt.roster

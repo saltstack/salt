@@ -11,7 +11,7 @@ Manage Windows Packages using Chocolatey
 
 import salt.utils.data
 import salt.utils.versions
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 def __virtual__():
@@ -141,13 +141,13 @@ def installed(
                     ret["comment"] = f"{name} {version} is already installed"
             else:
                 if allow_multiple:
-                    ret[
-                        "comment"
-                    ] = f"{name} {version} will be installed side by side with {name} {installed_version} if supported"
+                    ret["comment"] = (
+                        f"{name} {version} will be installed side by side with {name} {installed_version} if supported"
+                    )
                 else:
-                    ret[
-                        "comment"
-                    ] = f"{name} {version} will be installed over {name} {installed_version}"
+                    ret["comment"] = (
+                        f"{name} {version} will be installed over {name} {installed_version}"
+                    )
                     force = True
         else:
             version = installed_version
@@ -374,14 +374,14 @@ def upgraded(
                 if salt.utils.versions.compare(
                     ver1=installed_version, oper="<", ver2=version
                 ):
-                    ret[
-                        "comment"
-                    ] = f"{name} {installed_version} will be upgraded to version {version}"
+                    ret["comment"] = (
+                        f"{name} {installed_version} will be upgraded to version {version}"
+                    )
                 # If installed version is newer than new version
                 else:
-                    ret[
-                        "comment"
-                    ] = f"{name} {installed_version} (newer) is already installed"
+                    ret["comment"] = (
+                        f"{name} {installed_version} (newer) is already installed"
+                    )
                     return ret
         # Catch all for a condition where version is not passed and there is no
         # available version
@@ -511,5 +511,184 @@ def source_present(
     post_install = __salt__["chocolatey.list_sources"]()
 
     ret["changes"] = salt.utils.data.compare_dicts(pre_install, post_install)
+
+    return ret
+
+
+def bootstrapped(name, force=False, source=None, version=None):
+    """
+    .. versionadded:: 3007.1
+
+    Ensure chocolatey is installed on the system.
+
+    You can't upgrade an existing installation with this state. You must use
+    chocolatey to upgrade chocolatey.
+
+    For example:
+
+    .. code-block:: bash
+
+        choco upgrade chocolatey --version 2.2.0
+
+    Args:
+
+        name (str):
+            The name of the state that installs chocolatey. Required for all
+            states. This is ignored.
+
+        force (bool):
+            Run the bootstrap process even if Chocolatey is found in the path.
+
+            .. note::
+                If chocolatey is already installed this will just re-run the
+                install script over the existing version. The ``version``
+                parameter is ignored.
+
+        source (str):
+            The location of the ``.nupkg`` file or ``.ps1`` file to run from an
+            alternate location. This can be one of the following types of URLs:
+
+            - salt://
+            - http(s)://
+            - ftp://
+            - file:// - A local file on the system
+
+        version (str):
+            The version of chocolatey to install. The latest version is
+            installed if this value is ``None``. Default is ``None``
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Bootstrap the latest version of chocolatey
+        bootstrap_chocolatey:
+          chocolatey.bootstrapped
+
+        # Bootstrap the latest version of chocolatey
+        # If chocolatey is already present, re-run the install script
+        bootstrap_chocolatey:
+          chocolatey.bootstrapped:
+            - force: True
+
+        # Bootstrap Chocolatey version 1.4.0
+        bootstrap_chocolatey:
+          chocolatey.bootstrapped:
+            - version: 1.4.0
+
+        # Bootstrap Chocolatey from a local file
+        bootstrap_chocolatey:
+          chocolatey.bootstrapped:
+            - source: C:\\Temp\\chocolatey.nupkg
+
+        # Bootstrap Chocolatey from a file on the salt master
+        bootstrap_chocolatey:
+          chocolatey.bootstrapped:
+            - source: salt://Temp/chocolatey.nupkg
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+
+    try:
+        old = __salt__["chocolatey.chocolatey_version"]()
+    except CommandExecutionError:
+        old = None
+
+    # Try to predict what will happen
+    if old:
+        if force:
+            ret["comment"] = (
+                f"Chocolatey {old} will be reinstalled\n"
+                'Use "choco upgrade chocolatey --version 2.1.0" to change the version'
+            )
+        else:
+            # You can't upgrade chocolatey using the install script, you have to use
+            # chocolatey itself
+            ret["comment"] = (
+                f"Chocolatey {old} is already installed.\n"
+                'Use "choco upgrade chocolatey --version 2.1.0" to change the version'
+            )
+            return ret
+
+    else:
+        if version is None:
+            ret["comment"] = "The latest version of Chocolatey will be installed"
+        else:
+            ret["comment"] = f"Chocolatey {version} will be installed"
+
+    if __opts__["test"]:
+        ret["result"] = None
+        return ret
+
+    __salt__["chocolatey.bootstrap"](force=force, source=source, version=version)
+
+    try:
+        new = __salt__["chocolatey.chocolatey_version"](refresh=True)
+    except CommandExecutionError:
+        new = None
+
+    if new is None:
+        ret["comment"] = f"Failed to install chocolatey {new}"
+        ret["result"] = False
+    else:
+        if salt.utils.versions.version_cmp(old, new) == 0:
+            ret["comment"] = f"Re-installed chocolatey {new}"
+        else:
+            ret["comment"] = f"Installed chocolatey {new}"
+            ret["changes"] = {"old": old, "new": new}
+
+    return ret
+
+
+def unbootstrapped(name):
+    """
+    .. versionadded:: 3007.1
+
+    Ensure chocolatey is removed from the system.
+
+    Args:
+
+        name (str):
+            The name of the state that uninstalls chocolatey. Required for all
+            states. This is ignored.
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Uninstall chocolatey
+        uninstall_chocolatey:
+          chocolatey.unbootstrapped
+
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+
+    try:
+        old = __salt__["chocolatey.chocolatey_version"]()
+    except CommandExecutionError:
+        old = None
+
+    if old is None:
+        ret["comment"] = "Chocolatey not found on this system"
+        return ret
+
+    ret["comment"] = f"Chocolatey {old} will be removed"
+
+    if __opts__["test"]:
+        ret["result"] = None
+        return ret
+
+    __salt__["chocolatey.unbootstrap"]()
+
+    try:
+        new = __salt__["chocolatey.chocolatey_version"](refresh=True)
+    except CommandExecutionError:
+        new = None
+
+    if new is None:
+        ret["comment"] = f"Uninstalled chocolatey {old}"
+        ret["changes"] = {"new": new, "old": old}
+    else:
+        ret["comment"] = f"Failed to uninstall chocolatey {old}\nFound version {new}"
+        ret["result"] = False
 
     return ret

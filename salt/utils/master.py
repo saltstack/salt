@@ -5,6 +5,7 @@
     Utilities that can only be used on a salt master.
 
 """
+
 import logging
 import os
 import signal
@@ -31,7 +32,7 @@ log = logging.getLogger(__name__)
 
 def get_running_jobs(opts):
     """
-    Return the running jobs on this minion
+    Return the running jobs on this master
     """
 
     ret = []
@@ -52,6 +53,47 @@ def get_running_jobs(opts):
     return ret
 
 
+def clean_proc_dir(opts):
+    """
+    Clean out old tracked jobs running on the master
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    """
+    proc_dir = os.path.join(opts["cachedir"], "proc")
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(proc_dir, fn_)
+        try:
+            data = _read_proc_file(proc_file, opts)
+        except OSError:
+            # proc files may be removed at any time during this process by
+            # the master process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            log.trace("%s removed during processing by master process", proc_file)
+            continue
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file,
+                )
+                os.remove(proc_file)
+            except OSError as err:
+                log.error("Unable to remove proc file: %s.", err)
+            continue
+        if not _check_cmdline(data):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data["pid"],
+                    proc_file,
+                )
+                os.remove(proc_file)
+            except OSError as err:
+                log.error("Unable to remove proc file: %s.", err)
+
+
 def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
@@ -69,7 +111,7 @@ def _read_proc_file(path, opts):
                 log.debug("Unable to remove proc file %s.", path)
             return None
     if not isinstance(data, dict):
-        # Invalid serial object
+        # Invalid payload object
         return None
     if not salt.utils.process.os_is_running(data["pid"]):
         # The process is no longer running, clear out the file and
@@ -108,7 +150,7 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{}/cmdline".format(pid))
+    path = os.path.join(f"/proc/{pid}/cmdline")
     if not os.path.isfile(path):
         return False
     try:
@@ -160,7 +202,7 @@ class MasterPillarUtil:
         if opts is None:
             log.error("%s: Missing master opts init arg.", self.__class__.__name__)
             raise SaltException(
-                "{}: Missing master opts init arg.".format(self.__class__.__name__)
+                f"{self.__class__.__name__}: Missing master opts init arg."
             )
         else:
             self.opts = opts
@@ -201,7 +243,7 @@ class MasterPillarUtil:
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch("minions/{}".format(minion_id), "mine")
+            mdata = self.cache.fetch(f"minions/{minion_id}", "mine")
             if isinstance(mdata, dict):
                 mine_data[minion_id] = mdata
         return mine_data
@@ -219,7 +261,7 @@ class MasterPillarUtil:
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch("minions/{}".format(minion_id), "data")
+            mdata = self.cache.fetch(f"minions/{minion_id}", "data")
             if not isinstance(mdata, dict):
                 log.warning(
                     "cache.fetch should always return a dict. ReturnedType: %s,"
@@ -488,7 +530,7 @@ class MasterPillarUtil:
         if clear_mine:
             clear_what.append("mine")
         if clear_mine_func is not None:
-            clear_what.append("mine_func: '{}'".format(clear_mine_func))
+            clear_what.append(f"mine_func: '{clear_mine_func}'")
         if not clear_what:
             log.debug("No cached data types specified for clearing.")
             return False
@@ -514,7 +556,7 @@ class MasterPillarUtil:
                 if minion_id not in c_minions:
                     # Cache bank for this minion does not exist. Nothing to do.
                     continue
-                bank = "minions/{}".format(minion_id)
+                bank = f"minions/{minion_id}"
                 minion_pillar = pillars.pop(minion_id, False)
                 minion_grains = grains.pop(minion_id, False)
                 if (
@@ -822,7 +864,7 @@ def get_master_key(key_user, opts, skip_perm_errors=False):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         key_user = key_user.replace("\\", "_")
-    keyfile = os.path.join(opts["cachedir"], ".{}_key".format(key_user))
+    keyfile = os.path.join(opts["cachedir"], f".{key_user}_key")
     # Make sure all key parent directories are accessible
     salt.utils.verify.check_path_traversal(opts["cachedir"], key_user, skip_perm_errors)
 

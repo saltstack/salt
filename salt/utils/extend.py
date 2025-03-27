@@ -12,7 +12,6 @@ This tool is accessed using `salt-extend`
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-
 import logging
 import os
 import shutil
@@ -175,19 +174,15 @@ def _prompt_choice(var_name, options):
     :returns: The selected user
     """
     choice_map = OrderedDict(
-        ("{}".format(i), value)
-        for i, value in enumerate(options, 1)
-        if value[0] != "test"
+        (f"{i}", value) for i, value in enumerate(options, 1) if value[0] != "test"
     )
     choices = choice_map.keys()
     default = "1"
 
-    choice_lines = [
-        "{} - {} - {}".format(c[0], c[1][0], c[1][1]) for c in choice_map.items()
-    ]
+    choice_lines = [f"{c[0]} - {c[1][0]} - {c[1][1]}" for c in choice_map.items()]
     prompt = "\n".join(
         (
-            "Select {}:".format(var_name),
+            f"Select {var_name}:",
             "\n".join(choice_lines),
             "Choose from {}".format(", ".join(choices)),
         )
@@ -273,7 +268,7 @@ def run(
     if description is None:
         description = _prompt_user_variable("Short description of the module", "")
 
-    template_dir = "templates/{}".format(extension_type)
+    template_dir = f"templates/{extension_type}"
     module_name = name
 
     param_dict = {

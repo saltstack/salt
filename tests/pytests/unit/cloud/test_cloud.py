@@ -5,6 +5,10 @@ from salt.config import get_cloud_config_value
 from salt.exceptions import SaltCloudSystemExit
 from tests.support.mock import MagicMock, patch
 
+pytestmark = [
+    pytest.mark.timeout_unless_on_windows(120),
+]
+
 
 @pytest.fixture
 def master_config(master_opts):

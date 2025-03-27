@@ -59,7 +59,6 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 """
 
-
 import re
 import sys
 
@@ -356,10 +355,10 @@ def present(
         )
         return ret
     elif data == "no change":
-        ret[
-            "comment"
-        ] = "The authorized host key {} is already present for user {}".format(
-            name, user
+        ret["comment"] = (
+            "The authorized host key {} is already present for user {}".format(
+                name, user
+            )
         )
     elif data == "new":
         ret["changes"][name] = "New"
@@ -386,9 +385,9 @@ def present(
             )
     elif data == "invalid" or data == "Invalid public key":
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Invalid public ssh key, most likely has spaces or invalid syntax"
+        ret["comment"] = (
+            "Invalid public ssh key, most likely has spaces or invalid syntax"
+        )
 
     return ret
 

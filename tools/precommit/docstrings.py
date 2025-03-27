@@ -1,6 +1,7 @@
 """
 Check salt code base for for missing or wrong docstrings.
 """
+
 # Skip mypy checks since it will follow into Salt which doesn't yet have proper types defined
 # mypy: ignore-errors
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
@@ -344,7 +345,6 @@ MISSING_DOCSTRINGS = {
         "get_pillars",
         "expand_variables",
         "render_jinja",
-        "expand_classes_in_order",
         "dict_search_and_replace",
         "expanded_dict_from_minion",
         "find_value_to_expand",
@@ -360,7 +360,6 @@ MISSING_DOCSTRINGS = {
         "machine_get_machinestate_tuple",
     ],
     "salt/utils/win_osinfo.py": ["get_os_version_info"],
-    "salt/utils/win_runas.py": ["split_username"],
     "salt/utils/yamldumper.py": [
         "represent_undefined",
         "represent_ordereddict",
@@ -748,7 +747,6 @@ MISSING_EXAMPLES = {
         "delete_advanced_configs",
         "get_vm",
     ],
-    "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
     "salt/modules/zk_concurrency.py": [
         "lock",

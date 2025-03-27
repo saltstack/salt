@@ -32,14 +32,12 @@ def _pyenv_exec(command, args="", env=None, runas=None, ret=None):
     path = _pyenv_path(runas)
 
     if env:
-        env = " {}".format(env)
+        env = f" {env}"
     env = env or ""
 
-    binary = "env PYENV_ROOT={}{} {}".format(path, env, binary)
+    binary = f"env PYENV_ROOT={path}{env} {binary}"
 
-    result = __salt__["cmd.run_all"](
-        "{} {} {}".format(binary, command, args), runas=runas
-    )
+    result = __salt__["cmd.run_all"](f"{binary} {command} {args}", runas=runas)
 
     if isinstance(ret, dict):
         ret.update(result)
@@ -53,7 +51,7 @@ def _pyenv_exec(command, args="", env=None, runas=None, ret=None):
 
 def _pyenv_bin(runas=None):
     path = _pyenv_path(runas)
-    return "{}/bin/pyenv".format(path)
+    return f"{path}/bin/pyenv"
 
 
 def _pyenv_path(runas=None):
@@ -61,7 +59,7 @@ def _pyenv_path(runas=None):
     if runas in (None, "root"):
         path = __salt__["config.option"]("pyenv.root") or "/usr/local/pyenv"
     else:
-        path = __salt__["config.option"]("pyenv.root") or "~{}/.pyenv".format(runas)
+        path = __salt__["config.option"]("pyenv.root") or f"~{runas}/.pyenv"
 
     return os.path.expanduser(path)
 
@@ -71,7 +69,7 @@ def _install_pyenv(path, runas=None):
         return True
 
     return 0 == __salt__["cmd.retcode"](
-        "git clone https://github.com/yyuu/pyenv.git {}".format(path), runas=runas
+        f"git clone https://github.com/yyuu/pyenv.git {path}", runas=runas
     )
 
 
@@ -80,17 +78,17 @@ def _update_pyenv(path, runas=None):
         return False
 
     return 0 == __salt__["cmd.retcode"](
-        "cd {} && git pull".format(shlex.quote(path)), runas=runas
+        f"cd {shlex.quote(path)} && git pull", runas=runas
     )
 
 
 def _update_python_build(path, runas=None):
-    path = "{}/plugins/python-build".format(path)
+    path = f"{path}/plugins/python-build"
     if not os.path.isdir(path):
         return False
 
     return 0 == __salt__["cmd.retcode"](
-        "cd {} && git pull".format(shlex.quote(path)), runas=runas
+        f"cd {shlex.quote(path)} && git pull", runas=runas
     )
 
 
@@ -193,7 +191,7 @@ def uninstall_python(python, runas=None):
     """
     python = re.sub(r"^python-", "", python)
 
-    args = "--force {}".format(python)
+    args = f"--force {python}"
     _pyenv_exec("uninstall", args, runas=runas)
     return True
 
@@ -287,7 +285,7 @@ def do(cmdline=None, runas=None):
     for cmd in cmd_split:
         quoted_line = quoted_line + " " + shlex.quote(cmd)
     result = __salt__["cmd.run_all"](
-        "env PATH={}/shims:$PATH {}".format(shlex.quote(path), quoted_line),
+        f"env PATH={shlex.quote(path)}/shims:$PATH {quoted_line}",
         runas=runas,
         python_shell=True,
     )
@@ -311,7 +309,7 @@ def do_with_python(python, cmdline, runas=None):
         salt '*' pyenv.do_with_python 2.0.0-p0 'gem list bundler' deploy
     """
     if python:
-        cmd = "PYENV_VERSION={} {}".format(python, cmdline)
+        cmd = f"PYENV_VERSION={python} {cmdline}"
     else:
         cmd = cmdline
 

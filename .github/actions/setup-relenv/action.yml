@@ -1,37 +1,29 @@
 ---
 name: setup-relenv
 description: Setup Relenv
+
 inputs:
   platform:
     required: true
-    type: string
     description: The platform to build
   arch:
     required: true
-    type: string
     description: The platform arch to build
   python-version:
     required: true
-    type: string
     description: The version of python to build
   cache-seed:
     required: true
-    type: string
     description: Seed used to invalidate caches
   version:
     required: false
-    type: string
     description: The version of relenv to use
     default: 0.13.2
 
 outputs:
   version:
+    description: The relenv version
     value: ${{ inputs.version }}
-
-
-env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:
@@ -45,7 +37,7 @@ runs:
         python3 -m pip install relenv==${{ inputs.version }}
 
     - name: Cache Relenv Data Directory
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: ${{ github.workspace }}/.relenv
         key: ${{ inputs.cache-seed }}|relenv|${{ inputs.version }}|${{ inputs.python-version }}|${{ inputs.platform }}|${{ inputs.arch }}

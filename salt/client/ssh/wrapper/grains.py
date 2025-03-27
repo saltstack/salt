@@ -2,7 +2,6 @@
 Return/control aspects of the grains data
 """
 
-
 import math
 
 import salt.utils.data
@@ -23,21 +22,28 @@ def _serial_sanitizer(instr):
     return "{}{}".format(instr[:index], "X" * (length - index))
 
 
-_FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
-_HOSTNAME_SANITIZER = lambda x: "MINION"
-_DOMAINNAME_SANITIZER = lambda x: "DOMAINNAME"
+def _fqdn_sanitizer(x):
+    return "MINION.DOMAINNAME"
+
+
+def _hostname_sanitizer(x):
+    return "MINION"
+
+
+def _domainname_sanitizer(x):
+    return "DOMAINNAME"
 
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _SANITIZERS = {
     "serialnumber": _serial_sanitizer,
-    "domain": _DOMAINNAME_SANITIZER,
-    "fqdn": _FQDN_SANITIZER,
-    "id": _FQDN_SANITIZER,
-    "host": _HOSTNAME_SANITIZER,
-    "localhost": _HOSTNAME_SANITIZER,
-    "nodename": _HOSTNAME_SANITIZER,
+    "domain": _domainname_sanitizer,
+    "fqdn": _fqdn_sanitizer,
+    "id": _fqdn_sanitizer,
+    "host": _hostname_sanitizer,
+    "localhost": _hostname_sanitizer,
+    "nodename": _hostname_sanitizer,
 }
 
 

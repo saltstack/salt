@@ -849,7 +849,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     (L + "# foo\n* * * * * ls\n"),
                     (
                         L
-                        + "# foo {}:blah\n".format(cron.SALT_CRON_IDENTIFIER)
+                        + f"# foo {cron.SALT_CRON_IDENTIFIER}:blah\n"
                         + "* * * * * ls\n"
                     ),
                 ]
@@ -1428,7 +1428,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         Expected to run without runas argument.
         """
         temp_path = "some_temp_path"
-        crontab_cmd = "crontab {}".format(temp_path)
+        crontab_cmd = f"crontab {temp_path}"
 
         with patch.dict(cron.__grains__, {"os_family": "RedHat"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
@@ -1480,7 +1480,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         Expected to run with runas argument.
         """
         temp_path = "some_temp_path"
-        crontab_cmd = "crontab {}".format(temp_path)
+        crontab_cmd = f"crontab {temp_path}"
 
         with patch.dict(cron.__grains__, {"os_family": "RedHat"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
@@ -1508,7 +1508,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         Expected to run with runas argument.
         """
         temp_path = "some_temp_path"
-        crontab_cmd = "crontab {}".format(temp_path)
+        crontab_cmd = f"crontab {temp_path}"
 
         with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
@@ -1531,7 +1531,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         Expected to run with runas argument.
         """
         temp_path = "some_temp_path"
-        crontab_cmd = "crontab {}".format(temp_path)
+        crontab_cmd = f"crontab {temp_path}"
 
         with patch.dict(cron.__grains__, {"os_family": "Solaris"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}

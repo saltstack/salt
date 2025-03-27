@@ -42,7 +42,6 @@ CLI Example:
     salt '*' foo.bar --out=table
 """
 
-
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin
 
@@ -117,9 +116,9 @@ class TableDisplay:
             )
 
     def wrap_onspace(self, text):
-
         """
-        When the text inside the column is longer then the width, will split by space and continue on the next line."""
+        When the text inside the column is longer then the width, will split by space and continue on the next line.
+        """
 
         def _truncate(line, word):
             return "{line}{part}{word}".format(
@@ -136,7 +135,6 @@ class TableDisplay:
         return reduce(_truncate, text.split(" "))
 
     def prepare_rows(self, rows, indent, has_header):
-
         """Prepare rows content to be displayed."""
 
         out = []
@@ -198,7 +196,6 @@ class TableDisplay:
         return out
 
     def display_rows(self, rows, labels, indent):
-
         """Prepares row content and displays."""
 
         out = []
@@ -245,7 +242,6 @@ class TableDisplay:
         return self.prepare_rows(labels_and_rows, indent + 4, has_header)
 
     def display(self, ret, indent, out, rows_key=None, labels_key=None):
-
         """Display table(s)."""
 
         rows = []
@@ -350,7 +346,7 @@ def output(ret, **kwargs):
     )
 
     for argk in argks:
-        argv = kwargs.get(argk) or __opts__.get("out.table.{key}".format(key=argk))
+        argv = kwargs.get(argk) or __opts__.get(f"out.table.{argk}")
         if argv is not None:
             class_kvargs[argk] = argv
 

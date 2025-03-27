@@ -9,7 +9,6 @@ Tests for the zfs utils library
 .. versionadded:: 2018.3.1
 """
 
-
 import salt.utils.zfs as zfs
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch

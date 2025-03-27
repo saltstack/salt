@@ -183,7 +183,7 @@ def test_sed_limit_escaped(sed_content, subdir):
         path = tfile.name
         before = "/var/lib/foo"
         after = ""
-        limit = "^{}".format(before)
+        limit = f"^{before}"
 
         filemod.sed(path, before, after, limit=limit)
 
@@ -506,12 +506,13 @@ def test_get_diff():
             mockself.path = path
 
         def readlines(mockself):  # pylint: disable=unused-argument
-            return {
+            ret = {
                 "text1": text1.encode("utf8"),
                 "text2": text2.encode("utf8"),
                 "binary1": binary1,
                 "binary2": binary2,
-            }[mockself.path].splitlines(True)
+            }
+            return ret[mockself.path].splitlines(True)
 
         def __enter__(mockself):
             return mockself

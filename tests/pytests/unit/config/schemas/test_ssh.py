@@ -146,7 +146,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     try:
         jsonschema.validate(
@@ -155,7 +155,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     try:
         jsonschema.validate(
@@ -164,7 +164,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     try:
         jsonschema.validate(
@@ -173,7 +173,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     try:
         jsonschema.validate(
@@ -188,7 +188,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     try:
         jsonschema.validate(
@@ -202,7 +202,7 @@ def test_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(
@@ -259,7 +259,7 @@ def test_roster_config_validate():
             format_checker=jsonschema.FormatChecker(),
         )
     except jsonschema.exceptions.ValidationError as exc:
-        pytest.fail("ValidationError raised: {}".format(exc))
+        pytest.fail(f"ValidationError raised: {exc}")
 
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(

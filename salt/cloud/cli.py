@@ -1,6 +1,7 @@
 """
 Primary interfaces for the salt-cloud system
 """
+
 # Need to get data from 4 sources!
 # CLI options
 # salt cloud config - CONFIG_DIR + '/cloud'
@@ -174,11 +175,11 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             msg = "The following virtual machines are set to be destroyed:\n"
             names = set()
             for alias, drivers in matching.items():
-                msg += "  {}:\n".format(alias)
+                msg += f"  {alias}:\n"
                 for driver, vms in drivers.items():
-                    msg += "    {}:\n".format(driver)
+                    msg += f"    {driver}:\n"
                     for name in vms:
-                        msg += "      {}\n".format(name)
+                        msg += f"      {name}\n"
                         names.add(name)
             try:
                 if self.print_confirm(msg):
@@ -212,7 +213,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     key, value = name.split("=", 1)
                     kwargs[key] = value
                 else:
-                    msg += "  {}\n".format(name)
+                    msg += f"  {name}\n"
                     machines.append(name)
             names = machines
 
@@ -255,7 +256,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
         elif self.options.set_password:
             username = self.credential_username
-            provider_name = "salt.cloud.provider.{}".format(self.credential_provider)
+            provider_name = f"salt.cloud.provider.{self.credential_provider}"
             # TODO: check if provider is configured
             # set the password
             salt.utils.cloud.store_password_in_keyring(provider_name, username)
@@ -275,7 +276,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     # display profile errors
                     msg += "Found the following errors:\n"
                     for profile_name, error in dmap["errors"].items():
-                        msg += "  {}: {}\n".format(profile_name, error)
+                        msg += f"  {profile_name}: {error}\n"
                     sys.stderr.write(msg)
                     sys.stderr.flush()
 
@@ -283,17 +284,17 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if "existing" in dmap:
                     msg += "The following virtual machines already exist:\n"
                     for name in dmap["existing"]:
-                        msg += "  {}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if dmap["create"]:
                     msg += "The following virtual machines are set to be created:\n"
                     for name in dmap["create"]:
-                        msg += "  {}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if "destroy" in dmap:
                     msg += "The following virtual machines are set to be destroyed:\n"
                     for name in dmap["destroy"]:
-                        msg += "  {}\n".format(name)
+                        msg += f"  {name}\n"
 
                 if not dmap["create"] and not dmap.get("destroy", None):
                     if not dmap.get("existing", None):
@@ -382,19 +383,17 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 # This is a salt cloud system exit
                 if exc.exit_code > 0:
                     # the exit code is bigger than 0, it's an error
-                    msg = "Error: {}".format(msg)
+                    msg = f"Error: {msg}"
                 self.exit(exc.exit_code, msg.format(exc).rstrip() + "\n")
             # It's not a system exit but it's an error we can
             # handle
             self.error(msg.format(exc))
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
-        # pylint: disable=str-format-in-logging
         log.error(
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
-        # pylint: enable=str-format-in-logging
         self.exit(salt.defaults.exitcodes.EX_GENERIC)

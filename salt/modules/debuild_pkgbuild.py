@@ -9,7 +9,6 @@ environments. This also provides a function to generate debian repositories
 This module implements the pkgbuild interface
 """
 
-
 import errno
 import logging
 import os
@@ -91,9 +90,7 @@ def _check_repo_gpg_phrase_utils():
     if __salt__["file.file_exists"](util_name):
         return True
     else:
-        raise CommandExecutionError(
-            "utility '{}' needs to be installed".format(util_name)
-        )
+        raise CommandExecutionError(f"utility '{util_name}' needs to be installed")
 
 
 def _get_build_env(env):
@@ -106,8 +103,8 @@ def _get_build_env(env):
     if not isinstance(env, dict):
         raise SaltInvocationError("'env' must be a Python dictionary")
     for key, value in env.items():
-        env_override += "{}={}\n".format(key, value)
-        env_override += "export {}\n".format(key)
+        env_override += f"{key}={value}\n"
+        env_override += f"export {key}\n"
     return env_override
 
 
@@ -140,7 +137,7 @@ def _get_repo_options_env(env):
         raise SaltInvocationError("'env' must be a Python dictionary")
     for key, value in env.items():
         if key == "OPTIONS":
-            env_options += "{}\n".format(value)
+            env_options += f"{value}\n"
     return env_options
 
 
@@ -195,7 +192,7 @@ def _get_repo_dists_env(env):
     if env is None:
         for key, value in dflts_dict.items():
             if dflts_dict[key][0] == "M":
-                env_dists += "{}: {}\n".format(dflts_dict[key][1], dflts_dict[key][2])
+                env_dists += f"{dflts_dict[key][1]}: {dflts_dict[key][2]}\n"
                 if key == "CODENAME":
                     codename = dflts_dict[key][2]
         return (codename, env_dists)
@@ -211,15 +208,15 @@ def _get_repo_dists_env(env):
                 if key == "CODENAME":
                     codename = value
             if dflts_dict[key][0] != "I":
-                env_dists += "{}: {}\n".format(dflts_dict[key][1], value)
+                env_dists += f"{dflts_dict[key][1]}: {value}\n"
         else:
-            env_dists += "{}: {}\n".format(key, value)
+            env_dists += f"{key}: {value}\n"
 
     # ensure mandatories are included
     env_keys = list(env.keys())
     for key in env_keys:
         if key in dflts_keys and dflts_dict[key][0] == "M" and key not in env_man_seen:
-            env_dists += "{}: {}\n".format(dflts_dict[key][1], dflts_dict[key][2])
+            env_dists += f"{dflts_dict[key][1]}: {dflts_dict[key][2]}\n"
             if key == "CODENAME":
                 codename = value
 
@@ -257,7 +254,7 @@ def _create_pbuilders(env, runas="root"):
             Ensure the user has correct permissions to any files and
             directories which are to be utilized.
     """
-    home = os.path.expanduser("~{}".format(runas))
+    home = os.path.expanduser(f"~{runas}")
     pbuilderrc = os.path.join(home, ".pbuilderrc")
     if not os.path.isfile(pbuilderrc):
         raise SaltInvocationError("pbuilderrc environment is incorrectly setup")
@@ -426,25 +423,25 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv="base", runas="root"
     debname_orig = debname + ".orig.tar.gz"
     abspath_debname = os.path.join(tree_base, debname)
 
-    cmd = "tar -xvzf {}".format(salttarball)
+    cmd = f"tar -xvzf {salttarball}"
     retrc = __salt__["cmd.retcode"](cmd, cwd=tree_base, runas=root_user)
-    cmd = "mv {} {}".format(salttar_name, debname)
+    cmd = f"mv {salttar_name} {debname}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=tree_base, runas=root_user)
-    cmd = "tar -cvzf {} {}".format(os.path.join(tree_base, debname_orig), debname)
+    cmd = f"tar -cvzf {os.path.join(tree_base, debname_orig)} {debname}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=tree_base, runas=root_user)
-    cmd = "rm -f {}".format(salttarball)
+    cmd = f"rm -f {salttarball}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=tree_base, runas=root_user, env=env)
-    cmd = "cp {}  {}".format(spec_pathfile, abspath_debname)
+    cmd = f"cp {spec_pathfile}  {abspath_debname}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=abspath_debname, runas=root_user)
-    cmd = "tar -xvJf {}".format(spec_pathfile)
+    cmd = f"tar -xvJf {spec_pathfile}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=abspath_debname, runas=root_user, env=env)
-    cmd = "rm -f {}".format(os.path.basename(spec_pathfile))
+    cmd = f"rm -f {os.path.basename(spec_pathfile)}"
     retrc |= __salt__["cmd.retcode"](cmd, cwd=abspath_debname, runas=root_user)
     cmd = "debuild -S -uc -us -sa"
     retrc |= __salt__["cmd.retcode"](
         cmd, cwd=abspath_debname, runas=root_user, python_shell=True, env=env
     )
-    cmd = "rm -fR {}".format(abspath_debname)
+    cmd = f"rm -fR {abspath_debname}"
     retrc |= __salt__["cmd.retcode"](cmd, runas=root_user)
     if retrc != 0:
         raise SaltInvocationError(
@@ -512,13 +509,13 @@ def build(
 
     # ensure pbuilder setup from runas if other than root
     if runas != root_user:
-        user_home = os.path.expanduser("~{}".format(runas))
+        user_home = os.path.expanduser(f"~{runas}")
         root_home = os.path.expanduser("~root")
-        cmd = "cp {}/.pbuilderrc {}/".format(user_home, root_home)
+        cmd = f"cp {user_home}/.pbuilderrc {root_home}/"
         retrc = __salt__["cmd.retcode"](
             cmd, runas=root_user, python_shell=True, env=env
         )
-        cmd = "cp -R {}/.pbuilder-hooks {}/".format(user_home, root_home)
+        cmd = f"cp -R {user_home}/.pbuilder-hooks {root_home}/"
         retrc = __salt__["cmd.retcode"](
             cmd, runas=root_user, python_shell=True, env=env
         )
@@ -540,7 +537,7 @@ def build(
     results_dir = "/var/cache/pbuilder/result"
 
     # ensure clean
-    cmd = "rm -fR {}".format(results_dir)
+    cmd = f"rm -fR {results_dir}"
     retrc |= __salt__["cmd.retcode"](cmd, runas=root_user, python_shell=True, env=env)
 
     # dscs should only contain salt orig and debian tarballs and dsc file
@@ -559,7 +556,7 @@ def build(
                 retrc |= __salt__["cmd.retcode"](
                     cmd, runas=root_user, python_shell=True, env=env
                 )
-                cmd = '/usr/sbin/pbuilder build --debbuildopts "-sa" {}'.format(dsc)
+                cmd = f'/usr/sbin/pbuilder build --debbuildopts "-sa" {dsc}'
                 retrc |= __salt__["cmd.retcode"](
                     cmd, runas=root_user, python_shell=True, env=env
                 )
@@ -712,15 +709,15 @@ def make_repo(
     phrase = ""
 
     # preset passphase and interaction with gpg-agent
-    gpg_info_file = "{}/gpg-agent-info-salt".format(gnupghome)
-    gpg_tty_info_file = "{}/gpg-tty-info-salt".format(gnupghome)
+    gpg_info_file = f"{gnupghome}/gpg-agent-info-salt"
+    gpg_tty_info_file = f"{gnupghome}/gpg-tty-info-salt"
 
     # if using older than gnupg 2.1, then env file exists
     older_gnupg = __salt__["file.file_exists"](gpg_info_file)
 
     if keyid is not None:
         with salt.utils.files.fopen(repoconfdist, "a") as fow:
-            fow.write(salt.utils.stringutils.to_str("SignWith: {}\n".format(keyid)))
+            fow.write(salt.utils.stringutils.to_str(f"SignWith: {keyid}\n"))
 
         # import_keys
         pkg_pub_key_file = "{}/{}".format(
@@ -828,7 +825,7 @@ def make_repo(
             # sign_it_here
             if older_gnupg:
                 if local_keyid is not None:
-                    cmd = "debsign --re-sign -k {} {}".format(keyid, abs_file)
+                    cmd = f"debsign --re-sign -k {keyid} {abs_file}"
                     retrc |= __salt__["cmd.retcode"](
                         cmd, runas=runas, cwd=repodir, use_vt=True, env=env
                     )
@@ -846,7 +843,7 @@ def make_repo(
                 if local_keyid is not None:
                     number_retries = timeout / interval
                     times_looped = 0
-                    error_msg = "Failed to debsign file {}".format(abs_file)
+                    error_msg = f"Failed to debsign file {abs_file}"
                     if (
                         __grains__["os"] in ["Ubuntu"]
                         and __grains__["osmajorrelease"] < 18
@@ -854,7 +851,7 @@ def make_repo(
                         __grains__["os"] in ["Debian"]
                         and __grains__["osmajorrelease"] <= 8
                     ):
-                        cmd = "debsign --re-sign -k {} {}".format(keyid, abs_file)
+                        cmd = f"debsign --re-sign -k {keyid} {abs_file}"
                         try:
                             proc = salt.utils.vt.Terminal(
                                 cmd,
@@ -903,7 +900,7 @@ def make_repo(
 
                 number_retries = timeout / interval
                 times_looped = 0
-                error_msg = "Failed to reprepro includedsc file {}".format(abs_file)
+                error_msg = f"Failed to reprepro includedsc file {abs_file}"
                 cmd = (
                     "reprepro --ignore=wrongdistribution --component=main -Vb ."
                     " includedsc {} {}".format(codename, abs_file)

@@ -57,7 +57,6 @@ The function :py:func:`data.subdict_match <salt.utils.data.subdict_match>` check
             instances: "{{ instance }}"
 """
 
-
 import logging
 import operator
 import sys
@@ -96,7 +95,7 @@ def until(name, m_args=None, m_kwargs=None, condition=None, period=1, timeout=60
         m_kwargs = {}
 
     if name not in __salt__:
-        ret["comment"] = "Cannot find module {}".format(name)
+        ret["comment"] = f"Cannot find module {name}"
     elif condition is None:
         ret["comment"] = "An exit condition must be specified"
     elif not isinstance(period, (int, float)):
@@ -104,7 +103,7 @@ def until(name, m_args=None, m_kwargs=None, condition=None, period=1, timeout=60
     elif not isinstance(timeout, (int, float)):
         ret["comment"] = "Timeout must be specified as a float in seconds"
     elif __opts__["test"]:
-        ret["comment"] = "The execution module {} will be run".format(name)
+        ret["comment"] = f"The execution module {name} will be run"
         ret["result"] = None
     else:
         if m_args is None:
@@ -117,7 +116,7 @@ def until(name, m_args=None, m_kwargs=None, condition=None, period=1, timeout=60
             m_ret = __salt__[name](*m_args, **m_kwargs)
             if eval(condition):  # pylint: disable=W0123
                 ret["result"] = True
-                ret["comment"] = "Condition {} was met".format(condition)
+                ret["comment"] = f"Condition {condition} was met"
                 break
             time.sleep(period)
         else:
@@ -162,7 +161,7 @@ def until_no_eval(
     """
     ret = {"name": name, "comment": "", "changes": {}, "result": False}
     if name not in __salt__:
-        ret["comment"] = 'Module.function "{}" is unavailable.'.format(name)
+        ret["comment"] = f'Module.function "{name}" is unavailable.'
     elif not isinstance(period, (int, float)):
         ret["comment"] = "Period must be specified as a float in seconds"
     elif not isinstance(timeout, (int, float)):
@@ -172,7 +171,7 @@ def until_no_eval(
     elif compare_operator in __utils__:
         comparator = __utils__[compare_operator]
     elif not hasattr(operator, compare_operator):
-        ret["comment"] = 'Invalid operator "{}" supplied.'.format(compare_operator)
+        ret["comment"] = f'Invalid operator "{compare_operator}" supplied.'
     else:
         comparator = getattr(operator, compare_operator)
     if __opts__["test"]:
@@ -222,10 +221,10 @@ def until_no_eval(
             break
         time.sleep(period)
     else:
-        ret[
-            "comment"
-        ] = "Call did not produce the expected result after {} attempts".format(
-            current_attempt
+        ret["comment"] = (
+            "Call did not produce the expected result after {} attempts".format(
+                current_attempt
+            )
         )
         log.debug(
             "%s:until_no_eval:\n\t\tResults of all attempts: %s",

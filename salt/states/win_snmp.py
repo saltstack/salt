@@ -104,13 +104,13 @@ def auth_traps_enabled(name, status=True):
     current_status = __salt__["win_snmp.get_auth_traps_enabled"]()
 
     if status == current_status:
-        ret["comment"] = "{} already contains the provided value.".format(vname)
+        ret["comment"] = f"{vname} already contains the provided value."
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "{} will be changed.".format(vname)
+        ret["comment"] = f"{vname} will be changed."
         ret["changes"] = {"old": current_status, "new": status}
     else:
-        ret["comment"] = "Set {} to contain the provided value.".format(vname)
+        ret["comment"] = f"Set {vname} to contain the provided value."
         ret["changes"] = {"old": current_status, "new": status}
         ret["result"] = __salt__["win_snmp.set_auth_traps_enabled"](status=status)
 

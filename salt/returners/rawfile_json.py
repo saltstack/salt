@@ -16,7 +16,6 @@ noise, so you may wish to configure batch processing and/or configure the
 to restrict the events that are written.
 """
 
-
 import logging
 
 import salt.returners

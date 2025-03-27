@@ -3,13 +3,13 @@
 """
 
 import logging
-import os
 import random
 
 import pytest
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
+    pytest.mark.timeout_unless_on_windows(320),
 ]
 
 
@@ -29,7 +30,14 @@ def salt_master(salt_factories):
         "open_mode": True,
     }
     salt_master = salt_factories.salt_master_daemon(
-        "deltaproxy-functional-master", defaults=config_defaults
+        "deltaproxy-functional-master",
+        defaults=config_defaults,
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
     )
     with salt_master.started():
         yield salt_master
@@ -59,17 +67,6 @@ def proxy_minion_id(salt_master):
     finally:
         # Remove stale key if it exists
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
-
-
-def clear_proxy_minions(salt_master, proxy_minion_id):
-    for proxy in [proxy_minion_id, "dummy_proxy_one", "dummy_proxy_two"]:
-        pytest.helpers.remove_stale_minion_key(salt_master, proxy)
-
-        cachefile = os.path.join(
-            salt_master.config["cachedir"], "{}.cache".format(proxy)
-        )
-        if os.path.exists(cachefile):
-            os.unlink(cachefile)
 
 
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
@@ -183,6 +180,15 @@ def test_exit_status_correct_usage_large_number_of_minions(
             factory = salt_master.salt_proxy_minion_daemon(
                 proxy_minion_id,
                 defaults=config_defaults,
+                overrides={
+                    "fips_mode": FIPS_TESTRUN,
+                    "encryption_algorithm": (
+                        "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+                    ),
+                    "signing_algorithm": (
+                        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                    ),
+                },
                 extra_cli_arguments_after_first_start_failure=["--log-level=info"],
                 start_timeout=240,
             )

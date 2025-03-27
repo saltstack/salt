@@ -2,7 +2,6 @@
 Read in files from the file_root and save files to the file root
 """
 
-
 import os
 
 import salt.utils.files

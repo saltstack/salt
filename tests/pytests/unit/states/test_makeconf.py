@@ -24,7 +24,7 @@ def test_present():
 
     mock_t = MagicMock(return_value=True)
     with patch.dict(makeconf.__salt__, {"makeconf.get_var": mock_t}):
-        comt = "Variable {} is already present in make.conf".format(name)
+        comt = f"Variable {name} is already present in make.conf"
         ret.update({"comment": comt})
         assert makeconf.present(name) == ret
 
@@ -39,6 +39,6 @@ def test_absent():
 
     mock = MagicMock(return_value=None)
     with patch.dict(makeconf.__salt__, {"makeconf.get_var": mock}):
-        comt = "Variable {} is already absent from make.conf".format(name)
+        comt = f"Variable {name} is already absent from make.conf"
         ret.update({"comment": comt})
         assert makeconf.absent(name) == ret

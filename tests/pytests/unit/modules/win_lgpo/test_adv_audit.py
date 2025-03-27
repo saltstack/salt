@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.modules.win_file as win_file
@@ -158,11 +160,14 @@ def test_set_value_log_messages(caplog):
     mock_set_file_data = MagicMock(return_value=True)
     mock_set_pol_data = MagicMock(return_value=False)
     mock_context = {"lgpo.adv_audit_data": {"test_option": "test_value"}}
-    with patch.object(
-        win_lgpo, "_set_advaudit_file_data", mock_set_file_data
-    ), patch.object(win_lgpo, "_set_advaudit_pol_data", mock_set_pol_data), patch.dict(
-        win_lgpo.__context__, mock_context
-    ):
-        win_lgpo._set_advaudit_value("test_option", None)
-        assert "Failed to apply audit setting:" in caplog.text
+    with caplog.at_level(logging.DEBUG):
+        with patch.object(
+            win_lgpo, "_set_advaudit_file_data", mock_set_file_data
+        ), patch.object(
+            win_lgpo, "_set_advaudit_pol_data", mock_set_pol_data
+        ), patch.dict(
+            win_lgpo.__context__, mock_context
+        ):
+            win_lgpo._set_advaudit_value("test_option", None)
+            assert "Failed to apply audit setting:" in caplog.text
         assert "LGPO: Removing Advanced Audit data:" in caplog.text

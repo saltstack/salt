@@ -397,15 +397,16 @@ winrepo_source_dir
 
 :conf_minion:`winrepo_source_dir` (str)
 
-The location of the .sls files on the Salt file server. This allows for using
-different environments. Default is ``salt://win/repo-ng/``\.
+The location of the .sls files on the Salt file server. Default is
+``salt://win/repo-ng/``.
 
 .. warning::
-    If the default for ``winrepo_dir_ng`` is changed, this setting may need to
-    be changed on each minion. The default setting for ``winrepo_dir_ng`` is
-    ``/srv/salt/win/repo-ng``\. If that were changed to
-    ``/srv/salt/new/repo-ng``\, then the ``winrepo_source_dir`` would need to be
+    If the default for ``winrepo_dir_ng`` is changed, then this setting will
+    also need to be changed on each minion. The default setting for
+    ``winrepo_dir_ng`` is ``/srv/salt/win/repo-ng``. If that were changed to
+    ``/srv/salt/new/repo-ng`` then the ``winrepo_source_dir`` would need to be
     changed to ``salt://new/repo-ng``
+
 
 .. _masterless-minion-config:
 
@@ -430,7 +431,7 @@ winrepo_dir
 
 This setting is maintained for backwards compatibility with legacy minions. It
 points to the location in the ``file_roots`` where the winrepo files are kept.
-The default is: ``C:\salt\srv\salt\win\repo``
+The default is: ``C:\ProgramData\Salt Project\Salt\srv\salt\win\repo``
 
 winrepo_dir_ng
 --------------
@@ -438,7 +439,7 @@ winrepo_dir_ng
 :conf_minion:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``C:\salt\srv\salt\win\repo-ng``\.
+is ``C:\ProgramData\Salt Project\Salt\srv\salt\win\repo-ng``.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
@@ -482,6 +483,137 @@ default is a list containing a single URL:
 <https://github.com/saltstack/salt-winrepo-ng>`_
 
 .. _usage:
+
+
+Sample Configurations
+*********************
+
+Masterless
+==========
+
+The configs in this section are for working with winrepo on a Windows minion
+using ``salt-call --local``.
+
+Default Configuration
+---------------------
+
+This is the default configuration if nothing is configured in the minion config.
+The config is shown here for clarity. These are the defaults:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - C:\ProgramData\Salt Project\Salt\srv\salt
+    winrepo_source_dir: 'salt://win/repo-ng'
+    winrepo_dir_ng: C:\ProgramData\Salt Project\Salt\srv\salt\win\repo-ng
+
+The :mod:`winrepo.update_git_repos <salt.modules.winrepo.update_git_repos>`
+command will clone the repository to ``win\repo-ng`` on the file_roots.
+
+Multiple Salt Environments
+--------------------------
+
+This starts to get a little tricky. The winrepo repository doesn't
+get cloned to each environment when you run
+:mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`, so to
+make this work, all environments share the same winrepo. Applying states using
+the ``saltenv`` option will find the state files in the appropriate environment,
+but the package definition files will always be pulled from the same location.
+Therefore, you have to put the same winrepo location in each saltenv. Here's how
+this would look:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - C:\ProgramData\Salt Project\Salt\srv\salt\base
+        - C:\ProgramData\Salt Project\Salt\srv\salt\winrepo
+      test:
+        - C:\ProgramData\Salt Project\Salt\srv\salt\test
+        - C:\ProgramData\Salt Project\Salt\srv\salt\winrepo
+    winrepo_source_dir: 'salt://salt-winrepo-ng'
+    winrepo_dir_ng: C:\ProgramData\Salt Project\Salt\srv\salt\winrepo
+    winrepo_dir: C:\ProgramData\Salt Project\Salt\srv\salt\winrepo
+
+When you run
+:mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>` the
+Git repository will be cloned to the location specified in the
+``winrepo_dir_ng`` setting. I specified the ``winrepo_dir`` setting just so
+everything gets cloned to the same place. The directory that gets cloned is
+named ``salt-winrepo-ng`` so you specify that in the ``winrepo_source_dir``
+setting.
+
+The ``winrepo`` directory should only contain the package definition files. You
+wouldn't want to place any states in the ``winrepo`` directory as they will be
+available to both environments.
+
+Master
+======
+
+When working in a Master/Minion environment you have to split up some of the
+config settings between the master and the minion. Here are some sample configs
+for winrepo in a Master/Minion environment.
+
+Default Configuration
+---------------------
+
+This is the default configuration if nothing is configured. The config is shown
+here for clarity. These are the defaults on the master:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt
+    winrepo_dir_ng: /srv/salt/win/repo-ng
+
+This is the default in the minion config:
+
+.. code-block:: yaml
+
+    winrepo_source_dir: 'salt://win/repo-ng'
+
+The :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
+command will clone the repository to ``win\repo-ng`` on the file_roots.
+
+Multiple Salt Environments
+--------------------------
+
+To set up multiple saltenvs using a Master/Minion configuration set the
+following in the master config:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/base
+        - /srv/salt/winrepo
+      test:
+        - /srv/salt/test
+        - /srv/salt/winrepo
+    winrepo_dir_ng: /srv/salt/winrepo
+    winrepo_dir: /srv/salt/winrepo
+
+Use the winrepo runner to set up the winrepo repository on the master.
+
+.. code-block:: bash
+
+    salt-run winrepo.update_git_repos
+
+The winrepo will be cloned to ``/srv/salt/winrepo`` under a directory named
+``salt-winrepo-ng``.
+
+Set the following on the minion config so the minion knows where to find the
+package definition files in the file_roots:
+
+.. code-block:: yaml
+
+    winrepo_source_dir: 'salt://salt-winrepo-ng'
+
+The same stipulations apply in a Master/Minion configuration as they do in a
+Masterless configuration
+
 
 Usage
 *****

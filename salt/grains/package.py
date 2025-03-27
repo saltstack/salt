@@ -3,6 +3,7 @@ Grains for detecting what type of package Salt is using
 
 .. versionadded:: 3007.0
 """
+
 import logging
 
 import salt.utils.package

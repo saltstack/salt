@@ -61,9 +61,7 @@ class LoggerMock:
         :return:
         """
         for data in self.messages:
-            log_str = (
-                data["message"] % data["args"]
-            )  # pylint: disable=incompatible-py3-code
+            log_str = data["message"] % data["args"]
             if (data["type"] == log_type or not log_type) and log_str.find(msg) > -1:
                 return True
 

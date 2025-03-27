@@ -4,6 +4,7 @@
 
     Salt's Loader PyTest Mock Support
 """
+
 import logging
 import sys
 import types
@@ -127,13 +128,11 @@ class LoaderModuleMock:
         self._finalizers.append((func, args, kwargs))
 
     def _format_callback(self, callback, args, kwargs):
-        callback_str = "{}(".format(callback.__qualname__)
+        callback_str = f"{callback.__qualname__}("
         if args:
             callback_str += ", ".join([repr(arg) for arg in args])
         if kwargs:
-            callback_str += ", ".join(
-                ["{}={!r}".format(k, v) for (k, v) in kwargs.items()]
-            )
+            callback_str += ", ".join([f"{k}={v!r}" for (k, v) in kwargs.items()])
         callback_str += ")"
         return callback_str
 
@@ -143,7 +142,7 @@ class LoaderModuleMock:
         sys_modules = mocks["sys.modules"]
         if not isinstance(sys_modules, dict):
             raise RuntimeError(
-                "'sys.modules' must be a dictionary not: {}".format(type(sys_modules))
+                f"'sys.modules' must be a dictionary not: {type(sys_modules)}"
             )
         patcher = patch.dict(sys.modules, values=sys_modules)
         patcher.start()
