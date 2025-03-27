@@ -123,15 +123,15 @@ def test_build_rule():
         "comment": "Successfully built rule",
     }
 
-    assert nftables.build_rule(
-        table="filter",
-        chain="input",
-        family="ip6",
-        command="add",
-        icmpv6type="echo-request,echo-reply",
-        jump="accept",
-        full="True",
-    ) == {
+    assert nftables.build_rule(**{
+        "table": "filter",
+        "chain": "input",
+        "family": "ip6",
+        "command": "add",
+        "icmpv6-type": "echo-request,echo-reply",
+        "jump": "accept",
+        "full": "True",
+    }) == {
         "result": True,
         "rule": (
             "nft add rule ip6 filter input icmpv6 type {"
