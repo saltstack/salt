@@ -143,7 +143,7 @@ announcements.
 Other channels to receive security announcements include the
 [Salt Community mailing list](https://groups.google.com/forum/#!forum/salt-users)
 and the
-[Salt Project Community Slack](https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg).
+[Salt Project Community Discord](https://discord.gg/J7b7EscrAs).
 
 ## Confidentiality, integrity and availability
 
