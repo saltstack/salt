@@ -141,7 +141,7 @@ to receive notification when new information is available regarding security
 announcements.
 
 Other channels to receive security announcements include the
-[Salt Community mailing list](https://groups.google.com/forum/#!forum/salt-users)
+[Salt Project GitHub Discussions](https://github.com/saltstack/salt/discussions)
 and the
 [Salt Project Community Discord](https://discord.gg/J7b7EscrAs).
 
