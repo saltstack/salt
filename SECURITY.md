@@ -136,7 +136,7 @@ as is possible.
 Keep an eye on the
 [Salt Project Security Announcements](https://saltproject.io/security-announcements/)
 landing page. Salt Project recommends subscribing to the
-[Salt Project Security RSS feed](https://saltproject.io/feed/?post_type=security)
+[Salt Project Security RSS feed](https://saltproject.io/security-announcements/index.xml)
 to receive notification when new information is available regarding security
 announcements.
 
