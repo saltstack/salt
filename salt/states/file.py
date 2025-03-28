@@ -103,6 +103,11 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
     value in single quotes. If the value is not wrapped in quotes it
     will be read by YAML as an integer and evaluated as an octal.
 
+.. note::
+    Salt only supports numeric mode specifications (like ``644``)
+    and does not support symbolic modes (like ``u+rw``) that are commonly used
+    with commands like ``chmod``.
+
 The ``names`` parameter, which is part of the state compiler, can be used to
 expand the contents of a single state declaration into multiple, single state
 declarations. Each item in the ``names`` list receives its own individual state
@@ -2556,6 +2561,11 @@ def managed(
         .. note::
             This option is **not** supported on Windows.
 
+        .. note::
+            Salt's file module only supports numeric mode specifications
+            (like ``644``) and does not support symbolic modes (like ``u+rw``)
+            that are commonly used with commands like ``chmod``.
+
         .. versionchanged:: 2016.11.0
             This option can be set to ``keep``, and Salt will keep the mode
             from the Salt fileserver. This is only supported when the
@@ -3850,6 +3860,10 @@ def directory(
 
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
+
+        The file module only supports numeric mode specifications (like ``644``)
+        and does not support symbolic modes like ``u+rw``) that are commonly
+        used with commands like ``chmod``.
 
     makedirs
         If the directory is located in a path without a parent directory, then
