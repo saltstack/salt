@@ -508,3 +508,34 @@ def test_call_function_ordered_and_named_args():
         assert module._call_function(
             "testfunc", func_args=[1, 2], func_kwargs={"c": 3}
         ) == (1, 2, 3, (), {})
+
+
+def test_get_result():
+    """
+    Test _get_result routine when function returned result or retcode in it's results or in changes:
+
+    :return:
+    """
+
+    # List the tests with it's expected result:
+    tests = (
+        ({"result": False}, False),
+        ({"retcode": "-1"}, False),
+        ({"result": True}, True),
+        ({"retcode": 0}, True),
+        ({"retcode": -1, "result": True}, False),
+        (True, True),
+        (False, False),
+        ({"changes": {"result": False}}, False),
+        ({"changes": {"retcode": 1}}, False),
+        ({"changes": {"result": True}}, True),
+        ({"changes": {"retcode": 0}}, True),
+        ({"changes": {"result": False, "retcode": 0}}, False),
+        ({"changes": {"result": True, "retcode": 1}}, False),
+        ({"changes": {"result": False, "retcode": 1}}, False),
+        ({"changes": {"result": True, "retcode": 0}}, True),
+    )
+
+    for test in tests:
+        ret = module._get_result(test[0])
+        assert ret is test[1]
