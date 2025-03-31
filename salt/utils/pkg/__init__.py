@@ -34,7 +34,7 @@ def clear_rtag(opts):
         if exc.errno != errno.ENOENT:
             # Using __str__() here to get the fully-formatted error message
             # (error number, error message, path)
-            log.warning("Encountered error removing rtag: %s", exc.__str__())
+            log.warning("Encountered error removing rtag: %s", exc)
 
 
 def write_rtag(opts):
@@ -47,7 +47,7 @@ def write_rtag(opts):
             with salt.utils.files.fopen(rtag_file, "w+"):
                 pass
         except OSError as exc:
-            log.warning("Encountered error writing rtag: %s", exc.__str__())
+            log.warning("Encountered error writing rtag: %s", exc)
 
 
 def check_refresh(opts, refresh=None):

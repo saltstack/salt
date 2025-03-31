@@ -1,32 +1,29 @@
 ---
 name: setup-salt-version
 description: Setup Salt Version
+
 inputs:
   cwd:
-    type: string
     default: ""
+    description: The current working directory to use
   salt-version:
-    type: string
     default: ""
     description: >
       The Salt version to set prior to running tests or building packages.
       If not set, it is discover at run time, like, for example, capturing
       the output of running `python3 salt/version.py`
   validate-version:
-    type: boolean
-    default: false
+    default: "false"
     description: Validate the passed version.
   release:
-    type: boolean
-    default: false
+    default: "false"
     description: This is a release of salt.
+
 outputs:
   salt-version:
     value: ${{ steps.setup-salt-version.outputs.salt-version }}
     description: The Salt version written to `salt/_version.txt`
 
-env:
-  COLUMNS: 190
 
 runs:
   using: composite

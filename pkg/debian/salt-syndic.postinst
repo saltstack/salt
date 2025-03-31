@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+  configure)
+    db_get salt-syndic/user
+    if [ "$RET" != "root" ]; then
+      if [ ! -e "/var/log/salt/syndic" ]; then
+        touch /var/log/salt/syndic
+        chmod 640 /var/log/salt/syndic
+      fi
+      chown $RET:$RET /var/log/salt/syndic
+    fi
+    if command -v systemctl; then
+        db_get salt-syndic/active
+        RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+        if [ "$RESLT" != 10 ]; then
+            systemctl daemon-reload
+            if [ "$RESLT" = "active" ]; then
+                systemctl restart salt-syndic
+            fi
+            db_get salt-syndic/enabled
+            RESLT=$(echo "$RET" | cut -d ' ' -f 1)
+            if [ "$RESLT" = "disabled" ]; then
+                systemctl disable salt-syndic
+            else
+                systemctl enable salt-syndic
+            fi
+        else
+            systemctl daemon-reload
+            systemctl restart salt-syndic
+            systemctl enable salt-syndic
+        fi
+    fi
+  ;;
+esac

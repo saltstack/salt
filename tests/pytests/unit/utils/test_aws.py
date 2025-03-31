@@ -6,13 +6,35 @@
 """
 
 import io
+import os
 import time
 from datetime import datetime, timedelta
 
+import pytest
 import requests
+from pytest_timeout import DEFAULT_METHOD
 
 import salt.utils.aws as aws
+from tests.support.helpers import patched_environ
 from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    # Skip testing on windows since it does not support signal.SIGALRM
+    # which is what the timeout marker is using by default.
+    pytest.mark.skip_on_windows,
+    pytest.mark.timeout(60, method=DEFAULT_METHOD, func_only=True),
+]
+
+
+@pytest.fixture(autouse=True)
+def _cleanup():
+    # Make sure this cache is clear before each test
+    aws.__AssumeCache__.clear()
+    # Remove any AWS_ prefixed environment variables
+    with patched_environ(
+        __cleanup__=[k for k in os.environ if k.startswith("AWS_")],
+    ):
+        yield
 
 
 def test_get_metadata_imdsv1():

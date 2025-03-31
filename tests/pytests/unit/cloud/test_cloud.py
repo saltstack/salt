@@ -1,8 +1,13 @@
 import pytest
 
 from salt.cloud import Cloud
+from salt.config import get_cloud_config_value
 from salt.exceptions import SaltCloudSystemExit
 from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    pytest.mark.timeout_unless_on_windows(120),
+]
 
 
 @pytest.fixture
@@ -194,7 +199,6 @@ def test_vm_config_merger_nooverridevalue():
 
 @pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_run_profile_create_returns_boolean(master_config):
-
     master_config["profiles"] = {"test_profile": {"provider": "test_provider:saltify"}}
     master_config["providers"] = {
         "test_provider": {
@@ -213,3 +217,50 @@ def test_cloud_run_profile_create_returns_boolean(master_config):
         with pytest.raises(SaltCloudSystemExit):
             ret = cloud.run_profile("test_profile", ["test_vm"])
             assert ret == {"test_vm": False}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        [{"key1": "value1"}, {"key1": "value1", "key2": "value2"}],
+        ["a", "b"],
+        [1, 2, 4],
+        {"key1": "value1", "key2": 123},
+        "some text",
+        1234,
+    ],
+)
+def test_get_cloud_config_value(value):
+    value_name = "test_value_name"
+    opts = {
+        "providers": {
+            "my-cool-cloud-provider": {
+                "cool-cloud": {
+                    "driver": "cool-cloud",
+                    "profiles": {
+                        "my-cool-cloud-profile": {
+                            "provider": "my-cool-cloud-provider:cool-cloud",
+                            value_name: value,
+                            "profile": "my-cool-cloud-profile",
+                        }
+                    },
+                }
+            }
+        },
+        "profiles": {
+            "my-cool-cloud-profile": {
+                "provider": "my-cool-cloud-provider:cool-cloud",
+                value_name: value,
+                "profile": "my-cool-cloud-profile",
+            }
+        },
+        "profile": "my-cool-cloud-profile",
+    }
+    vm_ = {
+        value_name: value,
+        "profile": "my-cool-cloud-profile",
+        "driver": "cool-cloud",
+    }
+
+    result = get_cloud_config_value(value_name, vm_, opts)
+    assert result == value

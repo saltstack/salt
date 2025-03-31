@@ -2,7 +2,6 @@
     Test cases for salt.modules.xfs
 """
 
-
 import textwrap
 
 import pytest

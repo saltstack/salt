@@ -2,7 +2,6 @@
 Unit tests for salt.utils.color.py
 """
 
-
 import salt.utils.color
 from tests.support.unit import TestCase
 

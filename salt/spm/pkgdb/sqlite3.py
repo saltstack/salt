@@ -4,7 +4,6 @@ This module allows SPM to use sqlite3 as the backend for SPM's package database.
 .. versionadded:: 2015.8.0
 """
 
-
 import datetime
 import logging
 import os
@@ -194,7 +193,7 @@ def register_file(name, member, path, digest="", conn=None):
         "INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             name,
-            "{}/{}".format(path, member.path),
+            f"{path}/{member.path}",
             member.size,
             member.mode,
             digest,

@@ -509,7 +509,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     expected = [
                         "downdelay=200",
                         "miimon=100",
-                        "mode={}".format(mode_num),
+                        f"mode={mode_num}",
                         "use_carrier=0",
                     ]
                     assert bonding_opts == expected, bonding_opts
@@ -523,7 +523,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                         "arp_ip_target=1.2.3.4,5.6.7.8",
                         "downdelay=200",
                         "miimon=100",
-                        "mode={}".format(mode_num),
+                        f"mode={mode_num}",
                         "use_carrier=0",
                     ]
                     assert bonding_opts == expected, bonding_opts
@@ -535,7 +535,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     expected = [
                         "arp_interval=300",
                         "arp_ip_target=1.2.3.4,5.6.7.8",
-                        "mode={}".format(mode_num),
+                        f"mode={mode_num}",
                     ]
                     assert bonding_opts == expected, bonding_opts
 
@@ -718,7 +718,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                 "miimon=100",
                                 "mode=4",
                                 "use_carrier=0",
-                                "xmit_hash_policy={}".format(hash_alg),
+                                f"xmit_hash_policy={hash_alg}",
                             ]
                             assert bonding_opts == expected, bonding_opts
 
@@ -739,7 +739,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                 "miimon=100",
                                 "mode=4",
                                 "use_carrier=0",
-                                "xmit_hash_policy={}".format(hash_alg),
+                                f"xmit_hash_policy={hash_alg}",
                             ]
                             assert bonding_opts == expected, bonding_opts
 
@@ -786,14 +786,12 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                     raise
                             else:
                                 expected = [
-                                    "ad_select={}".format(ad_select),
+                                    f"ad_select={ad_select}",
                                     "downdelay=200",
                                     "lacp_rate={}".format(
                                         "1"
                                         if lacp_rate == "fast"
-                                        else "0"
-                                        if lacp_rate == "slow"
-                                        else lacp_rate
+                                        else "0" if lacp_rate == "slow" else lacp_rate
                                     ),
                                     "miimon=100",
                                     "mode=4",

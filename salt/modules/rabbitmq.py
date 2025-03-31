@@ -44,11 +44,9 @@ def __virtual__():
             )
             (dir_path, value_type) = winreg.QueryValueEx(key, "Install_Dir")
             if value_type != winreg.REG_SZ:
-                raise TypeError(
-                    "Invalid RabbitMQ Server directory type: {}".format(value_type)
-                )
+                raise TypeError(f"Invalid RabbitMQ Server directory type: {value_type}")
             if not os.path.isdir(dir_path):
-                raise OSError("RabbitMQ directory not found: {}".format(dir_path))
+                raise OSError(f"RabbitMQ directory not found: {dir_path}")
             subdir_match = ""
             for name in os.listdir(dir_path):
                 if name.startswith("rabbitmq_server-"):
@@ -58,7 +56,7 @@ def __virtual__():
                         subdir_match = subdir_path
             if not subdir_match:
                 raise OSError(
-                    '"rabbitmq_server-*" subdirectory not found in: {}'.format(dir_path)
+                    f'"rabbitmq_server-*" subdirectory not found in: {dir_path}'
                 )
             RABBITMQCTL = os.path.join(subdir_match, "sbin", "rabbitmqctl.bat")
             RABBITMQ_PLUGINS = os.path.join(
@@ -86,7 +84,7 @@ def _check_response(response):
             )
     else:
         if "Error" in response:
-            raise CommandExecutionError("RabbitMQ command failed: {}".format(response))
+            raise CommandExecutionError(f"RabbitMQ command failed: {response}")
 
 
 def _format_response(response, msg):
@@ -99,7 +97,7 @@ def _format_response(response, msg):
             response = response["stdout"]
     else:
         if "Error" in response:
-            raise CommandExecutionError("RabbitMQ command failed: {}".format(response))
+            raise CommandExecutionError(f"RabbitMQ command failed: {response}")
     return {msg: response}
 
 
@@ -165,7 +163,9 @@ def _output_to_dict(cmdoutput, values_mapper=None):
 
     ret = {}
     if values_mapper is None:
-        values_mapper = lambda string: string.split("\t")
+
+        def values_mapper(string):
+            return string.split("\t")
 
     # remove first and last line: Listing ... - ...done
     data_rows = _strip_listing_to_done(cmdoutput.splitlines())
@@ -237,11 +237,11 @@ def list_users(runas=None):
     )
 
     # func to get tags from string such as "[admin, monitoring]"
-    func = (
-        lambda string: [x.strip() for x in string[1:-1].split(",")]
-        if "," in string
-        else [x for x in string[1:-1].split(" ")]
-    )
+    def func(string):
+        if "," in string:
+            return [x.strip() for x in string[1:-1].split(",")]
+        return [x for x in string[1:-1].split(" ")]
+
     return _output_to_dict(res, func)
 
 
@@ -378,7 +378,7 @@ def add_user(name, password=None, runas=None):
         #         command,\r\noperable program or batch file.
         # Work around this by using a shell and a quoted command.
         python_shell = True
-        cmd = '"{}" add_user "{}" "{}"'.format(RABBITMQCTL, name, password)
+        cmd = f'"{RABBITMQCTL}" add_user "{name}" "{password}"'
     else:
         python_shell = False
         cmd = [RABBITMQCTL, "add_user", name, password]
@@ -448,7 +448,7 @@ def change_password(name, password, runas=None):
         #         command,\r\noperable program or batch file.
         # Work around this by using a shell and a quoted command.
         python_shell = True
-        cmd = '"{}" change_password "{}" "{}"'.format(RABBITMQCTL, name, password)
+        cmd = f'"{RABBITMQCTL}" change_password "{name}" "{password}"'
     else:
         python_shell = False
         cmd = [RABBITMQCTL, "change_password", name, password]
@@ -539,7 +539,7 @@ def check_password(name, password, runas=None):
             #         command,\r\noperable program or batch file.
             # Work around this by using a shell and a quoted command.
             python_shell = True
-            cmd = '"{}" authenticate_user "{}" "{}"'.format(RABBITMQCTL, name, password)
+            cmd = f'"{RABBITMQCTL}" authenticate_user "{name}" "{password}"'
         else:
             python_shell = False
             cmd = [RABBITMQCTL, "authenticate_user", name, password]
@@ -786,7 +786,7 @@ def join_cluster(host, user="rabbit", ram_node=None, runas=None):
     cmd = [RABBITMQCTL, "join_cluster"]
     if ram_node:
         cmd.append("--ram")
-    cmd.append("{}@{}".format(user, host))
+    cmd.append(f"{user}@{host}")
 
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()

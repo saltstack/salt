@@ -1,0 +1,212 @@
+---
+name: Build Salt Onedir
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      relenv-version:
+        required: true
+        type: string
+        description: The version of relenv to use
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
+      matrix:
+        type: string
+        required: true
+        description: Json config for build matrix
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
+
+env:
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+
+
+  build-salt-linux:
+    name: Linux
+    if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
+    env:
+      USE_S3_CACHE: 'false'
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|linux
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        id: setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+          salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+
+  build-salt-macos:
+    name: macOS
+    if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
+    runs-on:
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      USE_S3_CACHE: 'false'
+    steps:
+      - name: "Check cores"
+        shell: bash
+        run: sysctl -n hw.ncpu
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|macos
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Setup Relenv
+        id: setup-relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: macos
+          arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: macos
+          arch: ${{ matrix.arch }}
+          salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+
+  build-salt-windows:
+    name: Windows
+    if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
+    runs-on: windows-latest
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      USE_S3_CACHE: 'false'
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}|build-salt-onedir|windows
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Setup Relenv
+        id: setup-relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}

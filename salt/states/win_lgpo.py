@@ -206,6 +206,7 @@ Multiple policy configuration
 
         Windows Components\\Windows Update\\Configure Automatic Updates:
 """
+
 import logging
 
 import salt.utils.data
@@ -284,6 +285,7 @@ def set_(
     user_policy=None,
     cumulative_rights_assignments=True,
     adml_language="en-US",
+    refresh_cache=False,
 ):
     """
     Ensure the specified policy is set.
@@ -322,6 +324,18 @@ def set_(
         adml_language (str):
             The adml language to use for AMDX policy data/display conversions.
             Default is ``en-US``
+
+        refresh_cache (bool):
+            Clear the cached policy definitions before applying the state. This
+            is useful when the underlying policy files (ADMX/ADML) have been
+            added/modified in the same state. This will allow those new policies
+            to be picked up. This adds time to the state run when applied to
+            multiple states within the same run. Therefore, it is best to only
+            apply this to the first policy that is applied. For individual runs
+            this will have no effect. Default is ``False``
+
+            .. versionadded:: 3006.8
+            .. versionadded:: 3007.1
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
     policy_classes = ["machine", "computer", "user", "both"]
@@ -386,6 +400,10 @@ def set_(
         "machine": {"requested_policy": computer_policy, "policy_lookup": {}},
     }
 
+    if refresh_cache:
+        # Remove cached policies so new policies can be picked up
+        __salt__["lgpo.clear_policy_cache"]()
+
     current_policy = {}
     deprecation_comments = []
     for p_class, p_data in pol_data.items():
@@ -428,7 +446,7 @@ def set_(
                                     )
                                     deprecation_comments.append(msg)
                                 else:
-                                    msg = "Invalid element name: {}".format(e_name)
+                                    msg = f"Invalid element name: {e_name}"
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
@@ -525,7 +543,7 @@ def set_(
                             )
                             policy_changes.append(p_name)
                     else:
-                        msg = '"{}" is already set'.format(p_name)
+                        msg = f'"{p_name}" is already set'
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)

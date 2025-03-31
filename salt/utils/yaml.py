@@ -1,6 +1,7 @@
 """
 Convenience module that provides our custom loader and dumper in a single module
 """
+
 # pylint: disable=wildcard-import,unused-wildcard-import,unused-import
 
 from yaml import YAMLError, parser, scanner

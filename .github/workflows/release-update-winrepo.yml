@@ -19,7 +19,7 @@ permissions:
 jobs:
   update-winrepo:
     name: Update Winrepo
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-22.04
     steps:
 
     - name: Checkout Salt
@@ -34,16 +34,19 @@ jobs:
         repository: saltstack/salt-winrepo-ng
 
     - name: Set Up Python 3.10
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
     - name: Add Version to Minion Definition File
       working-directory: salt
       run: |
+        pwd
+        ls -al ../winrepo/salt-minion.sls
         python .github/workflows/scripts/update_winrepo.py \
           --file ../winrepo/salt-minion.sls \
           --version ${{ inputs.salt-version || github.ref_name }}
+        grep ${{ inputs.salt-version || github.ref_name }} ../winrepo/salt-minion.sls
 
     - name: Commit Changes
       working-directory: winrepo
@@ -56,7 +59,7 @@ jobs:
 
     - name: Create Pull Request
       id: cpr
-      uses: peter-evans/create-pull-request@v5
+      uses: peter-evans/create-pull-request@v7
       with:
         path: winrepo
         push-to-fork: saltbot-open/salt-winrepo-ng

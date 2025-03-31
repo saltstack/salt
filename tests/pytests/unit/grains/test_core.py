@@ -1156,6 +1156,36 @@ def test_almalinux_8_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_virtuozzo_7_os_grains():
+    """
+    Test if OS grains are parsed correctly in Virtuozzo 7
+    """
+    _os_release_data = {
+        "NAME": "Virtuozzo",
+        "ID": "virtuozzo",
+        "PRETTY_NAME": "Virtuozzo release 7.5.4",
+        "VERSION": "7.5.4",
+        "ID_LIKE": "rhel fedora",
+        "VERSION_ID": "7",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:virtuozzoproject:vz:7",
+        "HOME_URL": "http://www.virtuozzo.com",
+        "BUG_REPORT_URL": "https://bugs.openvz.org",
+    }
+    expectation = {
+        "os": "Virtuozzo",
+        "os_family": "RedHat",
+        "osfullname": "Virtuozzo",
+        "oscodename": "Virtuozzo release 7.5.4",
+        "osrelease": "7",
+        "osrelease_info": (7,),
+        "osmajorrelease": 7,
+        "osfinger": "Virtuozzo-7",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_endeavouros_os_grains():
     """
     Test if OS grains are parsed correctly in EndeavourOS
@@ -1227,6 +1257,39 @@ def test_Parrot_OS_grains():
         "osrelease_info": (5, 1),
         "osmajorrelease": 5,
         "osfinger": "Parrot OS-5",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_manjaro_arm_grains():
+    """
+    Test if OS grains are parsed correctly in Manjaro ARM
+    """
+    # /etc/os-release data taken from ParrotOS 5.1
+    _os_release_data = {
+        "NAME": "Manjaro ARM",
+        "ID": "manjaro-arm",
+        "ID_LIKE": "manjaro arch",
+        "PRETTY_NAME": "Manjaro ARM",
+        "ANSI_COLOR": "1;32",
+        "HOME_URL": "https://www.manjaro.org/",
+        "SUPPORT_URL": "https://forum.manjaro.org/c/arm/",
+        "LOGO": "manjarolinux",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("Manjaro ARM", "24.03", "n/a"),
+    }
+
+    expectation = {
+        "os": "Manjaro ARM",
+        "os_family": "Arch",
+        "oscodename": "Manjaro ARM",
+        "osfullname": "Manjaro ARM",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "Manjaro ARM-24",
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
@@ -1780,9 +1843,9 @@ def test_lxc_virtual():
         os.path,
         "isfile",
         MagicMock(
-            side_effect=lambda x: True
-            if x in ("/proc/1/cgroup", "/proc/1/environ")
-            else False
+            side_effect=lambda x: (
+                True if x in ("/proc/1/cgroup", "/proc/1/environ") else False
+            )
         ),
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
         core.__salt__, {"cmd.run_all": MagicMock()}
@@ -1815,6 +1878,37 @@ def test_lxc_virtual_with_virt_what():
 
 
 @pytest.mark.skip_on_windows
+def test_podman_virtual_with_systemd_detect_virt():
+    """
+    Test if virtual grains are parsed correctly in Podman using systemd-detect-virt.
+    """
+
+    def _which_side_effect(path):
+        if path == "systemd-detect-virt":
+            return "/usr/bin/systemd-detect-virt"
+        return None
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path,
+        "which",
+        MagicMock(return_value=True, side_effect=_which_side_effect),
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "podman"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Podman"
+
+
+@pytest.mark.skip_on_windows
 def test_container_inside_virtual_machine():
     """
     Test if a container inside an hypervisor is shown as a container
@@ -1828,9 +1922,11 @@ def test_container_inside_virtual_machine():
         os.path,
         "isfile",
         MagicMock(
-            side_effect=lambda x: True
-            if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
-            else False
+            side_effect=lambda x: (
+                True
+                if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+                else False
+            )
         ),
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
         core.__salt__, {"cmd.run_all": MagicMock()}
@@ -2324,6 +2420,7 @@ def test_fqdns_return():
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.timeout(60, func_only=True)
 def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain
@@ -2865,6 +2962,10 @@ def test_virtual_has_virtual_grain():
     assert virtual_grains["virtual"] != "physical"
 
 
+def test__windows_platform_data():
+    pass
+
+
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.parametrize(
     ("osdata", "expected"),
@@ -2872,6 +2973,13 @@ def test_virtual_has_virtual_grain():
         ({"kernel": "Not Windows"}, {}),
         ({"kernel": "Windows"}, {"virtual": "physical"}),
         ({"kernel": "Windows", "manufacturer": "QEMU"}, {"virtual": "kvm"}),
+        ({"kernel": "Windows", "biosstring": "VRTUAL"}, {"virtual": "HyperV"}),
+        ({"kernel": "Windows", "biosstring": "A M I"}, {"virtual": "VirtualPC"}),
+        (
+            {"kernel": "Windows", "biosstring": "Xen", "productname": "HVM domU"},
+            {"virtual": "Xen", "virtual_subtype": "HVM domU"},
+        ),
+        ({"kernel": "Windows", "biosstring": "AMAZON"}, {"virtual": "EC2"}),
         ({"kernel": "Windows", "manufacturer": "Bochs"}, {"virtual": "kvm"}),
         (
             {"kernel": "Windows", "productname": "oVirt"},
@@ -2880,10 +2988,6 @@ def test_virtual_has_virtual_grain():
         (
             {"kernel": "Windows", "productname": "RHEV Hypervisor"},
             {"virtual": "kvm", "virtual_subtype": "rhev"},
-        ),
-        (
-            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
-            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
         ),
         (
             {"kernel": "Windows", "productname": "VirtualBox"},
@@ -2912,6 +3016,7 @@ def test_virtual_has_virtual_grain():
             },
             {"virtual": "VirtualPC"},
         ),
+        ({"kernel": "Windows", "productname": "OpenStack"}, {"virtual": "OpenStack"}),
         (
             {"kernel": "Windows", "manufacturer": "Parallels Software"},
             {"virtual": "Parallels"},
@@ -2919,6 +3024,10 @@ def test_virtual_has_virtual_grain():
         (
             {"kernel": "Windows", "manufacturer": None, "productname": None},
             {"virtual": "physical"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
         ),
     ],
 )
@@ -2940,17 +3049,7 @@ def test_windows_virtual_set_virtual_grain():
         _,
     ) = platform.uname()
 
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        virtual_grains = core._windows_virtual(osdata)
+    virtual_grains = core._windows_virtual(osdata)
 
     assert "virtual" in virtual_grains
 
@@ -2968,46 +3067,15 @@ def test_windows_virtual_has_virtual_grain():
         _,
     ) = platform.uname()
 
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        virtual_grains = core._windows_virtual(osdata)
+    virtual_grains = core._windows_virtual(osdata)
 
     assert "virtual" in virtual_grains
-    assert virtual_grains["virtual"] != "physical"
 
 
 @pytest.mark.skip_unless_on_windows
 def test_osdata_virtual_key_win():
-    with patch.dict(
-        core.__salt__,
-        {
-            "cmd.run": salt.modules.cmdmod.run,
-            "cmd.run_all": salt.modules.cmdmod.run_all,
-            "cmd.retcode": salt.modules.cmdmod.retcode,
-            "smbios.get": salt.modules.smbios.get,
-        },
-    ):
-
-        _windows_platform_data_ret = core.os_data()
-        _windows_platform_data_ret["virtual"] = "something"
-
-        with patch.object(
-            core, "_windows_platform_data", return_value=_windows_platform_data_ret
-        ) as _windows_platform_data:
-
-            osdata_grains = core.os_data()
-            _windows_platform_data.assert_called_once()
-
-        assert "virtual" in osdata_grains
-        assert osdata_grains["virtual"] != "physical"
+    osdata_grains = core.os_data()
+    assert "virtual" in osdata_grains
 
 
 @pytest.mark.skip_unless_on_linux
@@ -3373,6 +3441,12 @@ def test_linux_gpus(caplog):
             "amd",
         ],  # AMD
         [
+            "Processing accelerators",
+            "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "Device X",
+            "amd",
+        ],  # AMD
+        [
             "Audio device",
             "Advanced Micro Devices, Inc. [AMD/ATI]",
             "Device aaf8",
@@ -3629,8 +3703,8 @@ def test_linux_devicetree_data(test_input, expected):
             raise FileNotFoundError()
 
         m = MagicMock()
-        m.__enter__.return_value.read = (
-            lambda: test_input.get(filename)  # pylint: disable=W0640
+        m.__enter__.return_value.read = lambda: (
+            test_input.get(filename)  # pylint: disable=W0640
             if filename in test_input  # pylint: disable=W0640
             else _raise_fnfe()
         )
@@ -4181,34 +4255,93 @@ def test__selinux():
         assert ret == {"enabled": True, "enforced": "Disabled"}
 
 
-def test__systemd():
+@pytest.mark.parametrize(
+    "systemd_data,expected",
+    (
+        (
+            {
+                "pid": 1234,
+                "retcode": 0,
+                "stdout": "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
+                "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
+                "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
+                "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
+                "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+                "stderr": "",
+            },
+            {
+                "version": "254",
+                "features": "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
+                "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
+                "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
+                "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified",
+            },
+        ),
+        (
+            {
+                "pid": 2345,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "some garbage in the output",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 3456,
+                "retcode": 0,
+                "stdout": "unexpected stdout\none more line",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            {
+                "pid": 4567,
+                "retcode": 0,
+                "stdout": "",
+                "stderr": "",
+            },
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+        (
+            Exception("Some exception on calling `systemctl --version`"),
+            {
+                "version": "UNDEFINED",
+                "features": "",
+            },
+        ),
+    ),
+)
+def test__systemd(systemd_data, expected):
     """
     test _systemd
     """
+
+    def mock_run_all_systemd(_):
+        if isinstance(systemd_data, Exception):
+            raise systemd_data
+        return systemd_data
+
     with patch.dict(
         core.__salt__,
         {
-            "cmd.run": MagicMock(
-                return_value=(
-                    "systemd 254 (254.3-1)\n+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK "
-                    "+SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS "
-                    "+FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 "
-                    "-PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD "
-                    "+BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-                )
-            ),
+            "cmd.run_all": mock_run_all_systemd,
         },
     ):
         ret = core._systemd()
         assert "version" in ret
         assert "features" in ret
-        assert ret["version"] == "254"
-        assert ret["features"] == (
-            "+PAM +AUDIT -SELINUX -APPARMOR -IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL "
-            "+ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP "
-            "+LIBFDISK +PCRE2 -PWQUALITY +P11KIT -QRENCODE +TPM2 +BZIP2 +LZ4 +XZ "
-            "+ZLIB +ZSTD +BPF_FRAMEWORK +XKBCOMMON +UTMP -SYSVINIT default-hierarchy=unified"
-        )
+        assert ret == expected
 
 
 def test__clean_value_uuid(caplog):

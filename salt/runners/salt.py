@@ -102,7 +102,7 @@ def cmd(fun, *args, **kwargs):
     return (
         functions[fun](*args, **kwargs)
         if fun in functions
-        else "'{}' is not available.".format(fun)
+        else f"'{fun}' is not available."
     )
 
 
@@ -115,7 +115,7 @@ def execute(
     ret="",
     jid="",
     kwarg=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2017.7.0
@@ -159,7 +159,7 @@ def execute(
                 ret=ret,
                 jid=jid,
                 kwarg=kwarg,
-                **kwargs
+                **kwargs,
             )
         except SaltClientError as client_error:
             log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)

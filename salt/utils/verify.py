@@ -338,7 +338,7 @@ def check_user(user):
 
     try:
         if hasattr(os, "initgroups"):
-            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+            os.initgroups(user, pwuser.pw_gid)
         else:
             os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
         os.setgid(pwuser.pw_gid)
@@ -429,7 +429,10 @@ def check_max_open_files(opts):
         # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
         mof_s = mof_h = win32file._getmaxstdio()
     else:
-        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        mof_s, mof_h = resource.getrlimit(  # pylint: disable=used-before-assignment
+            resource.RLIMIT_NOFILE
+        )
 
     accepted_keys_dir = os.path.join(opts.get("pki_dir"), "minions")
     accepted_count = len(os.listdir(accepted_keys_dir))
@@ -521,25 +524,28 @@ def _realpath(path):
     return os.path.realpath(path)
 
 
-def clean_path(root, path, subdir=False):
+def clean_path(root, path, subdir=False, realpath=True):
     """
     Accepts the root the path needs to be under and verifies that the path is
     under said root. Pass in subdir=True if the path can result in a
-    subdirectory of the root instead of having to reside directly in the root
+    subdirectory of the root instead of having to reside directly in the root.
+    Pass realpath=False if filesystem links should not be resolved.
     """
-    real_root = _realpath(root)
-    if not os.path.isabs(real_root):
-        return ""
+    if not os.path.isabs(root):
+        root = os.path.join(os.getcwd(), root)
+    root = os.path.normpath(root)
     if not os.path.isabs(path):
         path = os.path.join(root, path)
     path = os.path.normpath(path)
-    real_path = _realpath(path)
+    if realpath:
+        root = _realpath(root)
+        path = _realpath(path)
     if subdir:
-        if real_path.startswith(real_root):
-            return real_path
+        if os.path.commonpath([path, root]) == root:
+            return path
     else:
-        if os.path.dirname(real_path) == os.path.normpath(real_root):
-            return real_path
+        if os.path.dirname(path) == root:
+            return path
     return ""
 
 

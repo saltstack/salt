@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+import os
 import socket
 import time
 import warnings
@@ -128,10 +129,10 @@ class PublishClient(salt.transport.base.PublishClient):
                     conn = aiohttp.UnixConnector(path=self.path)
                     session = aiohttp.ClientSession(connector=conn)
                     if self.ssl:
-                        url = f"https://ipc.saltproject.io/ws"
+                        url = "https://ipc.saltproject.io/ws"
                     else:
-                        url = f"http://ipc.saltproject.io/ws"
-                log.error("pub client connect %r %r", url, ctx)
+                        url = "http://ipc.saltproject.io/ws"
+                log.debug("pub client connect %r %r", url, ctx)
                 ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
@@ -154,7 +155,7 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._ws is None:
             self._ws, self._session = await self.getstream(timeout=timeout)
             if self.connect_callback:
-                self.connect_callback(True)
+                self.connect_callback(True)  # pylint: disable=not-callable
             self.connected = True
 
     async def connect(
@@ -259,7 +260,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
         ssl=None,
+        started=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -268,12 +272,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pull_path_perms = pull_path_perms
+        self.pub_path_perms = pub_path_perms
         self.ssl = ssl
         self.clients = set()
         self._run = None
         self.pub_writer = None
         self.pub_reader = None
         self._connecting = None
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     @property
     def topic_support(self):
@@ -281,9 +291,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __setstate__(self, state):
         self.__init__(**state)
-
-    def __setstate__(self, state):
-        self.__init__(state["opts"])
 
     def __getstate__(self):
         return {
@@ -294,6 +301,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_host": self.pull_host,
             "pull_port": self.pull_port,
             "pull_path": self.pull_path,
+            "pull_path_perms": self.pull_path_perms,
+            "pub_path_perms": self.pub_path_perms,
+            "ssl": self.ssl,
+            "started": self.started,
         }
 
     def publish_daemon(
@@ -341,8 +352,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             server = aiohttp.web.Server(self.handle_request)
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
-            site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
-            log.info("Publisher binding to socket %s", self.pub_path)
+            with salt.utils.files.set_umask(0o177):
+                log.info("Publisher binding to socket %s", self.pub_path)
+                site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
+                await site.start()
+                os.chmod(self.pub_path, self.pub_path_perms)
         else:
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -355,7 +369,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-        await site.start()
+            await site.start()
 
         self._pub_payload = publish_payload
         if self.pull_path:
@@ -363,10 +377,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.puller = await asyncio.start_unix_server(
                     self.pull_handler, self.pull_path
                 )
+                os.chmod(self.pull_path, self.pull_path_perms)
         else:
             self.puller = await asyncio.start_server(
                 self.pull_handler, self.pull_host, self.pull_port
             )
+        self.started.set()
         while self._run.is_set():
             await asyncio.sleep(0.3)
         await self.server.stop()
@@ -400,7 +416,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         self.clients.add(ws)
@@ -424,7 +440,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self._connecting = asyncio.create_task(self._connect())
         return self._connecting
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
         """
@@ -485,6 +503,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         self.message_handler = message_handler
         self._run = asyncio.Event()
+        self._started = asyncio.Event()
         self._run.set()
 
         async def server():
@@ -497,6 +516,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
+            self._started.set()
             # pause here for very long time by serving HTTP requests and
             # waiting for keyboard interruption
             while self._run.is_set():
@@ -513,7 +533,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         async for msg in ws:
@@ -545,13 +565,13 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closed = False
         self.ssl = self.opts.get("ssl", None)
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
         if self.ssl is not None:
             ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)
         self.session = aiohttp.ClientSession()
         URL = self.get_master_uri(self.opts)
-        log.error("Connect to %s %s", URL, ctx)
+        log.debug("Connect to %s %s", URL, ctx)
         self.ws = await self.session.ws_connect(URL, ssl=ctx)
 
     async def send(self, load, timeout=60):

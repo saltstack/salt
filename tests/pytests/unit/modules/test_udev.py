@@ -4,7 +4,6 @@
     Test cases for salt.modules.udev
 """
 
-
 import pytest
 
 import salt.modules.udev as udev

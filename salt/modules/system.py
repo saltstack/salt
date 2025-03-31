@@ -12,6 +12,7 @@ Support for reboot, shutdown, etc on POSIX-like systems.
     with ``salt`` will work as expected.
 """
 
+import logging
 import os.path
 import re
 from datetime import datetime, timedelta, tzinfo
@@ -21,6 +22,8 @@ import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "system"
 
@@ -202,10 +205,10 @@ def _swclock_to_hwclock():
     """
     res = __salt__["cmd.run_all"](["hwclock", "--systohc"], python_shell=False)
     if res["retcode"] != 0:
-        msg = "hwclock failed to set hardware clock from software clock: {}".format(
-            res["stderr"]
+        log.warn(
+            "hwclock failed to set hardware clock from software clock: %s",
+            res["stderr"],
         )
-        raise CommandExecutionError(msg)
     return True
 
 
@@ -636,7 +639,7 @@ def get_computer_name():
 
     .. code-block:: bash
 
-        salt '*' network.get_hostname
+        salt '*' system.get_computer_name
     """
     return __salt__["network.get_hostname"]()
 

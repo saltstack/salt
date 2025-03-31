@@ -24,7 +24,7 @@ def test_logging_and_state_output_order(salt_master, salt_minion, salt_cli, tmp_
         target_path
     )
     sls_tempfile = salt_master.state_tree.base.temp_file(
-        "{}.sls".format(sls_name), sls_contents
+        f"{sls_name}.sls", sls_contents
     )
     with sls_tempfile:
         # Get the command line to use
@@ -40,7 +40,7 @@ def test_logging_and_state_output_order(salt_master, salt_minion, salt_cli, tmp_
             stderr=subprocess.STDOUT,
             check=False,
             shell=False,
-            universal_newlines=True,
+            text=True,
         )
         assert ret.stdout
         assert not ret.stderr
@@ -53,7 +53,7 @@ def test_logging_and_state_output_order(salt_master, salt_minion, salt_cli, tmp_
             # This output order should not match and should trigger a _pytest.outcomes.Failed exception
             matcher.fnmatch_lines(
                 [
-                    '"{}":*'.format(salt_minion.id),
+                    f'"{salt_minion.id}":*',
                     '"file_*',
                     "*Reading configuration from*",
                 ]
@@ -66,7 +66,7 @@ def test_logging_and_state_output_order(salt_master, salt_minion, salt_cli, tmp_
                     # Confirm we have logging going on...
                     "*Reading configuration from*",
                     # And that after logging, we have the state output
-                    '"{}":*'.format(salt_minion.id),
+                    f'"{salt_minion.id}":*',
                     '"file_*',
                 ]
             )

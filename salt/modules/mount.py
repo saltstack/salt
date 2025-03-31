@@ -2,7 +2,6 @@
 Salt module to manage Unix mounts and the fstab file
 """
 
-
 import logging
 import os
 import re
@@ -17,10 +16,8 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from salt.utils.odict import OrderedDict
 
-# Set up logger
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
 __virtualname__ = "mount"
 
 
@@ -864,7 +861,10 @@ def set_fstab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _fstab_entry.fstab_keys
+
+        def filterFn(key):
+            return key not in _fstab_entry.fstab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
         msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
@@ -994,7 +994,10 @@ def set_vfstab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _vfstab_entry.vfstab_keys
+
+        def filterFn(key):
+            return key not in _vfstab_entry.vfstab_keys
+
         invalid_keys = filter(filterFn, match_on)
 
         msg = f'Unrecognized keys in match_on: "{invalid_keys}"'
@@ -1419,7 +1422,7 @@ def umount(name, device=None, user=None, util="mount", lazy=False):
     if not device:
         cmd = f"{cmd} '{name}'"
     else:
-        cmd = f"{cmd}'{device}'"
+        cmd = f"{cmd} '{device}'"
 
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
@@ -1880,7 +1883,10 @@ def set_filesystems(
         criteria = entry_ip.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _FileSystemsEntry.compatibility_keys
+
+        def filterFn(key):
+            return key not in _FileSystemsEntry.compatibility_keys
+
         invalid_keys = filter(filterFn, match_on)
         raise CommandExecutionError(f'Unrecognized keys in match_on: "{invalid_keys}"')
 

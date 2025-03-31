@@ -106,7 +106,7 @@ def _set_file(path):
     """
     Execute the set selections command for debconf
     """
-    cmd = "debconf-set-selections {}".format(path)
+    cmd = f"debconf-set-selections {path}"
 
     __salt__["cmd.run_stdout"](cmd, python_shell=False)
 
@@ -127,7 +127,7 @@ def set_(package, question, type, value, *extra):
 
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
-    line = "{} {} {} {}".format(package, question, type, value)
+    line = f"{package} {question} {type} {value}"
     os.write(fd_, salt.utils.stringutils.to_bytes(line))
     os.close(fd_)
 
@@ -169,7 +169,7 @@ def set_template(path, template, context, defaults, saltenv="base", **kwargs):
         saltenv=saltenv,
         context=context,
         defaults=defaults,
-        **kwargs
+        **kwargs,
     )
 
     return set_file(path, saltenv, **kwargs)

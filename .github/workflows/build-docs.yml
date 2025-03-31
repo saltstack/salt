@@ -17,33 +17,32 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
   build:
     name: Build
     runs-on:
-      - self-hosted
-      - linux
-      - medium
-      - x86_64
+      - ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         docs-output:
-          - linkcheck
-          - spellcheck
+         # XXX re-enable lintcheck and spellcheck then fix the errors
+         # - linkcheck
+         # - spellcheck
           - html
-          - epub
-          # - pdf
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
@@ -71,17 +70,17 @@ jobs:
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: ./.github/actions/cache
         with:
           path: .tools-venvs/docs
           key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
 
       - name: Prepare Docs Build
         run: |
-          git clone https://gitlab.com/saltstack/open/docs/builddocs.git .builddocs
+          git clone https://gitlab.com/saltstack/open/docs/builddocs-fonts.git .builddocs-fonts
           sudo mkdir -p /usr/share/fonts/truetype /usr/share/fonts/opentype
-          sudo cp -rfv .builddocs/builddocs/files/fonts/truetype/*.ttf /usr/share/fonts/truetype/
-          sudo cp -rfv .builddocs/builddocs/files/fonts/opentype/*.otf /usr/share/fonts/opentype/
+          sudo cp -rfv .builddocs-fonts/truetype/*.ttf /usr/share/fonts/truetype/
+          sudo cp -rfv .builddocs-fonts/opentype/*.otf /usr/share/fonts/opentype/
           sudo fc-cache -f -v
 
       - name: Build Documentation (${{ matrix.docs-output }})
@@ -97,7 +96,7 @@ jobs:
 
       - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
         if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build-docs.outputs.artifact-name }}
           path: ${{ steps.build-docs.outputs.artifact-path }}

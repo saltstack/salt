@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -37,11 +38,6 @@ create = command_group(
 
 _deb_distro_info = {
     "debian": {
-        "10": {
-            "label": "deb10ary",
-            "codename": "buster",
-            "suitename": "oldoldstable",
-        },
         "11": {
             "label": "deb11ary",
             "codename": "bullseye",
@@ -61,6 +57,10 @@ _deb_distro_info = {
         "22.04": {
             "label": "salt_ubuntu2204",
             "codename": "jammy",
+        },
+        "24.04": {
+            "label": "salt_ubuntu2404",
+            "codename": "noble",
         },
     },
 }
@@ -285,11 +285,7 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if nightly_build_from:
-        nightly_link = create_repo_path.parent / "minor/latest"
-        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
-        nightly_link.symlink_to(f"minor/{salt_version}")
-    else:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -315,8 +311,8 @@ def debian(
 _rpm_distro_info = {
     "amazon": ["2", "2023"],
     "redhat": ["7", "8", "9"],
-    "fedora": ["36", "37", "38"],
-    "photon": ["3", "4", "5"],
+    "fedora": ["40"],
+    "photon": ["4", "5"],
 }
 
 
@@ -439,7 +435,7 @@ def rpm(
 
     createrepo = shutil.which("createrepo")
     if createrepo is None:
-        container = "ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9"
+        container = "ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9"
         ctx.info(f"Using docker container '{container}' to call 'createrepo'...")
         uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
         gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
@@ -482,12 +478,10 @@ def rpm(
     if salt_repo_user and salt_repo_pass:
         repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
 
-    def _create_repo_file(create_repo_path, url_suffix, nightly_path=None):
+    def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            if nightly_path is None:
-                nightly_path = datetime.utcnow().strftime("%Y-%m-%d")
-            base_url = f"salt-dev/{nightly_build_from}/{nightly_path}/"
+            base_url = f"salt-dev/{nightly_build_from}/{datetime.utcnow().strftime('%Y-%m-%d')}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -499,7 +493,7 @@ def rpm(
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
-            distro_name = "RHEL/CentOS"
+            distro_name = "RHEL"
         else:
             distro_name = distro.capitalize()
 
@@ -529,14 +523,7 @@ def rpm(
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if nightly_build_from:
-        nightly_latest_repo_file_path = create_repo_path.parent / "nightly_latest.repo"
-        _create_repo_file(nightly_latest_repo_file_path, "minor/latest", "latest")
-
-        nightly_link = create_repo_path.parent / "minor/latest"
-        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
-        nightly_link.symlink_to(f"minor/{salt_version}")
-    else:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -798,9 +785,11 @@ def src(
         for hash_name in ("blake2b", "sha512", "sha3_512"):
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
@@ -917,7 +906,7 @@ def _create_onedir_based_repo(
         if distro == "onedir":
             if "-onedir-linux-" in dpath.name.lower():
                 release_os = "linux"
-            elif "-onedir-darwin-" in dpath.name.lower():
+            elif "-onedir-macos-" in dpath.name.lower():
                 release_os = "macos"
             elif "-onedir-windows-" in dpath.name.lower():
                 release_os = "windows"
@@ -938,9 +927,11 @@ def _create_onedir_based_repo(
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
             release_json[dpath.name][hash_name.upper()] = hexdigest
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+            with open(
+                f"{hashes_base_path}_{hash_name.upper()}", "a+", encoding="utf-8"
+            ) as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
-            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+            with open(f"{dpath}.{hash_name}", "a+", encoding="utf-8") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():

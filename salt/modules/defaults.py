@@ -3,7 +3,6 @@ Module to work with salt formula defaults files
 
 """
 
-
 import copy
 import logging
 import os

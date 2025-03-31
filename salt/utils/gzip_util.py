@@ -4,7 +4,6 @@
     Helper module for handling gzip consistently between 2.7+ and 2.6-
 """
 
-
 import gzip
 import io
 

@@ -8,7 +8,6 @@
     Common salt configuration schemas
 """
 
-
 from salt.utils.schema import ArrayItem, OneOfItem, Schema, StringItem
 
 
@@ -26,7 +25,7 @@ class DefaultIncludeConfig(StringItem):
     description = __doc__
 
     def __init__(self, default=None, pattern=None, **kwargs):
-        default = "{}/*.conf".format(self.__confd_directory__)
+        default = f"{self.__confd_directory__}/*.conf"
         pattern = r"(?:.*)/\*\.conf"
         super().__init__(default=default, pattern=pattern, **kwargs)
 
@@ -47,7 +46,7 @@ class MinionDefaultInclude(DefaultIncludeConfig):
 
 class MasterDefaultInclude(DefaultIncludeConfig):
     __target__ = "master"
-    __confd_directory = "master.d"
+    __confd_directory = "master.d"  # pylint: disable=unused-private-member
 
 
 class IncludeConfig(Schema):

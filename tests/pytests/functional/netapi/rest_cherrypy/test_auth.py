@@ -56,7 +56,7 @@ async def test_good_login(http_client, auth_creds, content_type_map, client_conf
     cookies = response.headers["Set-Cookie"]
     response_obj = salt.utils.json.loads(response.body)["return"][0]
     token = response_obj["token"]
-    assert "session_id={}".format(token) in cookies
+    assert f"session_id={token}" in cookies
     perms = response_obj["perms"]
     perms_config = client_config["external_auth"]["auto"][auth_creds["username"]]
     assert set(perms) == set(perms_config)

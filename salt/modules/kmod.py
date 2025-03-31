@@ -83,9 +83,7 @@ def _set_persistent_module(mod):
         return set()
     escape_mod = re.escape(mod)
     # If module is commented only uncomment it
-    if __salt__["file.search"](
-        conf, "^#[\t ]*{}[\t ]*$".format(escape_mod), multiline=True
-    ):
+    if __salt__["file.search"](conf, f"^#[\t ]*{escape_mod}[\t ]*$", multiline=True):
         __salt__["file.uncomment"](conf, escape_mod)
     else:
         __salt__["file.append"](conf, mod)
@@ -103,9 +101,9 @@ def _remove_persistent_module(mod, comment):
         return set()
     escape_mod = re.escape(mod)
     if comment:
-        __salt__["file.comment"](conf, "^[\t ]*{}[\t ]?".format(escape_mod))
+        __salt__["file.comment"](conf, f"^[\t ]*{escape_mod}[\t ]?")
     else:
-        __salt__["file.sed"](conf, "^[\t ]*{}[\t ]?".format(escape_mod), "")
+        __salt__["file.sed"](conf, f"^[\t ]*{escape_mod}[\t ]?", "")
     return {mod_name}
 
 
@@ -115,7 +113,7 @@ def _which(cmd):
     """
     _cmd = salt.utils.path.which(cmd)
     if not _cmd:
-        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
     return _cmd
 
 

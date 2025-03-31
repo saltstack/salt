@@ -6,25 +6,22 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create old config
     pytest.helpers.old_install()
-
     # Create a custom config
     pytest.helpers.custom_config()
-
-    pytest.helpers.run_command(
-        [pytest.INST_BIN, "/S", "/custom-config=custom_conf", "/master=cli_master"]
-    )
-    yield
+    args = ["/S", "/custom-config=custom_conf", "/master=cli_master"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
-def test_ssm_present_old_location(install):
-    assert os.path.exists(rf"{pytest.OLD_DIR}\bin\ssm.exe")
-
-
 def test_binaries_present_old_location(install):
+    # This will show the contents of the directory on failure
+    dir_contents = os.listdir(rf"{pytest.OLD_DIR}\bin")
+    # Apparently we don't move the binaries even if they pass install-dir
+    # TODO: Decide if this is expected behavior
+    assert os.path.exists(rf"{pytest.OLD_DIR}\bin\ssm.exe")
     assert os.path.exists(rf"{pytest.OLD_DIR}\bin\python.exe")
 
 

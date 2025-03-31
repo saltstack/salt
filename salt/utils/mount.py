@@ -2,7 +2,6 @@
 Common functions for managing mounts
 """
 
-
 import logging
 import os
 

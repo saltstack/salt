@@ -60,11 +60,11 @@ def genrepo(name, force=False, allow_empty=False):
     if not force:
         if not os.path.exists(winrepo_dir):
             ret["result"] = False
-            ret["comment"] = "{} is missing".format(winrepo_dir)
+            ret["comment"] = f"{winrepo_dir} is missing"
             return ret
         elif not os.path.exists(winrepo_cachefile):
             execute = True
-            ret["comment"] = "{} is missing".format(winrepo_cachefile)
+            ret["comment"] = f"{winrepo_cachefile} is missing"
         else:
             winrepo_cachefile_mtime = os.stat(winrepo_cachefile)[stat.ST_MTIME]
             for root, dirs, files in salt.utils.path.os_walk(winrepo_dir):

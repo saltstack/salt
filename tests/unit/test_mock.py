@@ -142,20 +142,20 @@ class MockOpenMixin:
             with salt.utils.files.fopen("foo.txt", mode) as self.fh:
                 index = 0
                 for line in self.fh:
-                    assert line == questions[index], "Line {}: {}".format(index, line)
+                    assert line == questions[index], f"Line {index}: {line}"
                     index += 1
 
             if multifile:
                 with salt.utils.files.fopen("bar.txt", mode) as self.fh2:
                     index = 0
                     for line in self.fh2:
-                        assert line == answers[index], "Line {}: {}".format(index, line)
+                        assert line == answers[index], f"Line {index}: {line}"
                         index += 1
 
                 with salt.utils.files.fopen("baz.txt", mode) as self.fh3:
                     index = 0
                     for line in self.fh3:
-                        assert line == answers[index], "Line {}: {}".format(index, line)
+                        assert line == answers[index], f"Line {index}: {line}"
                         index += 1
 
                 try:

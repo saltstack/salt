@@ -4,7 +4,6 @@
     Test cases for salt.modules.rh_service
 """
 
-
 import textwrap
 
 import pytest

@@ -2,7 +2,6 @@
 Module for managing timezone on POSIX-like systems.
 """
 
-
 import errno
 import filecmp
 import logging

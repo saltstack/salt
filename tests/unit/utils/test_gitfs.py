@@ -143,6 +143,7 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
         provider._master_lock.release()
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_git_provider_mp_lock_timeout(self):
         """
         Check that lock will time out if master lock is locked.
@@ -157,6 +158,7 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
             provider._master_lock.release()
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_git_provider_mp_clear_lock_timeout(self):
         """
         Check that clear lock will time out if master lock is locked.

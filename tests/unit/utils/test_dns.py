@@ -259,8 +259,8 @@ class DNSlookupsCase(TestCase):
         :param secure: delta cmd.run_all output for secured RESULTS
         """
         # wrong
-        for wrong in wrong:
-            with self._mock_cmd_ret(wrong):
+        for _wrong in wrong:
+            with self._mock_cmd_ret(_wrong):
                 self.assertEqual(lookup_cb("mockq", "A"), False)
 
         # empty response
@@ -307,7 +307,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         False,
-                        msg="Insecure {} returns should not be returned".format(rec_t),
+                        msg=f"Insecure {rec_t} returns should not be returned",
                     )
 
         for rec_t, tests in secure.items():
@@ -316,7 +316,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         test_res,
-                        msg="Error parsing DNSSEC'd {} returns".format(rec_t),
+                        msg=f"Error parsing DNSSEC'd {rec_t} returns",
                     )
 
     @pytest.mark.skipif(
@@ -366,7 +366,7 @@ class DNSlookupsCase(TestCase):
 
     @pytest.mark.skipif(not salt.utils.dns.HAS_DIG, reason="dig is not available")
     def test_dig_options(self):
-        cmd = "dig {} -v".format(salt.utils.dns.DIG_OPTIONS)
+        cmd = f"dig {salt.utils.dns.DIG_OPTIONS} -v"
         cmd = salt.modules.cmdmod.retcode(
             cmd, python_shell=False, output_loglevel="quiet"
         )
@@ -585,7 +585,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         _lookup_gai("mockq", rec_t),
                         test_res,
-                        msg="Error parsing {} returns".format(rec_t),
+                        msg=f"Error parsing {rec_t} returns",
                     )
 
     def test_host(self):

@@ -61,38 +61,38 @@ def add_store(name, store, saltenv="base"):
 
     cert_file = __salt__["cp.cache_file"](name, saltenv)
     if cert_file is False:
-        ret["comment"] = "Certificate file not found: {}".format(name)
+        ret["comment"] = f"Certificate file not found: {name}"
         ret["result"] = False
         return ret
 
     cert_serial = __salt__["certutil.get_cert_serial"](name)
     if cert_serial is None:
-        ret["comment"] = "Invalid certificate file: {}".format(name)
+        ret["comment"] = f"Invalid certificate file: {name}"
         ret["result"] = False
         return ret
 
     old_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
     if cert_serial in old_serials:
-        ret["comment"] = "Certificate already present: {}".format(name)
+        ret["comment"] = f"Certificate already present: {name}"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Certificate will be added: {}".format(name)
+        ret["comment"] = f"Certificate will be added: {name}"
         ret["result"] = None
         return ret
 
     retcode = __salt__["certutil.add_store"](name, store, retcode=True)
     if retcode != 0:
-        ret["comment"] = "Error adding certificate: {}".format(name)
+        ret["comment"] = f"Error adding certificate: {name}"
         ret["result"] = False
         return ret
 
     new_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
     if cert_serial in new_serials:
         ret["changes"]["added"] = name
-        ret["comment"] = "Added certificate: {}".format(name)
+        ret["comment"] = f"Added certificate: {name}"
     else:
-        ret["comment"] = "Failed to add certificate: {}".format(name)
+        ret["comment"] = f"Failed to add certificate: {name}"
         ret["result"] = False
 
     return ret
@@ -131,38 +131,38 @@ def del_store(name, store, saltenv="base"):
 
     cert_file = __salt__["cp.cache_file"](name, saltenv)
     if cert_file is False:
-        ret["comment"] = "Certificate file not found: {}".format(name)
+        ret["comment"] = f"Certificate file not found: {name}"
         ret["result"] = False
         return ret
 
     cert_serial = __salt__["certutil.get_cert_serial"](name)
     if cert_serial is None:
-        ret["comment"] = "Invalid certificate file: {}".format(name)
+        ret["comment"] = f"Invalid certificate file: {name}"
         ret["result"] = False
         return ret
 
     old_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
     if cert_serial not in old_serials:
-        ret["comment"] = "Certificate already absent: {}".format(name)
+        ret["comment"] = f"Certificate already absent: {name}"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Certificate will be removed: {}".format(name)
+        ret["comment"] = f"Certificate will be removed: {name}"
         ret["result"] = None
         return ret
 
     retcode = __salt__["certutil.del_store"](name, store, retcode=True)
     if retcode != 0:
-        ret["comment"] = "Error removing certificate: {}".format(name)
+        ret["comment"] = f"Error removing certificate: {name}"
         ret["result"] = False
         return ret
 
     new_serials = __salt__["certutil.get_stored_cert_serials"](store=store)
     if cert_serial not in new_serials:
         ret["changes"]["removed"] = name
-        ret["comment"] = "Removed certificate: {}".format(name)
+        ret["comment"] = f"Removed certificate: {name}"
     else:
-        ret["comment"] = "Failed to remove certificate: {}".format(name)
+        ret["comment"] = f"Failed to remove certificate: {name}"
         ret["result"] = False
 
     return ret

@@ -19,8 +19,9 @@ on:
 
 
 env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
 
 
 permissions:
@@ -31,7 +32,7 @@ jobs:
     permissions:
       contents: write  # for dev-drprasad/delete-tag-and-release to delete tags or releases
     name: Generate Tag and Github Release
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-22.04
     steps:
     - uses: dev-drprasad/delete-tag-and-release@v0.2.0
       if: github.event.inputs.reTag == 'true'
@@ -54,7 +55,7 @@ jobs:
         custom_tag: ${{ github.event.inputs.saltVersion }}
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 

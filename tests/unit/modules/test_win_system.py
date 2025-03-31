@@ -633,6 +633,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         the WMI Class Win32_Processor. Older versions of Windows are missing
         this property
         """
+
         # Create a mock processor class that does not have the
         # NumberOfCoresEnabled property
         class MockWMIProcessor:
