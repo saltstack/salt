@@ -1,6 +1,7 @@
 """
 Tests for the archive state
 """
+
 import os
 import pathlib
 import shutil
@@ -45,7 +46,7 @@ class Archive:
 
     @src.default
     def _src(self):
-        return self.path / "{}_src_dir".format(self.fmt)
+        return self.path / f"{self.fmt}_src_dir"
 
     @src_file.default
     def _src_file(self):
@@ -53,11 +54,11 @@ class Archive:
 
     @archive.default
     def _archive(self):
-        return self.path / "archive.{}".format(self.fmt)
+        return self.path / f"archive.{self.fmt}"
 
     @dst.default
     def _dst(self):
-        return self.path / "{}_dst_dir".format(self.fmt)
+        return self.path / f"{self.fmt}_dst_dir"
 
     @filename.default
     def _filename(self):
@@ -150,7 +151,7 @@ def archive(modules):
 
 
 def unicode_filename_ids(value):
-    return "unicode_filename={}".format(value)
+    return f"unicode_filename={value}"
 
 
 @pytest.fixture(params=[True, False], ids=unicode_filename_ids)

@@ -8,8 +8,25 @@ import time
 import pytest
 from saltfactories.utils.tempfiles import temp_file
 
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.skipif(
+        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        reason="System ships with a version of python that is too recent for salt-ssh tests",
+        # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
+        # and it imports `ssl` and checks if the `match_hostname` function is defined, which
+        # has been deprecated since Python 3.7, so, the logic goes into trying to import
+        # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
+]
 
 SSH_SLS = "ssh_state_tests"
 SSH_SLS_FILE = "/tmp/salt_test_file"
@@ -17,7 +34,6 @@ SSH_SLS_FILE = "/tmp/salt_test_file"
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.slow_test
 class SSHStateTest(SSHCase):
     """
     testing the state system with salt-ssh
@@ -35,7 +51,7 @@ class SSHStateTest(SSHCase):
     def _check_request(self, empty=False):
         check = self.run_function("state.check_request", wipe=False)
         if empty:
-            self.assertFalse(bool(check), "bool({}) is not False".format(check))
+            self.assertFalse(bool(check), f"bool({check}) is not False")
         else:
             self._check_dict_ret(
                 ret=check["default"]["test_run"]["local"]["return"],
@@ -43,7 +59,6 @@ class SSHStateTest(SSHCase):
                 exp_ret=SSH_SLS,
             )
 
-    @pytest.mark.slow_test
     def test_state_apply(self):
         """
         test state.apply with salt-ssh
@@ -54,7 +69,6 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @pytest.mark.slow_test
     def test_state_sls_id(self):
         """
         test state.sls_id with salt-ssh
@@ -81,7 +95,6 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @pytest.mark.slow_test
     def test_state_sls_wrong_id(self):
         """
         test state.sls_id when id does not exist
@@ -90,7 +103,6 @@ class SSHStateTest(SSHCase):
         ret = self.run_function("state.sls_id", ["doesnotexist", SSH_SLS])
         assert "No matches for ID" in ret
 
-    @pytest.mark.slow_test
     def test_state_sls_id_with_pillar(self):
         """
         test state.sls_id with pillar data
@@ -104,7 +116,6 @@ class SSHStateTest(SSHCase):
         )
         self.assertTrue(check_file)
 
-    @pytest.mark.slow_test
     def test_state_show_sls(self):
         """
         test state.show_sls with salt-ssh
@@ -115,7 +126,16 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
-    @pytest.mark.slow_test
+    def test_state_sls_exists(self):
+        """
+        test state.sls_exists with salt-ssh
+        """
+        ret = self.run_function("state.sls_exists", [SSH_SLS])
+        self.assertTrue(ret)
+
+        check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
+        self.assertFalse(check_file)
+
     def test_state_show_top(self):
         """
         test state.show_top with salt-ssh
@@ -142,7 +162,6 @@ class SSHStateTest(SSHCase):
             ret = self.run_function("state.show_top")
             self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
 
-    @pytest.mark.slow_test
     def test_state_single(self):
         """
         state.single with salt-ssh
@@ -160,7 +179,6 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @pytest.mark.slow_test
     def test_show_highstate(self):
         """
         state.show_highstate with salt-ssh
@@ -190,7 +208,6 @@ class SSHStateTest(SSHCase):
             self.assertIn(destpath, high)
             self.assertEqual(high[destpath]["__env__"], "base")
 
-    @pytest.mark.slow_test
     def test_state_high(self):
         """
         state.high with salt-ssh
@@ -208,7 +225,6 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @pytest.mark.slow_test
     def test_show_lowstate(self):
         """
         state.show_lowstate with salt-ssh
@@ -236,7 +252,6 @@ class SSHStateTest(SSHCase):
             self.assertIsInstance(low, list)
             self.assertIsInstance(low[0], dict)
 
-    @pytest.mark.slow_test
     def test_state_low(self):
         """
         state.low with salt-ssh
@@ -255,7 +270,6 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @pytest.mark.slow_test
     def test_state_request_check_clear(self):
         """
         test state.request system with salt-ssh
@@ -269,7 +283,6 @@ class SSHStateTest(SSHCase):
         clear = self.run_function("state.clear_request", wipe=False)
         self._check_request(empty=True)
 
-    @pytest.mark.slow_test
     def test_state_run_request(self):
         """
         test state.request system with salt-ssh
@@ -283,7 +296,6 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @pytest.mark.slow_test
     def test_state_running(self):
         """
         test state.running with salt-ssh

@@ -1,6 +1,7 @@
 """
 Validate Cache class methods
 """
+
 import pytest
 
 import salt.cache

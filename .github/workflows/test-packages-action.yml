@@ -1,24 +1,9 @@
-name: Test Artifact
+---
+name: Test Packages
 
 on:
   workflow_call:
     inputs:
-      distro-slug:
-        required: true
-        type: string
-        description: The OS slug to run tests against
-      platform:
-        required: true
-        type: string
-        description: The platform being tested
-      arch:
-        required: true
-        type: string
-        description: The platform arch being tested
-      pkg-type:
-        required: true
-        type: string
-        description: The platform arch being tested
       salt-version:
         type: string
         required: true
@@ -31,189 +16,96 @@ on:
         required: true
         type: string
         description: A JSON list of releases to test upgrades against
-      package-name:
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
+      python-version:
         required: false
         type: string
-        description: The onedir package name to use
-        default: salt
+        description: The python version to run tests with
+        default: "3.10"
       nox-session:
         required: false
         type: string
         description: The nox session to run
-        default: test-pkgs-onedir
+        default: ci-test-onedir
       skip-code-coverage:
         required: false
         type: boolean
         description: Skip code coverage
         default: false
-      skip-junit-reports:
+      package-name:
         required: false
-        type: boolean
-        description: Skip Publishing JUnit Reports
-        default: false
-
+        type: string
+        description: The onedir package name to use
+        default: salt
+      matrix:
+        required: true
+        type: string
+        description: Json job matrix config
+      linux_arm_runner:
+        required: true
+        type: string
+        description: Json job matrix config
 
 env:
-  NOX_VERSION: "2022.8.7"
-  COLUMNS: 160
+  COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  USE_S3_CACHE: 'false'
 
 jobs:
 
-  generate-matrix:
-    name: Generate Package Test Matrix
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
-    outputs:
-      pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Generate Package Test Matrix
-        id: generate-pkg-matrix
-        run: |
-          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
-
-  dependencies:
-    name: Setup Test Dependencies
-    needs:
-      - generate-matrix
-    runs-on:
-      - self-hosted
-      - linux
-      - bastion
-    timeout-minutes: 90
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        id: nox-dependencies-cache
-        uses: actions/cache@v3
-        with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
-
-      - name: Download Onedir Tarball as an Artifact
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Decompress Onedir Tarball
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-          cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-
-      - name: Setup Python Tools Scripts
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Get Salt Project GitHub Actions Bot Environment
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
-      - name: Start VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        id: spin-up-vm
-        run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
-
-      - name: List Free Space
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
-
-      - name: Upload Checkout To VM
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm rsync ${{ inputs.distro-slug }}
-
-      - name: Install Dependencies
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
-
-      - name: Cleanup .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
-
-      - name: Compress .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
-
-      - name: Download Compressed .nox Directory
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
-
-      - name: Destroy VM
-        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
-
-      - name: Define Nox Upload Artifact Name
-        id: nox-artifact-name
-        run: |
-          if [ "${{ contains(inputs.distro-slug, 'windows') }}" != "true" ]; then
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ steps.nox-artifact-name.outputs.name }}
-          path: nox.${{ inputs.distro-slug }}.tar.*
-
-  test:
-    name: Test
-    runs-on:
-      - self-hosted
-      - linux
-      - bastion
+  test-linux:
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
-    needs:
-      - generate-matrix
-      - dependencies
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
-
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Download Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
-          path: pkg/artifacts/
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
+          path: artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -221,119 +113,399 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
 
       - name: List Packages
         run: |
-          tree pkg/artifacts
+          tree artifacts/pkg/
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-        uses: actions/cache@v3
+      - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
         with:
-          path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
-          # If we get a cache miss here it means the dependencies step failed to save the cache
-          fail-on-cache-miss: true
+          name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Get Salt Project GitHub Actions Bot Environment
+      - name: "Ensure docker is running"
         run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+          sudo systemctl start containerd || exit 0
 
-      - name: Start VM
-        id: spin-up-vm
+      - name: "Pull container ${{ matrix.container }}"
         run: |
-          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
+          docker pull ${{ matrix.container }}
 
-      - name: List Free Space
+      - name: "Create container ${{ matrix.container }}"
         run: |
-          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+          tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
-      - name: Upload Checkout To VM
+      - name: "Start container ${{ matrix.container }}"
         run: |
-          tools --timestamps vm rsync ${{ inputs.distro-slug }}
+          /usr/bin/docker start ${{ github.run_id }}_salt-test-pkg
 
       - name: Decompress .nox Directory
         run: |
-          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+          docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
-      - name: Show System Info & Test Plan
+      - name: List Free Space
         run: |
-          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
-            ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
+          df -h || true
+
+      - name: Show System Info
+        run: |
+          docker exec \
+          -e SKIP_REQUIREMENTS_INSTALL=1 \
+          -e PRINT_SYSTEM_INFO_ONLY=1 \
+          ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-          --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
-          ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
+          docker exec \
+          ${{ github.run_id }}_salt-test-pkg \
+          python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
-      - name: Download Test Run Artifacts
-        id: download-artifacts-from-vm
-        if: always() && steps.spin-up-vm.outcome == 'success'
+      - name: Upload Test Run Log Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/logs
+          include-hidden-files: true
+
+      - name: Upload Test Run Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/
+            !artifacts/pkg/*
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
+          include-hidden-files: true
+
+  test-macos:
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    runs-on: ${{ matrix.runner }}
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
+    timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['macos'] }}
+    steps:
+
+      - name: "Throttle Builds"
+        shell: bash
         run: |
-          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
+          path: artifacts/pkg/
+
+      - name: Install System Dependencies
+        run: |
+          brew install tree pkg-config mysql
+
+      - name: List Packages
+        run: |
+          tree artifacts/pkg/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - name: Download nox.macos.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
+
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- macos ${{ matrix.arch }}
+
+      - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+
+      - name: Run Package Tests
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          COVERAGE_CONTEXT: ${{ matrix.slug }}
+        run: |
+          sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
+
+      - name: Prepare Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always()
+        run: |
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
 
-      - name: Destroy VM
+      - name: Upload Test Run Log Artifacts
         if: always()
-        run: |
-          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/logs
+          include-hidden-files: true
 
       - name: Upload Test Run Artifacts
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-        uses: actions/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
-            artifacts
+            artifacts/
+            !artifacts/pkg/*
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
+          include-hidden-files: true
 
-  report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.test-chunk }})
-    runs-on:
-      - self-hosted
-      - linux
-      - x86_64
-    if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
-    needs:
-      - test
-      - generate-matrix
+
+  test-windows:
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    runs-on: ${{ matrix.slug }}
+    timeout-minutes: 120  # 2 Hours - More than this and something is wrong
+    if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+        include: ${{ fromJSON(inputs.matrix)['windows'] }}
+    steps:
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
+
+
+      - name: "Set `TIMESTAMP` environment variable"
+        shell: bash
+        run: |
+          echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
+          path: ./artifacts/pkg/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: ./artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
+        env:
+          PIP_INDEX_URL: https://pypi.org/simple
+
+      - run: python3 --version
+
+      - name: Download nox.windows.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
+
+      - name: Decompress .nox Directory
+        run: |
+          nox --force-color -e decompress-dependencies -- windows ${{ matrix.arch }}
+
+      - name: List Important Directories
+        run: |
+          dir d:/
+          dir .
+          dir artifacts/
+          dir artifacts/pkg
+          dir .nox/ci-test-onedir/Scripts
+
+      - name: Check onedir python
+        continue-on-error: true
+        run: |
+          artifacts/salt/Scripts/python.exe --version
+
+      - name: Check nox python
+        continue-on-error: true
+        run: |
+          .nox/ci-test-onedir/Scripts/python.exe --version
+
+      - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          SKIP_CODE_COVERAGE: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
+          PYTHONUTF8: "1"
+        run: |
+          nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- '${{ matrix.tests-chunk }}' --log-cli-level=debug
+
+      - name: Run Package Tests
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_ONEDIR_FAILURES: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          COVERAGE_CONTEXT: ${{ matrix.slug }}
+          OUTPUT_COLUMNS: "190"
+          PYTHONUTF8: "1"
+        run: >
+          nox --force-color -f noxfile.py -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
+
+      - name: Prepare Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always()
+        shell: bash
+        run: |
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+          fi
+
+      - name: Upload Test Run Log Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/logs
+          include-hidden-files: true
+
+      - name: Upload Test Run Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          path: |
+            artifacts/
+            !artifacts/pkg/*
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
+          include-hidden-files: true
+
+  report:
+    name: Report
+    runs-on: ubuntu-22.04
+    if: ${{ false }}
+    needs:
+      - test-linux
+      - test-macos
+      - test-windows
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
+
+      - name: Wait For Artifacts
+        run: |
+          sleep 60
+
+      - name: Merge Test Run Artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}
+          pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-*
+          separate-directories: true
+          delete-merged: true
+
+      - name: Wait For Artifacts 2
+        run: |
+          sleep 60
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
-          path: artifacts
+          path: artifacts/
+          pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}*
+          merge-multiple: true
 
       - name: Show Test Run Artifacts
-        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        if: always()
         run: |
           tree -a artifacts
-
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
-        # always run even if the previous steps fails
-        if: always() && inputs.skip-junit-reports == false && steps.download-test-run-artifacts.outcome == 'success'
-        with:
-          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.test-chunk }})
-          report_paths: 'artifacts/xml-unittests-output/*.xml'
-          annotate_only: true

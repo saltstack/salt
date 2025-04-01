@@ -38,12 +38,10 @@ def deepcopy_bound(name):
     """
 
     def _deepcopy_method(x, memo):
-        # pylint: disable=incompatible-py3-code
         return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)
-        # pylint: enable=incompatible-py3-code
 
+    pre_dispatch = copy._deepcopy_dispatch
     try:
-        pre_dispatch = copy._deepcopy_dispatch
         copy._deepcopy_dispatch[types.MethodType] = _deepcopy_method
         ret = copy.deepcopy(name)
     finally:

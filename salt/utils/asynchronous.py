@@ -2,7 +2,6 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-
 import asyncio
 import contextlib
 import logging
@@ -74,7 +73,8 @@ class SyncWrapper:
         self.cls = cls
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
-        self.obj = cls(*args, **kwargs)
+        with current_ioloop(self.io_loop):
+            self.obj = cls(*args, **kwargs)
         self._async_methods = list(
             set(async_methods + getattr(self.obj, "async_methods", []))
         )

@@ -8,14 +8,12 @@ apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.21.46
 boto>=2.46.0
 cassandra-driver>=2.0
-certifi>=2022.12.07
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
-croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 etcd3-py==0.1.6
-gitpython>=3.1.30
+gitpython>=3.1.37
 jmespath
 jsonschema
 junos-eznc; sys_platform != 'win32'
@@ -36,15 +34,15 @@ pynacl>=1.5.0
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi
-requests
 rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
-vcert; sys_platform != 'win32'
+vcert; sys_platform != 'win32' and python_version < '3.13.0'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4
+textfsm
 # Available template libraries that can be used
 genshi>=0.7.3
 cheetah3>=3.2.2

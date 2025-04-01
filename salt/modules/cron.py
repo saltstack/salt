@@ -113,7 +113,7 @@ def _render_tab(lst):
     """
     ret = []
     for pre in lst["pre"]:
-        ret.append("{}\n".format(pre))
+        ret.append(f"{pre}\n")
     if ret:
         if ret[-1] != TAG:
             ret.append(TAG)
@@ -170,10 +170,10 @@ def _get_cron_cmdstr(path, user=None):
     Returns a format string, to be used to build a crontab command.
     """
     if user:
-        cmd = "crontab -u {}".format(user)
+        cmd = f"crontab -u {user}"
     else:
         cmd = "crontab"
-    return "{} {}".format(cmd, path)
+    return f"{cmd} {path}"
 
 
 def _check_instance_uid_match(user):
@@ -343,7 +343,7 @@ def raw_cron(user):
         ).splitlines(True)
     # If Salt is running from root user it could modify any user's crontab
     elif _check_instance_uid_match("root"):
-        cmd = "crontab -u {} -l".format(user)
+        cmd = f"crontab -u {user} -l"
         # Preserve line endings
         lines = salt.utils.data.decode(
             __salt__["cmd.run_stdout"](

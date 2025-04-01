@@ -2,6 +2,7 @@ import copy
 import os
 
 import pytest
+import yaml
 
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
@@ -687,6 +688,34 @@ def test_setval_unicode():
         ret = grainsmod.setvals({key: value})
         assert key in ret
         assert ret[key] == value
+
+
+def test_setvals_conflicting_ids(tmp_path):
+    """
+    Test that conflicting top-level keys in static grains file does not break
+    managing static grains
+    """
+    static_grains = tmp_path / "grains"
+    with static_grains.open("w") as fh:
+        fh.write('foo: bar\nfoo: baz\nno_conflict_here: "yay"\n')
+
+    key = "hello"
+    value = "world"
+
+    with patch.dict(grainsmod.__opts__, {"conf_file": str(tmp_path / "minion")}):
+        # Update the grains file in the temp dir
+        grainsmod.setvals({key: value})
+
+    # Load the contents of the file as text for the below asserts
+    updated_grains = static_grains.read_text()
+
+    top_level_keys = [
+        line.split()[0].rstrip(":") for line in updated_grains.splitlines()
+    ]
+    # Confirm that the conflicting IDs were collapsed into a single value
+    assert top_level_keys.count("foo") == 1
+    # Confirm that the new static grain made it into the file
+    assert yaml.safe_load(updated_grains)[key] == value
 
 
 def test_delval_single():

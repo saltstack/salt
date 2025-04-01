@@ -4,17 +4,20 @@ import pytest
 
 import salt.modules.file as filemod
 import salt.states.file as file
-from tests.support.mock import call, create_autospec, patch
+from tests.support.mock import MagicMock, call, create_autospec, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {file: {"__opts__": {"test": False}}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        file: {
+            "__opts__": {"test": False},
+            "__env__": "base",
+        }
+    }
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_remove():
     fake_remove_mod = create_autospec(filemod.remove)
     with patch.dict(file.__salt__, {"file.remove": fake_remove_mod}):
@@ -47,8 +50,8 @@ def test_file_tidied_for_file_remove(fake_remove):
 
         file.tidied("/some/directory/tree")
 
-    call_root_file1 = "some root{}file1".format(os.sep)
-    call_root_file2 = "some root{}file2".format(os.sep)
+    call_root_file1 = f"some root{os.sep}file1"
+    call_root_file2 = f"some root{os.sep}file2"
     fake_remove.assert_has_calls([call(call_root_file1), call(call_root_file2)])
 
 
@@ -67,3 +70,22 @@ def test_file_copy_should_use_provided_force_mode_for_file_remove(fake_remove):
         file.copy_("/tmp/foo", source="/tmp/bar", group="fnord", force=True, mode=777)
 
     fake_remove.assert_called_with("/tmp/foo", force=True)
+
+
+def test_file_recurse_directory_test():
+    salt_dunder = {
+        "cp.list_master_dirs": MagicMock(return_value=[]),
+        "file.source_list": MagicMock(return_value=("salt://does_not_exist", "")),
+    }
+    with patch.dict(file.__salt__, salt_dunder):
+        ret = file.recurse("/tmp/test", "salt://does_not_exist", saltenv="base")
+        assert ret == {
+            "changes": {},
+            "comment": "The directory 'does_not_exist' does not exist on the salt fileserver in saltenv 'base'",
+            "name": "/tmp/test",
+            "result": False,
+        }
+        salt_dunder["cp.list_master_dirs"].assert_called_once_with(
+            saltenv="base",
+            prefix="does_not_exist/",
+        )

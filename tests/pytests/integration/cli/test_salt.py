@@ -1,6 +1,8 @@
 """
 :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 """
+
+import glob
 import logging
 import os
 import shutil
@@ -15,6 +17,7 @@ from pytestshellutils.utils.processes import ProcessResult, terminate_process
 
 import salt.defaults.exitcodes
 import salt.utils.path
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +25,24 @@ pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
+
+
+@pytest.fixture
+def salt_minion_2(salt_master):
+    """
+    A running salt-minion fixture
+    """
+    factory = salt_master.salt_minion_daemon(
+        "minion-2",
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
 
 
 def test_context_retcode_salt(salt_cli, salt_minion):
@@ -234,3 +255,50 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     assert "Exiting gracefully on Ctrl-c" in ret.stderr
     assert "Exception ignored in" not in ret.stderr
     assert "This job's jid is" in ret.stderr
+
+
+def test_minion_65400(salt_cli, salt_minion, salt_minion_2, salt_master):
+    """
+    Ensure correct exit status when salt CLI starts correctly.
+
+    """
+    state = """
+    custom_test_state:
+      test.configurable_test_state:
+        - name: example
+        - changes: True
+        - result: False
+        - comment: 65400 regression test
+    """
+    with salt_master.state_tree.base.temp_file("test_65400.sls", state):
+        ret = salt_cli.run("state.sls", "test_65400", minion_tgt="*")
+        assert isinstance(ret.data, dict)
+        assert len(ret.data.keys()) == 2
+        for minion_id in ret.data:
+            assert ret.data[minion_id] != "Error: test.configurable_test_state"
+            assert isinstance(ret.data[minion_id], dict)
+
+
+@pytest.mark.skip_on_windows(reason="Windows does not support SIGUSR1")
+def test_sigusr1_handler(salt_master, salt_minion):
+    """
+    Ensure SIGUSR1 handler works.
+
+    Refer to https://docs.saltproject.io/en/latest/topics/troubleshooting/minion.html#live-python-debug-output for more details.
+    """
+    tb_glob = os.path.join(tempfile.gettempdir(), "salt-debug-*.log")
+    tracebacks_before = glob.glob(tb_glob)
+    os.kill(salt_minion.pid, signal.SIGUSR1)
+    for i in range(10):
+        if len(glob.glob(tb_glob)) - len(tracebacks_before) == 1:
+            break
+        time.sleep(1)
+
+    os.kill(salt_master.pid, signal.SIGUSR1)
+    for i in range(10):
+        if len(glob.glob(tb_glob)) - len(tracebacks_before) == 2:
+            break
+        time.sleep(1)
+
+    tracebacks_after = glob.glob(tb_glob)
+    assert len(tracebacks_after) - len(tracebacks_before) == 2

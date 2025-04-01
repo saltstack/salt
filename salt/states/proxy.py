@@ -78,13 +78,13 @@ def managed(
         ret["changes"] = {"new": []}
 
         for service in services:
-            current_settings = __salt__["proxy.get_{}_proxy".format(service)]()
+            current_settings = __salt__[f"proxy.get_{service}_proxy"]()
 
             if current_settings.get("server") == name and current_settings.get(
                 "port"
             ) == str(port):
-                ret["comment"] += "{} proxy settings already set.\n".format(service)
-            elif __salt__["proxy.set_{}_proxy".format(service)](
+                ret["comment"] += f"{service} proxy settings already set.\n"
+            elif __salt__[f"proxy.set_{service}_proxy"](
                 name, port, user, password, network_service
             ):
                 ret["comment"] += "{} proxy settings updated correctly\n".format(

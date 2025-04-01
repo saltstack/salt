@@ -82,7 +82,6 @@ the following:
     user:  user name
 """
 
-
 import logging
 import os
 import re
@@ -163,7 +162,7 @@ def _parse_interval(value):
     """
     match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError("invalid time interval: '{}'".format(value))
+        raise ValueError(f"invalid time interval: '{value}'")
 
     result = 0
     resolution = None
@@ -212,7 +211,7 @@ def _parse_size(value):
         try:
             num = int(float(scalar) * multiplier)
         except ValueError:
-            raise ValueError('invalid size: "{}"'.format(value))
+            raise ValueError(f'invalid size: "{value}"')
 
     if style == "-":
         min_size = 0
@@ -280,7 +279,7 @@ class RegexOption(Option):
         try:
             self.regex = re.compile(value)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError(f'invalid regular expression: "{value}"')
 
     def match(self, dirname, filename, fstat):
         return self.regex.match(filename)
@@ -297,7 +296,7 @@ class IregexOption(Option):
         try:
             self.regex = re.compile(value, re.IGNORECASE)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError(f'invalid regular expression: "{value}"')
 
     def match(self, dirname, filename, fstat):
         return self.regex.match(filename)
@@ -326,7 +325,7 @@ class TypeOption(Option):
             try:
                 self.ftypes.add(_FILE_TYPES[ftype])
             except KeyError:
-                raise ValueError('invalid file type "{}"'.format(ftype))
+                raise ValueError(f'invalid file type "{ftype}"')
 
     def requires(self):
         return _REQUIRES_STAT
@@ -352,7 +351,7 @@ class OwnerOption(Option):
                 try:
                     self.uids.add(pwd.getpwnam(value).pw_uid)
                 except KeyError:
-                    raise ValueError('no such user "{}"'.format(name))
+                    raise ValueError(f'no such user "{name}"')
 
     def requires(self):
         return _REQUIRES_STAT
@@ -378,7 +377,7 @@ class GroupOption(Option):
                 try:
                     self.gids.add(grp.getgrnam(name).gr_gid)
                 except KeyError:
-                    raise ValueError('no such group "{}"'.format(name))
+                    raise ValueError(f'no such group "{name}"')
 
     def requires(self):
         return _REQUIRES_STAT
@@ -450,7 +449,7 @@ class GrepOption(Option):
         try:
             self.regex = re.compile(value)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError(f'invalid regular expression: "{value}"')
 
     def requires(self):
         return _REQUIRES_CONTENTS | _REQUIRES_STAT
@@ -590,11 +589,11 @@ class ExecOption(Option):
                     command,
                     salt.utils.stringutils.to_str(err),
                 )
-            return "{}:\n{}\n".format(command, salt.utils.stringutils.to_str(out))
+            return f"{command}:\n{salt.utils.stringutils.to_str(out)}\n"
 
         except Exception as e:  # pylint: disable=broad-except
             log.error('Exception while executing command "%s":\n\n%s', command, e)
-            return "{}: Failed".format(fullpath)
+            return f"{fullpath}: Failed"
 
 
 class Finder:
@@ -622,11 +621,11 @@ class Finder:
                 # this is a passthrough object, continue
                 continue
             if not value:
-                raise ValueError('missing value for "{}" option'.format(key))
+                raise ValueError(f'missing value for "{key}" option')
             try:
                 obj = globals()[key.title() + "Option"](key, value)
             except KeyError:
-                raise ValueError('invalid option "{}"'.format(key))
+                raise ValueError(f'invalid option "{key}"')
             if hasattr(obj, "match"):
                 requires = obj.requires()
                 if requires & _REQUIRES_CONTENTS:
@@ -722,7 +721,7 @@ def find(path, options):
 
 def _main():
     if len(sys.argv) < 2:
-        sys.stderr.write("usage: {} path [options]\n".format(sys.argv[0]))
+        sys.stderr.write(f"usage: {sys.argv[0]} path [options]\n")
         sys.exit(salt.defaults.exitcodes.EX_USAGE)
 
     path = sys.argv[1]
@@ -734,7 +733,7 @@ def _main():
     try:
         finder = Finder(criteria)
     except ValueError as ex:
-        sys.stderr.write("error: {}\n".format(ex))
+        sys.stderr.write(f"error: {ex}\n")
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):

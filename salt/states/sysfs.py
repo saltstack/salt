@@ -41,33 +41,33 @@ def present(name, value, config=None):
     current = __salt__["sysfs.read"](name)
     if current is False:
         ret["result"] = False
-        ret["comment"] = "SysFS attribute {} doesn't exist.".format(name)
+        ret["comment"] = f"SysFS attribute {name} doesn't exist."
     else:
         # if the return is a dict, the "name" is an object not an attribute
         if isinstance(current, dict):
             ret["result"] = False
-            ret["comment"] = "{} is not a SysFS attribute.".format(name)
+            ret["comment"] = f"{name} is not a SysFS attribute."
         else:
             # some attribute files lists all available options and the selected one between []
             if isinstance(current, str):
                 current = re.sub(r"(.*\[|\].*)", "", current)
             if value == current:
                 ret["result"] = True
-                ret["comment"] = "SysFS attribute {} is already set.".format(name)
+                ret["comment"] = f"SysFS attribute {name} is already set."
             else:
                 ret["result"] = None
 
     if ret["result"] is None:
         if __opts__["test"]:
-            ret["comment"] = "SysFS attribute {} set to be changed.".format(name)
+            ret["comment"] = f"SysFS attribute {name} set to be changed."
         else:
             update = __salt__["sysfs.write"](name, value)
             if not update:
                 ret["result"] = False
-                ret["comment"] = "Failed to set {} to {}".format(name, value)
+                ret["comment"] = f"Failed to set {name} to {value}"
             else:
                 ret["result"] = True
                 ret["changes"] = {name: value}
-                ret["comment"] = "Updated SysFS attribute {} to {}".format(name, value)
+                ret["comment"] = f"Updated SysFS attribute {name} to {value}"
 
     return ret

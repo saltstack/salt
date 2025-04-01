@@ -115,7 +115,7 @@ def get_xml_node(node, xpath):
         xpath: simple XPath to look for.
     """
     if not xpath.startswith("./"):
-        xpath = "./{}".format(xpath)
+        xpath = f"./{xpath}"
     res = node.find(xpath)
     if res is None:
         parent_xpath = xpath[: xpath.rfind("/")]
@@ -304,7 +304,7 @@ def change_xml(doc, data, mapping):
         xpath = param["xpath"]
         # Prepend the xpath with ./ to handle the root more easily
         if not xpath.startswith("./"):
-            xpath = "./{}".format(xpath)
+            xpath = f"./{xpath}"
 
         placeholders = [
             s[1:-1]
@@ -331,9 +331,7 @@ def change_xml(doc, data, mapping):
             if new_value is not None:
                 # We need to increment ids from arrays since xpath starts at 1
                 converters = {
-                    p: (lambda n: n + 1)
-                    if "[${}]".format(p) in xpath
-                    else (lambda n: n)
+                    p: ((lambda n: n + 1) if f"[${p}]" in xpath else (lambda n: n))
                     for p in placeholders
                 }
                 ctx = {

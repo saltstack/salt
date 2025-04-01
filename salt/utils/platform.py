@@ -2,6 +2,7 @@
 Functions for identifying which platform a machine is
 """
 
+import contextlib
 import multiprocessing
 import os
 import platform
@@ -18,8 +19,16 @@ def linux_distribution(full_distribution_name=True):
     Simple function to return information about the OS distribution (id_name, version, codename).
     """
     if full_distribution_name:
-        return distro.name(), distro.version(best=True), distro.codename()
-    return distro.id(), distro.version(best=True), distro.codename()
+        distro_name = distro.name()
+    else:
+        distro_name = distro.id()
+    # Empty string fallbacks
+    distro_version = distro_codename = ""
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_version = distro.version(best=True)
+    with contextlib.suppress(subprocess.CalledProcessError):
+        distro_codename = distro.codename()
+    return distro_name, distro_version, distro_codename
 
 
 @real_memoize
@@ -219,7 +228,11 @@ def is_aarch64():
     """
     Simple function to return if host is AArch64 or not
     """
-    return platform.machine().startswith("aarch64")
+    if is_darwin():
+        # Allow for MacOS Arm64 platform returning differently from Linux
+        return platform.machine().startswith("arm64")
+    else:
+        return platform.machine().startswith("aarch64")
 
 
 def spawning_platform():
@@ -230,3 +243,22 @@ def spawning_platform():
     Salt, however, will force macOS to spawning by default on all python versions
     """
     return multiprocessing.get_start_method(allow_none=False) == "spawn"
+
+
+def get_machine_identifier():
+    """
+    Provide the machine-id for machine/virtualization combination
+    """
+    # pylint: disable=resource-leakage
+    # Provides:
+    #   machine-id
+    locations = ["/etc/machine-id", "/var/lib/dbus/machine-id"]
+    existing_locations = [loc for loc in locations if os.path.exists(loc)]
+    if not existing_locations:
+        return {}
+    else:
+        # cannot use salt.utils.files.fopen due to circular dependency
+        with open(
+            existing_locations[0], encoding=__salt_system_encoding__
+        ) as machineid:
+            return {"machine_id": machineid.read().strip()}

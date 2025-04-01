@@ -329,6 +329,7 @@ the case when the dependency is unavailable.
     """
     Cheese execution (or returner/beacon/etc.) module
     """
+
     try:
         import enzymes
 
@@ -415,6 +416,8 @@ in the minion config file:
 The above example will force the minion to use the :py:mod:`systemd
 <salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
+
+For per-state provider overrides, see documentation on :ref:`state providers <state-providers>`.
 
 .. __: https://github.com/saltstack/salt/issues/new
 
@@ -536,8 +539,6 @@ the module using the following field lists:
 
 .. code-block:: text
 
-    :maintainer:    Thomas Hatch <thatch@saltstack.com, Seth House <shouse@saltstack.com>
-    :maturity:      new
     :depends:       python-mysqldb
     :platform:      all
 

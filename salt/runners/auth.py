@@ -5,7 +5,6 @@ Authentication runner for creating, deleting, and managing eauth tokens.
 
 """
 
-
 import os
 
 import salt.auth

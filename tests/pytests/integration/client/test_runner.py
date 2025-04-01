@@ -150,3 +150,13 @@ def test_invalid_kwargs_are_ignored(client, auth_creds):
     ret = client.cmd_sync(low.copy())
     assert ret
     assert ret[0] == "foo"
+
+
+def test_get_docs(client):
+    ret = client.get_docs(arg="*")
+    assert "auth.del_token" in ret
+    assert "auth.mk_token" in ret
+    assert "cache.clear_pillar" in ret
+    assert "cache.grains" in ret
+    assert "state.soft_kill" in ret
+    assert "test.arg" in ret

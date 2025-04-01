@@ -21,12 +21,13 @@ def check_status():
     Check the status of Github for remote operations
     """
     try:
-        return requests.get("https://github.com").status_code == 200
+        return requests.get("https://github.com", timeout=60).status_code == 200
     except Exception:  # pylint: disable=broad-except
         return False
 
 
-@pytest.mark.windows_whitelisted
+# @pytest.mark.windows_whitelisted
+# De-whitelist windows since it's hanging on the newer windows golden images
 @pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHModuleTest(ModuleCase):
     """
@@ -85,9 +86,7 @@ class SSHModuleTest(ModuleCase):
             )
             self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_bad_enctype(self):
@@ -124,9 +123,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["key"], self.key)
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.skip_on_photonos(
         reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
@@ -145,9 +142,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret[0]["key"], self.key)
             self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_check_known_host_add(self):
@@ -238,9 +233,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["old"], None)
             self.assertEqual(ret["new"][0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # check that item does exist
         ret = self.run_function(
             "ssh.get_known_host_entries",
@@ -250,9 +243,7 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # add the same item once again
         ret = self.run_function(
             "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
@@ -260,6 +251,4 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")

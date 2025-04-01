@@ -1,22 +1,25 @@
 import json
-import pathlib
-import tempfile
+import logging
 import time
 
 import pytest
 
+from tests.conftest import CODE_DIR
+
 docker = pytest.importorskip("docker")
 
+log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.core_test,
+    pytest.mark.timeout_unless_on_windows(600),
 ]
 
 
 def json_output_to_dict(output):
-    """
+    r"""
     Convert ``salt ... --out=json`` Syndic return to a dictionary. Since the
-    --out=json will return several JSON outputs, e.g. {...}\\n{...}, we have to
+    --out=json will return several JSON outputs, e.g. {...}\n{...}, we have to
     parse that output individually.
     """
     output = output or ""
@@ -31,20 +34,6 @@ def json_output_to_dict(output):
                 if minion not in ("syndic_a", "syndic_b"):
                     results[minion] = data[minion]
     return results
-
-
-def accept_keys(container, required_minions):
-    failure_time = time.time() + 20
-    while time.time() < failure_time:
-        container.run("salt-key -Ay")
-        res = container.run("salt-key -L --out=json")
-        if (
-            isinstance(res.data, dict)
-            and set(res.data.get("minions")) == required_minions
-        ):
-            break
-    else:
-        pytest.skip(f"{container} unable to accept keys for {required_minions}")
 
 
 @pytest.fixture(scope="module")
@@ -70,47 +59,49 @@ def syndic_network():
             network.remove()
 
 
-@pytest.fixture(scope="session")
-def source_path():
-    x = pathlib.Path(__file__).parent.parent.parent.parent.parent / "salt"
-    return str(x)
+@pytest.fixture(scope="module")
+def container_image_name():
+    return "ghcr.io/saltstack/salt-ci-containers/salt:3006"
 
 
 @pytest.fixture(scope="module")
-def config(source_path):
-    # 3.10>= will allow the below line
-    # with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_path:
-    with tempfile.TemporaryDirectory() as tmp_path:
-        tmp_path = pathlib.Path(tmp_path)
-        master_dir = tmp_path / "master"
-        minion_dir = tmp_path / "minion"
-        syndic_a_dir = tmp_path / "syndic_a"
-        syndic_b_dir = tmp_path / "syndic_b"
-        minion_a1_dir = tmp_path / "minion_a1"
-        minion_a2_dir = tmp_path / "minion_a2"
-        minion_b1_dir = tmp_path / "minion_b1"
-        minion_b2_dir = tmp_path / "minion_b2"
+def container_python_version():
+    return "3.10"
 
-        for dir_ in (
-            master_dir,
-            minion_dir,
-            syndic_a_dir,
-            syndic_b_dir,
-            minion_a1_dir,
-            minion_a2_dir,
-            minion_b1_dir,
-            minion_b2_dir,
-        ):
-            dir_.mkdir(parents=True, exist_ok=True)
-            (dir_ / "master.d").mkdir(exist_ok=True)
-            # minion.d is probably needed to prevent errors on tempdir cleanup
-            (dir_ / "minion.d").mkdir(exist_ok=True)
-            (dir_ / "pki").mkdir(exist_ok=True)
-        (master_dir / "master.d").mkdir(exist_ok=True)
 
-        master_config_path = master_dir / "master"
-        master_config_path.write_text(
-            """
+@pytest.fixture(scope="module")
+def config(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("eauth")
+    master_dir = tmp_path / "master"
+    minion_dir = tmp_path / "minion"
+    syndic_a_dir = tmp_path / "syndic_a"
+    syndic_b_dir = tmp_path / "syndic_b"
+    minion_a1_dir = tmp_path / "minion_a1"
+    minion_a2_dir = tmp_path / "minion_a2"
+    minion_b1_dir = tmp_path / "minion_b1"
+    minion_b2_dir = tmp_path / "minion_b2"
+
+    for dir_ in (
+        master_dir,
+        minion_dir,
+        syndic_a_dir,
+        syndic_b_dir,
+        minion_a1_dir,
+        minion_a2_dir,
+        minion_b1_dir,
+        minion_b2_dir,
+    ):
+        dir_.mkdir(parents=True, exist_ok=True)
+        (dir_ / "master.d").mkdir(exist_ok=True)
+        # minion.d is probably needed to prevent errors on tempdir cleanup
+        (dir_ / "minion.d").mkdir(exist_ok=True)
+        (dir_ / "pki").mkdir(exist_ok=True)
+    (master_dir / "master.d").mkdir(exist_ok=True)
+
+    master_config_path = master_dir / "master"
+    master_config_path.write_text(
+        """
+open_mode: True
 auth.pam.python: /usr/local/bin/python3
 order_masters: True
 
@@ -131,17 +122,20 @@ nodegroups:
   second_string: "minion_*2"
   b_string: "minion_b*"
 
+    """
+    )
+
+    minion_config_path = minion_dir / "minion"
+    minion_config_path.write_text("id: minion\nmaster: master\nopen_mode: True")
+
+    syndic_a_minion_config_path = syndic_a_dir / "minion"
+    syndic_a_minion_config_path.write_text(
+        "id: syndic_a\nmaster: master\nopen_mode: True"
+    )
+    syndic_a_master_config_path = syndic_a_dir / "master"
+    syndic_a_master_config_path.write_text(
         """
-        )
-
-        minion_config_path = minion_dir / "minion"
-        minion_config_path.write_text("id: minion\nmaster: master")
-
-        syndic_a_minion_config_path = syndic_a_dir / "minion"
-        syndic_a_minion_config_path.write_text("id: syndic_a\nmaster: master")
-        syndic_a_master_config_path = syndic_a_dir / "master"
-        syndic_a_master_config_path.write_text(
-            """
+open_mode: True
 auth.pam.python: /usr/local/bin/python3
 syndic_master: master
 publisher_acl:
@@ -156,50 +150,58 @@ external_auth:
       - '*1':
         - test.*
         - file.touch
-        """
-        )
+    """
+    )
 
-        minion_a1_config_path = minion_a1_dir / "minion"
-        minion_a1_config_path.write_text("id: minion_a1\nmaster: syndic_a")
-        minion_a2_config_path = minion_a2_dir / "minion"
-        minion_a2_config_path.write_text("id: minion_a2\nmaster: syndic_a")
+    minion_a1_config_path = minion_a1_dir / "minion"
+    minion_a1_config_path.write_text("id: minion_a1\nmaster: syndic_a\nopen_mode: True")
+    minion_a2_config_path = minion_a2_dir / "minion"
+    minion_a2_config_path.write_text("id: minion_a2\nmaster: syndic_a\nopen_mode: True")
 
-        syndic_b_minion_config_path = syndic_b_dir / "minion"
-        syndic_b_minion_config_path.write_text("id: syndic_b\nmaster: master")
-        syndic_b_master_config_path = syndic_b_dir / "master"
-        syndic_b_master_config_path.write_text("syndic_master: master")
+    syndic_b_minion_config_path = syndic_b_dir / "minion"
+    syndic_b_minion_config_path.write_text(
+        "id: syndic_b\nmaster: master\nopen_mode: True"
+    )
+    syndic_b_master_config_path = syndic_b_dir / "master"
+    syndic_b_master_config_path.write_text("syndic_master: master\nopen_mode: True")
 
-        minion_b1_config_path = minion_b1_dir / "minion"
-        minion_b1_config_path.write_text("id: minion_b1\nmaster: syndic_b")
-        minion_b2_config_path = minion_b2_dir / "minion"
-        minion_b2_config_path.write_text("id: minion_b2\nmaster: syndic_b")
+    minion_b1_config_path = minion_b1_dir / "minion"
+    minion_b1_config_path.write_text("id: minion_b1\nmaster: syndic_b\nopen_mode: True")
+    minion_b2_config_path = minion_b2_dir / "minion"
+    minion_b2_config_path.write_text("id: minion_b2\nmaster: syndic_b\nopen_mode: True")
 
-        yield {
-            "minion_dir": minion_dir,
-            "master_dir": master_dir,
-            "syndic_a_dir": syndic_a_dir,
-            "syndic_b_dir": syndic_b_dir,
-            "minion_a1_dir": minion_a1_dir,
-            "minion_a2_dir": minion_a2_dir,
-            "minion_b1_dir": minion_b1_dir,
-            "minion_b2_dir": minion_b2_dir,
-        }
+    return {
+        "minion_dir": minion_dir,
+        "master_dir": master_dir,
+        "syndic_a_dir": syndic_a_dir,
+        "syndic_b_dir": syndic_b_dir,
+        "minion_a1_dir": minion_a1_dir,
+        "minion_a2_dir": minion_a2_dir,
+        "minion_b1_dir": minion_b1_dir,
+        "minion_b2_dir": minion_b2_dir,
+    }
 
 
 @pytest.fixture(scope="module")
-def docker_master(salt_factories, syndic_network, config, source_path):
+def docker_master(
+    salt_factories,
+    syndic_network,
+    config,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["master_dir"])
     container = salt_factories.get_container(
         "master",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -211,26 +213,33 @@ def docker_master(salt_factories, syndic_network, config, source_path):
     # container.container_start_check(confirm_container_started, container)
     with container.started() as factory:
         for user in ("bob", "fnord"):
-            container.run(f"adduser -D {user}")
-            container.run(f"passwd -d {user}")
-        container.run("apk add linux-pam-dev")
+            ret = container.run(f"adduser {user}")
+            assert ret.returncode == 0
+            ret = container.run(f"passwd -d {user}")
+            assert ret.returncode == 0
         yield factory
 
 
 @pytest.fixture(scope="module")
-def docker_minion(salt_factories, syndic_network, config, source_path):
+def docker_minion(
+    salt_factories,
+    syndic_network,
+    config,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_dir"])
     container = salt_factories.get_container(
         "minion",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-minion",
             "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -245,19 +254,25 @@ def docker_minion(salt_factories, syndic_network, config, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_syndic_a(salt_factories, config, syndic_network, source_path):
+def docker_syndic_a(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["syndic_a_dir"])
     container = salt_factories.get_container(
         "syndic_a",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -272,19 +287,25 @@ def docker_syndic_a(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_syndic_b(salt_factories, config, syndic_network, source_path):
+def docker_syndic_b(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["syndic_b_dir"])
     container = salt_factories.get_container(
         "syndic_b",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             # "entrypoint": "salt-master -ldebug",
             "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -299,19 +320,25 @@ def docker_syndic_b(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_a1(salt_factories, config, syndic_network, source_path):
+def docker_minion_a1(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_a1_dir"])
     container = salt_factories.get_container(
         "minion_a1",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion -ldebug",
             "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -326,19 +353,25 @@ def docker_minion_a1(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_a2(salt_factories, config, syndic_network, source_path):
+def docker_minion_a2(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_a2_dir"])
     container = salt_factories.get_container(
         "minion_a2",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
             "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -353,19 +386,25 @@ def docker_minion_a2(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_b1(salt_factories, config, syndic_network, source_path):
+def docker_minion_b1(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_b1_dir"])
     container = salt_factories.get_container(
         "minion_b1",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
             "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -380,19 +419,25 @@ def docker_minion_b1(salt_factories, config, syndic_network, source_path):
 
 
 @pytest.fixture(scope="module")
-def docker_minion_b2(salt_factories, config, syndic_network, source_path):
+def docker_minion_b2(
+    salt_factories,
+    config,
+    syndic_network,
+    container_image_name,
+    container_python_version,
+):
     config_dir = str(config["minion_b2_dir"])
     container = salt_factories.get_container(
         "minion_b2",
-        image_name="saltstack/salt:3005",
+        image_name=container_image_name,
         container_run_kwargs={
             "network": syndic_network,
             # "entrypoint": "salt-minion",
             "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
-                source_path: {
-                    "bind": "/usr/local/lib/python3.7/site-packages/salt/",
+                str(CODE_DIR / "salt"): {
+                    "bind": f"/usr/local/lib/python{container_python_version}/site-packages/salt/",
                     "mode": "z",
                 },
             },
@@ -443,23 +488,16 @@ def all_the_docker(
         # END WORKAROUND
         for s in (docker_syndic_a, docker_syndic_b):
             s.run("salt-syndic -d")
-        failure_time = time.time() + 20
-        accept_keys(
-            container=docker_master, required_minions={"minion", "syndic_a", "syndic_b"}
-        )
-        accept_keys(
-            container=docker_syndic_a, required_minions={"minion_a1", "minion_a2"}
-        )
-        accept_keys(
-            container=docker_syndic_b, required_minions={"minion_b1", "minion_b2"}
-        )
-        for tries in range(30):
-            res = docker_master.run(r"salt \* test.ping -t20 --out=json")
+        failure_time = time.time() + (5 * 60)
+        results = None
+        while time.time() < failure_time:
+            res = docker_master.run(r"salt \* test.ping -t10 --out=json")
             results = json_output_to_dict(res.stdout)
             if set(results).issuperset(
                 ["minion", "minion_a1", "minion_a2", "minion_b1", "minion_b2"]
             ):
                 break
+            time.sleep(5)
         else:
             pytest.skip(f"Missing some minions: {sorted(results)}")
 
@@ -482,10 +520,10 @@ def all_the_docker(
                 # res = container.run('rm -rfv /etc/salt/')
                 # print(container)
                 # print(res.stdout)
-            except docker.errors.APIError as e:
+            except docker.errors.APIError as exc:
                 # if the container isn't running, there's not thing we can do
                 # at this point.
-                print(f"Docker failed removing /etc/salt: {e}")
+                log.info("Docker failed removing /etc/salt: %s", exc)
 
 
 @pytest.fixture(
@@ -714,12 +752,12 @@ def test_root_user_should_be_able_to_call_any_and_all_minions_with_any_and_all_c
 ):
     target, expected_minions = all_the_minions
     res = docker_master.run(
-        f"salt {target} {all_the_commands} -t 20 --out=json",
+        f"salt {target} {all_the_commands} -t 10 --out=json",
     )
     if "jid does not exist" in (res.stderr or ""):
         # might be flaky, let's retry
         res = docker_master.run(
-            f"salt {target} {all_the_commands} -t 20 --out=json",
+            f"salt {target} {all_the_commands} -t 10 --out=json",
         )
     results = json_output_to_dict(res.stdout)
     assert sorted(results) == expected_minions, res.stdout
@@ -730,7 +768,7 @@ def test_eauth_user_should_be_able_to_target_valid_minions_with_valid_command(
 ):
     target, expected_minions = eauth_valid_minions
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' {target} {eauth_valid_commands} {eauth_valid_arguments} -t 20 --out=json",
+        f"salt -a pam --username bob --password '' {target} {eauth_valid_commands} {eauth_valid_arguments} -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert sorted(results) == expected_minions, res.stdout
@@ -740,7 +778,7 @@ def test_eauth_user_should_not_be_able_to_target_invalid_minions(
     eauth_blocked_minions, docker_master, docker_minions
 ):
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' {eauth_blocked_minions} file.touch /tmp/bad_bad_file.txt -t 20 --out=json",
+        f"salt -a pam --username bob --password '' {eauth_blocked_minions} file.touch /tmp/bad_bad_file.txt -t 10 --out=json",
     )
     assert "Authorization error occurred." == res.data or res.data is None
     for minion in docker_minions:
@@ -755,7 +793,7 @@ def test_eauth_user_should_not_be_able_to_target_valid_minions_with_invalid_comm
 ):
     tgt, _ = eauth_valid_minions
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' {tgt} {eauth_invalid_commands} -t 20 --out=json",
+        f"salt -a pam --username bob --password '' {tgt} {eauth_invalid_commands} -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert "Authorization error occurred" in res.stdout
@@ -768,7 +806,7 @@ def test_eauth_user_should_not_be_able_to_target_valid_minions_with_valid_comman
 ):
     tgt, _ = eauth_valid_minions
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' -C '{tgt}' {eauth_valid_commands} {eauth_invalid_arguments} -t 20 --out=json",
+        f"salt -a pam --username bob --password '' -C '{tgt}' {eauth_valid_commands} {eauth_invalid_arguments} -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert "Authorization error occurred" in res.stdout
@@ -781,7 +819,7 @@ def test_invalid_eauth_user_should_not_be_able_to_do_anything(
     # TODO: Do we really need to run all of these tests for the invalid user? Maybe not! -W. Werner, 2022-12-01
     tgt, _ = eauth_valid_minions
     res = docker_master.run(
-        f"salt -a pam --username badguy --password '' -C '{tgt}' {eauth_valid_commands} {eauth_valid_arguments} -t 20 --out=json",
+        f"salt -a pam --username badguy --password '' -C '{tgt}' {eauth_valid_commands} {eauth_valid_arguments} -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert sorted(results) == []
@@ -792,7 +830,7 @@ def test_root_should_be_able_to_use_comprehensive_targeting(
 ):
     tgt, expected_minions = comprehensive_minion_targeting
     res = docker_master.run(
-        f"salt -C '{tgt}' test.version -t 20 --out=json",
+        f"salt -C '{tgt}' test.version -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert sorted(results) == expected_minions
@@ -803,7 +841,7 @@ def test_eauth_user_should_be_able_to_target_valid_minions_with_valid_commands_c
 ):
     tgt, expected_minions = valid_eauth_comprehensive_minion_targeting
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' -C '{tgt}' test.version -t 20 --out=json",
+        f"salt -a pam --username bob --password '' -C '{tgt}' test.version -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert sorted(results) == expected_minions
@@ -813,7 +851,7 @@ def test_eauth_user_with_invalid_comprehensive_targeting_should_auth_failure(
     invalid_comprehensive_minion_targeting, docker_master
 ):
     res = docker_master.run(
-        f"salt -a pam --username fnord --password '' -C '{invalid_comprehensive_minion_targeting}' test.version -t 20 --out=json",
+        f"salt -a pam --username fnord --password '' -C '{invalid_comprehensive_minion_targeting}' test.version -t 10 --out=json",
     )
     results = json_output_to_dict(res.stdout)
     assert "Authorization error occurred" in res.stdout

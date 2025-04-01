@@ -22,3 +22,16 @@ def test_deprecation_warnings(salt_call_cli, env, warn_expected):
     else:
         assert "DeprecationWarning" not in ret.stderr
         assert ret.data
+
+
+import salt.modules.test as test
+
+
+def test_raise_exception():
+    """
+    Add test raising an exception in test module.
+    """
+    msg = "message"
+    with pytest.raises(Exception) as err:
+        test.exception(message=msg)
+    assert err.match(msg)

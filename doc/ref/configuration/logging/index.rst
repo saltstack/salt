@@ -61,6 +61,13 @@ available in salt are shown in the table below.
 | all      |             0 | Everything                                                               |
 +----------+---------------+--------------------------------------------------------------------------+
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
+
 Available Configuration Settings
 ================================
 

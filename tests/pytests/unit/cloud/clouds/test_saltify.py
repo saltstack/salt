@@ -1,6 +1,7 @@
 """
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
+
 import pytest
 
 import salt.client

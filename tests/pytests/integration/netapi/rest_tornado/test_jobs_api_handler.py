@@ -37,7 +37,7 @@ async def test_get(http_client, subtests):
     # test with a specific JID passed in
     jid = next(iter(response_obj.keys()))
     response = await http_client.fetch(
-        "/jobs/{}".format(jid),
+        f"/jobs/{jid}",
         method="GET",
         follow_redirects=False,
     )

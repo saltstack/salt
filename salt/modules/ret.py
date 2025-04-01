@@ -16,7 +16,7 @@ def get_jid(returner, jid):
         salt '*' ret.get_jid redis 20421104181954700505
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{}.get_jid".format(returner)](jid)
+    return returners[f"{returner}.get_jid"](jid)
 
 
 def get_fun(returner, fun):
@@ -30,7 +30,7 @@ def get_fun(returner, fun):
         salt '*' ret.get_fun mysql network.interfaces
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{}.get_fun".format(returner)](fun)
+    return returners[f"{returner}.get_fun"](fun)
 
 
 def get_jids(returner):
@@ -44,7 +44,7 @@ def get_jids(returner):
         salt '*' ret.get_jids mysql
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{}.get_jids".format(returner)]()
+    return returners[f"{returner}.get_jids"]()
 
 
 def get_minions(returner):
@@ -58,4 +58,4 @@ def get_minions(returner):
         salt '*' ret.get_minions mysql
     """
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners["{}.get_minions".format(returner)]()
+    return returners[f"{returner}.get_minions"]()

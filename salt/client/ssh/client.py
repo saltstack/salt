@@ -39,6 +39,10 @@ class SSHClient:
 
         # Salt API should never offer a custom roster!
         self.opts["__disable_custom_roster"] = disable_custom_roster
+        # Pillar compilation and nested SSH calls require the correct config_dir
+        # in __opts__, otherwise we will use the SSH minion's one later.
+        if "config_dir" not in self.opts:
+            self.opts["config_dir"] = os.path.dirname(c_path)
 
     def sanitize_kwargs(self, kwargs):
         roster_vals = [
@@ -61,6 +65,7 @@ class SSHClient:
             ("ssh_scan_timeout", int),
             ("ssh_timeout", int),
             ("ssh_log_file", str),
+            ("ssh_pre_hook", str),
             ("raw_shell", bool),
             ("refresh_cache", bool),
             ("roster", str),

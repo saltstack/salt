@@ -48,7 +48,7 @@ def _cmd(binary, *args):
     """
     binary = salt.utils.path.which(binary)
     if not binary:
-        raise CommandNotFoundError("{}: command not found".format(binary))
+        raise CommandNotFoundError(f"{binary}: command not found")
     cmd = [binary] + list(args)
     return __salt__["cmd.run_stdout"]([binary] + list(args), python_shell=False)
 
@@ -245,6 +245,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         salt '*' at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
         salt '*' at.at '3:05am +3 days' 'bin/myscript' tag=nightly runas=jim
+        salt '*' at.at '"22:02"' 'bin/myscript' tag=nightly runas=jim
     """
 
     if len(args) < 2:
@@ -306,7 +307,7 @@ def atc(jobid):
     if output is None:
         return "'at.atc' is not available."
     elif output == "":
-        return {"error": "invalid job id '{}'".format(jobid)}
+        return {"error": f"invalid job id '{jobid}'"}
 
     return output
 
@@ -326,7 +327,7 @@ def _atq(**kwargs):
     month = kwargs.get("month", None)
     year = kwargs.get("year", None)
     if year and len(str(year)) == 2:
-        year = "20{}".format(year)
+        year = f"20{year}"
 
     jobinfo = atq()["jobs"]
     if not jobinfo:
@@ -350,28 +351,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "{:02d}".format(int(hour)) == job["time"].split(":")[0]:
+        elif f"{int(hour):02d}" == job["time"].split(":")[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "{:02d}".format(int(minute)) == job["time"].split(":")[1]:
+        elif f"{int(minute):02d}" == job["time"].split(":")[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "{:02d}".format(int(day)) == job["date"].split("-")[2]:
+        elif f"{int(day):02d}" == job["date"].split("-")[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "{:02d}".format(int(month)) == job["date"].split("-")[1]:
+        elif f"{int(month):02d}" == job["date"].split("-")[1]:
             pass
         else:
             continue

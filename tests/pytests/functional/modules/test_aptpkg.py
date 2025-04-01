@@ -11,8 +11,10 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.file as file
 import salt.modules.gpg as gpg
+import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
+from salt.loader.dunder import __opts__
 from tests.support.mock import Mock, patch
 
 pytestmark = [
@@ -52,7 +54,9 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
+    osarch = cmd.run("dpkg --print-architecture").strip()
+    grains.update({"osarch": osarch})
     return {
         aptpkg: {
             "__salt__": {
@@ -63,8 +67,15 @@ def configure_loader_modules(minion_opts):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
+                "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
+                "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
+                "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
+                "pkg_resource.stringify": pkg_resource.stringify,
             },
             "__opts__": minion_opts,
+            "__grains__": grains,
         },
         file: {
             "__salt__": {"cmd.run_all": cmd.run_all},
@@ -76,16 +87,22 @@ def configure_loader_modules(minion_opts):
         },
         gpg: {},
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         config: {
             "__opts__": minion_opts,
+        },
+        pkg_resource: {
+            "__grains__": grains,
         },
     }
 
 
 @pytest.fixture()
 def revert_repo_file(tmp_path):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -103,7 +120,7 @@ def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
         test_repos = [
-            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ jammy main",
             "deb http://dist.list stable/all/",
         ]
         with salt.utils.files.fopen(source_path, "w+") as fp:
@@ -374,3 +391,20 @@ def test_add_del_repo_key(get_key_file, aptkey):
             assert not keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert "0E08A149DE57BFBE" not in query_key
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_wildcard():
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
+    ret = aptpkg.remove(name="nginx-*")
+    assert not ret["nginx-light"]["new"]
+    assert ret["nginx-light"]["old"]
+    assert not ret["nginx-doc"]["new"]
+    assert ret["nginx-doc"]["old"]
+
+
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_unknown_package():
+    ret = aptpkg.remove(name="thispackageistotallynotthere")
+    assert not ret

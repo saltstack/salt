@@ -6,6 +6,7 @@ import functools
 import logging
 import os
 import re
+import shutil
 import time
 
 import salt.config
@@ -15,6 +16,8 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
+import salt.utils.path
+import salt.version
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -96,7 +99,7 @@ class CacheDisk(CacheDict):
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
-            self._dict.__delitem__(key)
+            del self._dict[key]
 
     def __contains__(self, key):
         self._enforce_ttl_key(key)
@@ -284,7 +287,7 @@ class CacheRegex:
             pass
         if len(self.cache) > self.size:
             self.sweep()
-        regex = re.compile("{}{}{}".format(self.prepend, pattern, self.append))
+        regex = re.compile(f"{self.prepend}{pattern}{self.append}")
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
 
@@ -295,7 +298,7 @@ class ContextCache:
         Create a context cache
         """
         self.opts = opts
-        self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
+        self.cache_path = os.path.join(opts["cachedir"], "context", f"{name}.p")
 
     def cache_context(self, context):
         """
@@ -345,3 +348,32 @@ def context_cache(func):
         return func(*args, **kwargs)
 
     return context_cache_wrap
+
+
+def verify_cache_version(cache_path):
+    """
+    Check that the cached version matches the Salt version.
+    If the cached version does not match the Salt version, wipe the cache.
+
+    :return: ``True`` if cache version matches, otherwise ``False``
+    """
+    if not os.path.isdir(cache_path):
+        os.makedirs(cache_path)
+    with salt.utils.files.fopen(
+        salt.utils.path.join(cache_path, "cache_version"), "a+"
+    ) as file:
+        file.seek(0)
+        data = "\n".join(file.readlines())
+        if data != salt.version.__version__:
+            log.warning("Cache version mismatch clearing: %s", repr(cache_path))
+            file.truncate(0)
+            file.write(salt.version.__version__)
+            for item in os.listdir(cache_path):
+                if item != "cache_version":
+                    item_path = salt.utils.path.join(cache_path, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+                    else:
+                        shutil.rmtree(item_path)
+            return False
+        return True

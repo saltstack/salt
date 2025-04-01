@@ -74,7 +74,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             ret["comment"] = "no tag provided and unique_tag is set to True"
             return ret
         elif len(__salt__["at.jobcheck"](tag=tag)["jobs"]) > 0:
-            ret["comment"] = "atleast one job with tag {tag} exists.".format(tag=tag)
+            ret["comment"] = f"atleast one job with tag {tag} exists."
             return ret
 
     # create job
@@ -82,7 +82,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
         luser = __salt__["user.info"](user)
         if not luser:
             ret["result"] = False
-            ret["comment"] = "user {} does not exists".format(user)
+            ret["comment"] = f"user {user} does not exists"
             return ret
         ret["comment"] = "job {} added and will run as {} on {}".format(
             job,
@@ -176,7 +176,7 @@ def absent(name, jobid=None, **kwargs):
 
     # limit was never support
     if "limit" in kwargs:
-        ret["comment"] = "limit parameter not supported {}".format(name)
+        ret["comment"] = f"limit parameter not supported {name}"
         ret["result"] = False
         return ret
 
@@ -191,7 +191,7 @@ def absent(name, jobid=None, **kwargs):
         jobs = __salt__["at.atq"](jobid)
         if "jobs" in jobs and len(jobs["jobs"]) == 0:
             ret["result"] = True
-            ret["comment"] = "job with id {jobid} not present".format(jobid=jobid)
+            ret["comment"] = f"job with id {jobid} not present"
             return ret
         elif "jobs" in jobs and len(jobs["jobs"]) == 1:
             if "job" in jobs["jobs"][0] and jobs["jobs"][0]["job"]:
@@ -209,10 +209,10 @@ def absent(name, jobid=None, **kwargs):
                 return ret
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "more than one job was return for job with id {jobid}".format(
-                jobid=jobid
+            ret["comment"] = (
+                "more than one job was return for job with id {jobid}".format(
+                    jobid=jobid
+                )
             )
             return ret
 
@@ -296,6 +296,3 @@ def mod_watch(name, **kwargs):
         ret = present(**kwargs)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

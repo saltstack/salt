@@ -14,10 +14,13 @@ Support for YUM/DNF
 
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
+
+.. versionadded:: 3006.10
+    Support for ``dnf5``` on Fedora 41
+
 .. versionadded:: 3007.0
     Support for ``dnf5``` on Fedora 39
 """
-
 
 import configparser
 import contextlib
@@ -31,7 +34,6 @@ import string
 
 import salt.utils.args
 import salt.utils.data
-import salt.utils.decorators.path
 import salt.utils.environment
 import salt.utils.files
 import salt.utils.functools
@@ -44,13 +46,6 @@ import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
-
-try:
-    import yum
-
-    HAS_YUM = True
-except ImportError:
-    HAS_YUM = False
 
 log = logging.getLogger(__name__)
 
@@ -216,7 +211,7 @@ def _yum_pkginfo(output):
     keys = itertools.cycle(("name", "version", "repoid"))
     values = salt.utils.itertools.split(_strip_headers(output))
     osarch = __grains__["osarch"]
-    for (key, value) in zip(keys, values):
+    for key, value in zip(keys, values):
         if key == "name":
             try:
                 cur["name"], cur["arch"] = value.rsplit(".", 1)
@@ -326,7 +321,8 @@ def _get_options(**kwargs):
         ret.append(f"--branch={branch}")
 
     for item in setopt:
-        ret.extend(["--setopt", str(item)])
+        log.info("Adding configuration option '%s'", item)
+        ret.extend([f"--setopt={item}"])
 
     if get_extra_options:
         # sorting here to make order uniform, makes unit testing more reliable
@@ -354,67 +350,46 @@ def _get_yum_config(strict_parser=True):
     This is currently only used to get the reposdir settings, but could be used
     for other things if needed.
 
-    If the yum python library is available, use that, which will give us all of
-    the options, including all of the defaults not specified in the yum config.
-    Additionally, they will all be of the correct object type.
-
-    If the yum library is not available, we try to read the yum.conf
-    directly ourselves with a minimal set of "defaults".
+    We try to read the yum.conf directly ourselves with a minimal set of
+    "defaults".
     """
     # in case of any non-fatal failures, these defaults will be used
     conf = {
         "reposdir": ["/etc/yum/repos.d", "/etc/yum.repos.d"],
     }
 
-    if HAS_YUM:
-        try:
-            yb = yum.YumBase()
-            yb.preconf.init_plugins = False
-            for name, value in yb.conf.items():
-                conf[name] = value
-        except (AttributeError, yum.Errors.ConfigError) as exc:
-            raise CommandExecutionError(f"Could not query yum config: {exc}")
-        except yum.Errors.YumBaseError as yum_base_error:
-            raise CommandExecutionError(
-                f"Error accessing yum or rpmdb: {yum_base_error}"
-            )
+    # fall back to parsing the config ourselves
+    # Look for the config the same order yum does
+    fn = None
+    paths = (
+        "/etc/yum/yum.conf",
+        "/etc/yum.conf",
+        "/etc/dnf/dnf.conf",
+        "/etc/tdnf/tdnf.conf",
+    )
+    for path in paths:
+        if os.path.exists(path):
+            fn = path
+            break
+
+    if not fn:
+        raise CommandExecutionError(f"No suitable yum config file found in: {paths}")
+
+    cp = configparser.ConfigParser(strict=strict_parser)
+    try:
+        cp.read(fn)
+    except OSError as exc:
+        raise CommandExecutionError(f"Unable to read from {fn}: {exc}")
+
+    if cp.has_section("main"):
+        for opt in cp.options("main"):
+            if opt in ("reposdir", "commands", "excludes"):
+                # these options are expected to be lists
+                conf[opt] = [x.strip() for x in cp.get("main", opt).split(",")]
+            else:
+                conf[opt] = cp.get("main", opt)
     else:
-        # fall back to parsing the config ourselves
-        # Look for the config the same order yum does
-        fn = None
-        paths = (
-            "/etc/yum/yum.conf",
-            "/etc/yum.conf",
-            "/etc/dnf/dnf.conf",
-            "/etc/tdnf/tdnf.conf",
-        )
-        for path in paths:
-            if os.path.exists(path):
-                fn = path
-                break
-
-        if not fn:
-            raise CommandExecutionError(
-                f"No suitable yum config file found in: {paths}"
-            )
-
-        cp = configparser.ConfigParser(strict=strict_parser)
-        try:
-            cp.read(fn)
-        except OSError as exc:
-            raise CommandExecutionError(f"Unable to read from {fn}: {exc}")
-
-        if cp.has_section("main"):
-            for opt in cp.options("main"):
-                if opt in ("reposdir", "commands", "excludes"):
-                    # these options are expected to be lists
-                    conf[opt] = [x.strip() for x in cp.get("main", opt).split(",")]
-                else:
-                    conf[opt] = cp.get("main", opt)
-        else:
-            log.warning(
-                "Could not find [main] section in %s, using internal defaults", fn
-            )
+        log.warning("Could not find [main] section in %s, using internal defaults", fn)
 
     return conf
 
@@ -424,7 +399,7 @@ def _get_yum_config_value(name, strict_config=True):
     Look for a specific config variable and return its value
     """
     conf = _get_yum_config(strict_config)
-    if name in conf.keys():
+    if name in conf:
         return conf.get(name)
     return None
 
@@ -747,6 +722,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = [
         "rpm",
         "-qa",
+        "--nodigest",
+        "--nosignature",
         "--queryformat",
         salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
     ]
@@ -1060,7 +1037,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
+    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -1084,7 +1061,7 @@ def list_downloaded(**kwargs):
 
         salt '*' pkg.list_downloaded
     """
-    CACHE_DIR = os.path.join("/var/cache/", _yum())
+    CACHE_DIR = os.path.join("/var/cache", _yum())
 
     ret = {}
     for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
@@ -1454,7 +1431,7 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
-    if "version" in kwargs:
+    if kwargs.get("version") is not None:
         kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
@@ -2013,7 +1990,7 @@ def upgrade(
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
     if _yum() in ("dnf", "dnf5") and not obsoletes:
-        # for dnf we can just disable obsoletes
+        # for dnf[5] we can just disable obsoletes
         _setopt = [
             opt
             for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
@@ -2105,7 +2082,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -2153,22 +2130,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
 
-    # Loop through pkg_params looking for any
-    # which contains a wildcard and get the
-    # real package names from the packages
-    # which are currently installed.
-    pkg_matches = {}
-    for pkg_param in list(pkg_params):
-        if "*" in pkg_param:
-            pkg_matches = {
-                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
-            }
-
-            # Remove previous pkg_param
-            pkg_params.pop(pkg_param)
-
-    # Update pkg_params with the matches
-    pkg_params.update(pkg_matches)
+    pkg_params = salt.utils.pkg.match_wildcard(old, pkg_params)
 
     for target in pkg_params:
         if target not in old:
@@ -2224,7 +2186,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
-        from killing any yum/dnf commands spawned by Salt when the
+        from killing any yum/dnf[5] commands spawned by Salt when the
         ``salt-minion`` service is restarted. (see ``KillMode`` in the
         `systemd.kill(5)`_ manpage for more information). If desired, usage of
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
@@ -2572,7 +2534,7 @@ def group_list():
     return ret
 
 
-def group_info(name, expand=False, ignore_groups=None):
+def group_info(name, expand=False, ignore_groups=None, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0,3001
@@ -2583,6 +2545,10 @@ def group_info(name, expand=False, ignore_groups=None):
         to ``mandatory``, ``optional``, and ``default`` for accuracy, as
         environment groups include other groups, and not packages. Finally,
         this function now properly identifies conditional packages.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists packages belonging to a certain group
 
@@ -2603,18 +2569,46 @@ def group_info(name, expand=False, ignore_groups=None):
 
         .. versionadded:: 3001
 
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_info 'Perl Support'
+        salt '*' pkg.group_info 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_info 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
     for pkgtype in pkgtypes:
         ret[pkgtype] = set()
 
-    cmd = [_yum(), "--quiet", "groupinfo", name]
+    options = _get_options(
+        **{
+            key: val
+            for key, val in kwargs.items()
+            if key in ("fromrepo", "enablerepo", "disablerepo")
+        }
+    )
+
+    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2682,22 +2676,49 @@ def group_info(name, expand=False, ignore_groups=None):
     return ret
 
 
-def group_diff(name):
+def group_diff(name, **kwargs):
     """
     .. versionadded:: 2014.1.0
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.
+    .. versionchanged:: 3006.2
+        Support for ``fromrepo``, ``enablerepo``, and ``disablerepo`` (as used
+        in :py:func:`pkg.install <salt.modules.yumpkg.install>`) has been
+        added.
 
     Lists which of a group's packages are installed and which are not
     installed
+
+    name
+        The name of the group to check
+
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 3006.2
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.group_diff 'Perl Support'
+        salt '*' pkg.group_diff 'Perl Support' fromrepo=base,updates
+        salt '*' pkg.group_diff 'Perl Support' enablerepo=somerepo
     """
     pkgtypes = ("mandatory", "optional", "default", "conditional")
     ret = {}
@@ -2705,7 +2726,7 @@ def group_diff(name):
         ret[pkgtype] = {"installed": [], "not installed": []}
 
     pkgs = list_pkgs()
-    group_pkgs = group_info(name, expand=True)
+    group_pkgs = group_info(name, expand=True, **kwargs)
     for pkgtype in pkgtypes:
         for member in group_pkgs.get(pkgtype, []):
             if member in pkgs:
@@ -2802,7 +2823,7 @@ def group_install(name, skip=(), include=(), **kwargs):
     if not pkgs:
         return {}
 
-    return install(pkgs=pkgs, **kwargs)
+    return install(pkgs=list(set(pkgs)), **kwargs)
 
 
 groupinstall = salt.utils.functools.alias_function(group_install, "groupinstall")
@@ -2966,10 +2987,13 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
+        .. versionadded:: 3008.0
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist, or metalink is required.
 
     Strict parsing of configuration files is the default, this can be disabled
     using the  ``strict_config`` keyword argument set to False
@@ -2980,16 +3004,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= metalink=http://host.com
     """
+    # set link types
+    link_types = ("baseurl", "mirrorlist", "metalink")
+
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False
@@ -3006,12 +3034,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
-    # specified in the repo_opts
-    if "mirrorlist" in repo_opts:
-        todelete.append("baseurl")
-    elif "baseurl" in repo_opts:
-        todelete.append("mirrorlist")
+    # Add what ever items in link_types is not in repo_opts to 'todelete' list
+    linkdict = {x: set(link_types) - {x} for x in link_types}
+    todelete.extend(
+        next(iter([y for x, y in linkdict.items() if x in repo_opts.keys()]), [])
+    )
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3074,10 +3101,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if all(x not in repo_opts.keys() for x in link_types):
                 raise SaltInvocationError(
-                    "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "The repo does not exist and needs to be created, but none of "
+                    f"{', '.join(link_types)} was given"
                 )
             filerepos[repo] = {}
     else:
@@ -3085,16 +3112,15 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = repos[repo]["file"]
         header, filerepos = _parse_repo_file(repofile, strict_parser)
 
-    # Error out if they tried to delete baseurl or mirrorlist improperly
-    if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+    # Error out if they tried to delete all linktypes
+    for link_type in link_types:
+        linklist = set(link_types) - {link_type}
+        if all(
+            x not in repo_opts and x not in filerepos[repo] and link_type in todelete
+            for x in linklist
+        ):
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
-            )
-    if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
-            raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                f"Cannot delete {link_type} without specifying {' or '.join(linklist)}"
             )
 
     # Delete anything in the todelete list
@@ -3102,7 +3128,9 @@ def mod_repo(repo, basedir=None, **kwargs):
         if key in filerepos[repo].copy().keys():
             del filerepos[repo][key]
 
-    _bool_to_str = lambda x: "1" if x else "0"
+    def _bool_to_str(x):
+        return "1" if x else "0"
+
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
@@ -3299,18 +3327,17 @@ def modified(*packages, **flags):
     return __salt__["lowpkg.modified"](*packages, **flags)
 
 
-@salt.utils.decorators.path.which("yumdownloader")
 def download(*packages, **kwargs):
     """
     .. versionadded:: 2015.5.0
 
     Download packages to the local disk. Requires ``yumdownloader`` from
-    ``yum-utils`` package.
+    ``yum-utils`` or ``dnf-utils`` package.
 
     .. note::
 
-        ``yum-utils`` will already be installed on the minion if the package
-        was installed from the Fedora / EPEL repositories.
+        ``yum-utils`` or ``dnf-utils`` will already be installed on the minion
+        if the package was installed from the EPEL / Fedora repositories.
 
     CLI Example:
 
@@ -3319,10 +3346,13 @@ def download(*packages, **kwargs):
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
     """
+    if not salt.utils.path.which("yumdownloader"):
+        raise CommandExecutionError("'yumdownloader' command not available")
+
     if not packages:
         raise SaltInvocationError("No packages were specified")
 
-    CACHE_DIR = "/var/cache/yum/packages"
+    CACHE_DIR = os.path.join("/var/cache", _yum(), "packages")
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     cached_pkgs = os.listdir(CACHE_DIR)
@@ -3503,12 +3533,17 @@ def services_need_restart(**kwargs):
 
         salt '*' pkg.services_need_restart
     """
-    if _yum() != "dnf":
-        raise CommandExecutionError("dnf is required to list outdated services.")
+    if _yum() not in ("dnf", "dnf5"):
+        raise CommandExecutionError(
+            "dnf or dnf5 is required to list outdated services."
+        )
     if not salt.utils.systemd.booted(__context__):
         raise CommandExecutionError("systemd is required to list outdated services.")
 
-    cmd = ["dnf", "--quiet", "needs-restarting"]
+    if _yum() == "dnf5":
+        cmd = ["dnf5", "--quiet", "needs-restarting"]
+    else:
+        cmd = ["dnf", "--quiet", "needs-restarting"]
     dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
     if not dnf_output:
         return []

@@ -1,6 +1,7 @@
 """
 Tests for the spm install utility
 """
+
 import os
 
 import pytest

@@ -3,7 +3,6 @@ Module for Manipulating Data via the Salt DB API
 ================================================
 """
 
-
 import salt.utils.sdb
 
 __func_alias__ = {

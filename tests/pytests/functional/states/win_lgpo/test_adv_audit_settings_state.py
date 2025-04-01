@@ -20,11 +20,13 @@ def configure_loader_modules(minion_opts, modules):
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
         },
         win_lgpo_module: {
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
         },
     }
 

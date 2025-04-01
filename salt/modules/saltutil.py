@@ -50,7 +50,12 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-# pylint: enable=import-error,no-name-in-module
+try:
+    import psutil
+
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 # Fix a nasty bug with Win32 Python not supporting all of the standard signals
 try:
@@ -59,16 +64,11 @@ except AttributeError:
     salt_SIGKILL = signal.SIGTERM
 
 
-HAS_PSUTIL = True
-try:
-    import salt.utils.psutil_compat
-except ImportError:
-    HAS_PSUTIL = False
-
-
 __proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
+
+TOP_ENVS_CKEY = "saltutil._top_file_envs"
 
 
 def _get_top_file_envs():
@@ -76,7 +76,7 @@ def _get_top_file_envs():
     Get all environments from the top file
     """
     try:
-        return __context__["saltutil._top_file_envs"]
+        return __context__[TOP_ENVS_CKEY]
     except KeyError:
         with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
             try:
@@ -87,7 +87,7 @@ def _get_top_file_envs():
                     envs = "base"
             except SaltRenderError as exc:
                 raise CommandExecutionError(f"Unable to render top file(s): {exc}")
-        __context__["saltutil._top_file_envs"] = envs
+        __context__[TOP_ENVS_CKEY] = envs
         return envs
 
 
@@ -126,8 +126,8 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
 def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
-    VMware, Inc provides the latest builds here:
-    update_url: https://repo.saltproject.io/windows/
+    Broadcom, Inc provides the latest builds here:
+    update_url: https://packages.broadcom.com/artifactory/saltproject-generic/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -243,10 +243,6 @@ def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
         If not passed, then all environments configured in the :ref:`top files
         <states-top>` will be checked for sdb modules to sync. If no top files
         are found, then the ``base`` environment will be synced.
-
-    refresh : False
-        This argument has no affect and is included for consistency with the
-        other sync functions.
 
     extmod_whitelist : None
         comma-separated list of modules to sync
@@ -473,8 +469,7 @@ def sync_renderers(
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
         This refresh will be performed even if no new renderers are synced.
-        Set to ``False`` to prevent this refresh. Set to ``False`` to prevent
-        this refresh.
+        Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
         comma-separated list of modules to sync
@@ -973,6 +968,57 @@ def sync_pillar(
     return ret
 
 
+def sync_tops(
+    saltenv=None,
+    refresh=True,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+):
+    """
+    .. versionadded:: 3007.0
+
+    Sync master tops from ``salt://_tops`` to the minion.
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for master tops to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        Refresh this module's cache containing the environments from which
+        extension modules are synced when ``saltenv`` is not specified.
+        This refresh will be performed even if no new master tops are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist based on type
+
+    .. note::
+        This function will raise an error if executed on a traditional (i.e.
+        not masterless) minion
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_tops
+        salt '*' saltutil.sync_tops saltenv=dev
+    """
+    if __opts__["file_client"] != "local":
+        raise CommandExecutionError(
+            "Master top modules can only be synced to masterless minions"
+        )
+    if refresh:
+        __context__.pop(TOP_ENVS_CKEY, None)
+    return _sync("tops", saltenv, extmod_whitelist, extmod_blacklist)
+
+
 def sync_executors(
     saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
 ):
@@ -1071,6 +1117,13 @@ def sync_all(
     clean_pillar_cache=False,
 ):
     """
+    .. versionchanged:: 3007.0
+
+        On masterless minions, master top modules are now synced as well.
+        When ``refresh`` is set to ``True``, this module's cache containing
+        the environments from which extension modules are synced when
+        ``saltenv`` is not specified will be refreshed.
+
     .. versionchanged:: 2015.8.11,2016.3.2
         On masterless minions, pillar modules are now synced, and refreshed
         when ``refresh`` is set to ``True``.
@@ -1081,7 +1134,9 @@ def sync_all(
 
     refresh : True
         Also refresh the execution modules and recompile pillar data available
-        to the minion. This refresh will be performed even if no new dynamic
+        to the minion. If this is a masterless minion, also refresh the environments
+        from which extension modules are synced after syncing master tops.
+        This refresh will be performed even if no new dynamic
         modules are synced. Set to ``False`` to prevent this refresh.
 
     .. important::
@@ -1121,6 +1176,9 @@ def sync_all(
     """
     log.debug("Syncing all")
     ret = {}
+    if __opts__["file_client"] == "local":
+        # Sync tops first since this might influence the other syncs
+        ret["tops"] = sync_tops(saltenv, refresh, extmod_whitelist, extmod_blacklist)
     ret["clouds"] = sync_clouds(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret["beacons"] = sync_beacons(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret["modules"] = sync_modules(saltenv, False, extmod_whitelist, extmod_blacklist)
@@ -1489,9 +1547,9 @@ def signal_job(jid, sig):
         if data["jid"] == jid:
             try:
                 if HAS_PSUTIL:
-                    for proc in salt.utils.psutil_compat.Process(
-                        pid=data["pid"]
-                    ).children(recursive=True):
+                    for proc in psutil.Process(pid=data["pid"]).children(
+                        recursive=True
+                    ):
                         proc.send_signal(sig)
                 os.kill(int(data["pid"]), sig)
                 if HAS_PSUTIL is False and "child_pids" in data:
@@ -1586,7 +1644,7 @@ def regen_keys():
         path = os.path.join(__opts__["pki_dir"], fn_)
         try:
             os.remove(path)
-        except os.error:
+        except OSError:
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
@@ -1692,9 +1750,11 @@ def _exec(
         old_ret, fcn_ret = fcn_ret, {}
         for key, value in old_ret.items():
             fcn_ret[key] = {
-                "out": value.get("out", "highstate")
-                if isinstance(value, dict)
-                else "highstate",
+                "out": (
+                    value.get("out", "highstate")
+                    if isinstance(value, dict)
+                    else "highstate"
+                ),
                 "ret": value,
             }
 

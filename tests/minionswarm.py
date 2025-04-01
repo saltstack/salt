@@ -7,7 +7,7 @@ on a single system to test scale capabilities
 # pylint: disable=resource-leakage
 
 import hashlib
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import random
 import shutil
@@ -207,7 +207,7 @@ class Swarm:
         if not os.path.exists(path):
             os.makedirs(path)
 
-            print("Creating shared pki keys for the swarm on: {}".format(path))
+            print(f"Creating shared pki keys for the swarm on: {path}")
             subprocess.call(
                 "salt-key -c {0} --gen-keys minion --gen-keys-dir {0} "
                 "--log-file {1} --user {2}".format(
@@ -260,7 +260,7 @@ class Swarm:
         Clean up the config files
         """
         for path in self.confs:
-            pidfile = "{}.pid".format(path)
+            pidfile = f"{path}.pid"
             try:
                 try:
                     with salt.utils.files.fopen(pidfile) as fp_:
@@ -287,7 +287,7 @@ class MinionSwarm(Swarm):
         """
         self.prep_configs()
         for path in self.confs:
-            cmd = "salt-minion -c {} --pid-file {}".format(path, "{}.pid".format(path))
+            cmd = "salt-minion -c {} --pid-file {}".format(path, f"{path}.pid")
             if self.opts["foreground"]:
                 cmd += " -l debug &"
             else:
@@ -392,9 +392,7 @@ class MasterSwarm(Swarm):
         """
         Do the master start
         """
-        cmd = "salt-master -c {} --pid-file {}".format(
-            self.conf, "{}.pid".format(self.conf)
-        )
+        cmd = "salt-master -c {} --pid-file {}".format(self.conf, f"{self.conf}.pid")
         if self.opts["foreground"]:
             cmd += " -l debug &"
         else:

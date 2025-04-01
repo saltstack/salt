@@ -1,14 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    integration.loader.ext_modules
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Test Salt's loader regarding external overrides
-"""
-
-
 import os
 import time
 
@@ -24,6 +13,7 @@ class LoaderOverridesTest(ModuleCase):
         self.run_function("saltutil.sync_modules")
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `override_test.py` file is present in the _modules directory before

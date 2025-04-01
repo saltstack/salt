@@ -9,6 +9,7 @@ from tests.support.pytest.helpers import FakeSaltExtension
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
@@ -22,8 +23,70 @@ def salt_extension(tmp_path_factory):
 
 @pytest.fixture
 def venv(tmp_path):
-    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as _venv:
+    with SaltVirtualEnv(
+        venv_dir=tmp_path / ".venv", system_site_packages=True
+    ) as _venv:
         yield _venv
+
+
+@pytest.fixture
+def module_dirs(tmp_path):
+    module_dir = tmp_path / "module-dir-base"
+    module_dir.joinpath("modules").mkdir(parents=True)
+    return [str(module_dir)]
+
+
+def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
+    # Install our extension into the virtualenv
+    venv.install(str(salt_extension.srcdir))
+    installed_packages = venv.get_installed_packages()
+    assert salt_extension.name in installed_packages
+    code = """
+    import sys
+    import json
+    import salt._logging
+    import salt.loader
+
+    minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
+    mod_dirs = salt.loader._module_dirs(minion_config, "modules", "module")
+    print(json.dumps(mod_dirs))
+    """
+    minion_opts["module_dirs"] = module_dirs
+    ret = venv.run_code(code, input=json.dumps(minion_opts))
+    module_dirs_return = json.loads(ret.stdout)
+    assert len(module_dirs_return) == 5
+    for i, tail in enumerate(
+        [
+            "/module-dir-base/modules",
+            "/var/cache/salt/minion/extmods/modules",
+            "/module-dir-base",
+            "/site-packages/salt_ext_loader_test/modules",
+            "/site-packages/salt/modules",
+        ]
+    ):
+        assert module_dirs_return[i].endswith(
+            tail
+        ), f"{module_dirs_return[i]} does not end with {tail}"
+
+    # Test the deprecated mode as well
+    minion_opts["features"] = {"enable_deprecated_module_search_path_priority": True}
+    ret = venv.run_code(code, input=json.dumps(minion_opts))
+    module_dirs_return = json.loads(ret.stdout)
+    assert len(module_dirs_return) == 5
+    for i, tail in enumerate(
+        [
+            "/module-dir-base/modules",
+            "/module-dir-base",
+            "/site-packages/salt_ext_loader_test/modules",
+            "/var/cache/salt/minion/extmods/modules",
+            "/site-packages/salt/modules",
+        ]
+    ):
+        assert module_dirs_return[i].endswith(
+            tail
+        ), f"{module_dirs_return[i]} does not end with {tail}"
 
 
 def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_factory):

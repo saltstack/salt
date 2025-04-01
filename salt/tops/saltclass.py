@@ -207,7 +207,6 @@ Not using ``^`` as the first entry will simply merge the lists
     escaped one will not be correctly rendered - '\${xx}' will stay as is instead of being rendered as '${xx}'
 """
 
-
 import logging
 
 import salt.utils.saltclass as sc

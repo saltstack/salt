@@ -9,6 +9,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     :maxdepth: 1
     :glob:
 
+    ../../ref/configuration/index
     ../../ref/configuration/master
     ../../ref/configuration/minion
     ../../ref/configuration/proxy
@@ -33,5 +34,4 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     ../channels/index
     ../transports/index
     ../master_tops/index
-    ../../ref/returners/index
     ../../ref/renderers/index

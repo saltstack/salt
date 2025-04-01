@@ -2,6 +2,7 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import asyncio
 import functools
 import inspect
@@ -24,6 +25,7 @@ from saltfactories.utils import random_string
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
@@ -53,7 +55,7 @@ def salt_eauth_account_factory():
 
 @pytest.fixture(scope="session")
 def salt_auto_account_factory():
-    return TestAccount(username="saltdev_auto", password="saltdev")
+    return TestAccount(username="saltdev-auto")
 
 
 @pytest.fixture(scope="session")
@@ -68,11 +70,6 @@ def salt_sub_minion_id():
 
 @pytest.fixture(scope="session")
 def sdb_etcd_port():
-    return ports.get_unused_localhost_port()
-
-
-@pytest.fixture(scope="session")
-def vault_port():
     return ports.get_unused_localhost_port()
 
 
@@ -126,7 +123,6 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
-    vault_port,
     reactor_event,
     master_id,
     salt_auth_account_1_factory,
@@ -175,11 +171,6 @@ def salt_master_factory(
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
     }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
-    }
 
     # Config settings to test `event_return`
     config_defaults["returner_dirs"] = []
@@ -187,7 +178,13 @@ def salt_master_factory(
         os.path.join(RUNTIME_VARS.FILES, "returners")
     )
     config_defaults["event_return"] = "runtests_noop"
-    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
+    config_overrides = {
+        "pytest-master": {"log": {"level": "DEBUG"}},
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -296,7 +293,7 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -307,15 +304,13 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
     }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
-    }
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -346,6 +341,9 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -370,6 +368,9 @@ def salt_proxy_factory(salt_master_factory):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
@@ -408,9 +409,15 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         "metaproxy": "deltaproxy",
         "master": "127.0.0.1",
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
@@ -437,9 +444,16 @@ def temp_salt_master(
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
@@ -451,9 +465,15 @@ def temp_salt_minion(temp_salt_master):
         "open_mode": True,
         "transport": temp_salt_master.config["transport"],
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
@@ -548,6 +568,15 @@ def ssl_webserver(integration_files_dir, this_txt_file):
         yield webserver
 
 
+@pytest.fixture(scope="module")
+def webserver(integration_files_dir, this_txt_file):
+    """
+    spins up an http webserver.
+    """
+    with Webserver(root=str(integration_files_dir)) as webserver:
+        yield webserver
+
+
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
 # This is based on https://github.com/eukaryote/pytest-tornasync
 # The reason why we don't use that pytest plugin instead is because it has
@@ -632,6 +661,7 @@ def io_loop():
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------
+
 
 # ----- Helpers ----------------------------------------------------------------------------------------------------->
 @pytest.helpers.proxy.register

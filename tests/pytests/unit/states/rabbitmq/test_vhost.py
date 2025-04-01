@@ -48,7 +48,7 @@ def test_absent():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Virtual Host '{}' is not present.".format(name),
+        "comment": f"Virtual Host '{name}' is not present.",
     }
 
     mock = MagicMock(return_value=False)

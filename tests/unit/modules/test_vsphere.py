@@ -4,6 +4,7 @@
 
     Tests for functions in salt.modules.vsphere
 """
+
 import pytest
 
 import salt.modules.vsphere as vsphere
@@ -809,7 +810,7 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         config = "foo"
         ret = {
             "success": False,
-            "message": "'{}' is not a valid config variable.".format(config),
+            "message": f"'{config}' is not a valid config variable.",
         }
         self.assertEqual(
             ret, vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, "bar")
@@ -3509,7 +3510,7 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                         USER,
                         PASSWORD,
                         certificate_verify=certificate_verify_value,
-                        **kwargs
+                        **kwargs,
                     )
                 http_query_mock.assert_called_once_with(
                     "https://1.2.3.4:443/host/ssh_root_authorized_keys",
@@ -3519,7 +3520,7 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                     text=True,
                     username="root",
                     verify_ssl=certificate_verify_value,
-                    **expected_kwargs
+                    **expected_kwargs,
                 )
 
     def test_get_ssh_key(self):

@@ -1,14 +1,17 @@
 import logging
+import textwrap
 
 import pytest
 
 import salt.modules.beacons as beaconmod
 import salt.modules.cp as cp
+import salt.modules.pacmanpkg as pacmanpkg
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
 import salt.utils.state as state_utils
+from salt.loader.dunder import __opts__
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
@@ -19,7 +22,7 @@ log = logging.getLogger(__name__)
 def configure_loader_modules(minion_opts):
     return {
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         pkg: {
             "__env__": "base",
@@ -35,6 +38,10 @@ def configure_loader_modules(minion_opts):
             "__opts__": minion_opts,
         },
         beaconmod: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
+        pacmanpkg: {
             "__salt__": {},
             "__opts__": minion_opts,
         },
@@ -87,16 +94,15 @@ def test_uptodate_with_changes(pkgs):
             "pkg.version": version,
         },
     ):
-
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == pkgs
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -151,17 +157,15 @@ def test_uptodate_no_changes():
     with patch.dict(
         pkg.__salt__, {"pkg.list_upgrades": list_upgrades, "pkg.upgrade": upgrade}
     ):
-
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
@@ -325,6 +329,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a pkg
@@ -541,7 +546,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,
@@ -570,7 +575,7 @@ def test_installed_with_changes_test_true(list_pkgs):
         expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.installed("dummy", test=True)
+            ret = pkg.installed("dummy")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
@@ -619,13 +624,12 @@ def test_removed_purged_with_changes_test_true(list_pkgs, action):
             "pkg_resource.version_clean": MagicMock(return_value=None),
         },
     ):
-
-        expected = {"pkga": {"new": "{}".format(action), "old": ""}}
+        expected = {"pkga": {"new": f"{action}", "old": ""}}
         pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg_actions[action]("pkga", test=True)
+            ret = pkg_actions[action]("pkga")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
@@ -690,7 +694,7 @@ def test_held_unheld(package_manager):
                         "name": pkg,
                         "changes": {"new": "hold", "old": ""},
                         "result": True,
-                        "comment": "Package {} is now being held.".format(pkg),
+                        "comment": f"Package {pkg} is now being held.",
                     }
                 }
             )
@@ -707,7 +711,7 @@ def test_held_unheld(package_manager):
                         "name": pkg,
                         "changes": {"new": "", "old": "hold"},
                         "result": True,
-                        "comment": "Package {} is no longer held.".format(pkg),
+                        "comment": f"Package {pkg} is no longer held.",
                     }
                 }
             )
@@ -847,7 +851,6 @@ def test_installed_with_single_normalize():
     ), patch.object(
         yumpkg, "list_holds", MagicMock()
     ):
-
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
                 "old": "",
@@ -942,7 +945,6 @@ def test_removed_with_single_normalize():
     ), patch.dict(
         yumpkg.__salt__, salt_dict
     ):
-
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
                 "old": "20220214-2.1",
@@ -1036,7 +1038,6 @@ def test_installed_with_single_normalize_32bit():
     ), patch.dict(
         yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
     ):
-
         expected = {
             "xz-devel.i686": {
                 "old": "",
@@ -1122,3 +1123,173 @@ def test_installed_salt_minion_windows():
         ret = pkg.installed(name="salt-minion-py3", version="3006.1")
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected_cli_options",
+    (
+        (
+            (
+                "fromrepo=foo,bar",
+                "someotherkwarg=test",
+                "disablerepo=ignored",
+                "enablerepo=otherignored",
+                "disableexcludes=this_argument_is_also_ignored",
+            ),
+            ("--disablerepo=*", "--enablerepo=foo,bar"),
+        ),
+        (
+            ("enablerepo=foo", "disablerepo=bar"),
+            ("--disablerepo=bar", "--enablerepo=foo"),
+        ),
+        (
+            ("disablerepo=foo",),
+            ("--disablerepo=foo",),
+        ),
+        (
+            ("enablerepo=bar",),
+            ("--enablerepo=bar",),
+        ),
+    ),
+)
+def test_yumpkg_group_installed_with_repo_options(
+    list_pkgs, kwargs, expected_cli_options
+):
+    """
+    Test that running a pkg.group_installed with repo options on RPM-based
+    systems results in the correct yum/dnf groupinfo command being run by
+    pkg.group_info.
+    """
+    kwargs = dict(item.split("=", 1) for item in kwargs)
+    run_stdout = MagicMock(
+        return_value=textwrap.dedent(
+            """\
+        Group: MyGroup
+         Group-Id: my-group
+         Description: A test group
+         Mandatory Packages:
+            pkga
+            pkgb
+        """
+        )
+    )
+
+    salt_dict = {
+        "cmd.run_stdout": run_stdout,
+        "pkg.group_diff": yumpkg.group_diff,
+        "pkg.group_info": yumpkg.group_info,
+    }
+
+    name = "MyGroup"
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        yumpkg.__salt__, salt_dict
+    ), patch.object(
+        yumpkg,
+        "list_pkgs",
+        MagicMock(return_value=list_pkgs),
+    ):
+        ret = pkg.group_installed(name, **kwargs)
+        assert ret["result"]
+        assert not ret["changes"]
+        expected = [yumpkg._yum(), "--quiet"]
+        expected.extend(expected_cli_options)
+        expected.extend(("groupinfo", name))
+        run_stdout.assert_called_once_with(
+            expected,
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
+    """
+    Test that running a pkg.group_installed with additional arguments on
+    platforms which use pacman does not result in a traceback, but is instead
+    cleanly handled and a useful comment included in the state return.
+    """
+    salt_dict = {
+        "pkg.group_diff": pacmanpkg.group_diff,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(pacmanpkg.__salt__, salt_dict):
+        ret = pkg.group_installed("foo", fromrepo="bar")
+        assert not ret["result"]
+        assert not ret["changes"]
+        assert ret["comment"] == "Repo options are not supported on this platform"
+
+
+def test_latest():
+    """
+    Test pkg.latest
+    """
+    pkg_name = "fake_pkg"
+    old_version = "1.2.2"
+    new_version = "1.2.3"
+    latest_version_mock = MagicMock(return_value={pkg_name: new_version})
+    current_version_mock = MagicMock(return_value={pkg_name: old_version})
+    install_mock = MagicMock(
+        return_value={
+            pkg_name: {
+                "new": new_version,
+                "old": old_version,
+            },
+        }
+    )
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True
+
+
+def test_latest_multiple_versions():
+    """
+    This case arises most often when updating the kernel, where multiple versions are now installed.
+
+    See: https://github.com/saltstack/salt/issues/60931
+    """
+    pkg_name = "fake_pkg"
+    old_version = "1.2.2"
+    new_version = "1.2.3"
+    latest_version_mock = MagicMock(return_value={pkg_name: new_version})
+    current_version_mock = MagicMock(return_value={pkg_name: old_version})
+    install_mock = MagicMock(
+        return_value={
+            pkg_name: {
+                "new": f"{old_version},{new_version}",
+                "old": old_version,
+            },
+        }
+    )
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True
+
+
+def test_latest_no_change_windows():
+    """
+    Test pkg.latest with no change to the package version for winrepo packages
+
+    See: https://github.com/saltstack/salt/issues/65165
+    """
+    pkg_name = "fake_pkg"
+    version = "1.2.2"
+    latest_version_mock = MagicMock(return_value={pkg_name: version})
+    current_version_mock = MagicMock(return_value={pkg_name: version})
+    install_mock = MagicMock(return_value={pkg_name: {"install status": "success"}})
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True

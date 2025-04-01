@@ -136,7 +136,7 @@ def test_state_sls_id_test_state_test_post_run(salt_call_cli, testfile_path):
     true post the state already being run previously
     """
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES, "testfile")
-    testfile_path.write_text(source.read_text())
+    testfile_path.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
     testfile_path.chmod(0o644)
     ret = salt_call_cli.run("state.sls", "sls-id-test")
     assert ret.returncode == 0
@@ -173,7 +173,7 @@ def test_state_sls_id_test_true_post_run(salt_call_cli, testfile_path):
     assert ret.returncode == 0
     assert testfile_path.exists()
     for val in ret.data.values():
-        assert val["comment"] == "File {} updated".format(testfile_path)
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
@@ -195,7 +195,7 @@ def test_state_sls_id_test_false_pillar_true(salt_call_cli, testfile_path):
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=False)
     assert ret.returncode == 0
     for val in ret.data.values():
-        assert val["comment"] == "File {} updated".format(testfile_path)
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
 

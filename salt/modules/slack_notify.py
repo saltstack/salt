@@ -15,7 +15,6 @@ Module for sending messages to Slack
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-
 import logging
 import urllib.parse
 
@@ -205,7 +204,7 @@ def post_message(
             channel,
             channel,
         )
-        channel = "#{}".format(channel)
+        channel = f"#{channel}"
 
     if not from_name:
         log.error("from_name is a required option.")

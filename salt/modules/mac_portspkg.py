@@ -62,7 +62,7 @@ def __virtual__():
 
 
 def _list(query=""):
-    cmd = "port list {}".format(query)
+    cmd = f"port list {query}"
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
     ret = {}
@@ -178,7 +178,7 @@ def latest_version(*names, **kwargs):
         ):
             ret[key] = val
         else:
-            ret[key] = "{} (installed)".format(version(key))
+            ret[key] = f"{version(key)} (installed)"
 
     return ret
 

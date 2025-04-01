@@ -28,7 +28,7 @@ def loadavg(name, maximum=None, minimum=None):
     data = __salt__["status.loadavg"]()
     if name not in data:
         ret["result"] = False
-        ret["comment"] += "Requested load average {} not available ".format(name)
+        ret["comment"] += f"Requested load average {name} not available "
         return ret
     if minimum and maximum and minimum >= maximum:
         ret["comment"] += "Min must be less than max"
@@ -44,7 +44,7 @@ def loadavg(name, maximum=None, minimum=None):
             return ret
     if maximum:
         if cap > float(maximum):
-            ret["comment"] = "Load avg above maximum of {} at {}".format(maximum, cap)
+            ret["comment"] = f"Load avg above maximum of {maximum} at {cap}"
             return ret
     ret["comment"] = "Load avg in acceptable range"
     ret["result"] = True
@@ -69,9 +69,9 @@ def process(name):
     data = __salt__["status.pid"](name)
     if not data:
         ret["result"] = False
-        ret["comment"] += 'Process signature "{}" not found '.format(name)
+        ret["comment"] += f'Process signature "{name}" not found '
         return ret
     ret["data"] = data
-    ret["comment"] += 'Process signature "{}" was found '.format(name)
+    ret["comment"] += f'Process signature "{name}" was found '
     ret["result"] = True
     return ret

@@ -1,6 +1,7 @@
 """
 Test the MessagePack utility
 """
+
 import inspect
 import os
 import pprint
@@ -14,14 +15,7 @@ import salt.utils.msgpack
 from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase
 
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack  # pylint: disable=import-error
-
-
-# A keyword to pass to tests that use `raw`, which was added in msgpack 0.5.2
-raw = {"raw": False} if msgpack.version > (0, 5, 2) else {}
+msgpack = pytest.importorskip("msgpack")
 
 
 @pytest.mark.skipif(
@@ -156,10 +150,7 @@ class TestMsgpack(TestCase):
                 bio.write(packer.pack(i * 2))  # value
 
         bio.seek(0)
-        if salt.utils.msgpack.version > (0, 6, 0):
-            unpacker = salt.utils.msgpack.Unpacker(bio, strict_map_key=False)
-        else:
-            unpacker = salt.utils.msgpack.Unpacker(bio)
+        unpacker = salt.utils.msgpack.Unpacker(bio, strict_map_key=False)
         for size in sizes:
             self.assertEqual(unpacker.unpack(), {i: i * 2 for i in range(size)})
 
@@ -293,7 +284,7 @@ class TestMsgpack(TestCase):
         class MyUnpacker(salt.utils.msgpack.Unpacker):
             def __init__(self):
                 my_kwargs = {}
-                super().__init__(ext_hook=self._hook, **raw)
+                super().__init__(ext_hook=self._hook, raw=False)
 
             def _hook(self, code, data):
                 if code == 1:
@@ -314,21 +305,20 @@ class TestMsgpack(TestCase):
     def _check(
         self, data, pack_func, unpack_func, use_list=False, strict_map_key=False
     ):
-        my_kwargs = {}
-        if salt.utils.msgpack.version >= (0, 6, 0):
-            my_kwargs["strict_map_key"] = strict_map_key
-        ret = unpack_func(pack_func(data), use_list=use_list, **my_kwargs)
+        ret = unpack_func(
+            pack_func(data), use_list=use_list, strict_map_key=strict_map_key
+        )
         self.assertEqual(ret, data)
 
     def _test_pack_unicode(self, pack_func, unpack_func):
         test_data = ["", "abcd", ["defgh"], "Русский текст"]
         for td in test_data:
-            ret = unpack_func(pack_func(td), use_list=True, **raw)
+            ret = unpack_func(pack_func(td), use_list=True, raw=False)
             self.assertEqual(ret, td)
             packer = salt.utils.msgpack.Packer()
             data = packer.pack(td)
             ret = salt.utils.msgpack.Unpacker(
-                BytesIO(data), use_list=True, **raw
+                BytesIO(data), use_list=True, raw=False
             ).unpack()
             self.assertEqual(ret, td)
 
@@ -352,19 +342,23 @@ class TestMsgpack(TestCase):
 
     def _test_ignore_unicode_errors(self, pack_func, unpack_func):
         ret = unpack_func(
-            pack_func(b"abc\xeddef", use_bin_type=False), unicode_errors="ignore", **raw
+            pack_func(b"abc\xeddef", use_bin_type=False),
+            unicode_errors="ignore",
+            raw=False,
         )
         self.assertEqual("abcdef", ret)
 
     def _test_strict_unicode_unpack(self, pack_func, unpack_func):
         packed = pack_func(b"abc\xeddef", use_bin_type=False)
-        self.assertRaises(UnicodeDecodeError, unpack_func, packed, use_list=True, **raw)
+        self.assertRaises(
+            UnicodeDecodeError, unpack_func, packed, use_list=True, raw=False
+        )
 
     def _test_ignore_errors_pack(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
             use_list=True,
-            **raw
+            raw=False,
         )
         self.assertEqual("abcdef", ret)
 
@@ -372,10 +366,6 @@ class TestMsgpack(TestCase):
         ret = unpack_func(pack_func(b"abc"), use_list=True)
         self.assertEqual(b"abc", ret)
 
-    @pytest.mark.skipif(
-        salt.utils.msgpack.version < (0, 2, 2),
-        "use_single_float was added in msgpack==0.2.2",
-    )
     def _test_pack_float(self, pack_func, **kwargs):
         self.assertEqual(
             b"\xca" + struct.pack(">f", 1.0), pack_func(1.0, use_single_float=True)
@@ -402,16 +392,9 @@ class TestMsgpack(TestCase):
         pairlist = [(b"a", 1), (2, b"b"), (b"foo", b"bar")]
         packer = salt.utils.msgpack.Packer()
         packed = packer.pack_map_pairs(pairlist)
-        if salt.utils.msgpack.version > (0, 6, 0):
-            unpacked = unpack_func(packed, object_pairs_hook=list, strict_map_key=False)
-        else:
-            unpacked = unpack_func(packed, object_pairs_hook=list)
+        unpacked = unpack_func(packed, object_pairs_hook=list, strict_map_key=False)
         self.assertEqual(pairlist, unpacked)
 
-    @pytest.mark.skipif(
-        salt.utils.msgpack.version < (0, 6, 0),
-        "getbuffer() was added to Packer in msgpack 0.6.0",
-    )
     def _test_get_buffer(self, pack_func, **kwargs):
         packer = msgpack.Packer(autoreset=False, use_bin_type=True)
         packer.pack([1, 2])

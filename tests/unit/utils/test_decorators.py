@@ -3,7 +3,6 @@
     unit.utils.decorators_test
 """
 
-
 import inspect
 
 import salt.utils.decorators as decorators

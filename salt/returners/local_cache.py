@@ -89,7 +89,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     So do what you have to do to make sure that stays the case
     """
     if recurse_count >= 5:
-        err = "prep_jid could not store a jid after {} tries.".format(recurse_count)
+        err = f"prep_jid could not store a jid after {recurse_count} tries."
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
@@ -237,7 +237,7 @@ def save_minions(jid, minions, syndic_id=None):
     log.debug(
         "Adding minions for job %s%s: %s",
         jid,
-        " from syndic master '{}'".format(syndic_id) if syndic_id else "",
+        f" from syndic master '{syndic_id}'" if syndic_id else "",
         minions,
     )
 
@@ -287,6 +287,7 @@ def get_load(jid):
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
+    exc = None
     for index in range(1, num_tries + 1):
         with salt.utils.files.fopen(load_p, "rb") as rfh:
             try:
@@ -297,7 +298,8 @@ def get_load(jid):
                     time.sleep(0.25)
     else:
         log.critical("Failed to unpack %s", load_p)
-        raise exc
+        if exc is not None:
+            raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]

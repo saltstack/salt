@@ -23,7 +23,8 @@ except ImportError:
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 pytestmark = [
-    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
+    pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
 ]
 
 
@@ -60,9 +61,6 @@ def minion_config_overrides():
             "testdeprecatedextpolicy": {
                 "X509v3 Basic Constraints": "critical CA:FALSE",
             },
-        },
-        "features": {
-            "x509_v2": True,
         },
     }
 
@@ -1359,6 +1357,14 @@ def test_create_csr_with_extensions(x509, rsa_privkey):
     assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
 
 
+def test_create_csr_with_wildcard_san(x509, rsa_privkey):
+    """
+    Test that wildcards in SAN extension are supported. Issue #65072
+    """
+    res = x509.create_csr(private_key=rsa_privkey, subjectAltName="DNS:*.salt.ca")
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+
+
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 def test_create_csr_write_to_path(x509, encoding, rsa_privkey, tmp_path):
     tgt = tmp_path / "csr"
@@ -1416,11 +1422,18 @@ def test_create_private_key_pkcs12(x509, passphrase):
 
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 def test_create_private_key_write_to_path(x509, encoding, tmp_path):
-    tgt = tmp_path / "csr"
+    tgt = tmp_path / "pk"
     x509.create_private_key(encoding=encoding, path=str(tgt))
     assert tgt.exists()
     if encoding == "pem":
         assert tgt.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+
+
+def test_create_private_key_write_to_path_encrypted(x509, tmp_path):
+    tgt = tmp_path / "pk"
+    x509.create_private_key(path=str(tgt), passphrase="hunter1")
+    assert tgt.exists()
+    assert tgt.read_text().startswith("-----BEGIN ENCRYPTED PRIVATE KEY-----")
 
 
 @pytest.mark.parametrize("encoding", ["pem", "der"])
@@ -1581,8 +1594,32 @@ def test_verify_crl(x509, crl, ca_cert):
     assert x509.verify_crl(crl, ca_cert) is True
 
 
-def test_verify_private_key(x509, ca_key, ca_cert):
-    assert x509.verify_private_key(ca_key, ca_cert) is True
+def test_encode_private_key(x509, rsa_privkey):
+    pk = x509.create_private_key()
+    res = x509.encode_private_key(pk)
+    assert res.strip() == pk.strip()
+
+
+def test_encode_private_key_encrypted(x509, ca_key, ca_key_enc):
+    pk = x509.create_private_key()
+    pk_enc = x509.encode_private_key(pk, passphrase="hunter1")
+    res = x509.encode_private_key(pk_enc, private_key_passphrase="hunter1")
+    assert res.strip() == pk.strip()
+
+
+@pytest.mark.parametrize("privkey,expected", [("ca_key", True), ("rsa_privkey", False)])
+def test_verify_private_key(x509, request, privkey, expected, ca_cert):
+    pk = request.getfixturevalue(privkey)
+    assert x509.verify_private_key(pk, ca_cert) is expected
+
+
+def test_verify_private_key_with_passphrase(x509, ca_key_enc, ca_cert):
+    assert (
+        x509.verify_private_key(
+            ca_key_enc, ca_cert, passphrase="correct horse battery staple"
+        )
+        is True
+    )
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])

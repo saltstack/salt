@@ -65,10 +65,9 @@ def test_basic_operations(subtests, profile_name, prefix):
         assert etcd_mod.get_(prefix, recurse=True, profile=profile_name) is None
 
     with subtests.test("We should be able to set and retrieve simple values"):
-        etcd_mod.set_("{}/1".format(prefix), "one", profile=profile_name)
+        etcd_mod.set_(f"{prefix}/1", "one", profile=profile_name)
         assert (
-            etcd_mod.get_("{}/1".format(prefix), recurse=False, profile=profile_name)
-            == "one"
+            etcd_mod.get_(f"{prefix}/1", recurse=False, profile=profile_name) == "one"
         )
 
     with subtests.test("We should be able to update and retrieve those values"):
@@ -85,8 +84,8 @@ def test_basic_operations(subtests, profile_name, prefix):
     with subtests.test("We should be list all top level values at a directory"):
         expected = {
             prefix: {
-                "{}/1".format(prefix): "not one",
-                "{}/2/".format(prefix): {},
+                f"{prefix}/1": "not one",
+                f"{prefix}/2/": {},
             },
         }
         assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
@@ -98,7 +97,7 @@ def test_basic_operations(subtests, profile_name, prefix):
                 "4": "two-four",
             },
         }
-        etcd_mod.rm_("{}/1".format(prefix), profile=profile_name)
+        etcd_mod.rm_(f"{prefix}/1", profile=profile_name)
         assert etcd_mod.tree(path=prefix, profile=profile_name) == updated
 
     with subtests.test("updates should be able to be caught by waiting in read"):
@@ -106,16 +105,16 @@ def test_basic_operations(subtests, profile_name, prefix):
 
         def wait_func(return_list):
             return_list.append(
-                etcd_mod.watch("{}/1".format(prefix), timeout=30, profile=profile_name)
+                etcd_mod.watch(f"{prefix}/1", timeout=30, profile=profile_name)
             )
 
         wait_thread = threading.Thread(target=wait_func, args=(return_list,))
         wait_thread.start()
         time.sleep(1)
-        etcd_mod.set_("{}/1".format(prefix), "one", profile=profile_name)
+        etcd_mod.set_(f"{prefix}/1", "one", profile=profile_name)
         wait_thread.join()
         modified = return_list.pop()
-        assert modified["key"] == "{}/1".format(prefix)
+        assert modified["key"] == f"{prefix}/1"
         assert modified["value"] == "one"
 
 
@@ -126,22 +125,22 @@ def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
     if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
         # Only need to run this once
         with subtests.test("Test no profile and bad connection in get_"):
-            assert etcd_mod.get_("{}/1".format(prefix)) is None
+            assert etcd_mod.get_(f"{prefix}/1") is None
 
         with subtests.test("Test no profile and bad connection in set_"):
-            assert etcd_mod.set_("{}/1".format(prefix), "lol") is None
+            assert etcd_mod.set_(f"{prefix}/1", "lol") is None
 
         with subtests.test("Test no profile and bad connection in update"):
-            assert etcd_mod.update({"{}/1".format(prefix): "SIUUU"}) is None
+            assert etcd_mod.update({f"{prefix}/1": "SIUUU"}) is None
 
         with subtests.test("Test no profile and bad connection in watch"):
-            assert etcd_mod.watch("{}/1".format(prefix)) is None
+            assert etcd_mod.watch(f"{prefix}/1") is None
 
         with subtests.test("Test no profile and bad connection in ls_"):
             assert etcd_mod.ls_() is None
 
         with subtests.test("Test no profile and bad connection in rm"):
-            assert etcd_mod.rm_("{}/1".format(prefix)) is None
+            assert etcd_mod.rm_(f"{prefix}/1") is None
 
         with subtests.test("Test no profile and bad connection in tree"):
             assert etcd_mod.tree() is None

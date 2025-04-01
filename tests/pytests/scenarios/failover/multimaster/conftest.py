@@ -8,6 +8,7 @@ import pytest
 from pytestshellutils.exceptions import FactoryNotStarted, FactoryTimeout
 
 import salt.utils.platform
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,10 @@ def salt_mm_failover_master_1(request, salt_factories):
     config_overrides = {
         "interface": "127.0.0.1",
         "master_sign_pubkey": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "mm-failover-master-1",
@@ -49,6 +54,10 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
     config_overrides = {
         "interface": "127.0.0.2",
         "master_sign_pubkey": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -91,8 +100,8 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
     mm_master_2_addr = salt_mm_failover_master_2.config["interface"]
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
@@ -100,6 +109,9 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_mm_failover_master_1.salt_minion_daemon(
         "mm-failover-minion-1",
@@ -129,8 +141,8 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
     # We put the second master first in the list so it has the right startup checks every time.
     config_overrides = {
         "master": [
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
+            f"{mm_master_2_addr}:{mm_master_2_port}",
+            f"{mm_master_1_addr}:{mm_master_1_port}",
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
@@ -138,6 +150,9 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_mm_failover_master_2.salt_minion_daemon(
         "mm-failover-minion-2",
@@ -174,7 +189,7 @@ def run_salt_cmds():
                 for minion in list(minions_to_check):
                     try:
                         ret = cli.run(
-                            "--timeout={}".format(timeout),
+                            f"--timeout={timeout}",
                             "test.ping",
                             minion_tgt=minion,
                         )

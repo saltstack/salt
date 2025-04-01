@@ -47,9 +47,7 @@ def _check_valid_version():
     npm_path = salt.utils.path.which("npm")
 
     # pylint: disable=no-member
-    res = salt.modules.cmdmod.run(
-        "{npm} --version".format(npm=npm_path), output_loglevel="quiet"
-    )
+    res = salt.modules.cmdmod.run(f"{npm_path} --version", output_loglevel="quiet")
     npm_version = Version(res)
     valid_version = Version("1.2")
     # pylint: enable=no-member
@@ -151,7 +149,7 @@ def install(
         cwd = dir
 
     if registry:
-        cmd.append('--registry="{}"'.format(registry))
+        cmd.append(f'--registry="{registry}"')
 
     if dry_run:
         cmd.append("--dry-run")
@@ -222,7 +220,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
         if uid:
             env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ["npm", "uninstall", '"{}"'.format(pkg)]
+    cmd = ["npm", "uninstall", f'"{pkg}"']
     if not dir:
         cmd.append("--global")
 
@@ -291,14 +289,14 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if depth is not None:
         if not isinstance(depth, (int, float)):
             raise salt.exceptions.SaltInvocationError(
-                "Error: depth {} must be a number".format(depth)
+                f"Error: depth {depth} must be a number"
             )
-        cmd.append("--depth={}".format(int(depth)))
+        cmd.append(f"--depth={int(depth)}")
 
     if pkg:
         # Protect against injection
         pkg = shlex.quote(pkg)
-        cmd.append('"{}"'.format(pkg))
+        cmd.append(f'"{pkg}"')
     cmd = " ".join(cmd)
 
     result = __salt__["cmd.run_all"](

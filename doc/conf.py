@@ -3,12 +3,18 @@
 Sphinx documentation for Salt
 """
 import os
+import pathlib
 import re
+import shutil
 import sys
+import textwrap
 import time
 import types
 
 from sphinx.directives.other import TocTree
+from sphinx.util import logging
+
+log = logging.getLogger(__name__)
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
@@ -153,6 +159,7 @@ extensions = [
     "saltrepo",
     "myst_parser",
     "sphinxcontrib.spelling",
+    "vaultpolicylexer",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
@@ -174,21 +181,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-1zlfxffs1-NuEH~G9TzOeuNGdsfZIl3w
-.. |windownload| raw:: html
-
-     <p>Python3 x86: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
-
-     <p>Python3 AMD64: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
-
-.. |osxdownloadpy3| raw:: html
-
-     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
+.. _`salt-discord`: https://discord.com/invite/J7b7EscrAs
 
 """.format(
     release=stripped_release
@@ -376,19 +369,6 @@ man_pages = [
 ]
 
 
-### epub options
-epub_title = "Salt Documentation"
-epub_author = "VMware, Inc."
-epub_publisher = epub_author
-epub_copyright = copyright
-
-epub_scheme = "URL"
-epub_identifier = "http://saltproject.io/"
-
-epub_tocdup = False
-# epub_tocdepth = 3
-
-
 def skip_mod_init_member(app, what, name, obj, skip, options):
     # pylint: disable=too-many-arguments,unused-argument
     if name.startswith("_"):
@@ -414,6 +394,67 @@ class ReleasesTree(TocTree):
         return rst
 
 
+def copy_release_templates_pre(app):
+    app._copied_release_files = []
+    docs_path = pathlib.Path(docs_basepath)
+    release_files_dir = docs_path / "topics" / "releases"
+    release_template_files_dir = release_files_dir / "templates"
+    for fpath in release_template_files_dir.iterdir():
+        dest = release_files_dir / fpath.name.replace(".template", "")
+        if dest.exists():
+            continue
+        log.info(
+            "Copying '%s' -> '%s' just for this build ...",
+            fpath.relative_to(docs_path),
+            dest.relative_to(docs_path),
+        )
+        app._copied_release_files.append(dest)
+        shutil.copyfile(fpath, dest)
+
+
+def copy_release_templates_post(app, exception):
+    docs_path = pathlib.Path(docs_basepath)
+    for fpath in app._copied_release_files:
+        log.info(
+            "The release file '%s' was copied for the build, but its not in "
+            "version control system. Deleting.",
+            fpath.relative_to(docs_path),
+        )
+        fpath.unlink()
+
+
+def extract_module_deprecations(app, what, name, obj, options, lines):
+    """
+    Add a warning to the modules being deprecated into extensions.
+    """
+    # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#event-autodoc-process-docstring
+    if what != "module":
+        # We're only interested in module deprecations
+        return
+
+    try:
+        deprecated_info = obj.__deprecated__
+    except AttributeError:
+        # The module is not deprecated
+        return
+
+    _version, _extension, _url = deprecated_info
+    msg = textwrap.dedent(
+        f"""
+        .. warning::
+
+            This module will be removed from Salt in version {_version} in favor of
+            the `{_extension} Salt Extension <{_url}>`_.
+
+        """
+    )
+    # Modify the docstring lines in-place
+    lines[:] = msg.splitlines() + lines
+
+
 def setup(app):
     app.add_directive("releasestree", ReleasesTree)
     app.connect("autodoc-skip-member", skip_mod_init_member)
+    app.connect("builder-inited", copy_release_templates_pre)
+    app.connect("build-finished", copy_release_templates_post)
+    app.connect("autodoc-process-docstring", extract_module_deprecations)

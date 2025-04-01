@@ -711,9 +711,9 @@ def salt_api_acl_tool(username, request):
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
     """
-    failure_str = "[api_acl] Authentication failed for " "user %s from IP %s"
+    failure_str = "[api_acl] Authentication failed for user %s from IP %s"
     success_str = "[api_acl] Authentication successful for user %s from IP %s"
-    pass_str = "[api_acl] Authentication not checked for " "user %s from IP %s"
+    pass_str = "[api_acl] Authentication not checked for user %s from IP %s"
 
     acl = None
     # Salt Configuration
@@ -777,7 +777,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     """
     # Redirect to the login page if the session hasn't been authed
-    if "token" not in cherrypy.session:  # pylint: disable=W8601
+    if "token" not in cherrypy.session:
         raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
@@ -898,9 +898,11 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{}".format(traceback.format_exc())
-            if cherrypy.config["debug"]
-            else "An unexpected error occurred",
+            "return": (
+                f"{traceback.format_exc()}"
+                if cherrypy.config["debug"]
+                else "An unexpected error occurred"
+            ),
         }
 
     # Raises 406 if requested content-type is not supported
@@ -1145,7 +1147,7 @@ for hook, tool_list in tools_config.items():
     for idx, tool_config in enumerate(tool_list):
         tool_name, tool_fn = tool_config
         setattr(
-            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=(50 + idx))
+            cherrypy.tools, tool_name, cherrypy.Tool(hook, tool_fn, priority=50 + idx)
         )
 
 
@@ -1199,13 +1201,6 @@ class LowDataAdapter:
         for chunk in lowstate:
             if token:
                 chunk["token"] = token
-
-            if "token" in chunk:
-                # Make sure that auth token is hex
-                try:
-                    int(chunk["token"], 16)
-                except (TypeError, ValueError):
-                    raise cherrypy.HTTPError(401, "Invalid token")
 
             if "token" in chunk:
                 # Make sure that auth token is hex
@@ -1416,7 +1411,7 @@ class Minions(LowDataAdapter):
             POST /minions HTTP/1.1
             Host: localhost:8000
             Accept: application/x-yaml
-            Content-Type: application/json
+            Content-Type: application/x-www-form-urlencoded
 
             tgt=*&fun=status.diskusage
 
@@ -1747,9 +1742,9 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers[
-            "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        headers["Content-Disposition"] = (
+            'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
+        )
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"
@@ -1944,7 +1939,7 @@ class Logout(LowDataAdapter):
 
     _cp_config = dict(
         LowDataAdapter._cp_config,
-        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False}
+        **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False},
     )
 
     def POST(self):  # pylint: disable=arguments-differ
@@ -2187,7 +2182,7 @@ class Events:
             "tools.salt_auth.on": False,
             "tools.hypermedia_in.on": False,
             "tools.hypermedia_out.on": False,
-        }
+        },
     )
 
     def __init__(self):
@@ -2392,7 +2387,7 @@ class Events:
 
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
-                    yield "data: {}\n\n".format(salt.utils.json.dumps(data))
+                    yield f"data: {salt.utils.json.dumps(data)}\n\n"
 
         return listen()
 
@@ -2422,7 +2417,7 @@ class WebsocketEndpoint:
             "tools.hypermedia_out.on": False,
             "tools.websocket.on": True,
             "tools.websocket.handler_cls": websockets.SynchronizingWebsocket,
-        }
+        },
     )
 
     def __init__(self):
@@ -2576,7 +2571,7 @@ class WebsocketEndpoint:
                                 SaltInfo.process(data, salt_token, self.opts)
                             else:
                                 handler.send(
-                                    "data: {}\n\n".format(salt.utils.json.dumps(data)),
+                                    f"data: {salt.utils.json.dumps(data)}\n\n",
                                     False,
                                 )
                         except UnicodeDecodeError:
@@ -2648,7 +2643,7 @@ class Webhook:
             "tools.lowdata_fmt.on": True,
             # Auth can be overridden in __init__().
             "tools.salt_auth.on": True,
-        }
+        },
     )
 
     def __init__(self):

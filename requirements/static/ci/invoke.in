@@ -1,5 +1,0 @@
---constraint=./py{py_version}/{platform}.txt
-
-invoke
-blessings
-pyyaml

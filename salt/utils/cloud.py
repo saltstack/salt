@@ -2,7 +2,6 @@
 Utility functions for salt.cloud
 """
 
-
 import codecs
 import copy
 import errno
@@ -63,7 +62,7 @@ try:
     from pypsexec.client import Client as PsExecClient
     from pypsexec.exceptions import SCMRException
     from pypsexec.scmr import Service as ScmrService
-    from smbprotocol.exceptions import SMBResponseException
+    from smbprotocol.exceptions import CannotDelete, SMBResponseException
     from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
@@ -565,9 +564,9 @@ def bootstrap(vm_, opts=None):
     )
 
     if saltify_driver:
-        deploy_kwargs[
-            "wait_for_passwd_maxtries"
-        ] = 0  # No need to wait/retry with Saltify
+        deploy_kwargs["wait_for_passwd_maxtries"] = (
+            0  # No need to wait/retry with Saltify
+        )
 
     win_installer = salt.config.get_cloud_config_value("win_installer", vm_, opts)
     if win_installer:
@@ -575,6 +574,13 @@ def bootstrap(vm_, opts=None):
             "smb_port", vm_, opts, default=445
         )
         deploy_kwargs["win_installer"] = win_installer
+        deploy_kwargs["win_delay_start"] = salt.config.get_cloud_config_value(
+            "win_delay_start", vm_, opts, default=""
+        )
+        deploy_kwargs["win_install_dir"] = salt.config.get_cloud_config_value(
+            "win_install_dir", vm_, opts, default=""
+        )
+
         minion = minion_config(opts, vm_)
         deploy_kwargs["master"] = minion["master"]
         deploy_kwargs["username"] = salt.config.get_cloud_config_value(
@@ -910,7 +916,12 @@ class Client:
         return self._client.connect()
 
     def disconnect(self):
-        self._client.cleanup()  # This removes the lingering PAExec binary
+        try:
+            # This removes any lingering PAExec binaries
+            self._client.cleanup()
+        except CannotDelete as exc:
+            # We shouldn't hard crash here, so just log the error
+            log.debug("Exception cleaning up PAexec: %r", exc)
         return self._client.disconnect()
 
     def create_service(self):
@@ -1232,6 +1243,8 @@ def deploy_windows(
     port_timeout=15,
     preseed_minion_keys=None,
     win_installer=None,
+    win_delay_start=False,
+    win_install_dir="",
     master=None,
     tmp_dir="C:\\salttmp",
     opts=None,
@@ -1353,6 +1366,11 @@ def deploy_windows(
             f"/master={_format_master_param(master)}",
             f"/minion-name={name}",
         ]
+        if win_delay_start:
+            args.append("/start-minion-delayed")
+
+        if win_install_dir:
+            args.append(f'/install-dir="{win_install_dir}"')
 
         if use_winrm:
             winrm_cmd(winrm_session, cmd, args)
@@ -1419,7 +1437,7 @@ def deploy_windows(
             if ret_code != 0:
                 return False
 
-            log.debug("Run psexec: sc start salt-minion")
+            log.debug("Run psexec: net start salt-minion")
             stdout, stderr, ret_code = run_psexec_command(
                 "cmd.exe", "/c net start salt-minion", host, username, password
             )
@@ -2115,9 +2133,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
         return proc.exitstatus
     except salt.utils.vt.TerminalException as err:
         trace = traceback.format_exc()
-        log.error(
-            error_msg.format(cmd, err, trace)
-        )  # pylint: disable=str-format-in-logging
+        log.error(error_msg.format(cmd, err, trace))
     finally:
         proc.close(terminate=True, kill=True)
     # Signal an error
@@ -2948,7 +2964,10 @@ def update_bootstrap(config, url=None):
         - The absolute path to the bootstrap
         - The content of the bootstrap script
     """
-    default_url = config.get("bootstrap_script_url", "https://bootstrap.saltstack.com")
+    default_url = config.get(
+        "bootstrap_script_url",
+        "https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh",
+    )
     if not url:
         url = default_url
     if not url:
@@ -2964,7 +2983,7 @@ def update_bootstrap(config, url=None):
                     "Python requests library to be installed"
                 )
             }
-        req = requests.get(url)
+        req = requests.get(url, timeout=120)
         if req.status_code != 200:
             return {
                 "error": (

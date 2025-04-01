@@ -8,6 +8,7 @@ This is a base library used by a number of AWS services.
 :depends: requests
 """
 
+import binascii
 import copy
 import hashlib
 import hmac
@@ -15,43 +16,18 @@ import logging
 import random
 import re
 import time
+import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime
+
+import requests
 
 import salt.config
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 
-try:
-    import requests
-
-    HAS_REQUESTS = True  # pylint: disable=W0612
-except ImportError:
-    HAS_REQUESTS = False  # pylint: disable=W0612
-
-try:
-    import binascii
-
-    HAS_BINASCII = True  # pylint: disable=W0612
-except ImportError:
-    HAS_BINASCII = False  # pylint: disable=W0612
-
-try:
-    import urllib.parse
-
-    HAS_URLLIB = True  # pylint: disable=W0612
-except ImportError:
-    HAS_URLLIB = False  # pylint: disable=W0612
-
-try:
-    import xml.etree.ElementTree as ET
-
-    HAS_ETREE = True  # pylint: disable=W0612
-except ImportError:
-    HAS_ETREE = False  # pylint: disable=W0612
-
-# pylint: enable=import-error,redefined-builtin,no-name-in-module
-
 log = logging.getLogger(__name__)
+
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
@@ -145,30 +121,26 @@ def creds(provider):
     ## if needed
     if provider["id"] == IROLE_CODE or provider["key"] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if __Expiration__ != "":
-            timenow = datetime.utcnow()
-            timestamp = timenow.strftime("%Y-%m-%dT%H:%M:%SZ")
-            if timestamp < __Expiration__:
-                # Current timestamp less than expiration fo cached credentials
-                return __AccessKeyId__, __SecretAccessKey__, __Token__
-        # We don't have any cached credentials, or they are expired, get them
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ):
+            # We don't have any cached credentials, or they are expired, get them
+            try:
+                result = get_metadata("meta-data/iam/security-credentials/")
+                role = result.text
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        try:
-            result = get_metadata("meta-data/iam/security-credentials/")
-            role = result.text
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
+            try:
+                result = get_metadata(f"meta-data/iam/security-credentials/{role}")
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+                return provider["id"], provider["key"], ""
 
-        try:
-            result = get_metadata(f"meta-data/iam/security-credentials/{role}")
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
-
-        data = result.json()
-        __AccessKeyId__ = data["AccessKeyId"]
-        __SecretAccessKey__ = data["SecretAccessKey"]
-        __Token__ = data["Token"]
-        __Expiration__ = data["Expiration"]
+            data = result.json()
+            __AccessKeyId__ = data["AccessKeyId"]
+            __SecretAccessKey__ = data["SecretAccessKey"]
+            __Token__ = data["Token"]
+            __Expiration__ = data["Expiration"]
 
         ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
@@ -267,7 +239,14 @@ def assumed_creds(prov_dict, role_arn, location=None):
         requesturl="https://sts.amazonaws.com/",
     )
     headers["Accept"] = "application/json"
-    result = requests.request("GET", requesturl, headers=headers, data="", verify=True)
+    result = requests.request(
+        "GET",
+        requesturl,
+        headers=headers,
+        data="",
+        verify=True,
+        timeout=AWS_METADATA_TIMEOUT,
+    )
 
     if result.status_code >= 400:
         log.info("AssumeRole response: %s", result.content)
@@ -534,7 +513,10 @@ def query(
         log.trace("AWS Request Parameters: %s", params_with_headers)
         try:
             result = requests.get(
-                requesturl, headers=headers, params=params_with_headers
+                requesturl,
+                headers=headers,
+                params=params_with_headers,
+                timeout=AWS_METADATA_TIMEOUT,
             )
             log.debug("AWS Response Status Code: %s", result.status_code)
             log.trace("AWS Response Text: %s", result.text)

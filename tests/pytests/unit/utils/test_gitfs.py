@@ -1,5 +1,4 @@
 import os
-import string
 import time
 
 import pytest
@@ -23,6 +22,14 @@ except AttributeError:
 
 if HAS_PYGIT2:
     import pygit2
+
+    try:
+        from pygit2.enums import ObjectType
+
+        HAS_PYGIT2_ENUMS = True
+
+    except ModuleNotFoundError:
+        HAS_PYGIT2_ENUMS = False
 
 
 @pytest.fixture
@@ -148,9 +155,14 @@ def _prepare_remote_repository_pygit2(tmp_path):
         tree,
         [repository.head.target],
     )
-    repository.create_tag(
-        "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
-    )
+    if HAS_PYGIT2_ENUMS:
+        repository.create_tag(
+            "annotated_tag", commit, ObjectType.COMMIT, signature, "some message"
+        )
+    else:
+        repository.create_tag(
+            "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+        )
     return remote
 
 
@@ -231,11 +243,11 @@ def test_checkout_pygit2(_prepare_provider):
     provider.init_remote()
     provider.fetch()
     provider.branch = "master"
-    assert provider.cachedir in provider.checkout()
+    assert provider.get_cachedir() in provider.checkout()
     provider.branch = "simple_tag"
-    assert provider.cachedir in provider.checkout()
+    assert provider.get_cachedir() in provider.checkout()
     provider.branch = "annotated_tag"
-    assert provider.cachedir in provider.checkout()
+    assert provider.get_cachedir() in provider.checkout()
     provider.branch = "does_not_exist"
     assert provider.checkout() is None
 
@@ -244,20 +256,9 @@ def test_checkout_pygit2(_prepare_provider):
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
-def test_full_id_pygit2(_prepare_provider):
-    assert _prepare_provider.full_id().startswith("-")
-    assert _prepare_provider.full_id().endswith("/pygit2-repo---gitfs-master--")
-
-
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
-    basename = _prepare_provider.get_cachedir_basename()
-    # Note: if you are changing the length of basename
-    # keep in mind that pygit2 will error out on large file paths on Windows
-    assert len(basename) == 45
-    assert basename[0] == "-"
-    # check that a valid base64 is given '/' -> '_'
-    assert all(c in string.ascii_letters + string.digits + "+_=" for c in basename[1:])
+    assert "_" == _prepare_provider.get_cache_basename()

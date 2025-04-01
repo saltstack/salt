@@ -253,7 +253,6 @@ def _get_env_activate(bin_env):
 
 
 def _find_req(link):
-
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
@@ -500,7 +499,9 @@ def install(
         or one or more package names with commas between them
 
     log
-        Log file where a complete (maximum verbosity) record will be kept
+        Log file where a complete (maximum verbosity) record will be kept.
+        If this file doesn't exist and the parent directory is writeable,
+        it will be created.
 
     proxy
         Specify a proxy in the form ``user:passwd@proxy.server:port``. Note
@@ -755,6 +756,16 @@ def install(
     if log:
         if os.path.isdir(log):
             raise OSError(f"'{log}' is a directory. Use --log path_to_file")
+        if not os.path.exists(log):
+            parent = os.path.dirname(log)
+            if not os.path.exists(parent):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' does not exist."
+                )
+            elif not os.access(parent, os.W_OK):
+                raise OSError(
+                    f"Trying to create '{log}' but parent directory '{parent}' is not writeable."
+                )
         elif not os.access(log, os.W_OK):
             raise OSError(f"'{log}' is not writeable")
 
@@ -837,9 +848,11 @@ def install(
         cmd.extend(["--build", build])
 
     # Use VENV_PIP_TARGET environment variable value as target
-    # if set and no target specified on the function call
+    # if set and no target specified on the function call.
+    # Do not set target if bin_env specified, use default
+    # for specified binary environment or expect explicit target specification.
     target_env = os.environ.get("VENV_PIP_TARGET", None)
-    if target is None and target_env is not None:
+    if target is None and target_env is not None and bin_env is None:
         target = target_env
 
     if target:
@@ -851,9 +864,13 @@ def install(
     if download_cache or cache_dir:
         cmd.extend(
             [
-                "--cache-dir"
-                if salt.utils.versions.compare(ver1=cur_version, oper=">=", ver2="6.0")
-                else "--download-cache",
+                (
+                    "--cache-dir"
+                    if salt.utils.versions.compare(
+                        ver1=cur_version, oper=">=", ver2="6.0"
+                    )
+                    else "--download-cache"
+                ),
                 download_cache or cache_dir,
             ]
         )
@@ -1637,16 +1654,6 @@ def list_all_versions(
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
 
-    if index_url:
-        if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
-        cmd.extend(["--index-url", index_url])
-
-    if extra_index_url:
-        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
-            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
-        cmd.extend(["--extra-index-url", extra_index_url])
-
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
@@ -1658,6 +1665,15 @@ def list_all_versions(
         regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
         cmd.extend(["install", f"{pkg}==versions"])
 
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{index_url}' is not a valid URL")
+        cmd.extend(["--index-url", index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
+        cmd.extend(["--extra-index-url", extra_index_url])
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
     )

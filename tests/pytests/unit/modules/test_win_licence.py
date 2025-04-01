@@ -2,7 +2,6 @@
     Test cases for salt.modules.win_licence
 """
 
-
 import pytest
 
 import salt.modules.win_license as win_license

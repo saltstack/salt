@@ -96,12 +96,22 @@ if [ -L "$SBIN_DIR/salt-config" ]; then
 fi
 
 #-------------------------------------------------------------------------------
-# Remove the $INSTALL_DIR directory
+# Remove folders and files from the INSTALL_DIR
+# Don't remove extras-3.##
+# The part wrapped in `@` will be replaced by the correct version of python
+# during packaging using SED
 #-------------------------------------------------------------------------------
-if [ -d "$INSTALL_DIR" ]; then
-    log "Cleanup: Removing $INSTALL_DIR"
-    rm -rf "$INSTALL_DIR"
-    log "Cleanup: Removed Successfully"
+for dir in "$INSTALL_DIR"/*/; do
+    if [[ "$dir" != *"extras-@PY_VER@"* ]]; then
+        log "Cleanup: Removing $dir"
+        rm -rf "$dir"
+    fi
+done
+log "Cleanup: Removed Directories Successfully"
+
+if [ -f "$INSTALL_DIR/salt-minion" ]; then
+    find $INSTALL_DIR -maxdepth 1 -type f -delete
+    log "Cleanup: Removed Files Successfully"
 fi
 
 #-------------------------------------------------------------------------------

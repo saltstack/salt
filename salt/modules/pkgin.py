@@ -40,7 +40,7 @@ def _check_pkgin():
                 "pkg_info -Q LOCALBASE pkgin", output_loglevel="trace"
             )
             if localbase is not None:
-                ppath = "{}/bin/pkgin".format(localbase)
+                ppath = f"{localbase}/bin/pkgin"
                 if not os.path.exists(ppath):
                     return None
         except CommandExecutionError:
@@ -124,7 +124,7 @@ def search(pkg_name, **kwargs):
         return pkglist
 
     if _supports_regex():
-        pkg_name = "^{}$".format(pkg_name)
+        pkg_name = f"^{pkg_name}$"
 
     out = __salt__["cmd.run"]([pkgin, "se", pkg_name], output_loglevel="trace")
     for line in out.splitlines():
@@ -170,7 +170,7 @@ def latest_version(*names, **kwargs):
         cmd_prefix.insert(1, "-p")
     for name in names:
         cmd = copy.deepcopy(cmd_prefix)
-        cmd.append("^{}$".format(name) if _supports_regex() else name)
+        cmd.append(f"^{name}$" if _supports_regex() else name)
 
         out = __salt__["cmd.run"](cmd, output_loglevel="trace")
         for line in out.splitlines():
@@ -564,9 +564,9 @@ def remove(name=None, pkgs=None, **kwargs):
         if not ver:
             continue
         if isinstance(ver, list):
-            args.extend(["{}-{}".format(param, v) for v in ver])
+            args.extend([f"{param}-{v}" for v in ver])
         else:
-            args.append("{}-{}".format(param, ver))
+            args.append(f"{param}-{ver}")
 
     if not args:
         return {}
@@ -701,6 +701,3 @@ def normalize_name(pkgs, **kwargs):
         with the pkg_resource provider.)
     """
     return pkgs
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

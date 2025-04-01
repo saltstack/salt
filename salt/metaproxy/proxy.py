@@ -2,6 +2,8 @@
 # Proxy minion metaproxy modules
 #
 
+import asyncio
+import copy
 import logging
 import os
 import signal
@@ -93,10 +95,13 @@ def post_master_init(self, master):
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
     if self.opts.get("proxy_merge_pillar_in_opts"):
-        # Override proxy opts with pillar data when the user required.
+        # Override proxy opts with pillar data when the user required. But do
+        # not override master in opts.
+        pillar = copy.deepcopy(self.opts["pillar"])
+        pillar.pop("master", None)
         self.opts = salt.utils.dictupdate.merge(
             self.opts,
-            self.opts["pillar"],
+            pillar,
             strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
             merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
         )
@@ -737,7 +742,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -745,7 +750,7 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
         elif self.opts["zmq_filtering"]:
             # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
             log.trace(
@@ -757,7 +762,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -803,7 +808,7 @@ def handle_decoded_payload(self, data):
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
-            yield tornado.gen.sleep(10)
+            await asyncio.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket

@@ -309,6 +309,20 @@ def sync_states(name, **kwargs):
     return _sync_single(name, "states", **kwargs)
 
 
+def sync_tops(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_tops module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_tops:
+            - refresh: True
+    """
+    return _sync_single(name, "tops", **kwargs)
+
+
 def sync_thorium(name, **kwargs):
     """
     Performs the same task as saltutil.sync_thorium module

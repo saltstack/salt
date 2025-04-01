@@ -1,6 +1,7 @@
 """
 Test the core grains
 """
+
 import pytest
 
 import salt.loader

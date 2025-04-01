@@ -1,44 +1,15 @@
 """
 Functions dealing with encryption
 """
+
 import hashlib
 import logging
 import os
 
-import salt.loader
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
-
-
-try:
-    import M2Crypto  # pylint: disable=unused-import
-
-    Random = None
-    HAS_M2CRYPTO = True
-except ImportError:
-    HAS_M2CRYPTO = False
-
-if not HAS_M2CRYPTO:
-    try:
-        from Cryptodome import Random
-
-        HAS_CRYPTODOME = True
-    except ImportError:
-        HAS_CRYPTODOME = False
-else:
-    HAS_CRYPTODOME = False
-
-if not HAS_M2CRYPTO and not HAS_CRYPTODOME:
-    try:
-        from Crypto import Random  # nosec
-
-        HAS_CRYPTO = True
-    except ImportError:
-        HAS_CRYPTO = False
-else:
-    HAS_CRYPTO = False
 
 
 def decrypt(
@@ -104,29 +75,17 @@ def decrypt(
     if renderers is None:
         if opts is None:
             raise TypeError("opts are required")
+
+        # Avaoid circular import
+        import salt.loader
+
         renderers = salt.loader.render(opts, {})
 
     rend_func = renderers.get(rend)
     if rend_func is None:
-        raise SaltInvocationError(
-            "Decryption renderer '{}' is not available".format(rend)
-        )
+        raise SaltInvocationError(f"Decryption renderer '{rend}' is not available")
 
     return rend_func(data, translate_newlines=translate_newlines)
-
-
-def reinit_crypto():
-    """
-    When a fork arises, pycrypto needs to reinit
-    From its doc::
-
-        Caveat: For the random number generator to work correctly,
-        you must call Random.atfork() in both the parent and
-        child processes after using os.fork()
-
-    """
-    if HAS_CRYPTODOME or HAS_CRYPTO:
-        Random.atfork()
 
 
 def pem_finger(path=None, key=None, sum_type="sha256"):
@@ -156,7 +115,7 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
     for ind, _ in enumerate(pre):
         if ind % 2:
             # Is odd
-            finger += "{}:".format(pre[ind])
+            finger += f"{pre[ind]}:"
         else:
             finger += pre[ind]
     return finger.rstrip(":")

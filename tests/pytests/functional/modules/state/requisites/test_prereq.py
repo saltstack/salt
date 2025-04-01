@@ -91,17 +91,13 @@ def test_requisites_prereq_simple_ordering_and_errors_1(state, state_tree):
       cmd.run:
         - name: echo C second
 
-    # will fail with "The following requisites were not found"
+    # will fail
     I:
-      cmd.run:
+      test.fail_without_changes:
         - name: echo I
-        - prereq:
-          - cmd: Z
     J:
-      cmd.run:
+      test.fail_without_changes:
         - name: echo J
-        - prereq:
-          - foobar: A
     """
     expected_result = {
         "cmd_|-A_|-echo A third_|-run": {
@@ -122,19 +118,15 @@ def test_requisites_prereq_simple_ordering_and_errors_1(state, state_tree):
             "result": True,
             "changes": True,
         },
-        "cmd_|-I_|-echo I_|-run": {
+        "test_|-I_|-echo I_|-fail_without_changes": {
             "__run_num__": 3,
-            "comment": "The following requisites were not found:\n"
-            + "                   prereq:\n"
-            + "                       cmd: Z\n",
+            "comment": "Failure!",
             "result": False,
             "changes": False,
         },
-        "cmd_|-J_|-echo J_|-run": {
+        "test_|-J_|-echo J_|-fail_without_changes": {
             "__run_num__": 4,
-            "comment": "The following requisites were not found:\n"
-            + "                   prereq:\n"
-            + "                       foobar: A\n",
+            "comment": "Failure!",
             "result": False,
             "changes": False,
         },
@@ -224,12 +216,10 @@ def test_requisites_prereq_simple_ordering_and_errors_3(state, state_tree):
       cmd.run:
         - name: echo C second
 
-    # will fail with "The following requisites were not found"
+    # will fail
     I:
-      cmd.run:
+      test.fail_without_changes:
         - name: echo I
-        - prereq:
-          - Z
         """
     expected_result = {
         "cmd_|-A_|-echo A third_|-run": {
@@ -250,11 +240,9 @@ def test_requisites_prereq_simple_ordering_and_errors_3(state, state_tree):
             "result": True,
             "changes": True,
         },
-        "cmd_|-I_|-echo I_|-run": {
+        "test_|-I_|-echo I_|-fail_without_changes": {
             "__run_num__": 3,
-            "comment": "The following requisites were not found:\n"
-            + "                   prereq:\n"
-            + "                       id: Z\n",
+            "comment": "Failure!",
             "result": False,
             "changes": False,
         },
@@ -270,7 +258,7 @@ def test_requisites_prereq_simple_ordering_and_errors_4(state, state_tree):
     """
     Call sls file containing several prereq_in and prereq.
 
-    Ensure that some of them are failing and that the order is right.
+    Ensure that the order is right.
     """
     sls_contents = """
     # Theory:
@@ -427,13 +415,14 @@ def test_requisites_prereq_simple_ordering_and_errors_6(state, state_tree):
     sls_contents = """
     # issue #8211
     #             expected rank
-    # B --+             1
-    #     |
-    # C <-+ ----+       2/3
-    #           |
-    # D ---+    |       3/2
-    #      |    |
-    # A <--+ <--+       4
+    #
+    # D --+ -------+    1
+    #              |
+    # B --+        |    2
+    #     |        |
+    # C <-+ --+    |    3
+    #         |    |
+    # A <-----+ <--+    4
     #
     #             resulting rank
     # D --+
@@ -489,19 +478,19 @@ def test_requisites_prereq_simple_ordering_and_errors_6(state, state_tree):
             "changes": True,
         },
         "cmd_|-B_|-echo B first_|-run": {
-            "__run_num__": 0,
+            "__run_num__": 1,
             "comment": 'Command "echo B first" run',
             "result": True,
             "changes": True,
         },
         "cmd_|-C_|-echo C second_|-run": {
-            "__run_num__": 1,
+            "__run_num__": 2,
             "comment": 'Command "echo C second" run',
             "result": True,
             "changes": True,
         },
         "cmd_|-D_|-echo D third_|-run": {
-            "__run_num__": 2,
+            "__run_num__": 0,
             "comment": 'Command "echo D third" run',
             "result": True,
             "changes": True,
@@ -522,7 +511,7 @@ def test_requisites_prereq_simple_ordering_and_errors_7(state, state_tree):
     """
     sls_contents = """
     # will fail with 'Cannot extend ID Z (...) not part of the high state.'
-    # and not "The following requisites were not found" like in yaml list syntax
+    # and not "Referenced state does not exist for requisite" like in yaml list syntax
     I:
       cmd.run:
         - name: echo I
@@ -530,13 +519,14 @@ def test_requisites_prereq_simple_ordering_and_errors_7(state, state_tree):
           - cmd: Z
     """
     errmsg = (
-        "The following requisites were not found:\n"
-        "                   prereq:\n"
-        "                       cmd: Z\n"
+        "Referenced state does not exist for requisite "
+        "[prereq: (cmd: Z)] in state "
+        "[echo I] in SLS [requisite]"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret["cmd_|-I_|-echo I_|-run"].comment == errmsg
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_prereq_simple_ordering_and_errors_8(state, state_tree):
@@ -557,13 +547,14 @@ def test_requisites_prereq_simple_ordering_and_errors_8(state, state_tree):
           - foobar: A
     """
     errmsg = (
-        "The following requisites were not found:\n"
-        "                   prereq:\n"
-        "                       foobar: A\n"
+        "Referenced state does not exist for requisite "
+        "[prereq: (foobar: A)] in state "
+        "[echo B] in SLS [requisite]"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret["cmd_|-B_|-echo B_|-run"].comment == errmsg
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_prereq_simple_ordering_and_errors_9(state, state_tree):
@@ -584,21 +575,52 @@ def test_requisites_prereq_simple_ordering_and_errors_9(state, state_tree):
           - foobar: C
     """
     errmsg = (
-        "The following requisites were not found:\n"
-        "                   prereq:\n"
-        "                       foobar: C\n"
+        "Referenced state does not exist for requisite "
+        "[prereq: (foobar: C)] in state "
+        "[echo B] in SLS [requisite]"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret["cmd_|-B_|-echo B_|-run"].comment == errmsg
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
-@pytest.mark.skip("issue #8210 : prereq recursion undetected")
 def test_requisites_prereq_simple_ordering_and_errors_10(state, state_tree):
     """
-    Call sls file containing several prereq_in and prereq.
+    Call sls file containing several prereq.
 
-    Ensure that some of them are failing and that the order is right.
+    Ensure a recursive requisite error occurs.
+    """
+    sls_contents = """
+    A:
+      cmd.run:
+        - name: echo A
+        - prereq:
+          - cmd: B
+    B:
+      cmd.run:
+        - name: echo B
+        - prereq:
+          - cmd: A
+    """
+    errmsg = (
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, "
+        "'prereq', {'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}), "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}, "
+        "'prereq', {'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'})"
+    )
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert ret.failed
+        assert ret.errors == [errmsg]
+
+
+def test_requisites_prereq_in_simple_ordering_and_errors(state, state_tree):
+    """
+    Call sls file containing several prereq_in.
+
+    Ensure a recursive requisite error occurs.
     """
     sls_contents = """
     A:
@@ -613,8 +635,11 @@ def test_requisites_prereq_simple_ordering_and_errors_10(state, state_tree):
           - cmd: A
     """
     errmsg = (
-        'A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID'
-        ' "B" ID "A"'
+        "Recursive requisites were found: "
+        "({'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'}, "
+        "'prereq', {'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}), "
+        "({'SLS': 'requisite', 'ID': 'A', 'NAME': 'echo A'}, "
+        "'prereq', {'SLS': 'requisite', 'ID': 'B', 'NAME': 'echo B'})"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")

@@ -1,6 +1,7 @@
 """
 unit tests for the jobs runner
 """
+
 import pytest
 
 import salt.minion

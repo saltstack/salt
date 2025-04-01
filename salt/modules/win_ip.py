@@ -132,14 +132,14 @@ def is_enabled(iface):
 
         salt -G 'os_family:Windows' ip.is_enabled 'Local Area Connection #2'
     """
-    cmd = ["netsh", "interface", "show", "interface", "name={}".format(iface)]
+    cmd = ["netsh", "interface", "show", "interface", f"name={iface}"]
     iface_found = False
     for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
         if "Connect state:" in line:
             iface_found = True
             return line.split()[-1] == "Connected"
     if not iface_found:
-        raise CommandExecutionError("Interface '{}' not found".format(iface))
+        raise CommandExecutionError(f"Interface '{iface}' not found")
     return False
 
 
@@ -173,7 +173,7 @@ def enable(iface):
         "interface",
         "set",
         "interface",
-        "name={}".format(iface),
+        f"name={iface}",
         "admin=ENABLED",
     ]
     __salt__["cmd.run"](cmd, python_shell=False)
@@ -197,7 +197,7 @@ def disable(iface):
         "interface",
         "set",
         "interface",
-        "name={}".format(iface),
+        f"name={iface}",
         "admin=DISABLED",
     ]
     __salt__["cmd.run"](cmd, python_shell=False)
@@ -215,7 +215,7 @@ def get_subnet_length(mask):
         salt -G 'os_family:Windows' ip.get_subnet_length 255.255.255.0
     """
     if not salt.utils.validate.net.netmask(mask):
-        raise SaltInvocationError("'{}' is not a valid netmask".format(mask))
+        raise SaltInvocationError(f"'{mask}' is not a valid netmask")
     return salt.utils.network.get_net_size(mask)
 
 
@@ -258,17 +258,17 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         return {}
 
     if not salt.utils.validate.net.ipv4_addr(addr):
-        raise SaltInvocationError("Invalid address '{}'".format(addr))
+        raise SaltInvocationError(f"Invalid address '{addr}'")
 
     if gateway and not salt.utils.validate.net.ipv4_addr(addr):
-        raise SaltInvocationError("Invalid default gateway '{}'".format(gateway))
+        raise SaltInvocationError(f"Invalid default gateway '{gateway}'")
 
     if "/" not in addr:
         addr += "/32"
 
     if append and _find_addr(iface, addr):
         raise CommandExecutionError(
-            "Address '{}' already exists on interface '{}'".format(addr, iface)
+            f"Address '{addr}' already exists on interface '{iface}'"
         )
 
     cmd = ["netsh", "interface", "ip"]
@@ -276,12 +276,12 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         cmd.append("add")
     else:
         cmd.append("set")
-    cmd.extend(["address", "name={}".format(iface)])
+    cmd.extend(["address", f"name={iface}"])
     if not append:
         cmd.append("source=static")
-    cmd.append("address={}".format(addr))
+    cmd.append(f"address={addr}")
     if gateway:
-        cmd.append("gateway={}".format(gateway))
+        cmd.append(f"gateway={gateway}")
 
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
     if result["retcode"] != 0:
@@ -348,7 +348,7 @@ def set_static_dns(iface, *addrs):
             "ip",
             "set",
             "dns",
-            "name={}".format(iface),
+            f"name={iface}",
             "source=static",
             "address=none",
         ]
@@ -363,9 +363,9 @@ def set_static_dns(iface, *addrs):
                 "ip",
                 "set",
                 "dns",
-                "name={}".format(iface),
+                f"name={iface}",
                 "source=static",
-                "address={}".format(addr),
+                f"address={addr}",
                 "register=primary",
             ]
             __salt__["cmd.run"](cmd, python_shell=False)
@@ -377,9 +377,9 @@ def set_static_dns(iface, *addrs):
                 "ip",
                 "add",
                 "dns",
-                "name={}".format(iface),
-                "address={}".format(addr),
-                "index={}".format(addr_index),
+                f"name={iface}",
+                f"address={addr}",
+                f"index={addr_index}",
             ]
             __salt__["cmd.run"](cmd, python_shell=False)
             addr_index = addr_index + 1

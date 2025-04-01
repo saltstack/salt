@@ -1,30 +1,56 @@
-============
-Contributing
-============
+==============================================
+Contributing to Salt: A Guide for Contributors
+==============================================
 
-So you want to contribute to the Salt project? Excellent! You can help
-in a number of ways:
+So, you want to contribute to the Salt project? That's fantastic! There are many
+ways you can help improve Salt:
 
--  Use Salt and open well-written bug reports.
--  Join a `working group <https://github.com/saltstack/community>`__.
--  Answer questions on `irc <https://web.libera.chat/#salt>`__,
-   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-1zlfxffs1-NuEH~G9TzOeuNGdsfZIl3w>`__,
-   the `salt-users mailing
-   list <https://groups.google.com/forum/#!forum/salt-users>`__,
-   `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
-   or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
--  Fix bugs.
--  `Improve the documentation <https://saltstack.gitlab.io/open/docs/docs-hub/topics/contributing.html>`__.
-- Provide workarounds, patches, or other code without tests.
-- Tell other people about problems you solved using Salt.
+- Use Salt and report bugs with clear, detailed descriptions.
+- Join a `working group <https://github.com/saltstack/community>`__ to
+  collaborate with other contributors.
+- Answer questions on platforms like
+  the `community Discord <https://discord.com/invite/J7b7EscrAs>`__,
+  the `salt-users mailing list <https://groups.google.com/forum/#!forum/salt-users>`__,
+  `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
+  or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
+- Fix bugs or contribute to the `documentation <https://saltstack.gitlab.io/open/docs/docs-hub/topics/contributing.html>`__.
+- Submit workarounds, patches, or code (even without tests).
+- Share your experiences and solutions to problems you've solved using Salt.
 
-If you'd like to update docs or fix an issue, you're going to need the
-Salt repo. The best way to contribute is using
-`Git <https://git-scm.com/>`__.
+Choosing the Right Branch for Your Pull Request
+===============================================
 
+We appreciate your contributions to the project! To ensure a smooth and
+efficient workflow, please follow these guidelines when submitting a Pull
+Request. Each type of contribution—whether it's fixing a bug, adding a feature,
+updating documentation, or fixing tests—should be targeted at the appropriate
+branch. This helps us manage changes effectively and maintain stability across
+versions.
 
-Environment setup
-=================
+- **Bug Fixes:**
+
+  Create your Pull Request against the oldest supported branch where the bug
+  exists. This ensures that the fix can be applied to all relevant versions.
+
+- **New Features**:
+
+  For new features or enhancements, create your Pull Request against the master
+  branch.
+
+- **Documentation Updates:**
+
+  Documentation changes should be made against the master branch, unless they
+  are related to a bug fix, in which case they should follow the same branch as
+  the bug fix.
+
+- **Test Fixes:**
+
+  Pull Requests that fix broken or failing tests should be created against the
+  oldest supported branch where the issue occurs.
+
+Setting Up Your Salt Development Environment
+============================================
+
 To hack on Salt or the docs you're going to need to set up your
 development environment. If you already have a workflow that you're
 comfortable with, you can use that, but otherwise this is an opinionated
@@ -88,7 +114,7 @@ version of Python:
 
 ::
 
-   pyenv install 3.7.0
+   pyenv install 3.9.18
 
 If that fails, don't panic! You're probably just missing some build
 dependencies. Check out `pyenv common build
@@ -99,7 +125,7 @@ new virtual environment with this command:
 
 ::
 
-   pyenv virtualenv 3.7.0 salt
+   pyenv virtualenv 3.9.18 salt
 
 Then activate it:
 
@@ -109,7 +135,7 @@ Then activate it:
 
 Sweet! Now you're ready to clone Salt so you can start hacking away! If
 you get stuck at any point, check out the resources at the beginning of
-this guide. IRC and Slack are particularly helpful places to go.
+this guide. Discord and GitHub Discussions are particularly helpful places to go.
 
 
 Get the source!
@@ -321,8 +347,8 @@ documentation:
 
    ::
 
-       pyenv install 3.7.15
-       pyenv virtualenv 3.7.15 salt-docs
+       pyenv install 3.9.18
+       pyenv virtualenv 3.9.18 salt-docs
        echo 'salt-docs' > .python-version
 
 #. Activate `pyenv` if it's not auto-activated:
@@ -477,7 +503,7 @@ meaningful and complete! *Typically* the best tests for Salt are going
 to be unit tests. Testing is `a whole topic on its
 own <https://docs.saltproject.io/en/master/topics/tutorials/writing_tests.html>`__,
 But you may also want to write functional or integration tests. You'll
-find those in the ``salt/tests`` directory.
+find those in the ``tests/`` directory.
 
 When you're thinking about tests to write, the most important thing to
 keep in mind is, “What, exactly, am I testing?” When a test fails, you
@@ -562,12 +588,12 @@ But that advice is backwards for the changelog. We follow the
 `keepachangelog <https://keepachangelog.com/en/1.0.0/>`__ approach for
 our changelog, and use towncrier to generate it for each release. As a
 contributor, all that means is that you need to add a file to the
-``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
+``salt/changelog`` directory, using the ``<issue #>.<type>.md`` format. For
 instance, if you fixed issue 123, you would do:
 
 ::
 
-   echo "Made sys.doc inform when no minions return" > changelog/123.fixed
+   echo "Made sys.doc inform when no minions return" > changelog/123.fixed.md
 
 And that's all that would go into your file. When it comes to your
 commit message, it's usually a good idea to add other information, such as
@@ -577,6 +603,9 @@ commit message, it's usually a good idea to add other information, such as
 
 This will also help you out, because when you go to create the PR it
 will automatically insert the body of your commit messages.
+
+See the `changelog <https://docs.saltproject.io/en/latest/topics/development/changelog.html>`__
+docs for more information.
 
 
 Pull request time!
@@ -602,7 +631,7 @@ your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we're not in a code freeze, ideally your code will be merged
 that week or month. If you haven't heard from your assigned reviewer, ping them
-on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
+on GitHub or `Community Discord <https://discord.com/invite/J7b7EscrAs>`__.
 
 It's likely that your reviewer will leave some comments that need
 addressing - it may be a style change, or you forgot a changelog entry,

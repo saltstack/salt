@@ -10,7 +10,6 @@ Execute calls on selinux
     proper packages are installed.
 """
 
-
 import os
 import re
 
@@ -375,7 +374,7 @@ def _validate_filetype(filetype):
     Checks if the given filetype is a valid SELinux filetype
     specification. Throws an SaltInvocationError if it isn't.
     """
-    if filetype not in _SELINUX_FILETYPES.keys():
+    if filetype not in _SELINUX_FILETYPES:
         raise SaltInvocationError(f"Invalid filetype given: {filetype}")
     return True
 
@@ -491,7 +490,7 @@ def fcontext_get_policy(
         "[[:alpha:] ]+" if filetype is None else filetype_id_to_string(filetype)
     )
     cmd = (
-        "semanage fcontext -l | egrep "
+        "semanage fcontext -l | grep -E "
         + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
             **cmd_kwargs
         )
@@ -613,6 +612,15 @@ def _fcontext_add_or_delete_policy(
         raise SaltInvocationError(
             f'Actions supported are "add" and "delete", not "{action}".'
         )
+
+    if "add" == action:
+        # need to use --modify if context for name file exists, otherwise ValueError
+        filespec = re.escape(name)
+        cmd = f"semanage fcontext -l | grep -E '{filespec} '"
+        current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
+        if current_entry_text != "":
+            action = "modify"
+
     cmd = f"semanage fcontext --{action}"
     # "semanage --ftype a" isn't valid on Centos 6,
     # don't pass --ftype since "a" is the default filetype.
@@ -754,7 +762,7 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
         "port": port,
     }
     cmd = (
-        "semanage port -l | egrep "
+        "semanage port -l | grep -E "
         + "'^{sel_type}{spacer}{protocol}{spacer}((.*)*)[ ]{port}($|,)'".format(
             **cmd_kwargs
         )
@@ -798,10 +806,45 @@ def port_add_policy(name, sel_type=None, protocol=None, port=None, sel_range=Non
 
     .. code-block:: bash
 
-        salt '*' selinux.port_add_policy add tcp/8080 http_port_t
-        salt '*' selinux.port_add_policy add foobar http_port_t protocol=tcp port=8091
+        salt '*' selinux.port_add_policy tcp/8080 http_port_t
+        salt '*' selinux.port_add_policy foobar http_port_t protocol=tcp port=8091
     """
     return _port_add_or_delete_policy("add", name, sel_type, protocol, port, sel_range)
+
+
+def port_modify_policy(name, sel_type=None, protocol=None, port=None, sel_range=None):
+    """
+    .. versionadded:: 2019.2.0
+
+    Modifies the SELinux policy for a given protocol and port.
+
+    Returns the result of the call to semanage.
+
+    name
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
+
+    sel_type
+        The SELinux Type. Required.
+
+    protocol
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
+
+    port
+        The port or port range. Required if name is not formatted.
+
+    sel_range
+        The SELinux MLS/MCS Security Range.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.port_modify_policy tcp/8080 http_port_t
+        salt '*' selinux.port_modify_policy foobar http_port_t protocol=tcp port=8091
+    """
+    return _port_add_or_delete_policy(
+        "modify", name, sel_type, protocol, port, sel_range
+    )
 
 
 def port_delete_policy(name, protocol=None, port=None):
@@ -837,13 +880,13 @@ def _port_add_or_delete_policy(
     """
     .. versionadded:: 2019.2.0
 
-    Performs the action as called from ``port_add_policy`` or ``port_delete_policy``.
+    Performs the action as called from ``port_add_policy``, ``port_modify_policy`` or ``port_delete_policy``.
 
     Returns the result of the call to semanage.
     """
-    if action not in ["add", "delete"]:
+    if action not in ["add", "modify", "delete"]:
         raise SaltInvocationError(
-            f'Actions supported are "add" and "delete", not "{action}".'
+            f'Actions supported are "add", "modify" and "delete", not "{action}".'
         )
     if action == "add" and not sel_type:
         raise SaltInvocationError("SELinux Type is required to add a policy")

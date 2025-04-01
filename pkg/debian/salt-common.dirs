@@ -3,3 +3,5 @@
 /var/run/salt
 /usr/share/fish/vendor_completions.d
 /opt/saltstack/salt
+/etc/salt
+/etc/logrotate.d

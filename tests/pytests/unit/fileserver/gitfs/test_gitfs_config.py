@@ -27,7 +27,7 @@ except (ImportError, AttributeError):
 
 pytestmark = [
     pytest.mark.skipif(
-        not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+        not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
     )
 ]
 

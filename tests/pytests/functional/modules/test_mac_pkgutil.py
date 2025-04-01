@@ -1,6 +1,7 @@
 """
 integration tests for mac_pkgutil
 """
+
 import shutil
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [
+    pytest.mark.timeout(120, func_only=True),
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
@@ -56,6 +58,10 @@ def macports_package_url(macports_package_filename):
 
 @pytest.fixture(scope="module")
 def pkg_name(grains):
+    if grains["osrelease_info"][0] >= 13:
+        return "com.apple.pkg.CLTools_SDK_macOS13"
+    if grains["osrelease_info"][0] >= 12:
+        return "com.apple.pkg.XcodeSystemResources"
     if grains["osrelease_info"][0] >= 11:
         return "com.apple.pkg.InstallAssistant.macOSBigSur"
     if grains["osrelease_info"][:2] == (10, 15):

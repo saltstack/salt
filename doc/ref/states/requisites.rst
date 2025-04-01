@@ -563,7 +563,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` and ``watch``
     notify-build_failure:
       hipchat.send_message:
         - room_id: 123456
-        - message: "Building website fail on {{ salt.grains.get('id') }}"
+        - message: "Building website fail on {{ grains['id'] }}"
 
 
 The default behavior of the ``onfail`` when multiple requisites are listed is
@@ -723,7 +723,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 
 .. code-block:: sls
 
-    {% for cfile in salt.pillar.get('nginx:config_files') %}
+    {% for cfile in salt['pillar.get']('nginx:config_files') %}
     /etc/nginx/conf.d/{{ cfile }}:
       file.managed:
         - source: salt://nginx/configs/{{ cfile }}
@@ -1053,8 +1053,8 @@ if the gluster commands return a 0 ret value.
 
 .. _creates-requisite:
 
-Creates
--------
+creates
+~~~~~~~
 
 .. versionadded:: 3001
 

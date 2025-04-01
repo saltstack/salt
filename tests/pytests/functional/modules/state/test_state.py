@@ -3,14 +3,21 @@ import os
 import textwrap
 import threading
 import time
+from textwrap import dedent
 
 import pytest
 
 import salt.loader
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.state as state_util
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -20,6 +27,32 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.core_test,
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+            "__utils__": {"state.check_result": state_util.check_result},
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
 
 
 def _check_skip(grains):
@@ -98,7 +131,11 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+            "Recursive requisites were found: "
+            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
+            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
             in ret.errors
         )
 
@@ -583,6 +620,7 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "
@@ -1032,3 +1070,114 @@ def test_state_sls_defaults(state, state_tree):
             for state_return in ret:
                 assert state_return.result is True
                 assert "echo 1" in state_return.comment
+
+
+def test_state_sls_mock_ret(state_tree):
+    """
+    test state.sls when mock=True is passed
+    """
+    sls_contents = """
+    echo1:
+      cmd.run:
+        - name: "echo 'This is a test!'"
+    """
+    with pytest.helpers.temp_file("mock.sls", sls_contents, state_tree):
+        ret = state_mod.sls("mock", mock=True)
+        assert (
+            ret["cmd_|-echo1_|-echo 'This is a test!'_|-run"]["comment"]
+            == "Not called, mocked"
+        )
+
+
+@pytest.fixture
+def _state_requires_env(loaders, state_tree):
+    mod_contents = dedent(
+        r"""
+        def test_it(name):
+            return {
+                "name": name,
+                "result": __env__ == "base",
+                "comment": "",
+                "changes": {},
+            }
+        """
+    )
+    sls = "test_spawning"
+    sls_contents = dedent(
+        """
+        This should not fail on spawning platforms:
+          requires_env.test_it:
+            - name: foo
+            - parallel: true
+        """
+    )
+    with pytest.helpers.temp_file(
+        f"{sls}.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("_states/requires_env.py", mod_contents, state_tree):
+        res = loaders.modules.saltutil.sync_states()
+        assert "states.requires_env" in res
+        yield sls
+
+
+def test_state_apply_parallel_spawning_with_global_dunders(state, _state_requires_env):
+    """
+    Ensure state modules called via `parallel: true` have access to injected
+    global dunders like `__env__`.
+    """
+    ret = state.apply(_state_requires_env)
+    assert (
+        ret[
+            "requires_env_|-This should not fail on spawning platforms_|-foo_|-test_it"
+        ]["result"]
+        is True
+    )
+
+
+@pytest.fixture
+def _state_unpicklable_ctx(loaders, state_tree):
+    mod_contents = dedent(
+        r"""
+        import threading
+
+        class Unpicklable:
+            def __init__(self):
+                self._lock = threading.RLock()
+
+        def test_it():
+            __context__["booh"] = Unpicklable()
+        """
+    )
+    sls = "test_spawning_unpicklable"
+    sls_contents = dedent(
+        r"""
+        {%- do salt["unpicklable.test_it"]() %}
+
+        This should not fail on spawning platforms:
+          test.nop:
+            - name: foo
+            - parallel: true
+        """
+    )
+    with pytest.helpers.temp_file(
+        f"{sls}.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("_modules/unpicklable.py", mod_contents, state_tree):
+        res = loaders.modules.saltutil.sync_modules()
+        assert "modules.unpicklable" in res
+        yield sls
+
+
+@pytest.mark.skip_unless_on_spawning_platform(
+    reason="Pickling is only relevant on spawning platforms"
+)
+def test_state_apply_parallel_spawning_with_unpicklable_context(
+    state, _state_unpicklable_ctx
+):
+    """
+    Ensure that if the __context__ dictionary contains unpicklable objects,
+    they are filtered out instead of causing a crash.
+    """
+    ret = state.apply(_state_unpicklable_ctx)
+    assert (
+        ret["test_|-This should not fail on spawning platforms_|-foo_|-nop"]["result"]
+        is True
+    )

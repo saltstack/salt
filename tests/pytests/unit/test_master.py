@@ -912,6 +912,7 @@ def test_run_func(maintenance):
     mocked_clean_old_jobs = MockTimedFunc()
     mocked_clean_expired_tokens = MockTimedFunc()
     mocked_clean_pub_auth = MockTimedFunc()
+    mocked_clean_proc_dir = MockTimedFunc()
     mocked_handle_git_pillar = MockTimedFunc()
     mocked_handle_schedule = MockTimedFunc()
     mocked_handle_key_cache = MockTimedFunc()
@@ -927,6 +928,8 @@ def test_run_func(maintenance):
         "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
     ), patch(
         "salt.daemons.masterapi.clean_pub_auth", mocked_clean_pub_auth
+    ), patch(
+        "salt.utils.master.clean_proc_dir", mocked_clean_proc_dir
     ), patch(
         "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
     ), patch(
@@ -949,6 +952,7 @@ def test_run_func(maintenance):
         assert mocked_clean_old_jobs.call_times == [0, 120, 180]
         assert mocked_clean_expired_tokens.call_times == [0, 120, 180]
         assert mocked_clean_pub_auth.call_times == [0, 120, 180]
+        assert mocked_clean_proc_dir.call_times == [0, 120, 180]
         assert mocked_handle_git_pillar.call_times == [0]
         assert mocked_handle_schedule.call_times == [0, 60, 120, 180]
         assert mocked_handle_key_cache.call_times == [0, 60, 120, 180]
@@ -990,7 +994,7 @@ def test_key_rotate_no_master_match(maintenance):
 def test_key_dfn_wait(cluster_maintenance):
     now = time.monotonic()
     key = pathlib.Path(cluster_maintenance.opts["cluster_pki_dir"]) / ".aes"
-    salt.crypt.Crypticle.read_or_generate_key(str(key))
+    salt.crypt.Crypticle.write_key(str(key))
     rotate_time = time.monotonic() - (cluster_maintenance.opts["publish_session"] + 1)
     os.utime(str(key), (rotate_time, rotate_time))
 
@@ -1021,3 +1025,35 @@ def test_key_dfn_wait(cluster_maintenance):
     thread.join()
     assert time.time() - start >= 5
     assert dfn.read_text() == "othermaster"
+
+
+def test_syndic_return_cache_dir_creation(encrypted_requests):
+    """master's cachedir for a syndic will be created by AESFuncs._syndic_return method"""
+    cachedir = pathlib.Path(encrypted_requests.opts["cachedir"])
+    assert not (cachedir / "syndics").exists()
+    encrypted_requests._syndic_return(
+        {
+            "id": "mamajama",
+            "jid": "",
+            "return": {},
+        }
+    )
+    assert (cachedir / "syndics").exists()
+    assert (cachedir / "syndics" / "mamajama").exists()
+
+
+def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
+    """
+    master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
+    """
+    cachedir = pathlib.Path(encrypted_requests.opts["cachedir"])
+    assert not (cachedir / "syndics").exists()
+    encrypted_requests._syndic_return(
+        {
+            "id": "../mamajama",
+            "jid": "",
+            "return": {},
+        }
+    )
+    assert not (cachedir / "syndics").exists()
+    assert not (cachedir / "mamajama").exists()

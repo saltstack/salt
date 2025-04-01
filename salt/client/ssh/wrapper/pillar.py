@@ -12,7 +12,9 @@ try:
     from collections.abc import Mapping
 except ImportError:
     # We still allow Py2 import because this could be executed in a machine with Py2.
-    from collections import Mapping  # pylint: disable=no-name-in-module
+    from collections import (  # pylint: disable=no-name-in-module,deprecated-class
+        Mapping,
+    )
 
 
 def get(key, default="", merge=False, delimiter=DEFAULT_TARGET_DELIM):

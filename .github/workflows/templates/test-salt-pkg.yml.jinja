@@ -1,113 +1,19 @@
-
-  <%- set linux_pkg_tests = (
-                               ("almalinux-8", "Alma Linux 8", "x86_64", "rpm"),
-                               ("almalinux-9", "Alma Linux 9", "x86_64", "rpm"),
-                               ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm"),
-                               ("centos-7", "CentOS 7", "x86_64", "rpm"),
-                               ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm"),
-                               ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm"),
-                               ("debian-10", "Debian 10", "x86_64", "deb"),
-                               ("debian-11", "Debian 11", "x86_64", "deb"),
-                               ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "deb"),
-                               ("fedora-37", "Fedora 37", "x86_64", "rpm"),
-                               ("fedora-38", "Fedora 38", "x86_64", "rpm"),
-                               ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "deb"),
-                               ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "deb"),
-                               ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "deb"),
-                               ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "deb")
-                            ) %>
-
-  <%- set linux_pkg_tests = (
-                               ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm"),
-                               ("centos-7", "CentOS 7", "x86_64", "rpm"),
-                               ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm"),
-                               ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm"),
-                               ("debian-10", "Debian 10", "x86_64", "deb"),
-                               ("debian-11", "Debian 11", "x86_64", "deb"),
-                               ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "deb"),
-                               ("photonos-3", "Photon OS 3", "x86_64", "rpm"),
-                               ("photonos-4", "Photon OS 4", "x86_64", "rpm"),
-                               ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "deb"),
-                               ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "deb"),
-                               ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "deb"),
-                               ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "deb")
-                            ) %>
-
-  <%- for slug, display_name, arch, pkg_type in linux_pkg_tests %>
-    <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
-
+  <%- set job_name = "test-packages" %>
   <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Test Package
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
     needs:
       - prepare-workflow
-      - build-<{ pkg_type }>-pkgs
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action.yml
     with:
-      distro-slug: <{ slug }>
-      platform: linux
-      arch: <{ arch }>
+      nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: <{ pkg_type }>
+      nox-version: <{ nox_version  }>
+      python-version: "<{ gh_actions_workflows_python_version }>"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  <%- endfor %>
-
-
-
-  <%- for slug, display_name, arch in (("macos-12", "macOS 12", "x86_64"),) %>
-    <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
-
-  <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-macos-pkgs
-    uses: ./.github/workflows/test-packages-action-macos.yml
-    with:
-      distro-slug: <{ slug }>
-      platform: darwin
-      arch: <{ arch }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: macos
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  <%- endfor %>
-
-
-  <%- for slug, display_name, arch in (("windows-2016", "Windows 2016", "amd64"),
-                                       ("windows-2019", "Windows 2019", "amd64"),
-                                       ("windows-2022", "Windows 2022", "amd64")) %>
-    <%- for pkg_type in ("NSIS", "MSI") %>
-    <%- set job_name = "{}-{}-pkg-tests".format(slug.replace(".", ""), pkg_type.lower()) %>
-
-  <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> <{ pkg_type }> Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-windows-pkgs
-    uses: ./.github/workflows/test-packages-action.yml
-    with:
-      distro-slug: <{ slug }>
-      platform: windows
-      arch: <{ arch }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: <{ pkg_type }>
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-    <%- endfor %>
-  <%- endfor %>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}

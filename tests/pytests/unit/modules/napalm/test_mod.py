@@ -1,6 +1,7 @@
 """
     :codeauthor: :email:`David Murphy <damurphy@vmware.com>`
 """
+
 import logging
 
 import pytest

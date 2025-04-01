@@ -80,7 +80,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         Side effect
         :return:
         """
-        raise AttributeError("attribute error: {}. {}".format(args, kwargs))
+        raise AttributeError(f"attribute error: {args}. {kwargs}")
 
     @patch("salt.utils.ssdp._json", None)
     @patch("salt.utils.ssdp.asyncio", None)
@@ -235,7 +235,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
         :return:
         """
         factory = self.get_ssdp_factory()
-        data = "{}nonsense".format(ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE])
+        data = f"{ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]}nonsense"
         addr = "10.10.10.10", "foo.suse.de"
         with patch.object(factory, "log", MagicMock()), patch.object(
             factory, "_sendto", MagicMock()
@@ -257,7 +257,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
         factory = self.get_ssdp_factory()
         factory.disable_hidden = True
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
-        data = "{}nonsense".format(signature)
+        data = f"{signature}nonsense"
         addr = "10.10.10.10", "foo.suse.de"
         with patch.object(factory, "log", MagicMock()), patch.object(
             factory, "_sendto", MagicMock()
@@ -269,10 +269,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
                 in factory.log.debug.call_args[0][0]
             )
             assert factory._sendto.called
-            assert (
-                "{}:E:Invalid timestamp".format(signature)
-                == factory._sendto.call_args[0][0]
-            )
+            assert f"{signature}:E:Invalid timestamp" == factory._sendto.call_args[0][0]
 
     def test_datagram_signature_outdated_timestamp_quiet(self):
         """
@@ -331,9 +328,9 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert factory.log.debug.called
             assert factory.disable_hidden
             assert factory._sendto.called
-            assert factory._sendto.call_args[0][
-                0
-            ] == "{}:E:Timestamp is too old".format(signature)
+            assert (
+                factory._sendto.call_args[0][0] == f"{signature}:E:Timestamp is too old"
+            )
             assert "Received outdated package" in factory.log.debug.call_args[0][0]
 
     def test_datagram_signature_correct_timestamp_reply(self):
@@ -365,7 +362,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert factory.disable_hidden
             assert factory._sendto.called
             assert factory._sendto.call_args[0][0] == salt.utils.stringutils.to_bytes(
-                "{}:@:{{}}".format(signature)
+                f"{signature}:@:{{}}"
             )
             assert 'Received "%s" from %s:%s' in factory.log.debug.call_args[0][0]
 
@@ -512,7 +509,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert clnt._socket.sendto.called
             message, target = clnt._socket.sendto.call_args[0]
             assert message == salt.utils.stringutils.to_bytes(
-                "{}{}".format(config[ssdp.SSDPBase.SIGNATURE], f_time)
+                f"{config[ssdp.SSDPBase.SIGNATURE]}{f_time}"
             )
             assert target[0] == "<broadcast>"
             assert target[1] == config[ssdp.SSDPBase.PORT]
@@ -580,7 +577,7 @@ class SSDPClientTestCase(TestCase, Mocks):
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         fake_resource = SSDPClientTestCase.Resource()
         fake_resource.pool = [
-            ("{}:E:{}".format(signature, error), "10.10.10.10"),
+            (f"{signature}:E:{error}", "10.10.10.10"),
             (None, None),
         ]
 
@@ -613,7 +610,7 @@ class SSDPClientTestCase(TestCase, Mocks):
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         fake_resource = SSDPClientTestCase.Resource()
         fake_resource.pool = [
-            ("{}:E:{}".format(signature, error), "10.10.10.10"),
+            (f"{signature}:E:{error}", "10.10.10.10"),
             (None, None),
         ]
 

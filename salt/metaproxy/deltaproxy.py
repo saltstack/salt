@@ -4,6 +4,7 @@
 
 import asyncio
 import concurrent.futures
+import copy
 import logging
 import os
 import signal
@@ -99,9 +100,11 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
+    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
-        self.opts["pillar"],
+        pillar,
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
@@ -368,10 +371,10 @@ def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[
-                        minion_id
-                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
-                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    self.deltaproxy_objs[minion_id].req_channel = (
+                        salt.channel.client.AsyncReqChannel.factory(
+                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                        )
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
@@ -395,10 +398,10 @@ def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[
-                        minion_id
-                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
-                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    self.deltaproxy_objs[minion_id].req_channel = (
+                        salt.channel.client.AsyncReqChannel.factory(
+                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                        )
                     )
 
     if _failed:
@@ -971,7 +974,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -979,7 +982,7 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
         if self._target_load(payload["load"]):
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
 
         # The following handles the sub-proxies
         sub_ids = self.opts["proxy"].get("ids", [self.opts["id"]])
@@ -987,7 +990,7 @@ def handle_payload(self, payload):
             if _id in self.deltaproxy_objs:
                 instance = self.deltaproxy_objs[_id]
                 if instance._target_load(payload["load"]):
-                    instance._handle_decoded_payload(payload["load"])
+                    await instance._handle_decoded_payload(payload["load"])
             else:
                 log.warning("Proxy minion %s is not loaded, skipping.", _id)
 
@@ -1001,7 +1004,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -1049,7 +1052,7 @@ def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            yield tornado.gen.sleep(0.5)
+            await asyncio.sleep(0.5)
             process_count = self.subprocess_list.count
 
     # We stash an instance references to allow for the socket

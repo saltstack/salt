@@ -13,12 +13,12 @@ Default values for these configs are as follow:
 :depends:   - redis-py-cluster Python package
 """
 
-
 import hashlib
 import logging
 import os
 
 import salt.payload
+from salt.config import DEFAULT_HASH_TYPE
 
 try:
     import rediscluster
@@ -74,7 +74,7 @@ def mk_token(opts, tdata):
     redis_client = _redis_client(opts)
     if not redis_client:
         return {}
-    hash_type = getattr(hashlib, opts.get("hash_type", "md5"))
+    hash_type = getattr(hashlib, opts.get("hash_type", DEFAULT_HASH_TYPE))
     tok = str(hash_type(os.urandom(512)).hexdigest())
     try:
         while redis_client.get(tok) is not None:

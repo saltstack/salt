@@ -2,7 +2,6 @@
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-
 import pytest
 
 import salt.modules.napalm_network as napalm_network

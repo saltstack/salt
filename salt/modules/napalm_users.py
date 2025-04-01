@@ -19,7 +19,6 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-
 import logging
 
 # import NAPALM utils
@@ -61,7 +60,6 @@ def __virtual__():
 
 @proxy_napalm_wrap
 def config(**kwargs):  # pylint: disable=unused-argument
-
     """
     Returns the configuration of the users on the device
 
@@ -100,7 +98,6 @@ def config(**kwargs):  # pylint: disable=unused-argument
 def set_users(
     users, test=False, commit=True, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Configures users on network devices.
 
@@ -149,7 +146,6 @@ def set_users(
 def delete_users(
     users, test=False, commit=True, **kwargs
 ):  # pylint: disable=unused-argument
-
     """
     Removes users from the configuration of network devices.
 

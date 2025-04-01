@@ -16,7 +16,6 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-
 import logging
 
 # import NAPALM utils
@@ -58,7 +57,6 @@ def __virtual__():
 
 @proxy_napalm_wrap
 def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argument
-
     """
     Displays all details for a certain route learned via a specific protocol.
     If the protocol is not specified, will return all possible routes.

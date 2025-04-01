@@ -81,11 +81,6 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
 $SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.txt"
-if ( $ARCH -eq "64bit" ) {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
-} else {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
-}
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
@@ -199,6 +194,25 @@ if ( $PKG ) {
             Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
+    }
+}
+
+# Create pywin32.pth file
+if ( -not ( Test-Path -Path "$SCRIPTS_DIR\pywin32.pth" ) ) {
+    Write-Host "Creating pywin32.pth file: " -NoNewline
+    $content = "# .pth file for the PyWin32 extensions`n" + `
+               "win32`n" + `
+               "win32\lib" + `
+               "Pythonwin" + `
+               "# And some hackery to deal with environments where the post_install script`n" + `
+               "# isn't run." + `
+               "import pywin32_bootstrap"
+    Set-Content -Path "$SCRIPTS_DIR\pywin32.pth" -Value $content
+    if ( Test-Path -Path "$SCRIPTS_DIR\pywin32.pth") {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
     }
 }
 

@@ -221,14 +221,10 @@ The best way to create new Formula repositories for now is to create a
 repository in your own account on GitHub and notify a SaltStack employee when
 it is ready. We will add you to the Contributors team on the
 `saltstack-formulas`_ organization and help you transfer the repository over.
-Ping a SaltStack employee on IRC (`#salt`_ on LiberaChat), join the
-``#formulas`` channel on the `salt-slack`_ (bridged to ``#saltstack-formulas``
-on LiberaChat) or send an email to the `salt-users`_ mailing list.  Note that
-IRC logs are available at http://ngxbot.nginx.org/logs/%23salt/ and archives
-for FreeNode (up to mid-June 2021) https://logbot-archive.s3.amazonaws.com/freenode/salt.gz
-and https://logbot-archive.s3.amazonaws.com/freenode/saltstack-formulas.gz.
+Join the ``#formulas`` channel on the `salt-discord`_
+or send an email to the `salt-users`_ mailing list.
 
-There are a lot of repositories in that organization! Team members can manage
+Team members can manage
 which repositories they are subscribed to on GitHub's watching page:
 https://github.com/watching.
 
@@ -246,7 +242,7 @@ your pull request has stayed open for more than a couple days feel free to
 "selfie-merge" your own pull request.
 
 .. _`at-mention`: https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax#mentioning-people-and-teams
-.. _`#salt`: https://web.libera.chat/#salt
+.. _`#salt`: https://discord.com/invite/J7b7EscrAs
 
 Style
 -----
@@ -262,7 +258,7 @@ file. This section contains several suggestions and examples.
     deploy_myapp:
       git.latest:
         - name: git@github.com/myco/myapp.git
-        - version: {{ salt.pillar.get('myapp:version', 'master') }}
+        - version: {{ salt['pillar.get']('myapp:version', 'master') }}
 
 Use a descriptive State ID
 ``````````````````````````
@@ -363,11 +359,11 @@ for commenting YAML code.
 
     # BAD EXAMPLE
     # The Jinja in this YAML comment is still executed!
-    # {% set apache_is_installed = 'apache' in salt.pkg.list_pkgs() %}
+    # {% set apache_is_installed = 'apache' in salt['pkg.list_pkgs']() %}
 
     # GOOD EXAMPLE
     # The Jinja in this Jinja comment will not be executed.
-    {# {% set apache_is_installed = 'apache' in salt.pkg.list_pkgs() %} #}
+    {# {% set apache_is_installed = 'apache' in salt['pkg.list_pkgs']() %} #}
 
 Easy on the Jinja!
 ------------------
@@ -427,7 +423,7 @@ Less common values are often found by running commands. For example:
 
 .. code-block:: jinja
 
-    {% set is_selinux_enabled = salt.cmd.run('sestatus') == '1' %}
+    {% set is_selinux_enabled = salt['cmd.run']('sestatus') == '1' %}
 
 This is usually best done with a variable assignment in order to separate the
 data from the state that will make use of the data.
@@ -442,7 +438,7 @@ from the Salt Master. For example:
 
 .. code-block:: jinja
 
-    {% set some_data = salt.pillar.get('some_data', {'sane default': True}) %}
+    {% set some_data = salt['pillar.get']('some_data', {'sane default': True}) %}
 
     {# or #}
 
@@ -478,7 +474,7 @@ Below is a simple example of a readable loop:
 
 .. code-block:: jinja
 
-    {% for user in salt.pillar.get('list_of_users', []) %}
+    {% for user in salt['pillar.get']('list_of_users', []) %}
 
     {# Ensure unique state IDs when looping. #}
     {{ user.name }}-{{ loop.index }}:
@@ -690,7 +686,7 @@ Macros are useful for creating reusable, parameterized states. For example:
         - groups: {{ groups | json() }}
     {% endmacro %}
 
-    {% for user_info in salt.pillar.get('my_users', []) %}
+    {% for user_info in salt['pillar.get']('my_users', []) %}
     {{ user_state('user_number_' ~ loop.index, **user_info) }}
     {% endfor %}
 
@@ -708,7 +704,7 @@ example, the following macro could be used to write a php.ini config file:
         - source: salt://php.ini.tmpl
         - template: jinja
         - context:
-            php_ini_settings: {{ salt.pillar.get('php_ini', {}) | json() }}
+            php_ini_settings: {{ salt['pillar.get']('php_ini', {}) | json() }}
 
 ``/srv/pillar/php.sls``:
 
@@ -920,7 +916,7 @@ Pillar can also be used.
 .. code-block:: jinja
 
     {% set lookup_table = {...} %}
-    {% do lookup_table.update(salt.pillar.get('my:custom:data')) %}
+    {% do lookup_table.update(salt['pillar.get']('my:custom:data')) %}
 
 When to use lookup tables
 `````````````````````````
@@ -994,7 +990,7 @@ XML.)
 .. code-block:: jinja
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
-    {% set server_xml_final_values = salt.pillar.get(
+    {% set server_xml_final_values = salt['pillar.get'](
         'appX:server_xml_overrides',
         default=server_xml_defaults,
         merge=True)
@@ -1033,11 +1029,11 @@ example:
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}
-    {% app = app_defaults.get(salt.grains.get('role')) %}
+    {% app = app_defaults.get(salt['grains.get']('role')) %}
 
     {# Allow values from Pillar to (optionally) update values from the lookup
        table. #}
-    {% do app_defaults.update(salt.pillar.get('myapp', {})) %}
+    {% do app_defaults.update(salt['pillar.get']('myapp', {})) %}
 
     deploy_application:
       git.latest:

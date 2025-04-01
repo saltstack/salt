@@ -2,7 +2,6 @@
 Test the directory roster.
 """
 
-
 import logging
 
 import pytest
@@ -111,14 +110,14 @@ def _test_match(ret, expected):
     assertDictEquals is too strict with OrderedDicts. The order isn't crucial
     for roster entries, so we test that they contain the expected members directly.
     """
-    assert ret != {}, "Found no matches, expected {}".format(expected)
+    assert ret != {}, f"Found no matches, expected {expected}"
     for minion, data in ret.items():
         assert minion in expected, "Expected minion {} to match, but it did not".format(
             minion
         )
         assert (
             dict(data) == expected[minion]
-        ), "Data for minion {} did not match expectations".format(minion)
+        ), f"Data for minion {minion} did not match expectations"
 
 
 def test_basic_glob(expected, create_roster_files):

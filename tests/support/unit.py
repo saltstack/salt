@@ -18,6 +18,7 @@
 
     .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 """
+
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 
@@ -158,7 +159,6 @@ class TestLoader(_TestLoader):
 
 class TestCase(_TestCase):
 
-    # pylint: disable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
     ##   Commented out because it may be causing tests to hang
     ##   at the end of the run
     #
@@ -178,7 +178,6 @@ class TestCase(_TestCase):
     #            print('\nWARNING: A misbehaving test has modified the working directory!\nThe test suite has reset the working directory '
     #                    'on tearDown() to {0}\n'.format(cls._cwd))
     #            cls._chdir_counter += 1
-    # pylint: enable=expected-an-indented-block-comment,too-many-leading-hastag-for-block-comment
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
@@ -225,7 +224,7 @@ class TestCase(_TestCase):
                             found_zombies += 1
                 except Exception:  # pylint: disable=broad-except
                     pass
-                proc_info += "|Z:{}".format(found_zombies)
+                proc_info += f"|Z:{found_zombies}"
             proc_info += "] {short_desc}".format(short_desc=desc if desc else "")
             return proc_info
         else:

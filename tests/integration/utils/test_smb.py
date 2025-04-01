@@ -1,6 +1,7 @@
 """
 Test utility methods that communicate with SMB shares.
 """
+
 import getpass
 import logging
 import os

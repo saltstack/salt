@@ -1,32 +1,5 @@
 # Windows source distribution requirements
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are windows specific, place "; sys_platform == 'win32'" in front of the requirement.
 
 -r zeromq.txt
-
-pywin32>=305
-wmi>=1.5.1
-pythonnet>=3.0.1
-
-backports.ssl-match-hostname>=3.7.0.1; python_version < '3.7'
-certifi>=2022.12.07
-cffi>=1.14.5
-cherrypy>=18.6.1
-gitpython>=3.1.30
-cryptography>=41.0.3
-lxml>=4.6.3
-pyasn1>=0.4.8
-pymssql>=2.2.1
-pymysql>=1.0.2
-pyopenssl>=23.2.0
-python-dateutil>=2.8.1
-python-gnupg>=0.4.7
-requests>=2.25.1
-setproctitle>=1.2.3
-timelib>=0.2.5
-urllib3>=1.26.5
-# Watchdog pulls in a GPL-3 package, argh, which cannot be shipped on the
-# windows distribution package.
-#
-# watchdog>=2.1.3
-wheel>=0.38.1
-
-importlib-metadata>=3.3.0

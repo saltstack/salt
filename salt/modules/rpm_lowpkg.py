@@ -110,14 +110,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
+                f"Unable to retrieve {path} from saltenv '{saltenv}'"
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{} does not exist on minion".format(path))
+            raise CommandExecutionError(f"{path} does not exist on minion")
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{} does not exist on minion".format(path))
+            raise SaltInvocationError(f"{path} does not exist on minion")
 
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
     # with 'none'
@@ -495,7 +495,7 @@ def diff(package_path, path):
     )
     res = __salt__["cmd.shell"](cmd.format(package_path, path), output_loglevel="trace")
     if res and res.startswith("Binary file"):
-        return "File '{}' is binary and its content has been modified.".format(path)
+        return f"File '{path}' is binary and its content has been modified."
 
     return res
 
@@ -710,7 +710,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 
@@ -762,7 +765,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
-                        return "0:{}".format(ver)
+                        return f"0:{ver}"
 
                     try:
                         if ":" not in ver:
@@ -818,7 +821,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 )
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
-                    "Comparison result '{}' is invalid".format(cmp_result)
+                    f"Comparison result '{cmp_result}' is invalid"
                 )
             return cmp_result
 

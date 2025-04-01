@@ -161,7 +161,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows raising custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` Jinja function.
 
 .. code-block:: jinja
 
@@ -174,8 +174,8 @@ exception is raised, causing the rendering to fail with the following message:
 
     TemplateError: Custom Error
 
-Filters
-=======
+Custom Filters
+==============
 
 Saltstack extends `builtin filters`_ with these custom filters:
 
@@ -405,8 +405,9 @@ This text will be wrapped in quotes.
 
 .. versionadded:: 2017.7.0
 
-Scan through string looking for a location where this regular expression
-produces a match. Returns ``None`` in case there were no matches found
+Looks for a match for the specified regex anywhere in the string. If the string
+does not match the regex, this filter returns ``None``. If the string _does_
+match the regex, then the `capture groups`_ for the regex will be returned.
 
 Example:
 
@@ -420,6 +421,29 @@ Returns:
 
   ("defabcdef",)
 
+If the regex you use does not contain a capture group then the number of
+capture groups will be zero, and a matching regex will return an empty tuple.
+This means that the following ``if`` statement would evaluate as ``False``:
+
+.. code-block:: jinja
+
+  {%- if 'foobar' | regex_search('foo') %}
+
+If you do not need a capture group and are just looking to test if a string
+matches a regex, then you should check to see if the filter returns ``None``:
+
+.. code-block:: jinja
+
+  {%- if (some_var | regex_search('foo')) is not none %}
+
+.. note::
+
+   In a Jinja statement, a null value (i.e. a Python ``None``) should be
+   expressed as ``none`` (i.e. lowercase). More info on this can be found in
+   the **Note** section here in the `jinja docs`_.
+
+.. _`capture groups`: https://docs.python.org/3/library/re.html#re.Match.groups
+.. _`jinja docs`:  https://jinja.palletsprojects.com/en/stable/templates/#literals
 
 .. jinja_ref:: regex_match
 
@@ -428,8 +452,8 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-If zero or more characters at the beginning of string match this regular
-expression, otherwise returns ``None``.
+Works exactly like :jinja_ref:`regex_search`, but only checks for matches at
+the _beginning_ of the string passed into this filter.
 
 Example:
 
@@ -2506,7 +2530,8 @@ dictionary of :term:`execution function <Execution Function>`.
 
 .. code-block:: jinja
 
-    # The following two function calls are equivalent.
+    # The following two function calls are mostly equivalent,
+    # but the first style should be preferred to avoid edge cases.
     {{ salt['cmd.run']('whoami') }}
     {{ salt.cmd.run('whoami') }}
 
@@ -2536,7 +2561,7 @@ For example, making the call:
 
 .. code-block:: jinja
 
-    {%- do salt.log.error('testing jinja logging') -%}
+    {%- do salt['log.error']('testing jinja logging') -%}
 
 Will insert the following message in the minion logs:
 
@@ -2552,14 +2577,14 @@ Profiling
 .. versionadded:: 3002
 
 When working with a very large codebase, it becomes increasingly imperative to
-trace inefficiencies with state and pillar render times.  The `profile` jinja
+trace inefficiencies with state and pillar render times. The `profile` Jinja
 block enables the user to get finely detailed information on the most expensive
 areas in the codebase.
 
 Profiling blocks
 ----------------
 
-Any block of jinja code can be wrapped in a ``profile`` block.  The syntax for
+Any block of Jinja code can be wrapped in a ``profile`` block.  The syntax for
 a profile block is ``{% profile as '<name>' %}<jinja code>{% endprofile %}``,
 where ``<name>`` can be any string.  The ``<name>`` token will appear in the
 log at the ``profile`` level along with the render time of the block.
@@ -2626,15 +2651,15 @@ For ``import_*`` blocks, the ``profile`` log statement has the following form:
     [...]
 
 Python Methods
-====================
+==============
 
-A powerful feature of jinja that is only hinted at in the official jinja
-documentation is that you can use the native python methods of the
-variable type. Here is the python documentation for `string methods`_.
+A powerful feature of Jinja that is only hinted at in the official Jinja
+documentation is that you can use the native Python methods of the
+variable type. Here is the Python documentation for `string methods`_.
 
 .. code-block:: jinja
 
-  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+  {% set hostname, domain = grains.id.partition('.')[::2] %}{{ hostname }}
 
 .. code-block:: jinja
 
@@ -2681,7 +2706,7 @@ module, say ``my_filters`` and use as:
 
 .. code-block:: jinja
 
-    {{ salt.my_filters.my_jinja_filter(my_variable) }}
+    {{ salt['my_filters.my_jinja_filter'](my_variable) }}
 
 The greatest benefit is that you are able to access thousands of existing functions, e.g.:
 
@@ -2689,16 +2714,16 @@ The greatest benefit is that you are able to access thousands of existing functi
 
   .. code-block:: jinja
 
-    {{ salt.dnsutil.AAAA('www.google.com') }}
+    {{ salt['dnsutil.AAAA']('www.google.com') }}
 
 - retrieve a specific field value from a :mod:`Redis <salt.modules.modredis>` hash:
 
   .. code-block:: jinja
 
-    {{ salt.redis.hget('foo_hash', 'bar_field') }}
+    {{ salt['redis.hget']('foo_hash', 'bar_field') }}
 
 - get the routes to ``0.0.0.0/0`` using the :mod:`NAPALM route <salt.modules.napalm_route>`:
 
   .. code-block:: jinja
 
-    {{ salt.route.show('0.0.0.0/0') }}
+    {{ salt['route.show']('0.0.0.0/0') }}

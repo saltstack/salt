@@ -74,13 +74,13 @@ def hosts_append(hostsfile="/etc/hosts", ip_addr=None, entries=None):
                 host_list.remove(host)
 
     if not host_list:
-        return "No additional hosts were added to {}".format(hostsfile)
+        return f"No additional hosts were added to {hostsfile}"
 
     append_line = "\n{} {}".format(ip_addr, " ".join(host_list))
     with salt.utils.files.fopen(hostsfile, "a") as fp_:
         fp_.write(salt.utils.stringutils.to_str(append_line))
 
-    return "The following line was added to {}:{}".format(hostsfile, append_line)
+    return f"The following line was added to {hostsfile}:{append_line}"
 
 
 def hosts_remove(hostsfile="/etc/hosts", entries=None):
@@ -103,7 +103,7 @@ def hosts_remove(hostsfile="/etc/hosts", entries=None):
     with salt.utils.files.fopen(hostsfile, "w") as out_file:
         for line in hosts.splitlines():
             if not line or line.strip().startswith("#"):
-                out_file.write(salt.utils.stringutils.to_str("{}\n".format(line)))
+                out_file.write(salt.utils.stringutils.to_str(f"{line}\n"))
                 continue
             comps = line.split()
             for host in host_list:
@@ -149,7 +149,7 @@ def parse_zone(zonefile=None, zone=None):
             mode = "multi"
             multi = ""
         if mode == "multi":
-            multi += " {}".format(line)
+            multi += f" {line}"
             if ")" in line:
                 mode = "single"
                 line = multi.replace("(", "").replace(")", "")
@@ -267,7 +267,7 @@ def A(host, nameserver=None):
             ]
             return addresses
         except socket.gaierror:
-            return "Unable to resolve {}".format(host)
+            return f"Unable to resolve {host}"
 
     return "This function requires dig, which is not currently available"
 
@@ -299,7 +299,7 @@ def AAAA(host, nameserver=None):
             ]
             return addresses
         except socket.gaierror:
-            return "Unable to resolve {}".format(host)
+            return f"Unable to resolve {host}"
 
     return "This function requires dig, which is not currently available"
 
@@ -394,7 +394,7 @@ def serial(zone="", update=False):
     grains = {}
     key = "dnsserial"
     if zone:
-        key += "_{}".format(zone)
+        key += f"_{zone}"
     stored = __salt__["grains.get"](key=key)
     present = time.strftime("%Y%m%d01")
     if not update:

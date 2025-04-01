@@ -88,7 +88,7 @@ def clean_fsbackend(opts):
     # Clear remote fileserver backend caches so they get recreated
     for backend in ("git", "hg", "svn"):
         if backend in opts["fileserver_backend"]:
-            env_cache = os.path.join(opts["cachedir"], "{}fs".format(backend), "envs.p")
+            env_cache = os.path.join(opts["cachedir"], f"{backend}fs", "envs.p")
             if os.path.isfile(env_cache):
                 log.debug("Clearing %sfs env cache", backend)
                 try:
@@ -99,7 +99,7 @@ def clean_fsbackend(opts):
                     )
 
             file_lists_dir = os.path.join(
-                opts["cachedir"], "file_lists", "{}fs".format(backend)
+                opts["cachedir"], "file_lists", f"{backend}fs"
             )
             try:
                 file_lists_caches = os.listdir(file_lists_dir)
@@ -132,7 +132,7 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(auth_cache):
+            for dirpath, dirnames, filenames in salt.utils.path.os_walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
@@ -177,7 +177,7 @@ def mk_key(opts, user):
             opts["cachedir"], ".{}_key".format(user.replace("\\", "_"))
         )
     else:
-        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
 
     if os.path.exists(keyfile):
         log.debug("Removing stale keyfile: %s", keyfile)
@@ -220,7 +220,7 @@ def access_keys(opts):
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
 
-        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
         if os.path.exists(keyfile):
             with salt.utils.files.fopen(keyfile, "r") as fp:
                 key = salt.utils.stringutils.to_unicode(fp.read())
@@ -380,7 +380,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
@@ -603,7 +603,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("minions/{}".format(minion), "mine")
+            mine_data = self.cache.fetch(f"minions/{minion}", "mine")
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -630,7 +630,7 @@ class RemoteFuncs:
                                 continue
                             salt.utils.dictupdate.set_dict_key_value(
                                 minion_side_acl,
-                                "{}:{}".format(minion, function),
+                                f"{minion}:{function}",
                                 get_minion,
                             )
                 if salt.utils.mine.minion_side_acl_denied(
@@ -738,7 +738,7 @@ class RemoteFuncs:
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"
@@ -1190,7 +1190,7 @@ class LocalFuncs:
         fun = load.pop("fun")
         tag = salt.utils.event.tagify(jid, prefix="wheel")
         data = {
-            "fun": "wheel.{}".format(fun),
+            "fun": f"wheel.{fun}",
             "jid": jid,
             "tag": tag,
             "user": username,
@@ -1274,7 +1274,7 @@ class LocalFuncs:
         # Setup authorization list variable and error information
         auth_list = auth_check.get("auth_list", [])
         error = auth_check.get("error")
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+        err_msg = f'Authentication failure of type "{auth_type}" occurred.'
 
         if error:
             # Authentication error occurred: do not continue.
