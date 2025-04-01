@@ -3423,17 +3423,18 @@ def privileges_grant(
 
     _grants = ",".join(_privs)
 
-    if object_type in ["table", "sequence"]:
+    if object_type in ["table", "sequence", "function"]:
         on_part = f'{prepend}."{object_name}"'
-    elif object_type == "function":
-        on_part = f"{object_name}"
     else:
         on_part = f'"{object_name}"'
 
     if grant_option:
         if object_type == "group":
             query = f'GRANT {object_name} TO "{name}" WITH ADMIN OPTION'
-        elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
+        elif (
+            object_type in ("table", "sequence", "function")
+            and object_name.upper() == "ALL"
+        ):
             query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), prepend, name
             )
@@ -3444,7 +3445,10 @@ def privileges_grant(
     else:
         if object_type == "group":
             query = f'GRANT {object_name} TO "{name}"'
-        elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
+        elif (
+            object_type in ("table", "sequence", "function")
+            and object_name.upper() == "ALL"
+        ):
             query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}"'.format(
                 _grants, object_type.upper(), prepend, name
             )
@@ -3571,10 +3575,10 @@ def privileges_revoke(
 
     _grants = ",".join(_privs)
 
-    if object_type in ["table", "sequence"]:
-        on_part = f"{prepend}.{object_name}"
+    if object_type in ["table", "sequence", "function"]:
+        on_part = f'{prepend}."{object_name}"'
     else:
-        on_part = object_name
+        on_part = f'"{object_name}"'
 
     if object_type == "group":
         query = f"REVOKE {object_name} FROM {name}"
