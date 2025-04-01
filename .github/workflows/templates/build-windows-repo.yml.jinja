@@ -10,6 +10,8 @@
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Get Salt Project GitHub Actions Bot Environment
         run: |
@@ -18,25 +20,25 @@
           echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Windows NSIS x86 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86-NSIS
           path: artifacts/pkgs/incoming
 
       - name: Download Windows MSI x86 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-x86-MSI
           path: artifacts/pkgs/incoming
 
       - name: Download Windows NSIS amd64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-amd64-NSIS
           path: artifacts/pkgs/incoming
 
       - name: Download Windows MSI amd64 Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-amd64-MSI
           path: artifacts/pkgs/incoming
@@ -83,7 +85,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-windows
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

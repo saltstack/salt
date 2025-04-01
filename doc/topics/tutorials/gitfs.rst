@@ -1,5 +1,6 @@
 .. _tutorial-gitfs:
 
+
 ==================================
 Git Fileserver Backend Walkthrough
 ==================================
@@ -276,10 +277,12 @@ And each repository contains some files:
         edit/vim.sls
         edit/vimrc
         nginx/init.sls
+        shell/init.sls
 
     second.git:
         edit/dev_vimrc
         haproxy/init.sls
+        shell.sls
 
     third:
         haproxy/haproxy.conf
@@ -295,6 +298,12 @@ is executed. For example:
   the :strong:`https://github.com/example/second.git` git repo.
 * A request for the file :strong:`salt://haproxy/haproxy.conf` will be served from the
   :strong:`file:///root/third` repo.
+
+Also a requested state file overrules a directory with an `init.sls`-file.
+For example:
+
+* A request for :strong:`state.apply shell` will be served from the
+  :strong:`https://github.com/example/second.git` git repo.
 
 .. note::
 

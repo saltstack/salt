@@ -4,7 +4,6 @@
     TestCase for the salt.modules.at module
 """
 
-
 import pytest
 
 import salt.modules.at as at

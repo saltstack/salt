@@ -22,7 +22,6 @@ from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
-import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -93,6 +92,8 @@ class SaltCacheLoader(BaseLoader):
             or not hasattr(self._file_client, "opts")
             or self._file_client.opts["file_roots"] != self.opts["file_roots"]
         ):
+            import salt.fileclient
+
             self._file_client = salt.fileclient.get_file_client(
                 self.opts, self.pillar_rend
             )
@@ -127,7 +128,7 @@ class SaltCacheLoader(BaseLoader):
         the importing file.
 
         """
-        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        # FIXME: somewhere do separator replacement: '\\' => '/'
         _template = template
         if template.split("/", 1)[0] in ("..", "."):
             is_relative = True
@@ -136,7 +137,6 @@ class SaltCacheLoader(BaseLoader):
         # checks for relative '..' paths that step-out of file_roots
         if is_relative:
             # Starts with a relative path indicator
-
             if not environment or "tpldir" not in environment.globals:
                 log.warning(
                     'Relative path "%s" cannot be resolved without an environment',
@@ -240,9 +240,7 @@ class PrintableDict(OrderedDict):
         for key, value in self.items():
             if isinstance(value, str):
                 # keeps quotes around strings
-                # pylint: disable=repr-flag-used-in-string
                 output.append(f"{key!r}: {value!r}")
-                # pylint: enable=repr-flag-used-in-string
             else:
                 # let default output
                 output.append(f"{key!r}: {value!s}")
@@ -253,9 +251,7 @@ class PrintableDict(OrderedDict):
         for key, value in self.items():
             # Raw string formatter required here because this is a repr
             # function.
-            # pylint: disable=repr-flag-used-in-string
             output.append(f"{key!r}: {value!r}")
-            # pylint: enable=repr-flag-used-in-string
         return "{" + ", ".join(output) + "}"
 
 

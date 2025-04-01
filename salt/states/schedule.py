@@ -264,6 +264,7 @@ def present(name, **kwargs):
             kwargs["test"] = True
             result = __salt__["schedule.add"](name, **kwargs)
             ret["comment"].append(result["comment"])
+            ret["changes"] = {name: "added"}
         else:
             result = __salt__["schedule.add"](name, **kwargs)
             if not result["result"]:

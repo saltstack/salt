@@ -1,37 +1,35 @@
-<%- for platform, pkg_type, display_name, runner_type in (
-                                                          ("linux", "rpm", "RPM", "self-hosted"),
-                                                          ("linux", "deb", "DEB", "self-hosted"),
-                                                          ("windows", "windows", "Windows", "github-hosted"),
-                                                          ("macos", "macos", "macOS", "github-hosted"),
-                                                        ) %>
-
-  <%- for backend in ("onedir", "src") %>
-  <%- set job_name = "build-{}-pkgs-{}".format(pkg_type, backend) %>
+<%- if gh_environment != "ci" -%>
+<%- set pkg_types = ("onedir", "src") %>
+<%- else -%>
+<%- set pkg_types = ("onedir",) %>
+<%- endif -%>
+  <%- for backend in pkg_types %>
+  <%- set job_name = "build-pkgs-{}".format(backend) %>
   <%- if backend == "src" %>
     <%- do conclusion_needs.append(job_name) %>
   <%- endif %>
 
   <{ job_name }>:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['<{ runner_type }>'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
-      - build-salt-onedir-<{ platform }>
-    uses: ./.github/workflows/build-<{ pkg_type }>-packages.yml
+      - build-salt-onedir
+    uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
       source: "<{ backend }>"
-    <%- if pkg_type in ("macos", "windows") and gh_environment %>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+    <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
-      <%- if pkg_type == "macos" %>
-      sign-packages: true
-      <%- else %>
-      sign-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
-      <%- endif %>
+      sign-macos-packages: false
+      sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
     secrets: inherit
+
     <%- endif %>
 
   <%- endfor %>
-<%- endfor %>

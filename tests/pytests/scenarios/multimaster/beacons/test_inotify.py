@@ -46,6 +46,7 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
             "inotify",
             beacon_data=[{"files": {str(inotify_test_path): {"mask": ["create"]}}}],
             minion_tgt=salt_mm_minion_1.id,
+            timeout=60,
         )
         assert ret.returncode == 0
         log.debug("Inotify beacon add returned: %s", ret.data or ret.stdout)
@@ -95,7 +96,7 @@ def test_beacons_duplicate_53344(
     # Since beacons will be executed both together, we wait for the status beacon event
     # which means that, the inotify becacon was executed too
     start_time = setup_beacons
-    expected_tag = "salt/beacon/{}/status/*".format(salt_mm_minion_1.id)
+    expected_tag = f"salt/beacon/{salt_mm_minion_1.id}/status/*"
     expected_patterns = [
         (salt_mm_master_1.id, expected_tag),
         (salt_mm_master_2.id, expected_tag),

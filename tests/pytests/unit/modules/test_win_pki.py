@@ -1,11 +1,11 @@
 """
-    Test cases for salt.modules.win_pki
+Test cases for salt.modules.win_pki
 """
-
 
 import pytest
 
 import salt.modules.win_pki as win_pki
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 
@@ -182,3 +182,46 @@ def test_remove_cert(thumbprint, certs):
         "salt.modules.win_pki.get_certs", MagicMock(return_value=certs)
     ):
         assert win_pki.remove_cert(thumbprint=thumbprint[::-1])
+
+
+def test__cmd_run():
+    """
+    Test the _cmd_run function
+    """
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stderr": "", "stdout": "some result"}
+    )
+    with patch.dict(win_pki.__salt__, {"cmd.run_all": mock_run}):
+        result = win_pki._cmd_run(cmd="command")
+        assert result == "some result"
+
+
+def test__cmd_run_as_json():
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stderr": "", "stdout": '{"key": "value"}'}
+    )
+    with patch.dict(win_pki.__salt__, {"cmd.run_all": mock_run}):
+        result = win_pki._cmd_run(cmd="command", as_json=True)
+        assert result == {"key": "value"}
+
+
+def test__cmd_run_stderr():
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stderr": "some error", "stdout": ""}
+    )
+    with patch.dict(win_pki.__salt__, {"cmd.run_all": mock_run}):
+        with pytest.raises(CommandExecutionError) as exc_info:
+            win_pki._cmd_run(cmd="command")
+        expected = "Unable to execute command: command\nError: some error"
+        assert exc_info.value.args[0] == expected
+
+
+def test__cmd_run_bad_json():
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stderr": "", "stdout": "not : valid\njson"}
+    )
+    with patch.dict(win_pki.__salt__, {"cmd.run_all": mock_run}):
+        with pytest.raises(CommandExecutionError) as exc_info:
+            win_pki._cmd_run(cmd="command", as_json=True)
+        expected = "Unable to parse return data as JSON:\nnot : valid\njson"
+        assert exc_info.value.args[0] == expected

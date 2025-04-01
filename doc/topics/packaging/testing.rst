@@ -27,7 +27,7 @@ In order to run the package tests, the `relenv
 built packages need to be placed in the correct locations.
 
 * Place all salt packages for the applicable testing version in
-  ``<repo-root>/pkg/artifacts/``.
+  ``<repo-root>/artifacts/pkg/``.
 * The onedir must be located under ``<repo-root>/artifacts/``.
 * Additionally, to ensure complete parity with Salt's CI/CD suite, place the
   ``nox`` virtual environment in ``<repo-root>/.nox/test-pkgs-onedir``.
@@ -109,7 +109,7 @@ can be performed for artifacts from nightly builds.
 
 #. Place the artifacts in the correct location:
 
-    Unzip the packages and place them in ``<repo-root>/pkg/artifacts/``.
+    Unzip the packages and place them in ``<repo-root>/artifacts/pkg/``.
 
     You must unzip and untar the onedir packages and place them in
     ``<repo-root>/artifacts/``. Windows onedir requires an additional unzip

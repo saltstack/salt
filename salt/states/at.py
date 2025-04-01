@@ -209,10 +209,10 @@ def absent(name, jobid=None, **kwargs):
                 return ret
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "more than one job was return for job with id {jobid}".format(
-                jobid=jobid
+            ret["comment"] = (
+                "more than one job was return for job with id {jobid}".format(
+                    jobid=jobid
+                )
             )
             return ret
 

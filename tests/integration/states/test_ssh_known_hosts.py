@@ -86,16 +86,14 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             self.assertNotIn(ret, ("", None))
         except AssertionError:
-            raise AssertionError("Salt return '{}' is in ('', None).".format(ret))
+            raise AssertionError(f"Salt return '{ret}' is in ('', None).")
         ret = self.run_function(
             "ssh.get_known_host_entries", ["root", GITHUB_IP], config=self.known_hosts
         )[0]
         try:
             self.assertNotIn(ret, ("", None, {}))
         except AssertionError:
-            raise AssertionError(
-                "Salt return '{}' is in ('', None,".format(ret) + " {})"
-            )
+            raise AssertionError(f"Salt return '{ret}' is in ('', None," + " {})")
 
     @pytest.mark.slow_test
     def test_present_fail(self):
@@ -117,9 +115,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         known_hosts = os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts")
         shutil.copyfile(known_hosts, self.known_hosts)
         if not os.path.isfile(self.known_hosts):
-            self.skipTest(
-                "Unable to copy {} to {}".format(known_hosts, self.known_hosts)
-            )
+            self.skipTest(f"Unable to copy {known_hosts} to {self.known_hosts}")
 
         kwargs = {"name": "github.com", "user": "root", "config": self.known_hosts}
         # test first

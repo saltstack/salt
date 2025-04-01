@@ -59,7 +59,7 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
 import tornado.iostream
@@ -76,6 +76,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
+from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
@@ -185,17 +186,23 @@ def tagify(suffix="", prefix="", base=SALT):
 
     """
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    if isinstance(suffix, Iterable) and not isinstance(
+        suffix, str
+    ):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    str_parts = []
+    for part in parts:
+        part_str = None
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            part_str = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
-    return TAGPARTER.join([part for part in parts if part])
+            part_str = str(part)
+        if part_str:
+            str_parts.append(part_str)
+    return TAGPARTER.join(str_parts)
 
 
 class SaltEvent:
@@ -421,7 +428,13 @@ class SaltEvent:
             salt.utils.stringutils.to_bytes(TAGEND)
         )  # split tag from data
         mtag = salt.utils.stringutils.to_str(mtag)
-        data = salt.payload.loads(mdata, encoding="utf-8")
+        try:
+            data = salt.payload.loads(mdata, encoding="utf-8")
+        except SaltDeserializationError:
+            log.warning(
+                "SaltDeserializationError on unpacking data, the payload could be incomplete"
+            )
+            raise
         return mtag, data
 
     @classmethod
@@ -550,6 +563,9 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
+                if not self._run_io_loop_sync:
+                    log.error("Trying to get event with async subscriber")
+                    raise SaltInvocationError("get_event needs synchronous subscriber")
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
@@ -562,6 +578,9 @@ class SaltEvent:
                     raise
                 else:
                     return None
+            except SaltDeserializationError:
+                log.error("Unable to deserialize received event")
+                return None
             except RuntimeError:
                 return None
 
@@ -706,8 +725,7 @@ class SaltEvent:
                 continue
             yield data
 
-    @tornado.gen.coroutine
-    def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
@@ -826,6 +844,14 @@ class SaltEvent:
             ret = load.get("return", {})
             retcode = load["retcode"]
 
+        if not isinstance(ret, dict):
+            log.error(
+                "Event with bad payload received from '%s': %s",
+                load.get("id", "UNKNOWN"),
+                "".join(ret) if isinstance(ret, list) else ret,
+            )
+            return
+
         try:
             for tag, data in ret.items():
                 data["retcode"] = retcode
@@ -845,7 +871,8 @@ class SaltEvent:
                     )
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Event iteration failed with exception: %s",
+                "Event from '%s' iteration failed with exception: %s",
+                load.get("id", "UNKNOWN"),
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )

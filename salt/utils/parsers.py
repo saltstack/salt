@@ -7,13 +7,14 @@
 
     This is where all the black magic happens on all of salt's CLI tools.
 """
+
 # pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
 import copy
 import getpass
 import logging
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import signal
 import sys
@@ -25,7 +26,6 @@ import salt._logging
 import salt.config as config
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.features
 import salt.syspaths as syspaths
 import salt.utils.args
 import salt.utils.data
@@ -454,6 +454,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
             if value != default:
                 # The user passed an argument, we won't override it with the
                 # one from Saltfile, if any
+                cli_config.pop(option.dest)
                 continue
 
             # We reached this far! Set the Saltfile value on the option
@@ -477,6 +478,7 @@ class SaltfileMixIn(metaclass=MixInMeta):
                 if value != default:
                     # The user passed an argument, we won't override it with
                     # the one from Saltfile, if any
+                    cli_config.pop(option.dest)
                     continue
 
                 setattr(self.options, option.dest, cli_config[option.dest])
@@ -1929,9 +1931,7 @@ class MasterOptionParser(
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS["log_file"]
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
 
 class MinionOptionParser(
@@ -1946,13 +1946,11 @@ class MinionOptionParser(
     _default_logging_logfile_ = config.DEFAULT_MINION_OPTS["log_file"]
 
     def setup_config(self):
-        opts = config.minion_config(
+        return config.minion_config(
             self.get_config_file_path(),  # pylint: disable=no-member
             cache_minion_id=True,
             ignore_config_errors=False,
         )
-        salt.features.setup_features(opts)
-        return opts
 
 
 class ProxyMinionOptionParser(
@@ -1983,11 +1981,9 @@ class ProxyMinionOptionParser(
         except AttributeError:
             minion_id = None
 
-        opts = config.proxy_config(
+        return config.proxy_config(
             self.get_config_file_path(), cache_minion_id=False, minion_id=minion_id
         )
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SyndicOptionParser(
@@ -2017,11 +2013,9 @@ class SyndicOptionParser(
     ]
 
     def setup_config(self):
-        opts = config.syndic_config(
+        return config.syndic_config(
             self.get_config_file_path(), self.get_config_file_path("minion")
         )
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SaltCMDOptionParser(
@@ -2360,9 +2354,7 @@ class SaltCMDOptionParser(
                 self.exit(42, "\nIncomplete options passed.\n\n")
 
     def setup_config(self):
-        opts = config.client_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltCPOptionParser(
@@ -2433,9 +2425,7 @@ class SaltCPOptionParser(
         self.config["dest"] = self.args[-1]
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
 
 class SaltKeyOptionParser(
@@ -2727,7 +2717,6 @@ class SaltKeyOptionParser(
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
             keys_config["pki_dir"] = self.options.gen_keys_dir
-        salt.features.setup_features(keys_config)
         return keys_config
 
     def process_rotate_aes_key(self):
@@ -2974,7 +2963,6 @@ class SaltCallOptionParser(
             opts = config.minion_config(
                 self.get_config_file_path(), cache_minion_id=True
             )
-        salt.features.setup_features(opts)
         return opts
 
     def process_module_dirs(self):
@@ -3076,9 +3064,7 @@ class SaltRunOptionParser(
             self.config["arg"] = []
 
     def setup_config(self):
-        opts = config.client_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltSSHOptionParser(
@@ -3108,6 +3094,7 @@ class SaltSSHOptionParser(
     ]
 
     def _mixin_setup(self):
+        # pylint: disable=W0106
         self.add_option(
             "-r",
             "--raw",
@@ -3191,6 +3178,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-exclude-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,
@@ -3234,6 +3228,16 @@ class SaltSSHOptionParser(
                 "custom grains/modules/states have been added or updated."
             ),
         )
+        self.add_option(
+            "--relenv",
+            dest="relenv",
+            default=False,
+            action="store_true",
+            help=(
+                "Deploy and use a relenv (Salt+Python bundled) environment on the "
+                "SSH target."
+            ),
+        ),
         self.add_option(
             "--python2-bin",
             default="python2",
@@ -3417,10 +3421,11 @@ class SaltSSHOptionParser(
                         option.explicit = True
                         break
 
+        if self.options.regen_thin and self.options.relenv:
+            self.error("--thin and --relenv are mutually exclusive")
+
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
 
 class SaltCloudParser(
@@ -3481,11 +3486,9 @@ class SaltCloudParser(
 
     def setup_config(self):
         try:
-            opts = config.cloud_config(self.get_config_file_path())
+            return config.cloud_config(self.get_config_file_path())
         except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SPMParser(
@@ -3541,9 +3544,7 @@ class SPMParser(
                 self.error("Insufficient arguments")
 
     def setup_config(self):
-        opts = salt.config.spm_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return salt.config.spm_config(self.get_config_file_path())
 
 
 class SaltAPIParser(
@@ -3569,8 +3570,6 @@ class SaltAPIParser(
     _default_logging_logfile_ = config.DEFAULT_API_OPTS[_logfile_config_setting_name_]
 
     def setup_config(self):
-        opts = salt.config.api_config(
+        return salt.config.api_config(
             self.get_config_file_path()
         )  # pylint: disable=no-member
-        salt.features.setup_features(opts)
-        return opts

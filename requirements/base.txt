@@ -1,14 +1,26 @@
-Jinja2
+--constraint=constraints.txt
+
+Jinja2>=3.1.5
 jmespath
-msgpack>=1.0.0
+msgpack>=1.0.0 ; python_version < '3.13'
+msgpack>=1.1.0 ; python_version >= '3.13'
 PyYAML
 MarkupSafe
-requests>=2.25.1
+networkx
+requests<2.32.0 ; python_version < '3.10'
+requests>=2.32.3 ; python_version >= '3.10'
+certifi==2023.07.22; python_version < '3.10'
+certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
-psutil>=5.0.0
+psutil<6.0.0; python_version <= '3.9'
+psutil>=5.0.0; python_version >= '3.10'
 packaging>=21.3
 looseversion
 tornado>=6.3.3
+aiohttp>=3.9.0
+urllib3>=1.26.18
+
+croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
 # We need contextvars for salt-ssh.
 # Even on python versions which ships with contextvars in the standard library!
@@ -16,20 +28,23 @@ contextvars
 
 setproctitle>=1.2.3
 timelib>=0.2.5
-pyopenssl>=20.0.1
+pyopenssl>=24.0.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 importlib-metadata>=3.3.0
-cryptography>=41.0.3
+cryptography>=42.0.0; python_version < '3.13'
+cryptography==42.0.2; python_version >= '3.13'
 
 # From old requirements/static/pkg/linux.in
 rpm-vercmp; sys_platform == 'linux'
 
 # From old windows.txt requirements file
+gitpython>=3.1.37; sys_platform == 'win32'
+lxml>=4.6.3; sys_platform == 'win32'
+pymssql>=2.2.11; sys_platform == 'win32'
+pymysql>=1.0.2; sys_platform == 'win32'
+pythonnet>=3.0.4; sys_platform == 'win32' and python_version < '3.13'
 pywin32>=305; sys_platform == 'win32'
 wmi>=1.5.1; sys_platform == 'win32'
-pythonnet>=3.0.1; sys_platform == 'win32'
-pymssql>=2.2.1; sys_platform == 'win32'
-pymysql>=1.0.2; sys_platform == 'win32'
-lxml>=4.6.3; sys_platform == 'win32'
+xmltodict>=0.13.0; sys_platform == 'win32'

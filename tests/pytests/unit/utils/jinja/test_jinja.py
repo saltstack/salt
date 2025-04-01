@@ -1,6 +1,7 @@
 """
 Tests for salt.utils.jinja
 """
+
 import salt.utils.dateutils  # pylint: disable=unused-import
 from salt.utils.jinja import Markup, indent, tojson
 

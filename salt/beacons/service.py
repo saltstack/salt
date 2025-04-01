@@ -1,6 +1,7 @@
 """
 Send events covering service status
 """
+
 import logging
 import os
 import time

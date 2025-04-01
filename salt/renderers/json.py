@@ -2,7 +2,6 @@
 JSON Renderer for Salt
 """
 
-
 import salt.utils.json
 
 json = salt.utils.json.import_json()

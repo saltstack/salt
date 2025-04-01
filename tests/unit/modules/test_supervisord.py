@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.supervisord as supervisord
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin

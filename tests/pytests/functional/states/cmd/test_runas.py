@@ -13,5 +13,5 @@ def account():
 def test_runas_id(cmd, account):
     ret = cmd.run("id", runas=account.username)
     assert ret.result is True
-    assert "uid={}".format(account.info.uid) in ret.changes["stdout"]
-    assert "gid={}".format(account.info.gid) in ret.changes["stdout"]
+    assert f"uid={account.info.uid}" in ret.changes["stdout"]
+    assert f"gid={account.info.gid}" in ret.changes["stdout"]

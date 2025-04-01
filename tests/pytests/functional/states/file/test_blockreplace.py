@@ -118,7 +118,7 @@ class BlockreplaceParts:
 
 
 def strip_ending_linebreak_ids(value):
-    return "strip_ending_linebreak={}".format(value)
+    return f"strip_ending_linebreak={value}"
 
 
 @pytest.mark.parametrize(
@@ -478,7 +478,7 @@ def test_append_no_append_newline(file, tmp_path, strip_ending_linebreak):
 
 
 def line_breaks_ids(value):
-    return "line_breaks={}".format(value)
+    return f"line_breaks={value}"
 
 
 @pytest.mark.parametrize("line_breaks", ("windows", "posix"), ids=line_breaks_ids)

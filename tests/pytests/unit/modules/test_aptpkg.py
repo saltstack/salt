@@ -1,11 +1,3 @@
-"""
-    :synopsis: Unit Tests for Advanced Packaging Tool module 'module.aptpkg'
-    :platform: Linux
-    :maturity: develop
-    versionadded:: 2017.7.0
-"""
-
-
 import copy
 import importlib
 import logging
@@ -24,24 +16,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.odict import OrderedDict
-from tests.support.mock import MagicMock, Mock, call, mock_open, patch
-
-try:
-    from aptsources.sourceslist import (  # pylint: disable=unused-import
-        SourceEntry,
-        SourcesList,
-    )
-
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    from aptsources import sourceslist  # pylint: disable=unused-import
-
-    HAS_APTSOURCES = True
-except ImportError:
-    HAS_APTSOURCES = False
+from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
 
@@ -388,12 +363,9 @@ def test_get_repo_keys(repo_keys_var):
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
 
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        if not HAS_APT:
-            with patch("os.listdir", return_value="/tmp/keys"):
-                with patch("pathlib.Path.is_dir", return_value=True):
-                    assert aptpkg.get_repo_keys() == repo_keys_var
-        else:
-            assert aptpkg.get_repo_keys() == repo_keys_var
+        with patch("os.listdir", return_value="/tmp/keys"):
+            with patch("pathlib.Path.is_dir", return_value=True):
+                assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -478,7 +450,7 @@ def test_get_http_proxy_url_username_passwd():
     """
     Test _get_http_proxy_url when username and passwod set
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = "user"
     passwd = "password"
@@ -494,7 +466,7 @@ def test_get_http_proxy_url():
     """
     Test basic functionality for _get_http_proxy_url
     """
-    host = "repo.saltproject.io"
+    host = "packages.broadcom.com"
     port = "888"
     user = ""
     passwd = ""
@@ -1209,7 +1181,7 @@ def test__expand_repo_def():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1248,7 +1220,7 @@ def test__expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1277,8 +1249,8 @@ def test_expand_repo_def_cdrom():
 
     # Valid source
     repo = "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
-    sanitized = aptpkg.expand_repo_def(os_name="debian", repo=repo, file=source_file)
-    log.warning("SAN: %s", sanitized)
+    sanitized = aptpkg._expand_repo_def(os_name="debian", repo=repo, file=source_file)
+    log.debug("SAN: %s", sanitized)
 
     assert isinstance(sanitized, dict)
     assert "uri" in sanitized
@@ -1286,9 +1258,9 @@ def test_expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
-    sanitized = aptpkg.expand_repo_def(
+    sanitized = aptpkg._expand_repo_def(
         os_name="debian", repo=repo, file=source_file, architectures="amd64"
     )
 
@@ -1556,31 +1528,31 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
         ]
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
+@pytest.fixture
+def _test_sourceslist_multiple_comps_fs(fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file(
+        "/etc/apt/sources.list",
+        contents="deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    )
+    yield
+
+
+@pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
-    with patch.object(aptpkg, "HAS_APT", return_value=True):
-        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
-            with patch("pathlib.Path.is_file", side_effect=[True, False]):
-                sources = aptpkg.SourcesList()
-                for source in sources:
-                    assert source.type == "deb"
-                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-                    assert source.comps == ["main", "restricted"]
-                    assert source.dist == "focal-updates"
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
-@pytest.mark.parametrize(
-    "repo_line",
-    [
+@pytest.fixture(
+    params=(
         "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
@@ -1588,24 +1560,28 @@ def test_sourceslist_multiple_comps():
         "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
-    ],
+    )
 )
+def repo_line(request, fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file("/etc/apt/sources.list", contents=request.param)
+    yield request.param
+
+
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
     """
-    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
-        with patch("pathlib.Path.is_file", side_effect=[True, False]):
-            sources = aptpkg.SourcesList()
-            for source in sources:
-                assert source.type == "deb"
-                assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-                assert source.comps == ["main", "restricted"]
-                assert source.dist == "focal-updates"
-                if "," in repo_line:
-                    assert source.architectures == ["amd64", "armel"]
-                else:
-                    assert source.architectures == ["amd64"]
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
+        if "," in repo_line:
+            assert source.architectures == ["amd64", "armel"]
+        else:
+            assert source.architectures == ["amd64"]
 
 
 @pytest.mark.parametrize(

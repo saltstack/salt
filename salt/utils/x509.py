@@ -1,10 +1,10 @@
 import base64
 import copy
-import datetime
 import ipaddress
 import logging
 import os.path
 import re
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from urllib.parse import urlparse, urlunparse
 
@@ -313,14 +313,14 @@ def build_crt(
     )
 
     not_before = (
-        datetime.datetime.strptime(not_before, TIME_FMT)
+        datetime.strptime(not_before, TIME_FMT).replace(tzinfo=timezone.utc)
         if not_before
-        else datetime.datetime.utcnow()
+        else datetime.now(tz=timezone.utc)
     )
     not_after = (
-        datetime.datetime.strptime(not_after, TIME_FMT)
+        datetime.strptime(not_after, TIME_FMT).replace(tzinfo=timezone.utc)
         if not_after
-        else datetime.datetime.utcnow() + datetime.timedelta(days=days_valid)
+        else datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
@@ -422,32 +422,38 @@ def build_crl(
     builder = cx509.CertificateRevocationListBuilder()
     if signing_cert:
         builder = builder.issuer_name(signing_cert.subject)
-    builder = builder.last_update(datetime.datetime.today())
+    builder = builder.last_update(datetime.now(tz=timezone.utc))
     builder = builder.next_update(
-        datetime.datetime.today() + datetime.timedelta(days=days_valid)
+        datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     for rev in revoked:
         serial_number = not_after = revocation_date = None
         if "not_after" in rev:
-            not_after = datetime.datetime.strptime(rev["not_after"], TIME_FMT)
+            not_after = datetime.strptime(rev["not_after"], TIME_FMT).replace(
+                tzinfo=timezone.utc
+            )
         if "serial_number" in rev:
             serial_number = rev["serial_number"]
         if "certificate" in rev:
             rev_cert = load_cert(rev["certificate"])
             serial_number = rev_cert.serial_number
-            not_after = rev_cert.not_valid_after
+            try:
+                not_after = rev_cert.not_valid_after_utc
+            except AttributeError:
+                # naive datetime object, release <42 (it's always UTC)
+                not_after = rev_cert.not_valid_after.replace(tzinfo=timezone.utc)
         if not serial_number:
             raise SaltInvocationError("Need serial_number or certificate")
         serial_number = _get_serial_number(serial_number)
         if not_after and not include_expired:
-            if datetime.datetime.utcnow() > not_after:
+            if datetime.now(tz=timezone.utc) > not_after:
                 continue
         if "revocation_date" in rev:
-            revocation_date = datetime.datetime.strptime(
+            revocation_date = datetime.strptime(
                 rev["revocation_date"], TIME_FMT
-            )
+            ).replace(tzinfo=timezone.utc)
         else:
-            revocation_date = datetime.datetime.utcnow()
+            revocation_date = datetime.now(tz=timezone.utc)
 
         revoked_cert = cx509.RevokedCertificateBuilder(
             serial_number=serial_number, revocation_date=revocation_date
@@ -1051,7 +1057,9 @@ def load_file_or_bytes(fob):
         with salt.utils.files.fopen(fob, "rb") as f:
             fob = f.read()
     if isinstance(fob, str):
-        if PEM_BEGIN.decode() in fob:
+        if fob.startswith("b64:"):
+            fob = base64.b64decode(fob[4:])
+        elif PEM_BEGIN.decode() in fob:
             fob = fob.encode()
         else:
             try:
@@ -1190,21 +1198,21 @@ def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
                     cx509.SubjectKeyIdentifier
                 ).value.digest
             except cx509.ExtensionNotFound:
-                args[
-                    "key_identifier"
-                ] = cx509.AuthorityKeyIdentifier.from_issuer_public_key(
-                    ca_crt.public_key()
-                ).key_identifier
+                args["key_identifier"] = (
+                    cx509.AuthorityKeyIdentifier.from_issuer_public_key(
+                        ca_crt.public_key()
+                    ).key_identifier
+                )
             except Exception:  # pylint: disable=broad-except
                 pass
         if not args["key_identifier"] and ca_pub:
             # this should happen for self-signed certificates
             try:
-                args[
-                    "key_identifier"
-                ] = cx509.AuthorityKeyIdentifier.from_issuer_public_key(
-                    ca_pub
-                ).key_identifier
+                args["key_identifier"] = (
+                    cx509.AuthorityKeyIdentifier.from_issuer_public_key(
+                        ca_pub
+                    ).key_identifier
+                )
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -1484,12 +1492,14 @@ def _create_policy_constraints(val, **kwargs):
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
     args = {
-        "require_explicit_policy": int(val["requireExplicitPolicy"])
-        if "requireExplicitPolicy" in val
-        else None,
-        "inhibit_policy_mapping": int(val["inhibitPolicyMapping"])
-        if "inhibitPolicyMapping" in val
-        else None,
+        "require_explicit_policy": (
+            int(val["requireExplicitPolicy"])
+            if "requireExplicitPolicy" in val
+            else None
+        ),
+        "inhibit_policy_mapping": (
+            int(val["inhibitPolicyMapping"]) if "inhibitPolicyMapping" in val else None
+        ),
     }
     try:
         # not sure why pylint complains about this line having kwargs from keyUsage
@@ -1544,12 +1554,12 @@ def _create_name_constraints(val, **kwargs):
             ],
         }
     args = {
-        "permitted_subtrees": _parse_general_names(val["permitted"])
-        if "permitted" in val
-        else None,
-        "excluded_subtrees": _parse_general_names(val["excluded"])
-        if "excluded" in val
-        else None,
+        "permitted_subtrees": (
+            _parse_general_names(val["permitted"]) if "permitted" in val else None
+        ),
+        "excluded_subtrees": (
+            _parse_general_names(val["excluded"]) if "excluded" in val else None
+        ),
     }
     if not any(args.values()):
         raise SaltInvocationError("nameConstraints needs at least one definition")
@@ -1620,8 +1630,9 @@ def _create_invalidity_date(val, **kwargs):
     if critical:
         val = val.split(" ", maxsplit=1)[1]
     try:
+        # InvalidityDate deals in naive datetime objects only currently
         return (
-            cx509.InvalidityDate(datetime.datetime.strptime(val, TIME_FMT)),
+            cx509.InvalidityDate(datetime.strptime(val, TIME_FMT)),
             critical,
         )
     except ValueError as err:
@@ -1954,13 +1965,15 @@ def _render_subject_key_identifier(ext):
 
 def _render_authority_key_identifier(ext):
     return {
-        "keyid": pretty_hex(ext.value.key_identifier)
-        if ext.value.key_identifier
-        else None,
+        "keyid": (
+            pretty_hex(ext.value.key_identifier) if ext.value.key_identifier else None
+        ),
         "issuer": [render_gn(x) for x in ext.value.authority_cert_issuer or []] or None,
-        "issuer_sn": dec2hex(ext.value.authority_cert_serial_number)
-        if ext.value.authority_cert_serial_number
-        else None,
+        "issuer_sn": (
+            dec2hex(ext.value.authority_cert_serial_number)
+            if ext.value.authority_cert_serial_number
+            else None
+        ),
     }
 
 
@@ -1994,11 +2007,11 @@ def _render_authority_info_access(ext):
         for description in ext.value._descriptions:
             rendered.append(
                 {
-                    description.access_method._name
-                    if description.access_method._name != "Unknown OID"
-                    else description.access_method.dotted_string: render_gn(
-                        description.access_location.value
-                    )
+                    (
+                        description.access_method._name
+                        if description.access_method._name != "Unknown OID"
+                        else description.access_method.dotted_string
+                    ): render_gn(description.access_location.value)
                 }
             )
     except AttributeError:
@@ -2015,9 +2028,11 @@ def _render_distribution_points(ext):
                     "crlissuer": [render_gn(x) for x in dpoint.crl_issuer or []],
                     "fullname": [render_gn(x) for x in dpoint.full_name or []],
                     "reasons": list(sorted(x.value for x in dpoint.reasons or [])),
-                    "relativename": dpoint.relative_name.rfc4514_string()
-                    if dpoint.relative_name
-                    else None,
+                    "relativename": (
+                        dpoint.relative_name.rfc4514_string()
+                        if dpoint.relative_name
+                        else None
+                    ),
                 }
             )
     except AttributeError:
@@ -2031,9 +2046,11 @@ def _render_issuing_distribution_point(ext):
         "onysomereasons": list(
             sorted(x.value for x in ext.value.only_some_reasons or [])
         ),
-        "relativename": ext.value.relative_name.rfc4514_string()
-        if ext.value.relative_name
-        else None,
+        "relativename": (
+            ext.value.relative_name.rfc4514_string()
+            if ext.value.relative_name
+            else None
+        ),
         "onlyuser": ext.value.only_contains_user_certs,
         "onlyCA": ext.value.only_contains_ca_certs,
         "onlyAA": ext.value.only_contains_attribute_certs,

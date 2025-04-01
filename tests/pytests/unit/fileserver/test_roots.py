@@ -3,8 +3,10 @@
 """
 
 import copy
+import os
 import pathlib
 import shutil
+import sys
 import textwrap
 
 import pytest
@@ -28,14 +30,14 @@ def unicode_dirname():
     return "соль"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def testfile(tmp_path):
     fp = tmp_path / "testfile"
     fp.write_text("This is a testfile")
     return fp
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def tmp_state_tree(tmp_path, testfile, unicode_filename, unicode_dirname):
     dirname = tmp_path / "roots_tmp_state_tree"
     dirname.mkdir(parents=True, exist_ok=True)
@@ -54,11 +56,15 @@ def tmp_state_tree(tmp_path, testfile, unicode_filename, unicode_dirname):
 
 
 @pytest.fixture
-def configure_loader_modules(tmp_state_tree, temp_salt_master):
-    opts = temp_salt_master.config.copy()
+def testfilepath(tmp_state_tree, testfile):
+    return tmp_state_tree / testfile.name
+
+
+@pytest.fixture
+def configure_loader_modules(tmp_state_tree, master_opts):
     overrides = {"file_roots": {"base": [str(tmp_state_tree)]}}
-    opts.update(overrides)
-    return {roots: {"__opts__": opts}}
+    master_opts.update(overrides)
+    return {roots: {"__opts__": master_opts}}
 
 
 def test_file_list(unicode_filename):
@@ -75,17 +81,17 @@ def test_find_file(tmp_state_tree):
     assert full_path_to_file == ret["path"]
 
 
-def test_serve_file(testfile):
+def test_serve_file(testfilepath):
     with patch.dict(roots.__opts__, {"file_buffer_size": 262144}):
         load = {
             "saltenv": "base",
-            "path": str(testfile),
+            "path": str(testfilepath),
             "loc": 0,
         }
-        fnd = {"path": str(testfile), "rel": "testfile"}
+        fnd = {"path": str(testfilepath), "rel": "testfile"}
         ret = roots.serve_file(load, fnd)
 
-        with salt.utils.files.fopen(str(testfile), "rb") as fp_:
+        with salt.utils.files.fopen(str(testfilepath), "rb") as fp_:
             data = fp_.read()
 
         assert ret == {"data": data, "dest": "testfile"}
@@ -236,7 +242,7 @@ def test_update_mtime_map():
     # between Python releases.
     lines_written = sorted(mtime_map_mock.write_calls())
     expected = sorted(
-        salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
+        salt.utils.stringutils.to_bytes(f"{key}:{val}\n")
         for key, val in new_mtime_map.items()
     )
     assert lines_written == expected, lines_written
@@ -277,3 +283,71 @@ def test_update_mtime_map_unicode_error(tmp_path):
         },
         "backend": "roots",
     }
+
+
+def test_find_file_not_in_root(tmp_state_tree):
+    """
+    Fileroots should never 'find' a file that is outside of it's root.
+    """
+    badfile = pathlib.Path(tmp_state_tree).parent / "bar"
+    badfile.write_text("Bad file")
+    badpath = "../bar"
+    ret = roots.find_file(badpath)
+    assert ret == {"path": "", "rel": ""}
+    badpath = f"{tmp_state_tree / '..' / 'bar'}"
+    ret = roots.find_file(badpath)
+    assert ret == {"path": "", "rel": ""}
+
+
+def test_serve_file_not_in_root(tmp_state_tree):
+    """
+    Fileroots should never 'serve' a file that is outside of it's root.
+    """
+    badfile = pathlib.Path(tmp_state_tree).parent / "bar"
+    badfile.write_text("Bad file")
+    badpath = "../bar"
+    load = {"path": "salt://|..\\bar", "saltenv": "base", "loc": 0}
+    fnd = {
+        "path": f"{tmp_state_tree / '..' / 'bar'}",
+        "rel": f"{pathlib.Path('..') / 'bar'}",
+    }
+    ret = roots.serve_file(load, fnd)
+    if "win" in sys.platform:
+        assert ret == {"data": "", "dest": "..\\bar"}
+    else:
+        assert ret == {"data": "", "dest": "../bar"}
+
+
+def test_find_file_symlink_destination_not_in_root(tmp_state_tree):
+    dirname = pathlib.Path(tmp_state_tree).parent / "foo"
+    dirname.mkdir(parents=True, exist_ok=True)
+    testfile = dirname / "testfile"
+    testfile.write_text("testfile")
+    symlink = tmp_state_tree / "bar"
+    symlink.symlink_to(str(dirname))
+    ret = roots.find_file("bar/testfile")
+    assert ret["path"] == str(symlink / "testfile")
+    assert ret["rel"] == f"bar{os.sep}testfile"
+
+
+def test_serve_file_symlink_destination_not_in_root(tmp_state_tree):
+    dirname = pathlib.Path(tmp_state_tree).parent / "foo"
+    dirname.mkdir(parents=True, exist_ok=True)
+    testfile = dirname / "testfile"
+    testfile.write_text("testfile")
+    symlink = tmp_state_tree / "bar"
+    symlink.symlink_to(str(dirname))
+    load = {"path": "bar/testfile", "saltenv": "base", "loc": 0}
+    fnd = {"path": str(symlink / "testfile"), "rel": "bar/testfile"}
+    ret = roots.serve_file(load, fnd)
+    assert ret == {"data": b"testfile", "dest": "bar/testfile"}
+
+
+def test_relative_file_roots(tmp_state_tree):
+    parent = pathlib.Path(tmp_state_tree).parent
+    reldir = os.path.basename(tmp_state_tree)
+    opts = {"file_roots": copy.copy(roots.__opts__["file_roots"])}
+    opts["file_roots"]["base"] = [reldir]
+    with patch.dict(roots.__opts__, opts), pytest.helpers.change_cwd(str(parent)):
+        ret = roots.find_file("testfile")
+        assert "testfile" == ret["rel"]

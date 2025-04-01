@@ -1,23 +1,31 @@
+import multiprocessing
 import time
-from multiprocessing import Manager, Process
 
 import psutil
 import pytest
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(360),
+    pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.skip_on_windows(reason="Windows is a spawning platform, won't work"),
+    pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work"),
+    pytest.mark.skipif(
+        True,
+        reason="Test has become too unstable to test",
+    ),
+    pytest.mark.skipif(
+        'grains["osfinger"] == "Fedora Linux-39"',
+        reason="vim package not available for this distribution",
+    ),
 ]
 
 
 @pytest.fixture
-def testfile_path(tmp_path):
-    return tmp_path / "testfile"
-
-
-@pytest.fixture
-def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
+def file_add_delete_sls(tmp_path, salt_master):
+    path = tmp_path / "testfile"
     sls_name = "file_add"
-    sls_contents = """
+    sls_contents = f"""
     add_file:
       file.managed:
         - name: {path}
@@ -35,22 +43,19 @@ def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
     echo:
       cmd.run:
         - name: \"echo 'This is a test!'\"
-    """.format(
-        path=testfile_path
-    )
-    with pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
-    ):
+    """
+    with salt_master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents):
         yield sls_name
 
 
-@pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work")
-@pytest.mark.flaky(max_runs=4)
+# This test is fundimentally flawed. Needs to be re-factored to test the memory
+# consuption of the minoin process not system wide memory.
+@pytest.mark.skip(reason="Flawed test")
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
     max_usg = None
 
     # Using shared variables to be able to send a stop flag to the process
-    with Manager() as manager:
+    with multiprocessing.Manager() as manager:
         done_flag = manager.list()
         during_run_data = manager.list()
 
@@ -60,7 +65,7 @@ def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
                 usg = psutil.virtual_memory()
                 data.append(usg.total - usg.available)
 
-        proc = Process(target=_func, args=(during_run_data, done_flag))
+        proc = multiprocessing.Process(target=_func, args=(during_run_data, done_flag))
         proc.start()
 
         # Try to drive up memory usage

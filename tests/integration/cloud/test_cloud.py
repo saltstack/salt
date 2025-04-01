@@ -1,6 +1,7 @@
 """
 Integration tests for functions located in the salt.cloud.__init__.py file.
 """
+
 import pytest
 
 import salt.cloud
@@ -23,7 +24,7 @@ class CloudClientTestCase(CloudTest):
 
         # Use a --list-images salt-cloud call to see if the DigitalOcean provider is
         # configured correctly before running any tests.
-        images = self.run_cloud("--list-images {}".format(self.PROVIDER))
+        images = self.run_cloud(f"--list-images {self.PROVIDER}")
 
         if self.image_name not in [i.strip() for i in images]:
             self.skipTest(

@@ -73,8 +73,8 @@ def test_mounted():
                 assert mount.mounted(name, device, fstype) == ret
 
             with patch.dict(mount.__opts__, {"test": False}):
-                comt = "Unable to unmount {}: False.".format(name)
-                umount = "Forced unmount and mount because options (noowners) changed"
+                comt = f"Unable to unmount {name}: False."
+                umount = "Forced a lazy unmount and mount because the previous unmount failed and because the options (noowners) changed"
                 ret.update(
                     {
                         "comment": comt,
@@ -114,7 +114,7 @@ def test_mounted():
                 with patch.dict(mount.__opts__, {"test": True}), patch(
                     "os.path.exists", MagicMock(return_value=False)
                 ):
-                    comt = "{} does not exist and would not be created".format(name)
+                    comt = f"{name} does not exist and would not be created"
                     ret.update({"comment": comt, "changes": {}, "result": None})
                     assert mount.mounted(name, device, fstype) == ret
 
@@ -192,7 +192,7 @@ def test_mounted():
                     ret.update({"comment": comt, "result": False, "changes": {}})
                     assert mount.mounted(name, device, fstype, mount=False) == ret
 
-                    comt = "{} not present and not mounted".format(name)
+                    comt = f"{name} not present and not mounted"
                     ret.update({"comment": comt, "result": True, "changes": {}})
                     assert mount.mounted(name, device, fstype, mount=False) == ret
 
@@ -319,7 +319,7 @@ def test_swap():
                 assert mount.swap(name) == ret
 
             with patch.dict(mount.__opts__, {"test": False}):
-                comt = "Swap {} already active".format(name)
+                comt = f"Swap {name} already active"
                 ret.update({"comment": comt, "result": True})
                 assert mount.swap(name, persist=False) == ret
 
@@ -327,7 +327,7 @@ def test_swap():
                     mount.__salt__,
                     {"mount.fstab": mock_emt, "mount.set_fstab": mock},
                 ):
-                    comt = "Swap {} already active".format(name)
+                    comt = f"Swap {name} already active"
                     ret.update({"comment": comt, "result": True})
                     assert mount.swap(name) == ret
 
@@ -375,12 +375,12 @@ def test_swap():
             },
         ):
             with patch.dict(mount.__opts__, {"test": True}):
-                comt = "Swap {} already active".format(name)
+                comt = f"Swap {name} already active"
                 ret.update({"comment": comt, "result": True})
                 assert mount.swap(name) == ret
 
             with patch.dict(mount.__opts__, {"test": False}):
-                comt = "Swap {} already active".format(name)
+                comt = f"Swap {name} already active"
                 ret.update({"comment": comt, "result": True})
                 assert mount.swap(name) == ret
 
@@ -388,7 +388,7 @@ def test_swap():
                     mount.__salt__,
                     {"mount.fstab": mock_emt, "mount.set_fstab": mock},
                 ):
-                    comt = "Swap {} already active".format(name)
+                    comt = f"Swap {name} already active"
                     ret.update({"comment": comt, "result": True})
                     assert mount.swap(name) == ret
 
@@ -432,7 +432,7 @@ def test_swap():
             },
         ):
             with patch.dict(mount.__opts__, {"test": True}):
-                comt = "Swap {} already active".format(name)
+                comt = f"Swap {name} already active"
                 ret.update({"comment": comt, "result": True})
                 assert mount.swap(name) == ret
 
@@ -494,7 +494,7 @@ def test_unmounted():
             },
         ):
             with patch.dict(mount.__opts__, {"test": True}):
-                comt = "Mount point {} is mounted but should not be".format(name)
+                comt = f"Mount point {name} is mounted but should not be"
                 ret.update({"comment": comt})
                 assert mount.unmounted(name, device) == ret
 
@@ -535,7 +535,7 @@ def test_unmounted():
                 assert mount.unmounted(name, device, persist=True) == ret
 
                 with patch.dict(mount.__salt__, {"mount.filesystems": mock_dev}):
-                    comt = "Mount point {} is mounted but should not be".format(name3)
+                    comt = f"Mount point {name3} is mounted but should not be"
                     ret.update({"comment": comt, "result": None, "name": name3})
                     assert mount.unmounted(name3, device3, persist=True) == ret
 
@@ -676,7 +676,7 @@ def test__convert_to_device_token():
         "disk.blkid": MagicMock(return_value={"/dev/sda1": {"UUID": uuid}}),
     }
     with patch.dict(mount.__salt__, salt_mock):
-        uuid = "UUID={}".format(uuid)
+        uuid = f"UUID={uuid}"
         assert mount._convert_to("/dev/sda1", "uuid") == uuid
         salt_mock["disk.blkid"].assert_called_with("/dev/sda1")
 
@@ -690,7 +690,7 @@ def test__convert_to_token_device():
         "disk.blkid": MagicMock(return_value={"/dev/sda1": {"UUID": uuid}}),
     }
     with patch.dict(mount.__salt__, salt_mock):
-        uuid = "UUID={}".format(uuid)
+        uuid = f"UUID={uuid}"
         assert mount._convert_to(uuid, "device") == "/dev/sda1"
         salt_mock["disk.blkid"].assert_called_with(token=uuid)
 
@@ -1359,9 +1359,9 @@ def test_bind_mount_copy_active_opts(mount_name):
         ),
     ):
         with patch.dict(mount.__opts__, {"test": True}):
-            ret[
-                "comment"
-            ] = "Remount would be forced because options (nodev,noexec,nosuid) changed"
+            ret["comment"] = (
+                "Remount would be forced because options (nodev,noexec,nosuid) changed"
+            )
             result = mount.mounted(
                 name=name,
                 device=device,
@@ -1426,6 +1426,105 @@ def test_bind_mount_copy_active_opts(mount_name):
                     "relatime",
                     "rw",
                 ],
+                0,
+                0,
+                "/etc/fstab",
+                match_on="auto",
+            )
+
+
+def test_mount_opts_change_lazy_umount():
+    name = "/mnt/nfs"
+    device = name
+    active_name = name
+    fstype = "nfs"
+    opts = [
+        "nodev",
+        "noexec",
+        "nosuid",
+        "rw",
+    ]
+
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+
+    mock_active = MagicMock(
+        return_value={
+            active_name: {
+                "alt_device": "192.168.0.1:/volume2/nfs",
+                "device": "192.168.0.1:/volume2/nfs",
+                "fstype": "nfs4",
+                "opts": [
+                    "rw",
+                    "noexec",
+                    "nodev",
+                    "relatime",
+                    "vers=4.1",
+                    "rsize=131072",
+                    "wsize=131072",
+                ],
+            },
+        }
+    )
+    mock_read_mount_cache = MagicMock(
+        return_value={
+            "device": "192.168.0.1:/volume2/nfs",
+            "fstype": "nfs",
+            "mkmnt": True,
+            "opts": ["noexec", "nodev"],
+        }
+    )
+    mock_set_fstab = MagicMock(return_value="new")
+
+    with patch.dict(mount.__grains__, {"os": "CentOS"}), patch.dict(
+        mount.__salt__,
+        {
+            "mount.active": mock_active,
+            "mount.read_mount_cache": mock_read_mount_cache,
+            "mount.umount": MagicMock(side_effect=[False, True]),
+            "mount.mount": MagicMock(return_value=True),
+            "mount.set_fstab": mock_set_fstab,
+            "mount.write_mount_cache": MagicMock(return_value=True),
+        },
+    ), patch.object(
+        os.path,
+        "realpath",
+        MagicMock(return_value=name),
+    ):
+        with patch.dict(mount.__opts__, {"test": True}):
+            ret["comment"] = "Remount would be forced because options (nosuid) changed"
+            result = mount.mounted(
+                name=name,
+                device=device,
+                fstype=fstype,
+                opts=opts,
+                persist=True,
+                bind_mount_copy_active_opts=False,
+            )
+            assert result == ret
+
+        with patch.dict(mount.__opts__, {"test": False}):
+            ret["comment"] = "Target was already mounted. Added new entry to the fstab."
+            ret["changes"] = {
+                "persist": "new",
+                "umount": "Forced a lazy unmount and mount because the previous unmount failed and because the options (nosuid) changed",
+            }
+            ret["result"] = True
+
+            # bind_mount_copy_active_opts is off
+            result = mount.mounted(
+                name=name,
+                device=device,
+                fstype=fstype,
+                opts=opts,
+                persist=True,
+            )
+            assert result == ret
+
+            mock_set_fstab.assert_called_with(
+                name,
+                device,
+                fstype,
+                ["nodev", "noexec", "nosuid", "rw"],
                 0,
                 0,
                 "/etc/fstab",

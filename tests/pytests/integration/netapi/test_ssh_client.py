@@ -1,18 +1,36 @@
+import logging
+
 import pytest
 
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.helpers import SaveRequestsPostHandler, Webserver
 from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
+    pytest.mark.skipif(
+        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        reason="System ships with a version of python that is too recent for salt-ssh tests",
+        # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
+        # and it imports `ssl` and checks if the `match_hostname` function is defined, which
+        # has been deprecated since Python 3.7, so, the logic goes into trying to import
+        # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def client_config(client_config):
+def client_config(client_config, known_hosts_file):
+    client_config["known_hosts_file"] = str(known_hosts_file)
     client_config["netapi_enable_clients"] = ["ssh"]
     return client_config
 
@@ -54,18 +72,11 @@ def salt_auth_account_1(salt_auth_account_1_factory):
         yield account
 
 
-@pytest.fixture(scope="module")
-def salt_auto_account(salt_auto_account_factory):
-    with salt_auto_account_factory as account:
-        yield account
-
-
 def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key):
     low = {
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
-        "ignore_host_keys": True,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
@@ -90,7 +101,7 @@ def test_ssh_unauthenticated(client):
 
 def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_handler):
 
-    fun = "-o ProxyCommand curl {}".format(webserver_root)
+    fun = f"-o ProxyCommand curl {webserver_root}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with pytest.raises(EauthAuthenticationError):
@@ -102,7 +113,7 @@ def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_ha
 def test_ssh_unauthenticated_raw_shell_touch(client, tmp_path):
 
     badfile = tmp_path / "badfile.txt"
-    fun = "-o ProxyCommand touch {}".format(badfile)
+    fun = f"-o ProxyCommand touch {badfile}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with pytest.raises(EauthAuthenticationError):
@@ -114,7 +125,7 @@ def test_ssh_unauthenticated_raw_shell_touch(client, tmp_path):
 def test_ssh_authenticated_raw_shell_disabled(client, tmp_path):
 
     badfile = tmp_path / "badfile.txt"
-    fun = "-o ProxyCommand touch {}".format(badfile)
+    fun = f"-o ProxyCommand touch {badfile}"
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
     with patch.dict(client.opts, {"netapi_allow_raw_shell": False}):
@@ -135,6 +146,7 @@ def test_ssh_disabled(client, auth_creds):
     assert ret is None
 
 
+@pytest.mark.timeout_unless_on_windows(360)
 def test_shell_inject_ssh_priv(
     client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account
 ):
@@ -143,13 +155,14 @@ def test_shell_inject_ssh_priv(
     """
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
-    tgts = ["repo.saltproject.io", "www.zerodayinitiative.com"]
+    tgts = ["packages.broadcom.com", "www.zerodayinitiative.com"]
+    ret = None
     for tgt in tgts:
         low = {
             "roster": "cache",
             "client": "ssh",
             "tgt": tgt,
-            "ssh_priv": "aaa|id>{} #".format(path),
+            "ssh_priv": f"aaa|id>{path} #",
             "fun": "test.ping",
             "eauth": "auto",
             "username": salt_auto_account.username,
@@ -160,7 +173,9 @@ def test_shell_inject_ssh_priv(
         ret = client.run(low)
         if ret:
             break
+
     assert path.exists() is False
+    assert ret
     assert not ret[tgt]["stdout"]
     assert ret[tgt]["stderr"]
 
@@ -174,7 +189,7 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_acco
     low = {
         "roster": "cache",
         "client": "ssh",
-        "tgt": "root|id>{} #@127.0.0.1".format(path),
+        "tgt": f"root|id>{path} #@127.0.0.1",
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "fun": "test.ping",
@@ -208,7 +223,7 @@ def test_shell_inject_ssh_options(
         "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_options": ["|id>{} #".format(path), "lol"],
+        "ssh_options": [f"|id>{path} #", "lol"],
     }
     ret = client.run(low)
     assert path.exists() is False
@@ -235,7 +250,7 @@ def test_shell_inject_ssh_port(
         "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_port": "hhhhh|id>{} #".format(path),
+        "ssh_port": f"hhhhh|id>{path} #",
         "ignore_host_keys": True,
     }
     ret = client.run(low)
@@ -260,7 +275,7 @@ def test_shell_inject_remote_port_forwards(
         "fun": "test.ping",
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
-        "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
+        "ssh_remote_port_forwards": f"hhhhh|id>{path} #, lol",
         "eauth": "auto",
         "username": salt_auto_account.username,
         "password": salt_auto_account.password,
@@ -288,7 +303,7 @@ def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, salt_auth_accou
         "username": salt_auth_account_1.username,
         "password": salt_auth_account_1.password,
         "regen_thin": True,
-        "thin_extra_mods": "';touch {};'".format(path),
+        "thin_extra_mods": f"';touch {path};'",
     }
 
     ret = client.run(low)
@@ -311,7 +326,6 @@ def test_ssh_auth_bypass(client, salt_ssh_roster_file):
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "eauth": "xx",
-        "ignore_host_keys": True,
     }
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
@@ -417,7 +431,7 @@ def test_ssh_cve_2021_3197_a(
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
-        "ssh_port": '22 -o ProxyCommand="touch {}"'.format(exploited_path),
+        "ssh_port": f'22 -o ProxyCommand="touch {exploited_path}"',
         "ssh_priv": ssh_priv_key,
         "roster_file": "roster",
         "rosters": [rosters_dir],
@@ -441,7 +455,7 @@ def test_ssh_cve_2021_3197_b(
         "tgt": "localhost",
         "fun": "test.ping",
         "ssh_port": 22,
-        "ssh_options": ['ProxyCommand="touch {}"'.format(exploited_path)],
+        "ssh_options": [f'ProxyCommand="touch {exploited_path}"'],
         "ssh_priv": ssh_priv_key,
         "roster_file": "roster",
         "rosters": [rosters_dir],

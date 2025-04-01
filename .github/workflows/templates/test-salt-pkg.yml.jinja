@@ -1,89 +1,19 @@
-  <%- for slug, display_name, arch, pkg_type in test_salt_pkg_listing["linux"] %>
-
-    <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
-
+  <%- set job_name = "test-packages" %>
   <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    name: Test Package
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
     needs:
       - prepare-workflow
-      - build-<{ pkg_type }>-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
+      - build-pkgs-onedir
+      - build-ci-deps
     uses: ./.github/workflows/test-packages-action.yml
     with:
-      distro-slug: <{ slug }>
       nox-session: ci-test-onedir
-      platform: linux
-      arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: <{ pkg_type }>
       nox-version: <{ nox_version  }>
       python-version: "<{ gh_actions_workflows_python_version }>"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  <%- endfor %>
-
-
-
-  <%- for slug, display_name, arch in test_salt_pkg_listing["macos"] %>
-    <%- set job_name = "{}-pkg-tests".format(slug.replace(".", "")) %>
-
-  <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-macos-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action-macos.yml
-    with:
-      distro-slug: <{ slug }>
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: <{ arch }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: macos
-      nox-version: <{ nox_version  }>
-      python-version: "<{ gh_actions_workflows_python_version }>"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-  <%- endfor %>
-
-
-  <%- for slug, display_name, arch in test_salt_pkg_listing["windows"] %>
-    <%- for pkg_type in ("NSIS", "MSI") %>
-    <%- set job_name = "{}-{}-pkg-tests".format(slug.replace(".", ""), pkg_type.lower()) %>
-
-  <{ job_name }>:
-    <%- do test_salt_pkg_needs.append(job_name) %>
-    name: <{ display_name }> <{ pkg_type }> Package Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-windows-pkgs-onedir
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-packages-action.yml
-    with:
-      distro-slug: <{ slug }>
-      nox-session: ci-test-onedir
-      platform: windows
-      arch: <{ arch }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: <{ pkg_type }>
-      nox-version: <{ nox_version  }>
-      python-version: "<{ gh_actions_workflows_python_version }>"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
-
-    <%- endfor %>
-  <%- endfor %>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}

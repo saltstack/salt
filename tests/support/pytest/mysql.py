@@ -3,6 +3,7 @@ import time
 
 import attr
 import pytest
+from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
 # This `pytest.importorskip` here actually works because this module
@@ -102,6 +103,10 @@ def mysql_image(request):
 
 @pytest.fixture(scope="module")
 def create_mysql_combo(mysql_image):
+    if platform.is_fips_enabled():
+        if mysql_image.name in ("mysql-server", "percona") and mysql_image.tag == "8.0":
+            pytest.skip(f"These tests fail on {mysql_image.name}:{mysql_image.tag}")
+
     return MySQLCombo(
         mysql_name=mysql_image.name,
         mysql_version=mysql_image.tag,

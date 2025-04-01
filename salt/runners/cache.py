@@ -327,7 +327,7 @@ def clear_git_lock(role, remote=None, **kwargs):
             )
             git_objects.append(obj)
     else:
-        raise SaltInvocationError("Invalid role '{}'".format(role))
+        raise SaltInvocationError(f"Invalid role '{role}'")
 
     ret = {}
     for obj in git_objects:

@@ -53,6 +53,11 @@ except ImportError:
         return stub_function
 
 
+pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
+]
+
+
 required_boto_version = "2.0.0"
 required_boto3_version = "1.2.1"
 region = "us-east-1"
@@ -200,7 +205,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
     def test_get_conn_with_no_auth_params_raises_invocation_error(self):
         with patch(
-            "boto.{}.connect_to_region".format(service),
+            f"boto.{service}.connect_to_region",
             side_effect=boto.exception.NoAuthHandlerFound(),
         ):
             with self.assertRaises(SaltInvocationError):
@@ -209,7 +214,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
     def test_get_conn_error_raises_command_execution_error(self):
         with patch(
-            "boto.{}.connect_to_region".format(service),
+            f"boto.{service}.connect_to_region",
             side_effect=BotoServerError(400, "Mocked error", body=error_body),
         ):
             with self.assertRaises(BotoServerError):

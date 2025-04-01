@@ -4,7 +4,6 @@
     Test cases for salt.modules.locate
 """
 
-
 import pytest
 
 import salt.modules.locate as locate

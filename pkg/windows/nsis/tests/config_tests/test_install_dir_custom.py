@@ -10,24 +10,19 @@ def inst_dir():
 
 @pytest.fixture(scope="module")
 def install(inst_dir):
-    pytest.helpers.clean_env(inst_dir)
-
+    pytest.helpers.clean_env()
     # Create a custom config
     pytest.helpers.custom_config()
-
-    pytest.helpers.run_command(
-        [
-            pytest.INST_BIN,
-            "/S",
-            f"/install-dir={inst_dir}",
-            "/custom-config=custom_conf",
-        ]
-    )
-    yield
+    args = ["/S", f"/install-dir={inst_dir}", "/custom-config=custom_conf"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env(inst_dir)
 
 
 def test_binaries_present(install, inst_dir):
+    # This will show the contents of the directory on failure
+    inst_dir_exists = os.path.exists(inst_dir)
+    dir_contents = os.listdir(inst_dir)
     assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 
@@ -37,7 +32,7 @@ def test_config_present(install):
 
 def test_config_correct(install):
     # The config file should be the custom config, unchanged
-    with open(rf"{pytest.REPO_DIR}\custom_conf") as f:
+    with open(rf"{pytest.SCRIPT_DIR}\custom_conf") as f:
         expected = f.readlines()
 
     with open(rf"{pytest.DATA_DIR}\conf\minion") as f:

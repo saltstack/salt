@@ -89,12 +89,12 @@ class CPModuleTest(ModuleCase):
         """
         src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
         with salt.utils.files.fopen(src, "rb") as fp_:
-            hash_str = hashlib.md5(fp_.read()).hexdigest()
+            hash_str = hashlib.sha256(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
         with salt.utils.files.fopen(tgt, "rb") as scene:
             data = scene.read()
-        self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
+        self.assertEqual(hash_str, hashlib.sha256(data).hexdigest())
         data = salt.utils.stringutils.to_unicode(data)
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -231,12 +231,15 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given
         """
-        self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
+        self.run_function(
+            "cp.get_url",
+            ["https://packages.broadcom.com/artifactory/saltproject-generic/", tgt],
+        )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Index of saltproject", data)
+        self.assertIn("onedir", data)
+        self.assertIn("Artifactory Online Server", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -245,14 +248,15 @@ class CPModuleTest(ModuleCase):
         cp.get_url with https:// source given and destination omitted.
         """
         ret = self.run_function(
-            "cp.get_url", ["https://repo.saltproject.io/index.html"]
+            "cp.get_url",
+            ["https://packages.broadcom.com/artifactory/saltproject-generic/"],
         )
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Salt Project", data)
-        self.assertIn("Package", data)
-        self.assertIn("Repo", data)
+        self.assertIn("Index of saltproject", data)
+        self.assertIn("onedir", data)
+        self.assertIn("Artifactory Online Server", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -266,16 +270,19 @@ class CPModuleTest(ModuleCase):
         tgt = None
         while time.time() - start <= timeout:
             ret = self.run_function(
-                "cp.get_url", ["https://repo.saltproject.io/index.html", tgt]
+                "cp.get_url",
+                ["https://packages.broadcom.com/artifactory/saltproject-generic/", tgt],
             )
             if ret.find("HTTP 599") == -1:
                 break
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
-            raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+            raise Exception(
+                "https://packages.broadcom.com/artifactory/saltproject-generic/ returned 599 error"
+            )
+        self.assertIn("Index of saltproject", ret)
+        self.assertIn("onedir", ret)
+        self.assertIn("Artifactory Online Server", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -344,11 +351,11 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_file_str with https:// source given
         """
-        src = "https://repo.saltproject.io/index.html"
+        src = "https://packages.broadcom.com/artifactory/saltproject-generic/"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Salt Project", ret)
-        self.assertIn("Package", ret)
-        self.assertIn("Repo", ret)
+        self.assertIn("Index of saltproject", ret)
+        self.assertIn("onedir", ret)
+        self.assertIn("Artifactory Online Server", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -421,7 +428,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = ports.get_unused_localhost_port()
-        url_prefix = "http://localhost:{}/".format(nginx_port)
+        url_prefix = f"http://localhost:{nginx_port}/"
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -444,7 +451,7 @@ class CPModuleTest(ModuleCase):
             fp_.write(
                 textwrap.dedent(
                     salt.utils.stringutils.to_str(
-                        """\
+                        f"""\
                 user root;
                 worker_processes 1;
                 error_log {nginx_conf_dir}/server_error.log;
@@ -474,9 +481,7 @@ class CPModuleTest(ModuleCase):
                             return 302 /actual_file;
                         }}
                     }}
-                }}""".format(
-                            **locals()
-                        )
+                }}"""
                     )
                 )
             )
@@ -597,7 +602,9 @@ class CPModuleTest(ModuleCase):
     @pytest.mark.slow_test
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
+        open(  # pylint: disable=resource-leakage
+            log_to_xfer, "w", encoding="utf-8"
+        ).close()
         try:
             self.run_function("cp.push", [log_to_xfer])
             tgt_cache_file = os.path.join(

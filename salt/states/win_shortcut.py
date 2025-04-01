@@ -6,6 +6,7 @@ shortcuts.
 
 .. versionadded:: 3005
 """
+
 import salt.utils.data
 import salt.utils.path
 import salt.utils.platform
@@ -187,10 +188,10 @@ def present(
 
     if __opts__["test"]:
         if changes:
-            ret["comment"] = "Shortcut will be modified: {}".format(name)
+            ret["comment"] = f"Shortcut will be modified: {name}"
             ret["changes"] = changes
         else:
-            ret["comment"] = "Shortcut will be created: {}".format(name)
+            ret["comment"] = f"Shortcut will be created: {name}"
 
         ret["result"] = None
         return ret
@@ -212,7 +213,7 @@ def present(
             user=user,
         )
     except CommandExecutionError as exc:
-        ret["comment"] = ["Failed to create the shortcut: {}".format(name)]
+        ret["comment"] = [f"Failed to create the shortcut: {name}"]
         ret["comment"].append(exc.message)
         ret["result"] = False
         return ret
@@ -220,7 +221,7 @@ def present(
     try:
         new = __salt__["shortcut.get"](name)
     except CommandExecutionError as exc:
-        ret["comment"] = ["Failed to create the shortcut: {}".format(name)]
+        ret["comment"] = [f"Failed to create the shortcut: {name}"]
         ret["comment"].append(exc.message)
         ret["result"] = False
         return ret
@@ -233,9 +234,9 @@ def present(
         return ret
 
     if changes:
-        ret["comment"] = "Shortcut modified: {}".format(name)
+        ret["comment"] = f"Shortcut modified: {name}"
         ret["changes"] = changes
     else:
-        ret["comment"] = "Shortcut created: {}".format(name)
+        ret["comment"] = f"Shortcut created: {name}"
 
     return ret

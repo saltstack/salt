@@ -15,7 +15,6 @@ A module used to create and manage PostgreSQL tablespaces.
 
 """
 
-
 import salt.utils.dictupdate as dictupdate
 
 
@@ -94,7 +93,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Tablespace {} is already present".format(name),
+        "comment": f"Tablespace {name} is already present",
     }
     dbargs = {
         "maintenance_db": maintenance_db,
@@ -109,22 +108,22 @@ def present(
         # not there, create it
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Tablespace {} is set to be created".format(name)
+            ret["comment"] = f"Tablespace {name} is set to be created"
             return ret
         if __salt__["postgres.tablespace_create"](
             name, directory, options, owner, **dbargs
         ):
-            ret["comment"] = "The tablespace {} has been created".format(name)
+            ret["comment"] = f"The tablespace {name} has been created"
             ret["changes"][name] = "Present"
             return ret
 
     # already exists, make sure it's got the right config
     if tblspaces[name]["Location"] != directory and not __opts__["test"]:
-        ret[
-            "comment"
-        ] = """Tablespace {} is not at the right location. This is
+        ret["comment"] = (
+            """Tablespace {} is not at the right location. This is
             unfixable without dropping and recreating the tablespace.""".format(
-            name
+                name
+            )
         )
         ret["result"] = False
         return ret
@@ -132,12 +131,12 @@ def present(
     if owner and not tblspaces[name]["Owner"] == owner:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Tablespace {} owner to be altered".format(name)
+            ret["comment"] = f"Tablespace {name} owner to be altered"
         if (
             __salt__["postgres.tablespace_alter"](name, new_owner=owner)
             and not __opts__["test"]
         ):
-            ret["comment"] = "Tablespace {} owner changed".format(name)
+            ret["comment"] = f"Tablespace {name} owner changed"
             ret["changes"][name] = {"owner": owner}
             ret["result"] = True
 
@@ -149,18 +148,18 @@ def present(
         # TODO remove options that exist if possible
         for k, v in options.items():
             # if 'seq_page_cost=1.1' not in '{seq_page_cost=1.1,...}'
-            if "{}={}".format(k, v) not in tblspaces[name]["Opts"]:
+            if f"{k}={v}" not in tblspaces[name]["Opts"]:
                 if __opts__["test"]:
                     ret["result"] = None
-                    ret[
-                        "comment"
-                    ] = """Tablespace {} options to be
+                    ret["comment"] = (
+                        """Tablespace {} options to be
                         altered""".format(
-                        name
+                            name
+                        )
                     )
                     break  # we know it's going to be altered, no reason to cont
                 if __salt__["postgres.tablespace_alter"](name, set_option={k: v}):
-                    ret["comment"] = "Tablespace {} opts changed".format(name)
+                    ret["comment"] = f"Tablespace {name} opts changed"
                     dictupdate.update(ret["changes"], {name: {"options": {k: v}}})
                     ret["result"] = True
 
@@ -214,10 +213,10 @@ def absent(
     if __salt__["postgres.tablespace_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Tablespace {} is set to be removed".format(name)
+            ret["comment"] = f"Tablespace {name} is set to be removed"
             return ret
         if __salt__["postgres.tablespace_remove"](name, **db_args):
-            ret["comment"] = "Tablespace {} has been removed".format(name)
+            ret["comment"] = f"Tablespace {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
 

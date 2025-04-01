@@ -123,7 +123,7 @@ def _to_port(port):
         assert 1 <= port <= 65535
         return port
     except (ValueError, AssertionError):
-        raise ValueError("Invalid port {}".format(port))
+        raise ValueError(f"Invalid port {port}")
 
 
 def _tree(domain, tld=False):
@@ -276,24 +276,24 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     :param servers: [] of servers to use
     :return: [] of records or False if error
     """
-    cmd = "dig {} -t {} ".format(DIG_OPTIONS, rdtype)
+    cmd = f"dig {DIG_OPTIONS} -t {rdtype} "
     if servers:
-        cmd += "".join(["@{} ".format(srv) for srv in servers])
+        cmd += "".join([f"@{srv} " for srv in servers])
     if timeout is not None:
         if servers:
             timeout = int(float(timeout) / len(servers))
         else:
             timeout = int(timeout)
-        cmd += "+time={} ".format(timeout)
+        cmd += f"+time={timeout} "
     if secure:
         cmd += "+dnssec +adflag "
 
     cmd = __salt__["cmd.run_all"](
-        "{} {}".format(cmd, name), python_shell=False, output_loglevel="quiet"
+        f"{cmd} {name}", python_shell=False, output_loglevel="quiet"
     )
 
     if "ignoring invalid type" in cmd["stderr"]:
-        raise ValueError("Invalid DNS type {}".format(rdtype))
+        raise ValueError(f"Invalid DNS type {rdtype}")
     elif cmd["retcode"] != 0:
         log.warning(
             "dig returned (%s): %s",
@@ -333,9 +333,9 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
     cmd = "drill "
     if secure:
         cmd += "-D -o ad "
-    cmd += "{} {} ".format(rdtype, name)
+    cmd += f"{rdtype} {name} "
     if servers:
-        cmd += "".join(["@{} ".format(srv) for srv in servers])
+        cmd += "".join([f"@{srv} " for srv in servers])
     cmd = __salt__["cmd.run_all"](
         cmd, timeout=timeout, python_shell=False, output_loglevel="quiet"
     )
@@ -364,7 +364,7 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
                 validated = True
                 continue
             elif l_type != rdtype:
-                raise ValueError("Invalid DNS type {}".format(rdtype))
+                raise ValueError(f"Invalid DNS type {rdtype}")
 
             res.append(_data_clean(l_rec))
 
@@ -385,10 +385,12 @@ def _lookup_gai(name, rdtype, timeout=None):
     :param timeout: ignored
     :return: [] of addresses or False if error
     """
-    try:
-        sock_t = {"A": socket.AF_INET, "AAAA": socket.AF_INET6}[rdtype]
-    except KeyError:
-        raise ValueError("Invalid DNS type {} for gai lookup".format(rdtype))
+    if rdtype == "A":
+        sock_t = socket.AF_INET
+    elif rdtype == "AAAA":
+        sock_t = socket.AF_INET6
+    else:
+        raise ValueError(f"Invalid DNS type {rdtype} for gai lookup")
 
     if timeout:
         log.info("Ignoring timeout on gai resolver; fix resolv.conf to do that")
@@ -412,18 +414,18 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     :param timeout: server response wait
     :return: [] of records or False if error
     """
-    cmd = "host -t {} ".format(rdtype)
+    cmd = f"host -t {rdtype} "
 
     if timeout:
-        cmd += "-W {} ".format(int(timeout))
+        cmd += f"-W {int(timeout)} "
     cmd += name
     if server is not None:
-        cmd += " {}".format(server)
+        cmd += f" {server}"
 
     cmd = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="quiet")
 
     if "invalid type" in cmd["stderr"]:
-        raise ValueError("Invalid DNS type {}".format(rdtype))
+        raise ValueError(f"Invalid DNS type {rdtype}")
     elif cmd["retcode"] != 0:
         log.warning("host returned (%s): %s", cmd["retcode"], cmd["stderr"])
         return False
@@ -470,7 +472,7 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
         ]
         return res
     except dns.rdatatype.UnknownRdatatype:
-        raise ValueError("Invalid DNS type {}".format(rdtype))
+        raise ValueError(f"Invalid DNS type {rdtype}")
     except (
         dns.resolver.NXDOMAIN,
         dns.resolver.YXDOMAIN,
@@ -489,12 +491,12 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     :param server: server to query
     :return: [] of records or False if error
     """
-    cmd = "nslookup -query={} {}".format(rdtype, name)
+    cmd = f"nslookup -query={rdtype} {name}"
 
     if timeout is not None:
-        cmd += " -timeout={}".format(int(timeout))
+        cmd += f" -timeout={int(timeout)}"
     if server is not None:
-        cmd += " {}".format(server)
+        cmd += f" {server}"
 
     cmd = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="quiet")
 
@@ -511,7 +513,7 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     try:
         line = next(lookup_res)
         if "unknown query type" in line:
-            raise ValueError("Invalid DNS type {}".format(rdtype))
+            raise ValueError(f"Invalid DNS type {rdtype}")
 
         while True:
             if name in line:
@@ -581,7 +583,6 @@ def lookup(
 
     rdtype = rdtype.upper()
 
-    # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
         ("gai", _lookup_gai, not any((rdtype not in ("A", "AAAA"), servers, secure))),
         ("dnspython", _lookup_dnspython, HAS_DNSPYTHON),
@@ -590,7 +591,6 @@ def lookup(
         ("host", _lookup_host, HAS_HOST and not secure),
         ("nslookup", _lookup_nslookup, HAS_NSLOOKUP and not secure),
     )
-    # pylint: enable=bad-whitespace,multiple-spaces-before-keyword
 
     try:
         if method == "auto":
@@ -895,7 +895,7 @@ def spf_rec(rdata):
             # It's a modifier
             mod, val = mech_spec.split("=", 1)
             if mod in mods:
-                raise KeyError("Modifier {} can only appear once".format(mod))
+                raise KeyError(f"Modifier {mod} can only appear once")
 
             mods.add(mod)
             continue
@@ -959,7 +959,7 @@ def srv_name(svc, proto="tcp", domain=None):
 
     if domain:
         domain = "." + domain
-    return "_{}._{}{}".format(svc, proto, domain)
+    return f"_{svc}._{proto}{domain}"
 
 
 def srv_rec(rdatas):
@@ -1133,7 +1133,7 @@ def services(services_file="/etc/services"):
                         if not curr_desc:
                             pp_res["desc"] = comment
                         elif comment != curr_desc:
-                            pp_res["desc"] = "{}, {}".format(curr_desc, comment)
+                            pp_res["desc"] = f"{curr_desc}, {comment}"
                 res[name] = svc_res
 
     for svc, data in res.items():
@@ -1210,7 +1210,7 @@ def parse_resolv(src="/etc/resolv.conf"):
                                             ip_addr
                                         )
                                         ip_net = ipaddress.ip_network(
-                                            "{}{}".format(ip_addr, mask), strict=False
+                                            f"{ip_addr}{mask}", strict=False
                                         )
                                     if ip_net.version == 6:
                                         # TODO

@@ -4,19 +4,12 @@ Salt package
 
 import asyncio
 import importlib
-import locale
 import os
 import sys
 import warnings
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-if sys.version_info < (3,):  # pragma: no cover
-    sys.stderr.write(
-        "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
-    )
-    sys.stderr.flush()
 
 
 class NaclImporter:
@@ -97,54 +90,28 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+warnings.filterwarnings(
+    "ignore",
+    "Deprecated call to `pkg_resources.declare_namespace.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    ".*pkg_resources is deprecated as an API.*",
+    category=DeprecationWarning,
+)
+
 
 def __define_global_system_encoding_variable__():
-    # This is the most trustworthy source of the system encoding, though, if
-    # salt is being imported after being daemonized, this information is lost
-    # and reset to None
-    encoding = None
-
-    if not sys.platform.startswith("win") and sys.stdin is not None:
-        # On linux we can rely on sys.stdin for the encoding since it
-        # most commonly matches the filesystem encoding. This however
-        # does not apply to windows
-        encoding = sys.stdin.encoding
-
-    if not encoding:
-        # If the system is properly configured this should return a valid
-        # encoding. MS Windows has problems with this and reports the wrong
-        # encoding
-        try:
-            encoding = locale.getencoding()
-        except AttributeError:
-            # Python < 3.11
-            encoding = locale.getpreferredencoding(do_setlocale=True)
-
-        if not encoding:
-            # This is most likely ascii which is not the best but we were
-            # unable to find a better encoding. If this fails, we fall all
-            # the way back to ascii
-            encoding = sys.getdefaultencoding()
-        if not encoding:
-            if sys.platform.startswith("darwin"):
-                # Mac OS X uses UTF-8
-                encoding = "utf-8"
-            elif sys.platform.startswith("win"):
-                # Windows uses a configurable encoding; on Windows, Python uses the name “mbcs”
-                # to refer to whatever the currently configured encoding is.
-                encoding = "mbcs"
-            else:
-                # On linux default to ascii as a last resort
-                encoding = "ascii"
-
     import builtins
+    import sys
 
     # Define the detected encoding as a built-in variable for ease of use
-    setattr(builtins, "__salt_system_encoding__", encoding)
+    setattr(builtins, "__salt_system_encoding__", sys.getdefaultencoding())
 
     # This is now garbage collectable
     del builtins
-    del encoding
+    del sys
 
 
 __define_global_system_encoding_variable__()

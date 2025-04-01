@@ -11,6 +11,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.url
+from salt.config import DEFAULT_HASH_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,6 @@ def sync(
     saltenv=None,
     extmod_whitelist=None,
     extmod_blacklist=None,
-    force_local=False,
 ):
     """
     Sync custom modules into the extension_modules directory
@@ -82,9 +82,7 @@ def sync(
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            with salt.fileclient.get_file_client(
-                opts, pillar=False, force_local=force_local
-            ) as fileclient:
+            with salt.fileclient.get_file_client(opts) as fileclient:
                 for sub_env in saltenv:
                     log.info("Syncing %s for environment '%s'", form, sub_env)
                     cache = []
@@ -123,7 +121,7 @@ def sync(
                         log.info("Copying '%s' to '%s'", fn_, dest)
                         if os.path.isfile(dest):
                             # The file is present, if the sum differs replace it
-                            hash_type = opts.get("hash_type", "md5")
+                            hash_type = opts.get("hash_type", DEFAULT_HASH_TYPE)
                             src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
                             dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
                             if src_digest != dst_digest:

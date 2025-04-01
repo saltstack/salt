@@ -1,20 +1,18 @@
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
-import fnmatch
 import hashlib
 import json
 import os
 import pathlib
 import shutil
 import sys
-import tempfile
-import zipfile
-from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from functools import cache
 
+import attr
 import packaging.version
+import yaml
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -25,6 +23,11 @@ from rich.progress import (
     TimeRemainingColumn,
     TransferSpeedColumn,
 )
+
+if sys.version_info < (3, 11):
+    from typing_extensions import TypedDict
+else:
+    from typing import TypedDict  # pylint: disable=no-name-in-module
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
@@ -41,6 +44,126 @@ class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
     SOFT_FAIL = 2
+
+
+@attr.s(frozen=True, slots=True)
+class OS:
+    platform: str = attr.ib()
+    slug: str = attr.ib()
+    arch: str = attr.ib()
+    display_name: str = attr.ib(default=None)
+    pkg_type: str = attr.ib(default=None)
+
+    @arch.default
+    def _default_arch(self):
+        return self._get_default_arch()
+
+    def _get_default_arch(self):
+        if "aarch64" in self.slug:
+            return "arm64"
+        if "arm64" in self.slug:
+            return "arm64"
+        return "x86_64"
+
+
+@attr.s(frozen=True, slots=True)
+class Linux(OS):
+    platform: str = attr.ib(default="linux")
+    fips: bool = attr.ib(default=False)
+    container: str = attr.ib(default=None)
+
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }{'-fips' if self.fips else ''}"
+
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "fips": self.fips,
+            "container": self.container,
+            "job_name": self.job_name,
+        }
+
+
+@attr.s(frozen=True, slots=True)
+class LinuxPkg(Linux):
+
+    @property
+    def job_name(self):
+        return f"test-pkg-{ self.slug.replace('.', '') }{ '-fips' if self.fips else ''}"
+
+
+@attr.s(frozen=True, slots=True)
+class MacOS(OS):
+    runner: str = attr.ib()
+    platform: str = attr.ib(default="macos")
+
+    @runner.default
+    def _default_runner(self):
+        return self.slug
+
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }"
+
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "runner": self.runner,
+            "job_name": self.job_name,
+        }
+
+
+@attr.s(frozen=True, slots=True)
+class MacOSPkg(MacOS):
+
+    @property
+    def job_name(self):
+        return f"test-pkg-{ self.slug.replace('.', '') }"
+
+
+@attr.s(frozen=True, slots=True)
+class Windows(OS):
+    platform: str = attr.ib(default="windows")
+
+    def _get_default_arch(self):
+        return "amd64"
+
+    @property
+    def job_name(self):
+        return f"test-{ self.slug.replace('.', '') }"
+
+    def as_dict(self):
+        return {
+            "platform": self.platform,
+            "slug": self.slug,
+            "arch": self.arch,
+            "display_name": self.display_name,
+            "pkg_type": self.pkg_type,
+            "job_name": self.job_name,
+        }
+
+
+@attr.s(frozen=True, slots=True)
+class WindowsPkg(Windows):
+
+    @property
+    def job_name(self):
+        return f"test-pkg-{ self.slug.replace('.', '') }-{ self.pkg_type.lower() }"
+
+
+class PlatformDefinitions(TypedDict):
+    linux: list[Linux]
+    macos: list[MacOS]
+    windows: list[Windows]
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):
@@ -133,7 +256,9 @@ class Version(packaging.version.Version):
         return hash(str(self))
 
 
-def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
+def get_salt_releases(
+    ctx: Context, repository: str = "saltstack/salt"
+) -> list[Version]:
     """
     Return a list of salt versions
     """
@@ -220,11 +345,15 @@ def download_file(
     ctx: Context,
     url: str,
     dest: pathlib.Path,
-    auth: str | None = None,
+    auth: tuple[str, str] | None = None,
     headers: dict[str, str] | None = None,
 ) -> pathlib.Path:
     ctx.info(f"Downloading {dest.name!r} @ {url} ...")
-    curl = shutil.which("curl")
+    if sys.platform == "win32":
+        # We don't want to use curl on Windows, it doesn't work
+        curl = None
+    else:
+        curl = shutil.which("curl")
     if curl is not None:
         command = [curl, "-sS", "-L"]
         if headers:
@@ -238,7 +367,7 @@ def download_file(
         return dest
     wget = shutil.which("wget")
     if wget is not None:
-        with ctx.cwd(dest.parent):
+        with ctx.chdir(dest.parent):
             command = [wget, "--no-verbose"]
             if headers:
                 for key, value in headers.items():
@@ -251,7 +380,8 @@ def download_file(
         return dest
     # NOTE the stream=True parameter below
     with ctx.web as web:
-        web.headers.update(headers)
+        if headers:
+            web.headers.update(headers)
         with web.get(url, stream=True, auth=auth) as r:
             r.raise_for_status()
             with dest.open("wb") as f:
@@ -259,3 +389,44 @@ def download_file(
                     if chunk:
                         f.write(chunk)
     return dest
+
+
+def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
+    if "windows" in slug:
+        platform = "windows"
+        arch = "amd64"
+    elif "macos" in slug:
+        platform = "macos"
+        if "macos-13" in slug and "xlarge" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+    else:
+        platform = "linux"
+        if "arm64" in slug:
+            arch = "arm64"
+        elif "aarch64" in slug:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+    return platform, arch
+
+
+@cache
+def get_cicd_shared_context():
+    """
+    Return the CI/CD shared context file contents.
+    """
+    shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    return yaml.safe_load(shared_context_file.read_text())
+
+
+@cache
+def get_golden_images():
+    """
+    Return the golden images information stored on file.
+    """
+    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
+        "r", encoding="utf-8"
+    ) as rfh:
+        return json.load(rfh)

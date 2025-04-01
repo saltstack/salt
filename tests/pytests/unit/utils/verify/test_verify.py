@@ -257,9 +257,11 @@ def test_max_open_files(caplog):
                         logmsg_chk.format(
                             newmax,
                             mof_test,
-                            mof_test - newmax
-                            if sys.platform.startswith("win")
-                            else mof_h - newmax,
+                            (
+                                mof_test - newmax
+                                if sys.platform.startswith("win")
+                                else mof_h - newmax
+                            ),
                         )
                         in caplog.messages
                     )
@@ -279,9 +281,11 @@ def test_max_open_files(caplog):
                 logmsg_crash.format(
                     newmax,
                     mof_test,
-                    mof_test - newmax
-                    if sys.platform.startswith("win")
-                    else mof_h - newmax,
+                    (
+                        mof_test - newmax
+                        if sys.platform.startswith("win")
+                        else mof_h - newmax
+                    ),
                 )
                 in caplog.messages
             )

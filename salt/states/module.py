@@ -300,6 +300,7 @@ Windows system:
 
 .. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
+
 import logging
 
 import salt.loader
@@ -459,19 +460,21 @@ def _run(**kwargs):
                         )
                     )
                 if func_ret is False:
-                    failures.append("'{}': {}".format(func, func_ret))
+                    failures.append(f"'{func}': {func_ret}")
             else:
                 success.append(
                     "{}: {}".format(
                         func,
-                        func_ret.get("comment", "Success")
-                        if isinstance(func_ret, dict)
-                        else func_ret,
+                        (
+                            func_ret.get("comment", "Success")
+                            if isinstance(func_ret, dict)
+                            else func_ret
+                        ),
                     )
                 )
                 ret["changes"][func] = func_ret
         except (SaltInvocationError, TypeError) as ex:
-            failures.append("'{}' failed: {}".format(func, ex))
+            failures.append(f"'{func}' failed: {ex}")
     ret["comment"] = ", ".join(failures + success)
     ret["result"] = not bool(failures)
 
@@ -527,12 +530,12 @@ def _legacy_run(name, **kwargs):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
     if name not in __salt__:
-        ret["comment"] = "Module function {} is not available".format(name)
+        ret["comment"] = f"Module function {name} is not available"
         ret["result"] = False
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Module function {} is set to execute".format(name)
+        ret["comment"] = f"Module function {name} is set to execute"
         return ret
 
     aspec = salt.utils.args.get_function_argspec(__salt__[name])
@@ -590,7 +593,7 @@ def _legacy_run(name, **kwargs):
     if missing:
         comment = "The following arguments are missing:"
         for arg in missing:
-            comment += " {}".format(arg)
+            comment += f" {arg}"
         ret["comment"] = comment
         ret["result"] = False
         return ret
@@ -654,7 +657,7 @@ def _legacy_run(name, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs["returner"] in returners:
             returners[kwargs["returner"]](ret_ret)
-    ret["comment"] = "Module function {} executed".format(name)
+    ret["comment"] = f"Module function {name} executed"
     ret["result"] = _get_result(mret, ret["changes"])
 
     return ret

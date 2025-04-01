@@ -69,59 +69,53 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
     """
     with subtests.test("Removing a non-existent key should not explode"):
         expected = {
-            "name": "{}/2/3".format(prefix),
+            "name": f"{prefix}/2/3",
             "comment": "Key does not exist",
             "result": True,
             "changes": {},
         }
-        assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
+        assert etcd_state.rm(f"{prefix}/2/3", profile=profile_name) == expected
 
     with subtests.test("We should be able to set a value"):
         expected = {
-            "name": "{}/1".format(prefix),
+            "name": f"{prefix}/1",
             "comment": "New key created",
             "result": True,
-            "changes": {"{}/1".format(prefix): "one"},
+            "changes": {f"{prefix}/1": "one"},
         }
-        assert (
-            etcd_state.set_("{}/1".format(prefix), "one", profile=profile_name)
-            == expected
-        )
+        assert etcd_state.set_(f"{prefix}/1", "one", profile=profile_name) == expected
 
     with subtests.test(
         "We should be able to create an empty directory and set values in it"
     ):
         if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
             expected = {
-                "name": "{}/2".format(prefix),
+                "name": f"{prefix}/2",
                 "comment": "New directory created",
                 "result": True,
-                "changes": {"{}/2".format(prefix): "Created"},
+                "changes": {f"{prefix}/2": "Created"},
             }
-            assert (
-                etcd_state.directory("{}/2".format(prefix), profile=profile_name)
-                == expected
-            )
+            assert etcd_state.directory(f"{prefix}/2", profile=profile_name) == expected
 
         expected = {
-            "name": "{}/2/3".format(prefix),
+            "name": f"{prefix}/2/3",
             "comment": "New key created",
             "result": True,
-            "changes": {"{}/2/3".format(prefix): "two-three"},
+            "changes": {f"{prefix}/2/3": "two-three"},
         }
         assert (
-            etcd_state.set_("{}/2/3".format(prefix), "two-three", profile=profile_name)
+            etcd_state.set_(f"{prefix}/2/3", "two-three", profile=profile_name)
             == expected
         )
 
     with subtests.test("We should be able to remove an existing key"):
         expected = {
-            "name": "{}/2/3".format(prefix),
+            "name": f"{prefix}/2/3",
             "comment": "Key removed",
             "result": True,
-            "changes": {"{}/2/3".format(prefix): "Deleted"},
+            "changes": {f"{prefix}/2/3": "Deleted"},
         }
-        assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
+        assert etcd_state.rm(f"{prefix}/2/3", profile=profile_name) == expected
 
 
 def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
@@ -131,16 +125,16 @@ def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
     if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
         # Only need to run this once
         with subtests.test("Test no profile and bad connection in set_"):
-            ret = etcd_state.set_("{}/1".format(prefix), "one")
+            ret = etcd_state.set_(f"{prefix}/1", "one")
             assert not ret["result"]
             assert ret["comment"] == etcd_state.NO_PROFILE_MSG
 
         with subtests.test("Test no profile and bad connection in directory"):
-            ret = etcd_state.directory("{}/2".format(prefix))
+            ret = etcd_state.directory(f"{prefix}/2")
             assert not ret["result"]
             assert ret["comment"] == etcd_state.NO_PROFILE_MSG
 
         with subtests.test("Test no profile and bad connection in rm"):
-            ret = etcd_state.rm("{}/2/3".format(prefix))
+            ret = etcd_state.rm(f"{prefix}/2/3")
             assert not ret["result"]
             assert ret["comment"] == etcd_state.NO_PROFILE_MSG

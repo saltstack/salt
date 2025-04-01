@@ -2,7 +2,6 @@
 Test the winrepo runner
 """
 
-
 import textwrap
 
 import pytest

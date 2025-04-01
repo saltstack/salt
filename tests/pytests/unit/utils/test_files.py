@@ -2,7 +2,6 @@
 Unit Tests for functions located in salt/utils/files.py
 """
 
-
 import copy
 import io
 import os
@@ -28,7 +27,7 @@ def test_safe_rm_exceptions(tmp_path):
 
 def test_safe_walk_symlink_recursion(tmp_path):
     if tmp_path.stat().st_ino == 0:
-        pytest.xfail(reason="inodes not supported in {}".format(tmp_path))
+        pytest.xfail(reason=f"inodes not supported in {tmp_path}")
     tmp_path = str(tmp_path)
 
     os.mkdir(os.path.join(tmp_path, "fax"))

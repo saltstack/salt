@@ -3,86 +3,22 @@
 <%- else %>
   <%- set timeout_value = 180 %>
 <%- endif %>
-
-  <%- for slug, display_name, arch in test_salt_listing["windows"] %>
-
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+  test:
+    name: Test Salt
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
     needs:
       - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
+      - build-ci-deps
     uses: ./.github/workflows/test-action.yml
     with:
-      distro-slug: <{ slug }>
       nox-session: ci-test-onedir
-      platform: windows
-      arch: amd64
       nox-version: <{ nox_version  }>
       python-version: "<{ gh_actions_workflows_python_version }>"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
       workflow-slug: <{ workflow_slug }>
       default-timeout: <{ timeout_value }>
-
-  <%- endfor %>
-
-
-  <%- for slug, display_name, arch in test_salt_listing["macos"] %>
-
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    needs:
-      - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-action-macos.yml
-    with:
-      distro-slug: <{ slug }>
-      nox-session: ci-test-onedir
-      platform: darwin
-      arch: x86_64
-      nox-version: <{ nox_version  }>
-      python-version: "<{ gh_actions_workflows_python_version }>"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      workflow-slug: <{ workflow_slug }>
-      default-timeout: <{ timeout_value }>
-
-  <%- endfor %>
-
-
-  <%- for slug, display_name, arch in test_salt_listing["linux"] %>
-
-  <{ slug.replace(".", "") }>:
-    <%- do test_salt_needs.append(slug.replace(".", "")) %>
-    name: <{ display_name }> Test
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - <{ slug.replace(".", "") }>-ci-deps
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: <{ slug }>
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: <{ arch }>
-      nox-version: <{ nox_version  }>
-      python-version: "<{ gh_actions_workflows_python_version }>"
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
-      skip-code-coverage: <{ skip_test_coverage_check }>
-      skip-junit-reports: <{ skip_junit_reports_check }>
-      workflow-slug: <{ workflow_slug }>
-      default-timeout: <{ timeout_value }>
-
-  <%- endfor %>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}

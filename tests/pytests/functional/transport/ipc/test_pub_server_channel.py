@@ -14,9 +14,14 @@ log = logging.getLogger(__name__)
 
 
 pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
     pytest.mark.skip_on_spawning_platform(
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
-    )
+    ),
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Rocky Linux-8' and grains['osarch'] == 'aarch64'",
+        reason="Temporarily skip on Rocky Linux 8 Arm64",
+    ),
 ]
 
 

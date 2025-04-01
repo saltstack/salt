@@ -1,6 +1,7 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import glob
 import logging
 import os
@@ -17,6 +18,7 @@ import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
 import salt.utils.win_dacl as win_dacl
+from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +85,7 @@ def lgpo_bin():
         # download lgpo.zip
         log.debug("Downloading LGPO.exe from Microsoft")
         url = "https://download.microsoft.com/download/8/5/C/85C25433-A1B0-4FFA-9429-7E023E7DA8D8/LGPO.zip"
-        r = requests.get(url)
+        r = requests.get(url, timeout=60)
         with salt.utils.files.fopen(zip_file, "wb") as f:
             f.write(r.content)
         # extract zip
@@ -105,6 +107,19 @@ def lgpo_bin():
     else:
         log.debug("LGPO.exe already present")
         yield str(sys_dir / "lgpo.exe")
+
+
+def test_clear_policy_cache():
+    context = {
+        "lgpo.policy_definitions": "spongebob",
+        "lgpo.policy_resources": "squarepants",
+    }
+    with patch.dict(win_lgpo.__context__, context):
+        assert "lgpo.policy_definitions" in win_lgpo.__context__
+        assert "lgpo.policy_resources" in win_lgpo.__context__
+        win_lgpo.clear_policy_cache()
+        assert "lgpo.policy_definitions" not in win_lgpo.__context__
+        assert "lgpo.policy_resources" not in win_lgpo.__context__
 
 
 @pytest.mark.destructive_test
@@ -334,6 +349,9 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
+            # Though not set here, we're verifying there were set
             "Specify settings for optional component installation and component repair",
             "Disabled",
             [
@@ -343,6 +361,8 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
             "Specify settings for optional component installation and component repair",
             {
                 "Alternate source file path": "",
@@ -356,6 +376,8 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
+            # This will need to be fixed for Windows Server 2025
+            # The bottom two options have been removed in 2025
             "Specify settings for optional component installation and component repair",
             {
                 "Alternate source file path": r"\\some\fake\server",
@@ -448,6 +470,7 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
         ),
     ],
 )
+@pytest.mark.destructive_test
 def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -518,6 +541,7 @@ def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_reg
         ),
     ],
 )
+@pytest.mark.destructive_test
 def test_set_user_policy(clean_user, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_user_policy(
         lgpo_bin=lgpo_bin,
@@ -528,6 +552,7 @@ def test_set_user_policy(clean_user, lgpo_bin, shell, name, setting, exp_regexes
     )
 
 
+@pytest.mark.destructive_test
 def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     """
     Test setting/unsetting/changing WindowsUpdate policy
@@ -667,6 +692,7 @@ def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     )
 
 
+@pytest.mark.destructive_test
 def test_set_computer_policy_multiple_policies(clean_comp, lgpo_bin, shell):
     """
     Tests setting several ADMX policies in succession and validating the
@@ -738,3 +764,16 @@ def test_set_computer_policy_multiple_policies(clean_comp, lgpo_bin, shell):
             r"\\AU[\s]*AllowMUUpdateService[\s]*DELETE",
         ],
     )
+
+
+def test__encode_xmlns_url():
+    """
+    Tests the _encode_xmlns_url function.
+    Spaces in the xmlns url should be converted to %20
+    """
+    line = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity intelligence">'
+    result = re.sub(
+        r'(.*)(\bxmlns(?::\w+)?)\s*=\s*"([^"]+)"(.*)', win_lgpo._encode_xmlns_url, line
+    )
+    expected = '<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/Policysecurity%20intelligence">'
+    assert result == expected

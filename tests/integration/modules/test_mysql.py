@@ -72,14 +72,14 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_function("mysql.db_create", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while creating db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while creating db for db name: '{db_name}'"
         )
         # test db exists
         ret = self.run_function("mysql.db_exists", name=db_name, **kwargs)
         self.assertEqual(
             True,
             ret,
-            "Problem while testing db exists for db name: '{}'".format(db_name),
+            f"Problem while testing db exists for db name: '{db_name}'",
         )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function("mysql.db_list", **kwargs)
@@ -115,7 +115,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         # Now remove database
         ret = self.run_function("mysql.db_remove", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while removing db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while removing db for db name: '{db_name}'"
         )
 
     @pytest.mark.destructive_test
@@ -694,7 +694,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         password=None,
         new_password=None,
         new_password_hash=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Perform some tests around creation of the given user
@@ -760,7 +760,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if not isinstance(ret, dict):
             raise AssertionError(
-                "Unexpected result while retrieving user_info for '{}'".format(user)
+                f"Unexpected result while retrieving user_info for '{user}'"
             )
         self.assertEqual(ret["Host"], host)
         self.assertEqual(ret["Password"], check_hash)
@@ -1489,7 +1489,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,
@@ -1505,7 +1505,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,

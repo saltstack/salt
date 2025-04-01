@@ -76,6 +76,32 @@ def offline(context=None):
     return ret
 
 
+def status(context=None):
+    """Return True if systemd status succeeds. When False, the system may have
+    been booted with systemd but systemd is in a degraded state.
+
+    .. versionadded:: 3006.0
+    """
+    contextkey = "salt.utils.systemd.status"
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
+        # Can't put this if block on the same line as the above if block,
+        # because it will break the elif below.
+        if contextkey in context:
+            return context[contextkey]
+    elif context is not None:
+        raise SaltInvocationError("context must be a dictionary if passed")
+    proc = subprocess.run(
+        ["systemctl", "status"],
+        check=False,
+        capture_output=True,
+    )
+    ret = (
+        b"Failed to get D-Bus connection: No such file or directory" not in proc.stderr
+    )
+    context[contextkey] = ret
+    return ret
+
+
 def version(context=None):
     """
     Attempts to run systemctl --version. Returns None if unable to determine
@@ -123,7 +149,10 @@ def has_scope(context=None):
     _sd_version = version(context)
     if _sd_version is None:
         return False
-    return _sd_version >= 205
+    if status(context):
+        return _sd_version >= 205
+    else:
+        return False
 
 
 def pid_to_service(pid):
@@ -143,7 +172,10 @@ def _pid_to_service_systemctl(pid):
     systemd_cmd = ["systemctl", "--output", "json", "status", str(pid)]
     try:
         systemd_output = subprocess.run(
-            systemd_cmd, check=True, text=True, capture_output=True
+            systemd_cmd,
+            check=True,
+            text=True,
+            capture_output=True,
         )
         status_json = salt.utils.json.find_json(systemd_output.stdout)
     except (ValueError, subprocess.CalledProcessError):

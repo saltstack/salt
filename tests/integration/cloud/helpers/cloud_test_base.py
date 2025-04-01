@@ -2,7 +2,6 @@
 Tests for the Openstack Cloud Provider
 """
 
-
 import logging
 import os
 import shutil
@@ -116,7 +115,7 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         log.debug('Deleting instance "%s"', instance_name)
         delete_str = self.run_cloud(
-            "-d {} --assume-yes --out=yaml".format(instance_name), timeout=timeout
+            f"-d {instance_name} --assume-yes --out=yaml", timeout=timeout
         )
         if delete_str:
             delete = safe_load("\n".join(delete_str))
@@ -160,7 +159,7 @@ class CloudTest(ShellCase):
             subclass = self.__class__.__name__.strip("Test")
             # Use the first three letters of the subclass, fill with '-' if too short
             self._instance_name = random_string(
-                "cloud-test-{:-<3}-".format(subclass[:3]), uppercase=False
+                f"cloud-test-{subclass[:3]:-<3}-", uppercase=False
             ).lower()
         return self._instance_name
 

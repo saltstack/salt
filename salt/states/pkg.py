@@ -10,7 +10,7 @@ Installation of packages using OS package managers such as yum or apt-get
     Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
     manpage for more information). If desired, usage of `systemd-run(1)`_ can
     be suppressed by setting a :mod:`config option <salt.modules.config.get>`
-    called ``systemd.use_scope``, with a value of ``False`` (no quotes).
+    called ``systemd.scope``, with a value of ``False`` (no quotes).
 
 .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
@@ -67,6 +67,7 @@ state module
     Make sure the package name has the correct case for package managers which are
     case-sensitive (such as :mod:`pkgng <salt.modules.pkgng>`).
 """
+
 import fnmatch
 import logging
 import os
@@ -1953,10 +1954,10 @@ def installed(
                 ret["comment"] = exc.strerror_without_changes
             else:
                 ret["changes"] = {}
-                ret[
-                    "comment"
-                ] = "An error was encountered while installing package(s): {}".format(
-                    exc
+                ret["comment"] = (
+                    "An error was encountered while installing package(s): {}".format(
+                        exc
+                    )
                 )
             if warnings:
                 ret.setdefault("warnings", []).extend(warnings)
@@ -2368,9 +2369,9 @@ def downloaded(
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = f"An error was encountered while downloading package(s): {exc}"
+            ret["comment"] = (
+                f"An error was encountered while downloading package(s): {exc}"
+            )
         return ret
 
     new_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
@@ -2425,9 +2426,9 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     if "pkg.list_patches" not in __salt__:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The pkg.patch_installed state is not available on this platform"
+        ret["comment"] = (
+            "The pkg.patch_installed state is not available on this platform"
+        )
         return ret
 
     if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
@@ -2448,9 +2449,9 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     if __opts__["test"]:
         summary = ", ".join(targets)
-        ret[
-            "comment"
-        ] = f"The following advisory patches would be downloaded: {summary}"
+        ret["comment"] = (
+            f"The following advisory patches would be downloaded: {summary}"
+        )
         return ret
 
     try:
@@ -2467,18 +2468,18 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = f"An error was encountered while downloading package(s): {exc}"
+            ret["comment"] = (
+                f"An error was encountered while downloading package(s): {exc}"
+            )
         return ret
 
     if not ret["changes"] and not ret["comment"]:
         status = "downloaded" if downloadonly else "installed"
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Advisory patch is not needed or related packages are already {}".format(
-            status
+        ret["comment"] = (
+            "Advisory patch is not needed or related packages are already {}".format(
+                status
+            )
         )
 
     return ret
@@ -2963,7 +2964,7 @@ def _uninstall(
 
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, normalize=normalize
+            name, pkgs, normalize=normalize, version=version, **kwargs
         )[0]
     except MinionError as exc:
         return {
@@ -3030,7 +3031,7 @@ def _uninstall(
     new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
     for param in pkg_params:
-        if __grains__["os_family"] in ["Suse", "RedHat"]:
+        if __grains__["os_family"] in ["Suse", "RedHat", "Windows"]:
             # Check if the package version set to be removed is actually removed:
             if param in new and not pkg_params[param]:
                 failed.append(param)
@@ -3164,9 +3165,9 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret[
-                "comment"
-            ] = f"An error was encountered while removing package(s): {exc}"
+            ret["comment"] = (
+                f"An error was encountered while removing package(s): {exc}"
+            )
         return ret
 
 
@@ -3491,19 +3492,19 @@ def group_installed(name, skip=None, include=None, **kwargs):
         if "unexpected keyword argument" in str(err):
             ret["comment"] = "Repo options are not supported on this platform"
         else:
-            ret[
-                "comment"
-            ] = f"An error was encountered while installing/updating group '{name}': {err}."
+            ret["comment"] = (
+                f"An error was encountered while installing/updating group '{name}': {err}."
+            )
         return ret
 
     mandatory = diff["mandatory"]["installed"] + diff["mandatory"]["not installed"]
 
     invalid_skip = [x for x in mandatory if x in skip]
     if invalid_skip:
-        ret[
-            "comment"
-        ] = "The following mandatory packages cannot be skipped: {}".format(
-            ", ".join(invalid_skip)
+        ret["comment"] = (
+            "The following mandatory packages cannot be skipped: {}".format(
+                ", ".join(invalid_skip)
+            )
         )
         return ret
 
@@ -3525,9 +3526,9 @@ def group_installed(name, skip=None, include=None, **kwargs):
     if __opts__["test"]:
         ret["result"] = None
         if partially_installed:
-            ret[
-                "comment"
-            ] = f"Group '{name}' is partially installed and will be updated"
+            ret["comment"] = (
+                f"Group '{name}' is partially installed and will be updated"
+            )
         else:
             ret["comment"] = f"Group '{name}' will be installed"
         return ret
@@ -3596,8 +3597,6 @@ def mod_aggregate(low, chunks, running):
     The mod_aggregate function which looks up all packages in the available
     low chunks and merges them into a single pkgs ref in the present low data
     """
-    pkgs = []
-    pkg_type = None
     agg_enabled = [
         "installed",
         "latest",
@@ -3606,6 +3605,9 @@ def mod_aggregate(low, chunks, running):
     ]
     if low.get("fun") not in agg_enabled:
         return low
+    is_sources = "sources" in low
+    # use a dict instead of a set to maintain insertion order
+    pkgs = {}
     for chunk in chunks:
         tag = __utils__["state.gen_tag"](chunk)
         if tag in running:
@@ -3620,40 +3622,50 @@ def mod_aggregate(low, chunks, running):
             # Check for the same repo
             if chunk.get("fromrepo") != low.get("fromrepo"):
                 continue
+            # If hold exists in the chunk, do not add to aggregation
+            # otherwise all packages will be held or unheld.
+            # setting a package to be held/unheld is not as
+            # time consuming as installing/uninstalling.
+            if "hold" in chunk:
+                continue
             # Check first if 'sources' was passed so we don't aggregate pkgs
             # and sources together.
-            if "sources" in chunk:
-                if pkg_type is None:
-                    pkg_type = "sources"
-                if pkg_type == "sources":
-                    pkgs.extend(chunk["sources"])
+            if is_sources and "sources" in chunk:
+                _combine_pkgs(pkgs, chunk["sources"])
+                chunk["__agg__"] = True
+            elif not is_sources:
+                # Pull out the pkg names!
+                if "pkgs" in chunk:
+                    _combine_pkgs(pkgs, chunk["pkgs"])
                     chunk["__agg__"] = True
-            else:
-                # If hold exists in the chunk, do not add to aggregation
-                # otherwise all packages will be held or unheld.
-                # setting a package to be held/unheld is not as
-                # time consuming as installing/uninstalling.
-                if "hold" not in chunk:
-                    if pkg_type is None:
-                        pkg_type = "pkgs"
-                    if pkg_type == "pkgs":
-                        # Pull out the pkg names!
-                        if "pkgs" in chunk:
-                            pkgs.extend(chunk["pkgs"])
-                            chunk["__agg__"] = True
-                        elif "name" in chunk:
-                            version = chunk.pop("version", None)
-                            if version is not None:
-                                pkgs.append({chunk["name"]: version})
-                            else:
-                                pkgs.append(chunk["name"])
-                            chunk["__agg__"] = True
-    if pkg_type is not None and pkgs:
-        if pkg_type in low:
-            low[pkg_type].extend(pkgs)
-        else:
-            low[pkg_type] = pkgs
+                elif "name" in chunk:
+                    version = chunk.pop("version", None)
+                    pkgs.setdefault(chunk["name"], set()).add(version)
+                    chunk["__agg__"] = True
+    if pkgs:
+        pkg_type = "sources" if is_sources else "pkgs"
+        low_pkgs = {}
+        _combine_pkgs(low_pkgs, low.get(pkg_type, []))
+        for pkg, values in pkgs.items():
+            low_pkgs.setdefault(pkg, {None}).update(values)
+        # the value is the version for pkgs and
+        # the URI for sources
+        low_pkgs_list = [
+            name if value is None else {name: value}
+            for name, values in pkgs.items()
+            for value in values
+        ]
+        low[pkg_type] = low_pkgs_list
     return low
+
+
+def _combine_pkgs(pkgs_dict, additional_pkgs_list):
+    for item in additional_pkgs_list:
+        if isinstance(item, str):
+            pkgs_dict.setdefault(item, {None})
+        else:
+            for pkg, version in item:
+                pkgs_dict.setdefault(pkg, {None}).add(version)
 
 
 def mod_watch(name, **kwargs):
@@ -4003,7 +4015,7 @@ def unheld(name, version=None, pkgs=None, all=False, **kwargs):
             (pkg_name, pkg_ver) = next(iter(pkg.items()))
             dpkgs.update({pkg_name: pkg_ver})
         else:
-            dpkgs.update({pkg: None})
+            dpkgs.update({pkg: None})  # pylint: disable=unhashable-member
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     comments = []

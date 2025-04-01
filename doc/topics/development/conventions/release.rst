@@ -46,7 +46,7 @@ example):
 #. Publish the docs.
 #. Create release at `github`_
 #. Update win-repo-ng with new salt versions.
-#. Announce release is live to irc, salt-users, salt-announce and release slack
+#. Announce release is live to irc, salt-users, salt-announce and release discord
    community channel.
 
 
@@ -63,7 +63,6 @@ for a bugfix release.
 
 #. Ensure all required bug fixes are merged.
 #. Create release branch with the version of the release. (ex. 3000.1)
-#. Create jenkins jobs that test the new release branch.
 #. Run through a manual test run based off of the head of the branch.
 #. Generate the new man pages for the release.
 #. Create internal tag for testing.(ex v3000.1)
@@ -80,7 +79,7 @@ for a bugfix release.
 #. Publish the docs.
 #. Create release at `github`_
 #. Update win-repo-ng with new salt versions.
-#. Announce release is live to irc, salt-users, salt-announce and release slack channel.
+#. Announce release is live to irc, salt-users, salt-announce and release discord channel.
 
 .. _`github`: https://github.com/saltstack/salt/releases
 .. _`repo.saltproject.io`: https://repo.saltproject.io

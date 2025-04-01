@@ -3,8 +3,8 @@ TCP transport classes
 
 Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
-
 """
+
 import asyncio
 import asyncio.exceptions
 import errno
@@ -26,28 +26,26 @@ import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
 import tornado.tcpserver
+import tornado.util
 
 import salt.master
 import salt.payload
+import salt.transport.base
 import salt.transport.frame
 import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
-from salt.utils.process import SignalHandlingProcess
 
 if salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
 else:
     USE_LOAD_BALANCER = False
 
-if USE_LOAD_BALANCER:
-    import tornado.util
-
-    from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +134,7 @@ def _set_tcp_keepalive(sock, opts):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
 
 
-class LoadBalancerServer(SignalHandlingProcess):
+class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
     """
     Raw TCP server which runs in its own process and will listen
     for incoming connections. Each incoming connection will be
@@ -177,6 +175,7 @@ class LoadBalancerServer(SignalHandlingProcess):
         self._socket.setblocking(1)
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
+
         while True:
             try:
                 # Wait for a connection to occur since the socket is
@@ -201,7 +200,7 @@ class Resolver(tornado.netutil.DefaultLoopResolver):
     """
 
 
-class TCPPubClient(salt.transport.base.PublishClient):
+class PublishClient(salt.transport.base.PublishClient):
     """
     Tornado based TCP Pub Client
     """
@@ -218,6 +217,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
     ]
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
         self.unpacker = salt.utils.msgpack.Unpacker()
@@ -234,6 +234,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         self.host = kwargs.get("host", None)
         self.port = kwargs.get("port", None)
         self.path = kwargs.get("path", None)
+        self.ssl = kwargs.get("ssl", None)
         self.source_ip = self.opts.get("source_ip")
         self.source_port = self.opts.get("source_publish_port")
         self.on_recv_task = None
@@ -260,15 +261,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         self._stream = None
         self._closed = True
 
-    # pylint: disable=W1701
-    def __del__(self):
-        if not self._closing:
-            warnings.warn(
-                "unclosed publish client {self!r}", ResourceWarning, source=self
-            )
-
-    # pylint: enable=W1701
-
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
@@ -284,10 +276,16 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self._tcp_client = TCPClientKeepAlive(
                         self.opts, resolver=self.resolver
                     )
+                    # ctx = None
+                    # if self.ssl is not None:
+                    #     ctx = salt.transport.base.ssl_context(
+                    #         self.ssl, server_side=False
+                    #     )
                     stream = await asyncio.wait_for(
                         self._tcp_client.connect(
                             ip_bracket(self.host, strip=True),
                             self.port,
+                            # ssl_options=ctx,
                             ssl_options=self.opts.get("ssl"),
                             **kwargs,
                         ),
@@ -311,9 +309,10 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     _connect_to = self.path
                 else:
                     _connect_to = f"{self.host}:{self.port}"
-                log.warning(
-                    "TCP Publish Client encountered an exception while connecting to"
+                log.debug(
+                    "%s encountered an exception while connecting to"
                     " %s: %r, will reconnect in %d seconds",
+                    self,
                     _connect_to,
                     exc,
                     self.backoff,
@@ -327,6 +326,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
 
     async def _connect(self, timeout=None):
         if self._stream is None:
+            self._connect_called = True
             self._closing = False
             self._closed = False
             self._stream = await self.getstream(timeout=timeout)
@@ -354,8 +354,9 @@ class TCPPubClient(salt.transport.base.PublishClient):
         if not isinstance(messages, dict):
             # TODO: For some reason we need to decode here for things
             #       to work. Fix this.
-            body = salt.utils.msgpack.loads(messages)
-            body = salt.transport.frame.decode_embedded_strs(body)
+            body = salt.payload.loads(messages)
+            # body = salt.utils.msgpack.loads(messages)
+            # body = salt.transport.frame.decode_embedded_strs(body)
         else:
             body = messages
         return body
@@ -369,8 +370,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
             await asyncio.sleep(0.001)
         if timeout == 0:
             for msg in self.unpacker:
-                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                return framed_msg["body"]
+                return msg[b"body"]
             try:
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
@@ -391,8 +391,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
-                            framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                            return framed_msg["body"]
+                            return msg[b"body"]
         elif timeout:
             try:
                 return await asyncio.wait_for(self.recv(), timeout=timeout)
@@ -406,8 +405,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 return
         else:
             for msg in self.unpacker:
-                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                return framed_msg["body"]
+                return msg[b"body"]
             while not self._closing:
                 async with self._read_in_progress:
                     try:
@@ -424,25 +422,28 @@ class TCPPubClient(salt.transport.base.PublishClient):
                         continue
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
-                        framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                        return framed_msg["body"]
+                        return msg[b"body"]
 
     async def on_recv_handler(self, callback):
         while not self._stream:
             # Retry quickly, we may want to increase this if it's hogging cpu.
             await asyncio.sleep(0.003)
+        tasks = []
         while True:
             msg = await self.recv()
             if msg:
                 try:
                     # XXX This is handled better in the websocket transport work
-                    await callback(msg)
+                    tasks.append(asyncio.create_task(callback(msg)))
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
                         exc_info=True,
                     )
+            for task in tasks[:]:
+                if task.done():
+                    tasks.remove(task)
 
     def on_recv(self, callback):
         """
@@ -464,7 +465,16 @@ class TCPPubClient(salt.transport.base.PublishClient):
         self.close()
 
 
-class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
+class TCPPubClient(PublishClient):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPPubClient has been deprecated, use PublishClient instead.",
+        )
+        super().__init__(*args, **kwargs)
+
+
+class RequestServer(salt.transport.base.DaemonizedRequestServer):
     """
     Tornado based TCP Request/Reply Server
 
@@ -478,6 +488,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
         self.opts = opts
         self._socket = None
         self.req_server = None
+        self.ssl = self.opts.get("ssl", None)
 
     @property
     def socket(self):
@@ -509,7 +520,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
                 if exc.errno != 9:
                     raise
                 log.exception(
-                    "TCPReqServerChannel close generated an exception: %s", str(exc)
+                    "RequestServer close generated an exception: %s", str(exc)
                 )
             self.req_server = None
 
@@ -545,14 +556,17 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
         message_handler: function to call with your payloads
         """
         self.message_handler = message_handler
-        log.info("ReqServer workers %s", socket)
+        log.info("RequestServer workers %s", socket)
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
+            ctx = None
+            if self.ssl is not None:
+                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
                     self.socket_queue,
                     self.handle_message,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                 )
             else:
                 if salt.utils.platform.is_windows():
@@ -563,13 +577,21 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
                     self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
                 self.req_server = SaltMessageServer(
                     self.handle_message,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                     io_loop=io_loop,
                 )
                 self.req_server.add_socket(self._socket)
                 self._socket.listen(self.backlog)
 
     async def handle_message(self, stream, payload, header=None):
+        try:
+            cert = stream.socket.getpeercert()
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         payload = self.decode_payload(payload)
         reply = await self.message_handler(payload)
         # XXX Handle StreamClosedError
@@ -577,6 +599,15 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
 
     def decode_payload(self, payload):
         return payload
+
+
+class TCPReqServer(RequestServer):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPReqServer has been deprecated, use RequestServer instead.",
+        )
+        super().__init__(*args, **kwargs)
 
 
 class SaltMessageServer(tornado.tcpserver.TCPServer):
@@ -593,7 +624,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         self.clients = []
         self.message_handler = message_handler
 
-    async def handle_stream(  # pylint: disable=arguments-differ
+    async def handle_stream(  # pylint: disable=arguments-differ,invalid-overridden-method
         self,
         stream,
         address,
@@ -1003,9 +1034,14 @@ class PubServer(tornado.tcpserver.TCPServer):
     """
 
     def __init__(
-        self, opts, io_loop=None, presence_callback=None, remove_presence_callback=None
+        self,
+        opts,
+        io_loop=None,
+        presence_callback=None,
+        remove_presence_callback=None,
+        ssl=None,
     ):
-        super().__init__(ssl_options=opts.get("ssl"))
+        super().__init__(ssl_options=ssl)
         self.io_loop = io_loop
         self.opts = opts
         self._closing = False
@@ -1019,6 +1055,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             self.remove_presence_callback = remove_presence_callback
         else:
             self.remove_presence_callback = lambda subscriber: subscriber
+        self.ssl = ssl
 
     def close(self):
         if self._closing:
@@ -1058,6 +1095,14 @@ class PubServer(tornado.tcpserver.TCPServer):
                 continue
 
     def handle_stream(self, stream, address):
+        try:
+            cert = stream.socket.getpeercert()
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         log.debug("Subscriber at %s connected", address)
         client = Subscriber(stream, address)
         self.clients.add(client)
@@ -1073,7 +1118,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         if topic_list:
             for topic in topic_list:
                 sent = False
-                for client in self.clients:
+                for client in list(self.clients):
                     if topic == client.id_:
                         try:
                             # Write the packed str
@@ -1085,7 +1130,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
-            for client in self.clients:
+            for client in list(self.clients):
                 try:
                     # Write the packed str
                     await client.stream.write(payload)
@@ -1108,7 +1153,13 @@ class TCPPuller:
     """
 
     def __init__(
-        self, host=None, port=None, path=None, io_loop=None, payload_handler=None
+        self,
+        host=None,
+        port=None,
+        path=None,
+        mode=0o600,
+        io_loop=None,
+        payload_handler=None,
     ):
         """
         Create a new Tornado IPC server
@@ -1128,6 +1179,7 @@ class TCPPuller:
         self.host = host
         self.port = port
         self.path = path
+        self.mode = mode
         self._started = False
         self.payload_handler = payload_handler
 
@@ -1145,7 +1197,7 @@ class TCPPuller:
         # Start up the ioloop
         if self.path:
             log.trace("IPCServer: binding to socket: %s", self.path)
-            self.sock = tornado.netutil.bind_unix_socket(self.path)
+            self.sock = tornado.netutil.bind_unix_socket(self.path, self.mode)
         else:
             log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1262,7 +1314,7 @@ class TCPPuller:
         self.close()
 
 
-class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
+class PublishServer(salt.transport.base.DaemonizedPublishServer):
     """
     Tornado based TCP PublishServer
     """
@@ -1286,6 +1338,10 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        ssl=None,
+        started=None,
     ):
         self.opts = opts
         self.pub_sock = None
@@ -1295,6 +1351,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pull_path_perms = pull_path_perms
+        self.pub_path_perms = pub_path_perms
+        self.ssl = ssl
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
 
     @property
     def topic_support(self):
@@ -1312,6 +1375,10 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_host": self.pull_host,
             "pull_port": self.pull_port,
             "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
+            "ssl": self.ssl,
+            "started": self.started,
         }
 
     def publish_daemon(
@@ -1349,18 +1416,30 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         if io_loop is None:
             io_loop = tornado.ioloop.IOLoop.current()
         # Spin up the publisher
+        ctx = None
+        if self.ssl is not None:
+            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
         self.pub_server = pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
+            ssl=ctx,
         )
         if self.pub_path:
-            log.debug("Publish server binding pub to %s", self.pub_path)
-            sock = tornado.netutil.bind_unix_socket(self.pub_path)
+            log.debug(
+                "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
+            )
+            with salt.utils.files.set_umask(0o177):
+                sock = tornado.netutil.bind_unix_socket(
+                    self.pub_path, self.pub_path_perms
+                )
         else:
             log.debug(
-                "Publish server binding pub to %s:%s", self.pub_host, self.pub_port
+                "Publish server binding pub to %s:%s ssl=%r",
+                self.pub_host,
+                self.pub_port,
+                self.ssl,
             )
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1383,17 +1462,18 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             pull_host = self.pull_host
             pull_port = self.pull_port
 
-        self.pull_sock = TCPPuller(
-            host=self.pull_host,
-            port=self.pull_port,
-            path=self.pull_path,
-            io_loop=io_loop,
-            payload_handler=publish_payload,
-        )
-
-        # Securely create socket
         with salt.utils.files.set_umask(0o177):
+            self.pull_sock = TCPPuller(
+                host=self.pull_host,
+                port=self.pull_port,
+                path=self.pull_path,
+                mode=self.pull_path_perms,
+                io_loop=io_loop,
+                payload_handler=publish_payload,
+            )
+            # Securely create socket
             self.pull_sock.start()
+        self.started.set()
 
     def pre_fork(self, process_manager):
         """
@@ -1401,7 +1481,11 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
+        process_manager.add_process(
+            self.publish_daemon,
+            args=[self.publish_payload],
+            name=self.__class__.__name__,
+        )
 
     async def publish_payload(self, payload, *args):
         return await self.pub_server.publish_payload(payload)
@@ -1418,7 +1502,9 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         )
         self.pub_sock.connect(timeout=timeout)
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
         """
@@ -1430,6 +1516,15 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.pub_sock:
             self.pub_sock.close()
             self.pub_sock = None
+
+
+class TCPPublishServer(PublishServer):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPPublishServer has been deprecated, use PublishServer instead.",
+        )
+        super().__init__(*args, **kwargs)
 
 
 class _TCPPubServerPublisher:
@@ -1613,7 +1708,7 @@ class _TCPPubServerPublisher:
         await self.stream.write(pack)
 
 
-class TCPReqClient(salt.transport.base.RequestClient):
+class RequestClient(salt.transport.base.RequestClient):
     """
     Tornado based TCP RequestClient
     """
@@ -1621,6 +1716,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
     ttype = "tcp"
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
 
@@ -1633,10 +1729,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         self._tcp_client = TCPClientKeepAlive(opts)
         self.source_ip = opts.get("source_ip")
         self.source_port = opts.get("source_ret_port")
-        self._mid = 1
-        self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
         # TODO: max queue size
-        self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
 
         self._read_until_future = None
@@ -1648,6 +1741,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         self.disconnect_callback = _null_callback
         self.connect_callback = _null_callback
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.ssl = self.opts.get("ssl", None)
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -1656,10 +1750,13 @@ class TCPReqClient(salt.transport.base.RequestClient):
         while stream is None and (not self._closed and not self._closing):
             try:
                 # XXX: Support ipc sockets too
+                ctx = None
+                if self.ssl is not None:
+                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
                 stream = await self._tcp_client.connect(
                     ip_bracket(self.host, strip=True),
                     self.port,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                     **kwargs,
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -1674,8 +1771,9 @@ class TCPReqClient(salt.transport.base.RequestClient):
                 await asyncio.sleep(self.backoff)
         return stream
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         if self._stream is None:
+            self._connect_called = True
             self._stream = await self.getstream()
             if self._stream:
                 if not self._stream_return_running:
@@ -1753,18 +1851,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         self._stream_return_running = False
 
     def _message_id(self):
-        wrap = False
-        while self._mid in self.send_future_map:
-            if self._mid >= self._max_messages:
-                if wrap:
-                    # this shouldn't ever happen, but just in case
-                    raise Exception("Unable to find available messageid")
-                self._mid = 1
-                wrap = True
-            else:
-                self._mid += 1
-
-        return self._mid
+        return str(uuid.uuid4())
 
     def timeout_message(self, message_id, msg):
         if message_id not in self.send_future_map:
@@ -1807,4 +1894,17 @@ class TCPReqClient(salt.transport.base.RequestClient):
         return recv
 
     def close(self):
-        self._stream.close()
+        if self._closing:
+            return
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+
+
+class TCPReqClient(RequestClient):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPReqClient has been deprecated, use RequestClient instead.",
+        )
+        super().__init__(*args, **kwargs)

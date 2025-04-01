@@ -58,12 +58,15 @@ Configuration Options
 
     ``location``
         **(Required)** The location of the VM. This should be a Linode region
-        (e.g. ``us-east``). See `listing locations <#listing-locations>`_ for
-        more options.
+        (e.g. ``us-east``). See `the list of locations <https://api.linode.com/v4/regions>`_ and
+        `the guide to choose a location <https://www.linode.com/docs/products/platform/get-started/guides/choose-a-data-center/>`_
+        for more options.
 
     ``size``
         **(Required)** The size of the VM. This should be a Linode instance type ID
-        (e.g. ``g6-standard-2``). See `listing sizes <#listing-sizes>`_ for more options.
+        (e.g. ``g6-standard-2``). See `the list of sizes <https://api.linode.com/v4/linode/types>`_ and
+        `the guide to choose a size <https://www.linode.com/docs/products/compute/compute-instances/plans/choosing-a-plan/>`_
+        for more options.
 
     ``password`` (overrides provider)
         **(*Required)** The default password for the VM. Must be provided at the profile
@@ -72,15 +75,19 @@ Configuration Options
     ``assign_private_ip``
         .. versionadded:: 2016.3.0
 
-        Whether or not to assign a private key to the VM. Defaults to ``False``.
+        **(optional)** Whether or not to assign a private IP to the VM. Defaults to ``False``.
+
+    ``backups_enabled``
+        **(optional)** Whether or not to enable the backup for this VM. Backup can be
+        configured in your Linode account Defaults to ``False``.
 
     ``cloneform``
-        The name of the Linode to clone from.
+        **(optional)** The name of the Linode to clone from.
 
     ``ssh_interface``
         .. versionadded:: 2016.3.0
 
-        The interface with which to connect over SSH. Valid options are ``private_ips`` or
+        **(optional)** The interface with which to connect over SSH. Valid options are ``private_ips`` or
         ``public_ips``. Defaults to ``public_ips``.
 
         If specifying ``private_ips``, the Linodes must be hosted within the same data center
@@ -93,17 +100,17 @@ Configuration Options
         documentation.
 
     ``ssh_pubkey``
-        The public key to authorize for SSH with the VM.
+        **(optional)** The public key to authorize for SSH with the VM.
 
     ``swap``
-        The amount of disk space to allocate for the swap partition. Defaults to ``256``.
+        **(optional)** The amount of disk space to allocate for the swap partition. Defaults to ``256``.
 
 .. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper/#what-is-network-helper
 
 Example Configuration
 ---------------------
 
-Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
+Set up a profile configuration at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
 

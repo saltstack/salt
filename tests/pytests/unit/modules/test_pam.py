@@ -3,6 +3,7 @@
 
     Test cases for salt.modules.pam
 """
+
 import pytest
 
 import salt.modules.pam as pam

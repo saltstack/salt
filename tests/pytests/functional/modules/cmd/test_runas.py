@@ -22,5 +22,5 @@ def configure_loader_modules():
 @pytest.mark.skip_if_not_root
 def test_run_as(account):
     ret = cmdmod.run("id", runas=account.username)
-    assert "gid={}".format(account.info.gid) in ret
-    assert "uid={}".format(account.info.uid) in ret
+    assert f"gid={account.info.gid}" in ret
+    assert f"uid={account.info.uid}" in ret

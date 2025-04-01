@@ -2,10 +2,10 @@
      Test cases for salt.modules.hashutil
 """
 
-
 import pytest
 
 import salt.modules.hashutil as hashutil
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -61,6 +61,7 @@ def test_base64_decodestring(the_string, the_string_base64):
     assert hashutil.base64_decodestring(the_string_base64) == the_string
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_md5_digest(the_string, the_string_md5):
     assert hashutil.md5_digest(the_string) == the_string_md5
 
@@ -83,3 +84,9 @@ def test_hmac_compute(the_string, the_string_hmac_compute):
 
 def test_github_signature(the_string, the_string_github):
     assert hashutil.github_signature(the_string, "shared secret", the_string_github)
+
+
+def test_github_signature_uses_hmac_compare_digest(the_string, the_string_github):
+    with patch("hmac.compare_digest") as hmac_compare:
+        assert hashutil.github_signature(the_string, "shared secret", the_string_github)
+        hmac_compare.assert_called_once()

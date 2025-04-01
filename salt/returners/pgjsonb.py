@@ -170,10 +170,6 @@ import salt.returners
 import salt.utils.data
 import salt.utils.job
 
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
-
-
 try:
     import psycopg2
     import psycopg2.extras
@@ -225,7 +221,7 @@ def _get_options(ret=None):
     }
 
     _options = salt.returners.get_returner_options(
-        "returner.{}".format(__virtualname__),
+        f"returner.{__virtualname__}",
         ret,
         attrs,
         __salt__=__salt__,
@@ -258,11 +254,11 @@ def _get_serv(ret=None, commit=False):
             dbname=_options.get("db"),
             user=_options.get("user"),
             password=_options.get("pass"),
-            **ssl_options
+            **ssl_options,
         )
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
-            "pgjsonb returner could not connect to database: {exc}".format(exc=exc)
+            f"pgjsonb returner could not connect to database: {exc}"
         )
 
     if conn.server_version is not None and conn.server_version >= 90500:

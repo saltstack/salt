@@ -1,8 +1,13 @@
 import pytest
 
+from tests.pytests.integration.ssh import check_system_python_version
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -23,6 +28,7 @@ def test_saltcheck_run_test(salt_ssh_cli):
     assert ret.data["status"] == "Pass"
 
 
+@pytest.mark.skip_on_aarch64
 def test_saltcheck_state(salt_ssh_cli):
     """
     saltcheck.run_state_tests

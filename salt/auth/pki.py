@@ -84,11 +84,10 @@ def auth(username, password, **kwargs):
         if cert.verify(cacert.get_pubkey()):
             log.info("Successfully authenticated certificate: %s", pem)
             return True
-        else:
-            log.info("Failed to authenticate certificate: %s", pem)
-            return False
+        log.info("Failed to authenticate certificate: %s", pem)
+        return False
 
-    c = OpenSSL.crypto
+    c = OpenSSL.crypto  # pylint: disable=used-before-assignment
     cert = c.load_certificate(c.FILETYPE_PEM, pem)
 
     with salt.utils.files.fopen(cacert_file) as f:
@@ -101,7 +100,7 @@ def auth(username, password, **kwargs):
     cert_asn1 = c.dump_certificate(c.FILETYPE_ASN1, cert)
 
     # Decode the certificate
-    der = asn1.DerSequence()
+    der = asn1.DerSequence()  # pylint: disable=used-before-assignment
     der.decode(cert_asn1)
 
     # The certificate has three parts:

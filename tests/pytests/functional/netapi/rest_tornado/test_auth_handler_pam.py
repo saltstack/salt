@@ -55,7 +55,7 @@ async def test_login(
         assert response.code == 200
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        assert "session_id={}".format(token) in cookies
+        assert f"session_id={token}" in cookies
         perms = response_obj["perms"]
         perms_config = client_config["external_auth"][eauth][username]
         assert set(perms) == set(perms_config)
@@ -75,7 +75,7 @@ async def test_login(
         assert response.code == 200
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        assert "session_id={}".format(token) in cookies
+        assert f"session_id={token}" in cookies
         perms = response_obj["perms"]
         perms_config = client_config["external_auth"][eauth][username]
         assert set(perms) == set(perms_config)
@@ -95,7 +95,7 @@ async def test_login(
         assert response.code == 200
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        assert "session_id={}".format(token) in cookies
+        assert f"session_id={token}" in cookies
         perms = response_obj["perms"]
         perms_config = client_config["external_auth"][eauth][username]
         assert set(perms) == set(perms_config)

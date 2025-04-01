@@ -8,7 +8,6 @@ Microsoft Update files management via wusa.exe
 .. versionadded:: 2018.3.4
 """
 
-
 import logging
 import os
 

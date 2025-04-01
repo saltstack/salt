@@ -4,7 +4,6 @@ from tests.support.case import SyndicCase
 
 
 @pytest.mark.windows_whitelisted
-@pytest.mark.skip(reason="The Syndic Tests are currently broken. See #58975")
 class TestSyndic(SyndicCase):
     """
     Validate the syndic interface by testing the test module

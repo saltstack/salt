@@ -106,7 +106,9 @@ def orchestrate(
         orig_user = __opts__["user"]
         __opts__["user"] = __user__
         log.debug(
-            f"changed opts user from original '{orig_user}' to global user '{__user__}'"
+            "changed opts user from original '%s' to global user '%s'",
+            orig_user,
+            __user__,
         )
     except NameError:
         log.debug("unable to find global user __user__")

@@ -30,9 +30,7 @@ class TestsHttpClient:
         if "headers" not in kwargs and self.headers:
             kwargs["headers"] = self.headers.copy()
         try:
-            response = await self.client.fetch(
-                "{}{}".format(self.address, path), **kwargs
-            )
+            response = await self.client.fetch(f"{self.address}{path}", **kwargs)
             return self._decode_body(response)
         except HTTPError as exc:
             exc.response = self._decode_body(exc.response)
@@ -75,7 +73,7 @@ class TestsTornadoHttpServer:
 
     @address.default
     def _address_default(self):
-        return "{}://127.0.0.1:{}".format(self.protocol, self.port)
+        return f"{self.protocol}://127.0.0.1:{self.port}"
 
     @server.default
     def _server_default(self):

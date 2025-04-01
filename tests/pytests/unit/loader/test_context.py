@@ -1,6 +1,7 @@
 """
 Tests for salt.loader.context
 """
+
 import copy
 
 import salt.loader.context
