@@ -2277,6 +2277,7 @@ class ClearFuncs(TransportMethods):
             }
 
             self.event.fire_event(data, tagify([jid, "new"], "wheel"))
+            clear_load["print_event"] = clear_load.get("print_event", False)
             ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
             data["return"] = ret["return"]
             data["success"] = ret["success"]
