@@ -2243,6 +2243,11 @@ def _linux_distribution_data():
 
     log.trace("Getting OS name, release, and codename from freedesktop_os_release")
     try:
+        # If using platform.freedesktop_os_release we must invalidate
+        # the internal platform os_release cache to allow grains to be
+        # actually recalculated during grains_refresh
+        if hasattr(platform, "_os_release_cache"):
+            platform._os_release_cache = None
         os_release = _freedesktop_os_release()
         grains.update(_os_release_to_grains(os_release))
 
