@@ -2275,8 +2275,6 @@ class ClearFuncs(TransportMethods):
                 "tag": tag,
                 "user": username,
             }
-
-            self.event.fire_event(data, tagify([jid, "new"], "wheel"))
             clear_load.update(
                 {
                     "__jid__": jid,
@@ -2288,7 +2286,6 @@ class ClearFuncs(TransportMethods):
             ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
             data["return"] = ret["return"]
             data["success"] = ret["success"]
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
