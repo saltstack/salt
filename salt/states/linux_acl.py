@@ -81,7 +81,6 @@ Ensure a Linux ACL list does not exist
 
 """
 
-
 import logging
 import os
 
@@ -708,9 +707,6 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
 
     acl_names
         The list of users or groups
-
-    perms
-        Remove the permissions eg.: rwx
 
     recurse
         Set the permissions recursive in the path

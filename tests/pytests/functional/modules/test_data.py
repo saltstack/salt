@@ -139,9 +139,9 @@ def test_has_key(data_module):
     ret = data_module.update("foo", "bar")
     assert ret
 
-    ret = data_module.has_key("foo")  # pylint: disable=.has_key-is-deprecated-use-in
+    ret = data_module.has_key("foo")
     assert ret
 
-    ret = data_module.has_key("bar")  # pylint: disable=.has_key-is-deprecated-use-in
+    ret = data_module.has_key("bar")
 
     assert not ret

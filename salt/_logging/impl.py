@@ -158,6 +158,9 @@ LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
+
+    ONCECACHE = set()
+
     def __new__(cls, *args):
         """
         We override `__new__` in our logging logger class in order to provide
@@ -170,7 +173,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             logging.getLogger(__name__)
 
         """
-        instance = super().__new__(cls)
+        instance = super().__new__(cls)  # pylint: disable=no-value-for-parameter
 
         try:
             max_logger_length = len(
@@ -234,7 +237,13 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         stack_info=False,
         stacklevel=1,
         exc_info_on_loglevel=None,
+        once=False,
     ):
+        if once:
+            if str(args) in self.ONCECACHE:
+                return
+            self.ONCECACHE.add(str(args))
+
         if extra is None:
             extra = {}
 
@@ -270,6 +279,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                         exc_info_on_loglevel
                     )
                 )
+        # XXX: extra is never None
         if extra is None:
             extra = {"exc_info_on_loglevel": exc_info_on_loglevel}
         else:
@@ -289,6 +299,8 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         except TypeError:
             # Python < 3.8 - We still need this for salt-ssh since it will use
             # the system python, and not out onedir.
+            # stacklevel was introduced in Py 3.8
+            # must be running on old OS with Python 3.6 or 3.7
             LOGGING_LOGGER_CLASS._log(
                 self,
                 level,
@@ -420,6 +432,7 @@ def set_logging_options_dict(opts):
     except AttributeError:
         pass
     set_logging_options_dict.__options_dict__ = opts
+    set_lowest_log_level_by_opts(opts)
 
 
 def freeze_logging_options_dict():
@@ -479,7 +492,7 @@ def setup_temp_handler(log_level=None):
 
         def tryflush():
             try:
-                handler.flush()
+                handler.flush()  # pylint: disable=cell-var-from-loop
             except ValueError:
                 # File handle has already been closed.
                 pass

@@ -1,6 +1,7 @@
 """
 Unit tests for salt.utils.compat.py
 """
+
 import pytest
 
 import salt.utils.compat

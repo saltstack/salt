@@ -48,7 +48,7 @@ class NetapiClient:
 
         for fun in self.netapi:
             if fun.endswith(".start"):
-                name = "RunNetapi({})".format(self.netapi[fun].__module__)
+                name = f"RunNetapi({self.netapi[fun].__module__})"
                 log.info("Starting %s", name)
                 self.process_manager.add_process(
                     RunNetapi, args=(self.opts, fun), name=name

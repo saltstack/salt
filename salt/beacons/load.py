@@ -1,6 +1,7 @@
 """
 Beacon to emit system load averages
 """
+
 import logging
 import os
 

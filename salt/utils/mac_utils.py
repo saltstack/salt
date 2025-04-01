@@ -154,7 +154,7 @@ def execute_return_success(cmd):
     log.debug("Execute return success %s: %r", cmd, ret)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {}\n".format(cmd)
+        msg = f"Command Failed: {cmd}\n"
         msg += "Return Code: {}\n".format(ret["retcode"])
         msg += "Output: {}\n".format(ret["stdout"])
         msg += "Error: {}\n".format(ret["stderr"])
@@ -178,7 +178,7 @@ def execute_return_result(cmd):
     ret = _run_all(cmd)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {}\n".format(cmd)
+        msg = f"Command Failed: {cmd}\n"
         msg += "Return Code: {}\n".format(ret["retcode"])
         msg += "Output: {}\n".format(ret["stdout"])
         msg += "Error: {}\n".format(ret["stderr"])
@@ -313,7 +313,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Raise an error or return successful result
     if ret["retcode"] or error:
-        out = "Failed to {} service:\n".format(sub_cmd)
+        out = f"Failed to {sub_cmd} service:\n"
         out += "stdout: {}\n".format(ret["stdout"])
         out += "stderr: {}\n".format(ret["stderr"])
         out += "retcode: {}".format(ret["retcode"])

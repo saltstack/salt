@@ -64,7 +64,7 @@ def execute(opts, data, func, args, kwargs):
     for arg in args:
         cmd.append(shlex.quote(str(arg)))
     for key in kwargs:
-        cmd.append(shlex.quote("{}={}".format(key, kwargs[key])))
+        cmd.append(shlex.quote(f"{key}={kwargs[key]}"))
 
     cmd_ret = __salt__["cmd.run_all"](cmd, use_vt=True, python_shell=False)
 

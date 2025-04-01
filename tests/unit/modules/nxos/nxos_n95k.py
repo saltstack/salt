@@ -21,7 +21,6 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N95KPlatform(NXOSPlatform):
-
     """Cisco Systems N9K Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9508 (8 Slot) Chassis"

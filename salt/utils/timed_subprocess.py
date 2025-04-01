@@ -33,9 +33,8 @@ class TimedProc:
             if not self.stdin_raw_newlines:
                 # Translate a newline submitted as '\n' on the CLI to an actual
                 # newline character.
-                self.stdin = salt.utils.stringutils.to_bytes(
-                    self.stdin.replace("\\n", "\n")
-                )
+                self.stdin = self.stdin.replace("\\n", "\n")
+            self.stdin = salt.utils.stringutils.to_bytes(self.stdin)
             kwargs["stdin"] = subprocess.PIPE
 
         if not self.with_communicate:
@@ -44,7 +43,7 @@ class TimedProc:
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError(
-                "Error: timeout {} must be a number".format(self.timeout)
+                f"Error: timeout {self.timeout} must be a number"
             )
         if kwargs.get("shell", False):
             args = salt.utils.data.decode(args, to_str=True)

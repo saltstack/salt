@@ -6,7 +6,6 @@
 
 """
 
-
 import os
 import string
 import tempfile
@@ -59,18 +58,18 @@ def create_class(tmp_path):
 
             def set_password(
                 self, servicename, username, password
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 self.__storage.setdefault(servicename, {}).update({username: password})
                 return 0
 
             def get_password(
                 self, servicename, username
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 return self.__storage.setdefault(servicename, {}).get(username)
 
             def delete_password(
                 self, servicename, username
-            ):  # pylint: disable=arguments-differ
+            ):  # pylint: disable=arguments-differ,arguments-renamed
                 self.__storage.setdefault(servicename, {}).pop(username, None)
                 return 0
 
@@ -249,6 +248,7 @@ def test_run_psexec_command_cleanup_lingering_paexec(caplog):
             "MermaidMan",
             "BarnicleBoy",
         )
+        # pylint: disable=no-value-for-parameter
         mock_client.return_value.cleanup = MagicMock(side_effect=CannotDelete())
 
         cloud.run_psexec_command(
@@ -450,6 +450,78 @@ def test_deploy_windows_programdata_minion_conf():
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
+def test_deploy_windows_install_delay_start():
+    mock_true = MagicMock(return_value=True)
+    mock_tuple = MagicMock(return_value=(0, 0, 0))
+    mock_conn = MagicMock()
+
+    with patch("salt.utils.smb", MagicMock()) as mock_smb:
+        mock_smb.get_conn.return_value = mock_conn
+        mock_smb.mkdirs.return_value = None
+        mock_smb.put_file.return_value = None
+        mock_smb.put_str.return_value = None
+        mock_smb.delete_file.return_value = None
+        mock_smb.delete_directory.return_value = None
+        with patch("time.sleep", MagicMock()), patch.object(
+            cloud, "wait_for_port", mock_true
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
+            cloud, "wait_for_psexecsvc", mock_true
+        ), patch.object(
+            cloud, "run_psexec_command", mock_tuple
+        ) as mock_psexec:
+            minion_conf = {"master": "test-master"}
+            cloud.deploy_windows(
+                host="test",
+                minion_conf=minion_conf,
+                win_installer="install.exe",
+                win_delay_start=True,
+            )
+            mock_psexec.assert_any_call(
+                "c:\\salttemp\\install.exe",
+                "/S /master=None /minion-name=None /start-minion-delayed",
+                "test",
+                "Administrator",
+                None,
+            )
+
+
+@pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
+def test_deploy_windows_install_install_dir():
+    mock_true = MagicMock(return_value=True)
+    mock_tuple = MagicMock(return_value=(0, 0, 0))
+    mock_conn = MagicMock()
+
+    with patch("salt.utils.smb", MagicMock()) as mock_smb:
+        mock_smb.get_conn.return_value = mock_conn
+        mock_smb.mkdirs.return_value = None
+        mock_smb.put_file.return_value = None
+        mock_smb.put_str.return_value = None
+        mock_smb.delete_file.return_value = None
+        mock_smb.delete_directory.return_value = None
+        with patch("time.sleep", MagicMock()), patch.object(
+            cloud, "wait_for_port", mock_true
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
+            cloud, "wait_for_psexecsvc", mock_true
+        ), patch.object(
+            cloud, "run_psexec_command", mock_tuple
+        ) as mock_psexec:
+            minion_conf = {"master": "test-master"}
+            cloud.deploy_windows(
+                host="test",
+                minion_conf=minion_conf,
+                win_installer="install.exe",
+                win_install_dir="C:\\salt",
+            )
+            mock_psexec.assert_any_call(
+                "c:\\salttemp\\install.exe",
+                '/S /master=None /minion-name=None /install-dir="C:\\salt"',
+                "test",
+                "Administrator",
+                None,
+            )
+
+
+@pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
 def test_winrm_pinnned_version():
     """
     Test that winrm is pinned to a version 0.3.0 or higher.
@@ -475,7 +547,7 @@ def test_winrm_pinnned_version():
     ):
 
         try:
-            import winrm
+            import winrm  # pylint: disable=unused-import
         except ImportError:
             raise pytest.skip('The "winrm" python module is not installed in this env.')
         else:

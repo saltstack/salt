@@ -47,7 +47,6 @@ Walkthrough <tutorial-gitfs>`.
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 """
 
-
 import logging
 
 import salt.utils.gitfs

@@ -7,6 +7,7 @@ from saltfactories.utils import random_string
 import salt.crypt
 import salt.master
 import salt.utils.stringutils
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +43,10 @@ def salt_master(salt_factories, transport):
         "transport": transport,
         "auto_accept": True,
         "sign_pub_messages": False,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         random_string(f"server-{transport}-master-"),
@@ -59,6 +64,9 @@ def salt_minion(salt_master, transport):
         "auth_timeout": 5,
         "auth_tries": 1,
         "master_uri": f"tcp://127.0.0.1:{salt_master.config['ret_port']}",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_master.salt_minion_daemon(
         random_string("server-{transport}-minion-"),

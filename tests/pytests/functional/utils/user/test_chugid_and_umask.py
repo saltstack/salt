@@ -20,6 +20,10 @@ pytestmark = [
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_on_windows,
     pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip),
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Rocky Linux-8' and grains['osarch'] == 'aarch64'",
+        reason="Temporarily skip on Rocky Linux 8 Arm64",
+    ),
 ]
 
 

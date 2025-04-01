@@ -44,6 +44,7 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 """
+
 import logging
 import shlex
 import subprocess

@@ -111,7 +111,7 @@ def match(tgt, opts=None, minion_id=None):
 
             results.append(
                 str(
-                    __context__["matchers"]["{}_match.match".format(engine)](
+                    __context__["matchers"][f"{engine}_match.match"](
                         *engine_args, **engine_kwargs
                     )
                 )

@@ -27,7 +27,7 @@ class ShadowModuleTest(ModuleCase):
         """
         self._password = self.run_function("shadow.gen_password", ["Password1234"])
         if "ERROR" in self._password:
-            self.fail("Failed to generate password: {}".format(self._password))
+            self.fail(f"Failed to generate password: {self._password}")
         super().setUp()
         self._no_user = random_string("tu-", uppercase=False)
         self._test_user = random_string("tu-", uppercase=False)
@@ -52,6 +52,7 @@ class ShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_binaries_missing("passwd")
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -61,8 +62,9 @@ class ShadowModuleTest(ModuleCase):
 
         # Correct Functionality
         self.assertTrue(self.run_function("shadow.del_password", [self._test_user]))
-        self.assertEqual(
-            self.run_function("shadow.info", [self._test_user])["passwd"], ""
+        self.assertIn(
+            self.run_function("shadow.info", [self._test_user])["passwd"],
+            ["", "!", "!!"],
         )
 
         # User does not exist

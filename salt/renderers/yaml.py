@@ -4,7 +4,6 @@ YAML Renderer for Salt
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 """
 
-
 import logging
 import warnings
 

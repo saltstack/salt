@@ -4,7 +4,6 @@ Utility functions for state functions
 .. versionadded:: 2018.3.0
 """
 
-
 import copy
 
 import salt.state

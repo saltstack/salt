@@ -4,7 +4,6 @@ Create virtualenv environments.
 .. versionadded:: 0.17.0
 """
 
-
 import glob
 import logging
 import os
@@ -21,14 +20,14 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 KNOWN_BINARY_NAMES = frozenset(
     [
         "virtualenv-{}.{}".format(*sys.version_info[:2]),
-        "virtualenv{}".format(sys.version_info[0]),
+        f"virtualenv{sys.version_info[0]}",
         "virtualenv",
     ]
 )
 
 log = logging.getLogger(__name__)
 
-__opts__ = {"venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or "virtualenv"}
+__opts__ = {"venv_bin": salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or "venv"}
 
 __pillar__ = {}
 
@@ -88,7 +87,7 @@ def create(
     user=None,
     use_vt=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Create a virtualenv
@@ -102,7 +101,7 @@ def create(
         Defaults to ``virtualenv``.
 
     system_site_packages : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv or venv
 
     distribute : False
         Passthrough argument given to virtualenv
@@ -112,7 +111,7 @@ def create(
         ``distribute=True``
 
     clear : False
-        Passthrough argument given to virtualenv or pyvenv
+        Passthrough argument given to virtualenv or venv
 
     python : None (default)
         Passthrough argument given to virtualenv
@@ -127,10 +126,10 @@ def create(
         Passthrough argument given to virtualenv if not None
 
     symlinks : None
-        Passthrough argument given to pyvenv if True
+        Passthrough argument given to venv if True
 
     upgrade : None
-        Passthrough argument given to pyvenv if True
+        Passthrough argument given to venv if True
 
     user : None
         Set ownership for the virtualenv
@@ -175,12 +174,15 @@ def create(
            - VIRTUALENV_ALWAYS_COPY: 1
     """
     if venv_bin is None:
-        venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
+        venv_bin = __pillar__.get("venv_bin") or __opts__.get("venv_bin")
 
-    cmd = [venv_bin]
+    if venv_bin == "venv":
+        cmd = [sys.executable, "-m", "venv"]
+    else:
+        cmd = [venv_bin]
 
-    if "pyvenv" not in venv_bin:
-        # ----- Stop the user if pyvenv only options are used --------------->
+    if "venv" not in venv_bin:
+        # ----- Stop the user if venv only options are used ----------------->
         # If any of the following values are not None, it means that the user
         # is actually passing a True or False value. Stop Him!
         if upgrade is not None:
@@ -195,7 +197,7 @@ def create(
                     venv_bin
                 )
             )
-        # <---- Stop the user if pyvenv only options are used ----------------
+        # <---- Stop the user if venv only options are used ------------------
 
         virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)
 
@@ -212,15 +214,13 @@ def create(
 
         if python is not None and python.strip() != "":
             if not salt.utils.path.which(python):
-                raise CommandExecutionError(
-                    "Cannot find requested python ({}).".format(python)
-                )
-            cmd.append("--python={}".format(python))
+                raise CommandExecutionError(f"Cannot find requested python ({python}).")
+            cmd.append(f"--python={python}")
         if extra_search_dir is not None:
             if isinstance(extra_search_dir, str) and extra_search_dir.strip() != "":
                 extra_search_dir = [e.strip() for e in extra_search_dir.split(",")]
             for entry in extra_search_dir:
-                cmd.append("--extra-search-dir={}".format(entry))
+                cmd.append(f"--extra-search-dir={entry}")
         if never_download is True:
             if (1, 10) <= virtualenv_version_info < (14, 0, 0):
                 log.info(
@@ -231,7 +231,7 @@ def create(
             else:
                 cmd.append("--never-download")
         if prompt is not None and prompt.strip() != "":
-            cmd.append("--prompt='{}'".format(prompt))
+            cmd.append(f"--prompt='{prompt}'")
     else:
         # venv module from the Python >= 3.3 standard library
 
@@ -267,7 +267,7 @@ def create(
         if symlinks is True:
             cmd.append("--symlinks")
 
-    # Common options to virtualenv and pyvenv
+    # Common options to virtualenv and venv
     if clear is True:
         cmd.append("--clear")
     if system_site_packages is True:
@@ -500,15 +500,17 @@ def _install_script(source, cwd, python, user, saltenv="base", use_vt=False):
 def _verify_safe_py_code(*args):
     for arg in args:
         if not salt.utils.verify.safe_py_code(arg):
-            raise SaltInvocationError("Unsafe python code detected in '{}'".format(arg))
+            raise SaltInvocationError(f"Unsafe python code detected in '{arg}'")
 
 
 def _verify_virtualenv(venv_path):
-    bin_path = os.path.join(venv_path, "bin/python")
+    if salt.utils.platform.is_windows():
+        bin_path = os.path.join(venv_path, "Scripts", "python.exe")
+    else:
+        bin_path = os.path.join(venv_path, "bin", "python")
+
     if not os.path.exists(bin_path):
         raise CommandExecutionError(
-            "Path '{}' does not appear to be a virtualenv: bin/python not found.".format(
-                venv_path
-            )
+            f"Path '{venv_path}' does not appear to be a virtualenv: '{bin_path}' not found."
         )
     return bin_path

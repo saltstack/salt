@@ -3,7 +3,6 @@ Functions for querying and modifying a user account and the groups to which it
 belongs.
 """
 
-
 import ctypes
 import getpass
 import logging
@@ -37,6 +36,10 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
+
+if sys.platform == "win32":
+    import ctypes.wintypes
+
 
 log = logging.getLogger(__name__)
 

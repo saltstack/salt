@@ -3,7 +3,6 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 """
 
-
 import copy
 import datetime
 import fnmatch
@@ -169,7 +168,7 @@ def _remove_circular_refs(ob, _seen=None):
     This has been taken from author Martijn Pieters
     https://stackoverflow.com/questions/44777369/
     remove-circular-references-in-dicts-lists-tuples/44777477#44777477
-    :param ob: dict, list, typle, set, and frozenset
+    :param ob: dict, list, tuple, set, and frozenset
         Standard python object
     :param object _seen:
         Object that has circular reference
@@ -1049,9 +1048,14 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
             return {}
 
     if key_cb is None:
-        key_cb = lambda x: x
+
+        def key_cb(x):
+            return x
+
     if val_cb is None:
-        val_cb = lambda x, y: y
+
+        def val_cb(x, y):
+            return y
 
     valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):
@@ -1380,7 +1384,7 @@ def recursive_diff(
             append_old = list(old.keys())[min_length:]
             append_new = list(new.keys())[min_length:]
         # Compare ordered
-        for (key_old, key_new) in zip(old, new):
+        for key_old, key_new in zip(old, new):
             if key_old == key_new:
                 if key_old in ignore_keys:
                     del ret_old[key_old]

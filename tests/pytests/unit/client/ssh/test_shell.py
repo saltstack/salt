@@ -1,3 +1,4 @@
+import importlib
 import logging
 import subprocess
 import types
@@ -101,14 +102,14 @@ def test_ssh_shell_exec_cmd_returns_status_code_with_highest_bit_set_if_process_
     assert retcode == 137
 
 
-def exec_cmd(cmd):
+def _exec_cmd(cmd):
     if cmd.startswith("mkdir -p"):
         return "", "Not a directory", 1
     return "OK", "", 0
 
 
 def test_ssh_shell_send_makedirs_failure_returns_immediately():
-    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=exec_cmd):
+    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=_exec_cmd):
         shl = shell.Shell({}, "localhost")
         stdout, stderr, retcode = shl.send("/tmp/file", "/tmp/file", True)
     assert retcode == 1
@@ -116,7 +117,7 @@ def test_ssh_shell_send_makedirs_failure_returns_immediately():
 
 
 def test_ssh_shell_send_makedirs_on_relative_filename_skips_exec(caplog):
-    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=exec_cmd) as cmd:
+    with patch("salt.client.ssh.shell.Shell.exec_cmd", side_effect=_exec_cmd) as cmd:
         with patch("salt.client.ssh.shell.Shell._run_cmd", return_value=("", "", 0)):
             shl = shell.Shell({}, "localhost")
             with caplog.at_level(logging.WARNING):
@@ -125,3 +126,52 @@ def test_ssh_shell_send_makedirs_on_relative_filename_skips_exec(caplog):
     assert "Not a directory" not in stderr
     assert call("mkdir -p ''") not in cmd.mock_calls
     assert "Makedirs called on relative filename" in caplog.text
+
+
+@pytest.fixture
+def _mock_bin_paths():
+    with patch("salt.utils.path.which") as mock_which:
+        mock_which.side_effect = lambda x: {
+            "ssh-keygen": "/custom/ssh-keygen",
+            "ssh": "/custom/ssh",
+            "scp": "/custom/scp",
+        }.get(x, None)
+        importlib.reload(shell)
+        try:
+            yield
+        finally:
+            importlib.reload(shell)
+
+
+@pytest.mark.usefixtures("_mock_bin_paths")
+def test_gen_key_uses_custom_ssh_keygen_path():
+    """Test that gen_key function uses the correct ssh-keygen path."""
+    with patch("subprocess.call") as mock_call:
+        shell.gen_key("/dev/null")
+
+        # Extract the first argument of the first call to subprocess.call
+        args, _ = mock_call.call_args
+
+        # Assert that the first part of the command is the custom ssh-keygen path
+        assert args[0][0] == "/custom/ssh-keygen"
+
+
+@pytest.mark.usefixtures("_mock_bin_paths")
+def test_ssh_command_execution_uses_custom_path():
+    options = {"_ssh_version": (4, 9)}
+    _shell = shell.Shell(opts=options, host="example.com")
+    cmd_string = _shell._cmd_str("ls -la")
+    assert "/custom/ssh" in cmd_string
+
+
+@pytest.mark.usefixtures("_mock_bin_paths")
+def test_scp_command_execution_uses_custom_path():
+    _shell = shell.Shell(opts={}, host="example.com")
+    with patch.object(
+        _shell, "_run_cmd", return_value=(None, None, None)
+    ) as mock_run_cmd:
+        _shell.send("source_file.txt", "/path/dest_file.txt")
+        # The command string passed to _run_cmd should include the custom scp path
+        args, _ = mock_run_cmd.call_args
+        assert "/custom/scp" in args[0]
+        assert "source_file.txt example.com:/path/dest_file.txt" in args[0]

@@ -2,6 +2,7 @@
 A Salt Util for working with the Registry.pol file. The Registry.pol file is the
 source of truth for registry settings that are configured via LGPO.
 """
+
 import logging
 import os
 import re

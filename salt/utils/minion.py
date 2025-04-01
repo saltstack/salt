@@ -2,7 +2,6 @@
 Utility functions for minions
 """
 
-
 import logging
 import os
 import threading
@@ -132,12 +131,11 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{}/cmdline".format(pid))
+    path = os.path.join(f"/proc/{pid}/cmdline")
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
-            if b"salt" in fp_.read():
-                return True
+            return b"salt" in fp_.read()
     except OSError:
         return False

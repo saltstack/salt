@@ -32,7 +32,7 @@ def test_selinux_change():
     file_name = "/tmp/some-test-file"
     check_perms_result = [
         {
-            "comment": "The file {} is set to be changed".format(file_name),
+            "comment": f"The file {file_name} is set to be changed",
             "changes": {
                 "selinux": {
                     "New": "User: unconfined_u Type: lost_found_t",

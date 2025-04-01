@@ -54,6 +54,7 @@ The same values can also be used to create states for setting these policies.
     you will have to find the values needed to set them with this module using a
     different method.
 """
+
 import logging
 
 import salt.utils.platform
@@ -373,16 +374,16 @@ def set_value(
     if found_key:
         if found_name:
             if "**del." in found_name:
-                log.debug(f"LGPO_REG Mod: Found disabled name: {found_name}")
+                log.debug("LGPO_REG Mod: Found disabled name: %s", found_name)
                 pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
                 found_name = v_name
-            log.debug(f"LGPO_REG Mod: Updating value: {found_name}")
+            log.debug("LGPO_REG Mod: Updating value: %s", found_name)
             pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
         else:
-            log.debug(f"LGPO_REG Mod: Setting new value: {found_name}")
+            log.debug("LGPO_REG Mod: Setting new value: %s", found_name)
             pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
     else:
-        log.debug(f"LGPO_REG Mod: Adding new key and value: {found_name}")
+        log.debug("LGPO_REG Mod: Adding new key and value: %s", found_name)
         pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
     success = True
@@ -462,20 +463,22 @@ def disable_value(key, v_name, policy_class="machine"):
     if found_key:
         if found_name:
             if "**del." in found_name:
-                log.debug(f"LGPO_REG Mod: Already disabled: {v_name}")
+                log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
                 return None
-            log.debug(f"LGPO_REG Mod: Disabling value name: {v_name}")
+            log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
             pol_data[found_key].pop(found_name)
             found_name = f"**del.{found_name}"
             pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
         else:
-            log.debug(f"LGPO_REG Mod: Setting new disabled value name: {v_name}")
+            log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
             pol_data[found_key][f"**del.{v_name}"] = {
                 "data": " ",
                 "type": "REG_SZ",
             }
     else:
-        log.debug(f"LGPO_REG Mod: Adding new key and disabled value name: {found_name}")
+        log.debug(
+            "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
+        )
         pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
 
     success = True
@@ -553,16 +556,16 @@ def delete_value(key, v_name, policy_class="Machine"):
 
     if found_key:
         if found_name:
-            log.debug(f"LGPO_REG Mod: Removing value name: {found_name}")
+            log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
             pol_data[found_key].pop(found_name)
         else:
-            log.debug(f"LGPO_REG Mod: Value name not found: {v_name}")
+            log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
             return None
         if len(pol_data[found_key]) == 0:
-            log.debug(f"LGPO_REG Mod: Removing empty key: {found_key}")
+            log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
             pol_data.pop(found_key)
     else:
-        log.debug(f"LGPO_REG Mod: Key not found: {key}")
+        log.debug("LGPO_REG Mod: Key not found: %s", key)
         return None
 
     success = True

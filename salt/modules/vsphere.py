@@ -181,7 +181,6 @@ connection credentials are used instead of vCenter credentials, the ``host_names
                     6500
 """
 
-
 import datetime
 import logging
 import sys
@@ -9640,7 +9639,7 @@ def _create_scsi_devices(scsi_devices):
         log.trace("Creating SCSI devices %s", devs)
         # unitNumber for disk attachment, 0:0 1st 0 is the controller busNumber,
         # 2nd is the unitNumber
-        for (key, scsi_controller) in zip(keys, scsi_devices):
+        for key, scsi_controller in zip(keys, scsi_devices):
             # create the SCSI controller
             scsi_spec = _apply_scsi_controller(
                 scsi_controller["adapter"],
@@ -9688,9 +9687,9 @@ def _create_network_adapters(network_interfaces, parent=None):
                 interface["switch_type"],
                 network_adapter_label=interface["adapter"],
                 operation="add",
-                connectable=interface["connectable"]
-                if "connectable" in interface
-                else None,
+                connectable=(
+                    interface["connectable"] if "connectable" in interface else None
+                ),
                 mac=interface["mac"],
                 parent=parent,
             )
@@ -9758,15 +9757,17 @@ def _create_cd_drives(cd_drives, controllers=None, parent_ref=None):
                     key,
                     drive["device_type"],
                     "add",
-                    client_device=drive["client_device"]
-                    if "client_device" in drive
-                    else None,
-                    datastore_iso_file=drive["datastore_iso_file"]
-                    if "datastore_iso_file" in drive
-                    else None,
-                    connectable=drive["connectable"]
-                    if "connectable" in drive
-                    else None,
+                    client_device=(
+                        drive["client_device"] if "client_device" in drive else None
+                    ),
+                    datastore_iso_file=(
+                        drive["datastore_iso_file"]
+                        if "datastore_iso_file" in drive
+                        else None
+                    ),
+                    connectable=(
+                        drive["connectable"] if "connectable" in drive else None
+                    ),
                     controller_key=controller_key,
                     parent_ref=parent_ref,
                 )
@@ -10056,9 +10057,9 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
         if isinstance(device, vim.vm.device.VirtualEthernetCard):
             interface = {}
             interface["adapter"] = device.deviceInfo.label
-            interface[
-                "adapter_type"
-            ] = salt.utils.vmware.get_network_adapter_object_type(device)
+            interface["adapter_type"] = (
+                salt.utils.vmware.get_network_adapter_object_type(device)
+            )
             interface["connectable"] = {
                 "allow_guest_control": device.connectable.allowGuestControl,
                 "connected": device.connectable.connected,
@@ -10396,12 +10397,16 @@ def _update_cd_drives(drives_old_new, controllers=None, parent=None):
                         current_drive["key"],
                         new_drive["device_type"],
                         "edit",
-                        client_device=new_drive["client_device"]
-                        if "client_device" in new_drive
-                        else None,
-                        datastore_iso_file=new_drive["datastore_iso_file"]
-                        if "datastore_iso_file" in new_drive
-                        else None,
+                        client_device=(
+                            new_drive["client_device"]
+                            if "client_device" in new_drive
+                            else None
+                        ),
+                        datastore_iso_file=(
+                            new_drive["datastore_iso_file"]
+                            if "datastore_iso_file" in new_drive
+                            else None
+                        ),
                         connectable=new_drive["connectable"],
                         controller_key=controller_key,
                         parent_ref=parent,

@@ -834,7 +834,7 @@ class Schedule:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in ret.items():
                     if key != "kwargs":
-                        kwargs["__pub_{}".format(key)] = copy.deepcopy(val)
+                        kwargs[f"__pub_{key}"] = copy.deepcopy(val)
 
             # Only include these when running runner modules
             if self.opts["__role"] == "master":
@@ -899,7 +899,7 @@ class Schedule:
                             rets.extend(returner)
                     # simple de-duplication with order retained
                     for returner in OrderedDict.fromkeys(rets):
-                        ret_str = "{}.returner".format(returner)
+                        ret_str = f"{returner}.returner"
                         if ret_str in self.returners:
                             self.returners[ret_str](ret)
                         else:
@@ -1108,10 +1108,10 @@ class Schedule:
                     and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
-                        data[
-                            "_error"
-                        ] = 'Grain "whens" must be a dict. Ignoring job {}.'.format(
-                            data["name"]
+                        data["_error"] = (
+                            'Grain "whens" must be a dict. Ignoring job {}.'.format(
+                                data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1123,10 +1123,10 @@ class Schedule:
                     try:
                         when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data[
-                            "_error"
-                        ] = "Invalid date string {}. Ignoring job {}.".format(
-                            i, data["name"]
+                        data["_error"] = (
+                            "Invalid date string {}. Ignoring job {}.".format(
+                                i, data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1382,10 +1382,10 @@ class Schedule:
                 try:
                     start = dateutil_parser.parse(start)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for start. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for start. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1394,10 +1394,10 @@ class Schedule:
                 try:
                     end = dateutil_parser.parse(end)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for end. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for end. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1753,7 +1753,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
+                miss_msg = f" (runtime missed by {abs(seconds)} seconds)"
 
             try:
                 if run:
@@ -1883,7 +1883,6 @@ class Schedule:
 
 
 def clean_proc_dir(opts):
-
     """
     Loop through jid files in the minion proc directory (default /var/cache/salt/minion/proc)
     and remove any that refer to processes that no longer exist

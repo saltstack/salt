@@ -82,7 +82,7 @@ def _pshell(cmd, cwd=None, depth=2):
     in Xml format and load that into python
     """
 
-    cmd = '{} | ConvertTo-Xml -Depth {} -As "stream"'.format(cmd, depth)
+    cmd = f'{cmd} | ConvertTo-Xml -Depth {depth} -As "stream"'
     log.debug("DSC: %s", cmd)
 
     results = __salt__["cmd.run_all"](
@@ -94,9 +94,7 @@ def _pshell(cmd, cwd=None, depth=2):
 
     if "retcode" not in results or results["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing powershell {}".format(cmd), info=results
-        )
+        raise CommandExecutionError(f"Issue executing powershell {cmd}", info=results)
 
     try:
         ret = _ps_xml_to_dict(
@@ -224,8 +222,8 @@ def install(
         flags.append(("Repository", repository))
     params = ""
     for flag, value in flags:
-        params += "-{} {} ".format(flag, value)
-    cmd = "Install-Module {} -Force".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Install-Module {params} -Force"
     _pshell(cmd)
     return name in list_modules()
 
@@ -259,8 +257,8 @@ def update(name, maximum_version=None, required_version=None):
 
     params = ""
     for flag, value in flags:
-        params += "-{} {} ".format(flag, value)
-    cmd = "Update-Module {} -Force".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Update-Module {params} -Force"
     _pshell(cmd)
     return name in list_modules()
 
@@ -279,7 +277,7 @@ def remove(name):
         salt 'win01' psget.remove PowerPlan
     """
     # Putting quotes around the parameter protects against command injection
-    cmd = 'Uninstall-Module "{}"'.format(name)
+    cmd = f'Uninstall-Module "{name}"'
     no_ret = _pshell(cmd)
     return name not in list_modules()
 
@@ -313,8 +311,8 @@ def register_repository(name, location, installation_policy=None):
 
     params = ""
     for flag, value in flags:
-        params += "-{} {} ".format(flag, value)
-    cmd = "Register-PSRepository {}".format(params)
+        params += f"-{flag} {value} "
+    cmd = f"Register-PSRepository {params}"
     no_ret = _pshell(cmd)
     return name not in list_modules()
 
@@ -333,6 +331,6 @@ def get_repository(name):
         salt 'win01' psget.get_repository MyRepo
     """
     # Putting quotes around the parameter protects against command injection
-    cmd = 'Get-PSRepository "{}"'.format(name)
+    cmd = f'Get-PSRepository "{name}"'
     no_ret = _pshell(cmd)
     return name not in list_modules()

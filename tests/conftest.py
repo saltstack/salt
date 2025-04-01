@@ -5,25 +5,23 @@
 import logging
 import os
 import pathlib
-import pprint
 import re
 import shutil
 import stat
 import sys
-from functools import lru_cache, partial, wraps
+from functools import lru_cache
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
 import more_itertools
-import psutil
 import pytest
+import pytestskipmarkers
 
 import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
-import salt.loader
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -35,7 +33,7 @@ from tests.support.helpers import (
     PRE_PYTEST_SKIP_REASON,
     get_virtualenv_binary_path,
 )
-from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
+from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
@@ -338,6 +336,11 @@ def pytest_configure(config):
         "when called returns `True`. If `skip` is a callable, it should accept a single argument "
         "'grains', which is the grains dictionary.",
     )
+    config.addinivalue_line(
+        "markers",
+        "timeout_unless_on_windows(*args, **kwargs): Apply the 'timeout' marker unless running "
+        "on Windows.",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -424,7 +427,8 @@ def pytest_itemcollected(item):
             pytest.fail(
                 "The test {!r} appears to be written for pytest but it's not under"
                 " {!r}. Please move it there.".format(
-                    item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
+                    item.nodeid,
+                    str(PYTESTS_DIR.relative_to(CODE_DIR)),
                 )
             )
 
@@ -444,103 +448,34 @@ def pytest_collection_modifyitems(config, items):
     groups_collection_modifyitems(config, items)
     from_filenames_collection_modifyitems(config, items)
 
-    log.warning("Mofifying collected tests to keep track of fixture usage")
+    timeout_marker_tests_paths = (
+        str(PYTESTS_DIR / "pkg"),
+        str(PYTESTS_DIR / "scenarios"),
+    )
     for item in items:
-        for fixture in item.fixturenames:
-            if fixture not in item._fixtureinfo.name2fixturedefs:
-                continue
-            for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope != "package":
-                    continue
-                try:
-                    fixturedef.finish.__wrapped__
-                except AttributeError:
-                    original_func = fixturedef.finish
-
-                    def wrapper(func, fixturedef):
-                        @wraps(func)
-                        def wrapped(self, request, nextitem=False):
-                            try:
-                                return self._finished
-                            except AttributeError:
-                                if nextitem:
-                                    fpath = pathlib.Path(self.baseid).resolve()
-                                    tpath = pathlib.Path(
-                                        nextitem.fspath.strpath
-                                    ).resolve()
-                                    try:
-                                        tpath.relative_to(fpath)
-                                        # The test module is within the same package that the fixture is
-                                        if (
-                                            not request.session.shouldfail
-                                            and not request.session.shouldstop
-                                        ):
-                                            log.debug(
-                                                "The next test item is still under the"
-                                                " fixture package path. Not"
-                                                " terminating %s",
-                                                self,
-                                            )
-                                            return
-                                    except ValueError:
-                                        pass
-                                log.debug("Finish called on %s", self)
-                                try:
-                                    return func(request)
-                                except BaseException as exc:  # pylint: disable=broad-except
-                                    pytest.fail(
-                                        "Failed to run finish() on {}: {}".format(
-                                            fixturedef, exc
-                                        ),
-                                        pytrace=True,
-                                    )
-                                finally:
-                                    self._finished = True
-
-                        return partial(wrapped, fixturedef)
-
-                    fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
-                    try:
-                        fixturedef.finish.__wrapped__
-                    except AttributeError:
-                        fixturedef.finish.__wrapped__ = original_func
-
-
-@pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_runtest_protocol(item, nextitem):
-    """
-    implements the runtest_setup/call/teardown protocol for
-    the given test item, including capturing exceptions and calling
-    reporting hooks.
-
-    :arg item: test item for which the runtest protocol is performed.
-
-    :arg nextitem: the scheduled-to-be-next test item (or None if this
-                   is the end my friend).  This argument is passed on to
-                   :py:func:`pytest_runtest_teardown`.
-
-    :return boolean: True if no further hook implementations should be invoked.
-
-
-    Stops at first non-None result, see :ref:`firstresult`
-    """
-    request = item._request
-    used_fixture_defs = []
-    for fixture in item.fixturenames:
-        if fixture not in item._fixtureinfo.name2fixturedefs:
-            continue
-        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope != "package":
-                continue
-            used_fixture_defs.append(fixturedef)
-    try:
-        # Run the test
-        yield
-    finally:
-        for fixturedef in used_fixture_defs:
-            fixturedef.finish(request, nextitem=nextitem)
-    del request
-    del used_fixture_defs
+        marker = item.get_closest_marker("timeout_unless_on_windows")
+        if marker is not None:
+            if not salt.utils.platform.is_windows():
+                # Apply the marker since we're not on windows
+                marker_kwargs = marker.kwargs.copy()
+                if "func_only" not in marker_kwargs:
+                    # Default to counting only the test execution for the timeouts, ie,
+                    # withough including the fixtures setup time towards the timeout.
+                    marker_kwargs["func_only"] = True
+                item.add_marker(pytest.mark.timeout(*marker.args, **marker_kwargs))
+        else:
+            if (
+                not salt.utils.platform.is_windows()
+                and not str(pathlib.Path(item.fspath).resolve()).startswith(
+                    timeout_marker_tests_paths
+                )
+                and not item.get_closest_marker("timeout")
+            ):
+                # Let's apply the timeout marker on the test, if the marker
+                # is not already applied
+                # Default to counting only the test execution for the timeouts, ie,
+                # withough including the fixtures setup time towards the timeout.
+                item.add_marker(pytest.mark.timeout(90, func_only=True))
 
 
 def pytest_markeval_namespace(config):
@@ -787,11 +722,14 @@ def pytest_runtest_setup(item):
         entropy_generator.generate_entropy()
 
     if salt.utils.platform.is_windows():
-        unit_tests_paths = (
+        auto_whitelisted_paths = (
             str(TESTS_DIR / "unit"),
             str(PYTESTS_DIR / "unit"),
+            str(PYTESTS_DIR / "pkg"),
         )
-        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(
+            auto_whitelisted_paths
+        ):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -865,6 +803,12 @@ def salt_factories_default_root_dir(salt_factories_default_root_dir):
         dictionary, then that's the value used, and not the one returned by
         this fixture.
     """
+    if os.environ.get("CI") and pytestskipmarkers.utils.platform.is_windows():
+        tempdir = pathlib.Path(
+            os.environ.get("RUNNER_TEMP", r"C:\Windows\Temp")
+        ).resolve()
+        return tempdir / "stsuite"
+
     return salt_factories_default_root_dir / "stsuite"
 
 
@@ -1055,6 +999,9 @@ def salt_syndic_master_factory(
     config_overrides = {
         "log_level_logfile": "quiet",
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -1171,6 +1118,9 @@ def salt_master_factory(
     config_overrides = {
         "log_level_logfile": "quiet",
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -1280,6 +1230,8 @@ def salt_minion_factory(salt_master_factory):
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1312,6 +1264,8 @@ def salt_sub_minion_factory(salt_master_factory):
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -1356,7 +1310,6 @@ def salt_call_cli(salt_minion_factory):
 
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
-    reap_stray_processes,
     salt_factories,
     salt_syndic_master_factory,
     salt_syndic_factory,
@@ -1393,6 +1346,8 @@ def bridge_pytest_and_runtests(
         salt_syndic_factory.config["conf_file"]
     )
     RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+    with reap_stray_processes():
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -1460,7 +1415,21 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(sshd_server, salt_master):
+def known_hosts_file(sshd_server, salt_master, salt_factories):
+    with pytest.helpers.temp_file(
+        "ssh-known-hosts",
+        "\n".join(sshd_server.get_host_keys()),
+        salt_factories.tmp_root_dir,
+    ) as known_hosts_file, pytest.helpers.temp_file(
+        "master.d/ssh-known-hosts.conf",
+        f"known_hosts_file: {known_hosts_file}",
+        salt_master.config_dir,
+    ):
+        yield known_hosts_file
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master, known_hosts_file):
     roster_contents = """
     localhost:
       host: 127.0.0.1
@@ -1473,6 +1442,7 @@ def salt_ssh_roster_file(sshd_server, salt_master):
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
+
     with pytest.helpers.temp_file(
         "roster", roster_contents, salt_master.config_dir
     ) as roster_file:
@@ -1522,7 +1492,7 @@ def from_filenames_collection_modifyitems(config, items):
         ):
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
-            contents = properly_slashed_path.read_text()
+            contents = properly_slashed_path.read_text(encoding="utf-8")
             for sep in ("\r\n", "\\r\\n", "\\n"):
                 contents = contents.replace(sep, "\n")
             for line in contents.split("\n"):
@@ -1692,46 +1662,6 @@ def from_filenames_collection_modifyitems(config, items):
 
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
-@pytest.fixture(scope="session")
-def reap_stray_processes():
-    # Run tests
-    yield
-
-    children = psutil.Process(os.getpid()).children(recursive=True)
-    if not children:
-        log.info("No astray processes found")
-        return
-
-    def on_terminate(proc):
-        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
-
-    if children:
-        # Reverse the order, sublings first, parents after
-        children.reverse()
-        log.warning(
-            "Test suite left %d astray processes running. Killing those processes:\n%s",
-            len(children),
-            pprint.pformat(children),
-        )
-
-        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
-        for child in alive:
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                continue
-
-        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
-        if alive:
-            # Give up
-            for child in alive:
-                log.warning(
-                    "Process %s survived SIGKILL, giving up:\n%s",
-                    child,
-                    pprint.pformat(child.as_dict()),
-                )
-
-
 @pytest.fixture(scope="session")
 def sminion():
     return create_sminion()

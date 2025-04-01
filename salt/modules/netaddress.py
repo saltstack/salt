@@ -6,7 +6,6 @@ Module for getting information about network addresses.
 :depends: netaddr
 """
 
-
 __virtualname__ = "netaddress"
 
 try:

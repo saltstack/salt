@@ -151,7 +151,6 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 """
 
-
 import itertools
 import logging
 import time
@@ -352,7 +351,7 @@ def _get_banks_to_remove(redis_server, bank, path=""):
     A simple tree traversal algorithm that builds the list of banks to remove,
     starting from an arbitrary node in the tree.
     """
-    current_path = bank if not path else "{path}/{bank}".format(path=path, bank=bank)
+    current_path = bank if not path else f"{path}/{bank}"
     bank_paths_to_remove = [current_path]
     # as you got here, you'll be removed
 

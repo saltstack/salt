@@ -43,7 +43,10 @@ def test_obfuscate_with_kwargs(pillar_value):
     ) as pillar_items_mock:
         ret = pillarmod.obfuscate(saltenv="saltenv")
         # ensure the kwargs are passed along to pillar.items
-        assert call(saltenv="saltenv") in pillar_items_mock.mock_calls
+        assert (
+            call(pillar=None, pillar_enc=None, pillarenv=None, saltenv="saltenv")
+            in pillar_items_mock.mock_calls
+        )
         assert ret == dict(a="<int>", b="<str>")
 
 
@@ -180,3 +183,9 @@ def test_pillar_keys():
         test_key = "7:11"
         res = pillarmod.keys(test_key)
         assert res == ["12"]
+
+
+def test_ls_pass_kwargs(pillar_value):
+    with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
+        ls = sorted(pillarmod.ls(pillarenv="base"))
+        assert ls == ["a", "b"]

@@ -4,7 +4,6 @@
     Test cases for salt.modules.key
 """
 
-
 import os.path
 
 import pytest

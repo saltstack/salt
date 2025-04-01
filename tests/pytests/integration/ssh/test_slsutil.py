@@ -2,6 +2,15 @@ import json
 
 import pytest
 
+from tests.pytests.integration.ssh import check_system_python_version
+
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
+]
+
 
 @pytest.mark.usefixtures("state_tree")
 def test_renderer_file(salt_ssh_cli):

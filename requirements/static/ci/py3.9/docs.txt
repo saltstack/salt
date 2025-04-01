@@ -6,13 +6,17 @@
 #
 alabaster==0.7.13
     # via sphinx
+annotated-types==0.6.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pydantic
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
 babel==2.12.1
     # via sphinx
-certifi==2023.07.22
+certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
@@ -30,7 +34,7 @@ cherrypy==18.8.0
     #   -r requirements/static/ci/docs.in
 docutils==0.20.1
     # via sphinx
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
@@ -40,7 +44,7 @@ importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
-inflect==6.0.4
+inflect==7.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
@@ -62,7 +66,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/docs.in
@@ -99,15 +103,19 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-pydantic==1.10.8
+pydantic-core==2.16.3
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pydantic
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   inflect
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.15.1
+pygments==2.17.2
     # via sphinx
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   tempora
@@ -115,7 +123,7 @@ pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils
-requests==2.31.0
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
@@ -153,7 +161,9 @@ tempora==5.3.0
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   inflect
     #   pydantic
+    #   pydantic-core
 uc-micro-py==1.0.2
     # via linkify-it-py
 urllib3==1.26.18

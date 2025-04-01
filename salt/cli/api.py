@@ -6,7 +6,6 @@
 
 """
 
-
 import logging
 
 import salt.client.netapi

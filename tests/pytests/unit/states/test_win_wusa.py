@@ -30,10 +30,10 @@ def test_installed_existing(kb):
     """
     mock_installed = MagicMock(return_value=True)
     with patch.dict(wusa.__salt__, {"wusa.is_installed": mock_installed}):
-        returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
+        returned = wusa.installed(name=kb, source=f"salt://{kb}.msu")
         expected = {
             "changes": {},
-            "comment": "{} already installed".format(kb),
+            "comment": f"{kb} already installed",
             "name": kb,
             "result": True,
         }
@@ -48,10 +48,10 @@ def test_installed_test_true(kb):
     with patch.dict(wusa.__salt__, {"wusa.is_installed": mock_installed}), patch.dict(
         wusa.__opts__, {"test": True}
     ):
-        returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
+        returned = wusa.installed(name=kb, source=f"salt://{kb}.msu")
         expected = {
             "changes": {},
-            "comment": "{} would be installed".format(kb),
+            "comment": f"{kb} would be installed",
             "name": kb,
             "result": None,
         }
@@ -68,10 +68,10 @@ def test_installed_cache_fail(kb):
         wusa.__salt__,
         {"wusa.is_installed": mock_installed, "cp.cache_file": mock_cache},
     ):
-        returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
+        returned = wusa.installed(name=kb, source=f"salt://{kb}.msu")
         expected = {
             "changes": {},
-            "comment": 'Unable to cache salt://{}.msu from saltenv "base"'.format(kb),
+            "comment": f'Unable to cache salt://{kb}.msu from saltenv "base"',
             "name": kb,
             "result": False,
         }
@@ -83,7 +83,7 @@ def test_installed(kb):
     test wusa.installed assuming success
     """
     mock_installed = MagicMock(side_effect=[False, True])
-    mock_cache = MagicMock(return_value="C:\\{}.msu".format(kb))
+    mock_cache = MagicMock(return_value=f"C:\\{kb}.msu")
     with patch.dict(
         wusa.__salt__,
         {
@@ -92,10 +92,10 @@ def test_installed(kb):
             "wusa.install": MagicMock(),
         },
     ):
-        returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
+        returned = wusa.installed(name=kb, source=f"salt://{kb}.msu")
         expected = {
             "changes": {"new": True, "old": False},
-            "comment": "{} was installed. ".format(kb),
+            "comment": f"{kb} was installed. ",
             "name": kb,
             "result": True,
         }
@@ -107,7 +107,7 @@ def test_installed_failed(kb):
     test wusa.installed with a failure
     """
     mock_installed = MagicMock(side_effect=[False, False])
-    mock_cache = MagicMock(return_value="C:\\{}.msu".format(kb))
+    mock_cache = MagicMock(return_value=f"C:\\{kb}.msu")
     with patch.dict(
         wusa.__salt__,
         {
@@ -116,10 +116,10 @@ def test_installed_failed(kb):
             "wusa.install": MagicMock(),
         },
     ):
-        returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
+        returned = wusa.installed(name=kb, source=f"salt://{kb}.msu")
         expected = {
             "changes": {},
-            "comment": "{} failed to install. ".format(kb),
+            "comment": f"{kb} failed to install. ",
             "name": kb,
             "result": False,
         }
@@ -135,7 +135,7 @@ def test_uninstalled_non_existing(kb):
         returned = wusa.uninstalled(name=kb)
         expected = {
             "changes": {},
-            "comment": "{} already uninstalled".format(kb),
+            "comment": f"{kb} already uninstalled",
             "name": kb,
             "result": True,
         }
@@ -153,7 +153,7 @@ def test_uninstalled_test_true(kb):
         returned = wusa.uninstalled(name=kb)
         expected = {
             "changes": {},
-            "comment": "{} would be uninstalled".format(kb),
+            "comment": f"{kb} would be uninstalled",
             "name": kb,
             "result": None,
         }
@@ -172,7 +172,7 @@ def test_uninstalled(kb):
         returned = wusa.uninstalled(name=kb)
         expected = {
             "changes": {"new": False, "old": True},
-            "comment": "{} was uninstalled".format(kb),
+            "comment": f"{kb} was uninstalled",
             "name": kb,
             "result": True,
         }
@@ -191,7 +191,7 @@ def test_uninstalled_failed(kb):
         returned = wusa.uninstalled(name=kb)
         expected = {
             "changes": {},
-            "comment": "{} failed to uninstall".format(kb),
+            "comment": f"{kb} failed to uninstall",
             "name": kb,
             "result": False,
         }

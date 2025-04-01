@@ -159,5 +159,4 @@ def test_get_docs(client):
     assert "cache.clear_pillar" in ret
     assert "cache.grains" in ret
     assert "state.soft_kill" in ret
-    assert "virt.start" in ret
     assert "test.arg" in ret

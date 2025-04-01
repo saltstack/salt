@@ -2,7 +2,6 @@
 Helpful decorators for module writing
 """
 
-
 import errno
 import inspect
 import logging
@@ -117,7 +116,7 @@ class Depends:
 
     @staticmethod
     def run_command(dependency, mod_name, func_name):
-        full_name = "{}.{}".format(mod_name, func_name)
+        full_name = f"{mod_name}.{func_name}"
         log.trace("Running '%s' for '%s'", dependency, full_name)
         if IS_WINDOWS:
             args = salt.utils.args.shlex_split(dependency, posix=False)
@@ -217,9 +216,11 @@ class Depends:
                     mod_name,
                     func_name,
                     dependency,
-                    " version {}".format(params["version"])
-                    if "version" in params
-                    else "",
+                    (
+                        " version {}".format(params["version"])
+                        if "version" in params
+                        else ""
+                    ),
                 )
                 # if not, unload the function
                 if frame:
@@ -228,7 +229,7 @@ class Depends:
                     except (AttributeError, KeyError):
                         pass
 
-                    mod_key = "{}.{}".format(mod_name, func_name)
+                    mod_key = f"{mod_name}.{func_name}"
 
                     # if we don't have this module loaded, skip it!
                     if mod_key not in functions:
@@ -263,7 +264,7 @@ def timing(function):
             mod_name = function.__module__[16:]
         else:
             mod_name = function.__module__
-        fstr = "Function %s.%s took %.{}f seconds to execute".format(sys.float_info.dig)
+        fstr = f"Function %s.%s took %.{sys.float_info.dig}f seconds to execute"
         log.profile(fstr, mod_name, function.__name__, end_time - start_time)
         return ret
 
@@ -290,9 +291,7 @@ def memoize(func):
             else:
                 str_args.append(arg)
 
-        args_ = ",".join(
-            list(str_args) + ["{}={}".format(k, kwargs[k]) for k in sorted(kwargs)]
-        )
+        args_ = ",".join(list(str_args) + [f"{k}={kwargs[k]}" for k in sorted(kwargs)])
         if args_ not in cache:
             cache[args_] = func(*args, **kwargs)
         return cache[args_]
@@ -623,9 +622,7 @@ class _WithDeprecated(_DeprecationDecorator):
                 "Function '{}' is mentioned both in deprecated "
                 "and superseded sections. Please remove any of that.".format(full_name)
             )
-        old_function = self._globals.get(
-            self._with_name or "_{}".format(function.__name__)
-        )
+        old_function = self._globals.get(self._with_name or f"_{function.__name__}")
         if self._policy == self.OPT_IN:
             self._function = function if use_superseded else old_function
         else:

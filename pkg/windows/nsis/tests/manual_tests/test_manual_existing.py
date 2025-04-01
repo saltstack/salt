@@ -6,12 +6,11 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-
     # Create an existing config
     pytest.helpers.existing_config()
-
-    pytest.helpers.run_command([pytest.INST_BIN])
-    yield
+    args = []
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 

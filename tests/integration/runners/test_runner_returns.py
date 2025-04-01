@@ -129,7 +129,7 @@ class RunnerReturnsTest(ShellCase):
         else:
             user = RUNTIME_VARS.RUNNING_TESTS_USER
         if salt.utils.platform.is_windows():
-            user = "sudo_{}\\{}".format(socket.gethostname(), user)
+            user = f"sudo_{socket.gethostname()}\\{user}"
         self.assertEqual(
             deserialized,
             {
