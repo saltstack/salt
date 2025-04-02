@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.modules.cmdmod as cmd
@@ -69,15 +71,17 @@ def test_write_secedit_data_import_fail(caplog):
     patch_cmd_retcode = patch.dict(
         win_lgpo.__salt__, {"cmd.retcode": MagicMock(return_value=1)}
     )
-    with patch_cmd_retcode:
-        assert win_lgpo._write_secedit_data("spongebob") is False
-        assert "Secedit failed to import template data" in caplog.text
+    with caplog.at_level(logging.DEBUG):
+        with patch_cmd_retcode:
+            assert win_lgpo._write_secedit_data("spongebob") is False
+            assert "Secedit failed to import template data" in caplog.text
 
 
 def test_write_secedit_data_configure_fail(caplog):
     patch_cmd_retcode = patch.dict(
         win_lgpo.__salt__, {"cmd.retcode": MagicMock(side_effect=[0, 1])}
     )
-    with patch_cmd_retcode:
-        assert win_lgpo._write_secedit_data("spongebob") is False
-        assert "Secedit failed to apply security database" in caplog.text
+    with caplog.at_level(logging.DEBUG):
+        with patch_cmd_retcode:
+            assert win_lgpo._write_secedit_data("spongebob") is False
+            assert "Secedit failed to apply security database" in caplog.text

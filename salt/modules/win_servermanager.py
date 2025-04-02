@@ -7,7 +7,6 @@ available and installed roles/features. Can install and remove roles/features.
 :depends:       PowerShell module ``ServerManager``
 """
 
-
 import logging
 import shlex
 

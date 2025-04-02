@@ -277,12 +277,12 @@ For example:
 
 """
 
-
 import copy
 import difflib
 import itertools
 import logging
 import os
+import pathlib
 import posixpath
 import re
 import shutil
@@ -558,7 +558,26 @@ def _gen_recurse_managed_files(
             managed_directories.add(mdest)
             keep.add(mdest)
 
-    return managed_files, managed_directories, managed_symlinks, keep
+    # Sets are randomly ordered. We need to use a list so we can make sure
+    # symlinks are always at the end. This is necessary because the file must
+    # exist before we can create a symlink to it. See issue:
+    # https://github.com/saltstack/salt/issues/64630
+    new_managed_files = list(managed_files)
+    # Now let's move all the symlinks to the end
+    for link_src_relpath, _ in managed_symlinks:
+        for file_dest, file_src in managed_files:
+            # We need to convert relpath to fullpath. We're using pathlib to
+            # be platform-agnostic
+            symlink_full_path = pathlib.Path(f"{name}{os.sep}{link_src_relpath}")
+            file_dest_full_path = pathlib.Path(file_dest)
+            if symlink_full_path == file_dest_full_path:
+                new_managed_files.append(
+                    new_managed_files.pop(
+                        new_managed_files.index((file_dest, file_src))
+                    )
+                )
+
+    return new_managed_files, managed_directories, managed_symlinks, keep
 
 
 def _gen_keep_files(name, require, walk_d=None):
@@ -566,6 +585,8 @@ def _gen_keep_files(name, require, walk_d=None):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     """
+
+    walk_ret = set()
 
     def _is_child(path, directory):
         """
@@ -1137,7 +1158,7 @@ def _get_template_texts(
 
     txtl = []
 
-    for (source, source_hash) in source_list:
+    for source, source_hash in source_list:
 
         tmpctx = defaults if defaults else {}
         if context:
@@ -1233,7 +1254,9 @@ def _shortcut_check(
 
     if os.path.isfile(name):
         with salt.utils.winapi.Com():
-            shell = win32com.client.Dispatch("WScript.Shell")
+            shell = win32com.client.Dispatch(  # pylint: disable=used-before-assignment
+                "WScript.Shell"
+            )
             scut = shell.CreateShortcut(name)
             state_checks = [scut.TargetPath.lower() == target.lower()]
             if arguments is not None:
@@ -1898,9 +1921,7 @@ def symlink(
             fs_entry_type = (
                 "File"
                 if os.path.isfile(name)
-                else "Directory"
-                if os.path.isdir(name)
-                else "File system entry"
+                else "Directory" if os.path.isdir(name) else "File system entry"
             )
             return _error(
                 ret,
@@ -2295,7 +2316,7 @@ def managed(
     show_changes=True,
     create=True,
     contents=None,
-    tmp_dir="",
+    tmp_dir=None,
     tmp_ext="",
     contents_pillar=None,
     contents_grains=None,
@@ -2321,6 +2342,11 @@ def managed(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
+    new_file_diff=False,
+    sig_backend="gpg",
     **kwargs,
 ):
     r"""
@@ -2500,8 +2526,12 @@ def managed(
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
-        the source file will result in the state needing to re-download the
-        source file if the state is run again.
+        the source file might result in the state needing to re-download the
+        source file if the state is run again. If the source is not a local or
+        ``salt://`` one, the source hash is known, ``skip_verify`` is not true
+        and the managed file exists with the correct hash and is not templated,
+        this is not the case (i.e. remote downloads are avoided if the local hash
+        matches the expected one).
 
         .. versionadded:: 2017.7.3
 
@@ -2919,7 +2949,7 @@ def managed(
         .. versionadded:: 3005
 
     signature
-        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Ensure a valid signature exists on the selected ``source`` file.
         Set this to true for inline signatures, or to a file URI retrievable
         by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -2941,7 +2971,7 @@ def managed(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -2958,15 +2988,17 @@ def managed(
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require at least one valid signature from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require a valid signature from each of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -2979,6 +3011,52 @@ def managed(
         When verifying signatures, use this GnuPG home.
 
         .. versionadded:: 3007.0
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3000,13 +3078,16 @@ def managed(
     if selinux is not None and not salt.utils.platform.is_linux():
         return _error(ret, "The 'selinux' option is only supported on Linux")
 
+    has_changes = False
+
     if signature or source_hash_sig:
-        # Fail early in case the gpg module is not present
+        # Fail early in case the signature verification backend is not present
         try:
-            __salt__["gpg.verify"]
+            __salt__[f"{sig_backend}.verify"]
         except KeyError:
             _error(
-                ret, "Cannot verify signatures because the gpg module was not loaded"
+                ret,
+                f"Cannot verify signatures because the {sig_backend} module was not loaded",
             )
 
     if selinux:
@@ -3219,6 +3300,60 @@ def managed(
     if defaults and not isinstance(defaults, dict):
         return _error(ret, "Defaults must be formed as a dict")
 
+    # If we're pulling from a remote source untemplated and we have a source hash,
+    # check early if the local file exists with the correct hash and skip
+    # managing contents if so. This avoids a lot of overhead.
+    if (
+        contents is None
+        and not template
+        and source
+        and not skip_verify
+        and os.path.exists(name)
+        and replace
+    ):
+        try:
+            # If the source is a list, find the first existing file.
+            # We're doing this after basic checks to not slow down
+            # runs where it does not matter.
+            source, source_hash = __salt__["file.source_list"](
+                source, source_hash, __env__
+            )
+            source_sum = None
+            if (
+                source
+                and source_hash
+                and urllib.parse.urlparse(source).scheme
+                not in (
+                    "salt",
+                    "file",
+                )
+                and not os.path.isabs(source)
+            ):
+                source_sum = __salt__["file.get_source_sum"](
+                    name,
+                    source,
+                    source_hash,
+                    source_hash_name,
+                    __env__,
+                    verify_ssl=verify_ssl,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
+                    sig_backend=sig_backend,
+                )
+                hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
+        except (CommandExecutionError, OSError) as err:
+            log.error(
+                "Failed checking existing file's hash against specified source_hash: %s",
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+        else:
+            if source_sum and source_sum["hsum"] == hsum:
+                replace = False
+
     if not replace and os.path.exists(name):
         ret_perms = {}
         # Check and set the permissions if necessary
@@ -3261,9 +3396,9 @@ def managed(
             else:
                 ret["comment"] = f"File {name} not updated"
         elif not ret["changes"] and ret["result"]:
-            ret[
-                "comment"
-            ] = f"File {name} exists with proper permissions. No changes made."
+            ret["comment"] = (
+                f"File {name} exists with proper permissions. No changes made."
+            )
         return ret
 
     accum_data, _ = _load_accumulators()
@@ -3275,7 +3410,7 @@ def managed(
     try:
         if __opts__["test"]:
             if "file.check_managed_changes" in __salt__:
-                ret["changes"] = __salt__["file.check_managed_changes"](
+                check_changes = __salt__["file.check_managed_changes"](
                     name,
                     source,
                     source_hash,
@@ -3302,8 +3437,17 @@ def managed(
                     signed_by_all=signed_by_all,
                     keyring=keyring,
                     gnupghome=gnupghome,
+                    sig_backend=sig_backend,
+                    ignore_ordering=ignore_ordering,
+                    ignore_whitespace=ignore_whitespace,
+                    ignore_comment_characters=ignore_comment_characters,
+                    new_file_diff=new_file_diff,
                     **kwargs,
                 )
+                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+                    has_changes, ret["changes"] = check_changes
+                else:
+                    ret["changes"] = check_changes
 
                 if salt.utils.platform.is_windows():
                     try:
@@ -3317,9 +3461,11 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if not isinstance(
-                            ret["changes"], tuple
-                        ) and exc.strerror.startswith("Path not found"):
+                        if (
+                            not isinstance(ret["changes"], tuple)
+                            and exc.strerror.startswith("Path not found")
+                            and not new_file_diff
+                        ):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
@@ -3337,6 +3483,13 @@ def managed(
             else:
                 ret["result"] = True
                 ret["comment"] = f"The file {name} is in the correct state"
+
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and ret["changes"]
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
             return ret
 
@@ -3370,6 +3523,7 @@ def managed(
             signed_by_all=signed_by_all,
             keyring=keyring,
             gnupghome=gnupghome,
+            sig_backend=sig_backend,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3430,6 +3584,11 @@ def managed(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3453,6 +3612,11 @@ def managed(
         if ret["changes"]:
             # Reset ret
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
             check_cmd_opts = {}
             if "shell" in __grains__:
@@ -3514,6 +3678,11 @@ def managed(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -4004,13 +4173,25 @@ def directory(
                 if not force:
                     return _error(
                         ret,
-                        "File exists where the backup target {} should go".format(
-                            backupname
-                        ),
+                        f"File exists where the backup target {backupname} should go",
                     )
+                if __opts__["test"]:
+                    ret["changes"][
+                        "forced"
+                    ] = f"Existing file at backup path {backupname} would be removed"
                 else:
                     __salt__["file.remove"](backupname)
-            os.rename(name, backupname)
+
+            if __opts__["test"]:
+                ret["changes"]["backup"] = f"{name} would be renamed to {backupname}"
+                ret["changes"][name] = {"directory": "new"}
+                ret["comment"] = (
+                    f"{name} would be backed up and replaced with a new directory"
+                )
+                ret["result"] = None
+                return ret
+            else:
+                os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
@@ -4183,9 +4364,9 @@ def directory(
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, str):
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = f"Failed to enforce group ownership for group {group}"
+                    ret["comment"] = (
+                        f"Failed to enforce group ownership for group {group}"
+                    )
             else:
                 ret["result"] = False
                 ret["comment"] = (
@@ -4484,18 +4665,26 @@ def recurse(
                                 or immediate subdirectories
 
     keep_symlinks
-        Keep symlinks when copying from the source. This option will cause
-        the copy operation to terminate at the symlink. If desire behavior
-        similar to rsync, then set this to True. This option is not taken
-        in account if ``fileserver_followsymlinks`` is set to False.
+
+        Determines how symbolic links (symlinks) are handled during the copying
+        process. When set to ``True``, the copy operation will copy the symlink
+        itself, rather than the file or directory it points to. When set to
+        ``False``, the operation will follow the symlink and copy the target
+        file or directory. If you want behavior similar to rsync, set this
+        option to ``True``.
+
+        However, if the ``fileserver_followsymlinks`` option is set to ``False``,
+        the ``keep_symlinks`` setting will be ignored, and symlinks will not be
+        copied at all.
 
     force_symlinks
-        Force symlink creation. This option will force the symlink creation.
-        If a file or directory is obstructing symlink creation it will be
-        recursively removed so that symlink creation can proceed. This
-        option is usually not needed except in special circumstances. This
-        option is not taken in account if ``fileserver_followsymlinks`` is
-        set to False.
+
+        Controls the creation of symlinks when using ``keep_symlinks``. When set
+        to ``True``, it forces the creation of symlinks by removing any existing
+        files or directories that might be obstructing their creation. This
+        removal is done recursively if a directory is blocking the symlink. This
+        option is only used when ``keep_symlinks`` is passed and is ignored if
+        ``fileserver_followsymlinks`` is set to ``False``.
 
     win_owner
         The owner of the symlink and directories if ``makedirs`` is True. If
@@ -6199,9 +6388,9 @@ def blockreplace(
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error managing block")
-        ret[
-            "comment"
-        ] = f"Encountered error managing block: {exc}. See the log for details."
+        ret["comment"] = (
+            f"Encountered error managing block: {exc}. See the log for details."
+        )
         return ret
 
     if changes:
@@ -6719,10 +6908,10 @@ def prepend(
     may specify a single line of text or a list of lines to append.
 
     name
-        The location of the file to append to.
+        The location of the file to prepend to.
 
     text
-        The text to be appended, which can be a single string or a list
+        The text to be prepended, which can be a single string or a list
         of strings.
 
     makedirs
@@ -6732,7 +6921,7 @@ def prepend(
         creation of the named file. Defaults to False.
 
     source
-        A single source file to append. This source file can be hosted on either
+        A single source file to prepend. This source file can be hosted on either
         the salt master server, or on an HTTP or FTP server. Both HTTPS and
         HTTP are supported as well as downloading directly from Amazon S3
         compatible URLs with both pre-configured and automatic IAM credentials
@@ -6771,7 +6960,7 @@ def prepend(
         <salt.states.file.managed>` function for more details and examples.
 
     template
-        The named templating engine will be used to render the appended-to file.
+        The named templating engine will be used to render the source file(s).
         Defaults to ``jinja``. The following templates are supported:
 
         - :mod:`cheetah<salt.renderers.cheetah>`
@@ -6782,7 +6971,7 @@ def prepend(
         - :mod:`wempy<salt.renderers.wempy>`
 
     sources
-        A list of source files to append. If the files are hosted on an HTTP or
+        A list of source files to prepend. If the files are hosted on an HTTP or
         FTP server, the source_hashes argument is also required.
 
     source_hashes
@@ -6801,6 +6990,10 @@ def prepend(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    header
+        Forces the text to be prepended. If it exists in the file but not at
+        the beginning, then it prepends a duplicate.
 
     Multi-line example:
 
@@ -7696,9 +7889,9 @@ def copy_(
             )
             ret["result"] = None
         else:
-            ret[
-                "comment"
-            ] = f'The target file "{name}" exists and will not be overwritten'
+            ret["comment"] = (
+                f'The target file "{name}" exists and will not be overwritten'
+            )
             ret["result"] = True
         return ret
 
@@ -7798,9 +7991,9 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret[
-                "comment"
-            ] = f'The target file "{name}" exists and will not be overwritten'
+            ret["comment"] = (
+                f'The target file "{name}" exists and will not be overwritten'
+            )
             return ret
         elif not __opts__["test"]:
             # Remove the destination to prevent problems later
@@ -7962,7 +8155,7 @@ def serialize(
     serializer_opts=None,
     deserializer_opts=None,
     check_cmd=None,
-    tmp_dir="",
+    tmp_dir=None,
     tmp_ext="",
     **kwargs,
 ):
@@ -8557,10 +8750,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "b":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a block device. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a block device. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a block device
@@ -8592,10 +8785,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "p":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret[
-                "comment"
-            ] = "File {} exists and is not a fifo pipe. Refusing to continue".format(
-                name
+            ret["comment"] = (
+                "File {} exists and is not a fifo pipe. Refusing to continue".format(
+                    name
+                )
             )
 
         # Check if it is a fifo
@@ -8712,7 +8905,7 @@ def decode(
             - name: /tmp/new_file
             - encoding_type: base64
             - encoded_data: |
-                {{ salt.pillar.get('path:to:data') | indent(8) }}
+                {{ salt['pillar.get']('path:to:data') | indent(8) }}
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -9041,6 +9234,7 @@ def cached(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2017.7.3
@@ -9101,7 +9295,7 @@ def cached(
     source_hash_sig
         When ``name`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -9116,15 +9310,17 @@ def cached(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to
-        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to
-        :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -9137,6 +9333,13 @@ def cached(
         When verifying signatures, use this GnuPG home.
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
@@ -9208,6 +9411,7 @@ def cached(
                 signed_by_all=signed_by_all,
                 keyring=keyring,
                 gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -9256,10 +9460,10 @@ def cached(
                 )
                 if local_hash == source_sum["hsum"]:
                     ret["result"] = True
-                    ret[
-                        "comment"
-                    ] = "File {} is present on the minion and has hash {}".format(
-                        full_path, local_hash
+                    ret["comment"] = (
+                        "File {} is present on the minion and has hash {}".format(
+                            full_path, local_hash
+                        )
                     )
                 else:
                     ret["comment"] = (
@@ -9313,14 +9517,14 @@ def cached(
             name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
         )
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(str(exc))
         return ret
 
     if not local_copy:
-        ret[
-            "comment"
-        ] = "Failed to cache {}, check minion log for more information".format(
-            salt.utils.url.redact_http_basic_auth(name)
+        ret["comment"] = (
+            "Failed to cache {}, check minion log for more information".format(
+                salt.utils.url.redact_http_basic_auth(name)
+            )
         )
         return ret
 
@@ -9400,7 +9604,7 @@ def not_cached(name, saltenv="base"):
         try:
             os.remove(local_copy)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = f"Failed to delete {local_copy}: {exc.__str__()}"
+            ret["comment"] = f"Failed to delete {local_copy}: {exc}"
         else:
             ret["result"] = True
             ret["changes"]["deleted"] = True

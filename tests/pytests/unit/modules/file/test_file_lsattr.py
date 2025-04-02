@@ -79,9 +79,7 @@ def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended():
     )
     with patch_has_ext, patch_run:
         actual = set(filemod.lsattr(fname)[fname])
-        msg = "Actual: {!r} Expected: {!r}".format(
-            actual, expected
-        )  # pylint: disable=E1322
+        msg = f"Actual: {actual!r} Expected: {expected!r}"
         assert actual == expected, msg
 
 
@@ -107,9 +105,7 @@ def test_if_chattr_version_is_high_enough_then_extended_flags_should_be_returned
     )
     with patch_has_ext, patch_run:
         actual = set(filemod.lsattr(fname)[fname])
-        msg = "Actual: {!r} Expected: {!r}".format(
-            actual, expected
-        )  # pylint: disable=E1322
+        msg = f"Actual: {actual!r} Expected: {expected!r}"
         assert actual == expected, msg
 
 
@@ -135,7 +131,5 @@ def test_if_supports_extended_but_there_are_no_flags_then_none_should_be_returne
     )
     with patch_has_ext, patch_run:
         actual = set(filemod.lsattr(fname)[fname])
-        msg = "Actual: {!r} Expected: {!r}".format(
-            actual, expected
-        )  # pylint: disable=E1322
+        msg = f"Actual: {actual!r} Expected: {expected!r}"
         assert actual == expected, msg

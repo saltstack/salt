@@ -19,7 +19,6 @@ A state module for creating or destroying software RAID devices.
         - run: True
 """
 
-
 import logging
 
 import salt.utils.path
@@ -100,20 +99,20 @@ def present(name, level, devices, **kwargs):
             new_devices.append(dev)
 
     if len(uuid_dict) > 1:
-        ret[
-            "comment"
-        ] = "Devices are a mix of RAID constituents with multiple MD_UUIDs: {}.".format(
-            sorted(uuid_dict)
+        ret["comment"] = (
+            "Devices are a mix of RAID constituents with multiple MD_UUIDs: {}.".format(
+                sorted(uuid_dict)
+            )
         )
         ret["result"] = False
         return ret
     elif len(uuid_dict) == 1:
         uuid = next(iter(uuid_dict))
         if present and present["uuid"] != uuid:
-            ret[
-                "comment"
-            ] = "Devices MD_UUIDs: {} differs from present RAID uuid {}.".format(
-                uuid, present["uuid"]
+            ret["comment"] = (
+                "Devices MD_UUIDs: {} differs from present RAID uuid {}.".format(
+                    uuid, present["uuid"]
+                )
             )
             ret["result"] = False
             return ret
@@ -131,7 +130,7 @@ def present(name, level, devices, **kwargs):
         verb = "assembled"
     else:
         if len(new_devices) == 0:
-            ret["comment"] = "All devices are missing: {}.".format(missing)
+            ret["comment"] = f"All devices are missing: {missing}."
             ret["result"] = False
             return ret
         do_assemble = False
@@ -150,22 +149,22 @@ def present(name, level, devices, **kwargs):
                 level,
                 new_devices + ["missing"] * len(missing),
                 test_mode=True,
-                **kwargs
+                **kwargs,
             )
 
         if present:
-            ret["comment"] = "Raid {} already present.".format(name)
+            ret["comment"] = f"Raid {name} already present."
 
         if do_assemble or do_create:
-            ret["comment"] = "Raid will be {} with: {}".format(verb, res)
+            ret["comment"] = f"Raid will be {verb} with: {res}"
             ret["result"] = None
 
         if (do_assemble or present) and len(new_devices) > 0:
-            ret["comment"] += " New devices will be added: {}".format(new_devices)
+            ret["comment"] += f" New devices will be added: {new_devices}"
             ret["result"] = None
 
         if len(missing) > 0:
-            ret["comment"] += " Missing devices: {}".format(missing)
+            ret["comment"] += f" Missing devices: {missing}"
 
         return ret
 
@@ -181,29 +180,29 @@ def present(name, level, devices, **kwargs):
         raids = __salt__["raid.list"]()
         changes = raids.get(name)
         if changes:
-            ret["comment"] = "Raid {} {}.".format(name, verb)
+            ret["comment"] = f"Raid {name} {verb}."
             ret["changes"] = changes
             # Saving config
             __salt__["raid.save_config"]()
         else:
-            ret["comment"] = "Raid {} failed to be {}.".format(name, verb)
+            ret["comment"] = f"Raid {name} failed to be {verb}."
             ret["result"] = False
     else:
-        ret["comment"] = "Raid {} already present.".format(name)
+        ret["comment"] = f"Raid {name} already present."
 
     if (do_assemble or present) and len(new_devices) > 0 and ret["result"]:
         for d in new_devices:
             res = __salt__["raid.add"](name, d)
             if not res:
-                ret["comment"] += " Unable to add {} to {}.\n".format(d, name)
+                ret["comment"] += f" Unable to add {d} to {name}.\n"
                 ret["result"] = False
             else:
-                ret["comment"] += " Added new device {} to {}.\n".format(d, name)
+                ret["comment"] += f" Added new device {d} to {name}.\n"
         if ret["result"]:
             ret["changes"]["added"] = new_devices
 
     if len(missing) > 0:
-        ret["comment"] += " Missing devices: {}".format(missing)
+        ret["comment"] += f" Missing devices: {missing}"
 
     return ret
 
@@ -225,10 +224,10 @@ def absent(name):
 
     # Raid does not exist
     if name not in __salt__["raid.list"]():
-        ret["comment"] = "Raid {} already absent".format(name)
+        ret["comment"] = f"Raid {name} already absent"
         return ret
     elif __opts__["test"]:
-        ret["comment"] = "Raid {} is set to be destroyed".format(name)
+        ret["comment"] = f"Raid {name} is set to be destroyed"
         ret["result"] = None
         return ret
     else:
@@ -236,7 +235,7 @@ def absent(name):
         ret["result"] = __salt__["raid.destroy"](name)
 
         if ret["result"]:
-            ret["comment"] = "Raid {} has been destroyed".format(name)
+            ret["comment"] = f"Raid {name} has been destroyed"
         else:
-            ret["comment"] = "Raid {} failed to be destroyed".format(name)
+            ret["comment"] = f"Raid {name} failed to be destroyed"
         return ret

@@ -1,6 +1,7 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.win_lgpo as win_lgpo

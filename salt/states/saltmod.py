@@ -33,7 +33,6 @@ import salt.syspaths
 import salt.utils.data
 import salt.utils.event
 import salt.utils.versions
-from salt.features import features
 
 log = logging.getLogger(__name__)
 
@@ -350,9 +349,11 @@ def state(
         cmd_ret = {
             __opts__["id"]: {
                 "ret": tmp_ret,
-                "out": tmp_ret.get("out", "highstate")
-                if isinstance(tmp_ret, dict)
-                else "highstate",
+                "out": (
+                    tmp_ret.get("out", "highstate")
+                    if isinstance(tmp_ret, dict)
+                    else "highstate"
+                ),
             }
         }
 
@@ -783,7 +784,9 @@ def runner(name, **kwargs):
     try:
         kwargs["__pub_user"] = __user__
         log.debug(
-            f"added __pub_user to kwargs using dunder user '{__user__}', kwargs '{kwargs}'"
+            "added __pub_user to kwargs using dunder user '%s', kwargs '%s'",
+            __user__,
+            kwargs,
         )
     except NameError:
         log.warning("unable to find user for fire args event due to missing __user__")
@@ -812,11 +815,11 @@ def runner(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    if features.get("enable_deprecated_orchestration_flag", False):
+    if __opts__["features"].get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
             3008,
-            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "The __orchestration__ return flag will be removed in {version}. "
             "For more information see https://github.com/saltstack/salt/pull/59917.",
         )
 
@@ -1061,7 +1064,7 @@ def wheel(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    if features.get("enable_deprecated_orchestration_flag", False):
+    if __opts__["features"].get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
             3008,

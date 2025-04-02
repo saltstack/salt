@@ -59,7 +59,7 @@ class VirtualboxCloudTestCase(ShellCase):
         @return:
         @rtype: dict
         """
-        arg_str = "--out=json {}".format(arg_str)
+        arg_str = f"--out=json {arg_str}"
         log.debug("running salt-cloud with %s", arg_str)
         output = self.run_script(
             "salt-cloud", arg_str, catch_stderr, timeout=timeout, config_dir=config_dir
@@ -97,9 +97,7 @@ class VirtualboxCloudTestCase(ShellCase):
         args = []
         # Args converted in the form of key1='value1' ... keyN='valueN'
         if kw_function_args:
-            args = [
-                "{}='{}'".format(key, value) for key, value in kw_function_args.items()
-            ]
+            args = [f"{key}='{value}'" for key, value in kw_function_args.items()]
 
         output = self.run_cloud(
             "-f {} {} {}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
@@ -118,7 +116,5 @@ class VirtualboxCloudTestCase(ShellCase):
         @rtype: dict
         """
 
-        output = self.run_cloud(
-            "-a {} {} --assume-yes".format(action, instance_name), **kwargs
-        )
+        output = self.run_cloud(f"-a {action} {instance_name} --assume-yes", **kwargs)
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})

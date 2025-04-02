@@ -140,7 +140,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
     """
     template = tmplpath
     if not os.path.isfile(template):
-        raise SaltRenderError("Template {} is not a file!".format(template))
+        raise SaltRenderError(f"Template {template} is not a file!")
 
     tmp_data = salt.utils.templates.py(
         template,
@@ -157,7 +157,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
         saltenv=saltenv,
         __sls__=sls,
         sls=sls,
-        **kws
+        **kws,
     )
     if not tmp_data.get("result", False):
         raise SaltRenderError(

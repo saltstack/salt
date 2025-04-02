@@ -13,14 +13,8 @@
         with:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
       - name: Download Source Tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
           path: artifacts/pkgs/incoming
@@ -70,7 +64,7 @@
           find artifacts/pkgs/repo -type f -print -exec cp {} artifacts/src \;
 
       - name: Upload Standalone Repository As An Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
           path: |
@@ -83,7 +77,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-src
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

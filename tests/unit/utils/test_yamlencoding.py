@@ -2,7 +2,6 @@
 Tests for salt.utils.yamlencoding
 """
 
-
 import salt.utils.yaml
 import salt.utils.yamlencoding
 from tests.support.unit import TestCase

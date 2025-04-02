@@ -21,7 +21,7 @@ def check_status():
     Check the status of Github for remote operations
     """
     try:
-        return requests.get("https://github.com").status_code == 200
+        return requests.get("https://github.com", timeout=60).status_code == 200
     except Exception:  # pylint: disable=broad-except
         return False
 

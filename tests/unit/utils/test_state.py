@@ -2,7 +2,6 @@
 Unit Tests for functions located in salt.utils.state.py.
 """
 
-
 import copy
 import textwrap
 
@@ -122,9 +121,7 @@ class StateUtilTestCase(TestCase):
             ),
         }
         for test, data in test_valid_false_states.items():
-            self.assertFalse(
-                salt.utils.state.check_result(data), msg="{} failed".format(test)
-            )
+            self.assertFalse(salt.utils.state.check_result(data), msg=f"{test} failed")
         test_valid_true_states = {
             "test1": salt.utils.odict.OrderedDict(
                 [
@@ -214,9 +211,7 @@ class StateUtilTestCase(TestCase):
             ),
         }
         for test, data in test_valid_true_states.items():
-            self.assertTrue(
-                salt.utils.state.check_result(data), msg="{} failed".format(test)
-            )
+            self.assertTrue(salt.utils.state.check_result(data), msg=f"{test} failed")
         test_invalid_true_ht_states = {
             "test_onfail_simple2": (
                 salt.utils.odict.OrderedDict(
@@ -519,7 +514,7 @@ class StateUtilTestCase(TestCase):
                 tdata["__id__"] = t_
             self.assertFalse(
                 salt.utils.state.check_result(data, highstate=ht),
-                msg="{} failed".format(test),
+                msg=f"{test} failed",
             )
 
         test_valid_true_ht_states = {
@@ -746,7 +741,7 @@ class StateUtilTestCase(TestCase):
                 tdata["__id__"] = t_
             self.assertTrue(
                 salt.utils.state.check_result(data, highstate=ht),
-                msg="{} failed".format(test),
+                msg=f"{test} failed",
             )
         test_valid_false_state = {"host1": {"test_state": {"result": False}}}
         self.assertFalse(salt.utils.state.check_result(test_valid_false_state))

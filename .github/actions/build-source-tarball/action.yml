@@ -1,22 +1,15 @@
 ---
 name: build-source-tarball
 description: Build Source Tarball
+
 inputs:
   salt-version:
-    type: string
     required: true
     description: The Salt version to set prior to building the tarball.
   nox-version:
     required: false
-    type: string
     description: The version of Nox to install
     default: "2022.8.7"
-
-
-env:
-  COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:
@@ -26,7 +19,7 @@ runs:
 
     - name: Download Release Patch
       if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.patch
 
@@ -53,7 +46,7 @@ runs:
         tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Upload Source Tarball as an Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
         path: dist/salt-*.tar.gz*

@@ -48,10 +48,10 @@ def get_cert_serial(cert_file, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(cert_file):
-        msg = "cert_file not found: {}".format(cert_file)
+        msg = f"cert_file not found: {cert_file}"
         raise CommandExecutionError(msg)
 
-    cmd = 'certutil.exe -silent -verify "{}"'.format(cert_file)
+    cmd = f'certutil.exe -silent -verify "{cert_file}"'
     out = __salt__["cmd.run"](cmd)
     # match serial number by paragraph to work with multiple languages
     matches = re.search(r":\s*(\w*)\r\n\r\n", out)
@@ -77,7 +77,7 @@ def get_stored_cert_serials(store):
 
         salt '*' certutil.get_stored_cert_serials <store>
     """
-    cmd = 'certutil.exe -store "{}"'.format(store)
+    cmd = f'certutil.exe -store "{store}"'
     out = __salt__["cmd.run"](cmd)
     # match serial numbers by header position to work with multiple languages
     matches = re.findall(r"={16}\r\n.*:\s*(\w*)\r\n", out)
@@ -112,10 +112,10 @@ def add_store(source, store, retcode=False, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: {}".format(source)
+        msg = f"cert_file not found: {source}"
         raise CommandExecutionError(msg)
 
-    cmd = 'certutil.exe -addstore {} "{}"'.format(store, source)
+    cmd = f'certutil.exe -addstore {store} "{source}"'
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:
@@ -150,11 +150,11 @@ def del_store(source, store, retcode=False, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: {}".format(source)
+        msg = f"cert_file not found: {source}"
         raise CommandExecutionError(msg)
 
     serial = get_cert_serial(source)
-    cmd = 'certutil.exe -delstore {} "{}"'.format(store, serial)
+    cmd = f'certutil.exe -delstore {store} "{serial}"'
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:

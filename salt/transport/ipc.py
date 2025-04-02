@@ -2,7 +2,6 @@
 IPC transport classes
 """
 
-
 import errno
 import logging
 import socket
@@ -178,13 +177,7 @@ class IPCServer:
             else:
                 return _null
 
-        # msgpack deprecated `encoding` starting with version 0.5.2
-        if salt.utils.msgpack.version >= (0, 5, 2):
-            # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": False}
-        else:
-            msgpack_kwargs = {"encoding": "utf-8"}
-        unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
+        unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -283,13 +276,7 @@ class IPCClient:
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
-        # msgpack deprecated `encoding` starting with version 0.5.2
-        if salt.utils.msgpack.version >= (0, 5, 2):
-            # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": False}
-        else:
-            msgpack_kwargs = {"encoding": "utf-8"}
-        self.unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
+        self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
 
     def connected(self):

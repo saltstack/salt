@@ -5,21 +5,15 @@ description: Setup 'python-tools-scripts'
 inputs:
   cache-prefix:
     required: true
-    type: string
     description: Seed used to invalidate caches
   cwd:
-    type: string
     description: The directory the salt checkout is located in
     default: "."
 
 outputs:
   version:
+    description: "Return the python-tools-scripts version"
     value: ${{ steps.get-version.outputs.version }}
-
-
-env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:
@@ -50,7 +44,7 @@ runs:
         cache-seed: tools|${{ steps.venv-hash.outputs.venv-hash }}
 
     - name: Restore Python Tools Virtualenvs Cache
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       with:
         path: ${{ inputs.cwd }}/.tools-venvs
         key: ${{ inputs.cache-prefix }}|${{ steps.venv-hash.outputs.venv-hash }}
@@ -60,10 +54,13 @@ runs:
       working-directory: ${{ inputs.cwd }}
       run: |
         PYTHON_EXE=${{ steps.tools-virtualenv.outputs.python-executable }}
+        ${PYTHON_EXE} -m ensurepip --upgrade
         (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
         if [ $exitcode -eq 0 ]; then
+          ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
           ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
         else
+          ${PYTHON_EXE} -m pip install --upgrade setuptools
           ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
         fi
 

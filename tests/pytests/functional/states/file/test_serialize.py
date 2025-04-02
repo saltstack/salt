@@ -4,7 +4,6 @@ import logging
 import pytest
 
 import salt.serializers.configparser
-import salt.serializers.plist
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +86,7 @@ def test_serializer_deserializer_opts(file, tmp_path):
     assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_binary_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of plists which should include
@@ -122,6 +122,7 @@ def test_serializer_plist_binary_file_open(file, tmp_path):
     assert serialized_data["foo"] == merged["foo"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of non binary plists with

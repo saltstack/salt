@@ -1359,9 +1359,9 @@ def test_bind_mount_copy_active_opts(mount_name):
         ),
     ):
         with patch.dict(mount.__opts__, {"test": True}):
-            ret[
-                "comment"
-            ] = "Remount would be forced because options (nodev,noexec,nosuid) changed"
+            ret["comment"] = (
+                "Remount would be forced because options (nodev,noexec,nosuid) changed"
+            )
             result = mount.mounted(
                 name=name,
                 device=device,

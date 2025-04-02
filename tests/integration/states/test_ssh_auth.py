@@ -29,7 +29,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC3dd5ACsvJhnIOrn6bSOkX5"
             "KyVDpTYsVAaJj3AmEo6Fr5cHXJFJoJS+Ld8K5vCscPzuXashdYUdrhL1E5Liz"
             "bza+zneQ5AkJ7sn2NXymD6Bbra+infO4NgnQXbGMp/NyY65jbQGqJeQ081iEV"
-            f"YbDP2zXp6fmrqqmFCaakZfGRbVw== root"
+            "YbDP2zXp6fmrqqmFCaakZfGRbVw== root"
         )
         key2 = (
             "AAAAB3NzaC1yc2EAAAADAQABAAAAgQC7h77HyBPCUDONCs5bI/PrrPwyYJegl0"

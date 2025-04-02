@@ -6,7 +6,6 @@ Returns a hash of the name of the pillar module as defined in
 _virtual__ with the value __opts__
 """
 
-
 import logging
 
 # Set up logging

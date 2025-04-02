@@ -4,6 +4,7 @@
 
     .. versionadded:: 2015.8.3
 """
+
 import logging
 
 import salt.utils.beacons
@@ -22,9 +23,9 @@ def _run_proxy_processes(proxies):
         result = {}
         if not __salt__["salt_proxy.is_running"](proxy)["result"]:
             __salt__["salt_proxy.configure_proxy"](proxy, start=True)
-            result[proxy] = "Proxy {} was started".format(proxy)
+            result[proxy] = f"Proxy {proxy} was started"
         else:
-            msg = "Proxy {} is already running".format(proxy)
+            msg = f"Proxy {proxy} is already running"
             result[proxy] = msg
             log.debug(msg)
         ret.append(result)

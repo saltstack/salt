@@ -1,6 +1,7 @@
 """
 Test salt.utils.zeromq
 """
+
 import pytest
 import zmq
 

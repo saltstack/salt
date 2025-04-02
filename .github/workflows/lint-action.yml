@@ -11,24 +11,20 @@ on:
 
 
 env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 
 jobs:
   Salt:
     name: Lint Salt's Source Code
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "large", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-22.04
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
     steps:
-      - name: Install System Deps
-        run: |
-          apt-get update
-          apt-get install -y enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
       - name: Add Git Safe Directory
         run: |
@@ -62,18 +58,13 @@ jobs:
 
   Tests:
     name: Lint Salt's Test Suite
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "large", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-22.04
     if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
     steps:
-      - name: Install System Deps
-        run: |
-          echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
-          apt-get update
-          apt-get install -y enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
       - name: Add Git Safe Directory
         run: |

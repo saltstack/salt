@@ -8,7 +8,7 @@ apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/cloud.in
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
@@ -20,13 +20,13 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
-cryptography==41.0.7
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   pyspnego
     #   requests-ntlm
     #   smbprotocol
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
@@ -51,7 +51,7 @@ pywinrm==0.4.3
     # via -r requirements/static/ci/cloud.in
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   apache-libcloud

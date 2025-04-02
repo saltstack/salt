@@ -7,6 +7,7 @@ Beacon to monitor certificate expiration dates from files on the filesystem.
 :maturity: new
 :depends: OpenSSL
 """
+
 import logging
 from datetime import datetime
 

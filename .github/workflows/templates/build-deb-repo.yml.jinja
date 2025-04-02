@@ -3,18 +3,7 @@
       fail-fast: false
       matrix:
         include:
-        <%- for distro, version, arch in (
-                                            ("debian", "10", "x86_64"),
-                                            ("debian", "10", "aarch64"),
-                                            ("debian", "11", "x86_64"),
-                                            ("debian", "11", "aarch64"),
-                                            ("debian", "12", "x86_64"),
-                                            ("debian", "12", "aarch64"),
-                                            ("ubuntu", "20.04", "x86_64"),
-                                            ("ubuntu", "20.04", "aarch64"),
-                                            ("ubuntu", "22.04", "x86_64"),
-                                            ("ubuntu", "22.04", "aarch64"),
-                                        ) %>
+        <%- for distro, version, arch in build_debs_listing %>
           - pkg-type: deb
             distro: <{ distro }>
             version: "<{ version }>"
@@ -34,14 +23,8 @@
         with:
           cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
-
       - name: Download DEB Packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
@@ -89,7 +72,7 @@
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo-${{ matrix.pkg-type }}-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.arch }}
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error

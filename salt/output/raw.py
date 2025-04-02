@@ -24,7 +24,6 @@ Example output:
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
 """
 
-
 import salt.utils.stringutils
 
 

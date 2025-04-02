@@ -1,5 +1,8 @@
 ---
 common:
+  exclude_patterns: &common_exclude_patterns
+    - "**/site-packages/ansible/plugins/test"
+    - "**/site-packages/ansible/plugins/test/**"
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
     - "**/lib/python3.*/test"
@@ -24,16 +27,22 @@ common:
 
 ci:
   darwin:
+    exclude_patterns: &ci_darwin_exclude_patterns
+      - *common_exclude_patterns
     dir_patterns: &ci_darwin_dir_patterns
       - *common_dir_patterns
     file_patterns: &ci_darwin_file_patterns
       - *common_file_patterns
   linux:
+    exclude_patterns: &ci_linux_exclude_patterns
+      - *common_exclude_patterns
     dir_patterns: &ci_linux_dir_patterns
       - *common_dir_patterns
     file_patterns: &ci_linux_file_patterns
       - *common_file_patterns
   windows:
+    exclude_patterns: &ci_windows_exclude_patterns
+      - *common_exclude_patterns
     dir_patterns: &ci_windows_dir_patterns
       - *common_dir_patterns
       - "**/artifacts/salt/configs"
@@ -52,6 +61,8 @@ ci:
 
 pkg:
   darwin:
+    exclude_patterns:
+      - *ci_darwin_exclude_patterns
     dir_patterns:
       - *ci_darwin_dir_patterns
       - "**/pkgconfig"
@@ -62,11 +73,15 @@ pkg:
     file_patterns:
       - *ci_darwin_file_patterns
   linux:
+    exclude_patterns:
+      - *ci_linux_exclude_patterns
     dir_patterns:
       - *ci_linux_dir_patterns
     file_patterns:
       - *ci_linux_file_patterns
   windows:
+    exclude_patterns:
+      - *ci_windows_exclude_patterns
     dir_patterns:
       - *ci_windows_dir_patterns
       - "**/salt/share"

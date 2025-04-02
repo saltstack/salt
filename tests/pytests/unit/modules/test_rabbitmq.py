@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import logging
 
 import pytest

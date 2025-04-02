@@ -489,6 +489,7 @@ def _check_skip(grains):
     return False
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_orchestrate_subset(
     salt_run_cli,

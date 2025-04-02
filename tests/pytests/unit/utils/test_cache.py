@@ -139,7 +139,7 @@ def test_set_cache(minion_opts, cache_mods_path, cache_mod_name, cache_dir):
     assert cache_test_func()["called"] == 1
     assert cache_test_func()["called"] == 2
 
-    cache_file_name = "salt.loaded.ext.rawmodule.{}.p".format(cache_mod_name)
+    cache_file_name = f"salt.loaded.ext.rawmodule.{cache_mod_name}.p"
 
     cached_file = cache_dir / "context" / cache_file_name
     assert cached_file.exists()
@@ -151,9 +151,7 @@ def test_set_cache(minion_opts, cache_mods_path, cache_mod_name, cache_dir):
     assert target_cache_data == dict(context, called=1)
 
     # Test cache de-serialize
-    cc = cache.ContextCache(
-        minion_opts, "salt.loaded.ext.rawmodule.{}".format(cache_mod_name)
-    )
+    cc = cache.ContextCache(minion_opts, f"salt.loaded.ext.rawmodule.{cache_mod_name}")
     retrieved_cache = cc.get_cache_context()
     assert retrieved_cache == dict(context, called=1)
 

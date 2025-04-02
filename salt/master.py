@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+
 import asyncio
 import collections
 import copy
@@ -37,7 +38,6 @@ import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
-import salt.utils.crypt
 import salt.utils.ctx
 import salt.utils.event
 import salt.utils.files
@@ -181,21 +181,21 @@ class SMaster:
 
         if use_lock:
             with cls.secrets["cluster_aes"]["secret"].get_lock():
-                cls.secrets["cluster_aes"][
-                    "secret"
-                ].value = salt.utils.stringutils.to_bytes(
-                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                cls.secrets["cluster_aes"]["secret"].value = (
+                    salt.utils.stringutils.to_bytes(
+                        cls.secrets["cluster_aes"]["reload"](remove=owner)
+                    )
                 )
         else:
-            cls.secrets["cluster_aes"][
-                "secret"
-            ].value = salt.utils.stringutils.to_bytes(
-                cls.secrets["cluster_aes"]["reload"](remove=owner)
+            cls.secrets["cluster_aes"]["secret"].value = (
+                salt.utils.stringutils.to_bytes(
+                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                )
             )
 
         if event:
             event.fire_event(
-                {f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
+                {"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
             )
 
         if publisher:
@@ -304,6 +304,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.utils.master.clean_proc_dir(self.opts)
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
@@ -363,7 +364,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 log.error("Found dropfile with incorrect permissions, ignoring...")
             if to_rotate:
                 os.remove(dfn)
-        except os.error:
+        except OSError:
             pass
 
         # There is no need to check key against publish_session if we're
@@ -373,7 +374,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
                 try:
                     stats = os.stat(keyfile)
-                except os.error as exc:
+                except OSError as exc:
                     log.error("Unexpected condition while reading keyfile %s", exc)
                     return
                 if now - stats.st_mtime >= self.opts["publish_session"]:
@@ -813,6 +814,10 @@ class Master(SMaster):
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
+                if not chan.transport.started.wait(60):
+                    raise salt.exceptions.SaltMasterError(
+                        "Publish server did not start within 60 seconds. Something went wrong.",
+                    )
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
@@ -820,6 +825,10 @@ class Master(SMaster):
                 self.opts
             )
             ipc_publisher.pre_fork(self.process_manager)
+            if not ipc_publisher.transport.started.wait(30):
+                raise salt.exceptions.SaltMasterError(
+                    "IPC publish server did not start within 30 seconds. Something went wrong."
+                )
             self.process_manager.add_process(
                 EventMonitor,
                 args=[self.opts, ipc_publisher],
@@ -867,7 +876,9 @@ class Master(SMaster):
                     mod = ".".join(proc.split(".")[:-1])
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                    cls = _tmp.__getattribute__(cls)
+                    cls = _tmp.__getattribute__(  # pylint: disable=unnecessary-dunder-call
+                        cls
+                    )
                     name = f"ExtProcess({cls.__qualname__})"
                     self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
@@ -1042,7 +1053,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     # Cannot delete read-only files on Windows.
                     os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
-            except os.error:
+            except OSError:
                 pass
 
         # Wait for kill should be less then parent's ProcessManager.
@@ -1106,8 +1117,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Create a salt master worker process
 
         :param dict opts: The salt options
-        :param dict mkey: The user running the salt master and the AES key
-        :param dict key: The user running the salt master and the RSA key
+        :param dict mkey: The user running the salt master and the RSA key
+        :param dict key: The user running the salt master and the AES key
 
         :rtype: MWorker
         :return: Master worker
@@ -1265,11 +1276,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             start = time.time()
             self.stats[cmd]["runs"] += 1
 
-        def run_func(data):
-            return self.aes_funcs.run_func(data["cmd"], data)
-
         with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = run_func(data)
+            ret = self.aes_funcs.run_func(data["cmd"], data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
@@ -1287,7 +1295,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     log.info(
                         "%s decrementing inherited ReqServer niceness to 0", self.name
                     )
-                    log.info(os.nice())
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
@@ -1311,7 +1318,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         )
         self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
-        salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 
@@ -1433,7 +1439,7 @@ class AESFuncs(TransportMethods):
             return False
         pub_path = os.path.join(self.pki_dir, "minions", id_)
         try:
-            pub = salt.crypt.get_rsa_pub_key(pub_path)
+            pub = salt.crypt.PublicKey(pub_path)
         except OSError:
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
@@ -1444,7 +1450,7 @@ class AESFuncs(TransportMethods):
         except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load public key "%s": %s', pub_path, err)
         try:
-            if salt.crypt.public_decrypt(pub, token) == b"salt":
+            if pub.decrypt(token) == b"salt":
                 return True
         except ValueError as err:
             log.error("Unable to decrypt token: %s", err)
@@ -1735,7 +1741,7 @@ class AESFuncs(TransportMethods):
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"
@@ -1901,10 +1907,16 @@ class AESFuncs(TransportMethods):
                 self.mminion.returners[fstr](load["jid"], load["load"])
 
             # Register the syndic
+
+            # We are creating a path using user suplied input. Use the
+            # clean_path to prevent a directory traversal.
+            root = os.path.join(self.opts["cachedir"], "syndics")
             syndic_cache_path = os.path.join(
                 self.opts["cachedir"], "syndics", load["id"]
             )
-            if not os.path.exists(syndic_cache_path):
+            if salt.utils.verify.clean_path(
+                root, syndic_cache_path
+            ) and not os.path.exists(syndic_cache_path):
                 path_name = os.path.split(syndic_cache_path)[0]
                 if not os.path.exists(path_name):
                     os.makedirs(path_name)
@@ -2476,8 +2488,8 @@ class ClearFuncs(TransportMethods):
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        await self._send_pub(payload)
 
+        await self._send_pub(payload)
         return {
             "enc": "clear",
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},

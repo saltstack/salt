@@ -4,14 +4,26 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.9.0
-    # via etcd3-py
-aiosignal==1.3.1
-    # via aiohttp
-async-timeout==4.0.2
-    # via aiohttp
-attrs==23.1.0
+aiohttp==3.9.5
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
+    #   etcd3-py
+aiosignal==1.3.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   aiohttp
+annotated-types==0.6.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   pydantic
+async-timeout==4.0.3
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   aiohttp
+attrs==23.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -40,10 +52,10 @@ cachetools==5.3.1
     # via google-auth
 cassandra-driver==3.28.0
     # via -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2023.07.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 cffi==1.16.0
@@ -71,7 +83,7 @@ cherrypy==18.8.0
     #   -r requirements/static/ci/common.in
 click==8.1.3
     # via geomet
-clr-loader==0.2.4
+clr-loader==0.2.6
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   pythonnet
@@ -85,7 +97,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-cryptography==41.0.7
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -94,7 +106,8 @@ cryptography==41.0.7
     #   pyopenssl
     #   pyspnego
     #   requests-ntlm
-distlib==0.3.7
+    #   trustme
+distlib==0.3.8
     # via virtualenv
 distro==1.8.0
     # via
@@ -103,11 +116,11 @@ distro==1.8.0
     #   pytest-skip-markers
 dmidecode==0.9.0
     # via -r requirements/static/ci/windows.in
-dnspython==2.3.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
@@ -115,27 +128,36 @@ exceptiongroup==1.1.1
     # via pytest
 filelock==3.13.1
     # via virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.3.3
+frozenlist==1.4.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   aiohttp
     #   aiosignal
+future==1.0.0
+    # via textfsm
 genshi==0.7.7
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
-    # via gitpython
-gitpython==3.1.40
-    # via -r requirements/static/ci/common.in
-google-auth==2.19.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   gitpython
+gitpython==3.1.43 ; sys_platform == "win32"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
+google-auth==2.27.0
     # via kubernetes
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   etcd3-py
     #   requests
+    #   trustme
     #   yarl
 immutables==0.15
     # via
@@ -149,7 +171,7 @@ importlib-resources==5.12.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   jaraco.text
-inflect==6.0.4
+inflect==7.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   jaraco.text
@@ -175,7 +197,7 @@ jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   jaraco.collections
-jinja2==3.1.2
+jinja2==3.1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -225,20 +247,25 @@ more-itertools==9.1.0
     #   jaraco.text
 moto==4.1.11
     # via -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
 multidict==6.0.4
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   aiohttp
     #   yarl
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
 packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
@@ -248,13 +275,13 @@ pathspec==0.11.1
     # via yamllint
 platformdirs==4.0.0
     # via virtualenv
-pluggy==1.0.0
+pluggy==1.4.0
     # via pytest
 portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cherrypy
-psutil==5.9.6
+psutil==5.9.6 ; python_version <= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -263,7 +290,7 @@ psutil==5.9.6
     #   pytest-system-statistics
 pyasn1-modules==0.3.0
     # via google-auth
-pyasn1==0.4.8
+pyasn1==0.5.1
     # via
     #   pyasn1-modules
     #   rsa
@@ -271,11 +298,15 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/crypto.txt
-pydantic==1.10.8
+pydantic-core==2.16.3
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   pydantic
+pydantic==2.6.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   inflect
@@ -283,7 +314,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
-pymssql==2.2.7 ; sys_platform == "win32"
+pymssql==2.3.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -293,7 +324,7 @@ pymysql==1.1.0 ; sys_platform == "win32"
     #   -r requirements/base.txt
 pynacl==1.5.0
     # via -r requirements/static/ci/common.in
-pyopenssl==23.2.0
+pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
@@ -311,12 +342,15 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc28
+pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.8.0
-    # via pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-shell-utilities==1.8.0 ; python_version <= "3.9"
     # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
+    # via
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -324,9 +358,9 @@ pytest-subtests==0.11.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.1.0
+pytest-timeout==2.3.1
     # via -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -346,15 +380,15 @@ python-dateutil==2.8.2
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.1
+python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-pythonnet==3.0.1 ; sys_platform == "win32"
+pythonnet==3.0.4 ; sys_platform == "win32" and python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   tempora
@@ -379,18 +413,17 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.1
+pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.31.0
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   docker
     #   etcd3-py
     #   kubernetes
@@ -421,17 +454,19 @@ six==1.15.0
     #   etcd3-py
     #   genshi
     #   geomet
-    #   google-auth
     #   jsonschema
     #   junit-xml
     #   kubernetes
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
+    #   textfsm
     #   websocket-client
-smmap==5.0.0
-    # via gitdb
-sqlparse==0.4.4
+smmap==5.0.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   gitdb
+sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -439,6 +474,8 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   portend
+textfsm==1.1.3
+    # via -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
@@ -451,12 +488,17 @@ tornado==6.3.3
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -r requirements/base.txt
+trustme==1.1.0
+    # via -r requirements/pytest.txt
 types-pyyaml==6.0.1
     # via responses
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   annotated-types
+    #   inflect
     #   pydantic
+    #   pydantic-core
     #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.18
@@ -464,7 +506,6 @@ urllib3==1.26.18
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   botocore
     #   docker
-    #   google-auth
     #   kubernetes
     #   python-etcd
     #   requests
@@ -476,12 +517,10 @@ virtualenv==20.24.7
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
-    # via
-    #   docker
-    #   kubernetes
+    # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   moto
     #   pytest-httpserver
@@ -491,14 +530,18 @@ wmi==1.5.1 ; sys_platform == "win32"
     #   -r requirements/base.txt
 xmldiff==2.6.3
     # via -r requirements/static/ci/common.in
-xmltodict==0.13.0
+xmltodict==0.13.0 ; sys_platform == "win32"
     # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   -r requirements/base.txt
     #   moto
     #   pywinrm
 yamllint==1.32.0
     # via -r requirements/static/ci/windows.in
-yarl==1.9.2
-    # via aiohttp
+yarl==1.9.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.8/windows.txt
+    #   aiohttp
 zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt

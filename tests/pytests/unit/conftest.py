@@ -1,9 +1,11 @@
 import asyncio
+import os
 
 import pytest
 
 import salt.config
 import salt.transport.tcp
+from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import MagicMock, patch
 
 
@@ -24,6 +26,10 @@ def minion_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/minion.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "minion")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["encryption_algorithm"] = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+    opts["signing_algorithm"] = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     return opts
 
 
@@ -41,6 +47,11 @@ def master_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/master.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "master")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["publish_signing_algorithm"] = (
+        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    )
     return opts
 
 
@@ -59,15 +70,16 @@ def syndic_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/syndic.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "syndic")
     return opts
 
 
 @pytest.fixture
 def mocked_tcp_pub_client():
-    transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    transport = MagicMock(spec=salt.transport.tcp.PublishClient)
     transport.connect = MagicMock()
     future = asyncio.Future()
     transport.connect.return_value = future
     future.set_result(True)
-    with patch("salt.transport.tcp.TCPPubClient", transport):
+    with patch("salt.transport.tcp.PublishClient", transport):
         yield

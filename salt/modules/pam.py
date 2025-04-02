@@ -54,7 +54,7 @@ def _parse(contents=None, file_name=None):
                     position += 1
                     break
                 else:
-                    control_flag += " {}".format(part)
+                    control_flag += f" {part}"
         else:
             control_flag = comps[1]
             position += 1

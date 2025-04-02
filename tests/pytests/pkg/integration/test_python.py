@@ -6,9 +6,6 @@ import pytest
 
 @pytest.fixture
 def python_script_bin(install_salt):
-    # Tiamat builds run scripts via `salt python`
-    if not install_salt.relenv and not install_salt.classic:
-        return install_salt.binary_paths["python"][:1] + ["python"]
     return install_salt.binary_paths["python"]
 
 

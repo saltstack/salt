@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.disk as disk
@@ -274,7 +275,7 @@ def test_fstype():
     """
     device = "/dev/sdX1"
     fs_type = "ext4"
-    mock = MagicMock(return_value="FSTYPE\n{}".format(fs_type))
+    mock = MagicMock(return_value=f"FSTYPE\n{fs_type}")
     with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch.dict(
         disk.__salt__, {"cmd.run": mock}
     ), patch("salt.utils.path.which", MagicMock(return_value=True)):
@@ -291,7 +292,7 @@ def test_resize2fs():
         "salt.utils.path.which", MagicMock(return_value=True)
     ):
         disk.resize2fs(device)
-        mock.assert_called_once_with("resize2fs {}".format(device), python_shell=False)
+        mock.assert_called_once_with(f"resize2fs {device}", python_shell=False)
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")

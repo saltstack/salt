@@ -1,6 +1,7 @@
 """
 Integration tests for salt-ssh py_versions
 """
+
 import logging
 import socket
 import time
@@ -84,22 +85,19 @@ def ssh_port(ssh_docker_container):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
+def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master, known_hosts_file):
     """
     Temporary roster for ssh docker container
     """
-    roster = """
+    roster = f"""
     pyvertest:
       host: localhost
       user: centos
-      port: {}
-      priv: {}
+      port: {ssh_port}
+      priv: {ssh_keys.priv_path}
       ssh_options:
-        - StrictHostKeyChecking=no
-        - UserKnownHostsFile=/dev/null
-    """.format(
-        ssh_port, ssh_keys.priv_path
-    )
+        - UserKnownHostsFile={known_hosts_file}
+    """
     with pytest.helpers.temp_file(
         "py_versions_roster", roster, salt_master.config_dir
     ) as roster_file:

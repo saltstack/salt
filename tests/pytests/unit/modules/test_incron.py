@@ -4,7 +4,6 @@
     Test cases for salt.modules.incron
 """
 
-
 import pytest
 
 import salt.modules.incron as incron

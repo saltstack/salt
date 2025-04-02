@@ -1,15 +1,11 @@
 import logging
 import os
-import plistlib
-import pprint
 
 import msgpack
 import pytest
 
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 import salt.utils.files
@@ -32,9 +28,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -75,18 +69,6 @@ def test_serialize():
         assert salt.utils.json.loads(returner.returned) == dataset
         filestate.serialize("/tmp", dataset, formatter="json")
         assert salt.utils.json.loads(returner.returned) == dataset
-
-        # plist
-        filestate.serialize("/tmp", dataset, serializer="plist")
-        assert plistlib.loads(returner.returned) == dataset
-        filestate.serialize("/tmp", dataset, formatter="plist")
-        assert plistlib.loads(returner.returned) == dataset
-
-        # Python
-        filestate.serialize("/tmp", dataset, serializer="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
-        filestate.serialize("/tmp", dataset, formatter="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
 
         # msgpack
         filestate.serialize("/tmp", dataset, serializer="msgpack")
@@ -131,7 +113,7 @@ def test_contents_and_contents_pillar():
 
 def test_contents_pillar_doesnt_add_more_newlines():
     # make sure the newline
-    pillar_value = "i am the pillar value{}".format(os.linesep)
+    pillar_value = f"i am the pillar value{os.linesep}"
 
     returner = MagicMock(return_value=None)
     path = "/tmp/foo"
@@ -182,12 +164,12 @@ def test_exists():
     assert filestate.exists("") == ret
 
     with patch.object(os.path, "exists", mock_f):
-        comt = "Specified path {} does not exist".format(name)
+        comt = f"Specified path {name} does not exist"
         ret.update({"comment": comt, "name": name})
         assert filestate.exists(name) == ret
 
     with patch.object(os.path, "exists", mock_t):
-        comt = "Path {} exists".format(name)
+        comt = f"Path {name} exists"
         ret.update({"comment": comt, "result": True})
         assert filestate.exists(name) == ret
 
@@ -209,12 +191,12 @@ def test_missing():
     assert filestate.missing("") == ret
 
     with patch.object(os.path, "exists", mock_t):
-        comt = "Specified path {} exists".format(name)
+        comt = f"Specified path {name} exists"
         ret.update({"comment": comt, "name": name})
         assert filestate.missing(name) == ret
 
     with patch.object(os.path, "exists", mock_f):
-        comt = "Path {} is missing".format(name)
+        comt = f"Path {name} is missing"
         ret.update({"comment": comt, "result": True})
         assert filestate.missing(name) == ret
 
@@ -271,7 +253,7 @@ def test_recurse():
         assert filestate.recurse(name, source, user=user, group=group) == ret
 
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt})
             assert filestate.recurse(name, source) == ret
 
@@ -297,12 +279,12 @@ def test_recurse():
 
             with patch.object(os.path, "isdir", mock_f):
                 with patch.object(os.path, "exists", mock_t):
-                    comt = "The path {} exists and is not a directory".format(name)
+                    comt = f"The path {name} exists and is not a directory"
                     ret.update({"comment": comt})
                     assert filestate.recurse(name, source) == ret
 
             with patch.object(os.path, "isdir", mock_t):
-                comt = "The directory {} is in the correct state".format(name)
+                comt = f"The directory {name} is in the correct state"
                 ret.update({"comment": comt, "result": True})
                 assert filestate.recurse(name, source) == ret
 
@@ -325,7 +307,7 @@ def test_replace():
     mock_t = MagicMock(return_value=True)
     mock_f = MagicMock(return_value=False)
     with patch.object(os.path, "isabs", mock_f):
-        comt = "Specified file {} is not an absolute path".format(name)
+        comt = f"Specified file {name} is not an absolute path"
         ret.update({"comment": comt, "name": name})
         assert filestate.replace(name, pattern, repl) == ret
 
@@ -356,7 +338,7 @@ def test_blockreplace():
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt, "name": name})
             assert filestate.blockreplace(name) == ret
 
@@ -389,26 +371,26 @@ def test_touch():
     mock_t = MagicMock(return_value=True)
     mock_f = MagicMock(return_value=False)
     with patch.object(os.path, "isabs", mock_f):
-        comt = "Specified file {} is not an absolute path".format(name)
+        comt = f"Specified file {name} is not an absolute path"
         ret.update({"comment": comt, "name": name})
         assert filestate.touch(name) == ret
 
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "exists", mock_f):
             with patch.dict(filestate.__opts__, {"test": True}):
-                comt = "File {} is set to be created".format(name)
+                comt = f"File {name} is set to be created"
                 ret.update({"comment": comt, "result": None, "changes": {"new": name}})
                 assert filestate.touch(name) == ret
 
         with patch.dict(filestate.__opts__, {"test": False}):
             with patch.object(os.path, "isdir", mock_f):
-                comt = "Directory not present to touch file {}".format(name)
+                comt = f"Directory not present to touch file {name}"
                 ret.update({"comment": comt, "result": False, "changes": {}})
                 assert filestate.touch(name) == ret
 
             with patch.object(os.path, "isdir", mock_t):
                 with patch.dict(filestate.__salt__, {"file.touch": mock_t}):
-                    comt = "Created empty file {}".format(name)
+                    comt = f"Created empty file {name}"
                     ret.update(
                         {"comment": comt, "result": True, "changes": {"new": name}}
                     )
@@ -482,7 +464,7 @@ def test_serialize_into_managed_file():
     mock_t = MagicMock(return_value=True)
     mock_f = MagicMock(return_value=False)
     with patch.object(os.path, "isfile", mock_f):
-        comt = "File {} is not present and is not set for creation".format(name)
+        comt = f"File {name} is not present and is not set for creation"
         ret.update({"comment": comt, "name": name, "result": True})
         assert filestate.serialize(name, create=False) == ret
 
@@ -495,11 +477,11 @@ def test_serialize_into_managed_file():
     assert filestate.serialize(name) == ret
 
     with patch.object(os.path, "isfile", mock_t):
-        comt = "merge_if_exists is not supported for the python serializer"
+        comt = "merge_if_exists is not supported for the json serializer"
         ret.update({"comment": comt, "result": False})
         assert (
             filestate.serialize(
-                name, dataset=True, merge_if_exists=True, formatter="python"
+                name, dataset=True, merge_if_exists=True, formatter="json"
             )
             == ret
         )
@@ -516,25 +498,25 @@ def test_serialize_into_managed_file():
     # __opts__['test']=True with changes
     with patch.dict(filestate.__salt__, {"file.check_managed_changes": mock_changes}):
         with patch.dict(filestate.__opts__, {"test": True}):
-            comt = "Dataset will be serialized and stored into {}".format(name)
+            comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None, "changes": True})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # __opts__['test']=True without changes
     with patch.dict(
         filestate.__salt__, {"file.check_managed_changes": mock_no_changes}
     ):
         with patch.dict(filestate.__opts__, {"test": True}):
-            comt = "The file {} is in the correct state".format(name)
+            comt = f"The file {name} is in the correct state"
             ret.update({"comment": comt, "result": True, "changes": False})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     mock = MagicMock(return_value=ret)
     with patch.dict(filestate.__opts__, {"test": False}):
         with patch.dict(filestate.__salt__, {"file.manage_file": mock}):
-            comt = "Dataset will be serialized and stored into {}".format(name)
+            comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # merge_if_exists deserialization error
     mock_exception = MagicMock(side_effect=TypeError("test"))

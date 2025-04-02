@@ -98,12 +98,12 @@ def versions():
             else:
                 continue
 
-            service_pack = " SP{}".format(sp) if sp != "N/A" else ""
+            service_pack = f" SP{sp}" if sp != "N/A" else ""
             return_dict["versions"].append(version)
             return_dict["details"][ver_key] = {
                 "version": version,
                 "service_pack": sp,
-                "full": "{}{}".format(version, service_pack),
+                "full": f"{version}{service_pack}",
             }
 
     return return_dict

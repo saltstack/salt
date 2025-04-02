@@ -1,3 +1,7 @@
+"""
+Cluster integration tests.
+"""
+
 import salt.utils.event
 
 

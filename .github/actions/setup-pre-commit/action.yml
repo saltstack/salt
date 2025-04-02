@@ -4,18 +4,12 @@ description: Setup 'pre-commit'
 
 inputs:
   version:
-    type: string
     description: Pre-commit version to install
     required: true
     default: 3.0.3
   cache-seed:
     required: true
-    type: string
     description: Seed used to invalidate caches
-
-env:
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 
 runs:
@@ -36,7 +30,7 @@ runs:
         ${{ steps.pre-commit-virtualenv.outputs.python-executable }} -m pip install pre-commit==${{ inputs.version }}
 
     - name: Cache Pre-Commit Hooks
-      uses: actions/cache@v3.3.1
+      uses: ./.github/actions/cache
       id: pre-commit-hooks-cache
       with:
         key: ${{ steps.pre-commit-virtualenv.outputs.cache-key }}|${{ inputs.version }}|${{ hashFiles('.pre-commit-config.yaml') }}

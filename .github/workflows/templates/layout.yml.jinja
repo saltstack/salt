@@ -5,11 +5,11 @@
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
-<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
-<%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set gh_actions_workflows_python_version = "3.10" %>
+<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -34,8 +34,10 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 <%- endblock env %>
 
@@ -47,6 +49,7 @@ permissions:
 <%- if workflow_slug not in ("nightly", "scheduled") %>
   actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
 <%- endif %>
+
 
 <%- endblock permissions %>
 
@@ -75,7 +78,8 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-22.04
+    environment: ci
     <%- if prepare_workflow_if_check %>
     if: <{ prepare_workflow_if_check }>
     <%- endif %>
@@ -86,17 +90,19 @@ jobs:
       <%- endfor %>
     <%- endif %>
     outputs:
-      jobs: ${{ steps.define-jobs.outputs.jobs }}
-      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      pull-labels: ${{ steps.get-pull-labels.outputs.labels }}
-      testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
+      nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
+      config: ${{ steps.workflow-config.outputs.config }}
+    env:
+      LINUX_ARM_RUNNER: ${{ vars.LINUX_ARM_RUNNER }}
+      FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
+      PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,7 +111,7 @@ jobs:
       - name: Get Changed Files
         if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         with:
           token: ${{ github.token }}
           list-files: json
@@ -141,6 +147,7 @@ jobs:
             docs:
               - added|modified:
                 - doc/**
+                - .github/workflows/build-docs.yml
                 - *doc_requirements
             workflows:
               - added|modified:
@@ -171,6 +178,9 @@ jobs:
                 - pkg/**
                 - *pkg_requirements
                 - *salt_added_modified
+            nsis_tests:
+              - added|modified: &nsis_tests
+                - pkg/windows/nsis/**
             testrun:
               - added|modified:
                 - *pkg_requirements
@@ -180,7 +190,7 @@ jobs:
                 - *pkg_tests_added_modified
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -205,13 +215,10 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
-      - name: Get Pull Request Test Labels
-        id: get-pull-labels
-        if: ${{ github.event_name == 'pull_request'}}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get Hash For Nox Tarball Cache
+        id: nox-archive-hash
         run: |
-          tools ci get-pr-test-labels --repository ${{ github.repository }}
+          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
 
       <%- if prepare_actual_release %>
 
@@ -246,26 +253,6 @@ jobs:
         run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Runner Types
-        id: runner-types
-        run: |
-          tools ci runner-types ${{ github.event_name }}
-
-      - name: Check Defined Runners
-        run: |
-          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
-
-      - name: Define Jobs
-        id: define-jobs
-        run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
-            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
-          }> ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Jobs
-        run: |
-          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
@@ -280,29 +267,21 @@ jobs:
         run: |
           tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Check Salt Releases
+      - name: Define workflow config
+        id: workflow-config
         run: |
-          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
-          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
-          echo '${{ steps.get-testing-releases.outputs.testing-releases }}' | jq -C '.'
-
-      - name: Define Testrun
-        id: define-testrun
-        run: |
-          tools ci define-testrun ${{ github.event_name }} changed-files.json
-
-      - name: Check Defined Test Run
-        run: |
-          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+          tools ci workflow-config<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
         run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
-        uses: actions/upload-artifact@v3
+        if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
+        uses: actions/upload-artifact@v4
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
@@ -315,18 +294,18 @@ jobs:
 {#  We can't yet use tokenless uploads with the codecov CLI
 
       - name: Install Codecov CLI
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           python3 -m pip install codecov-cli
 
       - name: Save Commit Metadata In Codecov
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             create-commit --git-service github --sha ${{ github.sha }}
 
       - name: Create Codecov Coverage Report
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.config)['skip_code_coverage'] == false }}
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             create-report --git-service github --sha ${{ github.sha }}
@@ -337,13 +316,12 @@ jobs:
   <%- endif %>
 
 <%- endblock jobs %>
-
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    if: ${{ !cancelled() && always() }}
+    runs-on: ubuntu-22.04
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>
     <%- endif %>
@@ -363,10 +341,14 @@ jobs:
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
+      <%- if workflow_slug != "release" %>
+      - test-packages
+      - test
+      <%- endif %>
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: technote-space/workflow-conclusion-action@v3
+        uses: im-open/workflow-conclusion@v2
 
       <%- block set_pipeline_exit_status_extra_steps %>
       <%- endblock set_pipeline_exit_status_extra_steps %>
@@ -374,13 +356,8 @@ jobs:
       - name: Set Pipeline Exit Status
         shell: bash
         run: |
-          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+          if [ "${{ steps.get-workflow-info.outputs.workflow_conclusion }}" != "success" ]; then
             exit 1
           else
             exit 0
           fi
-
-      - name: Done
-        if: always()
-        run:
-          echo "All worflows finished"

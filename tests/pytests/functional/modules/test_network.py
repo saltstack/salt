@@ -1,7 +1,10 @@
 """
 Validate network module
 """
+
 import pytest
+
+import salt.utils.platform
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -11,7 +14,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def url(modules):
-    return "rewrite.amazon.com"
+    return "ns.google.com"
 
 
 @pytest.fixture(scope="module")
@@ -25,9 +28,18 @@ def test_network_ping(network, url):
     network.ping
     """
     ret = network.ping(url)
-    exp_out = ["ping", url, "ms", "time"]
-    for out in exp_out:
-        assert out in ret.lower()
+
+    # Github Runners are on Azure, which doesn't allow ping
+    packet_loss = "100% packet loss"
+    if salt.utils.platform.is_windows():
+        packet_loss = "100% loss"
+
+    if packet_loss not in ret.lower():
+        exp_out = ["ping", url, "ms", "time"]
+        for out in exp_out:
+            assert out in ret.lower()
+    else:
+        assert packet_loss in ret.lower()
 
 
 @pytest.mark.skip_on_darwin(reason="Not supported on macOS")
@@ -76,6 +88,4 @@ def test_network_nslookup(network, url):
             if out in val:
                 exp_out.remove(out)
     if exp_out:
-        pytest.fail(
-            "Failed to find the {} key(s) on the returned data: {}".format(exp_out, ret)
-        )
+        pytest.fail(f"Failed to find the {exp_out} key(s) on the returned data: {ret}")

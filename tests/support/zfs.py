@@ -5,7 +5,6 @@
     ZFS related unit test data structures
 """
 
-
 import salt.utils.zfs
 from tests.support.mock import MagicMock, patch
 

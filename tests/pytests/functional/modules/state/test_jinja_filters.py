@@ -1,6 +1,7 @@
 """
 Testing Jinja filters availablilty via state system
 """
+
 import logging
 import os
 
@@ -384,8 +385,10 @@ def _filter_id(value):
             sls=r"""
             {% if grains['os'] == 'Windows' %}
               {% set result = 'c:\Windows\System32\cmd.exe' | is_bin_file() %}
+            {% elif grains['os_family'] == 'Debian' %}
+              {% set result = '/usr/bin/file' | is_bin_file() %}
             {% else %}
-              {% set result = '/bin/ls' | is_bin_file() %}
+              {% set result = '/bin/file' | is_bin_file() %}
             {% endif %}
             test:
               module.run:
@@ -1229,6 +1232,7 @@ def filter(request):
     return _filter
 
 
+@pytest.mark.timeout_unless_on_windows(120)
 def test_filter(state, state_tree, filter, grains):
     filter.check_skip(grains)
     with filter(state_tree):

@@ -72,13 +72,13 @@ def get_port_range(port_def):
         if range_start > range_end:
             raise ValueError("start > end")
     except (TypeError, ValueError) as exc:
-        if exc.__str__() == "start > end":
+        if str(exc) == "start > end":
             msg = (
                 "Start of port range ({}) cannot be greater than end of "
                 "port range ({})".format(range_start, range_end)
             )
         else:
-            msg = "'{}' is non-numeric or an invalid port range".format(port_def)
+            msg = f"'{port_def}' is non-numeric or an invalid port range"
         raise ValueError(msg)
     else:
         return range_start, range_end
@@ -110,9 +110,11 @@ def map_vals(val, *names, **extra_opts):
                     "'{}' contains {} value(s) (expected {})".format(
                         item,
                         num_elements,
-                        expected_num_elements
-                        if fill is NOTSET
-                        else "up to {}".format(expected_num_elements),
+                        (
+                            expected_num_elements
+                            if fill is NOTSET
+                            else f"up to {expected_num_elements}"
+                        ),
                     )
                 )
             val[idx] = dict(zip(names, elements))
@@ -122,7 +124,7 @@ def map_vals(val, *names, **extra_opts):
 def validate_ip(val):
     try:
         if not salt.utils.network.is_ip(val):
-            raise SaltInvocationError("'{}' is not a valid IP address".format(val))
+            raise SaltInvocationError(f"'{val}' is not a valid IP address")
     except RuntimeError:
         pass
 
@@ -130,7 +132,7 @@ def validate_ip(val):
 def validate_subnet(val):
     try:
         if not salt.utils.network.is_subnet(val):
-            raise SaltInvocationError("'{}' is not a valid subnet".format(val))
+            raise SaltInvocationError(f"'{val}' is not a valid subnet")
     except RuntimeError:
         pass
 
@@ -144,7 +146,7 @@ def translate_int(val):
         try:
             val = int(val)
         except (TypeError, ValueError):
-            raise SaltInvocationError("'{}' is not an integer".format(val))
+            raise SaltInvocationError(f"'{val}' is not an integer")
     return val
 
 
@@ -157,7 +159,7 @@ def translate_dict(val):
     Not really translating, just raising an exception if it's not a dict
     """
     if not isinstance(val, dict):
-        raise SaltInvocationError("'{}' is not a dictionary".format(val))
+        raise SaltInvocationError(f"'{val}' is not a dictionary")
     return val
 
 
@@ -255,9 +257,7 @@ def translate_key_val(val, delimiter="="):
         try:
             lvalue, rvalue = split(item, delimiter, 1)
         except (AttributeError, TypeError, ValueError):
-            raise SaltInvocationError(
-                "'{}' is not a key{}value pair".format(item, delimiter)
-            )
+            raise SaltInvocationError(f"'{item}' is not a key{delimiter}value pair")
         new_val[lvalue] = rvalue
     return new_val
 

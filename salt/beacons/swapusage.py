@@ -5,6 +5,7 @@ Beacon to monitor swap usage.
 
 :depends: python-psutil
 """
+
 import logging
 import re
 

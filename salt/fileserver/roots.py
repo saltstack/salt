@@ -27,6 +27,7 @@ import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.verify
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -98,6 +99,13 @@ def find_file(path, saltenv="base", **kwargs):
         if saltenv == "__env__":
             root = root.replace("__env__", actual_saltenv)
         full = os.path.join(root, path)
+
+        # Refuse to serve file that is not under the root.
+        if not salt.utils.verify.clean_path(
+            root, full, subdir=True, realpath=not __opts__["fileserver_followsymlinks"]
+        ):
+            continue
+
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
             fnd["rel"] = path
@@ -128,6 +136,28 @@ def serve_file(load, fnd):
     ret["dest"] = fnd["rel"]
     gzip = load.get("gzip", None)
     fpath = os.path.normpath(fnd["path"])
+
+    actual_saltenv = saltenv = load["saltenv"]
+    if saltenv not in __opts__["file_roots"]:
+        if "__env__" in __opts__["file_roots"]:
+            log.debug(
+                "salt environment '%s' maps to __env__ file_roots directory", saltenv
+            )
+            saltenv = "__env__"
+        else:
+            return fnd
+    file_in_root = False
+    for root in __opts__["file_roots"][saltenv]:
+        if saltenv == "__env__":
+            root = root.replace("__env__", actual_saltenv)
+        # Refuse to serve file that is not under the root.
+        if salt.utils.verify.clean_path(
+            root, fpath, subdir=True, realpath=not __opts__["fileserver_followsymlinks"]
+        ):
+            file_in_root = True
+    if not file_in_root:
+        return ret
+
     with salt.utils.files.fopen(fpath, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
@@ -193,9 +223,7 @@ def update():
         os.makedirs(mtime_map_path_dir)
     with salt.utils.files.fopen(mtime_map_path, "wb") as fp_:
         for file_path, mtime in new_mtime_map.items():
-            fp_.write(
-                salt.utils.stringutils.to_bytes("{}:{}\n".format(file_path, mtime))
-            )
+            fp_.write(salt.utils.stringutils.to_bytes(f"{file_path}:{mtime}\n"))
 
     if __opts__.get("fileserver_events", False):
         # if there is a change, fire an event
@@ -265,10 +293,7 @@ def file_hash(load, fnd):
                     # check if mtime changed
                     ret["hsum"] = hsum
                     return ret
-        except (
-            os.error,
-            OSError,
-        ):  # Can't use Python select() because we need Windows support
+        except OSError:  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
             try:
@@ -300,7 +325,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     """
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, empty dirs and symlinks
     """
     if "env" in load:
         # "env" is not supported; Use "saltenv".
@@ -326,11 +351,11 @@ def _file_lists(load, form):
             return []
     list_cache = os.path.join(
         list_cachedir,
-        "{}.p".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
+        f"{salt.utils.files.safe_filename_leaf(actual_saltenv)}.p",
     )
     w_lock = os.path.join(
         list_cachedir,
-        ".{}.w".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
+        f".{salt.utils.files.safe_filename_leaf(actual_saltenv)}.w",
     )
     cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
         __opts__, form, list_cache, w_lock

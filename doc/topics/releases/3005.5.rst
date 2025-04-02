@@ -1,0 +1,16 @@
+.. _release-3005-5:
+
+=========================
+Salt 3005.5 Release Notes
+=========================
+
+Version 3005.5 is a CVE security fix release for :ref:`3005 <release-3005>`.
+
+Security
+--------
+
+- Fix CVE-2024-22231 by preventing directory traversal when creating syndic cache directory on the master.
+- Fix CVE-2024-22232 Prevent directory traversal attacks in the master's serve_file method.
+
+These vulnerablities were discovered and reported by:
+Yudi Zhao(Huawei Nebula Security Lab),Chenwei Jiang(Huawei Nebula Security Lab) (#565)

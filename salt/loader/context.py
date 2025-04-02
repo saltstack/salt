@@ -1,6 +1,7 @@
 """
 Manage the context a module loaded by Salt's loader
 """
+
 import collections.abc
 import contextlib
 import copy
@@ -11,6 +12,8 @@ try:
 except ImportError:
     # Py<3.7
     import contextvars
+
+import salt.exceptions
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
@@ -40,6 +43,9 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.loader_context = loader_context
         self.default = default
 
+    def with_default(self, default):
+        return NamedLoaderContext(self.name, self.loader_context, default=default)
+
     def loader(self):
         """
         The LazyLoader in the current context. This will return None if there
@@ -65,11 +71,18 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         loader = self.loader()
         if loader is None:
             return self.default
-        if self.name == "__context__":
-            return loader.pack[self.name]
         if self.name == loader.pack_self:
             return loader
-        return loader.pack[self.name]
+        elif self.name == "__context__":
+            return loader.pack[self.name]
+        elif self.name == "__opts__":
+            return loader.pack[self.name]
+        try:
+            return loader.pack[self.name]
+        except KeyError:
+            raise salt.exceptions.LoaderError(
+                f"LazyLoader does not have a packed value for: {self.name}"
+            )
 
     def get(self, key, default=None):
         return self.value().get(key, default)

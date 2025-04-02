@@ -26,7 +26,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-
 import hashlib
 import logging
 import os

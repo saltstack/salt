@@ -24,7 +24,6 @@ configuration file.
 
 """
 
-
 import logging
 import os
 import os.path
@@ -80,7 +79,7 @@ def _indent(value):
     """
     Returns the indented parameter.
     """
-    return "{}{}".format(_INDENT, value)
+    return f"{_INDENT}{value}"
 
 
 def _indentln(string):
@@ -162,9 +161,9 @@ class Statement(Buildable):
 
     def build_header(self):
         if self.has_name:
-            return _indentln("{0} {1} {{".format(self.type, self.id))
+            return _indentln(f"{self.type} {self.id} {{")
         else:
-            return _indentln("{0} {{".format(self.type))
+            return _indentln(f"{self.type} {{")
 
     def build_tail(self):
         return _indentln("};")
@@ -232,7 +231,7 @@ class Option(Buildable):
         self.iterable = self.params
 
     def build(self):
-        header = _indentln("{}(".format(self.type))
+        header = _indentln(f"{self.type}(")
         tail = _indentln(");")
         body = self.build_body()
 
@@ -305,7 +304,7 @@ class TypedParameter(Parameter):
         self.iterable = self.values
 
     def build(self):
-        header = _indentln("{}(".format(self.type))
+        header = _indentln(f"{self.type}(")
         tail = _indent(")")
         body = self.build_body()
 
@@ -373,7 +372,7 @@ class TypedParameterValue(ParameterValue):
         self.iterable = self.arguments
 
     def build(self):
-        header = _indentln("{}(".format(self.type))
+        header = _indentln(f"{self.type}(")
         tail = _indent(")")
         body = self.build_body()
 
@@ -823,7 +822,7 @@ def config_test(syslog_ng_sbin_dir=None, cfgfile=None):
     """
     params = ["--syntax-only"]
     if cfgfile:
-        params.append("--cfgfile={}".format(cfgfile))
+        params.append(f"--cfgfile={cfgfile}")
 
     try:
         ret = _run_command_in_extended_path(syslog_ng_sbin_dir, "syslog-ng", params)
@@ -937,7 +936,7 @@ def _add_cli_param(params, key, value):
     Adds key and value as a command line parameter to params.
     """
     if value is not None:
-        params.append("--{}={}".format(key, value))
+        params.append(f"--{key}={value}")
 
 
 def _add_boolean_cli_param(params, key, value):
@@ -945,7 +944,7 @@ def _add_boolean_cli_param(params, key, value):
     Adds key as a command line parameter to params.
     """
     if value is True:
-        params.append("--{}".format(key))
+        params.append(f"--{key}")
 
 
 def stop(name=None):
@@ -1041,7 +1040,7 @@ def start(
         command = [syslog_ng_binary] + params
 
         if __opts__.get("test", False):
-            comment = "Syslog_ng state module will start {}".format(command)
+            comment = f"Syslog_ng state module will start {command}"
             return _format_state_result(name, result=None, comment=comment)
 
         result = __salt__["cmd.run_all"](command, python_shell=False)
@@ -1049,7 +1048,7 @@ def start(
         command = ["syslog-ng"] + params
 
         if __opts__.get("test", False):
-            comment = "Syslog_ng state module will start {}".format(command)
+            comment = f"Syslog_ng state module will start {command}"
             return _format_state_result(name, result=None, comment=comment)
 
         result = __salt__["cmd.run_all"](command, python_shell=False)
@@ -1157,7 +1156,7 @@ def write_version(name):
         salt '*' syslog_ng.write_version name="3.6"
 
     """
-    line = "@version: {}".format(name)
+    line = f"@version: {name}"
     try:
         if os.path.exists(__SYSLOG_NG_CONFIG_FILE):
             log.debug(

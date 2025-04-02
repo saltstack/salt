@@ -2,7 +2,6 @@
     Test cases for salt.modules.dig
 """
 
-
 import pytest
 
 import salt.modules.dig as dig

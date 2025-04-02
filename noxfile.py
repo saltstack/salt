@@ -4,6 +4,7 @@ noxfile
 
 Nox configuration script
 """
+
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 import contextlib
@@ -44,7 +45,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -62,6 +63,7 @@ if PRINT_SYSTEM_INFO is None:
     PRINT_SYSTEM_INFO = CI_RUN
 else:
     PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
+PRINT_SYSTEM_INFO_ONLY = os.environ.get("PRINT_SYSTEM_INFO_ONLY", "0") == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
@@ -329,7 +331,7 @@ def _install_coverage_requirement(session):
                     "photonos-3",
                 ):
                     # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
+                    # Plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
@@ -1022,6 +1024,11 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
         args.append(f"--log-file={RUNTESTS_LOGFILE}")
     args.extend(cmd_args)
 
+    if PRINT_SYSTEM_INFO_ONLY and "--sys-info-and-exit" not in args:
+        args.append("--sys-info-and-exit")
+        session.run("python", "-m", "pytest", *args, env=env)
+        return
+
     if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
         args.append("--sysinfo")
 
@@ -1230,14 +1237,29 @@ def coverage_report(session):
 def decompress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if "windows" in distro_slug:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'decompress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'decompress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
+        scripts_dir_name = "Scripts"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+        scripts_dir_name = "bin"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if not nox_dependencies_tarball_path.exists():
         session.error(
@@ -1251,10 +1273,7 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
-        if "windows" not in distro_slug:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
-        else:
-            scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
+        scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
         for key in sorted(script_paths):
@@ -1265,7 +1284,10 @@ def decompress_dependencies(session):
                 if not os.path.isabs(resolved_link):
                     # Relative symlinks, resolve them
                     resolved_link = os.path.join(scan_path, resolved_link)
-                if not os.path.exists(resolved_link):
+                prefix_check = False
+                if platform == "windows":
+                    prefix_check = resolved_link.startswith("\\\\?")
+                if not os.path.exists(resolved_link) or prefix_check:
                     session.log("The symlink %r looks to be broken", resolved_link)
                     # This is a broken link, fix it
                     resolved_link_suffix = resolved_link.split(
@@ -1285,11 +1307,11 @@ def decompress_dependencies(session):
                 continue
             if not path.is_file():
                 continue
-            if "windows" not in distro_slug:
+            if platform != "windows":
                 # Let's try to fix shebang's
                 try:
                     fpath = pathlib.Path(path)
-                    contents = fpath.read_text().splitlines()
+                    contents = fpath.read_text(encoding="utf-8").splitlines()
                     if (
                         contents[0].startswith("#!")
                         and contents[0].endswith("python")
@@ -1299,7 +1321,9 @@ def decompress_dependencies(session):
                             "Fixing broken shebang in %r",
                             str(fpath.relative_to(REPO_ROOT)),
                         )
-                        fpath.write_text("\n".join([fixed_shebang] + contents[1:]))
+                        fpath.write_text(
+                            "\n".join([fixed_shebang] + contents[1:]), encoding="utf-8"
+                        )
                 except UnicodeDecodeError:
                     pass
 
@@ -1308,14 +1332,27 @@ def decompress_dependencies(session):
 def compress_dependencies(session):
     if not session.posargs:
         session.error(
-            "Please pass the distro-slug to run tests against. "
-            "Check cicd/images.yml for what's available."
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
         )
-    distro_slug = session.posargs.pop(0)
-    if IS_WINDOWS:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    try:
+        platform = session.posargs.pop(0)
+        arch = session.posargs.pop(0)
+        if session.posargs:
+            session.error(
+                "The 'compress-dependencies' session target only accepts "
+                "two arguments, '<platform> <arch>'."
+            )
+    except IndexError:
+        session.error(
+            "The 'compress-dependencies' session target needs "
+            "two arguments, '<platform> <arch>'."
+        )
+    if platform == "windows":
+        extension = "tar.gz"
     else:
-        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+        extension = "tar.xz"
+    nox_dependencies_tarball = f"nox.{platform}.{arch}.{extension}"
     nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
     if nox_dependencies_tarball_path.exists():
         session_warn(
@@ -1443,9 +1480,7 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(
-    session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
-):
+def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
         linux_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "linux.txt"
@@ -1462,38 +1497,9 @@ def _lint(
         ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    if tee_output:
-        session.run("pylint", "--version")
-        pylint_report_path = os.environ.get("PYLINT_REPORT")
-
     cmd_args = ["pylint", f"--rcfile={rcfile}"] + list(flags) + list(paths)
-
     cmd_kwargs = {"env": {"PYTHONUNBUFFERED": "1"}}
-
-    if tee_output:
-        stdout = tempfile.TemporaryFile(mode="w+b")
-        cmd_kwargs["stdout"] = Tee(stdout, sys.__stdout__)
-
-    lint_failed = False
-    try:
-        session.run(*cmd_args, **cmd_kwargs)
-    except CommandFailed:
-        lint_failed = True
-        raise
-    finally:
-        if tee_output:
-            stdout.seek(0)
-            contents = stdout.read()
-            if contents:
-                contents = contents.decode("utf-8")
-                sys.stdout.write(contents)
-                sys.stdout.flush()
-                if pylint_report_path:
-                    # Write report
-                    with open(pylint_report_path, "w") as wfh:
-                        wfh.write(contents)
-                    session.log("Report file written to %r", pylint_report_path)
-            stdout.close()
+    session.run(*cmd_args, **cmd_kwargs)
 
 
 def _lint_pre_commit(session, rcfile, flags, paths):
@@ -1512,26 +1518,17 @@ def _lint_pre_commit(session, rcfile, flags, paths):
     from nox.virtualenv import VirtualEnv
 
     # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
+    session._runner.venv = VirtualEnv(
+        os.environ["VIRTUAL_ENV"],
+        interpreter=session._runner.func.python,
+        reuse_existing=True,
+        venv=True,
+    )
     _lint(
         session,
         rcfile,
         flags,
         paths,
-        tee_output=False,
         upgrade_setuptools_and_pip=False,
     )
 
@@ -1539,7 +1536,7 @@ def _lint_pre_commit(session, rcfile, flags, paths):
 @nox.session(python="3")
 def lint(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
     session.notify(f"lint-salt-{session.python}")
     session.notify(f"lint-tests-{session.python}")
@@ -1548,21 +1545,21 @@ def lint(session):
 @nox.session(python="3", name="lint-salt")
 def lint_salt(session):
     """
-    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt.
     """
     flags = ["--disable=I"]
     if session.posargs:
         paths = session.posargs
     else:
         # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
 @nox.session(python="3", name="lint-tests")
 def lint_tests(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
     flags = ["--disable=I"]
     if session.posargs:
@@ -1575,20 +1572,20 @@ def lint_tests(session):
 @nox.session(python=False, name="lint-salt-pre-commit")
 def lint_salt_pre_commit(session):
     """
-    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt.
     """
     flags = ["--disable=I"]
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
     _lint_pre_commit(session, ".pylintrc", flags, paths)
 
 
 @nox.session(python=False, name="lint-tests-pre-commit")
 def lint_tests_pre_commit(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
     flags = ["--disable=I"]
     if session.posargs:
@@ -1756,7 +1753,7 @@ class Recompress:
         d_targz = tempd.joinpath(targz.name)
         with tarfile.open(d_tar, "w|") as wfile:
             with tarfile.open(targz, "r:gz") as rfile:
-                rfile.extractall(d_src)
+                rfile.extractall(d_src)  # nosec
                 extracted_dir = next(pathlib.Path(d_src).iterdir())
                 for name in sorted(extracted_dir.rglob("*")):
                     wfile.add(
@@ -1845,13 +1842,24 @@ def ci_test_onedir_pkgs(session):
     session_warn(session, "Replacing VirtualEnv instance...")
 
     ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
-    session._runner.venv = VirtualEnv(
-        str(ci_test_onedir_path.relative_to(REPO_ROOT)),
-        interpreter=session._runner.func.python,
-        reuse_existing=True,
-        venv=session._runner.venv.venv_or_virtualenv == "venv",
-        venv_params=session._runner.venv.venv_params,
-    )
+    if hasattr(session._runner.venv, "venv_or_virtualenv"):
+        venv = session._runner.venv.venv_or_virtualenv == "venv"
+        session._runner.venv = VirtualEnv(
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=venv,
+            venv_params=session._runner.venv.venv_params,
+        )
+    else:
+        venv = session._runner.venv.venv_backend in ("venv", "virtualenv")
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv_backend=session._runner.venv.venv_backend,
+            venv_params=session._runner.venv.venv_params,
+        )
     os.environ["VIRTUAL_ENV"] = session._runner.venv.location
     session._runner.venv.create()
 
@@ -1871,32 +1879,17 @@ def ci_test_onedir_pkgs(session):
     ]
 
     chunks = {
-        "install": [
-            "tests/pytests/pkg/",
-        ],
+        "install": [],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
-        ],
-        "upgrade-classic": [
-            "--upgrade",
-            "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
-        ],
-        "downgrade-classic": [
-            "--downgrade",
-            "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "tests/pytests/pkg/download/",
         ],
     }
 
@@ -1907,6 +1900,11 @@ def ci_test_onedir_pkgs(session):
         chunk = session.posargs.pop(0)
 
     cmd_args = chunks[chunk]
+    for arg in session.posargs:
+        if arg.startswith("tests/pytests/pkg/"):
+            # The user is passing test paths
+            cmd_args.pop()
+            break
 
     if IS_LINUX:
         # Fetch the toolchain
@@ -1920,9 +1918,6 @@ def ci_test_onedir_pkgs(session):
         "PKG_TEST_TYPE": chunk,
     }
 
-    if chunk in ("upgrade-classic", "downgrade-classic"):
-        cmd_args.append("--classic")
-
     pytest_args = (
         common_pytest_args[:]
         + cmd_args[:]
@@ -1932,6 +1927,17 @@ def ci_test_onedir_pkgs(session):
         ]
         + session.posargs
     )
+    append_tests_path = True
+    test_paths = (
+        "tests/pytests/pkg/",
+        str(REPO_ROOT / "tests" / "pytests" / "pkg"),
+    )
+    for arg in session.posargs:
+        if arg.startswith(test_paths):
+            append_tests_path = False
+            break
+    if append_tests_path:
+        pytest_args.append("tests/pytests/pkg/")
     try:
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     except CommandFailed:
@@ -1955,6 +1961,8 @@ def ci_test_onedir_pkgs(session):
             ]
             + session.posargs
         )
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         _pytest(
             session,
             coverage=False,
@@ -1964,40 +1972,41 @@ def ci_test_onedir_pkgs(session):
         )
 
     if chunk not in ("install", "download-pkgs"):
-        cmd_args = chunks["install"]
+        cmd_args = chunks[chunk]
         pytest_args = (
             common_pytest_args[:]
             + cmd_args[:]
             + [
-                "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
-                f"--log-file=artifacts/logs/runtests-install.log",
+                "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                "--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
         if "downgrade" in chunk:
             pytest_args.append("--use-prev-version")
-        if chunk in ("upgrade-classic", "downgrade-classic"):
-            pytest_args.append("--classic")
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         try:
             _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
         except CommandFailed:
-            cmd_args = chunks["install"]
+            if os.environ.get("RERUN_FAILURES", "0") == "0":
+                # Don't rerun on failures
+                return
+            cmd_args = chunks[chunk]
             pytest_args = (
                 common_pytest_args[:]
                 + cmd_args[:]
                 + [
-                    "--no-install",
-                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
-                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",
                 ]
                 + session.posargs
             )
             if "downgrade" in chunk:
                 pytest_args.append("--use-prev-version")
-            if chunk in ("upgrade-classic", "downgrade-classic"):
-                pytest_args.append("--classic")
+            if append_tests_path:
+                pytest_args.append("tests/pytests/pkg/")
             _pytest(
                 session,
                 coverage=False,

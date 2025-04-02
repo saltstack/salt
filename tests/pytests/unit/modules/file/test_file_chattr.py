@@ -221,7 +221,7 @@ def test_check_perms_should_report_attrs_new_and_old_if_they_changed():
                 )
             ).strip()
         else:
-            assert False, "not sure how to handle {}".format(cmd)
+            assert False, f"not sure how to handle {cmd}"
 
     patch_run = patch.dict(
         filemod.__salt__,

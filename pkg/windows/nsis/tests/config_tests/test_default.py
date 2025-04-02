@@ -6,13 +6,18 @@ import pytest
 @pytest.fixture(scope="module")
 def install():
     pytest.helpers.clean_env()
-    pytest.helpers.run_command([pytest.INST_BIN, "/S"])
-    yield
+    args = ["/S"]
+    pytest.helpers.install_salt(args)
+    yield args
     pytest.helpers.clean_env()
 
 
 def test_binaries_present(install):
-    assert os.path.exists(rf"{pytest.INST_DIR}\ssm.exe")
+    # This will show the contents of the directory on failure
+    inst_dir = pytest.INST_DIR
+    inst_dir_exists = os.path.exists(inst_dir)
+    dir_contents = os.listdir(inst_dir)
+    assert os.path.exists(rf"{inst_dir}\ssm.exe")
 
 
 def test_config_present(install):
@@ -21,7 +26,7 @@ def test_config_present(install):
 
 def test_config_correct(install):
     # The config file should be the default config, unchanged
-    with open(rf"{pytest.REPO_DIR}\_files\minion") as f:
+    with open(rf"{pytest.SCRIPT_DIR}\_files\minion") as f:
         expected = f.readlines()
 
     with open(rf"{pytest.DATA_DIR}\conf\minion") as f:

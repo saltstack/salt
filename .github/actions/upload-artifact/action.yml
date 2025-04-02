@@ -37,6 +37,7 @@ inputs:
       without overriding the existing archives.
     required: false
 
+
 runs:
   using: composite
   steps:
@@ -45,7 +46,7 @@ runs:
         shopt -s globstar || echo "'globstar' not available"
         tar -cavf ${{ inputs.archive-name || inputs.name || 'archive' }}.tar.gz ${{ inputs.path }}
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.archive-name || inputs.name || 'archive' }}.tar.gz

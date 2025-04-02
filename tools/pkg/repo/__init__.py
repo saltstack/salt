@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -47,7 +48,7 @@ def restore_previous_releases(ctx: Context):
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"backup-complete=true\n")
+            wfh.write("backup-complete=true\n")
     ctx.info("Done")
 
 
@@ -157,7 +158,9 @@ def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack
             )
         except ClientError as exc:
             if "Error" not in exc.response:
-                log.exception(f"Could not get information about {remote_path}: {exc}")
+                log.exception(
+                    "Could not get information about %s: %s", remote_path, exc
+                )
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
                 ctx.error(f"Could not find {remote_path} in bucket.")
@@ -165,7 +168,7 @@ def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(f"Could get information about {remote_path}: {exc}")
                 ctx.exit(1)
-            log.exception(f"Error getting information about {remote_path}: {exc}")
+            log.exception("Error getting information about %s: %s", remote_path, exc)
             ctx.exit(1)
     ctx.info(f"Version {salt_version} has been staged for release")
     ctx.exit(0)

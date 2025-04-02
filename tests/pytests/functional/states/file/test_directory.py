@@ -34,11 +34,6 @@ def test_directory_symlink_dry_run(file, tmp_path):
     Ensure that symlinks are followed when file.directory is run with
     test=True
     """
-    if IS_WINDOWS and not os.environ.get("GITHUB_ACTIONS_PIPELINE"):
-        pytest.xfail(
-            "This test fails when running from Jenkins but not on the GitHub "
-            "Actions Pipeline"
-        )
     tmp_dir = tmp_path / "pgdata"
     sym_dir = tmp_path / "pg_data"
 
@@ -57,7 +52,22 @@ def test_directory_symlink_dry_run(file, tmp_path):
     ret = file.directory(
         test=True, name=str(sym_dir), follow_symlinks=True, **extra_kwds
     )
-    assert ret.result is True
+
+    expected = True
+
+    if IS_WINDOWS:
+        # On Windows the result is None because there would have been changes
+        # made to the directory (making Administrator the Owner)
+        # https://docs.saltproject.io/en/latest/ref/states/writing.html#return-data
+        expected = None
+
+    assert ret.result is expected
+
+
+def _kernel_check(lookfor):
+    with salt.utils.files.fopen("/proc/version") as fp:
+        versioninfo = fp.read().lower()
+    return lookfor in versioninfo
 
 
 @pytest.mark.skip_if_not_root
@@ -83,7 +93,10 @@ def test_directory_max_depth(file, tmp_path):
     initial_mode = "0111"
     changed_mode = "0555"
 
-    if salt.utils.platform.is_photonos():
+    # Check that we are not just running photon but the kernel matches. This
+    # check should fail if we are in a photon container running on and os other
+    # than photon.
+    if salt.utils.platform.is_photonos() and _kernel_check("photon"):
         initial_modes = {
             0: {sub: "0750", subsub: "0110"},
             1: {sub: "0110", subsub: "0110"},
@@ -436,3 +449,55 @@ def test_issue_12209_follow_symlinks(
         assert one_group_check == state_file_account.group.name
         two_group_check = modules.file.get_group(str(twodir), follow_symlinks=False)
         assert two_group_check == state_file_account.group.name
+
+
+@pytest.mark.parametrize("backupname_isfile", [False, True])
+def test_directory_backupname_force_test_mode_noclobber(
+    file, tmp_path, backupname_isfile
+):
+    """
+    Ensure that file.directory does not make changes when backupname is used
+    alongside force=True and test=True.
+
+    See https://github.com/saltstack/salt/issues/66049
+    """
+    source_dir = tmp_path / "source_directory"
+    source_dir.mkdir()
+    dest_dir = tmp_path / "dest_directory"
+    backupname = tmp_path / "backup_dir"
+    dest_dir.symlink_to(source_dir.resolve())
+
+    if backupname_isfile:
+        backupname.touch()
+        assert backupname.is_file()
+
+    ret = file.directory(
+        name=str(dest_dir),
+        allow_symlink=False,
+        force=True,
+        backupname=str(backupname),
+        test=True,
+    )
+
+    # Confirm None result
+    assert ret.result is None
+    try:
+        # Confirm dest_dir not modified
+        assert salt.utils.path.readlink(str(dest_dir)) == str(source_dir)
+    except OSError:
+        pytest.fail(f"{dest_dir} was modified")
+
+    # Confirm that comment and changes match what we expect
+    assert (
+        ret.comment
+        == f"{dest_dir} would be backed up and replaced with a new directory"
+    )
+    assert ret.changes[str(dest_dir)] == {"directory": "new"}
+    assert ret.changes["backup"] == f"{dest_dir} would be renamed to {backupname}"
+
+    if backupname_isfile:
+        assert ret.changes["forced"] == (
+            f"Existing file at backup path {backupname} would be removed"
+        )
+    else:
+        assert "forced" not in ret.changes

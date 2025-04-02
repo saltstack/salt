@@ -4,6 +4,7 @@ import subprocess
 import pytest
 
 import salt.utils.platform
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,16 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         ],
         "cluster_pki_dir": str(cluster_pki_path),
         "cache_dir": str(cluster_cache_path),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
         "127.0.0.1",
@@ -74,6 +85,16 @@ def cluster_master_2(salt_factories, cluster_master_1):
         ],
         "cluster_pki_dir": cluster_master_1.config["cluster_pki_dir"],
         "cache_dir": cluster_master_1.config["cache_dir"],
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -110,6 +131,16 @@ def cluster_master_3(salt_factories, cluster_master_1):
         ],
         "cluster_pki_dir": cluster_master_1.config["cluster_pki_dir"],
         "cache_dir": cluster_master_1.config["cache_dir"],
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -139,6 +170,15 @@ def cluster_minion_1(cluster_master_1):
     config_overrides = {
         "master": f"{addr}:{port}",
         "test.foo": "baz",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = cluster_master_1.salt_minion_daemon(
         "cluster-minion-1",

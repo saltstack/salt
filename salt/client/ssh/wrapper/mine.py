@@ -8,11 +8,13 @@ Wrapper function for mine operations for salt-ssh
     accessing the regular mine as well.
 """
 
-
 import copy
+import logging
 
 import salt.client.ssh
 import salt.daemons.masterapi
+
+log = logging.getLogger(__name__)
 
 
 def get(
@@ -97,9 +99,32 @@ def get(
         for ret in ssh.run_iter(mine=True):
             mrets.update(ret)
 
-        for host in mrets:
-            if "return" in mrets[host]:
-                rets[host] = mrets[host]["return"]
+        for host, data in mrets.items():
+            if not isinstance(data, dict):
+                log.error(
+                    "Error executing mine func %s on %s: %s."
+                    " Excluding minion from mine.",
+                    fun,
+                    host,
+                    data,
+                )
+            elif "_error" in data:
+                log.error(
+                    "Error executing mine func %s on %s: %s."
+                    " Excluding minion from mine. Full output in debug log.",
+                    fun,
+                    host,
+                    data["_error"],
+                )
+                log.debug("Return was: %s", salt.utils.json.dumps(data))
+            elif "return" not in data:
+                log.error(
+                    "Error executing mine func %s on %s: No return was specified."
+                    " Excluding minion from mine. Full output in debug log.",
+                    fun,
+                    host,
+                )
+                log.debug("Return was: %s", salt.utils.json.dumps(data))
             else:
-                rets[host] = mrets[host]
+                rets[host] = data["return"]
     return rets
