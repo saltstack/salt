@@ -4,7 +4,6 @@
     TestCase for the salt.modules.linux_lvm module
 """
 
-
 import os.path
 
 import pytest
@@ -371,7 +370,7 @@ def test_lvcreate_extra_arguments_no_parameter():
             assert linux_lvm.lvcreate(None, None, None, 1, **extra_args) == {
                 "Output from lvcreate": 'Logical volume "None" created.'
             }
-    expected_args = ["--{}".format(arg) for arg in extra_args]
+    expected_args = [f"--{arg}" for arg in extra_args]
     processed_extra_args = mock.call_args.args[0][-(len(extra_args) + 1) : -1]
     assert all([arg in expected_args for arg in processed_extra_args])
 

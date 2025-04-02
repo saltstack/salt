@@ -10,10 +10,14 @@ import pytest
 import salt.utils.files
 import salt.utils.yaml
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.pytests.integration.ssh import check_system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -26,6 +30,119 @@ def thin_dir(salt_ssh_cli):
         assert ret.returncode == 0
         thin_dir_path = ret.data
         shutil.rmtree(thin_dir_path, ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def invalid_json_exe_mod(salt_run_cli, base_env_state_tree_root_dir):
+    module_contents = r"""
+import os
+import sys
+
+
+def __virtual__():
+    return "whoops"
+
+
+def test():
+    data = '{\n  "local": {\n    "whoops": "hrhrhr"\n  }\n}'
+    ctr = 0
+    for line in data.splitlines():
+        sys.stdout.write(line)
+        if ctr == 3:
+            print("Warning: Chaos is not a letter")
+        ctr += 1
+    sys.stdout.flush()
+    os._exit(0)
+"""
+    module_dir = base_env_state_tree_root_dir / "_modules"
+    module_tempfile = pytest.helpers.temp_file("whoops.py", module_contents, module_dir)
+    try:
+        with module_tempfile:
+            ret = salt_run_cli.run("saltutil.sync_modules")
+            assert ret.returncode == 0
+            assert "modules.whoops" in ret.data
+            yield
+    finally:
+        ret = salt_run_cli.run("saltutil.sync_modules")
+        assert ret.returncode == 0
+
+
+@pytest.fixture(scope="module")
+def invalid_return_exe_mod(salt_run_cli, base_env_state_tree_root_dir):
+    module_contents = r"""
+import json
+import os
+import sys
+
+
+def __virtual__():
+    return "whoopsiedoodle"
+
+
+def test(wrapped=True):
+    data = "Chaos is a ladder though"
+    if wrapped:
+        data = {"local": {"no_return_key_present": data}}
+    else:
+        data = {"no_local_key_present": data}
+
+    print(json.dumps(data))
+    sys.stdout.flush()
+    os._exit(0)
+"""
+    module_dir = base_env_state_tree_root_dir / "_modules"
+    module_tempfile = pytest.helpers.temp_file(
+        "whoopsiedoodle.py", module_contents, module_dir
+    )
+    try:
+        with module_tempfile:
+            ret = salt_run_cli.run("saltutil.sync_modules")
+            assert ret.returncode == 0
+            assert "modules.whoopsiedoodle" in ret.data
+            yield
+    finally:
+        ret = salt_run_cli.run("saltutil.sync_modules")
+        assert ret.returncode == 0
+
+
+@pytest.fixture(scope="module")
+def remote_exception_wrap_mod(salt_master):
+    module_contents = r"""
+def __virtual__():
+    return "check_exception"
+
+
+def failure():
+    # This should raise an exception
+    ret = __salt__["disk.usage"]("c")
+    return f"Probably got garbage: {ret}"
+"""
+    module_dir = pathlib.Path(salt_master.config["extension_modules"]) / "wrapper"
+    module_tempfile = pytest.helpers.temp_file(
+        "check_exception.py", module_contents, module_dir
+    )
+    with module_tempfile:
+        yield
+
+
+@pytest.fixture(scope="module")
+def remote_parsing_failure_wrap_mod(salt_master, invalid_json_exe_mod):
+    module_contents = r"""
+def __virtual__():
+    return "check_parsing"
+
+
+def failure(mod):
+    # This should raise an exception
+    ret = __salt__[f"{mod}.test"]()
+    return f"Probably got garbage: {ret}"
+"""
+    module_dir = pathlib.Path(salt_master.config["extension_modules"]) / "wrapper"
+    module_tempfile = pytest.helpers.temp_file(
+        "check_parsing.py", module_contents, module_dir
+    )
+    with module_tempfile:
+        yield
 
 
 def test_ping(salt_ssh_cli):
@@ -108,8 +225,9 @@ def test_retcode_exe_run_fail(salt_ssh_cli):
     ret = salt_ssh_cli.run("file.touch", "/tmp/non/ex/is/tent")
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, dict)
+    # This should be the exact output, but some other warnings
+    # might be printed to stderr.
     assert "Error running 'file.touch': No such file or directory" in ret.data["stderr"]
-    assert ret.data["retcode"] == 1
 
 
 def test_retcode_exe_run_exception(salt_ssh_cli):
@@ -121,4 +239,123 @@ def test_retcode_exe_run_exception(salt_ssh_cli):
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, dict)
     assert ret.data["stderr"].endswith("Exception: hehehe")
-    assert ret.data["retcode"] == 1
+
+
+@pytest.mark.usefixtures("invalid_json_exe_mod")
+def test_retcode_json_decode_error(salt_ssh_cli):
+    """
+    Verify salt-ssh exits with a non-zero exit code when
+    it cannot decode the output of a command.
+    """
+    ret = salt_ssh_cli.run("whoops.test")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert (
+        ret.data["stdout"]
+        == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
+    )
+    assert ret.data["_error"] == "Failed to return clean data"
+    assert ret.data["retcode"] == 0
+
+
+@pytest.mark.usefixtures("invalid_return_exe_mod")
+def test_retcode_invalid_return(salt_ssh_cli):
+    """
+    Verify salt-ssh exits with a non-zero exit code when
+    the decoded command output is invalid.
+    """
+    ret = salt_ssh_cli.run("whoopsiedoodle.test", "false")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data["stdout"] == '{"no_local_key_present": "Chaos is a ladder though"}'
+    assert ret.data["_error"] == "Return dict was malformed"
+    assert ret.data["retcode"] == 0
+    assert ret.data["parsed"] == {"no_local_key_present": "Chaos is a ladder though"}
+
+
+@pytest.mark.usefixtures("remote_exception_wrap_mod")
+def test_wrapper_unwrapped_command_exception(salt_ssh_cli):
+    """
+    Verify salt-ssh does not return unexpected exception output to wrapper modules.
+    """
+    ret = salt_ssh_cli.run("check_exception.failure")
+    assert ret.returncode == EX_AGGREGATE
+    # "Probably got garbage" would be returned as a string (the module return),
+    # so no need to check
+    assert isinstance(ret.data, dict)
+    assert ret.data
+    assert (
+        "Error running 'disk.usage': Invalid flag passed to disk.usage"
+        in ret.data["stderr"]
+    )
+
+
+@pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_json_exe_mod")
+def test_wrapper_unwrapped_command_parsing_failure(salt_ssh_cli):
+    """
+    Verify salt-ssh does not return unexpected unparsable output to wrapper modules.
+    """
+    ret = salt_ssh_cli.run("check_parsing.failure", "whoops")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data
+    assert ret.data["_error"] == "Failed to return clean data"
+    assert ret.data["retcode"] == 0
+    assert (
+        ret.data["stdout"]
+        == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
+    )
+
+
+@pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_return_exe_mod")
+def test_wrapper_unwrapped_command_invalid_return(salt_ssh_cli):
+    """
+    Verify salt-ssh does not return unexpected unparsable output to wrapper modules.
+    """
+    ret = salt_ssh_cli.run("check_parsing.failure", "whoopsiedoodle")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data
+    assert ret.data["_error"] == "Return dict was malformed"
+    assert ret.data["retcode"] == 0
+    assert (
+        ret.data["stdout"]
+        == '{"local": {"no_return_key_present": "Chaos is a ladder though"}}'
+    )
+    assert ret.data["parsed"] == {
+        "local": {"no_return_key_present": "Chaos is a ladder though"}
+    }
+
+
+@pytest.fixture(scope="module")
+def utils_dependent_module(salt_run_cli, salt_master):
+    module_contents = r"""
+import customutilsmodule
+
+
+def __virtual__():
+    return "utilsync"
+
+
+def test():
+    return customutilsmodule.test()
+"""
+    utils_contents = r"""
+def test():
+    return "success"
+"""
+    module_tempfile = salt_master.state_tree.base.temp_file(
+        "_modules/utilsync.py", contents=module_contents
+    )
+    util_tempfile = salt_master.state_tree.base.temp_file(
+        "_utils/customutilsmodule.py", contents=utils_contents
+    )
+    with module_tempfile, util_tempfile:
+        yield
+
+
+@pytest.mark.usefixtures("utils_dependent_module")
+def test_custom_utils_are_present_on_target(salt_ssh_cli):
+    ret = salt_ssh_cli.run("utilsync.test")
+    assert ret.returncode == 0
+    assert ret.data == "success"

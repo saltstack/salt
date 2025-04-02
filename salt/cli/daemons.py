@@ -2,7 +2,6 @@
 Make me some salt!
 """
 
-
 import logging
 import os
 import warnings

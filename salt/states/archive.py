@@ -114,12 +114,12 @@ def _update_checksum(path):
                         line[1] = hsum
                     fp_.write("{}:{}\n".format(*line))
                 if hash_type not in [x[0] for x in lines]:
-                    fp_.write("{}:{}\n".format(hash_type, hsum))
+                    fp_.write(f"{hash_type}:{hsum}\n")
         except OSError as exc:
             log.warning(
                 "Failed to update checksum for %s: %s",
                 path,
-                exc.__str__(),
+                exc,
                 exc_info=True,
             )
 
@@ -165,6 +165,73 @@ def _cleanup_destdir(name):
         pass
 
 
+def _check_sig(
+    on_file,
+    signature,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    sig_backend="gpg",
+):
+    try:
+        verify = __salt__[f"{sig_backend}.verify"]
+    except KeyError:
+        raise CommandExecutionError(
+            f"Signature verification requires the {sig_backend} module, "
+            "which could not be found. Make sure you have the "
+            "necessary tools and libraries intalled"
+        )
+    # The GPG module does not understand URLs as signatures currently.
+    # Also, we want to ensure that, when verification fails, we get rid
+    # of the cached signatures.
+    final_sigs = None
+    if signature is not None:
+        sigs = [signature] if isinstance(signature, str) else signature
+        sigs_cached = []
+        final_sigs = []
+        for sig in sigs:
+            cached_sig = None
+            try:
+                urlparse(sig)
+            except (TypeError, ValueError):
+                pass
+            else:
+                cached_sig = __salt__["cp.cache_file"](sig, __env__)
+            if not cached_sig:
+                # The GPG module expects signatures as a single file path currently
+                if sig_backend == "gpg":
+                    raise CommandExecutionError(
+                        f"Detached signature file {sig} not found"
+                    )
+            else:
+                sigs_cached.append(cached_sig)
+            final_sigs.append(cached_sig or sig)
+        if isinstance(signature, str):
+            final_sigs = final_sigs[0]
+
+    res = verify(
+        filename=on_file,
+        signature=final_sigs,
+        keyring=keyring,
+        gnupghome=gnupghome,
+        signed_by_any=signed_by_any,
+        signed_by_all=signed_by_all,
+    )
+
+    if res["res"] is True:
+        return
+    # Ensure detached signature and file are deleted from cache
+    # on signature verification failure.
+    if signature is not None:
+        for sig in sigs_cached:
+            salt.utils.files.safe_rm(sig)
+    salt.utils.files.safe_rm(on_file)
+    raise CommandExecutionError(
+        f"The file's signature could not be verified: {res['message']}"
+    )
+
+
 def extracted(
     name,
     source,
@@ -190,7 +257,14 @@ def extracted(
     enforce_ownership_on=None,
     archive_format=None,
     use_etag=False,
-    **kwargs
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    sig_backend="gpg",
+    **kwargs,
 ):
     """
     .. versionadded:: 2014.1.0
@@ -671,6 +745,71 @@ def extracted(
 
         .. versionadded:: 3005
 
+    signature
+        Ensure a valid GPG signature exists on the selected ``source`` file.
+        This needs to be a file URI retrievable by
+        `:py:func:`cp.cache_file <salt.modules.cp.cache_file>` which
+        identifies a detached signature.
+
+        .. note::
+
+            A signature is only enforced directly after caching the file,
+            before it is extracted to its final destination. Existing files
+            at the target will never be modified.
+
+            It will be enforced regardless of source type.
+
+        .. versionadded:: 3007.0
+
+    source_hash_sig
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -716,9 +855,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret[
-            "comment"
-        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        ret["comment"] = (
+            'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        )
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -737,7 +876,7 @@ def extracted(
         keep_source = True
 
     if not _path_is_abs(name):
-        ret["comment"] = "{} is not an absolute path".format(name)
+        ret["comment"] = f"{name} is not an absolute path"
         return ret
     else:
         if not name:
@@ -755,7 +894,7 @@ def extracted(
         # False
         name = name.rstrip(os.sep)
         if os.path.isfile(name):
-            ret["comment"] = "{} exists and is not a directory".format(name)
+            ret["comment"] = f"{name} exists and is not a directory"
             return ret
         # Add back the slash so that file.makedirs properly creates the
         # destdir if it needs to be created. file.makedirs expects a trailing
@@ -780,27 +919,27 @@ def extracted(
                 # from making this state blow up with a traceback.
                 not_rel = True
             if not_rel:
-                ret[
-                    "comment"
-                ] = "Value for 'enforce_ownership_on' must be within {}".format(name)
+                ret["comment"] = (
+                    f"Value for 'enforce_ownership_on' must be within {name}"
+                )
                 return ret
 
     if if_missing is not None and os.path.exists(if_missing):
         ret["result"] = True
-        ret["comment"] = "Path {} exists".format(if_missing)
+        ret["comment"] = f"Path {if_missing} exists"
         return ret
 
     if user or group:
         if salt.utils.platform.is_windows():
-            ret[
-                "comment"
-            ] = "User/group ownership cannot be enforced on Windows minions"
+            ret["comment"] = (
+                "User/group ownership cannot be enforced on Windows minions"
+            )
             return ret
 
         if user:
             uid = __salt__["file.user_to_uid"](user)
             if uid == "":
-                ret["comment"] = "User {} does not exist".format(user)
+                ret["comment"] = f"User {user} does not exist"
                 return ret
         else:
             uid = -1
@@ -808,7 +947,7 @@ def extracted(
         if group:
             gid = __salt__["file.group_to_gid"](group)
             if gid == "":
-                ret["comment"] = "Group {} does not exist".format(group)
+                ret["comment"] = f"Group {group} does not exist"
                 return ret
         else:
             gid = -1
@@ -824,6 +963,16 @@ def extracted(
             "'source_hash' is not also specified."
         )
 
+    if signature or source_hash_sig:
+        # Fail early in case the signature verification backend is not present
+        try:
+            __salt__[f"{sig_backend}.verify"]
+        except KeyError:
+            ret["comment"] = (
+                f"Cannot verify signatures because the {sig_backend} module was not loaded"
+            )
+            return ret
+
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
     except CommandExecutionError as exc:
@@ -833,7 +982,7 @@ def extracted(
 
     if not source_match:
         ret["result"] = False
-        ret["comment"] = 'Invalid source "{}"'.format(source)
+        ret["comment"] = f'Invalid source "{source}"'
         return ret
 
     urlparsed_source = urlparse(source_match)
@@ -941,9 +1090,9 @@ def extracted(
                 )
     else:
         if password:
-            ret[
-                "comment"
-            ] = "The 'password' argument is only supported for zip archives"
+            ret["comment"] = (
+                "The 'password' argument is only supported for zip archives"
+            )
             return ret
 
     if archive_format == "rar":
@@ -971,9 +1120,9 @@ def extracted(
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret[
-                    "comment"
-                ] = "Invalid value for trim_output, must be True/False or an integer"
+                ret["comment"] = (
+                    "Invalid value for trim_output, must be True/False or an integer"
+                )
                 return ret
 
     if source_hash:
@@ -983,6 +1132,12 @@ def extracted(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=__env__,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -1048,10 +1203,10 @@ def extracted(
             # salt/states/file.py from being processed through the loader. If
             # that is the case, we have much more important problems as _all_
             # file states would be unavailable.
-            ret[
-                "comment"
-            ] = "Unable to cache {}, file.cached state not available".format(
-                salt.utils.url.redact_http_basic_auth(source_match)
+            ret["comment"] = (
+                "Unable to cache {}, file.cached state not available".format(
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
             )
             return ret
 
@@ -1063,10 +1218,16 @@ def extracted(
                 skip_verify=skip_verify,
                 saltenv=__env__,
                 use_etag=use_etag,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), exc.__str__()
+                salt.utils.url.redact_http_basic_auth(source_match), exc
             )
             log.exception(msg)
             ret["comment"] = msg
@@ -1083,6 +1244,21 @@ def extracted(
                 salt.utils.url.redact_http_basic_auth(source_match),
             )
             return result
+
+    if signature:
+        try:
+            _check_sig(
+                cached,
+                signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
+            )
+        except CommandExecutionError as err:
+            ret["comment"] = f"Failed verifying the source file's signature: {err}"
+            return ret
 
     existing_cached_source_sum = _read_cached_checksum(cached)
 
@@ -1153,7 +1329,7 @@ def extracted(
             )
 
             for error in errors:
-                msg += "\n- {}".format(error)
+                msg += f"\n- {error}"
         ret["comment"] = msg
         return ret
 
@@ -1208,7 +1384,7 @@ def extracted(
                 else:
                     ret["comment"] = (
                         "Failed to check for existence of if_missing path "
-                        "({}): {}".format(if_missing, exc.__str__())
+                        "({}): {}".format(if_missing, exc)
                     )
                     return ret
         else:
@@ -1237,13 +1413,11 @@ def extracted(
                             # that dir will raise an ENOTDIR OSError. So we
                             # expect these and will only abort here if the
                             # error code is something else.
-                            ret["comment"] = exc.__str__()
+                            ret["comment"] = str(exc)
                             return ret
 
             if incorrect_type:
-                incorrect_paths = "\n\n" + "\n".join(
-                    ["- {}".format(x) for x in incorrect_type]
-                )
+                incorrect_paths = "\n\n" + "\n".join([f"- {x}" for x in incorrect_type])
                 ret["comment"] = (
                     "The below paths (relative to {}) exist, but are the "
                     "incorrect type (file instead of directory, symlink "
@@ -1288,7 +1462,7 @@ def extracted(
                                 extraction_needed = True
                             except OSError as exc:
                                 if exc.errno != errno.ENOENT:
-                                    errors.append(exc.__str__())
+                                    errors.append(str(exc))
                         if errors:
                             msg = (
                                 "One or more paths existed by were the incorrect "
@@ -1297,7 +1471,7 @@ def extracted(
                                 "following errors were observed:\n"
                             )
                             for error in errors:
-                                msg += "\n- {}".format(error)
+                                msg += f"\n- {error}"
                             ret["comment"] = msg
                             return ret
 
@@ -1343,7 +1517,7 @@ def extracted(
                 salt.utils.files.rm_rf(name.rstrip(os.sep))
                 ret["changes"].setdefault(
                     "removed",
-                    "Directory {} was removed prior to the extraction".format(name),
+                    f"Directory {name} was removed prior to the extraction",
                 )
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
@@ -1354,7 +1528,7 @@ def extracted(
                     "errors were observed:\n".format(name)
                 )
                 for error in errors:
-                    msg += "\n- {}".format(error)
+                    msg += f"\n- {error}"
                 ret["comment"] = msg
                 return ret
 
@@ -1369,7 +1543,7 @@ def extracted(
                     ret["changes"].setdefault("removed", []).append(full_path)
                 except OSError as exc:
                     if exc.errno != errno.ENOENT:
-                        errors.append(exc.__str__())
+                        errors.append(str(exc))
 
             if errors:
                 msg = (
@@ -1377,7 +1551,7 @@ def extracted(
                     "errors were observed:\n"
                 )
                 for error in errors:
-                    msg += "\n- {}".format(error)
+                    msg += f"\n- {error}"
                 ret["comment"] = msg
                 return ret
 
@@ -1396,7 +1570,7 @@ def extracted(
                             options=options,
                             trim_output=trim_output,
                             password=password,
-                            **kwargs
+                            **kwargs,
                         )
                     except (CommandExecutionError, CommandNotFoundError) as exc:
                         ret["comment"] = exc.strerror
@@ -1409,7 +1583,7 @@ def extracted(
                         trim_output=trim_output,
                         password=password,
                         extract_perms=extract_perms,
-                        **kwargs
+                        **kwargs,
                     )
             elif archive_format == "rar":
                 try:
@@ -1423,7 +1597,7 @@ def extracted(
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, "r")) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))
+                            tar.extractall(salt.utils.stringutils.to_str(name))  # nosec
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1661,7 +1835,7 @@ def extracted(
     else:
         ret["result"] = True
         if if_missing_path_exists:
-            ret["comment"] = "{} exists".format(if_missing)
+            ret["comment"] = f"{if_missing} exists"
         else:
             ret["comment"] = "All files in archive are already present"
         if __opts__["test"]:
@@ -1686,7 +1860,7 @@ def extracted(
             "paths were missing:\n"
         )
         for item in enforce_missing:
-            ret["comment"] += "\n- {}".format(item)
+            ret["comment"] += f"\n- {item}"
 
     if enforce_failed:
         ret["result"] = False
@@ -1695,7 +1869,7 @@ def extracted(
             "unable to change ownership on the following paths:\n"
         )
         for item in enforce_failed:
-            ret["comment"] += "\n- {}".format(item)
+            ret["comment"] += f"\n- {item}"
 
     if not source_is_local:
         if keep_source:

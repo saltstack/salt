@@ -50,9 +50,7 @@ def test_present():
     ):
         ret = host.present(hostname, ip_str)
         assert ret["result"] is True
-        assert ret["comment"] == "Added host {} ({})".format(hostname, ip_str), ret[
-            "comment"
-        ]
+        assert ret["comment"] == f"Added host {hostname} ({ip_str})", ret["comment"]
         assert ret["changes"] == {"added": {ip_str: [hostname]}}, ret["changes"]
         expected = [call(ip_str, hostname)]
         assert add_host.mock_calls == expected, add_host.mock_calls
@@ -73,8 +71,8 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[0]})" in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]}
         }, ret["changes"]
@@ -102,10 +100,9 @@ def test_present():
     ):
         ret = host.present(hostname, ip_str)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_str) in ret["comment"]
+        assert f"Added host {hostname} ({ip_str})" in ret["comment"]
         assert (
-            "Host {} present for IP address {}".format(hostname, ip_list[0])
-            in ret["warnings"][0]
+            f"Host {hostname} present for IP address {ip_list[0]}" in ret["warnings"][0]
         )
         assert ret["changes"] == {"added": {ip_str: [hostname]}}, ret["changes"]
         expected = [call(ip_str, hostname)]
@@ -125,8 +122,8 @@ def test_present():
     ):
         ret = host.present(hostname, ip_str, clean=True)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_str) in ret["comment"]
-        assert "Removed host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
+        assert f"Added host {hostname} ({ip_str})" in ret["comment"]
+        assert f"Removed host {hostname} ({ip_list[0]})" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_str: [hostname]},
             "removed": {ip_list[0]: [hostname]},
@@ -157,8 +154,8 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[0]})" in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
         }, ret["changes"]
@@ -179,9 +176,9 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list, clean=True)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
-        assert "Removed host {} ({})".format(hostname, cur_ip) in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[0]})" in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
+        assert f"Removed host {hostname} ({cur_ip})" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "removed": {cur_ip: [hostname]},
@@ -214,7 +211,7 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
         assert ret["changes"] == {"added": {ip_list[1]: [hostname]}}, ret["changes"]
         expected = [call(ip_list[1], hostname)]
         assert add_host.mock_calls == expected, add_host.mock_calls
@@ -233,8 +230,8 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list, clean=True)
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
-        assert "Removed host {} ({})".format(hostname, cur_ip) in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
+        assert f"Removed host {hostname} ({cur_ip})" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_list[1]: [hostname]},
             "removed": {cur_ip: [hostname]},
@@ -259,11 +256,7 @@ def test_present():
     ):
         ret = host.present(hostname, ip_str)
         assert ret["result"] is True
-        assert (
-            ret["comment"]
-            == "Host {} ({}) already present".format(hostname, ip_str)
-            in ret["comment"]
-        )
+        assert f"Host {hostname} ({ip_str}) already present" in ret["comment"]
         assert ret["changes"] == {}, ret["changes"]
         assert add_host.mock_calls == [], add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
@@ -289,14 +282,8 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list)
         assert ret["result"] is True
-        assert (
-            "Host {} ({}) already present".format(hostname, ip_list[0])
-            in ret["comment"]
-        )
-        assert (
-            "Host {} ({}) already present".format(hostname, ip_list[1])
-            in ret["comment"]
-        )
+        assert f"Host {hostname} ({ip_list[0]}) already present" in ret["comment"]
+        assert f"Host {hostname} ({ip_list[1]}) already present" in ret["comment"]
         assert ret["changes"] == {}, ret["changes"]
         assert add_host.mock_calls == [], add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
@@ -320,14 +307,10 @@ def test_present():
     ):
         ret = host.present(hostname, ip_list, comment="A comment")
         assert ret["result"] is True
-        assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
-        assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
-        assert (
-            "Set comment for host {} (A comment)".format(ip_list[0]) in ret["comment"]
-        )
-        assert (
-            "Set comment for host {} (A comment)".format(ip_list[1]) in ret["comment"]
-        )
+        assert f"Added host {hostname} ({ip_list[0]})" in ret["comment"]
+        assert f"Added host {hostname} ({ip_list[1]})" in ret["comment"]
+        assert f"Set comment for host {ip_list[0]} (A comment)" in ret["comment"]
+        assert f"Set comment for host {ip_list[1]} (A comment)" in ret["comment"]
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "comment_added": {ip_list[0]: ["A comment"], ip_list[1]: ["A comment"]},

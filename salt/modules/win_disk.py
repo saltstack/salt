@@ -53,19 +53,19 @@ def usage():
                 available_bytes,
                 total_bytes,
                 total_free_bytes,
-            ) = win32api.GetDiskFreeSpaceEx("{}:\\".format(drive))
+            ) = win32api.GetDiskFreeSpaceEx(f"{drive}:\\")
             used = total_bytes - total_free_bytes
             capacity = used / float(total_bytes) * 100
-            ret["{}:\\".format(drive)] = {
-                "filesystem": "{}:\\".format(drive),
+            ret[f"{drive}:\\"] = {
+                "filesystem": f"{drive}:\\",
                 "1K-blocks": total_bytes / 1024,
                 "used": used / 1024,
                 "available": total_free_bytes / 1024,
-                "capacity": "{:.0f}%".format(capacity),
+                "capacity": f"{capacity:.0f}%",
             }
         except Exception:  # pylint: disable=broad-except
-            ret["{}:\\".format(drive)] = {
-                "filesystem": "{}:\\".format(drive),
+            ret[f"{drive}:\\"] = {
+                "filesystem": f"{drive}:\\",
                 "1K-blocks": None,
                 "used": None,
                 "available": None,

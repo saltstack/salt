@@ -35,7 +35,6 @@ def test_artifact_get_metadata():
             repository="libs-releases",
             group_id="com.company.sampleapp.web-module",
             artifact_id="web",
-            headers={},
         )
         assert metadata["latest_version"] == "1.1_RC11"
 
@@ -78,7 +77,6 @@ def test_snapshot_version_get_metadata():
             group_id="com.company.sampleapp.web-module",
             artifact_id="web",
             version="1.1_RC8-SNAPSHOT",
-            headers={},
         )
         assert metadata["snapshot_versions"]["war"] == "1.1_RC8-20140418.150212-1"
 
@@ -144,7 +142,6 @@ def test_construct_url_for_snapshot_version():
             artifact_id="web",
             version="1.0_RC10-SNAPSHOT",
             packaging="war",
-            headers={},
         )
 
         assert (
@@ -195,7 +192,6 @@ def test_get_snapshot_url_with_classifier():
             version="1.1_RC8-SNAPSHOT",
             packaging="war",
             classifier="test",
-            headers={},
         )
 
         assert (
@@ -249,7 +245,6 @@ def test_get_snapshot_url_without_classifier():
                 artifact_id="web",
                 version="1.1_RC8-SNAPSHOT",
                 packaging="war",
-                headers={},
             )
 
 
@@ -276,9 +271,7 @@ def test_get_latest_snapshot_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/snapshot",
-            "/path/to/file",
-            {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            "http://artifactory.example.com/artifactory/snapshot", "/path/to/file"
         )
 
 
@@ -303,9 +296,7 @@ def test_get_snapshot_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/snapshot",
-            "/path/to/file",
-            {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            "http://artifactory.example.com/artifactory/snapshot", "/path/to/file"
         )
 
 
@@ -332,9 +323,7 @@ def test_get_latest_release_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/release",
-            "/path/to/file",
-            {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            "http://artifactory.example.com/artifactory/release", "/path/to/file"
         )
 
 
@@ -359,9 +348,7 @@ def test_get_release_username_password():
             password="password",
         )
         save_artifact_mock.assert_called_with(
-            "http://artifactory.example.com/artifactory/release",
-            "/path/to/file",
-            {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            "http://artifactory.example.com/artifactory/release", "/path/to/file"
         )
 
 
@@ -378,7 +365,7 @@ def test_save_artifact_file_exists_checksum_equal():
             return_value=(True, sum_bin, None),
         ):
             result = getattr(artifactory, "__save_artifact")(
-                artifact_url=artifact_url, target_file=target_file, headers={}
+                artifact_url=artifact_url, target_file=target_file
             )
             assert result == {
                 "status": True,
@@ -394,7 +381,7 @@ def test_save_artifact_file_exists_checksum_equal():
             return_value=(True, sum_str, None),
         ):
             result = getattr(artifactory, "__save_artifact")(
-                artifact_url=artifact_url, target_file=target_file, headers={}
+                artifact_url=artifact_url, target_file=target_file
             )
             assert result == {
                 "status": True,

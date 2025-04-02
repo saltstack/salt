@@ -16,10 +16,10 @@ class RabbitMQImage:
 
     @container_id.default
     def _default_container_id(self):
-        return random_string("{}-{}-".format(self.name, self.tag))
+        return random_string(f"{self.name}-{self.tag}-")
 
     def __str__(self):
-        return "{}:{}".format(self.name, self.tag)
+        return f"{self.name}:{self.tag}"
 
 
 @attr.s(kw_only=True, slots=True)
@@ -42,7 +42,7 @@ def get_test_versions():
 
 
 def get_test_version_id(value):
-    return "container={}".format(value)
+    return f"container={value}"
 
 
 @pytest.fixture(scope="package", params=get_test_versions(), ids=get_test_version_id)

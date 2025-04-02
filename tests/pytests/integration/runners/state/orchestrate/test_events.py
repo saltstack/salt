@@ -1,6 +1,7 @@
 """
 Tests for orchestration events
 """
+
 import concurrent.futures
 import functools
 import json
@@ -170,7 +171,7 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
         for step_data in orch_job_data["data"][salt_master.id].values():
             assert "__jid__" in step_data
 
-        expected_event_tag = "salt/run/{}/ret".format(jid)
+        expected_event_tag = f"salt/run/{jid}/ret"
         event_pattern = (salt_master.id, expected_event_tag)
 
         matched_events = event_listener.wait_for_events(
@@ -178,7 +179,7 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
         )
         assert (
             matched_events.found_all_events
-        ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
+        ), f"Failed to receive the event with the tag '{expected_event_tag}'"
         for event in matched_events.matches:
             for job_data in event.data["return"]["data"][salt_master.id].values():
                 assert "__jid__" in job_data
@@ -186,6 +187,7 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
 
 # This test is flaky on FreeBSD
 @pytest.mark.skip_on_freebsd
+@pytest.mark.slow_test
 @pytest.mark.skip_on_spawning_platform(
     reason="The '__low__' global is not populated on spawning platforms"
 )
@@ -236,7 +238,7 @@ def test_parallel_orchestrations(
         assert duration > 20
         assert duration < 19 * 10 / 2
 
-        expected_event_tag = "salt/run/{}/ret".format(jid)
+        expected_event_tag = f"salt/run/{jid}/ret"
         event_pattern = (salt_master.id, expected_event_tag)
 
         matched_events = event_listener.wait_for_events(
@@ -244,7 +246,7 @@ def test_parallel_orchestrations(
         )
         assert (
             matched_events.found_all_events
-        ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
+        ), f"Failed to receive the event with the tag '{expected_event_tag}'"
         for event in matched_events.matches:
             for job_data in event.data["return"]["data"][salt_master.id].values():
                 # we expect each duration to be greater than 10s
@@ -418,6 +420,7 @@ def test_orchestration_onchanges_and_prereq(
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows
 @pytest.mark.skip_on_darwin
+@pytest.mark.timeout_unless_on_windows(120)
 def test_unknown_in_runner_event(
     runner_salt_run_cli,
     runner_salt_master,

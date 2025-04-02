@@ -2,7 +2,6 @@
 To be used with processors in module `highstate_doc`.
 """
 
-
 __virtualname__ = "highstate_doc"
 
 
@@ -36,7 +35,7 @@ def note(name, source=None, contents=None, **kwargs):
     """
     comment = ""
     if source:
-        comment += "include file: {}\n".format(source)
+        comment += f"include file: {source}\n"
     if contents and len(contents) < 200:
         comment += contents
     return {"name": name, "result": True, "comment": comment, "changes": {}}

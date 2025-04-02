@@ -2,7 +2,6 @@
 Helpful generators and other tools
 """
 
-
 import fnmatch
 import re
 

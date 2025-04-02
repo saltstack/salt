@@ -4,6 +4,7 @@
 
     Test current salt master with older salt minions
 """
+
 import logging
 import pathlib
 
@@ -12,6 +13,7 @@ from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import random_string
 
 import salt.utils.platform
+from tests.conftest import FIPS_TESTRUN
 from tests.support.runtests import RUNTIME_VARS
 
 docker = pytest.importorskip("docker")
@@ -20,6 +22,7 @@ log = logging.getLogger(__name__)
 
 
 pytestmark = [
+    pytest.mark.skip("GREAT MODULE MIGRATION"),
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("docker"),
     pytest.mark.skipif(
@@ -29,7 +32,7 @@ pytestmark = [
 
 
 def _get_test_versions_ids(value):
-    return "SaltMinion~={}".format(value)
+    return f"SaltMinion~={value}"
 
 
 @pytest.fixture(
@@ -41,13 +44,13 @@ def compat_salt_version(request):
 
 @pytest.fixture(scope="module")
 def minion_image_name(compat_salt_version):
-    return "salt-{}".format(compat_salt_version)
+    return f"salt-{compat_salt_version}"
 
 
 @pytest.fixture(scope="function")
 def minion_id(compat_salt_version):
     return random_string(
-        "salt-{}-".format(compat_salt_version),
+        f"salt-{compat_salt_version}-",
         uppercase=False,
     )
 
@@ -70,9 +73,15 @@ def salt_minion(
     config_overrides = {
         "master": salt_master.config["interface"],
         "user": False,
-        "pytest-minion": {"log": {"host": host_docker_network_ip_address}},
+        "pytest-minion": {
+            "log": {"host": host_docker_network_ip_address},
+            "returner_address": {"host": host_docker_network_ip_address},
+        },
         # We also want to scrutinize the key acceptance
         "open_mode": False,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_master.salt_minion_daemon(
         minion_id,
@@ -144,12 +153,14 @@ def populated_state_tree(minion_id, package_name, state_tree):
         yield
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_ping(salt_cli, salt_minion):
     ret = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
     assert ret.returncode == 0, ret
     assert ret.data is True
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.usefixtures("populated_state_tree")
 def test_highstate(salt_cli, salt_minion, package_name):
     """
@@ -163,6 +174,7 @@ def test_highstate(salt_cli, salt_minion, package_name):
     assert package_name in state_return["changes"], state_return
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.fixture
 def cp_file_source():
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES) / "cheese"
@@ -171,6 +183,7 @@ def cp_file_source():
         yield pathlib.Path(temp_file)
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_cp(salt_cp_cli, salt_minion, artifacts_path, cp_file_source):
     """
     Assert proper behaviour for salt-cp with a newer master and older minions.

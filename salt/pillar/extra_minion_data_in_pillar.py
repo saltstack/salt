@@ -27,6 +27,7 @@ Complete example in etc/salt/master
           include: <all>
 
 """
+
 import logging
 
 # Set up logging

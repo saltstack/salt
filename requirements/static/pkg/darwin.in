@@ -1,2 +1,3 @@
 # This file only exists to trigger the right static compiled requirements destination
-# Don't add any requirements here, add them in requirements/darwin.txt
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are macOS specific, place "; sys_platform == 'darwin'" in front of the requirement.

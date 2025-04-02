@@ -74,7 +74,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 #-------------------------------------------------------------------------------
 
 $WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL       = "https://repo.saltproject.io/windows/dependencies"
+$DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/vcredist"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $BUILD_DIR      = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR   = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -161,14 +161,12 @@ if ( ! "$env:WIX" ) {
 #-------------------------------------------------------------------------------
 
 $RUNTIMES = @(
-    ("Microsoft_VC120_CRT_x64.msm", "64", "15FD10A495287505184B8913DF8D6A9CA461F44F78BC74115A0C14A5EDD1C9A7"),
-    ("Microsoft_VC120_CRT_x86.msm", "32", "26340B393F52888B908AC3E67B935A80D390E1728A31FF38EBCEC01117EB2579"),
-    ("Microsoft_VC140_CRT_x64.msm", "64", "E1344D5943FB2BBB7A56470ED0B7E2B9B212CD9210D3CC6FA82BC3DA8F11EDA8"),
-    ("Microsoft_VC140_CRT_x86.msm", "32", "0D36CFE6E9ABD7F530DBAA4A83841CDBEF9B2ADCB625614AF18208FDCD6B92A4")
+    ("Microsoft_VC143_CRT_x64.msm", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
+    ("Microsoft_VC143_CRT_x86.msm", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
 )
 $RUNTIMES | ForEach-Object {
-    $name, $arch, $hash = $_
-    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$arch/$name" "$hash"
+    $name, $hash = $_
+    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$name" "$hash"
 }
 
 #-------------------------------------------------------------------------------
@@ -472,82 +470,6 @@ $states | ForEach-Object {
     }
 }
 Write-Result "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Remove compiled files
-#-------------------------------------------------------------------------------
-# We have to do this again because we use the Relenv Python to get the build
-# architecture. This recreates some of the pycache files that were removed
-# in the prep_salt script
-Write-Host "Removing __pycache__ directories: " -NoNewline
-$found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter "__pycache__" -Recurse
-$found | ForEach-Object {
-    Remove-Item -Path "$($_.FullName)" -Recurse -Force
-    if ( Test-Path -Path "$($_.FullName)" ) {
-        Write-Result "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $($_.FullName)"
-        exit 1
-    }
-}
-Write-Result "Success" -ForegroundColor Green
-
-# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
-# __pycache__ directories, it won't be able to find them because they are no
-# longer present
-# This probably won't find any *.pyc files, but just in case
-$remove = "*.pyc",
-          "*.chm"
-$remove | ForEach-Object {
-    Write-Host "Removing unneeded $_ files: " -NoNewline
-    $found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter $_ -Recurse
-    $found | ForEach-Object {
-        Remove-Item -Path "$($_.FullName)" -Recurse -Force
-        if ( Test-Path -Path "$($_.FullName)" ) {
-            Write-Result "Failed" -ForegroundColor Red
-            Write-Host "Failed to remove: $($_.FullName)"
-            exit 1
-        }
-    }
-    Write-Result "Success" -ForegroundColor Green
-}
-
-#-------------------------------------------------------------------------------
-# Set timestamps on Files
-#-------------------------------------------------------------------------------
-# We're doing this on the dlls that were created abive
-
-Write-Host "Getting commit time stamp: " -NoNewline
-[DateTime]$origin = "1970-01-01 00:00:00"
-$hash_time = $(git show -s --format=%at)
-$time_stamp = $origin.AddSeconds($hash_time)
-if ( $hash_time ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Setting time stamp on all files: " -NoNewline
-$found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
-}
-Write-Result "Success" -ForegroundColor Green
-
-Write-Host "Setting time stamp on installer dlls: " -NoNewline
-$found = Get-ChildItem -Path $SCRIPT_DIR -Filter "*.dll" -Recurse
-$found | ForEach-Object {
-    $_.CreationTime = $time_stamp
-    $_.LastAccessTime = $time_stamp
-    $_.LastWriteTime = $time_stamp
-}
-Write-Result "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Let's start building the MSI
-#-------------------------------------------------------------------------------
 
 # move conf folder up one dir because it must not be discovered twice and xslt is difficult
 Write-Host "Remove configs from discovery: " -NoNewline

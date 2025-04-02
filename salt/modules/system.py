@@ -3,15 +3,16 @@ Support for reboot, shutdown, etc on POSIX-like systems.
 
 .. note::
 
-    If you have configured a wrapper such as ``molly-guard`` to
-    intercept *interactive* shutdown commands, be aware that calling
-    ``system.halt``, ``system.poweroff``, ``system.reboot``, and
-    ``system.shutdown`` with ``salt-call`` will hang indefinitely
-    while the wrapper script waits for user input. Calling them with
-    ``salt`` will work as expected.
-
+    If a wrapper such as ``molly-guard`` to intercept *interactive* shutdown
+    commands is configured, calling :mod:`system.halt <salt.modules.system.halt>`,
+    :mod:`system.poweroff <salt.modules.system.poweroff>`,
+    :mod:`system.reboot <salt.modules.system.reboot>`, and
+    :mod:`system.shutdown <salt.modules.system.shutdown>` with ``salt-call`` will
+    hang indefinitely while the wrapper script waits for user input. Calling them
+    with ``salt`` will work as expected.
 """
 
+import logging
 import os.path
 import re
 from datetime import datetime, timedelta, tzinfo
@@ -22,13 +23,15 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
 
+log = logging.getLogger(__name__)
+
 __virtualname__ = "system"
 
 
 def __virtual__():
     """
     Only supported on POSIX-like systems
-    Windows, Solaris, and Mac have their own modules
+    Windows, Solaris, and OS X have their own modules
     """
     if salt.utils.platform.is_windows():
         return (False, "This module is not available on Windows")
@@ -67,7 +70,7 @@ def init(runlevel):
 
         salt '*' system.init 3
     """
-    cmd = ["init", "{}".format(runlevel)]
+    cmd = ["init", f"{runlevel}"]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -100,7 +103,7 @@ def reboot(at_time=None):
 
         salt '*' system.reboot
     """
-    cmd = ["shutdown", "-r", ("{}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", "-r", (f"{at_time}" if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -128,7 +131,7 @@ def shutdown(at_time=None):
     else:
         flag = "-h"
 
-    cmd = ["shutdown", flag, ("{}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", flag, (f"{at_time}" if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -137,7 +140,7 @@ def _date_bin_set_datetime(new_date):
     """
     set the system date/time using the date command
 
-    Note using a strictly posix-compliant date binary we can only set the date
+    Note using a strictly POSIX-compliant date binary we can only set the date
     up to the minute.
     """
     cmd = ["date"]
@@ -176,7 +179,7 @@ def _date_bin_set_datetime(new_date):
 
 def has_settable_hwclock():
     """
-    Returns True if the system has a hardware clock capable of being
+    Returns ``True`` if the system has a hardware clock capable of being
     set from software.
 
     CLI Example:
@@ -202,22 +205,22 @@ def _swclock_to_hwclock():
     """
     res = __salt__["cmd.run_all"](["hwclock", "--systohc"], python_shell=False)
     if res["retcode"] != 0:
-        msg = "hwclock failed to set hardware clock from software clock: {}".format(
-            res["stderr"]
+        log.warn(
+            "hwclock failed to set hardware clock from software clock: %s",
+            res["stderr"],
         )
-        raise CommandExecutionError(msg)
     return True
 
 
 def _try_parse_datetime(time_str, fmts):
     """
-    Attempts to parse the input time_str as a date.
+    Attempts to parse the input ``time_str`` as a date.
 
     :param str time_str: A string representing the time
     :param list fmts: A list of date format strings.
 
-    :return: Returns a datetime object if parsed properly. Otherwise None
-    :rtype datetime:
+    :return: Returns a datetime object if parsed properly. Otherwise ``None``
+    :rtype: datetime
     """
     result = None
     for fmt in fmts:
@@ -231,9 +234,9 @@ def _try_parse_datetime(time_str, fmts):
 
 def _offset_to_min(utc_offset):
     """
-    Helper function that converts the utc offset string into number of minutes
-    offset. Input is in form "[+-]?HHMM". Example valid inputs are "+0500"
-    "-0300" and "0800". These would return -300, 180, 480 respectively.
+    Helper function that converts the UTC offset string into number of minutes
+    offset. Input is in form ``[+-]?HHMM``. Example valid inputs are ``+0500``
+    ``-0300`` and ``0800``. These would return ``-300``, ``180``, ``480`` respectively.
     """
     match = re.match(r"^([+-])?(\d\d)(\d\d)$", utc_offset)
     if not match:
@@ -250,7 +253,7 @@ def _get_offset_time(utc_offset):
     """
     Will return the current time adjusted using the input timezone offset.
 
-    :rtype datetime:
+    :rtype: datetime
     """
     if utc_offset is not None:
         minutes = _offset_to_min(utc_offset)
@@ -266,12 +269,12 @@ def get_system_time(utc_offset=None):
     """
     Get the system time.
 
-    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-        optional sign (+/-).  Will default to None which will use the local
-        timezone. To set the time based off of UTC use "'+0000'". Note: if
+    :param str utc_offset: The UTC offset in 4 digit (e.g. ``+0600``) format with an
+        optional sign (``+``/``-``).  Will default to ``None`` which will use the local
+        timezone. To set the time based off of UTC use ``+0000``. Note: If
         being passed through the command line will need to be quoted twice to
-        allow negative offsets.
-    :return: Returns the system time in HH:MM:SS AM/PM format.
+        allow negative offsets (e.g. ``"'+0000'"``).
+    :return: Returns the system time in ``HH:MM:SS AM/PM`` format.
     :rtype: str
 
     CLI Example:
@@ -290,22 +293,23 @@ def set_system_time(newtime, utc_offset=None):
 
     :param str newtime:
         The time to set. Can be any of the following formats.
-        - HH:MM:SS AM/PM
-        - HH:MM AM/PM
-        - HH:MM:SS (24 hour)
-        - HH:MM (24 hour)
 
-        Note that the salt command line parser parses the date/time
-        before we obtain the argument (preventing us from doing utc)
+        - ``HH:MM:SS AM/PM``
+        - ``HH:MM AM/PM``
+        - ``HH:MM:SS`` (24 hour)
+        - ``HH:MM`` (24 hour)
+
+        Note that the Salt command line parser parses the date/time
+        before we obtain the argument (preventing us from doing UTC)
         Therefore the argument must be passed in as a string.
-        Meaning you may have to quote the text twice from the command line.
+        Meaning the text might have to be quoted twice on the command line.
 
-    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-        optional sign (+/-).  Will default to None which will use the local
-        timezone. To set the time based off of UTC use "'+0000'". Note: if
+    :param str utc_offset: The UTC offset in 4 digit (``+0600``) format with an
+        optional sign (``+``/``-``).  Will default to ``None`` which will use the local
+        timezone. To set the time based off of UTC use ``+0000``. Note: If
         being passed through the command line will need to be quoted twice to
-        allow negative offsets.
-    :return: Returns True if successful. Otherwise False.
+        allow negative offsets (e.g. ``"'+0000'"``)
+    :return: Returns ``True`` if successful. Otherwise ``False``.
     :rtype: bool
 
     CLI Example:
@@ -331,12 +335,12 @@ def get_system_date_time(utc_offset=None):
     """
     Get the system date/time.
 
-    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-        optional sign (+/-).  Will default to None which will use the local
-        timezone. To set the time based off of UTC use "'+0000'". Note: if
+    :param str utc_offset: The UTC offset in 4 digit (``+0600``) format with an
+        optional sign (``+``/``-``).  Will default to ``None`` which will use the local
+        timezone. To set the time based off of UTC use ``+0000``. Note: If
         being passed through the command line will need to be quoted twice to
-        allow negative offsets.
-    :return: Returns the system time in YYYY-MM-DD hh:mm:ss format.
+        allow negative offsets (e.g. ``"'+0000'"``).
+    :return: Returns the system time in ``YYYY-MM-DD hh:mm:ss`` format.
     :rtype: str
 
     CLI Example:
@@ -361,25 +365,26 @@ def set_system_date_time(
     """
     Set the system date and time. Each argument is an element of the date, but
     not required. If an element is not passed, the current system value for
-    that element will be used. For example, if you don't pass the year, the
-    current system year will be used. (Used by set_system_date and
-    set_system_time)
+    that element will be used. For example, if the year is not passed, the
+    current system year will be used. (Used by
+    :mod:`system.set_system_date <salt.modules.system.set_system_date>` and
+    :mod:`system.set_system_time <salt.modules.system.set_system_time>`)
 
     Updates hardware clock, if present, in addition to software
     (kernel) clock.
 
-    :param int years: Years digit, ie: 2015
-    :param int months: Months digit: 1 - 12
-    :param int days: Days digit: 1 - 31
-    :param int hours: Hours digit: 0 - 23
-    :param int minutes: Minutes digit: 0 - 59
-    :param int seconds: Seconds digit: 0 - 59
-    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-        optional sign (+/-).  Will default to None which will use the local
-        timezone. To set the time based off of UTC use "'+0000'". Note: if
+    :param int years: Years digit, e.g.: ``2015``
+    :param int months: Months digit: ``1``-``12``
+    :param int days: Days digit: ``1``-``31``
+    :param int hours: Hours digit: ``0``-``23``
+    :param int minutes: Minutes digit: ``0``-``59``
+    :param int seconds: Seconds digit: ``0``-``59``
+    :param str utc_offset: The UTC offset in 4 digit (``+0600``) format with an
+        optional sign (``+``/``-``).  Will default to ``None`` which will use the local
+        timezone. To set the time based off of UTC use ``+0000``. Note: If
         being passed through the command line will need to be quoted twice to
-        allow negative offsets.
-    :return: True if successful. Otherwise False.
+        allow negative offsets (e.g. ``"'+0000'"``).
+    :return: ``True`` if successful. Otherwise ``False``.
     :rtype: bool
 
     CLI Example:
@@ -427,11 +432,11 @@ def get_system_date(utc_offset=None):
     """
     Get the system date
 
-    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-        optional sign (+/-).  Will default to None which will use the local
-        timezone. To set the time based off of UTC use "'+0000'". Note: if
+    :param str utc_offset: The UTC offset in 4 digit (``+0600``) format with an
+        optional sign (``+``/``-``).  Will default to ``None`` which will use the local
+        timezone. To set the time based off of UTC use ``+0000``. Note: If
         being passed through the command line will need to be quoted twice to
-        allow negative offsets.
+        allow negative offsets (e.g. ``"'+0000'"``).
     :return: Returns the system date.
     :rtype: str
 
@@ -447,17 +452,17 @@ def get_system_date(utc_offset=None):
 
 def set_system_date(newdate, utc_offset=None):
     """
-    Set the system date. Use <mm-dd-yy> format for the date.
+    Set the system date. Use ``<mm-dd-yy>`` format for the date.
 
     :param str newdate:
         The date to set. Can be any of the following formats:
 
-        - YYYY-MM-DD
-        - MM-DD-YYYY
-        - MM-DD-YY
-        - MM/DD/YYYY
-        - MM/DD/YY
-        - YYYY/MM/DD
+        - ``YYYY-MM-DD``
+        - ``MM-DD-YYYY``
+        - ``MM-DD-YY``
+        - ``MM/DD/YYYY``
+        - ``MM/DD/YY``
+        - ``YYYY/MM/DD``
 
     CLI Example:
 
@@ -505,7 +510,7 @@ class _FixedOffset(tzinfo):
 
 def _strip_quotes(str_q):
     """
-    Helper function to strip off the ' or " off of a string
+    Helper function to strip off the ``'`` or ``"`` off of a string
     """
     if str_q[0] == str_q[-1] and str_q.startswith(("'", '"')):
         return str_q[1:-1]
@@ -514,11 +519,12 @@ def _strip_quotes(str_q):
 
 def get_computer_desc():
     """
-    Get PRETTY_HOSTNAME value stored in /etc/machine-info
+    Get ``PRETTY_HOSTNAME`` value stored in ``/etc/machine-info``
     If this file doesn't exist or the variable doesn't exist
-    return False.
+    return ``False``.
 
-    :return: Value of PRETTY_HOSTNAME if this does not exist False.
+    :return: Value of ``PRETTY_HOSTNAME`` in ``/etc/machine-info``.
+        If file/variable does not exist ``False``.
     :rtype: str
 
     CLI Example:
@@ -560,12 +566,12 @@ def get_computer_desc():
 
 def set_computer_desc(desc):
     """
-    Set PRETTY_HOSTNAME value stored in /etc/machine-info
+    Set ``PRETTY_HOSTNAME`` value stored in ``/etc/machine-info``
     This will create the file if it does not exist. If
-    it is unable to create or modify this file returns False.
+    it is unable to create or modify this file, ``False`` is returned.
 
     :param str desc: The computer description
-    :return: False on failure. True if successful.
+    :return: ``False`` on failure. ``True`` if successful.
 
     CLI Example:
 
@@ -592,7 +598,7 @@ def set_computer_desc(desc):
             pass
 
     pattern = re.compile(r"^\s*PRETTY_HOSTNAME=(.*)$")
-    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{}"'.format(desc))
+    new_line = salt.utils.stringutils.to_str(f'PRETTY_HOSTNAME="{desc}"')
     try:
         with salt.utils.files.fopen("/etc/machine-info", "r+") as mach_info:
             lines = mach_info.readlines()
@@ -633,7 +639,7 @@ def get_computer_name():
 
     .. code-block:: bash
 
-        salt '*' network.get_hostname
+        salt '*' system.get_computer_name
     """
     return __salt__["network.get_hostname"]()
 
@@ -651,12 +657,18 @@ NILRT_REBOOT_WITNESS_PATH = "/var/volatile/tmp/salt/reboot_witnessed"
 @depends("_is_nilrt_family")
 def set_reboot_required_witnessed():
     """
+    .. note::
+
+        This only applies to Minions running on NI Linux RT
+
     This function is used to remember that an event indicating that a reboot is
     required was witnessed. This function writes to a temporary filesystem so
     the event gets cleared upon reboot.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -669,10 +681,10 @@ def set_reboot_required_witnessed():
             os.makedirs(dir_path)
         except OSError as ex:
             raise SaltInvocationError(
-                "Error creating {} (-{}): {}".format(dir_path, ex.errno, ex.strerror)
+                f"Error creating {dir_path} (-{ex.errno}): {ex.strerror}"
             )
 
-        rdict = __salt__["cmd.run_all"]("touch {}".format(NILRT_REBOOT_WITNESS_PATH))
+        rdict = __salt__["cmd.run_all"](f"touch {NILRT_REBOOT_WITNESS_PATH}")
         errcode = rdict["retcode"]
 
     return errcode == 0
@@ -681,6 +693,10 @@ def set_reboot_required_witnessed():
 @depends("_is_nilrt_family")
 def get_reboot_required_witnessed():
     """
+    .. note::
+
+        This only applies to Minions running on NI Linux RT
+
     Determine if at any time during the current boot session the salt minion
     witnessed an event indicating that a reboot is required.
 

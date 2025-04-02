@@ -20,6 +20,6 @@ def key_is_encrypted(key):
     del key_data
 
     if not is_private_key:
-        raise CommandExecutionError("{} is not a private key".format(key))
+        raise CommandExecutionError(f"{key} is not a private key")
 
     return is_encrypted

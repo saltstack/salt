@@ -1,6 +1,7 @@
 """
 Get Version information from Windows
 """
+
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
 
 import ctypes

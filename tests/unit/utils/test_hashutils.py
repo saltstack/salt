@@ -1,3 +1,5 @@
+import pytest
+
 import salt.utils.hashutils
 from tests.support.unit import TestCase
 
@@ -87,6 +89,7 @@ class HashutilsTestCase(TestCase):
             self.bytes,
         )
 
+    @pytest.mark.skip_on_fips_enabled_platform
     def test_md5_digest(self):
         """
         Ensure that this function converts the value passed to bytes before

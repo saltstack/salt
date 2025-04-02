@@ -65,6 +65,8 @@ def test_dynamic_pillarenv():
         },
         "file_roots": {"base": ["/srv/salt/base"], "__env__": ["/srv/salt/__env__"]},
         "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
     pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
     assert pillar.opts["pillar_roots"] == {
@@ -87,6 +89,8 @@ def test_ignored_dynamic_pillarenv():
         },
         "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
         "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
     }
     pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="base")
     assert pillar.opts["pillar_roots"] == {"base": ["/srv/pillar/base"]}
@@ -160,6 +164,34 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
         assert fresh_pillar == {}
 
 
+def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
+    with pytest.helpers.temp_directory() as temp_path:
+        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
+        tmp_cachedir.mkdir(parents=True)
+        assert tmp_cachedir.exists()
+        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
+        assert tmp_cachefile.exists() is False
+
+        opts = temp_salt_minion.config.copy()
+        opts["pillarenv"] = None
+        opts["pillar_cache"] = True
+        opts["cachedir"] = str(temp_path)
+
+        pillar_override = {"inline_pillar": True}
+
+        caplog.at_level(logging.DEBUG)
+        pillar = salt.pillar.PillarCache(
+            opts=opts,
+            grains=salt.loader.grains(opts),
+            minion_id=temp_salt_minion.id,
+            saltenv="base",
+            pillar_override=pillar_override,
+        )
+
+        fresh_pillar = pillar.fetch_pillar()
+        assert fresh_pillar == {}
+
+
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     opts = temp_salt_minion.config.copy()
     opts["master_uri"] = "tcp://127.0.0.1:12323"
@@ -173,5 +205,6 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     mock = MagicMock()
     mock.side_effect = salt.exceptions.SaltReqTimeoutError()
     pillar.channel.crypted_transfer_decode_dictentry = mock
+    msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()

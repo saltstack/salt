@@ -23,7 +23,8 @@ except ImportError:
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 pytestmark = [
-    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
+    pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
 ]
 
 
@@ -60,9 +61,6 @@ def minion_config_overrides():
             "testdeprecatedextpolicy": {
                 "X509v3 Basic Constraints": "critical CA:FALSE",
             },
-        },
-        "features": {
-            "x509_v2": True,
         },
     }
 

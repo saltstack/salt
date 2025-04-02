@@ -39,7 +39,7 @@ def test_absent(name):
             # Test already absent
             with patch.dict(win_path.__salt__, {"win_path.exists": _mock([False])}):
                 ret = copy.deepcopy(ret_base)
-                ret["comment"] = "{} is not in the PATH".format(name)
+                ret["comment"] = f"{name} is not in the PATH"
                 ret["result"] = True
                 assert win_path.absent(name) == ret
 
@@ -48,7 +48,7 @@ def test_absent(name):
                 win_path.__salt__, {"win_path.exists": _mock([True, False])}
             ):
                 ret = copy.deepcopy(ret_base)
-                ret["comment"] = "Removed {} from the PATH".format(name)
+                ret["comment"] = f"Removed {name} from the PATH"
                 ret["changes"]["removed"] = name
                 ret["result"] = True
                 assert win_path.absent(name) == ret
@@ -58,7 +58,7 @@ def test_absent(name):
                 win_path.__salt__, {"win_path.exists": _mock([True, True])}
             ):
                 ret = copy.deepcopy(ret_base)
-                ret["comment"] = "Failed to remove {} from the PATH".format(name)
+                ret["comment"] = f"Failed to remove {name} from the PATH"
                 ret["result"] = False
                 assert win_path.absent(name) == ret
 
@@ -68,14 +68,14 @@ def test_absent(name):
             # Test already absent
             with patch.dict(win_path.__salt__, {"win_path.exists": _mock([False])}):
                 ret = copy.deepcopy(ret_base)
-                ret["comment"] = "{} is not in the PATH".format(name)
+                ret["comment"] = f"{name} is not in the PATH"
                 ret["result"] = True
                 assert win_path.absent(name) == ret
 
             # Test the test-mode return
             with patch.dict(win_path.__salt__, {"win_path.exists": _mock([True])}):
                 ret = copy.deepcopy(ret_base)
-                ret["comment"] = "{} would be removed from the PATH".format(name)
+                ret["comment"] = f"{name} would be removed from the PATH"
                 ret["result"] = None
                 assert win_path.absent(name) == ret
 
@@ -120,7 +120,7 @@ def test_exists_add_no_index_success(name):
         "name": name,
         "changes": {"index": {"old": None, "new": 3}},
         "result": True,
-        "comment": "Added {} to the PATH.".format(name),
+        "comment": f"Added {name} to the PATH.",
     }
 
 
@@ -151,7 +151,7 @@ def test_exists_add_no_index_failure(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Failed to add {} to the PATH.".format(name),
+        "comment": f"Failed to add {name} to the PATH.",
     }
 
 
@@ -216,7 +216,7 @@ def test_exists_change_index_success(name):
         "name": name,
         "changes": {"index": {"old": 3, "new": 0}},
         "result": True,
-        "comment": "Moved {} from index 3 to 0.".format(name),
+        "comment": f"Moved {name} from index 3 to 0.",
     }
 
 
@@ -249,7 +249,7 @@ def test_exists_change_negative_index_success(name):
         "name": name,
         "changes": {"index": {"old": -2, "new": -1}},
         "result": True,
-        "comment": "Moved {} from index -2 to -1.".format(name),
+        "comment": f"Moved {name} from index -2 to -1.",
     }
 
 
@@ -350,7 +350,7 @@ def test_exists_change_index_failure(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Failed to move {} from index 3 to 0.".format(name),
+        "comment": f"Failed to move {name} from index 3 to 0.",
     }
 
 
@@ -383,7 +383,7 @@ def test_exists_change_negative_index_failure(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Failed to move {} from index -2 to -1.".format(name),
+        "comment": f"Failed to move {name} from index -2 to -1.",
     }
 
 
@@ -412,7 +412,7 @@ def test_exists_change_index_test_mode(name):
         "name": name,
         "changes": {"index": {"old": 3, "new": 0}},
         "result": None,
-        "comment": "{} would be moved from index 3 to 0.".format(name),
+        "comment": f"{name} would be moved from index 3 to 0.",
     }
 
 
@@ -441,7 +441,7 @@ def test_exists_change_negative_index_test_mode(name):
         "name": name,
         "changes": {"index": {"old": -2, "new": -1}},
         "result": None,
-        "comment": "{} would be moved from index -2 to -1.".format(name),
+        "comment": f"{name} would be moved from index -2 to -1.",
     }
 
 
@@ -479,7 +479,7 @@ def _test_exists_add_already_present(index, test_mode, name):
         "changes": {},
         "result": True,
         "comment": "{} already exists in the PATH{}.".format(
-            name, " at index {}".format(index) if index is not None else ""
+            name, f" at index {index}" if index is not None else ""
         ),
     }
 

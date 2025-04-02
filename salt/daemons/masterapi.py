@@ -132,7 +132,7 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(auth_cache):
+            for dirpath, dirnames, filenames in salt.utils.path.os_walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
@@ -380,7 +380,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
@@ -738,7 +738,7 @@ class RemoteFuncs:
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"

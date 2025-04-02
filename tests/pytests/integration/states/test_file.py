@@ -1,10 +1,13 @@
 """
 Tests for the file state
 """
+
 import logging
 import os
 import pathlib
 import re
+import stat
+import subprocess
 import textwrap
 
 import pytest
@@ -14,6 +17,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import Version
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -233,6 +237,10 @@ def salt_secondary_master(request, salt_factories):
         "fileserver_followsymlinks": False,
         "publish_port": publish_port,
         "ret_port": ret_port,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -255,6 +263,9 @@ def salt_secondary_minion(salt_secondary_master):
     config_overrides = {
         "master": salt_secondary_master.config["interface"],
         "master_port": salt_secondary_master.config["ret_port"],
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_secondary_master.salt_minion_daemon(
@@ -384,109 +395,12 @@ def test_issue_50221(
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
 
 
-@pytest.mark.skip_if_not_root
-@pytest.mark.usefixtures("pillar_tree")
-def test_issue_60426(
-    salt_master,
-    salt_call_cli,
-    tmp_path,
-    salt_minion,
-):
-    target_path = tmp_path / "/etc/foo/bar"
-    jinja_name = "foo_bar"
-    jinja_contents = (
-        "{% for item in accumulator['accumulated configstuff'] %}{{ item }}{% endfor %}"
-    )
-
-    sls_name = "issue-60426"
-    sls_contents = """
-    configuration file:
-      file.managed:
-        - name: {target_path}
-        - source: salt://foo_bar.jinja
-        - template: jinja
-        - makedirs: True
-
-    accumulated configstuff:
-      file.accumulated:
-        - filename: {target_path}
-        - text:
-          - some
-          - good
-          - stuff
-        - watch_in:
-          - configuration file
-    """.format(
-        target_path=target_path
-    )
-
-    sls_tempfile = salt_master.state_tree.base.temp_file(
-        f"{sls_name}.sls", sls_contents
-    )
-
-    jinja_tempfile = salt_master.state_tree.base.temp_file(
-        f"{jinja_name}.jinja", jinja_contents
-    )
-
-    with sls_tempfile, jinja_tempfile:
-        ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.returncode == 0
-        assert ret.data
-        state_run = next(iter(ret.data.values()))
-        assert state_run["result"] is True
-        # Check to make sure the file was created
-        assert target_path.is_file()
-        # The type of new line, ie, `\n` vs `\r\n` is not important
-        assert target_path.read_text() == "somegoodstuff"
-
-    sls_name = "issue-60426"
-    sls_contents = """
-    configuration file:
-      file.managed:
-        - name: {target_path}
-        - source: salt://foo_bar.jinja
-        - template: jinja
-        - makedirs: True
-
-    accumulated configstuff:
-      file.accumulated:
-        - filename: {target_path}
-        - text:
-          - some
-          - good
-          - stuff
-        - watch_in:
-          - file: configuration file
-    """.format(
-        target_path=target_path
-    )
-
-    sls_tempfile = salt_master.state_tree.base.temp_file(
-        f"{sls_name}.sls", sls_contents
-    )
-
-    jinja_tempfile = salt_master.state_tree.base.temp_file(
-        f"{jinja_name}.jinja", jinja_contents
-    )
-
-    with sls_tempfile, jinja_tempfile:
-        ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.returncode == 0
-        assert ret.data
-        state_run = next(iter(ret.data.values()))
-        assert state_run["result"] is True
-        # Check to make sure the file was created
-        assert target_path.is_file()
-        # The type of new line, ie, `\n` vs `\r\n` is not important
-        assert target_path.read_text() == "somegoodstuff"
-
-
 @pytest.fixture
 def _check_min_patch_version(shell):
     min_patch_ver = "2.6"
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
-    version = ret.stdout.strip().split()[2]
+    version = ret.stdout.splitlines()[0].split()[-1]
     if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
@@ -753,7 +667,9 @@ def test_patch_single_file_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(numbers_file, "w"):
             pass
@@ -826,7 +742,9 @@ def test_patch_directory_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(math_file, "w"):
             pass
@@ -929,6 +847,7 @@ def test_patch_directory_template(
             - source: {all_patch_template}
             - template: "jinja"
             - context: {context}
+            - strip: 1
         """.format(
         base_dir=tmp_path, all_patch_template=all_patch_template, context=context
     )
@@ -945,7 +864,7 @@ def test_patch_directory_template(
         # Check to make sure the patch was applied okay
         state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
-        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
@@ -1271,6 +1190,66 @@ def test_issue_62611(
         assert state_run["result"] is True
 
 
+def test_state_skip_req(
+    salt_master,
+    salt_call_cli,
+    tmp_path,
+    salt_minion,
+):
+    target_path = tmp_path / "skip-req-file-target.txt"
+    target_path.write_text(
+        textwrap.dedent(
+            """
+            foo=bar
+            # some comment
+            fizz=buzz
+            """
+        )
+    )
+    name = "test_skip_req/skip_req"
+
+    sls_contents = """
+    modify_contents_with_ignore_params_to_skip:
+      file.managed:
+        - name: {}
+        - ignore_ordering: True
+        - ignore_whitespace: True
+        - ignore_comment_characters: '#'
+        - contents: |
+            fizz=buzz
+            foo=bar
+
+    this_req_should_not_trigger:
+      cmd.run:
+        - name: echo NEVER
+        - onchanges:
+          - file: modify_contents_with_ignore_params_to_skip
+    """.format(
+        target_path
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents)
+
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.apply", name.replace("/", "."))
+        assert ret.returncode == 0
+        assert ret.data
+        state_runs = list(ret.data.values())
+        # file.managed returns changes but doesn't trigger reqs
+        assert state_runs[0]["name"] == str(target_path)
+        assert state_runs[0]["result"] is True
+        assert state_runs[0]["changes"]
+        assert state_runs[0]["skip_req"] is True
+        # cmd.run is not run
+        assert state_runs[1]["name"] == "echo NEVER"
+        assert state_runs[1]["result"] is True
+        assert not state_runs[1]["changes"]
+        assert (
+            state_runs[1]["comment"]
+            == "State was not run because requisites were skipped by another state"
+        )
+
+
 def test_contents_file(salt_master, salt_call_cli, tmp_path):
     """
     test calling file.managed multiple times
@@ -1298,3 +1277,51 @@ def test_contents_file(salt_master, salt_call_cli, tmp_path):
             assert state_run["result"] is True
             # Check to make sure the file was created
             assert target_path.is_file()
+
+
+@pytest.mark.skip_on_windows
+def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
+    """
+    Test modifying ownership of symlink without affecting the link target's
+    permissions.
+    """
+    target_dir = tmp_path / "test-dir"
+    target_dir.mkdir()
+
+    target_file = target_dir / "test-file"
+    target_file.write_text("this is a test file")
+    file_perms = target_file.stat().st_mode
+
+    target_link = target_dir / "test-link"
+    target_link.symlink_to(target_file)
+
+    # Change the ownership of the sybolic link to 'nobody'
+    ret = subprocess.run(["chown", "-h", "nobody", str(target_link)], check=False)
+    assert ret.returncode == 0
+
+    if grains["os"] != "VMware Photon OS":
+        file_perms |= stat.S_IROTH
+
+    # The permissions of the file should be 644.
+    assert target_file.stat().st_mode == file_perms
+
+    sls_name = "test"
+    sls_contents = f"""
+    {target_dir}:
+      file.directory:
+        - user: root
+        - recurse:
+          - user
+    """
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        f"{sls_name}.sls", sls_contents
+    )
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.sls", sls_name)
+        key = f"file_|-{target_dir}_|-{target_dir}_|-directory"
+        assert key in ret.json
+        result = ret.json[key]
+        assert "changes" in result and result["changes"]
+
+    # Permissions of file should not have changed.
+    assert target_file.stat().st_mode == file_perms

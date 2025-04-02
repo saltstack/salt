@@ -291,7 +291,9 @@ Default: ``0``
 
 Configures how often, in seconds, the minion will verify that the current
 master is alive and responding.  The minion will try to establish a connection
-to the next master in the list if it finds the existing one is dead.
+to the next master in the list if it finds the existing one is dead. This
+setting can also be used to detect master DNS record changes when a minion has
+been disconnected.
 
 .. code-block:: yaml
 
@@ -3168,6 +3170,28 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+``encryption_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: OAEP-SHA1
+
+The RSA encryption algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``OAEP-SHA1`` and ``OAEP-SHA224``
+
+
+``signing_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+The RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``
+
 
 Reactor Settings
 ================
@@ -3307,6 +3331,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_level_logfile
 
@@ -3323,6 +3353,12 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_datefmt
 

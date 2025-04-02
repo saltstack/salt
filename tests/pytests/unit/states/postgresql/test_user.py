@@ -1,4 +1,5 @@
 import pytest
+from pytestskipmarkers.utils import platform
 
 import salt.modules.postgres as postgres
 import salt.states.postgres_user as postgres_user
@@ -25,6 +26,8 @@ def fixture_db_args():
 @pytest.fixture(name="md5_pw")
 def fixture_md5_pw():
     # 'md5' + md5('password' + 'username')
+    if platform.is_fips_enabled():
+        pytest.skip("Test cannot run on a FIPS enabled platform")
     return "md55a231fcdb710d73268c4f44283487ba2"
 
 

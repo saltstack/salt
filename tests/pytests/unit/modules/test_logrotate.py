@@ -4,7 +4,6 @@
     Test cases for salt.modules.logrotate
 """
 
-
 import pytest
 
 import salt.modules.logrotate as logrotate

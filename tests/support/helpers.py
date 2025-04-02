@@ -8,6 +8,7 @@
 
     Test support helpers
 """
+
 import asyncio
 import base64
 import builtins
@@ -34,6 +35,7 @@ import types
 
 import attr
 import pytest
+import pytestskipmarkers.utils.platform
 import tornado.ioloop
 import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
@@ -1644,6 +1646,10 @@ class VirtualEnv:
         return pathlib.Path(self.venv_python).parent
 
     def __enter__(self):
+        if pytestskipmarkers.utils.platform.is_fips_enabled():
+            pytest.skip(
+                "Test cannot currently create virtual environments on a FIPS enabled platform"
+            )
         try:
             self._create_virtualenv()
         except subprocess.CalledProcessError:
@@ -1667,9 +1673,9 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        if env:
-            env = self.environ.copy().update(env)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1771,11 +1777,14 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        self.install(
+            "-r", code_dir / "requirements" / "static" / "pkg" / "py3.10" / "linux.txt"
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)

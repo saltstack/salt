@@ -2,7 +2,6 @@
 Tests for the salt fileclient
 """
 
-
 import errno
 import logging
 import os
@@ -11,7 +10,7 @@ import pytest
 
 import salt.utils.files
 from salt import fileclient
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import AsyncMock, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
 
@@ -81,13 +80,10 @@ def test_fileclient_context_manager_closes(minion_opts, master_opts):
             "auth_timeout": 5,
             "master_ip": "127.0.0.1",
             "master_port": master_opts["ret_port"],
-            "master_uri": "tcp://127.0.0.1:{}".format(master_opts["ret_port"]),
+            "master_uri": f"tcp://127.0.0.1:{master_opts['ret_port']}",
             "request_channel_timeout": 1,
             "request_channel_tries": 1,
         }
-    )
-    master_uri = "tcp://{master_ip}:{master_port}".format(
-        master_ip="localhost", master_port=minion_opts["master_port"]
     )
     mock_reqchannel = MockReqChannel()
     patch_reqchannel = patch.object(
@@ -116,29 +112,24 @@ def test_fileclient_timeout(minion_opts, master_opts):
             "auth_timeout": 5,
             "master_ip": "127.0.0.1",
             "master_port": master_opts["ret_port"],
-            "master_uri": "tcp://127.0.0.1:{}".format(master_opts["ret_port"]),
+            "master_uri": f"tcp://127.0.0.1:{master_opts['ret_port']}",
             "request_channel_timeout": 1,
             "request_channel_tries": 1,
         }
     )
-    master_uri = "tcp://{master_ip}:{master_port}".format(
-        master_ip="localhost", master_port=minion_opts["master_port"]
-    )
-
-    async def mock_auth():
-        return True
 
     def mock_dumps(*args):
         return b"meh"
 
     with fileclient.get_file_client(minion_opts) as client:
         # Authenticate must return true
-        client.auth.authenticate = mock_auth
-        # Crypticle must return bytes to pass to transport.RequestClient.send
-        client.auth._crypticle = Mock()
-        client.auth._crypticle.dumps = mock_dumps
-        with pytest.raises(salt.exceptions.SaltClientError):
-            client.file_list()
+        with patch.object(client.auth, "authenticate", AsyncMock(return_value=True)):
+            # Crypticle must return bytes to pass to transport.RequestClient.send
+            client.auth._crypticle = Mock()
+            client.auth._crypticle.dumps = mock_dumps
+            msg = r"^File client timed out after \d{1,4} seconds$"
+            with pytest.raises(salt.exceptions.SaltClientError, match=msg):
+                client.file_list()
 
 
 def test_cache_skips_makedirs_on_race_condition(client_opts):
@@ -232,3 +223,19 @@ def test_get_file_client(file_client):
     with patch("salt.fileclient.RemoteClient", MagicMock(return_value="remote_client")):
         ret = fileclient.get_file_client(minion_opts)
         assert "remote_client" == ret
+
+
+def test_get_url_with_hash(client_opts):
+    """
+    Test get_url function with a URL containing a hash character.
+    """
+    with patch("os.path.isfile", return_value=True):
+        with patch("os.makedirs", return_value=None):
+            with patch("urllib.request.urlretrieve", return_value=None):
+                client = fileclient.Client(client_opts)
+                url = "file:///path/to/file#with#hash"
+                dest = "/mocked/destination"
+
+                result = client.get_url(url, dest)
+
+                assert result == "/path/to/file#with#hash"

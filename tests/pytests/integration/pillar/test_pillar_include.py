@@ -1,6 +1,7 @@
 """
 Pillar include tests
 """
+
 import pytest
 
 
@@ -83,8 +84,16 @@ def pillar_include_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cl
         "glob-include-b.sls", glob_include_b_pillar_file, base_env_pillar_tree_root_dir
     )
     try:
-        with top_tempfile, include_tempfile, include_a_tempfile, include_b_tempfile, include_c_tempfile, include_d_tempfile:
-            with glob_include_tempfile, glob_include_a_tempfile, glob_include_b_tempfile:
+        with (
+            top_tempfile
+        ), (
+            include_tempfile
+        ), (
+            include_a_tempfile
+        ), include_b_tempfile, include_c_tempfile, include_d_tempfile:
+            with (
+                glob_include_tempfile
+            ), glob_include_a_tempfile, glob_include_b_tempfile:
                 ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
                 assert ret.returncode == 0
                 assert ret.data is True

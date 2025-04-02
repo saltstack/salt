@@ -1,0 +1,19 @@
+.. _release-3005-3:
+
+=========================
+Salt 3005.3 Release Notes
+=========================
+
+Version 3005.3 is a Bug fix release for :ref:`3005 <release-3005>`.
+
+
+Changed
+-------
+
+- Fix __env__ and improve cache cleaning see more info at pull #65017. (#65002)
+
+
+Security
+--------
+
+- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65167)

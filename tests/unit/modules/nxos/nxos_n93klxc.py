@@ -19,7 +19,6 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N93KLXCPlatform(NXOSPlatform):
-
     """Cisco Systems N93K (boot mode lxc) Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9396PX (LXC) Chassis"

@@ -7,7 +7,6 @@
 .. versionadded:: 2015.8.0
 """
 
-
 import salt.spm
 import salt.utils.parsers as parsers
 from salt.utils.verify import verify_env

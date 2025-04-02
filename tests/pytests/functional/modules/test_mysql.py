@@ -1,6 +1,7 @@
 """
 Test Salt MySQL module across various MySQL variants
 """
+
 import logging
 import time
 
@@ -19,6 +20,7 @@ pytestmark = [
     pytest.mark.skipif(
         mysqlmod.MySQLdb is None, reason="No python mysql client installed."
     ),
+    pytest.mark.skip_on_fips_enabled_platform,
 ]
 
 

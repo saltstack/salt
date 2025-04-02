@@ -18,12 +18,6 @@ def client(client_config):
     return salt.wheel.Wheel(client_config)
 
 
-@pytest.fixture(scope="module")
-def salt_auto_account(salt_auto_account_factory):
-    with salt_auto_account_factory as account:
-        yield account
-
-
 @pytest.fixture
 def auth_creds(salt_auto_account):
     return {

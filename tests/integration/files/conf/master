@@ -99,22 +99,12 @@ discovery: false
 #enable_ssh_minions: True
 #ignore_host_keys: True
 
-# test vault
-# set uses to 0 so the token
-# has unlimited uses available.
-vault:
-  url: http://127.0.0.1:8200
-  auth:
-    method: token
-    token: testsecret
-    uses: 0
-  policies:
-  - testpolicy
-peer_run:
-  .*:
-  - vault.generate_token
-sdbvault:
-  driver: vault
+# Ensure pytest-salt-factories is not included
+# in the thin tar during integration tests
+# (it defines a saltext, which are autodiscovered by default)
+thin_saltext_blocklist:
+  - pytest-salt-factories
+
 sdbetcd:
   driver: etcd
   etcd.host: 127.0.0.1

@@ -6,10 +6,7 @@ import yaml as _yaml
 
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
-import salt.serializers.keyvalue as keyvalue
 import salt.serializers.msgpack as msgpack
-import salt.serializers.plist as plist
-import salt.serializers.python as python
 import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
@@ -153,7 +150,7 @@ def test_compare_sls_vs_yaml_with_jinja():
 
     # BLAAM! yml_src is not valid !
     final_obj = OrderedDict(yaml.deserialize(yml_src))
-    assert obj != final_obj, "Objects matched! {} == {}".format(obj, final_obj)
+    assert obj != final_obj, f"Objects matched! {obj} == {final_obj}"
 
 
 @pytest.mark.skipif(yamlex.available is False, reason=SKIP_MESSAGE.format("sls"))
@@ -284,12 +281,12 @@ def test_sls_repr():
     sls_obj = convert(OrderedDict([("foo", "bar"), ("baz", "qux")]))
 
     # ensure that repr and str are yaml friendly
-    assert sls_obj.__str__() == "{foo: bar, baz: qux}"
-    assert sls_obj.__repr__() == "{foo: bar, baz: qux}"
+    assert str(sls_obj) == "{foo: bar, baz: qux}"
+    assert repr(sls_obj) == "{foo: bar, baz: qux}"
 
     # ensure that repr and str are already quoted
-    assert sls_obj["foo"].__str__() == '"bar"'
-    assert sls_obj["foo"].__repr__() == '"bar"'
+    assert str(sls_obj["foo"]) == '"bar"'
+    assert repr(sls_obj["foo"]) == '"bar"'
 
 
 @pytest.mark.skipif(yamlex.available is False, reason=SKIP_MESSAGE.format("sls"))
@@ -338,10 +335,10 @@ def test_msgpack():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(python.available is False, reason=SKIP_MESSAGE.format("python"))
+@pytest.mark.skip("Great module migration")
 def test_serialize_python():
     data = {"foo": "bar"}
-    serialized = python.serialize(data)
+    serialized = python.serialize(data)  # pylint: disable=undefined-variable
     expected = repr({"foo": "bar"})
     assert serialized == expected, serialized
 
@@ -369,10 +366,10 @@ def test_serialize_toml():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(plist.available is False, reason=SKIP_MESSAGE.format("plist"))
+@pytest.mark.skip("Great module migration")
 def test_serialize_plist():
     data = {"foo": "bar"}
-    serialized = plist.serialize(data)
+    serialized = plist.serialize(data)  # pylint: disable=undefined-variable
     expected = (
         b'<?xml version="1.0" encoding="UTF-8"?>\n'
         b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
@@ -386,46 +383,62 @@ def test_serialize_plist():
     )
     assert serialized == expected, serialized
 
-    deserialized = plist.deserialize(serialized)
+    deserialized = plist.deserialize(serialized)  # pylint: disable=undefined-variable
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(plist.available is False, reason=SKIP_MESSAGE.format("plist"))
+@pytest.mark.skip("Great module migration")
 def test_serialize_binary_plist():
     data = {"foo": "bar"}
-    serialized = plist.serialize(data, fmt="FMT_BINARY")
+    serialized = plist.serialize(  # pylint: disable=undefined-variable
+        data, fmt="FMT_BINARY"
+    )
 
-    deserialized = plist.deserialize(serialized)
+    deserialized = plist.deserialize(serialized)  # pylint: disable=undefined-variable
     assert deserialized == data, deserialized
 
 
+@pytest.mark.skip("Great module migration")
 def test_serialize_keyvalue():
     data = {"foo": "bar baz"}
-    serialized = keyvalue.serialize(data)
+    serialized = keyvalue.serialize(data)  # pylint: disable=undefined-variable
     assert serialized == "foo=bar baz", serialized
 
-    deserialized = keyvalue.deserialize(serialized)
+    deserialized = keyvalue.deserialize(  # pylint: disable=undefined-variable
+        serialized
+    )
     assert deserialized == data, deserialized
 
 
+@pytest.mark.skip("Great module migration")
 def test_serialize_keyvalue_quoting():
     data = {"foo": "bar baz"}
-    serialized = keyvalue.serialize(data, quoting=True)
+    serialized = keyvalue.serialize(  # pylint: disable=undefined-variable
+        data, quoting=True
+    )
     assert serialized == "foo='bar baz'", serialized
 
-    deserialized = keyvalue.deserialize(serialized, quoting=False)
+    deserialized = keyvalue.deserialize(  # pylint: disable=undefined-variable
+        serialized, quoting=False
+    )
     assert deserialized == data, deserialized
 
 
+@pytest.mark.skip("Great module migration")
 def test_serialize_keyvalue_separator():
     data = {"foo": "bar baz"}
-    serialized = keyvalue.serialize(data, separator=" = ")
+    serialized = keyvalue.serialize(  # pylint: disable=undefined-variable
+        data, separator=" = "
+    )
     assert serialized == "foo = bar baz", serialized
 
-    deserialized = keyvalue.deserialize(serialized, separator=" = ")
+    deserialized = keyvalue.deserialize(  # pylint: disable=undefined-variable
+        serialized, separator=" = "
+    )
     assert deserialized == data, deserialized
 
 
+@pytest.mark.skip("Great module migration")
 def test_serialize_keyvalue_list_of_lists():
     if salt.utils.platform.is_windows():
         linend = "\r\n"
@@ -433,8 +446,10 @@ def test_serialize_keyvalue_list_of_lists():
         linend = "\n"
     data = [["foo", "bar baz"], ["salt", "rocks"]]
     expected = {"foo": "bar baz", "salt": "rocks"}
-    serialized = keyvalue.serialize(data)
+    serialized = keyvalue.serialize(data)  # pylint: disable=undefined-variable
     assert serialized == f"foo=bar baz{linend}salt=rocks", serialized
 
-    deserialized = keyvalue.deserialize(serialized)
+    deserialized = keyvalue.deserialize(  # pylint: disable=undefined-variable
+        serialized
+    )
     assert deserialized == expected, deserialized

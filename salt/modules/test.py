@@ -18,6 +18,7 @@ import salt.utils.hashutils
 import salt.utils.platform
 import salt.utils.versions
 import salt.version
+from salt.config import DEFAULT_HASH_TYPE
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ["*"]
@@ -528,7 +529,7 @@ def random_hash(size=9999999999, hash_type=None):
         salt '*' test.random_hash hash_type=sha512
     """
     if not hash_type:
-        hash_type = __opts__.get("hash_type", "md5")
+        hash_type = __opts__.get("hash_type", DEFAULT_HASH_TYPE)
     return salt.utils.hashutils.random_hash(size=size, hash_type=hash_type)
 
 

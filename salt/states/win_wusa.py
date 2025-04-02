@@ -7,7 +7,6 @@ without WSUS or Windows Update
 .. versionadded:: 2018.3.4
 """
 
-
 import logging
 
 import salt.utils.platform
@@ -62,13 +61,13 @@ def installed(name, source):
     # Is the KB already installed
     if __salt__["wusa.is_installed"](name):
         ret["result"] = True
-        ret["comment"] = "{} already installed".format(name)
+        ret["comment"] = f"{name} already installed"
         return ret
 
     # Check for test=True
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "{} would be installed".format(name)
+        ret["comment"] = f"{name} would be installed"
         ret["result"] = None
         return ret
 
@@ -92,11 +91,11 @@ def installed(name, source):
 
     # Verify successful install
     if __salt__["wusa.is_installed"](name):
-        ret["comment"] = "{} was installed. {}".format(name, additional_comment)
+        ret["comment"] = f"{name} was installed. {additional_comment}"
         ret["changes"] = {"old": False, "new": True}
         ret["result"] = True
     else:
-        ret["comment"] = "{} failed to install. {}".format(name, additional_comment)
+        ret["comment"] = f"{name} failed to install. {additional_comment}"
 
     return ret
 
@@ -122,13 +121,13 @@ def uninstalled(name):
     # Is the KB already uninstalled
     if not __salt__["wusa.is_installed"](name):
         ret["result"] = True
-        ret["comment"] = "{} already uninstalled".format(name)
+        ret["comment"] = f"{name} already uninstalled"
         return ret
 
     # Check for test=True
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "{} would be uninstalled".format(name)
+        ret["comment"] = f"{name} would be uninstalled"
         ret["result"] = None
         return ret
 
@@ -137,10 +136,10 @@ def uninstalled(name):
 
     # Verify successful uninstall
     if not __salt__["wusa.is_installed"](name):
-        ret["comment"] = "{} was uninstalled".format(name)
+        ret["comment"] = f"{name} was uninstalled"
         ret["changes"] = {"old": True, "new": False}
         ret["result"] = True
     else:
-        ret["comment"] = "{} failed to uninstall".format(name)
+        ret["comment"] = f"{name} failed to uninstall"
 
     return ret

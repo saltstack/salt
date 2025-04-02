@@ -11,6 +11,7 @@ import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
 import salt.utils.state as state_utils
+from salt.loader.dunder import __opts__
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
@@ -21,7 +22,7 @@ log = logging.getLogger(__name__)
 def configure_loader_modules(minion_opts):
     return {
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         pkg: {
             "__env__": "base",
@@ -328,6 +329,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a pkg
@@ -544,7 +546,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,

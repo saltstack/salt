@@ -97,7 +97,7 @@ def info(dev):
     else:
         qtype = "name"
 
-    cmd = "udevadm info --export --query=all --{}={}".format(qtype, dev)
+    cmd = f"udevadm info --export --query=all --{qtype}={dev}"
     udev_result = __salt__["cmd.run_all"](cmd, output_loglevel="quiet")
 
     if udev_result["retcode"] != 0:

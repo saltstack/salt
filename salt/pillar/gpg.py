@@ -15,7 +15,6 @@ Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 
 """
 
-
 import salt.loader
 
 

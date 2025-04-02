@@ -1,8 +1,13 @@
+import logging
 import pathlib
 import time
+import types
 
 import attr
 import pytest
+
+log = logging.getLogger(__name__)
+
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -210,7 +215,7 @@ class PillarRefresh:
             "top.sls", top_file_contents
         )
         self.minion_1_pillar = self.master.pillar_tree.base.temp_file(
-            "minion-1-pillar.sls", "{}: true".format(self.pillar_key)
+            "minion-1-pillar.sls", f"{self.pillar_key}: true"
         )
         self.top_file.__enter__()
         self.minion_1_pillar.__enter__()
@@ -395,6 +400,7 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(120)
 def test_pillar_refresh_pillar_scheduler(salt_master, salt_cli, salt_minion):
     """
     Ensure schedule jobs in pillar are only updated when values change.
@@ -588,3 +594,106 @@ def test_pillar_ext_59975(salt_call_cli):
     """
     ret = salt_call_cli.run("pillar.ext", '{"libvert": _}')
     assert "ext_pillar_opts" in ret.data
+
+
+@pytest.fixture
+def event_listerner_timeout(grains):
+    if grains["os"] == "Windows":
+        if grains["osrelease"].startswith("2019"):
+            return types.SimpleNamespace(catch=120, miss=30)
+        return types.SimpleNamespace(catch=90, miss=10)
+    return types.SimpleNamespace(catch=60, miss=10)
+
+
+@pytest.mark.slow_test
+def test_pillar_refresh_pillar_beacons(
+    base_env_pillar_tree_root_dir,
+    salt_cli,
+    salt_minion,
+    salt_master,
+    event_listener,
+    event_listerner_timeout,
+):
+    """
+    Ensure beacons jobs in pillar are started after
+    a pillar refresh and then not running when pillar
+    is cleared.
+    """
+
+    top_sls = """
+        base:
+          '{}':
+            - test_beacons
+        """.format(
+        salt_minion.id
+    )
+
+    test_beacons_sls_empty = ""
+
+    test_beacons_sls = """
+        beacons:
+          status:
+            - loadavg:
+              - 1-min
+        """
+
+    assert salt_minion.is_running()
+
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_sls, base_env_pillar_tree_root_dir
+    )
+    beacon_tempfile = pytest.helpers.temp_file(
+        "test_beacons.sls", test_beacons_sls_empty, base_env_pillar_tree_root_dir
+    )
+
+    with top_tempfile, beacon_tempfile:
+        # Calling refresh_pillar to update in-memory pillars
+        salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
+
+        # Ensure beacons start when pillar is refreshed
+        with salt_master.pillar_tree.base.temp_file(
+            "test_beacons.sls", test_beacons_sls
+        ):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the beacons a chance to start
+            time.sleep(5)
+
+            event_tag = "salt/beacon/*/status/*"
+            start_time = time.time()
+
+            event_pattern = (salt_master.id, event_tag)
+            matched_events = event_listener.wait_for_events(
+                [event_pattern],
+                after_time=start_time,
+                timeout=event_listerner_timeout.catch,
+            )
+
+            assert matched_events.found_all_events
+
+        # Ensure beacons sttop when pillar is refreshed
+        with salt_master.pillar_tree.base.temp_file(
+            "test_beacons.sls", test_beacons_sls_empty
+        ):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the beacons a chance to stop
+            time.sleep(5)
+
+            event_tag = "salt/beacon/*/status/*"
+            start_time = time.time()
+
+            event_pattern = (salt_master.id, event_tag)
+            matched_events = event_listener.wait_for_events(
+                [event_pattern],
+                after_time=start_time,
+                timeout=event_listerner_timeout.miss,
+            )
+
+            assert not matched_events.found_all_events

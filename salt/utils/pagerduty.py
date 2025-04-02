@@ -44,7 +44,7 @@ def query(
     """
     Query the PagerDuty API
     """
-    user_agent = "SaltStack {}".format(__version__)
+    user_agent = f"SaltStack {__version__}"
 
     if opts is None:
         opts = {}

@@ -70,7 +70,6 @@ You can also include comments:
 
 """
 
-
 import logging
 
 import salt.utils.validate.net
@@ -145,7 +144,7 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
                     update_comment.add((addr, comment))
                 else:
                     # No changes needed for this IP address and hostname
-                    comments.append("Host {} ({}) already present".format(name, addr))
+                    comments.append(f"Host {name} ({addr}) already present")
             else:
                 # IP address listed in hosts file, but hostname is not present.
                 # We will need to add it.
@@ -155,32 +154,30 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
                         update_comment.add((addr, comment))
                 else:
                     ret["result"] = False
-                    comments.append("Invalid IP Address for {} ({})".format(name, addr))
+                    comments.append(f"Invalid IP Address for {name} ({addr})")
 
     for addr, name in to_add:
         if __opts__["test"]:
             ret["result"] = None
-            comments.append("Host {} ({}) would be added".format(name, addr))
+            comments.append(f"Host {name} ({addr}) would be added")
         else:
             if __salt__["hosts.add_host"](addr, name):
-                comments.append("Added host {} ({})".format(name, addr))
+                comments.append(f"Added host {name} ({addr})")
             else:
                 ret["result"] = False
-                comments.append("Failed to add host {} ({})".format(name, addr))
+                comments.append(f"Failed to add host {name} ({addr})")
                 continue
         ret["changes"].setdefault("added", {}).setdefault(addr, []).append(name)
 
     for addr, comment in update_comment:
         if __opts__["test"]:
-            comments.append("Comment for {} ({}) would be added".format(addr, comment))
+            comments.append(f"Comment for {addr} ({comment}) would be added")
         else:
             if __salt__["hosts.set_comment"](addr, comment):
-                comments.append("Set comment for host {} ({})".format(addr, comment))
+                comments.append(f"Set comment for host {addr} ({comment})")
             else:
                 ret["result"] = False
-                comments.append(
-                    "Failed to add comment for host {} ({})".format(addr, comment)
-                )
+                comments.append(f"Failed to add comment for host {addr} ({comment})")
                 continue
         ret["changes"].setdefault("comment_added", {}).setdefault(addr, []).append(
             comment
@@ -189,13 +186,13 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
     for addr, name in to_remove:
         if __opts__["test"]:
             ret["result"] = None
-            comments.append("Host {} ({}) would be removed".format(name, addr))
+            comments.append(f"Host {name} ({addr}) would be removed")
         else:
             if __salt__["hosts.rm_host"](addr, name):
-                comments.append("Removed host {} ({})".format(name, addr))
+                comments.append(f"Removed host {name} ({addr})")
             else:
                 ret["result"] = False
-                comments.append("Failed to remove host {} ({})".format(name, addr))
+                comments.append(f"Failed to remove host {name} ({addr})")
                 continue
         ret["changes"].setdefault("removed", {}).setdefault(addr, []).append(name)
 
@@ -222,15 +219,15 @@ def absent(name, ip):  # pylint: disable=C0103
     for _ip in ip:
         if not __salt__["hosts.has_pair"](_ip, name):
             ret["result"] = True
-            comments.append("Host {} ({}) already absent".format(name, _ip))
+            comments.append(f"Host {name} ({_ip}) already absent")
         else:
             if __opts__["test"]:
-                comments.append("Host {} ({}) needs to be removed".format(name, _ip))
+                comments.append(f"Host {name} ({_ip}) needs to be removed")
             else:
                 if __salt__["hosts.rm_host"](_ip, name):
                     ret["changes"] = {"host": name}
                     ret["result"] = True
-                    comments.append("Removed host {} ({})".format(name, _ip))
+                    comments.append(f"Removed host {name} ({_ip})")
                 else:
                     ret["result"] = False
                     comments.append("Failed to remove host")
@@ -264,12 +261,12 @@ def only(name, hostnames):
     new = " ".join(x.strip() for x in hostnames)
 
     if old == new:
-        ret["comment"] = 'IP address {} already set to "{}"'.format(name, new)
+        ret["comment"] = f'IP address {name} already set to "{new}"'
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = 'Would change {} from "{}" to "{}"'.format(name, old, new)
+        ret["comment"] = f'Would change {name} from "{old}" to "{new}"'
         return ret
 
     ret["result"] = __salt__["hosts.set_host"](name, new)
@@ -279,6 +276,6 @@ def only(name, hostnames):
         )
         return ret
 
-    ret["comment"] = 'successfully changed {} from "{}" to "{}"'.format(name, old, new)
+    ret["comment"] = f'successfully changed {name} from "{old}" to "{new}"'
     ret["changes"] = {name: {"old": old, "new": new}}
     return ret

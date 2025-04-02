@@ -26,7 +26,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-
 import hashlib
 import logging
 import os
@@ -271,7 +270,7 @@ def key_str(match):
 
     .. code-block:: python
 
-        >>> wheel.cmd('key.key_str', ['minion1'])
+        >>> wheel.cmd('key.print', ['minion1'])
         {'minions': {'minion1': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0B
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}

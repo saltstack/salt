@@ -111,10 +111,10 @@ def query(
     if not bucket or path_style:
         endpoint = service_url
     else:
-        endpoint = "{}.{}".format(bucket, service_url)
+        endpoint = f"{bucket}.{service_url}"
 
     if path_style and bucket:
-        path = "{}/{}".format(bucket, path)
+        path = f"{bucket}/{path}"
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
@@ -150,7 +150,7 @@ def query(
             endpoint,
             params,
             data=data,
-            uri="/{}".format(path),
+            uri=f"/{path}",
             prov_dict={"id": keyid, "key": key},
             role_arn=role_arn,
             location=location,
@@ -222,7 +222,7 @@ def query(
             log.debug(
                 "Failed to parse s3 err response. %s: %s", type(err).__name__, err
             )
-            err_code = "http-{}".format(result.status_code)
+            err_code = f"http-{result.status_code}"
             err_msg = err_text
 
     log.debug("S3 Response Status Code: %s", result.status_code)
@@ -236,7 +236,7 @@ def query(
                     )
                 )
             raise CommandExecutionError(
-                "Failed to create bucket {}. {}: {}".format(bucket, err_code, err_msg)
+                f"Failed to create bucket {bucket}. {err_code}: {err_msg}"
             )
 
         if local_file:
@@ -254,7 +254,7 @@ def query(
                     )
                 )
             raise CommandExecutionError(
-                "Failed to delete bucket {}. {}: {}".format(bucket, err_code, err_msg)
+                f"Failed to delete bucket {bucket}. {err_code}: {err_msg}"
             )
 
         if path:
@@ -266,20 +266,16 @@ def query(
     # This can be used to save a binary object to disk
     if local_file and method == "GET":
         if result.status_code < 200 or result.status_code >= 300:
-            raise CommandExecutionError(
-                "Failed to get file. {}: {}".format(err_code, err_msg)
-            )
+            raise CommandExecutionError(f"Failed to get file. {err_code}: {err_msg}")
 
         log.debug("Saving to local file: %s", local_file)
         with salt.utils.files.fopen(local_file, "wb") as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
-        return "Saved to local file: {}".format(local_file)
+        return f"Saved to local file: {local_file}"
 
     if result.status_code < 200 or result.status_code >= 300:
-        raise CommandExecutionError(
-            "Failed s3 operation. {}: {}".format(err_code, err_msg)
-        )
+        raise CommandExecutionError(f"Failed s3 operation. {err_code}: {err_msg}")
 
     # This can be used to return a binary object wholesale
     if return_bin:

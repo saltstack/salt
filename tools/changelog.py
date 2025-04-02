@@ -1,6 +1,7 @@
 """
 These commands are used manage Salt's changelog.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -8,27 +9,14 @@ import datetime
 import logging
 import os
 import pathlib
-import re
 import sys
 import textwrap
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 from tools.utils import REPO_ROOT, Version
-
-CHANGELOG_LIKE_RE = re.compile(r"([\d]+)\.([a-z]+)$")
-CHANGELOG_TYPES = (
-    "removed",
-    "deprecated",
-    "changed",
-    "fixed",
-    "added",
-    "security",
-)
-CHANGELOG_ENTRY_RE = re.compile(
-    r"([\d]+|(CVE|cve)-[\d]{{4}}-[\d]+)\.({})(\.md)?$".format("|".join(CHANGELOG_TYPES))
-)
 
 log = logging.getLogger(__name__)
 
@@ -37,114 +25,17 @@ changelog = command_group(
     name="changelog",
     help="Changelog tools",
     description=__doc__,
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "changelog.txt"
+            / "changelog.txt",
         ],
-    },
+    ),
 )
-
-
-@changelog.command(
-    name="pre-commit-checks",
-    arguments={
-        "files": {
-            "nargs": "*",
-        }
-    },
-)
-def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
-    """
-    Run pre-commit checks on changelog snippets.
-    """
-    docs_path = REPO_ROOT / "doc"
-    tests_integration_files_path = REPO_ROOT / "tests" / "integration" / "files"
-    changelog_entries_path = REPO_ROOT / "changelog"
-    exitcode = 0
-    for entry in files:
-        path = pathlib.Path(entry).resolve()
-        # Is it under changelog/
-        try:
-            path.relative_to(changelog_entries_path)
-            if path.name in (".keep", ".template.jinja"):
-                # This is the file we use so git doesn't delete the changelog/ directory
-                continue
-            # Is it named properly
-            if not CHANGELOG_ENTRY_RE.match(path.name):
-                ctx.error(
-                    "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                        path.relative_to(REPO_ROOT),
-                        ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
-                    ),
-                )
-                exitcode = 1
-                continue
-            if path.suffix != ".md":
-                ctx.error(
-                    f"Please rename '{path.relative_to(REPO_ROOT)}' to "
-                    f"'{path.relative_to(REPO_ROOT)}.md'"
-                )
-                exitcode = 1
-                continue
-        except ValueError:
-            # No, carry on
-            pass
-        # Does it look like a changelog entry
-        if CHANGELOG_LIKE_RE.match(path.name) and not CHANGELOG_ENTRY_RE.match(
-            path.name
-        ):
-            try:
-                # Is this under doc/
-                path.relative_to(docs_path)
-                # Yes, carry on
-                continue
-            except ValueError:
-                # No, resume the check
-                pass
-            try:
-                # Is this under tests/integration/files
-                path.relative_to(tests_integration_files_path)
-                # Yes, carry on
-                continue
-            except ValueError:
-                # No, resume the check
-                pass
-            ctx.error(
-                "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                    path.relative_to(REPO_ROOT),
-                    ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
-                )
-            )
-            exitcode = 1
-            continue
-        # Is it a changelog entry
-        if not CHANGELOG_ENTRY_RE.match(path.name):
-            # No? Carry on
-            continue
-        # Is the changelog entry in the right path?
-        try:
-            path.relative_to(changelog_entries_path)
-        except ValueError:
-            exitcode = 1
-            ctx.error(
-                "The changelog entry '{}' should be placed under '{}/', not '{}'".format(
-                    path.name,
-                    changelog_entries_path.relative_to(REPO_ROOT),
-                    path.relative_to(REPO_ROOT).parent,
-                )
-            )
-        if path.suffix != ".md":
-            ctx.error(
-                f"Please rename '{path.relative_to(REPO_ROOT)}' to "
-                f"'{path.relative_to(REPO_ROOT)}.md'"
-            )
-            exitcode = 1
-    ctx.exit(exitcode)
 
 
 def _get_changelog_contents(ctx: Context, version: Version):
@@ -220,18 +111,18 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
     header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
     parts = orig.split("%changelog")
     tmpspec = "pkg/rpm/salt.spec.1"
-    with open(tmpspec, "w") as wfp:
+    with open(tmpspec, "w", encoding="utf-8") as wfp:
         wfp.write(parts[0])
         wfp.write("%changelog\n")
         wfp.write(header)
         wfp.write(changes)
         wfp.write(parts[1])
     try:
-        with open(tmpspec) as rfp:
+        with open(tmpspec, encoding="utf-8") as rfp:
             if draft:
                 ctx.info(rfp.read())
             else:
-                with open("pkg/rpm/salt.spec", "w") as wfp:
+                with open("pkg/rpm/salt.spec", "w", encoding="utf-8") as wfp:
                     wfp.write(rfp.read())
     finally:
         os.remove(tmpspec)
@@ -263,20 +154,20 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
     tmpchanges = "pkg/rpm/salt.spec.1"
     debian_changelog_path = "pkg/debian/changelog"
     tmp_debian_changelog_path = f"{debian_changelog_path}.1"
-    with open(tmp_debian_changelog_path, "w") as wfp:
+    with open(tmp_debian_changelog_path, "w", encoding="utf-8") as wfp:
         wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
             f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
         )
-        with open(debian_changelog_path) as rfp:
+        with open(debian_changelog_path, encoding="utf-8") as rfp:
             wfp.write(rfp.read())
     try:
-        with open(tmp_debian_changelog_path) as rfp:
+        with open(tmp_debian_changelog_path, encoding="utf-8") as rfp:
             if draft:
                 ctx.info(rfp.read())
             else:
-                with open(debian_changelog_path, "w") as wfp:
+                with open(debian_changelog_path, "w", encoding="utf-8") as wfp:
                     wfp.write(rfp.read())
     finally:
         os.remove(tmp_debian_changelog_path)
@@ -364,7 +255,7 @@ def update_release_notes(
             return
 
     unreleased = " - UNRELEASED"
-    warning = f"""
+    warning = """
 <!---
 Do not edit this file. This is auto generated.
 Edit the templates in doc/topics/releases/templates/

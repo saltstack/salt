@@ -1,0 +1,69 @@
+---
+name: Upload Release Artifact
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      upload_url:
+        type: string
+        required: true
+        description: Release's upload url.
+      pattern:
+        type: string
+        required: false
+        description: Pattern of files to upload
+
+
+jobs:
+
+  list-files:
+    name: List ${{ inputs.name }}
+    runs-on: ubuntu-22.04
+    outputs:
+      files: ${{ steps.list-files.outputs.files }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.name }}
+          path: artifacts
+      - run: find artifacts -maxdepth 1 -type f -printf '%f\n'
+      - id: list-files
+        run: |
+          if [ "${{ inputs.pattern }}" != "" ]; then
+            echo files="$(find artifacts -maxdepth 1 -type f -name '${{ inputs.pattern }}' -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+          else
+            echo files="$(find artifacts -maxdepth 1 -type f -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
+          fi
+
+  upload-files:
+    name: Upload ${{ matrix.file }} from ${{ inputs.name }}
+    runs-on: ubuntu-22.04
+    needs:
+      - list-files
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.list-files.outputs.files) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.name }}
+          path: artifacts
+
+      - name: Detect type of ${{ matrix.file }}
+        id: file-type
+        run: echo "file_type=$( file --mime-type artifacts/${{ matrix.file }} )" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ${{ matrix.file }}
+        id: upload-release-asset-source
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ inputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: artifacts/${{ matrix.file }}
+          asset_name: ${{ matrix.file }}
+          asset_content_type: ${{ steps.file-type.outputs.file_type }}

@@ -297,7 +297,6 @@ Supported assertions
   ``saltcheck.run_highstate_tests`` are needed.
 """
 
-
 import copy
 import logging
 import multiprocessing
@@ -487,7 +486,7 @@ def run_state_tests(
         results_dict = OrderedDict()
         # Check for situations to disable parallization
         if parallel:
-            if type(num_proc) == float:
+            if isinstance(num_proc, float):
                 num_proc = int(num_proc)
 
             if multiprocessing.cpu_count() < 2:
@@ -927,12 +926,12 @@ class SaltCheck:
             else:
                 assertion_section_repr_title = ""
                 assertion_section_repr_value = ""
-            value[
-                f"module.function [args]{assertion_section_repr_title}"
-            ] = "{} {}{}".format(
-                mod_and_func,
-                dumps(args),
-                assertion_section_repr_value,
+            value[f"module.function [args]{assertion_section_repr_title}"] = (
+                "{} {}{}".format(
+                    mod_and_func,
+                    dumps(args),
+                    assertion_section_repr_value,
+                )
             )
             value["saltcheck assertion"] = "{}{} {}".format(
                 ("" if expected_return is None else f"{expected_return} "),

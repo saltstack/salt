@@ -1,6 +1,7 @@
 """
 A simple beacon to watch journald for specific entries
 """
+
 import logging
 
 import salt.utils.beacons

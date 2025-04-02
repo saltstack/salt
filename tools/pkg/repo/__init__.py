@@ -1,6 +1,7 @@
 """
 These commands are used to build the package repository files.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -8,26 +9,15 @@ import logging
 import os
 import pathlib
 import shutil
-import sys
 from typing import TYPE_CHECKING
 
+import boto3
+from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
 from tools.utils import Version, get_salt_releases
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +48,7 @@ def restore_previous_releases(ctx: Context):
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"backup-complete=true\n")
+            wfh.write("backup-complete=true\n")
     ctx.info("Done")
 
 
@@ -91,6 +81,7 @@ def _rclone(ctx: Context, src: str, dst: str):
         "--transfers=50",
         "--fast-list",
         "--verbose",
+        "--exclude=salt-dev/*",
     ]
     if src == tools.utils.RELEASE_BUCKET_NAME:
         cmdline.append("--s3-storage-class=INTELLIGENT_TIERING")
@@ -167,7 +158,9 @@ def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack
             )
         except ClientError as exc:
             if "Error" not in exc.response:
-                log.exception(f"Could not get information about {remote_path}: {exc}")
+                log.exception(
+                    "Could not get information about %s: %s", remote_path, exc
+                )
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
                 ctx.error(f"Could not find {remote_path} in bucket.")
@@ -175,7 +168,7 @@ def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(f"Could get information about {remote_path}: {exc}")
                 ctx.exit(1)
-            log.exception(f"Error getting information about {remote_path}: {exc}")
+            log.exception("Error getting information about %s: %s", remote_path, exc)
             ctx.exit(1)
     ctx.info(f"Version {salt_version} has been staged for release")
     ctx.exit(0)

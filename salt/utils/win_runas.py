@@ -52,6 +52,9 @@ def __virtual__():
 
 
 def split_username(username):
+    """
+    Splits out the username from the domain name and returns both.
+    """
     domain = "."
     user_name = username
     if "@" in username:
@@ -81,7 +84,8 @@ def create_env(user_token, inherit, timeout=1):
             break
     if env is not None:
         return env
-    raise exc
+    if exc is not None:
+        raise exc
 
 
 def runas(cmdLine, username, password=None, cwd=None):
@@ -183,8 +187,10 @@ def runas(cmdLine, username, password=None, cwd=None):
         | win32process.CREATE_SUSPENDED
     )
 
+    flags = win32con.STARTF_USESTDHANDLES
+    flags |= win32con.STARTF_USESHOWWINDOW
     startup_info = salt.platform.win.STARTUPINFO(
-        dwFlags=win32con.STARTF_USESTDHANDLES,
+        dwFlags=flags,
         hStdInput=stdin_read.handle,
         hStdOutput=stdout_write.handle,
         hStdError=stderr_write.handle,
@@ -192,6 +198,9 @@ def runas(cmdLine, username, password=None, cwd=None):
 
     # Create the environment for the user
     env = create_env(user_token, False)
+
+    if "&&" in cmdLine:
+        cmdLine = f'cmd /c "{cmdLine}"'
 
     hProcess = None
     try:
@@ -233,7 +242,7 @@ def runas(cmdLine, username, password=None, cwd=None):
         fd_out = msvcrt.open_osfhandle(stdout_read.handle, os.O_RDONLY | os.O_TEXT)
         with os.fdopen(fd_out, "r") as f_out:
             stdout = f_out.read()
-            ret["stdout"] = stdout
+            ret["stdout"] = stdout.strip()
 
         # Read standard error
         fd_err = msvcrt.open_osfhandle(stderr_read.handle, os.O_RDONLY | os.O_TEXT)
@@ -282,12 +291,17 @@ def runas_unpriv(cmd, username, password, cwd=None):
     dupin = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
 
     # Get startup info structure
+    flags = win32con.STARTF_USESTDHANDLES
+    flags |= win32con.STARTF_USESHOWWINDOW
     startup_info = salt.platform.win.STARTUPINFO(
-        dwFlags=win32con.STARTF_USESTDHANDLES,
+        dwFlags=flags,
         hStdInput=dupin,
         hStdOutput=c2pwrite,
         hStdError=errwrite,
     )
+
+    if "&&" in cmd:
+        cmd = f'cmd /c "{cmd}"'
 
     try:
         # Run command and return process info structure

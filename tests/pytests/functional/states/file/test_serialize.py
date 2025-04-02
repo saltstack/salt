@@ -4,7 +4,6 @@ import logging
 import pytest
 
 import salt.serializers.configparser
-import salt.serializers.plist
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +86,7 @@ def test_serializer_deserializer_opts(file, tmp_path):
     assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_binary_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of plists which should include
@@ -122,6 +122,7 @@ def test_serializer_plist_binary_file_open(file, tmp_path):
     assert serialized_data["foo"] == merged["foo"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of non binary plists with
@@ -147,3 +148,37 @@ def test_serializer_plist_file_open(file, tmp_path):
     serialized_data = salt.serializers.plist.deserialize(name.read_bytes())
     # make sure our serialized data matches what we expect
     assert serialized_data["foo"] == merged["foo"]
+
+
+def test_serialize_check_cmd(file, tmp_path):
+    # pass
+    path_test = tmp_path / "test_serialize_check_cmd"
+    dataset_one = {
+        "name": "naive",
+        "description": "A basic test",
+        "a_list": ["first_element", "second_element"],
+    }
+    ret = file.serialize(
+        name=str(path_test),
+        dataset=dataset_one,
+        serializer="json",
+        check_cmd="grep 'first_element'",
+    )
+    assert ret.result is True
+
+    # fail
+    dataset_two = {
+        "name": "naive",
+        "description": "A basic test",
+        "a_list": ["first_element", "second_element"],
+        "finally": "the last item",
+    }
+    ret = file.serialize(
+        name=str(path_test),
+        dataset=dataset_two,
+        serializer="json",
+        check_cmd="grep 'fifth_element'",
+    )
+    assert ret.result is False
+
+    assert json.loads(path_test.read_text()) == dataset_one

@@ -1,7 +1,7 @@
 {
   "repoOwner": "saltstack",
   "repoName": "salt",
-  "targetBranchChoices": ["master", "3006.x", "3005.x"],
+  "targetBranchChoices": ["master", "3006.x", "3005.x", "freeze"],
   "autoMerge": false,
   "autoMergeMethod": "rebase",
   "branchLabelMapping": {

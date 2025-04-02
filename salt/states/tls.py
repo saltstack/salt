@@ -4,7 +4,6 @@ Enforce state for SSL/TLS
 
 """
 
-
 import datetime
 import logging
 import time
@@ -31,7 +30,7 @@ def valid_certificate(name, weeks=0, days=0, hours=0, minutes=0, seconds=0):
     try:
         cert_info = __salt__["tls.cert_info"](name)
     except OSError as exc:
-        ret["comment"] = "{}".format(exc)
+        ret["comment"] = f"{exc}"
         ret["result"] = False
         log.error(ret["comment"])
         return ret
@@ -63,5 +62,5 @@ def valid_certificate(name, weeks=0, days=0, hours=0, minutes=0, seconds=0):
         return ret
 
     ret["result"] = True
-    ret["comment"] = "Certificate is valid for {}".format(delta_remaining)
+    ret["comment"] = f"Certificate is valid for {delta_remaining}"
     return ret

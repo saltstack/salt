@@ -49,7 +49,7 @@ def tcc_db_path(tmp_path, macos_version):
         #   .schema
         #
         # Copy/Paste the output of that to this test.
-        pytest.fail("Don't know how to handle {}".format(macos_version))
+        pytest.fail(f"Don't know how to handle {macos_version}")
     conn = sqlite3.connect(str(db))
     with conn:
         for stmt in schema.splitlines():

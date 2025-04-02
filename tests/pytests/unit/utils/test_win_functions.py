@@ -1,10 +1,19 @@
-import pytest
+import platform
 
+import pytest
+from saltfactories.utils import random_string
+
+import salt.modules.win_useradd
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
 
 HAS_WIN32 = False
 HAS_PYWIN = False
+
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+]
 
 try:
     import win32net
@@ -29,10 +38,17 @@ except ImportError:
     HAS_PYWIN = False
 
 
+@pytest.fixture(scope="module")
+def test_user():
+    user_name = random_string("test-")
+    salt.modules.win_useradd.add(name=user_name, password="P@ssw0rd")
+    yield user_name
+    salt.modules.win_useradd.delete(name=user_name)
+
+
 # Test cases for salt.utils.win_functions.
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_escape_argument_simple():
     """
     Test to make sure we encode simple arguments correctly
@@ -41,7 +57,6 @@ def test_escape_argument_simple():
     assert encoded == "simple"
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_escape_argument_with_space():
     """
     Test to make sure we encode arguments containing spaces correctly
@@ -50,7 +65,6 @@ def test_escape_argument_with_space():
     assert encoded == '^"with space^"'
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_escape_argument_simple_path():
     """
     Test to make sure we encode simple path arguments correctly
@@ -59,7 +73,6 @@ def test_escape_argument_simple_path():
     assert encoded == "C:\\some\\path"
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_escape_argument_path_with_space():
     """
     Test to make sure we encode path arguments containing spaces correctly
@@ -68,7 +81,6 @@ def test_escape_argument_path_with_space():
     assert encoded == '^"C:\\Some Path\\With Spaces^"'
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_broadcast_setting_change():
     """
     Test to rehash the Environment variables
@@ -76,14 +88,12 @@ def test_broadcast_setting_change():
     assert win_functions.broadcast_setting_change()
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_get_user_groups():
     groups = ["Administrators", "Users"]
     with patch("win32net.NetUserGetLocalGroups", return_value=groups):
         assert win_functions.get_user_groups("Administrator") == groups
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_get_user_groups_sid():
     groups = ["Administrators", "Users"]
     expected = ["S-1-5-32-544", "S-1-5-32-545"]
@@ -91,14 +101,12 @@ def test_get_user_groups_sid():
         assert win_functions.get_user_groups("Administrator", sid=True) == expected
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_get_user_groups_system():
     groups = ["SYSTEM"]
     with patch("win32net.NetUserGetLocalGroups", return_value=groups):
         assert win_functions.get_user_groups("SYSTEM") == groups
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_user_groups_unavailable_dc():
     groups = ["Administrators", "Users"]
@@ -109,7 +117,6 @@ def test_get_user_groups_unavailable_dc():
         assert win_functions.get_user_groups("Administrator") == groups
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_user_groups_unknown_dc():
     groups = ["Administrators", "Users"]
@@ -120,7 +127,6 @@ def test_get_user_groups_unknown_dc():
         assert win_functions.get_user_groups("Administrator") == groups
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_user_groups_missing_permission():
     groups = ["Administrators", "Users"]
@@ -131,7 +137,6 @@ def test_get_user_groups_missing_permission():
         assert win_functions.get_user_groups("Administrator") == groups
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_user_groups_error():
     win_error = WinError()
@@ -142,7 +147,6 @@ def test_get_user_groups_error():
             win_functions.get_user_groups("Administrator")
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
 def test_get_user_groups_local_pywin_error():
     win_error = PyWinError()
@@ -153,7 +157,6 @@ def test_get_user_groups_local_pywin_error():
             win_functions.get_user_groups("Administrator")
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
 def test_get_user_groups_pywin_error():
     win_error = PyWinError()
@@ -163,3 +166,27 @@ def test_get_user_groups_pywin_error():
         with patch("win32net.NetUserGetGroups", side_effect=mock_error):
             with pytest.raises(PyWinError):
                 win_functions.get_user_groups("Administrator")
+
+
+@pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
+def test_get_sam_name_lookup_fails():
+    win_error = PyWinError()
+    mock_error = MagicMock(side_effect=win_error)
+    with patch("win32security.LookupAccountName", side_effect=mock_error):
+        expected = "\\".join([platform.node()[:15].upper(), "junk"])
+        result = win_functions.get_sam_name("junk")
+        assert result == expected
+
+
+@pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
+def test_get_sam_name_everyone():
+    expected = "Everyone"
+    result = win_functions.get_sam_name("Everyone")
+    assert result == expected
+
+
+@pytest.mark.skipif(not HAS_PYWIN, reason="Requires pywintypes libraries")
+def test_get_sam_name(test_user):
+    expected = "\\".join([platform.node()[:15], test_user])
+    result = win_functions.get_sam_name(test_user)
+    assert result.lower() == expected.lower()

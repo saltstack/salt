@@ -6,6 +6,7 @@ Module to manage Windows software repo on a Standalone Minion
 For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
+
 import logging
 import os
 
@@ -164,15 +165,15 @@ def show_sls(name, saltenv="base"):
         repo.extend(definition)
 
         # Check for the sls file by name
-        sls_file = "{}.sls".format(os.sep.join(repo))
+        sls_file = f"{os.sep.join(repo)}.sls"
         if not os.path.exists(sls_file):
 
             # Maybe it's a directory with an init.sls
-            sls_file = "{}\\init.sls".format(os.sep.join(repo))
+            sls_file = f"{os.sep.join(repo)}\\init.sls"
             if not os.path.exists(sls_file):
 
                 # It's neither, return
-                return "Software definition {} not found".format(name)
+                return f"Software definition {name} not found"
 
     # Load the renderer
     renderers = salt.loader.render(__opts__, __salt__)
@@ -192,7 +193,7 @@ def show_sls(name, saltenv="base"):
     except SaltRenderError as exc:
         log.debug("Failed to compile %s.", sls_file)
         log.debug("Error: %s.", exc)
-        config["Message"] = "Failed to compile {}".format(sls_file)
-        config["Error"] = "{}".format(exc)
+        config["Message"] = f"Failed to compile {sls_file}"
+        config["Error"] = f"{exc}"
 
     return config

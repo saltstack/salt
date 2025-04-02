@@ -5,7 +5,6 @@
     Code to generate Salt CLI scripts for test runs
 """
 
-
 import logging
 import os
 

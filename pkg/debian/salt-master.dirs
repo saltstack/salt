@@ -1,5 +1,4 @@
 /etc/salt/master.d
-/etc/ufw/applications.d/salt-master
 /etc/salt/pki/master/minions
 /etc/salt/pki/master/minions_autosign
 /etc/salt/pki/master/minions_denied

@@ -4,6 +4,7 @@
 
     Load beacon test cases
 """
+
 import pytest
 
 import salt.beacons.load as load

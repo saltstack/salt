@@ -43,7 +43,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata="fake string data",
         )
@@ -52,7 +52,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -83,7 +83,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata=UNICODE_VALUE,
         )
@@ -92,7 +92,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -122,14 +122,14 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # default type is 'REG_SZ'
         # Does the state return the correct data
         ret = self.run_state(
-            "reg.present", name="HKLM\\{}".format(FAKE_KEY), vdata=UNICODE_VALUE
+            "reg.present", name=f"HKLM\\{FAKE_KEY}", vdata=UNICODE_VALUE
         )
         expected = {
             "reg": {
                 "Added": {
                     "Entry": "(Default)",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -161,7 +161,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname=UNICODE_VALUE_NAME,
             vdata="fake string data",
         )
@@ -170,7 +170,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": UNICODE_VALUE_NAME,
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -203,7 +203,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_binary",
             vtype="REG_BINARY",
             vdata=test_data,
@@ -213,7 +213,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_binary",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": test_data,
@@ -244,7 +244,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_multi_sz",
             vtype="REG_MULTI_SZ",
             vdata=["item1", "item2"],
@@ -254,7 +254,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_multi_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": ["item1", "item2"],
@@ -285,7 +285,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata="fake string data",
             use_32bit_registry=True,
@@ -296,7 +296,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",

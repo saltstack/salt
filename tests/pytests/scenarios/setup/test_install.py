@@ -1,6 +1,7 @@
 """
 Tests for building and installing salt
 """
+
 import json
 import logging
 import os

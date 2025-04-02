@@ -41,7 +41,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             ) as reqfp:
                 return_text = reqfp.read().encode("utf-8")
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_text).hexdigest()
+                checksum = hashlib.sha256(return_text).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304

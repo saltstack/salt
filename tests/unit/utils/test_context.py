@@ -3,7 +3,6 @@ tests.unit.context_test
 ~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import salt.utils.json
 from salt.utils.context import NamespacedDictWrapper
 from tests.support.unit import TestCase

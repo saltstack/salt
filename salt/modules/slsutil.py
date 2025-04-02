@@ -2,7 +2,7 @@
 Utility functions for use with or in SLS files
 """
 
-
+import logging
 import os
 import posixpath
 import textwrap
@@ -15,6 +15,9 @@ import salt.utils.dictupdate
 import salt.utils.path
 
 CONTEXT_BASE = "slsutil"
+
+
+log = logging.getLogger(__name__)
 
 
 def update(dest, upd, recursive_update=True, merge_lists=False):
@@ -127,18 +130,18 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     .. code-block:: jinja
 
         #!jinja|yaml
-        {% set apache = salt.grains.filter_by({
+        {% set apache = salt['grains.filter_by']({
             ...normal jinja map file here...
-        }, merge=salt.pillar.get('apache:lookup')) %}
+        }, merge=salt['pillar.get']('apache:lookup')) %}
         {{ apache | yaml() }}
 
     .. code-block:: python
 
         #!py
         def run():
-            apache = __salt__.grains.filter_by({
+            apache = __salt__['grains.filter_by']({
                 ...normal map here but as a python dict...
-            }, merge=__salt__.pillar.get('apache:lookup'))
+            }, merge=__salt__['pillar.get']('apache:lookup'))
             return apache
 
     Regardless of which of the above map files is used, it can be accessed from
@@ -147,7 +150,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
 
     .. code-block:: jinja
 
-        {% set apache = salt.slsutil.renderer('map.sls') %}
+        {% set apache = salt['slsutil.renderer']('map.sls') %}
 
     CLI Example:
 
@@ -161,7 +164,10 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     """
     if not path and not string:
-        raise salt.exceptions.SaltInvocationError("Must pass either path or string")
+        raise salt.exceptions.SaltInvocationError("Must pass path or string.")
+
+    if path and string:
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string.")
 
     renderers = salt.loader.render(__opts__, __salt__)
 
@@ -169,7 +175,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         path_or_string = __salt__["cp.get_url"](
             path, saltenv=kwargs.get("saltenv", "base")
         )
-    elif string:
+    if string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
 
@@ -179,7 +185,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         default_renderer,
         __opts__["renderer_blacklist"],
         __opts__["renderer_whitelist"],
-        **kwargs
+        **kwargs,
     )
     return ret.read() if __utils__["stringio.is_readable"](ret) else ret
 
@@ -191,12 +197,12 @@ def _get_serialize_fn(serializer, fn_name):
 
     if not fns:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{}' not found.".format(serializer)
+            f"Serializer '{serializer}' not found."
         )
 
     if not fn:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{}' does not implement {}.".format(serializer, fn_name)
+            f"Serializer '{serializer}' does not implement {fn_name}."
         )
 
     return fn
@@ -217,7 +223,7 @@ def serialize(serializer, obj, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set json_string = salt.slsutil.serialize('json',
+        {% set json_string = salt['slsutil.serialize']('json',
             {'foo': 'Foo!'}) %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
@@ -241,7 +247,7 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set python_object = salt.slsutil.deserialize('json',
+        {% set python_object = salt['slsutil.deserialize']('json',
             '{"foo": "Foo!"}') %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
@@ -568,7 +574,7 @@ def findup(startpath, filenames, saltenv="base"):
     # Verify the cwd is a valid path in the state tree
     if startpath and not path_exists(startpath, saltenv):
         raise salt.exceptions.SaltInvocationError(
-            "Starting path not found in the state tree: {}".format(startpath)
+            f"Starting path not found in the state tree: {startpath}"
         )
 
     # Ensure that patterns is a string or list of strings

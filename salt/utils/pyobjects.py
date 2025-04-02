@@ -250,10 +250,10 @@ class State:
 
     @property
     def full_func(self):
-        return "{!s}.{!s}".format(self.module, self.func)
+        return f"{self.module!s}.{self.func!s}"
 
     def __str__(self):
-        return "{!s} = {!s}:{!s}".format(self.id_, self.full_func, self.attrs)
+        return f"{self.id_!s} = {self.full_func!s}:{self.attrs!s}"
 
     def __call__(self):
         return {self.full_func: self.attrs}
@@ -283,7 +283,7 @@ class SaltObject:
         class __wrapper__:
             def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
-                    return self._salt["{}.{}".format(mod, func)]
+                    return self._salt[f"{mod}.{func}"]
                 except KeyError:
                     raise AttributeError
 

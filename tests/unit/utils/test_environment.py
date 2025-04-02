@@ -1,6 +1,7 @@
 """
 Test case for utils/__init__.py
 """
+
 import salt.utils.environment
 from tests.support.unit import TestCase
 

@@ -4,7 +4,6 @@ Decorators for salt.state
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 """
 
-
 import logging
 
 import salt.utils.stringutils
@@ -18,7 +17,7 @@ class OutputUnifier:
         self.policies = []
         for pls in policies:
             if not hasattr(self, pls):
-                raise SaltException("Unknown policy: {}".format(pls))
+                raise SaltException(f"Unknown policy: {pls}")
             else:
                 self.policies.append(getattr(self, pls))
 
@@ -36,7 +35,7 @@ class OutputUnifier:
                     "result": False,
                     "name": "later",
                     "changes": {},
-                    "comment": "An exception occurred in this state: {}".format(exc),
+                    "comment": f"An exception occurred in this state: {exc}",
                 }
         return data
 

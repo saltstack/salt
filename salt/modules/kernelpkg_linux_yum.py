@@ -199,14 +199,12 @@ def remove(release):
         salt '*' kernelpkg.remove 3.10.0-327.el7
     """
     if release not in list_installed():
-        raise CommandExecutionError(
-            "Kernel release '{}' is not installed".format(release)
-        )
+        raise CommandExecutionError(f"Kernel release '{release}' is not installed")
 
     if release == active():
         raise CommandExecutionError("Active kernel cannot be removed")
 
-    target = "{}-{}".format(_package_name(), release)
+    target = f"{_package_name()}-{release}"
     log.info("Removing kernel package %s", target)
     old = __salt__["pkg.list_pkgs"]()
 

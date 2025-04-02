@@ -3,6 +3,7 @@
 """
 
 import logging
+from typing import Any
 
 import pytest
 
@@ -11,7 +12,6 @@ import salt.state
 import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -38,28 +38,39 @@ def test_format_log_non_ascii_character():
     salt.state.format_log(ret)
 
 
+def test_format_log_list(caplog):
+    """
+    Test running format_log when ret is not a dictionary
+    """
+    with caplog.at_level(logging.INFO):
+        ret = ["test1", "test2"]
+        salt.state.format_log(ret)
+        assert "INFO" in caplog.text
+        assert f"{ret}" in caplog.text
+
+
 def test_render_error_on_invalid_requisite(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
     """
     with patch("salt.state.State._gather_pillar"):
-        high_data = {
-            "git": OrderedDict(
+        high_data: dict[str, Any] = {
+            "git": salt.state.HashableOrderedDict(
                 [
                     (
                         "pkg",
                         [
-                            OrderedDict(
+                            salt.state.HashableOrderedDict(
                                 [
                                     (
                                         "require",
                                         [
-                                            OrderedDict(
+                                            salt.state.HashableOrderedDict(
                                                 [
                                                     (
                                                         "file",
-                                                        OrderedDict(
+                                                        salt.state.HashableOrderedDict(
                                                             [("test1", "test")]
                                                         ),
                                                     )
@@ -78,10 +89,16 @@ def test_render_error_on_invalid_requisite(minion_opts):
                 ]
             )
         }
-        minion_opts["pillar"] = {"git": OrderedDict([("test1", "test")])}
+        expected_result = [
+            "Requisite [require: file] in state [git] in SLS"
+            " [issue_35226] must have a string as the value"
+        ]
+        minion_opts["pillar"] = {
+            "git": salt.state.HashableOrderedDict([("test1", "test")])
+        }
         state_obj = salt.state.State(minion_opts)
-        with pytest.raises(salt.exceptions.SaltRenderError):
-            state_obj.call_high(high_data)
+        return_result = state_obj.call_high(high_data)
+        assert expected_result == return_result
 
 
 def test_verify_onlyif_parse(minion_opts):
@@ -709,13 +726,22 @@ def test_render_requisite_require_disabled(minion_opts):
     """
     with patch("salt.state.State._gather_pillar"):
         high_data = {
-            "step_one": OrderedDict(
+            "step_one": salt.state.HashableOrderedDict(
                 [
                     (
                         "test",
                         [
-                            OrderedDict(
-                                [("require", [OrderedDict([("test", "step_two")])])]
+                            salt.state.HashableOrderedDict(
+                                [
+                                    (
+                                        "require",
+                                        [
+                                            salt.state.HashableOrderedDict(
+                                                [("test", "step_two")]
+                                            )
+                                        ],
+                                    )
+                                ]
                             ),
                             "succeed_with_changes",
                             {"order": 10000},
@@ -735,6 +761,7 @@ def test_render_requisite_require_disabled(minion_opts):
         minion_opts["disabled_requisites"] = ["require"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
+        assert isinstance(ret, dict)
         run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
             "__run_num__"
         ]
@@ -753,16 +780,20 @@ def test_render_requisite_require_in_disabled(minion_opts):
                 "__env__": "base",
                 "__sls__": "test.disable_require_in",
             },
-            "step_two": OrderedDict(
+            "step_two": salt.state.HashableOrderedDict(
                 [
                     (
                         "test",
                         [
-                            OrderedDict(
+                            salt.state.HashableOrderedDict(
                                 [
                                     (
                                         "require_in",
-                                        [OrderedDict([("test", "step_one")])],
+                                        [
+                                            salt.state.HashableOrderedDict(
+                                                [("test", "step_one")]
+                                            )
+                                        ],
                                     )
                                 ]
                             ),
@@ -779,6 +810,7 @@ def test_render_requisite_require_in_disabled(minion_opts):
         minion_opts["disabled_requisites"] = ["require_in"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
+        assert isinstance(ret, dict)
         run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
             "__run_num__"
         ]
@@ -821,135 +853,13 @@ def test_call_chunk_sub_state_run(minion_opts):
         with patch("salt.state.State.call", return_value=mock_call_return):
             minion_opts["disabled_requisites"] = ["require"]
             state_obj = salt.state.State(minion_opts)
-            ret = state_obj.call_chunk(low_data, {}, {})
+            ret = state_obj.call_chunk(low_data, {}, [])
             sub_state = ret.get(expected_sub_state_tag)
             assert sub_state
             assert sub_state["__run_num__"] == 1
             assert sub_state["name"] == "external_state_name"
             assert sub_state["__state_ran__"]
             assert sub_state["__sls__"] == "external"
-
-
-def test_aggregate_requisites(minion_opts):
-    """
-    Test to ensure that the requisites are included in the aggregated low state.
-    """
-    # The low that is returned from _mod_aggregrate
-    low = {
-        "state": "pkg",
-        "name": "other_pkgs",
-        "__sls__": "47628",
-        "__env__": "base",
-        "__id__": "other_pkgs",
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
-        "aggregate": True,
-        "order": 10002,
-        "fun": "installed",
-        "__agg__": True,
-    }
-
-    # Chunks that have been processed through the pkg mod_aggregate function
-    chunks = [
-        {
-            "state": "file",
-            "name": "/tmp/install-vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-vim",
-            "order": 10000,
-            "fun": "managed",
-        },
-        {
-            "state": "file",
-            "name": "/tmp/install-tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "/tmp/install-tmux",
-            "order": 10001,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "other_pkgs",
-            "__sls__": "47628",
-            "__env __": "base",
-            "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
-            "aggregate": True,
-            "order": 10002,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "bc",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "bc",
-            "hold": True,
-            "__agg__": True,
-            "order": 10003,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "vim",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "vim",
-            "require": ["/tmp/install-vim"],
-            "order": 10004,
-            "fun": "installed",
-        },
-        {
-            "state": "pkg",
-            "name": "tmux",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "tmux",
-            "require": ["/tmp/install-tmux"],
-            "order": 10005,
-            "fun": "installed",
-        },
-        {
-            "state": "pkgrepo",
-            "name": "deb https://packages.cloud.google.com/apt cloud-sdk main",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__id__": "google-cloud-repo",
-            "humanname": "Google Cloud SDK",
-            "file": "/etc/apt/sources.list.d/google-cloud-sdk.list",
-            "key_url": "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
-            "order": 10006,
-            "fun": "managed",
-        },
-        {
-            "state": "pkg",
-            "name": "google-cloud-sdk",
-            "__sls__": "47628",
-            "__env__": "base",
-            "__agg__": True,
-            "__id__": "google-cloud-sdk",
-            "require": ["google-cloud-repo"],
-            "order": 10007,
-            "fun": "installed",
-        },
-    ]
-
-    with patch("salt.state.State._gather_pillar"):
-        state_obj = salt.state.State(minion_opts)
-        low_ret = state_obj._aggregate_requisites(low, chunks)
-
-        # Ensure the low returned contains require
-        assert "require" in low_ret
-
-        # Ensure all the requires from pkg states are in low
-        assert low_ret["require"] == [
-            "/tmp/install-vim",
-            "/tmp/install-tmux",
-            "google-cloud-repo",
-        ]
 
 
 def test_mod_aggregate(minion_opts):
@@ -963,7 +873,7 @@ def test_mod_aggregate(minion_opts):
         "__sls__": "test.62439",
         "__env__": "base",
         "__id__": "sl",
-        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "require_in": [salt.state.HashableOrderedDict([("file", "/tmp/foo")])],
         "order": 10002,
         "aggregate": True,
         "fun": "installed",
@@ -989,7 +899,7 @@ def test_mod_aggregate(minion_opts):
             "__env__": "base",
             "__id__": "figlet",
             "__agg__": True,
-            "require": [OrderedDict([("file", "/tmp/foo")])],
+            "require": [salt.state.HashableOrderedDict([("file", "/tmp/foo")])],
             "order": 10001,
             "aggregate": True,
             "fun": "installed",
@@ -1000,8 +910,18 @@ def test_mod_aggregate(minion_opts):
             "__sls__": "test.62439",
             "__env__": "base",
             "__id__": "sl",
-            "require_in": [OrderedDict([("file", "/tmp/foo")])],
+            "require_in": [salt.state.HashableOrderedDict([("file", "/tmp/foo")])],
             "order": 10002,
+            "aggregate": True,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "hello",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "hello",
+            "order": 10003,
             "aggregate": True,
             "fun": "installed",
         },
@@ -1015,11 +935,11 @@ def test_mod_aggregate(minion_opts):
         "__sls__": "test.62439",
         "__env__": "base",
         "__id__": "sl",
-        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "require_in": [salt.state.HashableOrderedDict([("file", "/tmp/foo")])],
         "order": 10002,
         "fun": "installed",
         "__agg__": True,
-        "pkgs": ["figlet", "sl"],
+        "pkgs": ["sl", "hello"],
     }
 
     with patch("salt.state.State._gather_pillar"):
@@ -1028,20 +948,23 @@ def test_mod_aggregate(minion_opts):
             state_obj.states,
             {"pkg.mod_aggregate": MagicMock(return_value=mock_pkg_mod_aggregate)},
         ):
-            low_ret = state_obj._mod_aggregate(low, running, chunks)
+            state_obj.order_chunks(chunks)
+            low_ret = state_obj._mod_aggregate(low, running)
 
             # Ensure the low returned contains require
             assert "require_in" in low_ret
 
             # Ensure all the requires from pkg states are in low
-            assert low_ret["require_in"] == [OrderedDict([("file", "/tmp/foo")])]
+            assert low_ret["require_in"] == [
+                salt.state.HashableOrderedDict([("file", "/tmp/foo")])
+            ]
 
             # Ensure that the require requisite from the
             # figlet state doesn't find its way into this state
             assert "require" not in low_ret
 
             # Ensure pkgs were aggregated
-            assert low_ret["pkgs"] == ["figlet", "sl"]
+            assert low_ret["pkgs"] == ["sl", "hello"]
 
 
 def test_verify_onlyif_cmd_opts_exclude(minion_opts):
@@ -1089,3 +1012,240 @@ def test_verify_onlyif_cmd_opts_exclude(minion_opts):
                 timeout=5,
                 success_retcodes=1,
             )
+
+
+@pytest.mark.parametrize("verifier", (salt.state.State, salt.state.Compiler))
+@pytest.mark.parametrize(
+    "high,err_msg",
+    (
+        (
+            {"/some/file": {"file.managed": ["source:salt://bla"]}},
+            "Too many functions declared in state '/some/file' in SLS 'sls'. Please choose one of the following: managed, source:salt://bla",
+        ),
+        (
+            {"/some/file": {"file": ["managed", "source:salt://bla"]}},
+            "Too many functions declared in state '/some/file' in SLS 'sls'. Please choose one of the following: managed, source:salt://bla",
+        ),
+    ),
+)
+def test_verify_high_too_many_functions_declared_error_message(
+    high, err_msg, minion_opts, verifier
+):
+    """
+    Ensure the error message when a list item of a state call is
+    accidentally passed as a string instead of a single-item dict
+    is more meaningful. Example:
+
+    /some/file:
+      file.managed:
+        - source:salt://bla
+
+    /some/file:
+      file:
+        - managed
+        - source:salt://bla
+
+    Issue #38098.
+    """
+    high[next(iter(high))]["__sls__"] = "sls"
+    with patch("salt.state.State._gather_pillar"):
+        if verifier is salt.state.Compiler:
+            state_obj = verifier(minion_opts, [])
+        else:
+            state_obj = verifier(minion_opts)
+        res = state_obj.verify_high(high)
+        assert isinstance(res, list)
+        assert any(err_msg in x for x in res)
+
+
+def test_load_modules_pkg(minion_opts):
+    """
+    Test load_modules when using this state:
+    nginx:
+      pkg.installed:
+        - provider: pacmanpkg
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": "pacmanpkg",
+        "order": 10000,
+        "fun": "installed",
+    }
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(data)
+        for func in [
+            "pkg.available_version",
+            "pkg.file_list",
+            "pkg.group_diff",
+            "pkg.group_info",
+        ]:
+            assert func in state_obj.functions
+
+
+def test_load_modules_list(minion_opts):
+    """
+    Test load_modules when using providers in state
+    as a list, with this state:
+    nginx:
+      pkg.installed:
+        - provider:
+          - cmd: cmdmod
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": [salt.state.HashableOrderedDict([("cmd", "cmdmod")])],
+        "order": 10000,
+        "fun": "installed",
+    }
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        state_obj.load_modules(data)
+        for func in ["cmd.exec_code", "cmd.run", "cmd.script"]:
+            assert func in state_obj.functions
+
+
+def test_load_modules_dict(minion_opts):
+    """
+    Test load_modules when providers is a dict, which is
+    not valid. Testing this state:
+    nginx:
+      pkg.installed:
+        - provider: {cmd: test}
+    """
+    data = {
+        "state": "pkg",
+        "name": "nginx",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "nginx",
+        "provider": salt.state.HashableOrderedDict([("cmd", "test")]),
+        "order": 10000,
+        "fun": "installed",
+    }
+    mock_raw_mod = MagicMock()
+    patch_raw_mod = patch("salt.loader.raw_mod", mock_raw_mod)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_raw_mod:
+            state_obj = salt.state.State(minion_opts)
+            state_obj.load_modules(data)
+            mock_raw_mod.assert_not_called()
+
+
+def test_check_refresh_grains(minion_opts):
+    """
+    Test check_refresh when using this state:
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+    Ensure that the grains are loaded when reload_grains
+    is set.
+    """
+    data = {
+        "state": "module",
+        "name": "saltutil.refresh_grains",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "grains_refresh",
+        "reload_grains": True,
+        "order": 10000,
+        "fun": "run",
+    }
+    ret = {
+        "name": "saltutil.refresh_grains",
+        "changes": {"ret": True},
+        "comment": "Module function saltutil.refresh_grains executed",
+        "result": True,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_refresh:
+            state_obj = salt.state.State(minion_opts)
+            state_obj.check_refresh(data, ret)
+            mock_refresh.assert_called_once()
+            assert "cwd" in state_obj.opts["grains"]
+
+
+def test_check_refresh_pillar(minion_opts, caplog):
+    """
+    Test check_refresh when using this state:
+    pillar_refresh:
+      module.run:
+       - name: saltutil.refresh_pillar
+       - reload_pillar: true
+    Ensure the pillar is refreshed.
+    """
+    data = {
+        "state": "module",
+        "name": "saltutil.refresh_pillar",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "pillar_refresh",
+        "reload_pillar": True,
+        "order": 10000,
+        "fun": "run",
+    }
+    ret = {
+        "name": "saltutil.refresh_pillar",
+        "changes": {"ret": False},
+        "comment": "Module function saltutil.refresh_pillar executed",
+        "result": False,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    mock_pillar = MagicMock()
+    patch_pillar = patch("salt.state.State._gather_pillar", mock_pillar)
+    with patch_pillar, patch_refresh:
+        with caplog.at_level(logging.DEBUG):
+            state_obj = salt.state.State(minion_opts)
+            state_obj.check_refresh(data, ret)
+            mock_refresh.assert_called_once()
+            assert "Refreshing pillar..." in caplog.text
+
+
+def test_module_refresh_runtimeerror(minion_opts, caplog):
+    """
+    test module_refresh when runtimerror occurs
+    """
+    mock_importlib = MagicMock()
+    mock_importlib.side_effect = RuntimeError("Error")
+    patch_importlib = patch("importlib.reload", mock_importlib)
+    patch_pillar = patch("salt.state.State._gather_pillar", return_value="")
+    with patch_importlib, patch_pillar:
+        state_obj = salt.state.State(minion_opts)
+        state_obj.module_refresh()
+        assert (
+            "Error encountered during module reload. Modules were not reloaded."
+            in caplog.text
+        )
+
+
+def test_module_refresh_typeerror(minion_opts, caplog):
+    """
+    test module_refresh when typeerror occurs
+    """
+    mock_importlib = MagicMock()
+    mock_importlib.side_effect = TypeError("Error")
+    patch_importlib = patch("importlib.reload", mock_importlib)
+    patch_pillar = patch("salt.state.State._gather_pillar", return_value="")
+    with patch_importlib, patch_pillar:
+        state_obj = salt.state.State(minion_opts)
+        state_obj.module_refresh()
+        assert (
+            "Error encountered during module reload. Modules were not reloaded."
+            in caplog.text
+        )

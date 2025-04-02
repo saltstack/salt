@@ -40,15 +40,15 @@ def download_onedir_artifact(
             )
             return ExitCode.FAIL
     else:
-        if arch == "arm64":
-            ctx.info(f"Turning passed arch {arch!r} into 'aarch64'")
-            arch = "aarch64"
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
         elif arch == "x64":
             ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
             arch = "x86_64"
-        if arch not in ("x86_64", "aarch64"):
+        if arch not in ("x86_64", "arm64"):
             ctx.error(
-                f"The allowed values for '--arch' on {platform.title()} are 'x86_64', 'aarch64' or 'arm64'"
+                f"The allowed values for '--arch' on {platform.title()} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
     artifacts_path = tools.utils.REPO_ROOT / "artifacts"
@@ -105,8 +105,9 @@ def download_onedir_artifact(
 
 def download_nox_artifact(
     ctx: Context,
+    platform: str,
+    arch: str,
     run_id: int = None,
-    slug: str = None,
     nox_env: str = "ci-test-onedir",
     repository: str = "saltstack/salt",
 ) -> ExitCode:
@@ -115,7 +116,30 @@ def download_nox_artifact(
     """
     if TYPE_CHECKING:
         assert run_id is not None
-        assert slug is not None
+        assert arch is not None
+        assert platform is not None
+
+    if platform == "windows":
+        if arch in ("x64", "x86_64"):
+            ctx.info(f"Turning passed arch {arch!r} into 'amd64'")
+            arch = "amd64"
+        if arch not in ("amd64", "x86"):
+            ctx.error(
+                "The allowed values for '--arch' on Windows are 'amd64' and 'x86'"
+            )
+            return ExitCode.FAIL
+    else:
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
+        elif arch == "x64":
+            ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
+            arch = "x86_64"
+        if arch not in ("x86_64", "arm64"):
+            ctx.error(
+                f"The allowed values for '--arch' on {platform.title()} are 'x86_64' or 'arm64'"
+            )
+            return ExitCode.FAIL
 
     artifacts_path = tools.utils.REPO_ROOT / ".nox" / nox_env
     if artifacts_path.exists():
@@ -123,7 +147,7 @@ def download_nox_artifact(
             f"The '.nox/{nox_env}' directory already exists ... Stopped processing."
         )
         return ExitCode.SOFT_FAIL
-    artifact_name = f"nox-{slug}-{nox_env}"
+    artifact_name = f"nox-{platform}-{arch}-{nox_env}"
     ctx.info(
         f"Searching for artifact {artifact_name} from run_id {run_id} in repository {repository} ..."
     )
@@ -138,7 +162,16 @@ def download_nox_artifact(
     if nox is None:
         ctx.error("Could not find the 'nox' binary in $PATH")
         return ExitCode.FAIL
-    ret = ctx.run(nox, "-e", "decompress-dependencies", "--", slug, check=False)
+    ret = ctx.run(
+        nox,
+        "--force-color",
+        "-e",
+        "decompress-dependencies",
+        "--",
+        platform,
+        arch,
+        check=False,
+    )
     if ret.returncode:
         ctx.error("Failed to decompress the nox dependencies")
         return ExitCode.FAIL
@@ -171,29 +204,29 @@ def download_pkgs_artifact(
             return ExitCode.FAIL
         artifact_name += f"{arch}-MSI"
     else:
-        if arch == "arm64":
-            ctx.info(f"Turning passed arch {arch!r} into 'aarch64'")
-            arch = "aarch64"
+        if arch == "aarch64":
+            ctx.info(f"Turning passed arch {arch!r} into 'arm64'")
+            arch = "arm64"
         elif arch == "x64":
             ctx.info(f"Turning passed arch {arch!r} into 'x86_64'")
             arch = "x86_64"
-        if arch not in ("x86_64", "aarch64"):
+        if arch not in ("x86_64", "arm64"):
             ctx.error(
-                f"The allowed values for '--arch' for {slug} are 'x86_64', 'aarch64' or 'arm64'"
+                f"The allowed values for '--arch' for {slug} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
 
         if slug.startswith(("debian", "ubuntu")):
             artifact_name += f"{arch}-deb"
         elif slug.startswith(
-            ("almalinux", "amazonlinux", "centos", "fedora", "opensuse", "photonos")
+            ("rockylinux", "amazonlinux", "fedora", "opensuse", "photonos")
         ):
             artifact_name += f"{arch}-rpm"
         else:
             ctx.error(f"We do not build packages for {slug}")
             return ExitCode.FAIL
 
-    artifacts_path = tools.utils.REPO_ROOT / "pkg" / "artifacts"
+    artifacts_path = tools.utils.REPO_ROOT / "artifacts" / "pkg"
     artifacts_path.mkdir(exist_ok=True)
 
     ctx.info(
@@ -216,11 +249,20 @@ def get_github_token(ctx: Context) -> str | None:
     Get the GITHUB_TOKEN to be able to authenticate to the API.
     """
     github_token = os.environ.get("GITHUB_TOKEN")
-    if github_token is None:
-        gh = shutil.which("gh")
-        ret = ctx.run(gh, "auth", "token", check=False, capture=True)
-        if ret.returncode == 0:
-            github_token = ret.stdout.decode().strip() or None
+    if github_token is not None:
+        ctx.info("$GITHUB_TOKEN was found on the environ")
+        return github_token
+
+    gh = shutil.which("gh")
+    if gh is None:
+        ctx.info("The 'gh' CLI tool is not available. Can't get a token using it.")
+        return github_token
+
+    ret = ctx.run(gh, "auth", "token", check=False, capture=True)
+    if ret.returncode == 0:
+        ctx.info("Got the GitHub token from the 'gh' CLI tool")
+        return ret.stdout.decode().strip() or None
+    ctx.info("Failed to get the GitHub token from the 'gh' CLI tool")
     return github_token
 
 

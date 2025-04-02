@@ -2,7 +2,6 @@
     Test cases for salt.modules.status
 """
 
-
 import os
 
 import pytest
@@ -150,7 +149,7 @@ def test_uptime_linux():
     ), patch(
         "os.path.exists", MagicMock(return_value=True)
     ):
-        proc_uptime = salt.utils.stringutils.to_str("{} {}".format(m.ut, m.idle))
+        proc_uptime = salt.utils.stringutils.to_str(f"{m.ut} {m.idle}")
 
         with patch("salt.utils.files.fopen", mock_open(read_data=proc_uptime)):
             ret = status.uptime()

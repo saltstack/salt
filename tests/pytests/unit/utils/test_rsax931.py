@@ -215,6 +215,47 @@ def test_find_libcrypto_darwin_catalina():
     assert "/usr/lib/libcrypto.44.dylib" == lib_path
 
 
+@pytest.mark.skip_unless_on_darwin
+def test_find_libcrypto_darwin_pip_install():
+    """
+    Test _find_libcrypto on a macOS host where there salt has been installed
+    into an existing python or virtual environment.
+    """
+    bin_path = "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10"
+    expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
+    glob_effect = ([], [], ["yay"], [], [], [], [])
+    with patch("salt.utils.platform.is_darwin", lambda: True), patch(
+        "sys.executable", bin_path
+    ), patch("os.path.islink", return_value=False), patch.object(
+        glob, "glob", side_effect=glob_effect
+    ) as mock_glob:
+        lib_path = _find_libcrypto()
+        assert lib_path == "yay"
+        mock_glob.assert_any_call(expected)
+
+
+@pytest.mark.skip_unless_on_darwin
+def test_find_libcrypto_darwin_pip_install_venv():
+    """
+    Test _find_libcrypto on a macOS host where there salt has been installed
+    into an existing python or virtual environment.
+    """
+    src_path = "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10"
+    lnk_path = "/Users/bill/src/salt/venv/bin/python"
+    expected = "/Library/Frameworks/Python.framework/Versions/3.10/lib/libcrypto.dylib"
+    glob_effect = ([], [], ["yay"], [], [], [], [])
+    with patch("salt.utils.platform.is_darwin", lambda: True), patch(
+        "sys.executable", lnk_path
+    ), patch("os.path.islink", return_value=True), patch(
+        "os.path.realpath", return_value=src_path
+    ), patch.object(
+        glob, "glob", side_effect=glob_effect
+    ) as mock_glob:
+        lib_path = _find_libcrypto()
+        assert lib_path == "yay"
+        mock_glob.assert_any_call(expected)
+
+
 def test_find_libcrypto_darwin_bigsur_packaged():
     """
     Test _find_libcrypto on a Darwin-like macOS host where there isn't a
@@ -247,11 +288,12 @@ def test_find_libcrypto_darwin_bigsur_packaged():
         platform, "mac_ver", lambda: ("11.2.2", (), "")
     ), patch.object(sys, "platform", "macosx"):
         for package_manager, expected_lib in managed_paths.items():
+            mock_env = os.environ.copy()
             if package_manager == "brew":
-                env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
-            else:
-                env = {"HOMEBREW_PREFIX": ""}
-            with patch.object(os, "getenv", mock_getenv(env)):
+                mock_env["HOMEBREW_PREFIX"] = "/test/homebrew/prefix"
+            elif "HOMEBREW_PREFIX" in mock_env:
+                del mock_env["HOMEBREW_PREFIX"]
+            with patch.dict(os.environ, mock_env):
                 with patch.object(glob, "glob", mock_glob(expected_lib)):
                     lib_path = _find_libcrypto()
 

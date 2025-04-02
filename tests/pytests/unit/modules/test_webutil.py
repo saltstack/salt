@@ -4,7 +4,6 @@
     Test cases for salt.modules.webutil
 """
 
-
 import pytest
 
 import salt.modules.webutil as htpasswd

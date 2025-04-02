@@ -64,7 +64,7 @@ def parse_auth(rule):
         "disablewins",
     )
     for arg in noargs:
-        parser.add_argument("--{}".format(arg), dest=arg, action="store_true")
+        parser.add_argument(f"--{arg}", dest=arg, action="store_true")
 
     parser.add_argument("--enablenis", dest="enablenis", action="store")
     parser.add_argument("--hesiodrhs", dest="hesiodrhs", action="store")
