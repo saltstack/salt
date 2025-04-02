@@ -428,6 +428,47 @@ def test__linux_lsb_distrib_data():
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="platform.freedesktop_os_release not available in Python < 3.10",
+)
+def test__freedesktop_os_release_cache_is_invalidated():
+    OS_RELEASE_DATA = {
+        "NAME": "openSUSE Leap",
+        "ID": "opensuse-leap",
+        "PRETTY_NAME": "openSUSE Leap 15.6",
+        "VERSION": "15.6",
+        "ID_LIKE": "suse opensuse",
+        "VERSION_ID": "15.6",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:opensuse:leap:15.6",
+        "BUG_REPORT_URL": "https://bugs.opensuse.org",
+        "HOME_URL": "https://www.opensuse.org/",
+        "DOCUMENTATION_URL": "https://en.opensuse.org/Portal:Leap",
+        "LOGO": "distributor-logo-Leap",
+    }
+
+    class FreeDesktopOSReleaseMock:
+        def __call__(self):
+            if hasattr(platform, "_os_release_cache"):
+                assert platform._os_release_cache is None
+            return OS_RELEASE_DATA
+
+    with patch.object(
+        core, "_linux_lsb_distrib_data", MagicMock(return_value=({}, None))
+    ), patch.object(
+        core, "_freedesktop_os_release", FreeDesktopOSReleaseMock()
+    ), patch.object(
+        core,
+        "_legacy_linux_distribution_data",
+        MagicMock(return_value={"osrelease": "15.6"}),
+    ):
+        platform._os_release_cache = {"this-cache-should-be-invalidated": "foobar"}
+        ret = core._linux_distribution_data()
+        assert ret == {"osrelease": "15.6"}
+
+
+@pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
     Test to return a list of all enabled services
