@@ -440,33 +440,28 @@ class Key:
         Optionally, pass in a list of minions which should have their caches
         preserved. To preserve all caches, set __opts__['preserve_minion_cache']
         """
+        if self.opts.get("preserve_minion_cache", False):
+            return
+
         if preserve_minions is None:
             preserve_minions = []
+        preserve_minions = set(preserve_minions)
+
         keys = self.list_keys()
-        minions = []
-        for key, val in keys.items():
-            minions.extend(val)
-        if not self.opts.get("preserve_minion_cache", False):
-            m_cache = os.path.join(self.opts["cachedir"], self.ACC)
-            if os.path.isdir(m_cache):
-                for minion in os.listdir(m_cache):
-                    if minion not in minions and minion not in preserve_minions:
-                        try:
-                            shutil.rmtree(os.path.join(m_cache, minion))
-                        except OSError as ex:
-                            log.warning(
-                                "Key: Delete cache for %s got OSError/IOError: %s \n",
-                                minion,
-                                ex,
-                            )
-                            continue
-            cache = salt.cache.factory(self.opts)
-            for bank in ["grains", "pillar"]:
-                clist = cache.list(bank)
-                if clist:
-                    for minion in clist:
-                        if minion not in minions and minion not in preserve_minions:
-                            cache.flush(bank, minion)
+
+        for val in keys.values():
+            preserve_minions.update(val)
+
+        # we use a new cache instance here as we dont want the key cache
+        cache = salt.cache.factory(self.opts)
+
+        for bank in ["grains", "pillar"]:
+            clist = set(cache.list(bank))
+            for minion in clist - preserve_minions:
+                # pillar optionally encodes pillarenv in the key as minion:$pillarenv
+                if ":" in minion and minion.split(":")[0] in preserve_minions:
+                    continue
+                cache.flush(bank, minion)
 
     def check_master(self):
         """
