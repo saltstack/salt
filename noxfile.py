@@ -1948,7 +1948,6 @@ def ci_test_onedir_pkgs(session):
             + cmd_args[:]
             + [
                 "--no-install",
-                "--no-uninstall",
                 "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 "--log-file=artifacts/logs/runtests-install.log",
             ]
