@@ -231,6 +231,9 @@ def test_paths_log_rotation(
     Check ownership and premissions.
     Assumes test_pkg_paths successful
     """
+    pytest.skip(
+        "Test has too many side effects that cause other tests to fail. needs refactor"
+    )
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
         "3006.4"
     ):
