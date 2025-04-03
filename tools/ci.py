@@ -878,6 +878,8 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
+                # Skip upgrade tests on photonos due to lack of package pinning
+                # support.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -887,7 +889,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs
+                    if _.slug in requested_slugs and "photon" not in _.slut
                 ]
                 pkg_test_matrix[platform] += [
                     dict(
