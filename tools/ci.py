@@ -889,7 +889,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs and "photon" not in _.slut
+                    if _.slug in requested_slugs and "photon" not in _.slug
                 ]
                 pkg_test_matrix[platform] += [
                     dict(
