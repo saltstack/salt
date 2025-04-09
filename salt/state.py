@@ -27,7 +27,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import networkx as nx
 
@@ -164,11 +164,9 @@ def _calculate_fake_duration() -> tuple[str, float]:
     Generate a NULL duration for when states do not run
     but we want the results to be consistent.
     """
-    utc_start_time = datetime.datetime.utcnow()
-    local_start_time = utc_start_time - (
-        datetime.datetime.utcnow() - datetime.datetime.now()
-    )
-    utc_finish_time = datetime.datetime.utcnow()
+    utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+    local_start_time = utc_start_time.astimezone()
+    utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
     start_time = local_start_time.time().isoformat()
     delta = utc_finish_time - utc_start_time
     # duration in milliseconds.microseconds
@@ -800,7 +798,7 @@ class State:
         self.global_state_conditions = None
         self.dependency_dag = DependencyGraph()
         # a mapping of state tag (unique id) to the return result dict
-        self.disabled_states: Optional[dict[str, dict[str, Any]]] = None
+        self.disabled_states: dict[str, dict[str, Any]] | None = None
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1458,7 +1456,7 @@ class State:
                 )
 
     def compile_high_data(
-        self, high: dict[str, Any], orchestration_jid: Union[str, int, None] = None
+        self, high: dict[str, Any], orchestration_jid: str | int | None = None
     ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
@@ -1916,7 +1914,7 @@ class State:
             instance.states.inject_globals = inject_globals
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
-        utc_start_time = datetime.datetime.utcnow()
+        utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
         instance.format_slots(cdata)
         tag = _gen_tag(low)
@@ -1936,10 +1934,9 @@ class State:
                 "comment": f"An exception occurred in this state: {trb}",
             }
 
-        utc_finish_time = datetime.datetime.utcnow()
-        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
-        local_finish_time = utc_finish_time - timezone_delta
-        local_start_time = utc_start_time - timezone_delta
+        utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_finish_time = utc_finish_time.astimezone()
+        local_start_time = utc_start_time.astimezone()
         ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
@@ -1969,8 +1966,8 @@ class State:
                         *cdata["args"], **cdata["kwargs"]
                     )
 
-                    utc_start_time = datetime.datetime.utcnow()
-                    utc_finish_time = datetime.datetime.utcnow()
+                    utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+                    utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
                     delta = utc_finish_time - utc_start_time
                     duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
                     retry_ret["duration"] = duration
@@ -2022,7 +2019,7 @@ class State:
         self,
         cdata: dict[str, Any],
         low: LowChunk,
-        inject_globals: Optional[dict[Any, Any]],
+        inject_globals: dict[Any, Any] | None,
     ):
         """
         Call the state defined in the given cdata in parallel
@@ -2084,18 +2081,16 @@ class State:
     def call(
         self,
         low: LowChunk,
-        chunks: Optional[Sequence[LowChunk]] = None,
-        running: Optional[dict[str, dict]] = None,
+        chunks: Sequence[LowChunk] | None = None,
+        running: dict[str, dict] | None = None,
         retries: int = 1,
     ):
         """
         Call a state directly with the low data structure, verify data
         before processing.
         """
-        utc_start_time = datetime.datetime.utcnow()
-        local_start_time = utc_start_time - (
-            datetime.datetime.utcnow() - datetime.datetime.now()
-        )
+        utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_start_time = utc_start_time.astimezone()
         low_name = low.get("name")
         log_low_name = low_name.strip() if isinstance(low_name, str) else low_name
         log.info(
@@ -2286,10 +2281,9 @@ class State:
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        utc_finish_time = datetime.datetime.utcnow()
-        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
-        local_finish_time = utc_finish_time - timezone_delta
-        local_start_time = utc_start_time - timezone_delta
+        utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_finish_time = utc_finish_time.astimezone()
+        local_start_time = utc_start_time.astimezone()
         ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
@@ -2508,7 +2502,7 @@ class State:
     def call_chunks(
         self,
         chunks: Sequence[LowChunk],
-        disabled_states: Optional[dict[str, dict[str, Any]]] = None,
+        disabled_states: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """
         Iterate over a list of chunks and call them, checking for requires.
@@ -2554,7 +2548,7 @@ class State:
             return not running[tag]["result"]
         return False
 
-    def check_pause(self, low: LowChunk) -> Optional[str]:
+    def check_pause(self, low: LowChunk) -> str | None:
         """
         Check to see if this low chunk has been paused
         """
@@ -2754,7 +2748,7 @@ class State:
         return status, reqs
 
     def event(
-        self, chunk_ret: dict, length: int, fire_event: Union[bool, str] = False
+        self, chunk_ret: dict, length: int, fire_event: bool | str = False
     ) -> None:
         """
         Fire an event on the master bus
@@ -3150,8 +3144,8 @@ class State:
         return running
 
     def call_high(
-        self, high: HighData, orchestration_jid: Union[str, int, None] = None
-    ) -> Union[dict, list]:
+        self, high: HighData, orchestration_jid: str | int | None = None
+    ) -> dict | list:
         """
         Process a high data call and ensure the defined states.
         """
@@ -3335,7 +3329,7 @@ class LazyAvailStates:
 
     def __init__(self, hs: BaseHighState):
         self._hs = hs
-        self._avail: dict[Hashable, Optional[list[str]]] = {"base": None}
+        self._avail: dict[Hashable, list[str] | None] = {"base": None}
         self._filled = False
 
     def _fill(self) -> None:
