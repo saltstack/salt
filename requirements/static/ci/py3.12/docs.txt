@@ -159,7 +159,7 @@ multidict==6.0.4
     #   yarl
 myst-docutils[linkify]==1.0.0
     # via -r requirements/static/ci/docs.in
-packaging==23.1
+packaging==24.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

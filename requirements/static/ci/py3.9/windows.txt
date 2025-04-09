@@ -253,7 +253,7 @@ multidict==6.0.4
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   aiohttp
     #   yarl
-packaging==23.1
+packaging==24.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -262,11 +262,11 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
-pathspec==0.11.1
+pathspec==0.12.1
     # via yamllint
 platformdirs==4.0.0
     # via virtualenv
-pluggy==1.4.0
+pluggy==1.5.0
     # via pytest
 portend==3.1.0
     # via
@@ -473,7 +473,7 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tomli==2.0.1
+tomli==2.2.1
     # via pytest
 tornado==6.3.3
     # via
