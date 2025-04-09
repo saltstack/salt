@@ -484,6 +484,7 @@ werkzeug==3.0.3
     #   pytest-httpserver
 wheel==0.38.4
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/windows.txt
 wmi==1.5.1

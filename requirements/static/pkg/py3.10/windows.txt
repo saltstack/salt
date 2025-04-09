@@ -128,7 +128,9 @@ urllib3==1.26.18
     #   -r requirements/windows.txt
     #   requests
 wheel==0.38.4
-    # via -r requirements/windows.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt
 xmltodict==0.13.0
