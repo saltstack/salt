@@ -251,20 +251,22 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
                 pkg_type="rpm",
                 container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
             ),
-            LinuxPkg(
-                slug="amazonlinux-2",
-                display_name="Amazon Linux 2",
-                arch="x86_64",
-                pkg_type="rpm",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
-            ),
-            LinuxPkg(
-                slug="amazonlinux-2-arm64",
-                display_name="Amazon Linux 2 Arm64",
-                arch="arm64",
-                pkg_type="rpm",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
-            ),
+            # Amazon linux 2 containers have degraded systemd so the package
+            # tests will not pass.
+            # LinuxPkg(
+            #     slug="amazonlinux-2",
+            #     display_name="Amazon Linux 2",
+            #     arch="x86_64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
+            # LinuxPkg(
+            #     slug="amazonlinux-2-arm64",
+            #     display_name="Amazon Linux 2 Arm64",
+            #     arch="arm64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
             LinuxPkg(
                 slug="amazonlinux-2023",
                 display_name="Amazon Linux 2023",

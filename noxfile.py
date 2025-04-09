@@ -1948,7 +1948,7 @@ def ci_test_onedir_pkgs(session):
     except CommandFailed:
         if os.environ.get("RERUN_FAILURES", "0") == "0":
             # Don't rerun on failures
-            return
+            sys.exit(1)
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
@@ -1998,7 +1998,7 @@ def ci_test_onedir_pkgs(session):
         except CommandFailed:
             if os.environ.get("RERUN_FAILURES", "0") == "0":
                 # Don't rerun on failures
-                return
+                sys.exit(1)
             cmd_args = chunks[chunk]
             pytest_args = (
                 common_pytest_args[:]

@@ -712,7 +712,7 @@ class SaltPkgInstall:
                 arch = "amd64"
 
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
-            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.gpg"
+            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.pgp"
 
             # download the gpg pub key
             download_file(
@@ -724,28 +724,37 @@ class SaltPkgInstall:
             ) as fp:
                 fp.write(
                     f"deb [signed-by={gpg_full_path} arch={arch}] "
-                    f"{root_url}/saltproject-deb/ {self.distro_codename} main"
+                    f"{root_url}/saltproject-deb/ stable main"
                 )
             self._check_retcode(ret)
+            pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            pref_file.parent.mkdir(exist_ok=True)
+            pin = f"{self.prev_version.rsplit('.', 1)[0]}.*"
+            if downgrade:
+                pin = self.prev_version
+            with salt.utils.files.fopen(pref_file, "w") as fp:
+                fp.write(
+                    f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"
+                )
 
             cmd = [self.pkg_mngr, "install", *self.salt_pkgs, "-y"]
 
-            if downgrade:
-                pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
-                pref_file.parent.mkdir(exist_ok=True)
-                # TODO: There's probably something I should put in here to say what version
-                # TODO: But maybe that's done elsewhere, hopefully in self.salt_pkgs
-                pref_file.write_text(
-                    textwrap.dedent(
-                        f"""\
-                Package: salt*
-                Pin: origin "{root_url}/saltproject-deb"
-                Pin-Priority: 1001
-                """
-                    ),
-                    encoding="utf-8",
-                )
-                cmd.append("--allow-downgrades")
+            # if downgrade:
+            #    pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            #    pref_file.parent.mkdir(exist_ok=True)
+            #    # TODO: There's probably something I should put in here to say what version
+            #    # TODO: But maybe that's done elsewhere, hopefully in self.salt_pkgs
+            #    pref_file.write_text(
+            #        textwrap.dedent(
+            #            f"""\
+            #    Package: salt*
+            #    Pin: origin "{root_url}/saltproject-deb"
+            #    Pin-Priority: 1001
+            #    """
+            #        ),
+            #        encoding="utf-8",
+            #    )
+            cmd.append("--allow-downgrades")
             env = os.environ.copy()
             env["DEBIAN_FRONTEND"] = "noninteractive"
             extra_args = [
@@ -757,18 +766,20 @@ class SaltPkgInstall:
             self.proc.run(self.pkg_mngr, "update", *extra_args, env=env)
 
             cmd.extend(extra_args)
-
+            log.error("Run cmd %s", cmd)
             ret = self.proc.run(*cmd, env=env)
+            log.error("cmd return %r", ret)
             # Pre-relenv packages down get downgraded to cleanly programmatically
             # They work manually, and the install tests after downgrades will catch problems with the install
+            self._check_retcode(ret)
             # Let's not check the returncode if this is the case
-            if not (
-                downgrade
-                and packaging.version.parse(self.prev_version)
-                < packaging.version.parse("3006.0")
-            ):
-                self._check_retcode(ret)
-            if downgrade:
+            # if not (
+            #    downgrade
+            #    and packaging.version.parse(self.prev_version)
+            #    < packaging.version.parse("3006.0")
+            # ):
+            #    self._check_retcode(ret)
+            if downgrade and not self.no_uninstall:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():

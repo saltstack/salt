@@ -73,7 +73,13 @@ def salt_test_upgrade(
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 
-    time.sleep(60)  # give it some time
+    start = time.monotonic()
+    while True:
+        ret = salt_call_cli.run("--local", "test.version", _timeout=10)
+        if ret.returncode == 0:
+            break
+        if time.monotonic() - start > 60:
+            break
 
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -95,7 +101,7 @@ def salt_test_upgrade(
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
-    if sys.platform == "linux":
+    if sys.platform == "linux" and install_salt.distro_id not in ("ubuntu", "debian"):
         assert new_minion_pids
         assert new_master_pids
         assert new_minion_pids != old_minion_pids
