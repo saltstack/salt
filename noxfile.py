@@ -269,7 +269,7 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     ]
     if upgrade:
         install_command.append("-U")
-    install_command.extend(["setuptools", "pip", "wheel"])
+    install_command.extend(["setuptools[core]", "pip", "wheel"])
     session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT, env=env)
     return True
 
