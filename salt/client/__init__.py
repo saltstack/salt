@@ -1058,7 +1058,7 @@ class LocalClient:
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print(f"jid: {jid}")
+            print(f"jid: {jid}", file=sys.stderr)
         if timeout is None:
             timeout = self.opts["timeout"]
         fret = {}
@@ -1550,7 +1550,7 @@ class LocalClient:
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print(f"jid: {jid}")
+            print(f"jid: {jid}", file=sys.stderr)
 
         if timeout is None:
             timeout = self.opts["timeout"]
@@ -1644,7 +1644,7 @@ class LocalClient:
             print(msg)
             print("-" * len(msg) + "\n")
         elif show_jid:
-            print(f"jid: {jid}")
+            print(f"jid: {jid}", file=sys.stderr)
 
         # lazy load the connected minions
         connected_minions = None
