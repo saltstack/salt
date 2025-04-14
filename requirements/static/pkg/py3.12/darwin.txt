@@ -126,8 +126,10 @@ vultr==1.0.1
     # via -r requirements/darwin.txt
 zc.lockfile==2.0
     # via cherrypy
-zipp==3.12.0
-    # via importlib-metadata
+zipp==3.21.0
+    # via
+    #   -r requirements/darwin.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

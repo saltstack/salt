@@ -479,9 +479,10 @@ zc.lockfile==2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
     #   cherrypy
-zipp==3.12.0
+zipp==3.21.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
+    #   -r requirements/darwin.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
