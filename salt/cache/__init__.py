@@ -4,6 +4,7 @@ Loader mechanism for caching data, with data expiration, etc.
 .. versionadded:: 2016.11.0
 """
 
+import datetime
 import logging
 import time
 from collections import OrderedDict
@@ -121,7 +122,7 @@ class Cache:
 
         return data
 
-    def store(self, bank, key, data):
+    def store(self, bank, key, data, expires=None):
         """
         Store data using the specified module
 
@@ -138,12 +139,28 @@ class Cache:
             The data which will be stored in the cache. This data should be
             in a format which can be serialized by msgpack.
 
-        :raises SaltCacheError:
+        :param expires:
+            how many seconds from now the data should be considered stale.
+
+         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.store"
-        return self.modules[fun](bank, key, data, **self._kwargs)
+        try:
+            return self.modules[fun](bank, key, data, expires=expires, **self._kwargs)
+        except TypeError:
+            # if the backing store doesnt natively support expiry, we handle it as a fallback
+            if expires:
+                expires_at = datetime.datetime.now().astimezone() + datetime.timedelta(
+                    seconds=expires
+                )
+                expires_at = int(expires_at.timestamp())
+                return self.modules[fun](
+                    bank, key, {"data": data, "_expires": expires_at}, **self._kwargs
+                )
+            else:
+                return self.modules[fun](bank, key, data, **self._kwargs)
 
     def fetch(self, bank, key):
         """
@@ -167,7 +184,17 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.fetch"
-        return self.modules[fun](bank, key, **self._kwargs)
+        ret = self.modules[fun](bank, key, **self._kwargs)
+
+        # handle fallback if necessary
+        if isinstance(ret, dict) and set(ret.keys()) == {"data", "_expires"}:
+            now = datetime.datetime.now().astimezone().timestamp()
+            if ret["_expires"] > now:
+                return ret["data"]
+            else:
+                return {}
+        else:
+            return ret
 
     def updated(self, bank, key):
         """
@@ -311,19 +338,21 @@ class MemCache(Cache):
         now = time.time()
         record = self.storage.pop((bank, key), None)
         # Have a cached value for the key
-        if record is not None and record[0] + self.expire >= now:
-            if self.debug:
-                self.hit += 1
-                log.debug(
-                    "MemCache stats (call/hit/rate): %s/%s/%s",
-                    self.call,
-                    self.hit,
-                    float(self.hit) / self.call,
-                )
-            # update atime and return
-            record[0] = now
-            self.storage[(bank, key)] = record
-            return record[1]
+        if record is not None:
+            (created_at, expires, data) = record
+            if (created_at + (expires or self.expire)) >= now:
+                if self.debug:
+                    self.hit += 1
+                    log.debug(
+                        "MemCache stats (call/hit/rate): %s/%s/%s",
+                        self.call,
+                        self.hit,
+                        float(self.hit) / self.call,
+                    )
+                # update atime and return
+                record[0] = now
+                self.storage[(bank, key)] = record
+                return record[1]
 
         # Have no value for the key or value is expired
         data = super().fetch(bank, key)
@@ -335,15 +364,15 @@ class MemCache(Cache):
         self.storage[(bank, key)] = [now, data]
         return data
 
-    def store(self, bank, key, data):
+    def store(self, bank, key, data, expires=None):
         self.storage.pop((bank, key), None)
-        super().store(bank, key, data)
+        super().store(bank, key, data, expires)
         if len(self.storage) >= self.max:
             if self.cleanup:
                 MemCache.__cleanup(self.expire)
             if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [time.time(), data]
+        self.storage[(bank, key)] = [time.time(), expires, data]
 
     def flush(self, bank, key=None):
         if key is None:
