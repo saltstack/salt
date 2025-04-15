@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 from ptscripts import Context, command_group
 
@@ -42,7 +43,8 @@ def create(ctx: Context, image: str, name: str = ""):
         ctx.info(f"Creating docker network: {network}")
         create_network(ctx, network)
     if onci:
-        workdir = "/__w/salt/salt"
+        cwdname = pathlib.Path().resolve().name
+        workdir = f"/__w/{cwdname}/{cwdname}"
         home = "/github/home"
     env = {
         "HOME": home,
