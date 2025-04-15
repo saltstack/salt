@@ -86,9 +86,6 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: List directory
-        run: ls -a .
-
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -148,10 +145,6 @@ jobs:
       - name: "Start container ${{ matrix.container }}"
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test-pkg
-
-      - name: Show System Info
-        run: |
-          docker exec ${{ github.run_id}}_salt-test-pkg python3  ls -a .
 
       - name: Decompress .nox Directory
         run: |
