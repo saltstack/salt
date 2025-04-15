@@ -126,6 +126,8 @@ def _get_running_named_salt_pid(process_name):
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
         except psutil.AccessDenied:
             continue
+        except psutil.ZombieProcess:
+            continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
 
