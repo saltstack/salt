@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 from ptscripts import Context, command_group
 
@@ -74,6 +75,9 @@ def create(ctx: Context, image: str, name: str = ""):
     ]:
         if var in os.environ:
             env[var] = os.environ[var]
+
+    pathlib.Path("/tmp/docker-var").mkdir(exist_ok=True)
+
     cmd = [
         "/usr/bin/docker",
         "create",
@@ -81,7 +85,7 @@ def create(ctx: Context, image: str, name: str = ""):
         "--privileged",
         f"--workdir={workdir}",
         "-v",
-        "/tmp/:/var/lib/docker",
+        "/tmp/docker-var:/var/lib/docker",
     ]
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
