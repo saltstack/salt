@@ -122,7 +122,7 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt

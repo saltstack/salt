@@ -206,7 +206,7 @@ typing-extensions==4.8.0
     #   myst-docutils
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
