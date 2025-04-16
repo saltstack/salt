@@ -492,6 +492,20 @@ class SaltPkgInstall:
             env = os.environ.copy()
             extra_args = []
             if self.distro_id in ("ubuntu", "debian"):
+
+                pref_file = pathlib.Path(
+                    "/etc", "apt", "preferences.d", "salt-pin-1001"
+                )
+                pref_file.parent.mkdir(exist_ok=True)
+                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                with salt.utils.files.fopen(pref_file, "w") as fp:
+                    fp.write(
+                        f"Package: salt-*\n"
+                        f"Pin: version {pin}\n"
+                        f"Pin-Priority: 1001"
+                    )
+                log.error("Pin to %s", pin)
+
                 env["DEBIAN_FRONTEND"] = "noninteractive"
                 extra_args = [
                     "-o",
