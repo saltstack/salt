@@ -179,6 +179,9 @@ def test_pkg_paths(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
 
+    if install_salt.prev_version == "3007.1":
+        pytest.xfail("Fails due to syndic permissions bug")
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:

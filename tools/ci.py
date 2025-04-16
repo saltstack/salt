@@ -1079,6 +1079,8 @@ def workflow_config(
 
                 # Skip upgrade tests on photonos due to lack of package pinning
                 # support.
+
+                # XXX We could still run upgrades between minor versions for photon.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1099,7 +1101,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs
+                    if _.slug in requested_slugs and "photon" not in _.slug
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
