@@ -624,7 +624,7 @@ tzlocal==3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   apscheduler
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt

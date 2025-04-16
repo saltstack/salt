@@ -485,7 +485,7 @@ typing-extensions==4.8.0
     # via pytest-system-statistics
 tzlocal==3.0
     # via apscheduler
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
