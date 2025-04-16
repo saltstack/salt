@@ -12,7 +12,10 @@ certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-packaging>=21.3
+
+# Packaging 24.1 imports annotations from __future__ which breaks salt ssh
+# tests on target hosts with older python versions.
+packaging>=21.3,<=24.0
 looseversion
 tornado>=6.3.3
 aiohttp>=3.9.0

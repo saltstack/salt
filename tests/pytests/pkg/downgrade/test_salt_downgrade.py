@@ -94,7 +94,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
 
-    time.sleep(60)  # give it some time
+    time.sleep(30)  # give it some time
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
@@ -115,6 +115,9 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
+    assert packaging.version.parse(
+        ret.stdout.strip().split()[1]
+    ) == packaging.version.parse(install_salt.prev_version)
 
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()

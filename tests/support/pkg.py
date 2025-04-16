@@ -680,6 +680,18 @@ class SaltPkgInstall:
                 "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
+
+            if "3007" in self.prev_version:
+                ret = self.proc.run(
+                    self.pkg_mngr, "config-manager", "--enable", "salt-repo-3007-sts"
+                )
+                self._check_retcode(ret)
+            else:
+                ret = self.proc.run(
+                    self.pkg_mngr, "config-manager", "--disable", "salt-repo-3007-sts"
+                )
+                self._check_retcode(ret)
+
             if self.distro_name == "photon":
                 # yum version on photon doesn't support expire-cache
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
@@ -704,12 +716,14 @@ class SaltPkgInstall:
                     if dbg_exists:
                         pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
+            # pkgs = [f"{_}=={self.prev_version}" for _ in pkgs_to_install]
             ret = self.proc.run(
                 self.pkg_mngr,
                 cmd_action,
                 *pkgs_to_install,
                 "-y",
             )
+            log.error("**WTF %r", ret)
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:

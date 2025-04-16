@@ -87,7 +87,7 @@ more-itertools==9.1.0
     #   jaraco.text
 myst-docutils[linkify]==1.0.0
     # via -r requirements/static/ci/docs.in
-packaging==24.2
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
