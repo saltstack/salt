@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import shutil
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
@@ -35,6 +35,12 @@ cgroup = command_group(
     description=__doc__,
     parent="pre-commit",
 )
+
+PLATFORMS: list[Literal["linux", "macos", "windows"]] = [
+    "linux",
+    "macos",
+    "windows",
+]
 
 # Testing platforms
 TEST_SALT_LISTING = PlatformDefinitions(

@@ -1979,11 +1979,12 @@ def ci_test_onedir_pkgs(session):
     # The upgrade/downgrad tests passed, now run the integration tests against
     # the results.
     if chunk not in ("install", "download-pkgs"):
-        cmd_args = chunks[chunk]
+        cmd_args = chunks["install"]
         pytest_args = (
             common_pytest_args[:]
             + cmd_args[:]
             + [
+                "--no-install",
                 "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 "--log-file=artifacts/logs/runtests-install.log",
             ]
@@ -1999,11 +2000,12 @@ def ci_test_onedir_pkgs(session):
             if os.environ.get("RERUN_FAILURES", "0") == "0":
                 # Don't rerun on failures
                 sys.exit(1)
-            cmd_args = chunks[chunk]
+            cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
                 + cmd_args[:]
                 + [
+                    "--no-install",
                     "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
                     "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",
