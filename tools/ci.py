@@ -1070,7 +1070,7 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
-                if "win" in platform and "3006.x" in version:
+                if platform == "windows" and "3006" in version:
                     # The salt_master_cli.py script used by the windows pakcage
                     # tests doesn't play nice with trying to go from 3006.x to
                     # >=3007.x.
