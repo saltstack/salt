@@ -72,8 +72,9 @@ markupsafe==3.0.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==10.5.0
+more-itertools==10.5.0 ; sys_platform == "darwin" and python_version >= "3.11"
     # via
+    #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
