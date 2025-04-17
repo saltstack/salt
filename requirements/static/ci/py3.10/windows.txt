@@ -195,9 +195,10 @@ looseversion==1.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
-lxml==4.9.1
+lxml==4.9.1 ; sys_platform == "win32" and python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
     #   -r requirements/windows.txt
 mako==1.2.2
     # via -r requirements/static/ci/common.in

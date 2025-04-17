@@ -19,3 +19,6 @@ croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 contextvars
 cryptography>=42.0.0
 urllib3>=1.26.20,<2.0.0
+more-itertools>=8.3.0; sys_platform == 'darwin' and python_version >= '3.11'
+lxml>=4.6.3; sys_platform == 'win32' and python_version < '3.11'
+lxml>=5.3.2; sys_platform == 'win32' and python_version >= '3.11'
