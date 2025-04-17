@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import shutil
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
@@ -35,6 +35,12 @@ cgroup = command_group(
     description=__doc__,
     parent="pre-commit",
 )
+
+PLATFORMS: list[Literal["linux", "macos", "windows"]] = [
+    "linux",
+    "macos",
+    "windows",
+]
 
 # Testing platforms
 TEST_SALT_LISTING = PlatformDefinitions(
@@ -251,20 +257,22 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
                 pkg_type="rpm",
                 container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
             ),
-            LinuxPkg(
-                slug="amazonlinux-2",
-                display_name="Amazon Linux 2",
-                arch="x86_64",
-                pkg_type="rpm",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
-            ),
-            LinuxPkg(
-                slug="amazonlinux-2-arm64",
-                display_name="Amazon Linux 2 Arm64",
-                arch="arm64",
-                pkg_type="rpm",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
-            ),
+            # Amazon linux 2 containers have degraded systemd so the package
+            # tests will not pass.
+            # LinuxPkg(
+            #     slug="amazonlinux-2",
+            #     display_name="Amazon Linux 2",
+            #     arch="x86_64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
+            # LinuxPkg(
+            #     slug="amazonlinux-2-arm64",
+            #     display_name="Amazon Linux 2 Arm64",
+            #     arch="arm64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
             LinuxPkg(
                 slug="amazonlinux-2023",
                 display_name="Amazon Linux 2023",
@@ -489,16 +497,6 @@ def generate_workflows(ctx: Context):
         },
         "Scheduled": {
             "template": "scheduled.yml",
-        },
-        "Release": {
-            "template": "release.yml",
-            "includes": {
-                "pre-commit": False,
-                "lint": False,
-                "pkg-tests": False,
-                "salt-tests": False,
-                "test-pkg-downloads": True,
-            },
         },
     }
     test_salt_pkg_listing = TEST_SALT_PKG_LISTING
