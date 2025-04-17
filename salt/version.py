@@ -3,7 +3,6 @@ Set up the version of Salt
 """
 
 import argparse
-import json
 import operator
 import os
 import platform
@@ -601,14 +600,6 @@ def __discover_version(saltstack_version):
             # This is not a Salt git checkout!!! Don't even try to parse...
             return saltstack_version
 
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    basesha = None
-    if gh_event_path is not None:
-        gh_event = json.loads(
-            open(gh_event_path, encoding="utf-8").read()  # pylint: disable=W8470
-        )
-        if "pull_request" in gh_event:
-            basesha = gh_event["pull_request"]["base"]["sha"]
     try:
         kwargs = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
 
@@ -616,21 +607,17 @@ def __discover_version(saltstack_version):
             # Let's not import `salt.utils` for the above check
             kwargs["close_fds"] = True
 
-        args = [
-            "git",
-            "describe",
-            "--tags",
-            "--long",
-            "--match",
-            "v[0-9]*",
-            "--always",
-        ]
-
-        if basesha:
-            args.append(basesha)
-
         process = subprocess.Popen(
-            args,
+            [
+                "git",
+                "describe",
+                "--tags",
+                "--long",
+                "--match",
+                "v[0-9]*",
+                "--always",
+                "--candidates=150",
+            ],
             **kwargs,
         )
 
