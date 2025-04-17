@@ -4,13 +4,6 @@ import pytest
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
-    pytest.mark.skipif(
-        True,
-        reason=(
-            "Package permissions are getting reworked in "
-            "https://github.com/saltstack/salt/pull/66218"
-        ),
-    ),
 ]
 
 
