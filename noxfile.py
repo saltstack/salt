@@ -1273,6 +1273,27 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
+        pyenv = REPO_ROOT.joinpath(".nox", dirname, "pyvenv.cfg")
+        pyenv_vars = []
+        if os.path.exists(pyenv):
+            # Update pyvenv.cnf configuration in case the location of
+            # everything changed.
+            with open(pyenv, encoding="utf-8") as fp:
+                for line in fp.readlines():
+                    k, v = (_.strip() for _ in line.split("=", 1))
+                    if k in [
+                        "home",
+                        "base-prefix",
+                        "base-exec-prefix",
+                        "base-executable",
+                    ]:
+                        root, _path = v.split("artifacts/", 1)
+                        v = str(REPO_ROOT / "artifacts" / _path)
+                    pyenv_vars.append((k, v))
+            with open(pyenv, "w", encoding="utf-8") as fp:
+                for k, v in pyenv_vars:
+                    fp.write(f"{k} = {v}\n")
+
         scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
