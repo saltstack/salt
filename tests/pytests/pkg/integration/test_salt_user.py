@@ -1,7 +1,6 @@
 import os
 import pathlib
 import subprocess
-import sys
 import time
 
 import packaging.version
@@ -57,12 +56,16 @@ def pkg_paths_salt_user():
     """
     Paths created by package installs and owned by salt user
     """
+    ret = subprocess.run(
+        ["/opt/saltstack/salt/bin/python3", "--version"],
+        check=True,
+        capture_output=True,
+    )
+    v = packaging.version.Version(ret.stdout.decode().split()[1])
     return [
         "/etc/salt/cloud.deploy.d",
         "/var/log/salt/cloud",
-        "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
-            *sys.version_info
-        ),
+        f"/opt/saltstack/salt/lib/python{v.major}.{v.minor}/site-packages/salt/cloud/deploy",
         "/etc/salt/pki/master",
         "/etc/salt/master.d",
         "/var/log/salt/master",
