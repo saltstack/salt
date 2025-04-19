@@ -80,8 +80,6 @@ def create(ctx: Context, image: str, name: str = ""):
         f"--name={name}",
         "--privileged",
         f"--workdir={workdir}",
-        "-v",
-        "/tmp/:/var/lib/docker",
     ]
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
