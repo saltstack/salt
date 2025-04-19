@@ -141,17 +141,19 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
+    ret = salt_call_cli.run("--local", "gpg.list_keys")
+    assert ret.returncode == 1
+
     original_py_version = install_salt.package_python_version()
 
     # Test pip install before an upgrade
-    dep = "PyGithub==1.56.0"
+    dep = "python-gnupg==0.4.4"
     install = salt_call_cli.run("--local", "pip.install", dep)
     assert install.returncode == 0
 
     # Verify we can use the module dependent on the installed package
-    repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-    assert "Authentication information could" in use_lib.stderr
+    ret = salt_call_cli.run("--local", "gpg.list_keys")
+    assert ret.returncode == 0
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt)
@@ -159,5 +161,5 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
         # test pip install after an upgrade
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-        assert "Authentication information could" in use_lib.stderr
+        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        assert ret.returncode == 0

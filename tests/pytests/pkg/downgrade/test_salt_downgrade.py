@@ -64,18 +64,13 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     )
 
     # Test pip install before a downgrade
-    for dep in ["mysqlclient==2.2.7", "sqlparser"]:
-        install = salt_call_cli.run("--local", "pip.install", dep)
-        assert install.returncode == 0
+    dep = "python-gnupg==0.4.4"
+    install = salt_call_cli.run("--local", "pip.install", dep)
+    assert install.returncode == 0
 
     # Verify we can use the module dependent on the installed package
-    repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run(
-        "--local", "mysql.file_query", "mydb", "file_name=/tmp/query.sql"
-    )
-    # The should will fail with false in the output because the databse and
-    # file do not exist.
-    assert "false" in use_lib.stdout
+    ret = salt_call_cli.run("--local", "gpg.list_keys")
+    assert ret.returncode == 0
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
@@ -128,6 +123,5 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
-            # test pip install after a downgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
+            ret = salt_call_cli.run("--local", "gpg.list_keys")
+            assert ret.returncode == 0
