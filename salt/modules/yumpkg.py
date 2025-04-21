@@ -2512,7 +2512,7 @@ def group_list():
     }
 
     out = __salt__["cmd.run_stdout"](
-        [_yum(), "grouplist", "hidden"], output_loglevel="trace", python_shell=False
+        [_yum(), "group", "list", "hidden"], output_loglevel="trace", python_shell=False
     )
     key = None
     for line in salt.utils.itertools.split(out, "\n"):
@@ -2614,7 +2614,7 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
+    cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2630,8 +2630,8 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     elif "group" in g_info:
         ret["type"] = "package group"
 
-    ret["group"] = g_info.get("environment group") or g_info.get("group")
-    ret["id"] = g_info.get("environment-id") or g_info.get("group-id")
+    ret["group"] = g_info.get("environment group") or g_info.get("group") or g_info.get("name")
+    ret["id"] = g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
     if not ret["group"] and not ret["id"]:
         raise CommandExecutionError(f"Group '{name}' not found")
 
