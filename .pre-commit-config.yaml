@@ -266,6 +266,20 @@ repos:
           - requirements/static/pkg/freebsd.in
 
       - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.9-zmq-requirements
+        name: Darwin Packaging Py3.9 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --build-isolation
+          - --py-version=3.9
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --no-emit-index-url
+          - requirements/static/pkg/darwin.in
+
+      - id: pip-tools-compile
         alias: compile-pkg-darwin-3.10-zmq-requirements
         name: Darwin Packaging Py3.10 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.10/darwin\.txt)))$
@@ -890,18 +904,6 @@ repos:
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
-        alias: compile-ci-cloud-3.9-requirements
-        name: Cloud CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.9/cloud\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.9
-          - --no-emit-index-url
-          - requirements/static/ci/cloud.in
-
-      - id: pip-tools-compile
         alias: compile-ci-cloud-3.10-requirements
         name: Cloud CI Py3.10 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.10/cloud\.txt)))$
@@ -944,19 +946,6 @@ repos:
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
 
   # ----- Doc CI Requirements --------------------------------------------------------------------------------------->
-
-      - id: pip-tools-compile
-        alias: compile-doc-requirements
-        name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.9
-          - --platform=linux
-          - --no-emit-index-url
-          - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
@@ -1076,19 +1065,6 @@ repos:
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
 
   # ----- Changelog ------------------------------------------------------------------------------------------------->
-
-      - id: pip-tools-compile
-        alias: compile-ci-changelog-3.9-requirements
-        name: Changelog CI Py3.9 Requirements
-        files: ^requirements/static/ci/(changelog\.in|py3\.9/(changelog|linux)\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --build-isolation
-          - --py-version=3.9
-          - --platform=linux
-          - --no-emit-index-url
-          - requirements/static/ci/changelog.in
 
       - id: pip-tools-compile
         alias: compile-ci-changelog-3.9-requirements
