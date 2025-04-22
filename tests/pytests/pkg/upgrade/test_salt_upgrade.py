@@ -164,11 +164,18 @@ def test_salt_sysv_service_files(install_salt):
         ):
             test_initd_name = f"/etc/init.d/{test_pkg_basename_adj}"
             if salt.utils.path.which("dpkg"):
-                proc = subprocess.run(
-                    ["dpkg", "-q", "-c", f"{test_pkg_name}"],
-                    capture_output=True,
-                    check=True,
-                )
+                if os.path.exists("/etc/debian_version"):
+                    proc = subprocess.run(
+                        ["dpkg", "-c", f"{test_pkg_name}"],
+                        capture_output=True,
+                        check=True,
+                    )
+                else:
+                    proc = subprocess.run(
+                        ["dpkg", "-q", "-c", f"{test_pkg_name}"],
+                        capture_output=True,
+                        check=True,
+                    )
             elif salt.utils.path.which("rpm"):
                 proc = subprocess.run(
                     ["rpm", "-q", "-l", "-p", f"{test_pkg_name}"],
