@@ -25,11 +25,11 @@ markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jinja2
-packaging==23.1
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/changelog.in
-tomli==2.0.1
+tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   towncrier
