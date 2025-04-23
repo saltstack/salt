@@ -2,6 +2,7 @@
 IPC transport classes
 """
 
+import datetime
 import errno
 import logging
 import socket
@@ -533,8 +534,18 @@ class IPCMessagePublisher:
 
     @salt.ext.tornado.gen.coroutine
     def _write(self, stream, pack):
+        timeout = self.opts.get("ipc_write_timeout", 15)
         try:
-            yield stream.write(pack)
+            yield salt.ext.tornado.gen.with_timeout(
+                datetime.timedelta(seconds=timeout),
+                stream.write(pack),
+                quiet_exceptions=(StreamClosedError,),
+            )
+        except salt.ext.tornado.gen.TimeoutError:
+            log.trace("Failed to relay event to client after %d seconds", timeout)
+            if not stream.closed():
+                stream.close()
+            self.streams.discard(stream)
         except StreamClosedError:
             log.trace("Client disconnected from IPC %s", self.socket_path)
             self.streams.discard(stream)
