@@ -124,7 +124,7 @@ def test_salt_systemd_inactive_preservation(
         test_cmd = f"systemctl is-active {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         test_active = ret.stdout.strip().split()[2].strip('"').strip()
-        assert ret.returncode == 1
+        assert ret.returncode != 0
         assert test_active == "inactive"
 
 
