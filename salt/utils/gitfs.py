@@ -2624,7 +2624,11 @@ class GitBase:
             per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
-        for remote in remotes:
+        for remote in list(remotes):
+            if not salt.utils.verify.url(remote):
+                log.warning("Found bad url data %r", remote)
+                remotes.remove(remote)
+                continue
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,

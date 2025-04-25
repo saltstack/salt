@@ -10,6 +10,7 @@ import re
 import socket
 import stat
 import sys
+import urllib.parse
 
 import salt.defaults.exitcodes
 import salt.utils.files
@@ -781,3 +782,37 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     if skip_extra is False:
         # Run the extra verification checks
         zmq_version()
+
+
+SCHEMES = (
+    "http",
+    "https",
+    "ssh",
+    "ftp",
+    "sftp",
+    "file",
+)
+
+
+class URLValidator:
+
+    PCHAR = r"^([a-z,0-9,-,.,_,~,!,$,&,',(,),;,=,:,@,\,]|%\d\d)+$"
+    ALL_VALID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
+
+    def __init__(self, schemes=SCHEMES):
+        self.schemes = schemes
+
+    def __call__(self, data):
+        if any([x not in self.ALL_VALID for x in data]):
+            return False
+        parsed = urllib.parse.urlparse(data)
+        if parsed.scheme not in self.schemes:
+            return False
+        matcher = re.compile(self.PCHAR, re.IGNORECASE)
+        for part in parsed.path.split("/"):
+            if part and not matcher.match(part):
+                return False
+        return True
+
+
+url = URLValidator()

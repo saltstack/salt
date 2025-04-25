@@ -3,10 +3,13 @@ import time
 
 import pytest
 
+import salt.config
+import salt.crypt
 import salt.master
 import salt.utils.files
 import salt.utils.platform
 from tests.support.mock import patch
+from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.fixture
@@ -221,3 +224,129 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
                 "return": {},
             }
         )
+
+
+def _git_pillar_base_config(tmp_path):
+    return {
+        "__role": "master",
+        "pki_dir": str(tmp_path / "pki"),
+        "cachedir": str(tmp_path / "cache"),
+        "sock_dir": str(tmp_path / "sock_drawer"),
+        "conf_file": str(tmp_path / "config.conf"),
+        "fileserver_backend": ["local"],
+        "master_job_cache": False,
+        "file_client": "local",
+        "pillar_cache": False,
+        "state_top": "top.sls",
+        "pillar_roots": {
+            "base": [str(tmp_path / "pillar")],
+        },
+        "render_dirs": [str(pathlib.Path(RUNTIME_VARS.SALT_CODE_DIR) / "renderer")],
+        "renderer": "jinja|yaml",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "optimization_order": [0, 1, 2],
+        "on_demand_ext_pillar": [],
+        "git_pillar_user": "",
+        "git_pillar_password": "",
+        "git_pillar_pubkey": "",
+        "git_pillar_privkey": "",
+        "git_pillar_passphrase": "",
+        "git_pillar_insecure_auth": False,
+        "git_pillar_refspecs": salt.config._DFLT_REFSPECS,
+        "git_pillar_ssl_verify": True,
+        "git_pillar_branch": "master",
+        "git_pillar_base": "master",
+        "git_pillar_root": "",
+        "git_pillar_env": "",
+        "git_pillar_fallback": "",
+    }
+
+
+@pytest.fixture
+def allowed_funcs(tmp_path):
+    """
+    Configuration with git on demand pillar allowed
+    """
+    opts = _git_pillar_base_config(tmp_path)
+    opts["on_demand_ext_pillar"] = ["git"]
+    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    master_pki = tmp_path / "pki"
+    master_pki.mkdir()
+    accepted_pki = master_pki / "minions"
+    accepted_pki.mkdir()
+    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
+
+    return salt.master.AESFuncs(opts=opts)
+
+
+def test_on_demand_allowed_command_injection(allowed_funcs, tmp_path, caplog):
+    """
+    Verify on demand pillars validate remote urls
+    """
+    pwnpath = tmp_path / "pwn"
+    assert not pwnpath.exists()
+    load = {
+        "cmd": "_pillar",
+        "saltenv": "base",
+        "pillarenv": "base",
+        "id": "carbon",
+        "grains": {},
+        "ver": 2,
+        "ext": {
+            "git": [
+                f'base ssh://fake@git/repo\n[core]\nsshCommand = touch {pwnpath}\n[remote "origin"]\n'
+            ]
+        },
+        "clean_cache": True,
+    }
+    with caplog.at_level(level="WARNING"):
+        ret = allowed_funcs._pillar(load)
+    assert not pwnpath.exists()
+    assert "Found bad url data" in caplog.text
+
+
+@pytest.fixture
+def not_allowed_funcs(tmp_path):
+    """
+    Configuration with no on demand pillars allowed
+    """
+    opts = _git_pillar_base_config(tmp_path)
+    opts["on_demand_ext_pillar"] = []
+    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    master_pki = tmp_path / "pki"
+    master_pki.mkdir()
+    accepted_pki = master_pki / "minions"
+    accepted_pki.mkdir()
+    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
+
+    return salt.master.AESFuncs(opts=opts)
+
+
+def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
+    """
+    Verify on demand pillars do not render when not allowed
+    """
+    pwnpath = tmp_path / "pwn"
+    assert not pwnpath.exists()
+    load = {
+        "cmd": "_pillar",
+        "saltenv": "base",
+        "pillarenv": "base",
+        "id": "carbon",
+        "grains": {},
+        "ver": 2,
+        "ext": {
+            "git": [
+                f'base ssh://fake@git/repo\n[core]\nsshCommand = touch {pwnpath}\n[remote "origin"]\n'
+            ]
+        },
+        "clean_cache": True,
+    }
+    with caplog.at_level(level="WARNING"):
+        ret = not_allowed_funcs._pillar(load)
+    assert not pwnpath.exists()
+    assert (
+        "The following ext_pillar modules are not allowed for on-demand pillar data: git."
+        in caplog.text
+    )

@@ -166,6 +166,21 @@ class SMaster:
             log.debug("Pinging all connected minions due to key rotation")
             salt.utils.master.ping_all_connected_minions(opts)
 
+    @classmethod
+    def populate_secrets(cls):
+        cls.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
+
 
 class Maintenance(salt.utils.process.SignalHandlingProcess):
     """
@@ -701,18 +716,7 @@ class Master(SMaster):
 
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
-            SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
-                ),
-                "serial": multiprocessing.Value(
-                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
-                ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
-            }
+            SMaster.populate_secrets()
 
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
