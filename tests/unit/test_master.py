@@ -49,6 +49,7 @@ class TransportMethodsTest(TestCase):
             "_AESFuncs__verify_load",
             "_AESFuncs__verify_minion",
             "_AESFuncs__verify_minion_publish",
+            "_handle_minion_event",
             "__class__",
             "__delattr__",
             "__dir__",
