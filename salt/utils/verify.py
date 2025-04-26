@@ -796,8 +796,12 @@ SCHEMES = (
 
 class URLValidator:
 
-    PCHAR = r"^([a-z,0-9,-,.,_,~,!,$,&,',(,),;,=,:,@,\,]|%\d\d)+$"
+    PCHAR = r"^([a-z0-9\-._~!$&'();=:@,]|%\d\d)+$"
     ALL_VALID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
+
+    @classmethod
+    def pchar_matcher(cls):
+        return re.compile(cls.PCHAR, re.IGNORECASE)
 
     def __init__(self, schemes=SCHEMES):
         self.schemes = schemes
@@ -808,7 +812,7 @@ class URLValidator:
         parsed = urllib.parse.urlparse(data)
         if parsed.scheme not in self.schemes:
             return False
-        matcher = re.compile(self.PCHAR, re.IGNORECASE)
+        matcher = self.pchar_matcher()
         for part in parsed.path.split("/"):
             if part and not matcher.match(part):
                 return False

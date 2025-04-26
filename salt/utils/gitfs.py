@@ -2624,6 +2624,8 @@ class GitBase:
             per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
+        # In case a tuple is passed.
+        remotes = list(remotes)
         for remote in list(remotes):
             if not salt.utils.verify.url(remote):
                 log.warning("Found bad url data %r", remote)
