@@ -168,6 +168,25 @@ PYGIT2_MINVER = Version("0.20.3")
 LIBGIT2_MINVER = Version("0.20.0")
 
 
+def split_name(remote):
+    """
+    Given a string determin if it a a url or a name and url combination.
+
+    Examples:
+
+       None, "https://github.com/saltstack/salt.git" == split_name("https://github.com/saltstack/salt.git")
+
+       "__env__", "https://github.com/saltstack/salt.git" == split_name("__env__ https://github.com/saltstack/salt.git")
+    """
+    parts = remote.split(" ", 1)
+    if len(parts) == 1:
+        return None, remote
+    maybename, maybeurl = parts
+    if not salt.utils.verify.url(maybename):
+        return maybename, maybeurl
+    return None, remote
+
+
 def enforce_types(key, val):
     """
     Force params to be strings unless they should remain a different type
@@ -2627,10 +2646,24 @@ class GitBase:
         # In case a tuple is passed.
         remotes = list(remotes)
         for remote in list(remotes):
-            if not salt.utils.verify.url(remote):
-                log.warning("Found bad url data %r", remote)
-                remotes.remove(remote)
-                continue
+
+            if isinstance(remote, dict):
+                for key in list(remote):
+                    name, url = split_name(key)
+                    if not salt.utils.verify.url(url):
+                        log.warning("Found bad url data %r", key)
+                        remote.remove(key)
+                        continue
+                # None of the remotes were valid
+                if not remote:
+                    remotes.remove(remote)
+            else:
+                name, url = split_name(remote)
+                if not salt.utils.verify.url(url):
+                    log.warning("Found bad url data %r", remote)
+                    remotes.remove(remote)
+                    continue
+
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
