@@ -17,7 +17,12 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt._logging import LOG_LEVELS
-from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemExit
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltClientError,
+    SaltSystemExit,
+    SaltValidationError,
+)
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -502,7 +507,7 @@ def _realpath_windows(path):
 
 def _realpath(path):
     """
-    Cross platform realpath method. On Windows when python 3, this method
+    FCross platform realpath method. On Windows when python 3, this method
     uses the os.readlink method to resolve any filesystem links.
     All other platforms and version use ``os.path.realpath``.
     """
@@ -522,20 +527,31 @@ def clean_path(root, path, subdir=False, realpath=True):
     """
     if not os.path.isabs(root):
         root = os.path.join(os.getcwd(), root)
-    root = os.path.normpath(root)
+    normroot = os.path.normpath(root)
     if not os.path.isabs(path):
-        path = os.path.join(root, path)
-    path = os.path.normpath(path)
+        path = os.path.join(normroot, path)
+    normpath = os.path.normpath(path)
     if realpath:
-        root = _realpath(root)
-        path = _realpath(path)
+        normroot = _realpath(normroot)
+        normpath = _realpath(normpath)
     if subdir:
-        if os.path.commonpath([path, root]) == root:
-            return path
+        if os.path.commonpath([normpath, normroot]) == normroot:
+            return normpath
     else:
-        if os.path.dirname(path) == root:
-            return path
+        if os.path.dirname(normpath) == normroot:
+            return normpath
     return ""
+
+
+def clean_join(root, *paths, subdir=False, realpath=True):
+    """
+    Performa a join and then check the result against the clean_path method. If
+    clean_path fails a SaltValidationError is raised.
+    """
+    path = os.path.join(root, *paths)
+    if not clean_path(root, path, subdir, realpath):
+        raise SaltValidationError(f"Invalid path: {path!r}")
+    return path
 
 
 def valid_id(opts, id_):

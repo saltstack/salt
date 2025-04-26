@@ -1197,7 +1197,6 @@ class AESFuncs(TransportMethods):
         "_file_recv",
         "_pillar",
         "_minion_event",
-        "_handle_minion_event",
         "_return",
         "_syndic_return",
         "minion_runner",
