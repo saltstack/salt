@@ -1426,6 +1426,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             If passed with a list of packages in the ``pkgs`` parameter, the
             version will be ignored.
 
+            .. note::
+                Remember that versions that contain a single `.` will be
+                interpreted as numbers and must be double-quoted. For example,
+                version ``3006.10`` will be rendered as ``3006.1``. To pass
+                ``3006.10`` you'll need to use double-quotes.
+                ``version="'3006.10'"``
+
             CLI Example:
 
              .. code-block:: bash

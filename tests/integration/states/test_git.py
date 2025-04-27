@@ -295,6 +295,17 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             "git.latest", name=TEST_REPO, target=target, force_reset=True
         )
         self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        # beginning of comment
+        self.assertEqual(
+            f"Repository {target} is up-to-date\n",
+            ret["comment"][0 : 26 + len(target)],
+        )
+        self.assertIn("Uncommitted changes were discarded.", ret["comment"])
+        # ending of comment
+        self.assertEqual(
+            "Repository was hard-reset to remote HEAD (bbefe81).", ret["comment"][-51:]
+        )
 
         # Make sure that we no longer have uncommitted changes
         self.assertFalse(self.run_function("git.diff", [target, "HEAD"]))

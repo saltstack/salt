@@ -359,7 +359,7 @@ $modules = "acme",
            "uswgi",
            "varnish",
            "vbox",
-           "virt",
+           "virt.py",  # We don't want to remove virtualenv_mod.py
            "xapi",
            "xbpspkg",
            "xfs",
