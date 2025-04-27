@@ -2652,7 +2652,7 @@ class GitBase:
                     name, url = split_name(key)
                     if not salt.utils.verify.url(url):
                         log.warning("Found bad url data %r", key)
-                        remote.remove(key)
+                        remote.pop(key)
                         continue
                 # None of the remotes were valid
                 if not remote:
