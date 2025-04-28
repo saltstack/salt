@@ -20,7 +20,6 @@ import time
 import traceback
 
 import salt.grains.extra
-import salt.platform.win
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -54,6 +53,7 @@ except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
+    import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
 
