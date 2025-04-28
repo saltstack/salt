@@ -25,10 +25,6 @@ jaraco.functools>=4.1.0
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
-# We need contextvars for salt-ssh.
-# Even on python versions which ships with contextvars in the standard library!
-contextvars
-
 setproctitle>=1.2.3
 timelib>=0.2.5
 pyopenssl>=24.0.0
@@ -50,3 +46,9 @@ pythonnet>=3.0.1; sys_platform == 'win32'
 pywin32>=305; sys_platform == 'win32'
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'
+croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+
+# We need contextvars for salt-ssh
+contextvars
+cryptography>=42.0.0
+urllib3>=1.26.20,<2.0.0

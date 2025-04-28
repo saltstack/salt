@@ -57,7 +57,7 @@ typing-extensions==4.8.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   astroid
     #   pylint
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   docker

@@ -1,5 +1,6 @@
 import os
 import pathlib
+import tempfile
 
 from ptscripts import Context, command_group
 
@@ -39,11 +40,13 @@ def create(ctx: Context, image: str, name: str = ""):
     workdir = "/salt"
     home = "/root"
     network = "ip6net"
+    tmpdir = tempfile.mkdtemp(prefix="salt-test-container")
     if not onci and not has_network(ctx, network):
         ctx.info(f"Creating docker network: {network}")
         create_network(ctx, network)
     if onci:
-        workdir = "/__w/salt/salt"
+        cwdname = pathlib.Path().resolve().name
+        workdir = f"/__w/{cwdname}/{cwdname}"
         home = "/github/home"
     env = {
         "HOME": home,
@@ -85,7 +88,7 @@ def create(ctx: Context, image: str, name: str = ""):
         "--privileged",
         f"--workdir={workdir}",
         "-v",
-        "/tmp/docker-var:/var/lib/docker",
+        f"{tmpdir}:/var/lib/docker",
     ]
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])

@@ -140,7 +140,7 @@ tempora==5.3.0
     #   portend
 uc-micro-py==1.0.2
     # via linkify-it-py
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
