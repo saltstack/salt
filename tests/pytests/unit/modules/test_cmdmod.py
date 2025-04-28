@@ -1116,7 +1116,7 @@ def test_prep_powershell_cmd_encoded():
             "-ExecutionPolicy",
             "Bypass",
             "-EncodedCommand",
-            f'"{e_cmd}"'
+            f'"{e_cmd}"',
         ]
         assert ret == expected
 
