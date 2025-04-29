@@ -3242,14 +3242,15 @@ class GitFS(GitBase):
         if os.path.isabs(path):
             return fnd
 
-        dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
-        hashes_glob = salt.utils.path.join(
+        # dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
+        dest = salt.utils.verify.clean_join(self.cache_root, "refs", tgt_env, path)
+        hashes_glob = salt.utils.verify.clean_join(
             self.hash_cachedir, tgt_env, f"{path}.hash.*"
         )
-        blobshadest = salt.utils.path.join(
+        blobshadest = salt.utils.verify.clean_join(
             self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
+        lk_fn = salt.utils.verify.clean_join(self.hash_cachedir, tgt_env, f"{path}.lk")
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):

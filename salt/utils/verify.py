@@ -548,10 +548,13 @@ def clean_join(root, *paths, subdir=False, realpath=True):
     Performa a join and then check the result against the clean_path method. If
     clean_path fails a SaltValidationError is raised.
     """
-    path = os.path.join(root, *paths)
-    if not clean_path(root, path, subdir, realpath):
-        raise SaltValidationError(f"Invalid path: {path!r}")
-    return path
+    parent = root
+    for path in paths:
+        child = os.path.join(parent, path)
+        if not clean_path(parent, child, subdir, realpath):
+            raise SaltValidationError(f"Invalid path: {path!r}")
+        parent = child
+    return child
 
 
 def valid_id(opts, id_):
