@@ -17,6 +17,7 @@ RequestExecutionLevel admin
 
 # Import Libraries
 !include "FileFunc.nsh"
+!include "helper_StrContains.nsh"
 !include "LogicLib.nsh"
 !include "MoveFileFolder.nsh"
 !include "MUI2.nsh"
@@ -27,9 +28,7 @@ RequestExecutionLevel admin
 !include "x64.nsh"
 ${StrLoc}
 ${StrRep}
-${StrStrAdv}   # Supported by Install Sections
-${UnStrFunc}   # Enable Uninstall functions
-${UnStrStrAdv} # Supported by Uninstall Sections
+${StrStrAdv}
 
 # Required by MoveFileFolder.nsh
 !insertmacro Locate
@@ -1209,8 +1208,8 @@ Function ${un}uninstallSalt
         ${LogMsg} "Service found"
     ${Else}
         # If the service is already gone, skip the SSM commands
-        ${StrStrAdv} $2 $1 "service does not exist" ">" ">" "1" "0" "0"
-        StrCmp $2 "service does not exist" doneSSM
+        ${StrContains} $2 $1 "service does not exist"
+        StrCmp $2 "" doneSSM
         ${LogMsg} "Failed"
         ${LogMsg} "ExitCode: $0"
         ${LogMsg} "StdOut: $1"
