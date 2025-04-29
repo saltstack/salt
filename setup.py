@@ -691,6 +691,9 @@ class Install(install):
             return first_call
         return second_call
 
+    def do_egg_install(self):
+        raise NotImplementedError("Support for egg-based install has been removed.")
+
 
 class InstallLib(install_lib):
     def run(self):
