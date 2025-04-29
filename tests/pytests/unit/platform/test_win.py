@@ -4,6 +4,7 @@ from salt.platform import win
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
 ]
 
 
