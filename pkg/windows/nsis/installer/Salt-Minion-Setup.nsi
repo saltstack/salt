@@ -27,7 +27,9 @@ RequestExecutionLevel admin
 !include "x64.nsh"
 ${StrLoc}
 ${StrRep}
-${StrStrAdv}
+${StrStrAdv}   # Supported by Install Sections
+${UnStrFunc}   # Enable Uninstall functions
+${UnStrStrAdv} # Supported by Uninstall Sections
 
 # Required by MoveFileFolder.nsh
 !insertmacro Locate
