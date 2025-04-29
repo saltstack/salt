@@ -11,6 +11,11 @@ import salt.utils.msgpack
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
+
 
 @pytest.fixture
 def config():

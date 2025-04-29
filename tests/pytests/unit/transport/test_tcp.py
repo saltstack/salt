@@ -15,6 +15,7 @@ from pytestshellutils.utils import ports
 import salt.channel.server
 import salt.exceptions
 import salt.transport.tcp
+import salt.utils.platform
 from tests.support.mock import MagicMock, PropertyMock, patch
 
 pytestmark = [
@@ -96,6 +97,24 @@ class ClientSocket:
 def client_socket():
     with ClientSocket() as _client_socket:
         yield _client_socket
+
+
+def test_get_socket():
+    socket = salt.transport.tcp._get_socket({"ipv6": True})
+
+    if salt.utils.platform.is_windows():
+        assert int(socket.family) == 23
+    else:
+        assert int(socket.family) == 10
+
+    socket = salt.transport.tcp._get_socket({"ipv6": False})
+    assert int(socket.family) == 2
+
+
+def test_get_bind_addr():
+    opts = {"interface": "192.168.0.1", "tcp": 1}
+    res = salt.transport.tcp._get_bind_addr(opts=opts, port_type="tcp")
+    assert res == ("192.168.0.1", 1)
 
 
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
@@ -265,7 +284,7 @@ def salt_message_client():
         client.close()
 
 
-# XXX we don't reutnr a future anymore, this needs a different way of testing.
+# XXX we don't return a future anymore, this needs a different way of testing.
 # def test_send_future_set_retry(salt_message_client):
 #    future = salt_message_client.send({"some": "message"}, tries=10, timeout=30)
 #
