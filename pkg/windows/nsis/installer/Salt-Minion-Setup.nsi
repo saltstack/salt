@@ -1,4 +1,4 @@
-﻿# This file must be UNICODE
+# This file must be UNICODE
 
 !define PRODUCT_NAME "Salt Minion"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
@@ -600,7 +600,9 @@ Section "Install" Install01
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         # Move the C:\salt directory to the new location
         StrCpy $switch_overwrite 0
@@ -648,7 +650,9 @@ Section "Install" Install01
     ${If} $0 == 0
         ${LogMsg} "Success"
     ${Else}
-        ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
     ${EndIf}
 
 SectionEnd
@@ -961,7 +965,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service autostart"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion Start SERVICE_AUTO_START"
@@ -970,7 +976,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service console stop method"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodConsole 24000"
@@ -979,7 +987,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service windows stop method"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodWindow 2000"
@@ -988,7 +998,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service app restart delay"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppRestartDelay 60000"
@@ -997,7 +1009,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1035,7 +1049,10 @@ Section -Post
     ${Else}
         # See this table for Error Codes:
         # https://github.com/GsNSIS/EnVar#error-codes
-        ${LogMsg} "Failed. Error Code: $0"
+        ${LogMsg} "Failed"
+        ${LogMsg} "Error Code: $0"
+        ${LogMsg} "Lookup error codes here:"
+        ${LogMsg} "https://github.com/GsNSIS/EnVar#error-codes"
     ${EndIf}
 
 SectionEnd
@@ -1052,7 +1069,9 @@ Function .onInstSuccess
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1065,7 +1084,9 @@ Function .onInstSuccess
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1110,7 +1131,10 @@ Section Uninstall
     ${Else}
         # See this table for Error Codes:
         # https://github.com/GsNSIS/EnVar#error-codes
-        ${LogMsg} "Failed. Error Code: $0"
+        ${LogMsg} "Failed"
+        ${LogMsg} "Error Code: $0"
+        ${LogMsg} "Lookup error codes here:"
+        ${LogMsg} "https://github.com/GsNSIS/EnVar#error-codes"
     ${EndIf}
 
 SectionEnd
@@ -1174,7 +1198,21 @@ Function ${un}uninstallSalt
 
     ${LogMsg} "ssm.exe found: $SSMBin"
 
-    #
+    # Detect if the salt-minion service is installed
+    ${LogMsg} "Detecting salt-minion service"
+    nsExec::ExecToStack "$SSMBin Status salt-minion"
+    pop $0  # ExitCode
+    pop $1  # StdOut
+    ${If} $0 == 0
+        ${LogMsg} "Service found"
+    ${Else}
+        # If the service is already gone, skip the SSM commands
+        ${StrStrAdv} $2 $1 "service does not exist" ">" ">" "1" "0" "0"
+        StrCmp $2 "service does not exist" doneSSM
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
+    ${EndIf}
 
     # Stop and Remove salt-minion service
     ${LogMsg} "Stopping salt-minion service"
@@ -1184,7 +1222,9 @@ Function ${un}uninstallSalt
     ${If} $0 == 0
         ${LogMsg} "Success"
     ${Else}
-        ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
     ${EndIf}
 
     ${LogMsg} "Removing salt-minion service"
@@ -1194,7 +1234,9 @@ Function ${un}uninstallSalt
     ${If} $0 == 0
         ${LogMsg} "Success"
     ${Else}
-        ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
         Abort
     ${EndIf}
 
