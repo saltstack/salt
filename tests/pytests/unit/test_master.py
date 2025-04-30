@@ -4,6 +4,7 @@ import time
 import pytest
 
 import salt.master
+import salt.utils.files
 import salt.utils.platform
 from tests.support.mock import patch
 
@@ -11,12 +12,14 @@ from tests.support.mock import patch
 @pytest.fixture
 def encrypted_requests(tmp_path):
     # To honor the comment on AESFuncs
+    (tmp_path / "pki").mkdir()
     return salt.master.AESFuncs(
         opts={
+            "pki_dir": str(tmp_path / "pki"),
             "cachedir": str(tmp_path / "cache"),
             "sock_dir": str(tmp_path / "sock_drawer"),
             "conf_file": str(tmp_path / "config.conf"),
-            "fileserver_backend": "local",
+            "fileserver_backend": ["local"],
             "master_job_cache": False,
         }
     )
@@ -193,3 +196,28 @@ def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
     )
     assert not (cachedir / "syndics").exists()
     assert not (cachedir / "mamajama").exists()
+
+
+def test_pub_ret_traversal(encrypted_requests, tmp_path):
+    """
+    master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
+    """
+    salt.crypt.gen_keys(tmp_path, "minion", 2048)
+
+    minions = pathlib.Path(encrypted_requests.opts["pki_dir"]) / "minions"
+    minions.mkdir()
+
+    with salt.utils.files.fopen(minions / "minion", "wb") as wfp:
+        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
+            wfp.write(rfp.read())
+
+    priv = salt.crypt.PrivateKey(tmp_path / "minion.pem")
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        encrypted_requests.pub_ret(
+            {
+                "tok": priv.encrypt(b"salt"),
+                "id": "minion",
+                "jid": "asdf/../../../sdf",
+                "return": {},
+            }
+        )

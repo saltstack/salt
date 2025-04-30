@@ -1269,7 +1269,7 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.opts["pki_dir"], "minions", id_)
+        pub_path = salt.utils.verify.clean_join(self.opts["pki_dir"], "minions", id_)
 
         try:
             pub = salt.crypt.PublicKey(pub_path)
@@ -1690,8 +1690,8 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = os.path.join(
-                self.opts["pki_dir"], "minions/{}".format(load["id"])
+            this_minion_pubkey = salt.utils.clean_join(
+                self.opts["pki_dir"], "minions", load["id"]
             )
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(
@@ -1803,7 +1803,7 @@ class AESFuncs(TransportMethods):
         auth_cache = os.path.join(self.opts["cachedir"], "publish_auth")
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load["jid"]))
+        jid_fn = salt.utils.verify.clean_join(auth_cache, str(load["jid"]))
         with salt.utils.files.fopen(jid_fn, "r") as fp_:
             if not load["id"] == fp_.read():
                 return {}
