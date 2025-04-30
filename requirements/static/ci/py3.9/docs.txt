@@ -6,10 +6,6 @@
 #
 alabaster==0.7.13
     # via sphinx
-annotated-types==0.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pydantic
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -44,10 +40,6 @@ importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
-inflect==7.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   jaraco.text
 jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -56,13 +48,13 @@ jaraco.context==4.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
-jaraco.functools==3.7.0
+jaraco.functools==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.11.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
@@ -103,14 +95,6 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-pydantic-core==2.16.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pydantic
-pydantic==2.6.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   inflect
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.17.2
@@ -158,12 +142,6 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
-typing-extensions==4.8.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   inflect
-    #   pydantic
-    #   pydantic-core
 uc-micro-py==1.0.2
     # via linkify-it-py
 urllib3==1.26.18
