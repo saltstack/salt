@@ -32,7 +32,7 @@ when operating as a cluster, minion keys are stored in the `cluster_pki_dir`
 instead of the master's `pki_dir`.
 
 
-Reference Implimentation
+Reference Implementation
 ========================
 
 Gluster: https://docs.gluster.org/en/main/Quick-Start-Guide/Quickstart/
