@@ -19,6 +19,8 @@ looseversion
 tornado>=6.3.3
 aiohttp>=3.9.0
 urllib3>=1.26.18
+jaraco.text>=4.0.0
+jaraco.functools>=4.1.0
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
