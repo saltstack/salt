@@ -258,7 +258,7 @@ changed to the filesystem location shared between peers in the cluster.
 .. conf_master:: cluster_port
 
 ``cluster_pool_port``
-----------------
+---------------------
 
 .. versionadded:: 3007.2
 
