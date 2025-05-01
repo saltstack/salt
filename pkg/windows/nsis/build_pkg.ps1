@@ -436,8 +436,8 @@ if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
 } else {
     Write-Result "Failed" -ForegroundColor Red
     Write-Host "Failed to find $installer_name in installer directory"
-    Write-Host "Build Command:"
-    Write-Host "$NSIS_BIN /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size $INSTALLER_DIR\Salt-Minion-Setup.nsi"
+    Write-Host "CMD:"
+    Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$INSTALLER_DIR\Salt-Minion-Setup.nsi`""
     exit 1
 }
 

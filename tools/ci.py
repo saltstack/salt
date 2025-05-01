@@ -940,13 +940,19 @@ def workflow_config(
         full = True
         requested_slugs = _environment_slugs(
             ctx,
-            tools.utils.get_cicd_shared_context()["full-testrun-slugs"],
+            os.environ.get(
+                "FULL_TESTRUN_SLUGS",
+                tools.utils.get_cicd_shared_context()["full-testrun-slugs"],
+            ),
             labels,
         )
     else:
         requested_slugs = _environment_slugs(
             ctx,
-            tools.utils.get_cicd_shared_context()["pr-testrun-slugs"],
+            os.environ.get(
+                "PR_TESTRUN_SLUGS",
+                tools.utils.get_cicd_shared_context()["pr-testrun-slugs"],
+            ),
             labels,
         )
 
