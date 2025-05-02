@@ -16,7 +16,7 @@ from salt.utils.odict import OrderedDict
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd, recursive_update=True, merge_lists=False):
+def update(dest, upd, recursive_update=True, merge_lists=False, strict=False):
     """
     Recursive version of the default dict.update
 
@@ -30,9 +30,15 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     is ``dest[key] + upd[key]``. This behavior is only activated when
     recursive_update=True. By default merge_lists=False.
 
+    if strict=True, then we will raise a TypeError when trying to merge a list
+    with a mapping when ``merge_lists=True``.
+
     .. versionchanged:: 2016.11.6
         When merging lists, duplicate values are removed. Values already
         present in the ``dest`` list are not added from the ``upd`` list.
+    .. versionchanged:: 3008.0
+        Throw a TypeError when trying to merge a list with a mapping when
+        ``merge_lists=True``.
     """
     if (not isinstance(dest, Mapping)) or (not isinstance(upd, Mapping)):
         raise TypeError("Cannot update using non-dict types in dictupdate.update()")
@@ -56,6 +62,15 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
                     dest[key] = merged
                 else:
                     dest[key] = upd[key]
+            elif (
+                strict
+                and merge_lists
+                and isinstance(dest_subkey, list)
+                and isinstance(val, Mapping)
+            ):
+                raise TypeError(
+                    f"With {merge_lists=} we cannot update list under {key=} with mapping containing keys {val.keys()=} in dictupdate.update()"
+                )
             else:
                 dest[key] = upd[key]
         return dest
