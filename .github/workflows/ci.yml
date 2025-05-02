@@ -5,11 +5,7 @@ name: CI
 run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
 
 on:
-  push:
-    branches:
-      - 3006.x
-      - 3007.x
-      - master
+  push: {}
   pull_request:
     types:
       - labeled
