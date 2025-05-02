@@ -24,13 +24,6 @@ except ImportError:
     HAS_RANDOM = False
 
 try:
-    import crypt
-
-    HAS_CRYPT = True
-except (ImportError, PermissionError):
-    HAS_CRYPT = False
-
-try:
     import passlib.context
 
     HAS_PASSLIB = True
@@ -101,10 +94,6 @@ def secure_password(
         raise CommandExecutionError(str(exc))
 
 
-if HAS_CRYPT:
-    methods = {m.name.lower(): m for m in crypt.methods}
-else:
-    methods = {}
 known_methods = ["sha512", "sha256", "blowfish", "md5", "crypt"]
 
 
@@ -130,26 +119,6 @@ def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
     return ctx.hash(**kwargs)
 
 
-def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
-    """
-    Generate /etc/shadow hash using the native crypt module
-    """
-    if crypt_salt is None:
-        # setting crypt_salt to the algorithm makes crypt generate
-        #  a salt compatible with the specified algorithm.
-        crypt_salt = methods[algorithm]
-    else:
-        if algorithm != "crypt":
-            # all non-crypt algorithms are specified as part of the salt
-            crypt_salt = f"${methods[algorithm].ident}${crypt_salt}"
-
-    try:
-        ret = crypt.crypt(password, crypt_salt)
-    except OSError:
-        ret = None
-    return ret
-
-
 def gen_hash(crypt_salt=None, password=None, algorithm=None):
     """
     Generate /etc/shadow hash
@@ -159,16 +128,12 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
 
     if algorithm is None:
         # prefer the most secure natively supported method
-        algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
+        algorithm = known_methods[0]
 
     if algorithm == "crypt" and crypt_salt and len(crypt_salt) != 2:
         log.warning("Hash salt is too long for 'crypt' hash.")
 
-    if HAS_CRYPT and algorithm in methods:
-        return _gen_hash_crypt(
-            crypt_salt=crypt_salt, password=password, algorithm=algorithm
-        )
-    elif HAS_PASSLIB and algorithm in known_methods:
+    if HAS_PASSLIB and algorithm in known_methods:
         return _gen_hash_passlib(
             crypt_salt=crypt_salt, password=password, algorithm=algorithm
         )
@@ -177,6 +142,6 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
             "Cannot hash using '{}' hash algorithm. Natively supported "
             "algorithms are: {}. If passlib is installed ({}), the supported "
             "algorithms are: {}.".format(
-                algorithm, list(methods), HAS_PASSLIB, known_methods
+                algorithm, [], HAS_PASSLIB, known_methods
             )
         )
