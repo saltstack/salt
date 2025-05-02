@@ -901,7 +901,7 @@ def workflow_config(
     gh_event: dict[str, Any] = {}
     config: dict[str, Any] = {}
     labels: list[tuple[str, str]] = []
-    slugs: list[str] = []
+    slugs: str | list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
     ctx.info(f"{pprint.pformat(dict(os.environ))}")
@@ -938,23 +938,19 @@ def workflow_config(
 
     if event_name != "pull_request" or "test:full" in [_[0] for _ in labels]:
         full = True
-        requested_slugs = _environment_slugs(
-            ctx,
-            os.environ.get(
-                "FULL_TESTRUN_SLUGS",
-                tools.utils.get_cicd_shared_context()["full-testrun-slugs"],
-            ),
-            labels,
-        )
+        slugs = os.environ.get("FULL_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["full-testrun-slugs"]
     else:
-        requested_slugs = _environment_slugs(
-            ctx,
-            os.environ.get(
-                "PR_TESTRUN_SLUGS",
-                tools.utils.get_cicd_shared_context()["pr-testrun-slugs"],
-            ),
-            labels,
-        )
+        slugs = os.environ.get("PR_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["pr-testrun-slugs"]
+
+    requested_slugs = _environment_slugs(
+        ctx,
+        slugs,
+        labels,
+    )
 
     ctx.info(f"{'==== requested slugs ====':^80s}")
     ctx.info(f"{pprint.pformat(requested_slugs)}")
