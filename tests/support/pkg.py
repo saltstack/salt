@@ -465,6 +465,13 @@ class SaltPkgInstall:
                 log.error("Invalid package: %s", pkg)
                 return False
 
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
+
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
@@ -860,6 +867,13 @@ class SaltPkgInstall:
                 # Now run the batch file
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
+
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
@@ -1499,6 +1513,20 @@ class SaltMasterWindows(SaltMaster):
             script_name="salt-master",
             code_dir=self.factories_manager.code_dir.parent,
         )
+
+        # XXX: Add install path to cli_scripts.generate_scripts?
+        def patch_script(script):
+            text = script.read_text()
+            newlines = []
+            for line in text.splitlines():
+                newlines.append(line)
+                if line == "sys.path.insert(0, CODE_DIR)":
+                    newlines.append(
+                        'sys.path.insert(0, "C:\\Program Files\\Salt Project\\Salt\\Lib\\site-packages")'
+                    )
+            script.write_text(os.linesep.join(newlines))
+
+        patch_script(self.factories_manager.scripts_dir / "cli_salt_master.py")
 
     def _get_impl_class(self):
         return DaemonImpl

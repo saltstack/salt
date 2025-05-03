@@ -483,9 +483,17 @@ def salt_minion(salt_factories, salt_master, install_salt):
         if minion_pki.exists():
             salt.utils.files.rm_rf(minion_pki)
 
-        # Work around missing WMIC until 3008.10 has been released.
+        # Work around missing WMIC until 3008.10 has been released. Not sure
+        # why this doesn't work anymore on the master branch when it was enough
+        # on 3006.x and 3007.x. We had to add similar logic in
+        # tests/support/pkg.py to fix the upgrade/downgrade tests on master.
         grainsdir = pathlib.Path("c:/salt/etc/grains")
         grainsdir.mkdir(exist_ok=True)
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
+
+        grainsdir = pathlib.Path(
+            r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+        )
         shutil.copy(r"salt\grains\disks.py", grainsdir)
 
     factory.after_terminate(
