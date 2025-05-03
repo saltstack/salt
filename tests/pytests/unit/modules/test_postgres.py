@@ -57,7 +57,7 @@ def get_test_list_language_csv():
 @pytest.fixture
 def get_test_privileges_list_table_csv():
     return """name
-"{baruwatest=arwdDxt/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*/baruwatest}"
+"{baruwatest=arwdDxtm/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*m*/baruwatest}"
 """
 
 
@@ -1624,6 +1624,7 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
                 "REFERENCES": True,
                 "SELECT": True,
                 "DELETE": True,
+                "MAINTAIN": True,
             },
             "baruwatest": {
                 "INSERT": False,
@@ -1633,6 +1634,7 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
                 "REFERENCES": False,
                 "SELECT": False,
                 "DELETE": False,
+                "MAINTAIN": False,
             },
         }
         assert ret == expected
