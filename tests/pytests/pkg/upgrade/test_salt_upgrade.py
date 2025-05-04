@@ -144,6 +144,8 @@ def test_salt_upgrade(salt_call_cli, install_salt):
 
     original_py_version = install_salt.package_python_version()
 
+    uninstall = salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+
     # XXX: This module checking should be a separate integration in
     #      tests/pytests/pkg/integration.
 
@@ -152,16 +154,16 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     #      Otherwise find a module on windows to run this test agsint.
 
     if not platform.is_windows():
-        ret = salt_call_cli.run("--local", "gpg.list_keys")
-        assert ret.returncode == 1
-        assert "The gpg execution module cannot be loaded" in ret.stderr
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
 
         # Test pip install before an upgrade
-        dep = "python-gnupg==0.4.4"
+        dep = "netaddr==0.8.0"
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
-        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
         assert ret.returncode == 0
 
     # perform Salt package upgrade test
@@ -171,5 +173,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     if new_py_version == original_py_version:
         # test pip install after an upgrade
         if not platform.is_windows():
-            ret = salt_call_cli.run("--local", "gpg.list_keys")
+            ret = salt_call_cli.run(
+                "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+            )
             assert ret.returncode == 0

@@ -67,14 +67,20 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     #      windows. Ideally find a module that works on both windows/linux.
     #      Otherwise find a module on windows to run this test agsint.
 
+    uninstall = salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+
     if not platform.is_windows():
-        # Test pip install before a downgrade
-        dep = "python-gnupg==0.4.4"
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
+
+        # Test pip install before an upgrade
+        dep = "netaddr==0.8.0"
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
         # Verify we can use the module dependent on the installed package
-        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
         assert ret.returncode == 0
 
     # Verify there is a running minion by getting its PID
@@ -129,5 +135,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
             if not platform.is_windows():
-                ret = salt_call_cli.run("--local", "gpg.list_keys")
+                ret = salt_call_cli.run(
+                    "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+                )
                 assert ret.returncode == 0
