@@ -983,12 +983,14 @@ def _set_symlink_ownership(path, user, group, win_owner):
     return _check_symlink_ownership(path, user, group, win_owner)
 
 
-def _symlink_check(name, target, force, user, group, win_owner):
+def _symlink_check(name, target, force, user, group, win_owner, follow_symlinks=False):
     """
     Check the symlink function
     """
     changes = {}
-    if not os.path.exists(name) and not __salt__["file.is_link"](name):
+    exists = os.path.exists if follow_symlinks else os.path.lexists
+
+    if not exists(name) and not __salt__["file.is_link"](name):
         changes["new"] = name
         return (
             None,
@@ -1788,7 +1790,7 @@ def symlink(
         return _error(ret, msg)
 
     tresult, tcomment, tchanges = _symlink_check(
-        name, target, force, user, group, win_owner
+        name, target, force, user, group, win_owner, follow_symlinks
     )
 
     if not os.path.isdir(os.path.dirname(name)):

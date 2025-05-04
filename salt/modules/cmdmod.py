@@ -2904,13 +2904,18 @@ def script(
         kwargs.pop("__env__")
 
     win_cwd = False
-    if salt.utils.platform.is_windows() and runas and cwd is None:
-        # Create a temp working directory
-        cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])
-        win_cwd = True
-        salt.utils.win_dacl.set_permissions(
-            obj_name=cwd, principal=runas, permissions="full_control"
-        )
+    if salt.utils.platform.is_windows() and runas:
+        # Let's make sure the user exists first
+        if not __salt__["user.info"](runas):
+            msg = f"Invalid user: {runas}"
+            raise CommandExecutionError(msg)
+        if cwd is None:
+            # Create a temp working directory
+            cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])
+            win_cwd = True
+            salt.utils.win_dacl.set_permissions(
+                obj_name=cwd, principal=runas, permissions="full_control"
+            )
 
     path = salt.utils.files.mkstemp(
         dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]

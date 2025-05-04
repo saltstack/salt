@@ -88,7 +88,7 @@ networkx==3.1
     # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
-packaging==24.1
+packaging==24.0
     # via -r requirements/base.txt
 portend==3.2.0
     # via cherrypy
@@ -127,7 +127,7 @@ timelib==0.3.0
     # via -r requirements/base.txt
 tornado==6.4.1
     # via -r requirements/base.txt
-urllib3==2.2.3
+urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests

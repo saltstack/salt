@@ -6,6 +6,7 @@ import pathlib
 import pprint
 import re
 import shutil
+import subprocess
 import textwrap
 import time
 from typing import TYPE_CHECKING
@@ -438,7 +439,7 @@ class SaltPkgInstall:
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        pkg = self.pkgs[0]
+        pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
@@ -446,27 +447,20 @@ class SaltPkgInstall:
                 self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
-                batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait {str(pkg)} /start-minion=0 /S'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                log.info("Installing: %s", str(pkg))
+                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+                log.info("Installing: %s", str(pkg))
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
@@ -498,6 +492,20 @@ class SaltPkgInstall:
             env = os.environ.copy()
             extra_args = []
             if self.distro_id in ("ubuntu", "debian"):
+
+                pref_file = pathlib.Path(
+                    "/etc", "apt", "preferences.d", "salt-pin-1001"
+                )
+                pref_file.parent.mkdir(exist_ok=True)
+                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                with salt.utils.files.fopen(pref_file, "w") as fp:
+                    fp.write(
+                        f"Package: salt-*\n"
+                        f"Pin: version {pin}\n"
+                        f"Pin-Priority: 1001"
+                    )
+                log.error("Pin to %s", pin)
+
                 env["DEBIAN_FRONTEND"] = "noninteractive"
                 extra_args = [
                     "-o",
@@ -522,12 +530,13 @@ class SaltPkgInstall:
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
             assert ret.returncode == 0
             assert "/saltstack/salt/run" not in ret.stdout
-        log.info(ret)
-        self._check_retcode(ret)
+            log.info(ret)
+            self._check_retcode(ret)
 
     def _install_ssm_service(self, service="minion"):
         """
@@ -671,6 +680,18 @@ class SaltPkgInstall:
                 "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
+
+            if "3007" in self.prev_version:
+                ret = self.proc.run(
+                    self.pkg_mngr, "config-manager", "--enable", "salt-repo-3007-sts"
+                )
+                self._check_retcode(ret)
+            else:
+                ret = self.proc.run(
+                    self.pkg_mngr, "config-manager", "--disable", "salt-repo-3007-sts"
+                )
+                self._check_retcode(ret)
+
             if self.distro_name == "photon":
                 # yum version on photon doesn't support expire-cache
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
@@ -695,12 +716,14 @@ class SaltPkgInstall:
                     if dbg_exists:
                         pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
+            # pkgs = [f"{_}=={self.prev_version}" for _ in pkgs_to_install]
             ret = self.proc.run(
                 self.pkg_mngr,
                 cmd_action,
                 *pkgs_to_install,
                 "-y",
             )
+            log.error("**WTF %r", ret)
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:
@@ -717,7 +740,7 @@ class SaltPkgInstall:
                 arch = "amd64"
 
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
-            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.gpg"
+            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.pgp"
 
             # download the gpg pub key
             download_file(
@@ -729,28 +752,37 @@ class SaltPkgInstall:
             ) as fp:
                 fp.write(
                     f"deb [signed-by={gpg_full_path} arch={arch}] "
-                    f"{root_url}/saltproject-deb/ {self.distro_codename} main"
+                    f"{root_url}/saltproject-deb/ stable main"
                 )
             self._check_retcode(ret)
+            pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            pref_file.parent.mkdir(exist_ok=True)
+            pin = f"{self.prev_version.rsplit('.', 1)[0]}.*"
+            if downgrade:
+                pin = self.prev_version
+            with salt.utils.files.fopen(pref_file, "w") as fp:
+                fp.write(
+                    f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"
+                )
 
             cmd = [self.pkg_mngr, "install", *self.salt_pkgs, "-y"]
 
-            if downgrade:
-                pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
-                pref_file.parent.mkdir(exist_ok=True)
-                # TODO: There's probably something I should put in here to say what version
-                # TODO: But maybe that's done elsewhere, hopefully in self.salt_pkgs
-                pref_file.write_text(
-                    textwrap.dedent(
-                        f"""\
-                Package: salt*
-                Pin: origin "{root_url}/saltproject-deb"
-                Pin-Priority: 1001
-                """
-                    ),
-                    encoding="utf-8",
-                )
-                cmd.append("--allow-downgrades")
+            # if downgrade:
+            #    pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            #    pref_file.parent.mkdir(exist_ok=True)
+            #    # TODO: There's probably something I should put in here to say what version
+            #    # TODO: But maybe that's done elsewhere, hopefully in self.salt_pkgs
+            #    pref_file.write_text(
+            #        textwrap.dedent(
+            #            f"""\
+            #    Package: salt*
+            #    Pin: origin "{root_url}/saltproject-deb"
+            #    Pin-Priority: 1001
+            #    """
+            #        ),
+            #        encoding="utf-8",
+            #    )
+            cmd.append("--allow-downgrades")
             env = os.environ.copy()
             env["DEBIAN_FRONTEND"] = "noninteractive"
             extra_args = [
@@ -762,24 +794,27 @@ class SaltPkgInstall:
             self.proc.run(self.pkg_mngr, "update", *extra_args, env=env)
 
             cmd.extend(extra_args)
-
+            log.error("Run cmd %s", cmd)
             ret = self.proc.run(*cmd, env=env)
+            log.error("cmd return %r", ret)
             # Pre-relenv packages down get downgraded to cleanly programmatically
             # They work manually, and the install tests after downgrades will catch problems with the install
+            self._check_retcode(ret)
             # Let's not check the returncode if this is the case
-            if not (
-                downgrade
-                and packaging.version.parse(self.prev_version)
-                < packaging.version.parse("3006.0")
-            ):
-                self._check_retcode(ret)
-            if downgrade:
+            # if not (
+            #    downgrade
+            #    and packaging.version.parse(self.prev_version)
+            #    < packaging.version.parse("3006.0")
+            # ):
+            #    self._check_retcode(ret)
+            if downgrade and not self.no_uninstall:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
             self.ssm_bin = self.install_dir / "ssm.exe"
+            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
 
             if self.file_ext == "exe":
                 win_pkg = (
@@ -798,16 +833,25 @@ class SaltPkgInstall:
             download_file(win_pkg_url, pkg_path)
 
             if self.file_ext == "msi":
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+
+                if downgrade:
+                    # MSI can not be downgraded, we must remove the newer version
+                    # before installing the old one.
+                    ret = subprocess.run(
+                        f"msiexec.exe /qn /x {pkg} /norestart",
+                        shell=True,  # nosec
+                        check=False,
+                    )
+                    assert ret.returncode == 0
+
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg_path} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 batch_file = pkg_path.parent / "install_nsis.cmd"
                 batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
@@ -820,6 +864,9 @@ class SaltPkgInstall:
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
+
+            # Add installation to the path
+            self.update_process_path()
 
             if self.pkg_system_service:
                 self._install_ssm_service()
@@ -1007,11 +1054,14 @@ class SaltPkgInstall:
     def __enter__(self):
         if platform.is_windows():
             self.update_process_path()
+
         if self.no_install:
             return self
+
         if self.upgrade:
             self.install_previous()
         else:
+            # assume downgrade, since no_install only used in these two cases
             self.install()
         return self
 
@@ -1231,7 +1281,7 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     "processes",
                     self.get_service_name(),
                 )
-                log.warning(ret)
+                log.debug("process result %s", ret)
                 if not ret.stdout or (ret.stdout and not ret.stdout.strip()):
                     if n >= 120:
                         return False
@@ -1244,7 +1294,11 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     mainpid = line.strip().split()[0]
                     self._process = psutil.Process(int(mainpid))
                     break
-        return self._process.is_running()
+        ret = self._process.is_running()
+        if not hasattr(self, "logged_running"):
+            log.error("SSM processs is running %s", ret)
+            self.logged_running = True
+        return ret
 
     def _terminate(self):
         """
