@@ -97,6 +97,7 @@ def salt_test_upgrade(
 
     # Verify there is a new running minion and master by getting their PID and comparing them
     # with previous PIDs from before the upgrade
+    time.sleep(15)
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
@@ -141,19 +142,27 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    ret = salt_call_cli.run("--local", "gpg.list_keys")
-    assert ret.returncode == 1
-
     original_py_version = install_salt.package_python_version()
 
-    # Test pip install before an upgrade
-    dep = "python-gnupg==0.4.4"
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
+    # XXX: This module checking should be a separate integration in
+    #      tests/pytests/pkg/integration.
 
-    # Verify we can use the module dependent on the installed package
-    ret = salt_call_cli.run("--local", "gpg.list_keys")
-    assert ret.returncode == 0
+    # XXX: The gpg module needs a gpg binary on
+    #      windows. Ideally find a module that works on both windows/linux.
+    #      Otherwise find a module on windows to run this test agsint.
+
+    if not platform.is_windows():
+        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        assert ret.returncode == 1
+        assert "The gpg execution module cannot be loaded" in ret.stderr
+
+        # Test pip install before an upgrade
+        dep = "python-gnupg==0.4.4"
+        install = salt_call_cli.run("--local", "pip.install", dep)
+        assert install.returncode == 0
+
+        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        assert ret.returncode == 0
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt)
@@ -161,5 +170,6 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
         # test pip install after an upgrade
-        ret = salt_call_cli.run("--local", "gpg.list_keys")
-        assert ret.returncode == 0
+        if not platform.is_windows():
+            ret = salt_call_cli.run("--local", "gpg.list_keys")
+            assert ret.returncode == 0

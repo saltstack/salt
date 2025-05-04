@@ -63,14 +63,19 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         install_salt.artifact_version
     )
 
-    # Test pip install before a downgrade
-    dep = "python-gnupg==0.4.4"
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
+    # XXX: The gpg module needs a gpg binary on
+    #      windows. Ideally find a module that works on both windows/linux.
+    #      Otherwise find a module on windows to run this test agsint.
 
-    # Verify we can use the module dependent on the installed package
-    ret = salt_call_cli.run("--local", "gpg.list_keys")
-    assert ret.returncode == 0
+    if not platform.is_windows():
+        # Test pip install before a downgrade
+        dep = "python-gnupg==0.4.4"
+        install = salt_call_cli.run("--local", "pip.install", dep)
+        assert install.returncode == 0
+
+        # Verify we can use the module dependent on the installed package
+        ret = salt_call_cli.run("--local", "gpg.list_keys")
+        assert ret.returncode == 0
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
@@ -123,5 +128,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
-            ret = salt_call_cli.run("--local", "gpg.list_keys")
-            assert ret.returncode == 0
+            if not platform.is_windows():
+                ret = salt_call_cli.run("--local", "gpg.list_keys")
+                assert ret.returncode == 0
