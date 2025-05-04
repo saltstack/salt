@@ -1086,7 +1086,11 @@ class SaltPkgInstall:
         # Did we left anything running?!
         procs = []
         for proc in psutil.process_iter():
-            if "salt" in proc.name():
+            try:
+                name = proc.name()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+            if "salt" in name:
                 cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
                 if "/opt/saltstack" in cmdl_strg:
                     procs.append(proc)
