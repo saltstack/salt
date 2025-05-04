@@ -131,6 +131,10 @@ def debian(
         "arch": {
             "help": "The arch to build for",
         },
+        "key_id": {
+            "help": "Signing key id",
+            "required": False,
+        },
     },
 )
 def rpm(
@@ -139,6 +143,7 @@ def rpm(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
+    key_id: str = None,
 ):
     """
     Build the RPM package.
@@ -184,7 +189,17 @@ def rpm(
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
     )
-
+    if key_id:
+        for pkg in pathlib.Path("~/rpmbuild/RPMS/").glob("*.rpm"):
+            ctx.info(f"Running 'rpmsign' on {pkg} ...")
+            ctx.run(
+                "rpmsign",
+                "--key-id",
+                key_id,
+                "--addsign",
+                "--digest-algo=sha256",
+                str(pkg),
+            )
     ctx.info("Done")
 
 

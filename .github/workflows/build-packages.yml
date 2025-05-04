@@ -16,6 +16,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       sign-macos-packages:
         type: boolean
         default: false
@@ -199,6 +203,25 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
 
+      - name: Setup GnuPG
+        if: ${{ inputs.sign-rpm-packages }}
+        env:
+          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          export GNUPGHOME
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          passphrase-file ${GNUPGHOME}/passphrase
+          EOF
+          echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
+          echo "${SIGNING_GPG_KEY}" | gpg --import -
+
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
@@ -216,7 +239,7 @@ jobs:
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }}
+          }} ${{ inputs.sign-rpm-packages && '--key-id=64CBBC8173D76B3F' || '' }}
 
       - name: Set Artifact Name
         id: set-artifact-name
