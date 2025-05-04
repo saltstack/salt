@@ -97,7 +97,7 @@ def salt_test_upgrade(
 
     # Verify there is a new running minion and master by getting their PID and comparing them
     # with previous PIDs from before the upgrade
-    time.sleep(15)
+    time.sleep(30)
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
