@@ -19,7 +19,11 @@ run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && forma
 <%- block on %>
 
 on:
-  push: {}
+  push:
+    branches:
+      - 3006.x
+      - 3007.x
+      - master
   pull_request:
     types:
       - labeled
