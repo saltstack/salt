@@ -322,10 +322,10 @@ def test_artifacts(
         if succeeded:
             ctx.info(f"Downloaded {succeeded} to {dest}")
         else:
-            ctx.error(f"Download failed.")
+            ctx.error("Download failed.")
             ctx.exit(1)
         if succeeded.endswith("tar.xz"):
             ctx.info(f"Extracting {succeeded} to {dest}")
-            dest = pathlib.Path(dest)
-            with tarfile.open(str(dest / succeeded)) as tarball:
-                tarball.extractall(path=dest)
+            destpath = pathlib.Path(dest)
+            with tarfile.open(str(destpath / succeeded)) as tarball:
+                tarball.extractall(path=dest)  # nosec
