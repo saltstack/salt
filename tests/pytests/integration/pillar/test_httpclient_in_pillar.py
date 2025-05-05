@@ -1,4 +1,4 @@
-def test_pillar_using_http_query(salt_master, salt_minion, salt_cli, tmp_path):
+def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
     pillar_top = """
     base:
       "*":
@@ -9,8 +9,15 @@ def test_pillar_using_http_query(salt_master, salt_minion, salt_cli, tmp_path):
     http_query_test: {{ something }}
     """
 
-    with salt_master.pillar_tree.base.temp_file("top.sls", pillar_top):
-        with salt_master.pillar_tree.base.temp_file("http_pillar_test.sls", my_pillar):
+    with salt_master.pillar_tree.base.temp_file(
+        "top.sls",
+        pillar_top,
+    ) as p_top:
+        with salt_master.pillar_tree.base.temp_file(
+            "http_pillar_test.sls", my_pillar
+        ) as p_data:
+            top_content = p_top.read_text()
+            pillar_content = p_data.read_text()
             ret = salt_cli.run("state.apply", minion_tgt=salt_minion.id)
             assert ret.returncode == 1
             assert (
