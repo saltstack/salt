@@ -73,13 +73,15 @@ def salt_test_upgrade(
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 
-    start = time.monotonic()
-    while True:
-        ret = salt_call_cli.run("--local", "test.version", _timeout=10)
-        if ret.returncode == 0:
-            break
-        if time.monotonic() - start > 60:
-            break
+    # XXX: Come up with a faster way of knowing whne we are ready.
+    # start = time.monotonic()
+    # while True:
+    #    ret = salt_call_cli.run("--local", "test.version", _timeout=10)
+    #    if ret.returncode == 0:
+    #        break
+    #    if time.monotonic() - start > 60:
+    #        break
+    time.sleep(60)
 
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
