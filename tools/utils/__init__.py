@@ -299,6 +299,8 @@ def get_salt_releases(
             )
             ctx.exit(1)
         for release in ret.json():
+            if release.get("draft", False):
+                continue
             name = release["name"]
             if name.startswith("v"):
                 name = name[1:]

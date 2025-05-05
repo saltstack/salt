@@ -266,7 +266,7 @@ tornado==6.3.3
     #   -r requirements/base.txt
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

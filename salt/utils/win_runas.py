@@ -96,6 +96,10 @@ def runas(cmdLine, username, password=None, cwd=None):
     Commands are run in with the highest level privileges possible for the
     account provided.
     """
+    # Sometimes this comes in as an int. LookupAccountName can't handle an int
+    # Let's make it a string if it's anything other than a string
+    if not isinstance(username, str):
+        username = str(username)
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)
@@ -265,6 +269,10 @@ def runas_unpriv(cmd, username, password, cwd=None):
     """
     Runas that works for non-privileged users
     """
+    # Sometimes this comes in as an int. LookupAccountName can't handle an int
+    # Let's make it a string if it's anything other than a string
+    if not isinstance(username, str):
+        username = str(username)
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)

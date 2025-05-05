@@ -130,6 +130,7 @@ def present(
        - EXECUTE
        - REFERENCES
        - DELETE
+       - MAINTAIN
        - ALL
 
        :note: privileges should not be set when granting group membership
@@ -260,6 +261,7 @@ def absent(
        - EXECUTE
        - REFERENCES
        - DELETE
+       - MAINTAIN
        - ALL
 
        :note: privileges should not be set when revoking group membership

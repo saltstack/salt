@@ -78,6 +78,31 @@ def encrypted_requests(tmp_path):
     )
 
 
+def test_maintenance_pki_dir_initialized():
+    """
+    Verify Maintenance pki_dir property initalization
+    """
+    not_clustered_path = "not_clustered"
+    clustered_path = "clustered"
+    opts = {
+        "loop_interval": 10,
+        "maintenance_interval": 1,
+        "pki_dir": not_clustered_path,
+        "cluster_pki_dir": clustered_path,
+    }
+
+    # If it's not a cluster, pki_dir is opts['pki_dir']
+    mp = salt.master.Maintenance(opts)
+    assert mp.pki_dir == not_clustered_path
+    assert mp.pki_dir != clustered_path
+
+    # If it's a cluster, pki_dir is opts['cluster_pki_dir']
+    opts.update(cluster_id="test-cluster")
+    mp = salt.master.Maintenance(opts)
+    assert mp.pki_dir == clustered_path
+    assert mp.pki_dir != not_clustered_path
+
+
 def test_maintenance_duration():
     """
     Validate Maintenance process duration.

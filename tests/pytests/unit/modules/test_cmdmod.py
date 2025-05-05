@@ -822,14 +822,12 @@ def test_cmd_script_saltenv_from_config():
 def test_cmd_script_saltenv_from_config_windows():
     mock_cp_get_template = MagicMock()
     mock_cp_cache_file = MagicMock()
-    mock_run = MagicMock()
     with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
         with patch.dict(
             cmdmod.__salt__,
             {
                 "cp.cache_file": mock_cp_cache_file,
                 "cp.get_template": mock_cp_get_template,
-                "file.user_to_uid": MagicMock(),
                 "file.remove": MagicMock(),
             },
         ):
