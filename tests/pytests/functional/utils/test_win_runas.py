@@ -7,6 +7,7 @@ from random import randint
 import pytest
 
 import salt.modules.win_useradd as win_useradd
+import salt.platform.win
 import salt.utils.win_runas as win_runas
 
 pytestmark = [
@@ -42,7 +43,7 @@ def test_compound_runas(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas(
-        cmd=cmd,
+        cmd=salt.platform.win.prepend_cmd(cmd),
         username=user.username,
         password=user.password,
     )
@@ -61,7 +62,7 @@ def test_compound_runas_unpriv(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas_unpriv(
-        cmd=cmd,
+        cmd=salt.platform.win.prepend_cmd(cmd),
         username=user.username,
         password=user.password,
     )
