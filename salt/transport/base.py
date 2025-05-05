@@ -119,7 +119,7 @@ def publish_server(opts, **kwargs):
     else:
         raise Exception(f"Transport type not found: {ttype}")
 
-    if not transcls.support_ssl:
+    if not transcls.support_ssl():
         if "ssl" in kwargs:
             log.warning(f"SSL is not supported for transport: {ttype}")
             kwargs.pop("ssl")
@@ -399,10 +399,9 @@ class DaemonizedPublishServer(PublishServer):
     ):
         raise NotImplementedError
 
-    @property
     @classmethod
     @abstractmethod
-    def support_ssl(self):
+    def support_ssl(cls):
         """If the transport supports SSL then this should be True."""
         raise NotImplementedError
 
