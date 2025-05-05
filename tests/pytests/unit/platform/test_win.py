@@ -1,6 +1,9 @@
 import pytest
 
-from salt.platform import win
+import salt.utils.platform
+
+if salt.utils.platform.is_windows():
+    from salt.platform import win
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
