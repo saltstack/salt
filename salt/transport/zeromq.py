@@ -837,9 +837,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     Encapsulate synchronous operations for a publisher channel
     """
 
-    # Required from DaemonizedPublishServer
-    support_ssl = False
-
     async_methods = [
         "publish",
     ]
@@ -887,6 +884,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.started = multiprocessing.Event()
         else:
             self.started = started
+
+    @classmethod
+    def support_ssl(cls):
+        # Required from DaemonizedPublishServer
+        return False
 
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
@@ -1090,12 +1092,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.connect()
         await self.sock.send(payload)
 
+    def __enter__(self):
+        return self
+
     @property
     def topic_support(self):
         return self.opts.get("zmq_filtering", False)
-
-    def __enter__(self):
-        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
