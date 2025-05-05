@@ -240,9 +240,6 @@ class PublishClient(salt.transport.base.PublishClient):
 class PublishServer(salt.transport.base.DaemonizedPublishServer):
     """ """
 
-    # Required from DaemonizedPublishServer
-    support_ssl = True
-
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
@@ -287,6 +284,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.started = multiprocessing.Event()
         else:
             self.started = started
+
+    @classmethod
+    def support_ssl(cls):
+        # Required from DaemonizedPublishServer
+        return True
 
     @property
     def topic_support(self):
