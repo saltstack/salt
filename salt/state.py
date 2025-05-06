@@ -27,7 +27,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import networkx as nx
 
@@ -800,7 +800,7 @@ class State:
         self.global_state_conditions = None
         self.dependency_dag = DependencyGraph()
         # a mapping of state tag (unique id) to the return result dict
-        self.disabled_states: Optional[dict[str, dict[str, Any]]] = None
+        self.disabled_states: dict[str, dict[str, Any]] | None = None
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1458,7 +1458,7 @@ class State:
                 )
 
     def compile_high_data(
-        self, high: dict[str, Any], orchestration_jid: Union[str, int, None] = None
+        self, high: dict[str, Any], orchestration_jid: str | int | None = None
     ) -> tuple[list[LowChunk], list[str]]:
         """
         "Compile" the high data as it is retrieved from the CLI or YAML into
@@ -2022,7 +2022,7 @@ class State:
         self,
         cdata: dict[str, Any],
         low: LowChunk,
-        inject_globals: Optional[dict[Any, Any]],
+        inject_globals: dict[Any, Any] | None,
     ):
         """
         Call the state defined in the given cdata in parallel
@@ -2084,8 +2084,8 @@ class State:
     def call(
         self,
         low: LowChunk,
-        chunks: Optional[Sequence[LowChunk]] = None,
-        running: Optional[dict[str, dict]] = None,
+        chunks: Sequence[LowChunk] | None = None,
+        running: dict[str, dict] | None = None,
         retries: int = 1,
     ):
         """
@@ -2508,11 +2508,25 @@ class State:
     def call_chunks(
         self,
         chunks: Sequence[LowChunk],
-        disabled_states: Optional[dict[str, dict[str, Any]]] = None,
+        disabled_states: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """
         Iterate over a list of chunks and call them, checking for requires.
         """
+
+        def _call_pending(
+            pending: dict[str, LowChunk], running: dict[str, dict]
+        ) -> tuple[dict[str, LowChunk], dict[str, dict], bool]:
+            still_pending = {}
+            for tag, pend in pending.items():
+                if tag not in running:
+                    running, is_pending = self.call_chunk(pend, running, chunks)
+                    if is_pending:
+                        still_pending[tag] = pend
+                    if self.check_failhard(pend, running):
+                        return still_pending, running, True
+            return still_pending, running, False
+
         if disabled_states is None:
             # Check for any disabled states
             disabled = {}
@@ -2521,7 +2535,11 @@ class State:
         else:
             disabled = disabled_states
         running = {}
+        pending_chunks = {}
         for low in chunks:
+            pending_chunks, running, failhard = _call_pending(pending_chunks, running)
+            if failhard:
+                return running
             if "__FAILHARD__" in running:
                 running.pop("__FAILHARD__")
                 return running
@@ -2531,14 +2549,21 @@ class State:
                 action = self.check_pause(low)
                 if action == "kill":
                     break
-                running = self.call_chunk(low, running, chunks)
+                running, pending = self.call_chunk(low, running, chunks)
+                if pending:
+                    pending_chunks[tag] = low
                 if self.check_failhard(low, running):
                     return running
+        while pending_chunks:
+            pending_chunks, running, failhard = _call_pending(pending_chunks, running)
+            if failhard:
+                return running
+            time.sleep(0.01)
         while True:
             if self.reconcile_procs(running):
                 break
             time.sleep(0.01)
-        ret = dict(list(disabled.items()) + list(running.items()))
+        ret = {**disabled, **running}
         return ret
 
     def check_failhard(self, low: LowChunk, running: dict[str, dict]):
@@ -2554,7 +2579,7 @@ class State:
             return not running[tag]["result"]
         return False
 
-    def check_pause(self, low: LowChunk) -> Optional[str]:
+    def check_pause(self, low: LowChunk) -> str | None:
         """
         Check to see if this low chunk has been paused
         """
@@ -2644,6 +2669,7 @@ class State:
         states.
         """
         reqs = {}
+        pending = False
         for req_type, chunk in self.dependency_dag.get_dependencies(low):
             reqs.setdefault(req_type, []).append(chunk)
         fun_stats = set()
@@ -2663,15 +2689,20 @@ class State:
                     filtered_run_dict[tag] = run_dict_chunk
             run_dict = filtered_run_dict
 
-            while True:
-                if self.reconcile_procs(run_dict):
-                    break
-                time.sleep(0.01)
+            if low.get("parallel"):
+                pending = not self.reconcile_procs(run_dict)
+            else:
+                while True:
+                    if self.reconcile_procs(run_dict):
+                        break
+                    time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
                     req_stats.add("unmet")
+                    continue
+                if pending:
                     continue
                 # A state can include a "skip_req" key in the return dict
                 # with a True value to skip triggering onchanges, watch, or
@@ -2729,6 +2760,8 @@ class State:
 
         if "unmet" in fun_stats:
             status = "unmet"
+        elif pending:
+            status = "pending"
         elif "fail" in fun_stats:
             status = "fail"
         elif "skip_req" in fun_stats and (fun_stats & {"onchangesmet", "premet"}):
@@ -2754,7 +2787,7 @@ class State:
         return status, reqs
 
     def event(
-        self, chunk_ret: dict, length: int, fire_event: Union[bool, str] = False
+        self, chunk_ret: dict, length: int, fire_event: bool | str = False
     ) -> None:
         """
         Fire an event on the master bus
@@ -2810,7 +2843,7 @@ class State:
         running: dict[str, dict],
         chunks: Sequence[LowChunk],
         depth: int = 0,
-    ) -> dict[str, dict]:
+    ) -> tuple[dict[str, dict], bool]:
         """
         Execute the chunk if the requisites did not fail
         """
@@ -2826,8 +2859,13 @@ class State:
 
         status, reqs = self._check_requisites(low, running)
         if status == "unmet":
-            if self._call_unmet_requisites(low, running, chunks, tag, depth):
-                return running
+            running_failhard, pending = self._call_unmet_requisites(
+                low, running, chunks, tag, depth
+            )
+            if running_failhard or pending:
+                return running, pending
+        elif status == "pending":
+            return running, True
         elif status == "met":
             if low.get("__prereq__"):
                 self.pre[tag] = self.call(low, chunks, running)
@@ -2955,7 +2993,7 @@ class State:
                 for key in ("__sls__", "__id__", "name"):
                     running[sub_tag][key] = low.get(key)
 
-        return running
+        return running, False
 
     def _assign_not_run_result_dict(
         self,
@@ -2989,16 +3027,19 @@ class State:
         chunks: Sequence[LowChunk],
         tag: str,
         depth: int,
-    ) -> dict[str, dict]:
+    ) -> tuple[dict[str, dict], bool]:
+        pending = False
         for _, chunk in self.dependency_dag.get_dependencies(low):
             # Check to see if the chunk has been run, only run it if
             # it has not been run already
             ctag = _gen_tag(chunk)
             if ctag not in running:
-                running = self.call_chunk(chunk, running, chunks)
+                running, pending = self.call_chunk(chunk, running, chunks)
+                if pending:
+                    return running, pending
                 if self.check_failhard(chunk, running):
                     running["__FAILHARD__"] = True
-                    return running
+                    return running, pending
         if low.get("__prereq__"):
             status, _ = self._check_requisites(low, running)
             self.pre[tag] = self.call(low, chunks, running)
@@ -3020,11 +3061,11 @@ class State:
                 for key in ("__sls__", "__id__", "name"):
                     running[tag][key] = low.get(key)
             else:
-                running = self.call_chunk(low, running, chunks, depth)
+                running, pending = self.call_chunk(low, running, chunks, depth)
         if self.check_failhard(low, running):
             running["__FAILHARD__"] = True
-            return running
-        return {}
+            return running, pending
+        return {}, pending
 
     def call_beacons(self, chunks: Iterable[LowChunk], running: dict) -> dict:
         """
@@ -3150,8 +3191,8 @@ class State:
         return running
 
     def call_high(
-        self, high: HighData, orchestration_jid: Union[str, int, None] = None
-    ) -> Union[dict, list]:
+        self, high: HighData, orchestration_jid: str | int | None = None
+    ) -> dict | list:
         """
         Process a high data call and ensure the defined states.
         """
@@ -3335,7 +3376,7 @@ class LazyAvailStates:
 
     def __init__(self, hs: BaseHighState):
         self._hs = hs
-        self._avail: dict[Hashable, Optional[list[str]]] = {"base": None}
+        self._avail: dict[Hashable, list[str] | None] = {"base": None}
         self._filled = False
 
     def _fill(self) -> None:
