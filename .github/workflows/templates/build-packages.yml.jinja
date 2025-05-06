@@ -27,6 +27,7 @@
     <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
       sign-macos-packages: false
+      sign-rpm-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
     secrets: inherit
 
