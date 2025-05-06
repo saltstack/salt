@@ -484,6 +484,7 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: false
+      sign-rpm-packages: false
       sign-windows-packages: false
     secrets: inherit
 
@@ -504,6 +505,7 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: false
+      sign-rpm-packages: false
       sign-windows-packages: false
     secrets: inherit
   build-ci-deps:
