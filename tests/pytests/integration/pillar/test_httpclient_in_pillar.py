@@ -9,19 +9,14 @@ def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
     http_query_test: {{ something }}
     """
 
-    with salt_master.pillar_tree.base.temp_file(
-        "top.sls",
-        pillar_top,
-    ) as p_top:
-        with salt_master.pillar_tree.base.temp_file(
-            "http_pillar_test.sls", my_pillar
-        ) as p_data:
-            top_content = p_top.read_text()
-            pillar_content = p_data.read_text()
+    with salt_master.pillar_tree.base.temp_file("top.sls", pillar_top):
+        with salt_master.pillar_tree.base.temp_file("http_pillar_test.sls", my_pillar):
+
+            # We may need this for the following pillar.item to work
             ret = salt_cli.run("state.apply", minion_tgt=salt_minion.id)
             assert ret.returncode == 1
             assert (
-                ret.data["no_|-states_|-states_|-None"]["comment"]
+                ret.json["no_|-states_|-states_|-None"]["comment"]
                 == "No states found for this minion"
             )
 
@@ -29,5 +24,4 @@ def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
                 "pillar.item", "http_query_test", minion_tgt=salt_minion.id
             )
             assert pillar_ret.returncode == 0
-
             assert '"http_query_test": 200' in pillar_ret.stdout

@@ -6,13 +6,14 @@ def test_pillar_using_cp_module(salt_master, salt_minion, salt_cli, tmp_path):
     """
     my_file = tmp_path / "my_file.txt"
     my_file.write_text("foobar")
-    my_file_contents = my_file.read_text()
     my_pillar = f"""
     {{%- set something = salt['cp.get_file_str']("{str(my_file)}") %}}
     file_content: {{{{ something }}}}
     """
     with salt_master.pillar_tree.base.temp_file("top.sls", pillar_top):
         with salt_master.pillar_tree.base.temp_file("my_pillar.sls", my_pillar):
+
+            # We may need this for the following pillar.item to work
             ret = salt_cli.run("state.apply", minion_tgt=salt_minion.id)
             assert ret.returncode == 1
             assert (
@@ -24,5 +25,4 @@ def test_pillar_using_cp_module(salt_master, salt_minion, salt_cli, tmp_path):
                 "pillar.item", "file_content", minion_tgt=salt_minion.id
             )
             assert pillar_ret.returncode == 0
-
             assert '"file_content": "foobar"' in pillar_ret.stdout
