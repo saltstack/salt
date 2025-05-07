@@ -53,6 +53,7 @@ except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
+    import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
 
@@ -286,9 +287,9 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         # We need to append $LASTEXITCODE here to return the actual exit code
         # from the script. Otherwise, it will always return 1 on any non-zero
         # exit code failure. Issue: #60884
-        new_cmd.append(f"& {cmd.strip()}; exit $LASTEXITCODE")
+        new_cmd.append(f'"& {cmd.strip()}; exit $LASTEXITCODE"')
     elif encoded_cmd:
-        new_cmd.extend(["-EncodedCommand", f"{cmd}"])
+        new_cmd.extend(["-EncodedCommand", f'"{cmd}"'])
     else:
         # Strip whitespace
         if isinstance(cmd, list):
@@ -300,10 +301,10 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
 
         for keyword in keywords:
             if cmd.lower().startswith(keyword.lower()):
-                new_cmd.extend(["-Command", f"{cmd.strip()}"])
+                new_cmd.extend(["-Command", f'"{cmd.strip()}"'])
                 break
         else:
-            new_cmd.extend(["-Command", f"& {cmd.strip()}"])
+            new_cmd.extend(["-Command", f'"& {cmd.strip()}"'])
 
     log.debug(new_cmd)
     return new_cmd
@@ -450,13 +451,16 @@ def _run(
         )
         log.info(log_callback(msg))
 
-    if runas and salt.utils.platform.is_windows():
-        if not HAS_WIN_RUNAS:
-            msg = "missing salt/utils/win_runas.py"
-            raise CommandExecutionError(msg)
+    if salt.utils.platform.is_windows():
+        if runas:
+            if not HAS_WIN_RUNAS:
+                msg = "missing salt/utils/win_runas.py"
+                raise CommandExecutionError(msg)
 
         if isinstance(cmd, (list, tuple)):
             cmd = " ".join(cmd)
+
+        cmd = salt.platform.win.prepend_cmd(cmd)
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not
