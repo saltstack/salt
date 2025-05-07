@@ -48,6 +48,12 @@ on:
         required: true
         type: string
         description: Json job matrix config
+    secrets:
+      SIGNING_GPG_KEY:
+        required: false
+      SIGNING_PASSPHRASE:
+        required: false
+
 
 env:
   COLUMNS: 190
