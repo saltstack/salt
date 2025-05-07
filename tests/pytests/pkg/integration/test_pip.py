@@ -72,12 +72,9 @@ def test_pip_install(salt_call_cli, install_salt, shell):
 
 
 @pytest.fixture
-def extras_pypath():
-    ret = subprocess.run(
-        ["/opt/saltstack/salt/bin/python3", "--version"],
-        check=True,
-        capture_output=True,
-    )
+def extras_pypath(install_salt):
+    python_bin = os.path.join(*install_salt.binary_paths["python"])
+    ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
     v = packaging.version.Version(ret.stdout.decode().split()[1])
     extras_dir = f"extras-{v.major}.{v.minor}"
 
