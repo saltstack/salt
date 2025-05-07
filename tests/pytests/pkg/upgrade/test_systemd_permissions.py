@@ -1,8 +1,11 @@
 import logging
+import textwrap
 import time
+from pathlib import Path
 
 import packaging.version
 import pytest
+from saltfactories.utils.tempfiles import temp_file
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
@@ -11,10 +14,47 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="module")
+def salt_systemd_overrides():
+    """
+    Fixture to create systemd overrides for salt-api, salt-minion, and
+    salt-master services.
+
+    This is required because the pytest-salt-factories engine does not
+    stop cleanly if you only kill the process. This leaves the systemd
+    service in a failed state.
+    """
+
+    systemd_dir = Path("/etc/systemd/system")
+    conf_name = "override.conf"
+    contents = textwrap.dedent(
+        """
+        [Service]
+        KillMode=control-group
+        TimeoutStopSec=10
+        SuccessExitStatus=SIGKILL
+        """
+    )
+
+    with temp_file(
+        name=conf_name, directory=systemd_dir / "salt-api.service.d", contents=contents
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-minion.service.d",
+        contents=contents,
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-master.service.d",
+        contents=contents,
+    ):
+        yield
+
+
 @pytest.fixture(scope="function")
 def salt_systemd_setup(
     salt_call_cli,
     install_salt,
+    salt_systemd_overrides,
 ):
     """
     Fixture install previous version and set systemd for salt packages
@@ -75,7 +115,7 @@ def test_salt_systemd_disabled_preservation(
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
     install_salt.install(upgrade=True)
-    time.sleep(10)  # give it some time
+    time.sleep(60)  # give it some time
 
     # test for disabled systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -120,7 +160,7 @@ def test_salt_systemd_inactive_preservation(
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # ensure known state, disabled
+    # ensure known state, inactive
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl stop {test_item}"
@@ -129,7 +169,7 @@ def test_salt_systemd_inactive_preservation(
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True)
+    install_salt.install(upgrade=True, stop_services=False)
     time.sleep(10)  # give it some time
 
     # test for inactive systemd state
@@ -153,7 +193,7 @@ def test_salt_systemd_active_preservation(
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True)
+    install_salt.install(upgrade=True, stop_services=False)
     time.sleep(10)  # give it some time
 
     # test for active systemd state
