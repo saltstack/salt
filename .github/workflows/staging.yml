@@ -464,7 +464,6 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
-    environment: staging
     secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -486,7 +485,6 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
-    environment: staging
     secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
