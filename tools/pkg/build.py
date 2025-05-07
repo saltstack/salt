@@ -148,6 +148,7 @@ def rpm(
     """
     Build the RPM package.
     """
+    onci = "GITHUB_WORKFLOW" in os.environ
     checkout = pathlib.Path.cwd()
     if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
@@ -190,7 +191,11 @@ def rpm(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
     )
     if key_id:
-        for pkg in pathlib.Path("~/rpmbuild/RPMS/").glob("*.rpm"):
+        if onci:
+            path = "/github/home/rpmbuild/RPMS/"
+        else:
+            path = "~/rpmbuild/RPMS/"
+        for pkg in pathlib.Path(path).glob("*.rpm"):
             ctx.info(f"Running 'rpmsign' on {pkg} ...")
             ctx.run(
                 "rpmsign",
