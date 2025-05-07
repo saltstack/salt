@@ -97,10 +97,6 @@ def salt_test_upgrade(
         ret.stdout.strip().split()[1]
     ) == packaging.version.parse(install_salt.artifact_version)
 
-    # Verify there is a new running minion and master by getting their PID and comparing them
-    # with previous PIDs from before the upgrade
-    time.sleep(60)
-
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
@@ -127,9 +123,7 @@ def _get_running_named_salt_pid(process_name):
     for proc in psutil.process_iter():
         try:
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except psutil.AccessDenied:
-            continue
-        except psutil.ZombieProcess:
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
