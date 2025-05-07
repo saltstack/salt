@@ -180,7 +180,11 @@ def rpm(
             path = "/github/home/rpmbuild/RPMS/"
         else:
             path = "~/rpmbuild/RPMS/"
-        for pkg in pathlib.Path(path).glob("*.rpm"):
+        pkgs = list(pathlib.Path(path).glob("**/*.rpm"))
+        if not pkgs:
+            ctx.error("Signing requested but no packages found.")
+            ctx.exit(1)
+        for pkg in pkgs:
             ctx.info(f"Running 'rpmsign' on {pkg} ...")
             ctx.run(
                 "rpmsign",
