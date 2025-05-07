@@ -40,6 +40,12 @@ case "$1" in
                                   /var/log/salt/minion /var/cache/salt/minion \
                                   /var/run/salt/minion \
                                   || true
+
+    if [ ! -f /var/lib/systemd/deb-systemd-helper-enabled/salt-minion.service.dsh-also ]
+    then
+        # Workaround service status detection
+        echo /etc/systemd/system/multi-user.target.wants/salt-minion.service > /var/lib/systemd/deb-systemd-helper-enabled/salt-minion.service.dsh-also
+    fi
   ;;
 
   abort-upgrade)

@@ -37,6 +37,12 @@ case "$1" in
                                   /var/log/salt/master /var/log/salt/key \
                                   /var/cache/salt/master /var/run/salt/master \
                                   || true
+
+    if [ ! -f /var/lib/systemd/deb-systemd-helper-enabled/salt-master.service.dsh-also ]
+    then
+        # Workaround service status detection
+        echo /etc/systemd/system/multi-user.target.wants/salt-master.service > /var/lib/systemd/deb-systemd-helper-enabled/salt-master.service.dsh-also
+    fi
   ;;
 
   abort-upgrade)
