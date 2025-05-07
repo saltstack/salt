@@ -20,14 +20,6 @@ set -e
 
 case "$1" in
   install)
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
-
-    # Reset permissions to fix previous installs
-    find /etc/salt /var/log/salt /var/cache/salt /var/run/salt \
-        \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path \
-        /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \( -user ${SALT_USER} \
-        -o -group ${SALT_GROUP} \) -exec chown ${SALT_USER}:${SALT_GROUP} \{\} \; \
-        || true
     ;;
 
   upgrade)
