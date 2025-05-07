@@ -1,31 +1,80 @@
+import logging
+import textwrap
 import time
+from pathlib import Path
 
+import packaging.version
 import pytest
+from saltfactories.utils.tempfiles import temp_file
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
-    pytest.mark.skipif(
-        True,
-        reason=(
-            "Package permissions are getting reworked in "
-            "https://github.com/saltstack/salt/pull/66218"
-        ),
-    ),
 ]
 
+log = logging.getLogger(__name__)
 
-@pytest.fixture
+
+@pytest.fixture(scope="module")
+def salt_systemd_overrides():
+    """
+    Fixture to create systemd overrides for salt-api, salt-minion, and
+    salt-master services.
+
+    This is required because the pytest-salt-factories engine does not
+    stop cleanly if you only kill the process. This leaves the systemd
+    service in a failed state.
+    """
+
+    systemd_dir = Path("/etc/systemd/system")
+    conf_name = "override.conf"
+    contents = textwrap.dedent(
+        """
+        [Service]
+        KillMode=control-group
+        TimeoutStopSec=10
+        SuccessExitStatus=SIGKILL
+        """
+    )
+
+    with temp_file(
+        name=conf_name, directory=systemd_dir / "salt-api.service.d", contents=contents
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-minion.service.d",
+        contents=contents,
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-master.service.d",
+        contents=contents,
+    ):
+        yield
+
+
+@pytest.fixture(scope="function")
 def salt_systemd_setup(
     salt_call_cli,
     install_salt,
+    salt_systemd_overrides,
 ):
     """
-    Fixture to set systemd for salt packages to enabled and active
-    Note: assumes Salt packages already installed
-    """
-    install_salt.install()
+    Fixture install previous version and set systemd for salt packages
+    to enabled and active
 
-    # ensure known state, enabled and active
+    This fixture is function scoped, so it will be run for each test
+    """
+
+    # Install previous version, downgrading if necessary
+    install_salt.install_previous(downgrade=True)
+
+    # Verify that the previous version is installed
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    assert installed_minion_version < packaging.version.parse(
+        install_salt.artifact_version
+    )
+
+    # Ensure known state for systemd services - enabled and active
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl enable {test_item}"
@@ -36,6 +85,16 @@ def salt_systemd_setup(
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
+    yield
+
+    # Verify that the new version is installed after the test
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    assert installed_minion_version == packaging.version.parse(
+        install_salt.artifact_version
+    )
+
 
 def test_salt_systemd_disabled_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
@@ -45,10 +104,6 @@ def test_salt_systemd_disabled_preservation(
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
 
     # ensure known state, disabled
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -81,14 +136,10 @@ def test_salt_systemd_enabled_preservation(
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
     install_salt.install(upgrade=True)
-    time.sleep(60)  # give it some time
+    time.sleep(10)  # give it some time
 
     # test for enabled systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -109,11 +160,7 @@ def test_salt_systemd_inactive_preservation(
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
-    # ensure known state, disabled
+    # ensure known state, inactive
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl stop {test_item}"
@@ -122,8 +169,8 @@ def test_salt_systemd_inactive_preservation(
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True)
-    time.sleep(60)  # give it some time
+    install_salt.install(upgrade=True, stop_services=False)
+    time.sleep(10)  # give it some time
 
     # test for inactive systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -131,7 +178,7 @@ def test_salt_systemd_inactive_preservation(
         test_cmd = f"systemctl is-active {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         test_active = ret.stdout.strip().split()[2].strip('"').strip()
-        assert ret.returncode == 1
+        assert ret.returncode != 0
         assert test_active == "inactive"
 
 
@@ -144,14 +191,10 @@ def test_salt_systemd_active_preservation(
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True)
-    time.sleep(60)  # give it some time
+    install_salt.install(upgrade=True, stop_services=False)
+    time.sleep(10)  # give it some time
 
     # test for active systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -169,10 +212,6 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
 
     # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
