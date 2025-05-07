@@ -48,11 +48,6 @@ on:
         required: true
         type: string
         description: Json job matrix config
-    secrets:
-      SIGNING_GPG_KEY:
-        required: false
-      SIGNING_PASSPHRASE:
-        required: false
 
 
 env:
@@ -159,6 +154,7 @@ jobs:
 
   build-rpm-packages:
     name: RPM
+    environment: ${{ inputs.environment }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}

@@ -18,6 +18,7 @@
     uses: ./.github/workflows/build-packages.yml
     <% if gh_environment == 'staging' -%>
     environment: staging
+    secrets: inherit
     <% endif -%>
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -32,7 +33,6 @@
       sign-macos-packages: false
       sign-rpm-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
-    secrets: inherit
 
     <%- endif %>
 
