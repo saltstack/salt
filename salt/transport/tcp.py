@@ -293,7 +293,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     )
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug(
-                        "PubClient conencted to %r %r:%r", self, self.host, self.port
+                        "PubClient connected to %r %r:%r", self, self.host, self.port
                     )
                 else:
                     log.debug("PubClient connecting to %r %r", self, self.path)
@@ -303,7 +303,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     )
                     await asyncio.wait_for(stream.connect(self.path), 1)
                     self.unpacker = salt.utils.msgpack.Unpacker()
-                    log.debug("PubClient conencted to %r %r", self, self.path)
+                    log.debug("PubClient connected to %r %r", self, self.path)
             except Exception as exc:  # pylint: disable=broad-except
                 if self.path:
                     _connect_to = self.path
