@@ -1,24 +1,14 @@
-# Do not edit these workflows directly as the changes made will be overwritten.
-# Instead, edit the template '.github/workflows/templates/nightly.yml.jinja'
 ---
-
-name: Nightly
-run-name: "Nightly (branch: ${{ github.ref_name }})"
+name: Dependency Checker
+run-name: "Dependency check ({{ format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
 
 on:
   workflow_dispatch:
     inputs:
-      skip-salt-test-suite:
-        type: boolean
-        default: false
-        description: Skip running the Salt test suite.
-      skip-salt-pkg-test-suite:
-        type: boolean
-        default: false
-        description: Skip running the Salt packages test suite.
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 0 * * *'  # Every day at 0AM
+      slug:
+        type: string
+        required: true
+        description: Slug of os to test.
 
 env:
   COLUMNS: 190
@@ -30,73 +20,22 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
-  actions: write  # to trigger branch nightly builds
+  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
 
 concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-
-  workflow-requirements:
-    name: Check Workflow Requirements
-    runs-on: ubuntu-22.04
-    outputs:
-      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
-    steps:
-      - name: Check Requirements
-        id: check-requirements
-        run: |
-          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
-            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.private }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a private repository"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          else
-            MSG="Running workflow because ${{ github.repository }} is not a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          fi
-
-  trigger-branch-nightly-builds:
-    name: Trigger Branch Workflows
-    if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on: ubuntu-22.04
-    needs:
-      - workflow-requirements
-
-    steps:
-
-      - name: Trigger 3006.x branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run nightly.yml --repo ${{ github.repository }} --ref 3006.x
-
-      - name: Trigger 3007.x branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run nightly.yml --repo ${{ github.repository }} --ref 3007.x
 
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
     environment: ci
-    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    needs:
-      - workflow-requirements
     outputs:
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -264,7 +203,7 @@ jobs:
       - name: Define workflow config
         id: workflow-config
         run: |
-          tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
+          tools ci workflow-config ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
@@ -506,30 +445,7 @@ jobs:
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-      environment: nightly
-      sign-macos-packages: false
-      sign-rpm-packages: false
-      sign-windows-packages: false
 
-  build-pkgs-src:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.19.0"
-      python-version: "3.10.17"
-      source: "src"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
-      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-      environment: nightly
-      sign-macos-packages: false
-      sign-rpm-packages: false
-      sign-windows-packages: false
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
@@ -546,6 +462,7 @@ jobs:
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -560,7 +477,7 @@ jobs:
       nox-version: 2022.8.7
       python-version: "3.10"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.17
-      skip-code-coverage: true
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -578,28 +495,154 @@ jobs:
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.17
-      skip-code-coverage: true
-      workflow-slug: nightly
-      default-timeout: 360
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
+      workflow-slug: ci
+      default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+
+  combine-all-code-coverage:
+    name: Combine Code Coverage
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] == false }}
+    runs-on: ubuntu-22.04
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}-coverage
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==2022.8.7'
+
+
+
+      - name: Merge All Code Coverage Test Run Artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: all-testrun-coverage-artifacts
+          pattern: all-testrun-coverage-artifacts-*
+          separate-directories: false
+          delete-merged: true
+
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/coverage/
+          pattern: all-testrun-coverage-artifacts*
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: tree -a artifacts/
+
+      - name: Install Codecov CLI
+        run: |
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          mv ./codecov /usr/local/bin/
+
+      - name: Create XML Coverage Reports
+        run: |
+          nox --force-color -e create-xml-coverage-reports
+
+      - name: Upload Code Coverage To Codecov
+        if: ${{ ! github.event.repository.private && ! github.event.repository.fork }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Create Salt Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report -- salt
+
+      - name: Upload Salt Code Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-salt-html-report
+          path: artifacts/coverage/html/salt
+          retention-days: 7
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e coverage-report
+
+      - name: Create Combined Code Coverage JSON Report
+        run: |
+          nox --force-color -e create-json-coverage-reports
+
+      - name: Upload Combined Code Coverage JSON Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-full-json-report
+          path: artifacts/coverage/coverage.json
+          retention-days: 7
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Create Combined Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
+      - name: Upload Combined Code Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-full-html-report
+          path: artifacts/coverage/html/full
+          retention-days: 7
+          if-no-files-found: error
+          include-hidden-files: true
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
-    environment: nightly
     needs:
-      - workflow-requirements
-      - trigger-branch-nightly-builds
       - prepare-workflow
       - pre-commit
       - lint
       - nsis-tests
       - build-docs
       - build-salt-onedir
-      - build-pkgs-src
+      - combine-all-code-coverage
       - build-ci-deps
       - test-packages
       - test

@@ -18,6 +18,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       skip-test-pypi-publish:
         type: boolean
         default: false
@@ -481,6 +485,7 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -491,8 +496,8 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
+      sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
 
   build-pkgs-src:
     name: Build Packages
@@ -501,6 +506,7 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -511,8 +517,8 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
+      sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
