@@ -17,7 +17,6 @@
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     <% if gh_environment == 'staging' -%>
-    environment: staging
     secrets: inherit
     <% endif -%>
     with:
