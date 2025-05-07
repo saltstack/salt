@@ -486,6 +486,7 @@ jobs:
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     environment: staging
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -498,7 +499,6 @@ jobs:
       sign-macos-packages: false
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
 
   build-pkgs-src:
     name: Build Packages
@@ -508,6 +508,7 @@ jobs:
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     environment: staging
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -520,7 +521,6 @@ jobs:
       sign-macos-packages: false
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
