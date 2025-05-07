@@ -464,6 +464,7 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    environment: staging
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -485,6 +486,7 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    environment: staging
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
