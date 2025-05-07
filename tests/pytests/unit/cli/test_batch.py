@@ -4,7 +4,7 @@ Unit Tests for the salt.cli.batch module
 
 import pytest
 
-from salt.cli.batch import Batch
+from salt.cli.batch import Batch, batch_get_opts
 from tests.support.mock import MagicMock, patch
 
 
@@ -135,3 +135,67 @@ def test_return_value_in_run_for_return(batch):
         verbose=False,
         gather_job_timeout=5,
     )
+
+
+def test_batch_presence_ping(batch):
+    """
+    Tests passing batch_presence_ping_timeout and batch_presence_ping_gather_job_timeout
+    """
+    ret = batch_get_opts("", "test.ping", "2", {}, timeout=20, gather_job_timeout=120)
+    assert ret["batch_presence_ping_timeout"] == 20
+    assert ret["batch_presence_ping_gather_job_timeout"] == 120
+    ret = batch_get_opts(
+        "",
+        "test.ping",
+        "2",
+        {},
+        timeout=20,
+        gather_job_timeout=120,
+        batch_presence_ping_timeout=4,
+        batch_presence_ping_gather_job_timeout=360,
+    )
+    assert ret["batch_presence_ping_timeout"] == 4
+    assert ret["batch_presence_ping_gather_job_timeout"] == 360
+
+
+def test_gather_minions_with_batch_presence_ping(batch):
+    """
+    Tests __gather_minions with batch_presence_ping options
+    """
+    opts_no_pp = {
+        "batch": "2",
+        "conf_file": {},
+        "tgt": "",
+        "transport": "",
+        "timeout": 5,
+        "gather_job_timeout": 20,
+    }
+    opts_with_pp = {
+        "batch": "2",
+        "conf_file": {},
+        "tgt": "",
+        "transport": "",
+        "timeout": 5,
+        "gather_job_timeout": 20,
+        "batch_presence_ping_timeout": 3,
+        "batch_presence_ping_gather_job_timeout": 4,
+    }
+    local_client_mock = MagicMock()
+    with patch(
+        "salt.client.get_local_client", MagicMock(return_value=local_client_mock)
+    ), patch("salt.client.LocalClient.cmd_iter", MagicMock(return_value=[])):
+        Batch(opts_no_pp).gather_minions()
+        Batch(opts_with_pp).gather_minions()
+        assert local_client_mock.mock_calls[0][1][3] == opts_no_pp["timeout"]
+        assert (
+            local_client_mock.mock_calls[0][2]["gather_job_timeout"]
+            == opts_no_pp["gather_job_timeout"]
+        )
+        assert (
+            local_client_mock.mock_calls[2][1][3]
+            == opts_with_pp["batch_presence_ping_timeout"]
+        )
+        assert (
+            local_client_mock.mock_calls[2][2]["gather_job_timeout"]
+            == opts_with_pp["batch_presence_ping_gather_job_timeout"]
+        )
