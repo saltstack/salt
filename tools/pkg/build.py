@@ -339,6 +339,9 @@ def macos(
         "python_version": {
             "help": "The version of python to build with using relenv",
         },
+        "debug_signing": {
+            "help": "Enable verbose logging for signtool",
+        },
     },
 )
 def windows(
@@ -349,6 +352,7 @@ def windows(
     sign: bool = False,
     relenv_version: str = None,
     python_version: str = None,
+    debug_signing: bool = True,
 ):
     """
     Build the Windows package.
@@ -448,15 +452,12 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
-        for fname in (
-            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
-            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}.msi",
-        ):
-            fpath = str(pathlib.Path(fname).resolve())
-            ctx.info(f"Signing {fname} ...")
-            ctx.run(
-                "signtool.exe",
-                "sign",
+        sign_cmd = ["signtool.exe", "sign"]
+        if debug_signing:
+            sign_cmd.extend(["/v", "/debug"])
+
+        sign_cmd.extend(
+            [
                 "/sha1",
                 os.environ["WIN_SIGN_CERT_SHA1_HASH"],
                 "/tr",
@@ -465,7 +466,18 @@ def windows(
                 "SHA256",
                 "/fd",
                 "SHA256",
-                fpath,
+            ]
+        )
+
+        for fname in (
+            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
+            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}.msi",
+        ):
+            fpath = str(pathlib.Path(fname).resolve())
+            ctx.info(f"Signing {fname} ...")
+            cmd = sign_cmd[:] + [fpath]
+            ctx.run(
+                *cmd,
                 env=env,
             )
             ctx.info(f"Verifying {fname} ...")
