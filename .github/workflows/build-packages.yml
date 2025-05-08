@@ -393,6 +393,7 @@ jobs:
       SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
       SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
       WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      SM_CODE_SIGNING_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
       PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
@@ -443,7 +444,7 @@ jobs:
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v0.0.2
+        uses: digicert/ssm-code-signing@v1.0.0
 
       - name: Setup Certificate
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
