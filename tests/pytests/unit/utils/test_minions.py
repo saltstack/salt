@@ -14,6 +14,7 @@ def test_connected_ids():
         "publish_port": 4505,
         "detect_remote_minions": False,
         "minion_data_cache": True,
+        "__role": "minion",
     }
     minion = "minion"
     ips = {"203.0.113.1", "203.0.113.2", "127.0.0.1"}
@@ -37,6 +38,7 @@ def test_connected_ids_remote_minions():
         "detect_remote_minions": True,
         "remote_minions_port": 22,
         "minion_data_cache": True,
+        "__role": "master",
     }
     minion = "minion"
     minion2 = "minion2"
@@ -64,7 +66,7 @@ def test_validate_tgt_returns_true_when_no_valid_minions_have_been_found():
     CKMinions is only able to check against minions the master knows about. If
     no minion keys have been accepted it will return True.
     """
-    ckminions = salt.utils.minions.CkMinions(opts={})
+    ckminions = salt.utils.minions.CkMinions(opts={"__role": "master"})
     with patch(
         "salt.utils.minions.CkMinions.check_minions", autospec=True, return_value={}
     ):
@@ -83,7 +85,7 @@ def test_validate_tgt_returns_true_when_no_valid_minions_have_been_found():
 def test_validate_tgt_should_return_false_when_minions_have_minions_not_in_valid_minions(
     valid_minions, target_minions
 ):
-    ckminions = salt.utils.minions.CkMinions(opts={})
+    ckminions = salt.utils.minions.CkMinions(opts={"__role": "master"})
     with patch(
         "salt.utils.minions.CkMinions.check_minions",
         autospec=True,
@@ -106,7 +108,7 @@ def test_validate_tgt_should_return_false_when_minions_have_minions_not_in_valid
 def test_validate_tgt_should_return_true_when_all_minions_are_found_in_valid_minions(
     valid_minions, target_minions
 ):
-    ckminions = salt.utils.minions.CkMinions(opts={})
+    ckminions = salt.utils.minions.CkMinions({"__role": "master"})
     with patch(
         "salt.utils.minions.CkMinions.check_minions",
         autospec=True,
