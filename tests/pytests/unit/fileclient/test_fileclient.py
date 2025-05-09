@@ -225,6 +225,16 @@ def test_get_file_client(file_client):
         assert "remote_client" == ret
 
 
+def test_getstate(file_client, mocked_opts):
+    assert file_client.__getstate__() == {"opts": mocked_opts}
+
+
+def test_setstate(file_client, mocked_opts):
+    mocked_opts["fake_opt"] = "fake"
+    file_client.__setstate__({"opts": mocked_opts})
+    assert file_client.opts == mocked_opts
+
+
 def test_get_url_with_hash(client_opts):
     """
     Test get_url function with a URL containing a hash character.
