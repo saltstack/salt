@@ -426,14 +426,20 @@ def windows(
             ]
         )
         env["PATH"] = os.pathsep.join(path_parts)
+        command = ["smksp_registrar.exe", "register"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ctx.run(*command, env=env)
+
         command = ["smksp_registrar.exe", "list"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ctx.run(*command, env=env)
+
         command = ["smctl.exe", "keypair", "ls"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = [
             r"C:\Windows\System32\certutil.exe",
             "-csp",
