@@ -609,7 +609,7 @@ class CMDModuleTest(ModuleCase):
         Ensure that nt.environ is used properly with cmd.run*
         """
         out = self.run_function(
-            "cmd.run", ["set"], env={"abc": "123", "ABC": "456"}
+            "cmd.run", ["set"], env={"abc": "123", "DEF": "456"}
         ).splitlines()
         self.assertIn("abc=123", out)
-        self.assertIn("ABC=456", out)
+        self.assertIn("DEF=456", out)
