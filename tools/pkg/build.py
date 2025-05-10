@@ -452,28 +452,37 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
-        command = ["smksp_cert_sync.exe"]
-        ctx.info(f"Running: '{' '.join(command)}' ...")
-        ret = ctx.run(*command, env=env, check=False)
-        if ret.returncode:
-            ctx.error(f"Failed to run '{' '.join(command)}'")
+        #command = ["smksp_cert_sync.exe"]
+        #ctx.info(f"Running: '{' '.join(command)}' ...")
+        #ret = ctx.run(*command, env=env, check=False)
+        #if ret.returncode:
+        #    ctx.error(f"Failed to run '{' '.join(command)}'")
 
-        sign_cmd = ["signtool.exe", "sign"]
-        if debug_signing:
-            sign_cmd.extend(["/v", "/debug"])
+        #sign_cmd = ["signtool.exe", "sign"]
+        #if debug_signing:
+        #    sign_cmd.extend(["/v", "/debug"])
 
-        sign_cmd.extend(
-            [
-                "/sha1",
-                os.environ["WIN_SIGN_CERT_SHA1_HASH"],
-                "/tr",
-                "http://timestamp.digicert.com",
-                "/td",
-                "SHA256",
-                "/fd",
-                "SHA256",
-            ]
-        )
+        #sign_cmd.extend(
+        #    [
+        #        "/sha1",
+        #        os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+        #        "/tr",
+        #        "http://timestamp.digicert.com",
+        #        "/td",
+        #        "SHA256",
+        #        "/fd",
+        #        "SHA256",
+        #    ]
+        #)
+        sign_cmd = [
+           "smctl",
+           "sign",
+           "--fingerprint"
+           os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+           "--config-file",
+           "C:\Users\RUNNER~1\AppData\Local\Temp\smtools-windows-x64\pkcs11properties.cfg",
+           "--input",
+        ]
 
         for fname in (
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
