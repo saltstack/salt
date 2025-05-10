@@ -477,6 +477,7 @@ def windows(
         sign_cmd = [
             "smctl.exe",
             "sign",
+            "-v",
             "--fingerprint",
             os.environ["WIN_SIGN_CERT_SHA1_HASH"],
             "--config-file",
