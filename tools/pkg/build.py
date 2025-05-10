@@ -475,9 +475,9 @@ def windows(
         #    ]
         #)
         sign_cmd = [
-           "smctl",
+           "smctl.exe",
            "sign",
-           "--fingerprint"
+           "--fingerprint",
            os.environ["WIN_SIGN_CERT_SHA1_HASH"],
            "--config-file",
            "C:\Users\RUNNER~1\AppData\Local\Temp\smtools-windows-x64\pkcs11properties.cfg",
