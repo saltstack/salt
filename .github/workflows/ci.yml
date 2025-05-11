@@ -1,5 +1,5 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
-# Instead, edit the template '.github\workflows\templates\ci.yml.jinja'
+# Instead, edit the template '.github/workflows/templates/ci.yml.jinja'
 ---
 name: CI
 run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"

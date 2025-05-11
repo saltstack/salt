@@ -1,5 +1,5 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
-# Instead, edit the template '.github\workflows\templates\staging.yml.jinja'
+# Instead, edit the template '.github/workflows/templates/staging.yml.jinja'
 ---
 
 name: Stage Release
