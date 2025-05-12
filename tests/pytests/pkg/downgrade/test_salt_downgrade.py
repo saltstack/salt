@@ -35,7 +35,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_call_cli, install_salt):
+def test_salt_downgrade_minion(salt_master, salt_call_cli, install_salt):
     """
     Test a downgrade of Salt Minion.
     """
@@ -83,8 +83,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     old_minion_pids = _get_running_named_salt_pid(process_name)
     assert old_minion_pids
 
-    # Downgrade Salt to the previous version and test
-    install_salt.install(downgrade=True)
+    if platform.is_windows():
+        with salt_master.stopped():
+            # Downgrade Salt to the previous version and test
+            install_salt.install(downgrade=True)
+    else:
+        install_salt.install(downgrade=True)
 
     time.sleep(10)  # give it some time
     # downgrade install will stop services on Debian/Ubuntu

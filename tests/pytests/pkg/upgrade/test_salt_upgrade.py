@@ -32,6 +32,7 @@ def salt_systemd_setup(
 
 
 def salt_test_upgrade(
+    salt_master,
     salt_call_cli,
     install_salt,
 ):
@@ -71,15 +72,20 @@ def salt_test_upgrade(
     assert old_master_pids
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    install_salt.install(upgrade=True)
+    if sys.platform == "win32":
+        with salt_master.stopped():
+            install_salt.install(upgrade=True)
+    else:
+        install_salt.install(upgrade=True)
 
-    start = time.monotonic()
-    while True:
-        ret = salt_call_cli.run("--local", "test.version", _timeout=10)
-        if ret.returncode == 0:
-            break
-        if time.monotonic() - start > 60:
-            break
+    # start = time.monotonic()
+    # while True:
+    #    ret = salt_call_cli.run("--local", "test.version", _timeout=10)
+    #    if ret.returncode == 0:
+    #        break
+    #    if time.monotonic() - start > 60:
+    #        break
+    time.sleep(60)
 
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -134,7 +140,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_upgrade(salt_call_cli, install_salt):
+def test_salt_upgrade(salt_master, salt_call_cli, install_salt):
     """
     Test an upgrade of Salt, Minion and Master
     """
@@ -154,7 +160,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     assert "Authentication information could" in use_lib.stderr
 
     # perform Salt package upgrade test
-    salt_test_upgrade(salt_call_cli, install_salt)
+    salt_test_upgrade(salt_master, salt_call_cli, install_salt)
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
