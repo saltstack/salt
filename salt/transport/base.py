@@ -121,7 +121,7 @@ def publish_server(opts, **kwargs):
 
     if not transcls.support_ssl():
         if "ssl" in kwargs:
-            log.warning(f"SSL is not supported for transport: {ttype}")
+            log.warning("SSL is not supported for transport: %s", ttype)
             kwargs.pop("ssl")
     return transcls(opts, **kwargs)
 
