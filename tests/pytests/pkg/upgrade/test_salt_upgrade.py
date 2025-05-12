@@ -32,6 +32,7 @@ def salt_systemd_setup(
 
 
 def salt_test_upgrade(
+    salt_master,
     salt_call_cli,
     install_salt,
 ):
@@ -71,7 +72,11 @@ def salt_test_upgrade(
     assert old_master_pids
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    install_salt.install(upgrade=True)
+    if sys.platform == "win32":
+        with salt_master.stopped():
+            install_salt.install(upgrade=True)
+    else:
+        install_salt.install(upgrade=True)
 
     # XXX: Come up with a faster way of knowing whne we are ready.
     # start = time.monotonic()
@@ -131,7 +136,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_upgrade(salt_call_cli, install_salt):
+def test_salt_upgrade(salt_master, salt_call_cli, install_salt):
     """
     Test an upgrade of Salt, Minion and Master
     """
@@ -163,7 +168,7 @@ def test_salt_upgrade(salt_call_cli, install_salt):
         assert ret.returncode == 0
 
     # perform Salt package upgrade test
-    salt_test_upgrade(salt_call_cli, install_salt)
+    salt_test_upgrade(salt_master, salt_call_cli, install_salt)
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
