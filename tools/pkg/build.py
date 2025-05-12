@@ -452,6 +452,13 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
+        # DIGICERT asked me to add this for troubleshooting
+        command = ["smctl.exe", "healthcheck"]
+        ctx.info("Running Health Check...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+
         # command = ["smksp_cert_sync.exe"]
         # ctx.info(f"Running: '{' '.join(command)}' ...")
         # ret = ctx.run(*command, env=env, check=False)
