@@ -920,17 +920,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        ioloop = tornado.ioloop.IOLoop()
-        ioloop.add_callback(self.publisher, publish_payload, io_loop=ioloop)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.add_callback(self.publisher, publish_payload, io_loop=io_loop)
         try:
-            ioloop.start()
+            io_loop.start()
         finally:
             self.close()
 
-    def _get_sockets(self, context, ioloop):
+    def _get_sockets(self, context, io_loop):
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
-        monitor.start_io_loop(ioloop)
+        monitor.start_io_loop(io_loop)
         _set_tcp_keepalive(pub_sock, self.opts)
         self.dpub_sock = pub_sock  # = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
@@ -987,7 +987,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_pull_sock,
             self.daemon_pub_sock,
             self.daemon_monitor,
-        ) = self._get_sockets(self.daemon_context, ioloop)
+        ) = self._get_sockets(self.daemon_context, io_loop)
         self.started.set()
         while True:
             try:
