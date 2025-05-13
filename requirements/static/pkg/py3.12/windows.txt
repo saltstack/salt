@@ -122,8 +122,8 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/windows.txt
+timelib==0.3.0 ; python_version >= "3.11"
+    # via -r requirements/base.txt
 urllib3==1.26.20
     # via
     #   -r requirements/base.txt

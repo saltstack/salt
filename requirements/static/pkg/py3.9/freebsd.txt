@@ -103,8 +103,10 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/static/pkg/freebsd.in
+timelib==0.2.5 ; python_version < "3.11"
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.in
 urllib3==1.26.20
     # via
     #   -r requirements/base.txt

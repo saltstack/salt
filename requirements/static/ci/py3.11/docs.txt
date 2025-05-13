@@ -200,6 +200,10 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   portend
+timelib==0.3.0 ; python_version >= "3.11"
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
