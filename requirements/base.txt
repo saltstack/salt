@@ -32,6 +32,9 @@ python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 
+immutables>=0.15 ; python_version < '3.12'
+immutables>=0.19 ; python_version >= '3.12'
+
 # We need contextvars for salt-ssh
 contextvars
 importlib-metadata>=3.3.0

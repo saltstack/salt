@@ -155,9 +155,10 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.15
+immutables==0.15 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==6.6.0
     # via
