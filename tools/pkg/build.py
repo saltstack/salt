@@ -464,7 +464,7 @@ def windows(
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
-        ctx.run("powershell.exe", "-C", "Get-EventLog -LogName \"Microsoft-Windows-AppxPackaging/Operational\" -Newest 10", check=False)
+        ctx.run("powershell.exe", "-C", "Get-WinEvent -LogName \"*Microsoft-Windows-AppxPackaging*\" -MaxEvents 150", check=False)
 
         # sign_cmd = ["signtool.exe", "sign"]
         # if debug_signing:
