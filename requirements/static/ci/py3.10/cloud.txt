@@ -73,7 +73,7 @@ cachetools==4.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   google-auth
-cassandra-driver==3.23.0
+cassandra-driver==3.23.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in

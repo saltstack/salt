@@ -74,7 +74,7 @@ cachetools==4.2.2
     #   -c requirements/static/ci/py3.12/linux.txt
     #   google-auth
     #   python-telegram-bot
-cassandra-driver==3.23.0
+cassandra-driver==3.29.2 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -569,7 +569,6 @@ six==1.16.0
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   apscheduler
-    #   cassandra-driver
     #   cheroot
     #   etcd3-py
     #   genshi
