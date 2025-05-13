@@ -745,9 +745,10 @@ yamlordereddictloader==0.4.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   junos-eznc
-yarl==1.7.2
+yarl==1.7.2 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/static/ci/common.in
     #   aiohttp
 zc.lockfile==1.4
     # via

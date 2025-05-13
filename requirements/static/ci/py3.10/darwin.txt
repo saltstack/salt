@@ -532,8 +532,10 @@ yamlordereddictloader==0.4.0
     # via
     #   -r requirements/static/ci/darwin.in
     #   junos-eznc
-yarl==1.7.2
-    # via aiohttp
+yarl==1.7.2 ; python_version < "3.11"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   aiohttp
 zc.lockfile==2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt

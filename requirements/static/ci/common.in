@@ -48,3 +48,5 @@ genshi>=0.7.3
 cheetah3>=3.2.2
 mako
 wempy
+yarl >= 1.7.2 ; python_version < '3.11'
+yarl >= 1.9.4 ; python_version >= '3.11'

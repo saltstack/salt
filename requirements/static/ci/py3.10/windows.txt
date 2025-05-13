@@ -511,8 +511,10 @@ xmltodict==0.13.0
     #   pywinrm
 yamllint==1.28.0
     # via -r requirements/static/ci/windows.in
-yarl==1.8.1
-    # via aiohttp
+yarl==1.8.1 ; python_version < "3.11"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   aiohttp
 zc.lockfile==2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
