@@ -29,9 +29,10 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   cherrypy
-cherrypy==18.6.1
+cherrypy==18.10.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
 contextvars==2.4
     # via

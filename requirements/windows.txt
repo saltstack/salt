@@ -6,7 +6,6 @@ pywin32>=305
 wmi>=1.5.1
 pythonnet>=3.0.1
 cffi>=1.14.5
-cherrypy>=18.6.1
 gitpython>=3.1.37
 ioloop>=0.1a0
 lxml>=4.6.3
