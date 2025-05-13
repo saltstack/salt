@@ -7,6 +7,8 @@ import packaging.version
 import pytest
 from saltfactories.utils.tempfiles import temp_file
 
+import salt.utils.files
+
 pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
 ]
@@ -94,6 +96,16 @@ def salt_systemd_setup(
     assert installed_minion_version == packaging.version.parse(
         install_salt.artifact_version
     )
+
+    ## Do we need to stop services???
+
+    if install_salt.distro_name in ["debian", "ubuntu"]:
+        # Remove pinning file for previous version
+        pref_file = Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+        pref_file.parent.mkdir(exist_ok=True)
+        pin = f"{install_salt.artifact_version.rsplit('.', 1)[0]}.*"
+        with salt.utils.files.fopen(pref_file, "w") as fp:
+            fp.write(f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001")
 
 
 def test_salt_systemd_disabled_preservation(
