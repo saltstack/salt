@@ -47,6 +47,10 @@ distro==1.5.0
     #   -r requirements/base.txt
 docutils==0.19
     # via sphinx
+frozenlist==1.6.0 ; python_version >= "3.11"
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
 idna==3.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
