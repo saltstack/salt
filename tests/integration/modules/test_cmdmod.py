@@ -611,5 +611,15 @@ class CMDModuleTest(ModuleCase):
         out = self.run_function(
             "cmd.run", ["set"], env={"abc": "123", "ABC": "456"}
         ).splitlines()
-        self.assertIn("abc=123", out)
+        if sys.version_info.major == 3 and sys.version_info.minor < 11:
+            self.assertIn("abc=123", out)
+            self.assertIn("ABC=456", out)
+        else:
+            # in 3.11 and greater Python's subprocess module will not allow abc
+            # and ABC environment variables to be set.
+            self.assertIn("ABC=456", out)
+        out = self.run_function(
+            "cmd.run", ["set"], env={"xyz": "123", "ABC": "456"}
+        ).splitlines()
+        self.assertIn("xyz=123", out)
         self.assertIn("ABC=456", out)
