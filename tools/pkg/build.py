@@ -471,6 +471,7 @@ def windows(
             'Get-WinEvent -LogName "*Microsoft-Windows-AppxPackaging*" -MaxEvents 150',
             check=False,
         )
+        ctx.run("smctl.exe", "windows", "certsync", check=False)
 
         # sign_cmd = ["signtool.exe", "sign"]
         # if debug_signing:
