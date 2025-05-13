@@ -574,9 +574,9 @@ def key_absent(name, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not reg.read_value(
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )["success"]:
+    if not reg.read_value(hive=hive, key=key, use_32bit_registry=use_32bit_registry)[
+        "success"
+    ]:
         ret["comment"] = f"{name} is already absent"
         return ret
 
@@ -591,12 +591,10 @@ def key_absent(name, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    reg.delete_key_recursive(
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )
-    if reg.read_value(
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )["success"]:
+    reg.delete_key_recursive(hive=hive, key=key, use_32bit_registry=use_32bit_registry)
+    if reg.read_value(hive=hive, key=key, use_32bit_registry=use_32bit_registry)[
+        "success"
+    ]:
         ret["result"] = False
         ret["changes"] = {}
         ret["comment"] = f"Failed to remove registry key {name}"

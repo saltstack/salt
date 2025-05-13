@@ -408,9 +408,7 @@ def test_key_absent(reg_vars, reset):
     """
     expected = {
         "comment": f"Removed {reg_vars.name}",
-        "changes": {
-            "reg": {"Removed": {"Key": reg_vars.name}}
-        },
+        "changes": {"reg": {"Removed": {"Key": reg_vars.name}}},
         "name": reg_vars.name,
         "result": True,
     }
@@ -433,9 +431,7 @@ def test_key_absent_already_absent(reg_vars, clean):
 def test_key_absent_test_true(reg_vars, reset):
     expected = {
         "comment": f"Will remove {reg_vars.name}",
-        "changes": {
-            "reg": {"Will remove": {"Key": reg_vars.name}}
-        },
+        "changes": {"reg": {"Will remove": {"Key": reg_vars.name}}},
         "name": reg_vars.name,
         "result": None,
     }
