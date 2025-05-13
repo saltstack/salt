@@ -442,15 +442,43 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
 
-      - name: Code signing with Software Trust Manager
-        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v1.0.0
-
       - name: Setup Certificate
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
         shell: bash
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+
+      - name: Code signing with Software Trust Manager
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        shell: powershell
+        run: |
+          # Navigate to C: drive
+          Set-Location C:\
+
+          # Check if the file exists in the user's home directory
+          $filePath = Join-Path $env:USERPROFILE 'smtools-windows-x64.msi'
+          if (Test-Path $filePath) {
+              Write-Host "File exists. Moving to C:"
+              Copy-Item $filePath -Destination .\
+          }
+          else {
+              Write-Host "No existing file found. Downloading..."
+              # Download the file using Invoke-WebRequest
+              curl.exe -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:$env:SM_API_KEY" -o smtools-windows-x64.msi
+              # Copy the downloaded file to the user's home directory
+              Copy-Item 'smtools-windows-x64.msi' -Destination $env:USERPROFILE
+          }
+
+          # Execute the MSI installer
+          msiexec.exe /i smtools-windows-x64.msi /quiet /qn | Wait-Process
+          & 'C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smksp_cert_sync.exe'
+
+          # Manual resync
+          & 'C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe' windows certsync
+
+      #- name: Code signing with Software Trust Manager
+      #  if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+      #  uses: digicert/ssm-code-signing@v0.0.2
 
       - name: Build Windows Packages
         run: |
