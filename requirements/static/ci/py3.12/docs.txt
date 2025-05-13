@@ -147,9 +147,10 @@ msgpack==1.0.7
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.4.3 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils[linkify]==1.0.0

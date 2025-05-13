@@ -88,8 +88,9 @@ more-itertools==8.2.0
     #   jaraco.text
 msgpack==1.0.7
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.4.3 ; python_version >= "3.12"
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 packaging==24.0
