@@ -459,11 +459,12 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
-        # command = ["smksp_cert_sync.exe"]
-        # ctx.info(f"Running: '{' '.join(command)}' ...")
-        # ret = ctx.run(*command, env=env, check=False)
-        # if ret.returncode:
-        #    ctx.error(f"Failed to run '{' '.join(command)}'")
+        command = ["smksp_cert_sync.exe"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+        ctx.run("powershell.exe", "-C", "Get-EventLog -LogName Application -Newest 10", check=False)
 
         # sign_cmd = ["signtool.exe", "sign"]
         # if debug_signing:
