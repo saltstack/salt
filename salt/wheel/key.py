@@ -26,7 +26,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-import hashlib
 import logging
 import os
 
@@ -35,7 +34,6 @@ import salt.crypt
 import salt.key
 import salt.utils.crypt
 import salt.utils.files
-import salt.utils.platform
 from salt.utils.sanitizers import clean
 
 __func_alias__ = {"list_": "list", "key_str": "print", "name_match": "glob_match"}
@@ -76,7 +74,7 @@ def list_all():
         'minions': ['minion1', 'minion2', 'minion3']}
     """
     with salt.key.get_key(__opts__) as skey:
-        return skey.list_keys()
+        return skey.all_keys()
 
 
 def glob_match(match):
@@ -368,26 +366,8 @@ def gen(id_=None, keysize=2048):
         -----END RSA PRIVATE KEY-----'}
 
     """
-    if id_ is None:
-        id_ = hashlib.sha512(os.urandom(32)).hexdigest()
-    else:
-        id_ = clean.filename(id_)
-    ret = {"priv": "", "pub": ""}
-    priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
-    pub = "{}.pub".format(priv[: priv.rindex(".")])
-    with salt.utils.files.fopen(priv) as fp_:
-        ret["priv"] = salt.utils.stringutils.to_unicode(fp_.read())
-    with salt.utils.files.fopen(pub) as fp_:
-        ret["pub"] = salt.utils.stringutils.to_unicode(fp_.read())
-
-    # The priv key is given the Read-Only attribute. The causes `os.remove` to
-    # fail in Windows.
-    if salt.utils.platform.is_windows():
-        os.chmod(priv, 128)
-
-    os.remove(priv)
-    os.remove(pub)
-    return ret
+    priv, pub = salt.crypt.gen_keys(keysize)
+    return {"priv": priv, "pub": pub}
 
 
 def gen_accept(id_, keysize=2048, force=False):
