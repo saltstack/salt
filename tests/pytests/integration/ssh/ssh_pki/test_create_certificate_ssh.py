@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.pytests.integration.ssh import check_system_python_version
 
 try:
     import cryptography
@@ -16,6 +17,13 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+try:
+    import bcrypt  # pylint: disable=unused-import
+
+    HAS_BCRYPT = True
+except ImportError:
+    HAS_BCRYPT = False
+
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 log = logging.getLogger(__name__)
@@ -24,6 +32,9 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -102,12 +113,11 @@ def test_sign_remote_certificate_match(
 # We cannot check though since the expression is only present on the CA minion.
 
 
+@pytest.mark.usefixtures("_check_bcrypt")
 def test_sign_remote_certificate_enc(ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey):
     cert_args["private_key"] += "_enc"
     cert_args["private_key_passphrase"] = "hunter1"
     ret = ssh_salt_ssh_cli.run("ssh_pki.create_certificate", **cert_args)
-    if ret.returncode != 0 and "Need bcrypt module" in str(ret.data):
-        pytest.skip("Test needs bcrypt module in the global Python PATH")
     assert ret.returncode == 0
     assert ret.data
     cert = _get_cert(ret.data)
@@ -116,6 +126,7 @@ def test_sign_remote_certificate_enc(ssh_salt_ssh_cli, cert_args, ca_key, rsa_pr
     assert _belongs_to(cert, rsa_privkey)
 
 
+@pytest.mark.usefixtures("_check_bcrypt")
 def test_sign_remote_certificate_ca_enc(
     ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey
 ):
@@ -159,6 +170,7 @@ def test_sign_remote_certificate_disallowed_policy(ssh_salt_ssh_cli, cert_args):
     assert "minion not permitted to use specified signing policy" in ret.data
 
 
+@pytest.mark.usefixtures("_check_bcrypt")
 def test_get_signing_policy_remote(
     ssh_salt_ssh_cli, cert_args, ca_minion_config, ca_pub
 ):
