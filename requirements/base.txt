@@ -62,3 +62,6 @@ wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'
 six>=1.16.0 ; python_version < '3.12'
 six>=1.17.0 ; python_version >= '3.12'
+croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+
+cffi>=1.17.0; sys_platform == 'win32' and python_version >= '3.12'

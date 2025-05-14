@@ -294,7 +294,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.13.1 ; python_version < "3.12"
     # via -r requirements/static/ci/windows.in
 pymssql==2.3.1 ; sys_platform == "win32"
     # via
