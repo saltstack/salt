@@ -5,6 +5,7 @@ atomic way
 
 import errno
 import os
+import pathlib
 import random
 import shutil
 import sys
@@ -31,6 +32,10 @@ if os.name == "nt":  # pragma: no cover
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):  # pylint: disable=E0102
+            if isinstance(src, pathlib.Path):
+                src = str(src)
+            if isinstance(dst, pathlib.Path):
+                dst = str(dst)
             if not isinstance(src, str):
                 src = str(src, sys.getfilesystemencoding())
             if not isinstance(dst, str):
