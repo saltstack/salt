@@ -241,9 +241,7 @@ class ReqServerChannel:
             )
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=signing_algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=signing_algorithm),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
@@ -256,9 +254,7 @@ class ReqServerChannel:
             return {
                 "enc": "clear",
                 "load": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=algorithm),
             }
         except UnsupportedAlgorithm:
             log.info(
@@ -663,31 +659,23 @@ class ReqServerChannel:
         # sent to the minion that was just authenticated
         if self.opts["master_sign_pubkey"]:
             # append the pre-computed signature to the auth-reply
-            if self.master_key.pubkey_signature():
+            if self.master_key.pubkey_signature:
                 log.debug("Adding pubkey signature to auth-reply")
-                log.debug(self.master_key.pubkey_signature())
-                ret.update({"pub_sig": self.master_key.pubkey_signature()})
+                log.debug(self.master_key.pubkey_signature)
+                ret.update({"pub_sig": self.master_key.pubkey_signature})
             else:
                 # the master has its own signing-keypair, compute the master.pub's
                 # signature and append that to the auth-reply
-
-                # get the key_pass for the signing key
-                key_pass = salt.utils.sdb.sdb_get(
-                    self.opts["signing_key_pass"], self.opts
-                )
                 log.debug("Signing master public key before sending")
-                pub_sign = salt.crypt.sign_message(
-                    self.master_key.get_sign_paths()[1],
-                    ret["pub_key"],
-                    key_pass,
-                    algorithm=sig_algo,
+                pub_sign = self.master_key.sign_key.sign(
+                    ret["pub_key"], algorithm=sig_algo
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     aes = "{}_|-{}".format(
                         salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
                     )
@@ -709,7 +697,7 @@ class ReqServerChannel:
         else:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     ret["token"] = pub.encrypt(mtoken, enc_algo)
                 except UnsupportedAlgorithm as exc:
                     log.info(
@@ -728,7 +716,7 @@ class ReqServerChannel:
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
-        ret["sig"] = self.master_key.key.encrypt(digest)
+        ret["sig"] = self.master_key.encrypt(digest)
         eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
@@ -917,9 +905,9 @@ class PubServerChannel:
         if self.opts["sign_pub_messages"]:
             log.debug("Signing data packet")
             payload["sig_algo"] = self.opts["publish_signing_algorithm"]
-            payload["sig"] = salt.crypt.PrivateKey(
-                self.master_key.rsa_path,
-            ).sign(payload["load"], self.opts["publish_signing_algorithm"])
+            payload["sig"] = self.master_key.sign(
+                payload["load"], self.opts["publish_signing_algorithm"]
+            )
 
         int_payload = {"payload": salt.payload.dumps(payload)}
 
