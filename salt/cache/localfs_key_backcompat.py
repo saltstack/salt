@@ -23,16 +23,20 @@ import logging
 import os
 import os.path
 import shutil
+import stat
 import tempfile
+from pathlib import Path
 
 import salt.utils.atomicfile
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 from salt.utils.verify import clean_path, valid_id
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list"}
+
 
 BASE_MAPPING = {
     "minions_pre": "pending",
@@ -41,18 +45,40 @@ BASE_MAPPING = {
     "minions_denied": "denied",
 }
 
+# master_keys keys that if fetched, even with cluster_id set, will still refer
+# to pki_dir instead of cluster_pki_dir
+NON_CLUSTERED_MASTER_KEYS = []
+
 
 # we explicitly override cache dir to point to pki here
 def init_kwargs(kwargs):
     """
     setup kwargs for cache functions
     """
-    if __opts__.get("cluster_id"):
+    if __opts__["__role"] != "minion":
+        global NON_CLUSTERED_MASTER_KEYS
+        NON_CLUSTERED_MASTER_KEYS = [
+            "master.pem",
+            "master.pub",
+            f"{__opts__['master_sign_key_name']}.pem",
+            f"{__opts__['master_sign_key_name']}.pub",
+            f"{__opts__['id'].removesuffix('_master')}.pub",
+            f"{__opts__['id'].removesuffix('_master')}.pem",
+            __opts__.get(
+                "master_pubkey_signature", f"{__opts__['id']}_pubkey_signature"
+            ),
+        ]
+
+    if "pki_dir" in kwargs:
+        pki_dir = kwargs["pki_dir"]
+    elif __opts__.get("cluster_id"):
         pki_dir = __opts__["cluster_pki_dir"]
     else:
         pki_dir = __opts__["pki_dir"]
 
-    return {"cachedir": pki_dir, "user": kwargs.get("user")}
+    user = kwargs.get("user", __opts__.get("user"))
+
+    return {"cachedir": pki_dir, "user": user}
 
 
 def store(bank, key, data, cachedir, user, **kwargs):
@@ -63,8 +89,13 @@ def store(bank, key, data, cachedir, user, **kwargs):
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
-    if bank not in ["keys", "denied_keys"]:
+    if bank not in ["keys", "denied_keys", "master_keys"]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
+
+    if __opts__["permissive_pki_access"]:
+        umask = 0o0700
+    else:
+        umask = 0o0750
 
     if bank == "keys":
         if data["state"] == "rejected":
@@ -80,9 +111,17 @@ def store(bank, key, data, cachedir, user, **kwargs):
         # denied keys is a list post migration, but is a single key in legacy
         data = data[0]
         base = "minions_denied"
+    elif bank == "master_keys":
+        # private keys are separate from permissive_pki_access
+        umask = 0o277
+        base = ""
+        # even in clustered mode, master and signing keys live in the
+        # non-clustered pki dir
+        if key in NON_CLUSTERED_MASTER_KEYS:
+            cachedir = __opts__["pki_dir"]
 
-    base = os.path.join(cachedir, base)
-    savefn = os.path.join(base, key)
+    savefn = Path(cachedir) / base / key
+    base = savefn.parent
 
     if not clean_path(cachedir, savefn, subdir=True):
         raise SaltCacheError(f"key {key} is not a valid key path.")
@@ -97,11 +136,6 @@ def store(bank, key, data, cachedir, user, **kwargs):
 
     # delete current state before re-serializing new state
     flush(bank, key, cachedir, **kwargs)
-
-    if __opts__["permissive_pki_access"]:
-        umask = 0o0700
-    else:
-        umask = 0o0750
 
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
@@ -120,12 +154,16 @@ def store(bank, key, data, cachedir, user, **kwargs):
     try:
         with salt.utils.files.set_umask(umask):
             with salt.utils.files.fopen(tmpfname, "w+b") as fh_:
-                fh_.write(data.encode("utf-8"))
+                fh_.write(salt.utils.stringutils.to_bytes(data))
+
+            if bank == "master_keys":
+                os.chmod(tmpfname, 0o400)
+
         # On Windows, os.rename will fail if the destination file exists.
         salt.utils.atomicfile.atomic_rename(tmpfname, savefn)
     except OSError as exc:
         raise SaltCacheError(
-            f"There was an error writing the cache file, {base}: {exc}"
+            f"There was an error writing the cache file, base={base}: {exc}"
         )
 
 
@@ -136,8 +174,11 @@ def fetch(bank, key, cachedir, **kwargs):
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
-    if bank not in ["keys", "denied_keys"]:
+    if bank not in ["keys", "denied_keys", "master_keys"]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
+
+    if not clean_path(cachedir, key, subdir=True):
+        raise SaltCacheError(f"key {key} is not a valid key path.")
 
     if key == ".key_cache":
         raise SaltCacheError("trying to read key_cache, there is a bug at call-site")
@@ -148,9 +189,10 @@ def fetch(bank, key, cachedir, **kwargs):
                 ("pending", "minions_pre"),
                 ("accepted", "minions"),
             ]:
-                pubfn = os.path.join(cachedir, bank, key)
-                if os.path.isfile(pubfn):
-                    with salt.utils.files.fopen(pubfn, "r") as fh_:
+                keyfile = Path(cachedir, bank, key)
+
+                if keyfile.is_file() and not keyfile.is_symlink():
+                    with salt.utils.files.fopen(keyfile, "r") as fh_:
                         return {"state": state, "pub": fh_.read()}
             return None
         elif bank == "denied_keys":
@@ -161,6 +203,15 @@ def fetch(bank, key, cachedir, **kwargs):
             if os.path.isfile(pubfn_denied):
                 with salt.utils.files.fopen(pubfn_denied, "r") as fh_:
                     return [fh_.read()]
+        elif bank == "master_keys":
+            if key in NON_CLUSTERED_MASTER_KEYS:
+                cachedir = __opts__["pki_dir"]
+
+            keyfile = Path(cachedir, key)
+
+            if keyfile.is_file() and not keyfile.is_symlink():
+                with salt.utils.files.fopen(keyfile, "r") as fh_:
+                    return fh_.read()
         else:
             raise SaltCacheError(f'unrecognized bank "{bank}"')
     except OSError as exc:
@@ -182,22 +233,26 @@ def updated(bank, key, cachedir, **kwargs):
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "master_keys":
+        if key in NON_CLUSTERED_MASTER_KEYS:
+            cachedir = __opts__["pki_dir"]
+        bases = [""]
     else:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     for dir in bases:
-        key_file = os.path.join(cachedir, dir, key)
+        keyfile = Path(cachedir, dir, key)
 
-        if not clean_path(cachedir, key_file, subdir=True):
+        if not clean_path(cachedir, keyfile, subdir=True):
             raise SaltCacheError(f"key {key} is not a valid key path.")
 
-        if os.path.isfile(key_file):
+        if keyfile.is_file() and not keyfile.is_symlink():
             try:
-                return int(os.path.getmtime(key_file))
+                return int(os.path.getmtime(keyfile))
             except OSError as exc:
                 raise SaltCacheError(
                     'There was an error reading the mtime for "{}": {}'.format(
-                        key_file, exc
+                        keyfile, exc
                     )
                 )
     log.debug('pki file "%s" does not exist in accepted/rejected/pending', key)
@@ -219,6 +274,10 @@ def flush(bank, key=None, cachedir=None, **kwargs):
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "master_keys":
+        if key in NON_CLUSTERED_MASTER_KEYS:
+            cachedir = __opts__["pki_dir"]
+        bases = [""]
     else:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
@@ -239,6 +298,10 @@ def flush(bank, key=None, cachedir=None, **kwargs):
 
                 if not os.path.isfile(target):
                     continue
+
+                # necessary on windows, otherwise PermissionError: [WinError 5] Access is denied
+                os.chmod(target, stat.S_IWRITE)
+
                 os.remove(target)
                 flushed = True
         except OSError as exc:
@@ -255,6 +318,8 @@ def list_(bank, cachedir, **kwargs):
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "master_keys":
+        bases = [""]
     else:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
@@ -273,7 +338,9 @@ def list_(bank, cachedir, **kwargs):
             # salt foolishly dumps a file here for key cache, ignore it
             if bank in ["keys", "denied_keys"] and not valid_id(__opts__, item):
                 log.error("saw invalid id %s, discarding", item)
-            else:
+
+            keyfile = Path(cachedir, base, item)
+            if keyfile.is_file() and not keyfile.is_symlink():
                 ret.append(item)
     return ret
 
@@ -282,22 +349,27 @@ def contains(bank, key, cachedir, **kwargs):
     """
     Checks if the specified bank contains the specified key.
     """
-    if not valid_id(__opts__, key):
+    if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
     if bank == "keys":
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "master_keys":
+        if key in NON_CLUSTERED_MASTER_KEYS:
+            cachedir = __opts__["pki_dir"]
+        bases = [""]
     else:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     for base in bases:
-        keyfile = os.path.join(cachedir, base, key)
+        keyfile = Path(cachedir, base, key)
 
         if not clean_path(cachedir, keyfile, subdir=True):
             raise SaltCacheError(f"key {key} is not a valid key path.")
 
-        if os.path.isfile(keyfile):
+        if keyfile.is_file() and not keyfile.is_symlink():
             return True
+
     return False
