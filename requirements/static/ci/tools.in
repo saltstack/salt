@@ -1,5 +1,5 @@
 attrs
-pip>=25 ; python_version >= '3.12'
+pip>=24 ; python_version >= '3.12'
 python-tools-scripts >= 0.20.0
 boto3
 pyyaml
