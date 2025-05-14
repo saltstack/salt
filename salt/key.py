@@ -4,7 +4,6 @@ used to manage salt keys directly without interfacing with the CLI.
 """
 
 import fnmatch
-import functools
 import itertools
 import logging
 import os
@@ -27,6 +26,7 @@ import salt.utils.minions
 import salt.utils.sdb
 import salt.utils.stringutils
 import salt.utils.user
+from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class KeyCLI:
         else:
             self.key = Key
 
-        self.auth = None
+        self.auth = {}
 
     def _update_opts(self):
         # get the key command
@@ -121,11 +121,13 @@ class KeyCLI:
                         low["key"] = salt.utils.stringutils.to_unicode(fp_.readline())
                 except OSError:
                     low["token"] = self.opts["token"]
-            #
+
             # If using eauth and a token hasn't already been loaded into
             # low, prompt the user to enter auth credentials
             if "token" not in low and "key" not in low and self.opts["eauth"]:
                 # This is expensive. Don't do it unless we need to.
+                import salt.auth
+
                 resolver = salt.auth.Resolver(self.opts)
                 res = resolver.cli(self.opts["eauth"])
                 if self.opts["mktoken"] and res:
@@ -331,6 +333,7 @@ class Key:
 
     def __init__(self, opts, io_loop=None):
         self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
         if self.opts.get("cluster_id", None) is not None:
             self.pki_dir = self.opts.get("cluster_pki_dir", "")
         else:
@@ -344,12 +347,12 @@ class Key:
             self.opts.get("signing_key_pass"), self.opts
         )
         self.io_loop = io_loop
-        self.cache = salt.cache.factory(
-            self.opts,
-            driver=self.opts.get("keys.cache_driver", "localfs_key_backcompat"),
-        )
 
-    @functools.cached_property
+    @cached_property
+    def master_keys(self):
+        return salt.crypt.MasterKeys(self.opts)
+
+    @cached_property
     def event(self):
         return salt.utils.event.get_event(
             self._kind,
@@ -375,15 +378,11 @@ class Key:
         if not keydir:
             if "gen_keys_dir" in self.opts:
                 keydir = self.opts["gen_keys_dir"]
-                cache = salt.cache.Cache(
-                    self.opts,
-                    driver=self.opts["keys.cache_driver"],
-                    cachedir=self.opts["gen_keys_dir"],
-                )
             else:
                 keydir = self.pki_dir
-        if cache is None:
-            cache = self.cache
+        cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"], cachedir=keydir, user=user
+        )
         if not keyname:
             if "gen_keys" in self.opts:
                 keyname = self.pki_dir
@@ -400,14 +399,10 @@ class Key:
         keydir, keyname, keysize, user, cache = self._get_key_attrs(
             keydir, keyname, keysize, user
         )
-        salt.crypt.gen_keys(keydir, keyname, keysize, user, self.passphrase)
-        return salt.utils.crypt.pem_finger(os.path.join(keydir, keyname + ".pub"))
-
-    def gen_signature(self, privkey, pubkey, sig_path):
-        """
-        Generate master public-key-signature
-        """
-        return salt.crypt.gen_signature(privkey, pubkey, sig_path, self.passphrase)
+        priv = self.master_keys.find_or_create_keys(
+            keyname, keysize=keysize, cache=cache
+        )
+        return salt.utils.crypt.pem_finger(key=priv.public_key())
 
     def gen_keys_signature(
         self, priv, pub, signature_path, auto_create=False, keysize=None
@@ -435,26 +430,29 @@ class Key:
             if os.path.isfile(mpriv):
                 priv = mpriv
 
-        if not priv:
+        if priv:
+            priv = salt.crypt.PrivateKey.from_file(priv)
+        else:
             if auto_create:
                 log.debug(
                     "Generating new signing key-pair .%s.* in %s",
                     self.opts["master_sign_key_name"],
                     self.pki_dir,
                 )
-                salt.crypt.gen_keys(
-                    self.pki_dir,
-                    self.opts["master_sign_key_name"],
-                    keysize or self.opts["keysize"],
-                    self.opts.get("user"),
-                    self.passphrase,
+                # we force re-create as master_keys init also does the same
+                # creation without these kwarg overrides
+                priv = self.master_keys.sign_key = self.master_keys.find_or_create_keys(
+                    name=self.opts["master_sign_key_name"],
+                    keysize=keysize or self.opts["keysize"],
+                    passphrase=self.passphrase,
+                    force=True,
                 )
-
-                priv = self.pki_dir + "/" + self.opts["master_sign_key_name"] + ".pem"
             else:
                 return "No usable private-key found"
 
-        if not pub:
+        if pub:
+            pub = salt.crypt.PublicKey.from_file(pub).key
+        else:
             return "No usable public-key found"
 
         log.debug("Using public-key %s", pub)
@@ -463,13 +461,11 @@ class Key:
         if signature_path:
             if not os.path.isdir(signature_path):
                 log.debug("target directory %s does not exist", signature_path)
+            sign_path = signature_path + "/" + self.master_keys.master_pubkey_signature
         else:
-            signature_path = self.pki_dir
+            sign_path = None
 
-        sign_path = signature_path + "/" + self.opts["master_pubkey_signature"]
-
-        skey = get_key(self.opts)
-        return skey.gen_signature(priv, pub, sign_path)
+        return self.master_keys.gen_signature(priv, pub, sign_path)
 
     def check_minion_cache(self, preserve_minions=None):
         """
@@ -508,7 +504,10 @@ class Key:
         """
         Accept a glob which to match the of a key and return the key's location
         """
-        matches = self.list_keys()
+        if full:
+            matches = self.all_keys()
+        else:
+            matches = self.list_keys()
         ret = {}
         if "," in match and isinstance(match, str):
             match = match.split(",")
@@ -568,7 +567,7 @@ class Key:
         """
         Return a dict of managed keys and what the key status are
         """
-        if self.opts["key_cache"] == "sched":
+        if self.opts.get("key_cache") == "sched":
             acc = "accepted"
 
             cache_file = os.path.join(self.opts["pki_dir"], acc, ".key_cache")
@@ -583,7 +582,7 @@ class Key:
             "minions": [],
             "minions_denied": [],
         }
-        for id_ in self.cache.list("keys"):
+        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
             key = self.cache.fetch("keys", id_)
 
             if key["state"] == "accepted":
@@ -593,15 +592,33 @@ class Key:
             elif key["state"] == "rejected":
                 ret["minions_rejected"].append(id_)
 
-        for id_ in self.cache.list("denied_keys"):
+        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("denied_keys")):
             ret["minions_denied"].append(id_)
         return ret
+
+    def local_keys(self):
+        """
+        Return a dict of local keys
+        """
+        ret = {"local": []}
+        for key in salt.utils.data.sorted_ignorecase(self.cache.list("master_keys")):
+            if key.endswith(".pub") or key.endswith(".pem"):
+                ret["local"].append(key)
+        return ret
+
+    def all_keys(self):
+        """
+        Merge managed keys with local keys
+        """
+        keys = self.list_keys()
+        keys.update(self.local_keys())
+        return keys
 
     def list_status(self, match):
         """
         Return a dict of managed keys under a named status
         """
-        ret = self.list_keys()
+        ret = self.all_keys()
         if match.startswith("acc"):
             return {
                 "minions": salt.utils.data.sorted_ignorecase(ret.get("minions", []))
@@ -697,9 +714,7 @@ class Key:
                         key = self.cache.fetch("keys", keyname)
 
                     try:
-                        salt.crypt.get_rsa_pub_key(
-                            salt.utils.stringutils.to_bytes(key["pub"])
-                        )
+                        salt.crypt.PublicKey.from_str(key["pub"])
                     except salt.exceptions.InvalidKeyError:
                         log.error("Invalid RSA public key: %s", keyname)
                         invalid_keys.append(keyname)
@@ -862,7 +877,7 @@ class Key:
         if hash_type is None:
             hash_type = self.opts["hash_type"]
 
-        matches = self.glob_match(match)
+        matches = self.glob_match(match, full=True)
         ret = {}
         for status, keys in matches.items():
             ret[status] = {}
@@ -879,7 +894,10 @@ class Key:
                     if len(denied) == 1:
                         ret[status][key] = ret[status][key][0]
                 else:
-                    pub = self.cache.fetch("keys", key)["pub"].encode("utf-8")
+                    if status == "local":
+                        pub = self.cache.fetch("master_keys", key).encode("utf-8")
+                    else:
+                        pub = self.cache.fetch("keys", key)["pub"].encode("utf-8")
                     ret[status][key] = salt.utils.crypt.pem_finger(
                         key=pub, sum_type=hash_type
                     )

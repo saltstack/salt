@@ -253,16 +253,10 @@ def gen_keys(keysize=2048):
     # Mandate that keys are at least 2048 in size
     if keysize < 2048:
         keysize = 2048
-    tdir = tempfile.mkdtemp()
 
-    salt.crypt.gen_keys(tdir, "minion", keysize)
-    priv_path = os.path.join(tdir, "minion.pem")
-    pub_path = os.path.join(tdir, "minion.pub")
-    with salt.utils.files.fopen(priv_path) as fp_:
-        priv = salt.utils.stringutils.to_unicode(fp_.read())
-    with salt.utils.files.fopen(pub_path) as fp_:
-        pub = salt.utils.stringutils.to_unicode(fp_.read())
-    shutil.rmtree(tdir)
+    (priv, pub) = salt.crypt.gen_keys(keysize)
+    priv = salt.utils.stringutils.to_unicode(priv)
+    pub = salt.utils.stringutils.to_unicode(pub)
     return priv, pub
 
 

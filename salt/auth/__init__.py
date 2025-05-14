@@ -17,7 +17,6 @@ import logging
 import random
 import time
 from collections.abc import Iterable, Mapping
-from functools import cached_property
 
 import salt.channel.client
 import salt.config
@@ -31,6 +30,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
+from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 

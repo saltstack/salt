@@ -162,7 +162,7 @@ VALID_OPTS = immutabletypes.freeze(
         "always_verify_signature": bool,
         # The name of the file in the masters pki-directory that holds the pre-calculated signature of
         # the masters public-key
-        "master_pubkey_signature": str,
+        "master_pubkey_signature": (type(None), str),
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
@@ -1629,7 +1629,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_minions": 0,
         "master_sign_key_name": "master_sign",
         "master_sign_pubkey": False,
-        "master_pubkey_signature": "master_pubkey_signature",
+        "master_pubkey_signature": None,
         "master_use_pubkey_signature": False,
         "zmq_filtering": False,
         "zmq_monitor": False,
