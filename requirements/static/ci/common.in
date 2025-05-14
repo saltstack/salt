@@ -8,7 +8,8 @@ apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.21.46
 boto>=2.46.0
 cassandra-driver>=2.0
-cffi>=1.14.6
+cffi>=1.14.6; python_version < '3.12'
+cffi>=1.16.0; python_version >= '3.12'
 cherrypy>=17.4.1
 clustershell
 dnspython
@@ -48,3 +49,9 @@ genshi>=0.7.3
 cheetah3>=3.2.2
 mako
 wempy
+napalm>=4.1.0 ; sys_platform != 'win32' and python_version < '3.12'
+napalm>=5.0.0 ; sys_platform != 'win32' and python_version >= '3.12'
+lxml>=4.9.2 ; python_version < '3.12'
+lxml>=5.4.0 ; python_version >= '3.12'
+mercurial; python_version < '3.12'
+mercurial>=6.9; python_version >= '3.12'

@@ -74,7 +74,7 @@ mdit-py-plugins==0.3.5
     # via myst-docutils
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==5.0.0
+more-itertools==10.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cheroot
@@ -99,7 +99,7 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   tempora
-pyyaml==6.0.1
+pyyaml==6.0.1 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   myst-docutils
@@ -107,10 +107,9 @@ requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   sphinx
-six==1.16.0
+six==1.16.0 ; python_version < "3.12"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   more-itertools
     #   sphinxcontrib-httpdomain
 snowballstemmer==2.2.0
     # via sphinx

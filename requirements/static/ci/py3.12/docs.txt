@@ -29,7 +29,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   requests
-cffi==1.16.0
+cffi==1.16.0 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   cryptography
@@ -136,14 +136,15 @@ mdit-py-plugins==0.3.5
     # via myst-docutils
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==5.0.0
+more-itertools==10.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.7
+msgpack==1.1.0 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -198,7 +199,7 @@ pytz==2024.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   croniter
     #   tempora
-pyyaml==6.0.1
+pyyaml==6.0.1 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -220,10 +221,10 @@ setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-six==1.16.0
+six==1.17.0 ; python_version >= "3.12"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   more-itertools
+    #   -r requirements/base.txt
     #   python-dateutil
     #   sphinxcontrib-httpdomain
 snowballstemmer==2.2.0
