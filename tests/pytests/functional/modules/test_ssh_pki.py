@@ -13,6 +13,13 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+try:
+    import bcrypt  # pylint: disable=unused-import
+
+    HAS_BCRYPT = True
+except ImportError:
+    HAS_BCRYPT = False
+
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 pytestmark = [
@@ -55,7 +62,7 @@ def minion_config_overrides():
 
 
 @pytest.fixture
-def ssh(loaders, modules):
+def ssh(modules):
     yield modules.ssh_pki
 
 
@@ -325,6 +332,9 @@ def test_create_certificate_from_privkey(ssh, cert_type, ca_key, ca_pub, algo, r
     _assert_cert_basic(res, cert_type, pubkey, ca_pub)
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.parametrize("cert_type", ["user", "host"])
 def test_create_certificate_from_encrypted_privkey(
     ssh, ca_key, ca_pub, rsa_privkey_enc, rsa_pubkey, cert_type
@@ -340,6 +350,9 @@ def test_create_certificate_from_encrypted_privkey(
     _assert_cert_basic(res, cert_type, rsa_pubkey, ca_pub)
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.parametrize("cert_type", ["user", "host"])
 def test_create_certificate_from_encrypted_privkey_with_encrypted_privkey(
     ssh, ca_key_enc, ca_pub, rsa_privkey_enc, rsa_pubkey, cert_type
@@ -636,6 +649,9 @@ def test_create_private_key(ssh, algo):
     assert ssh.get_public_key(priv) == pub
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.slow_test
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])
 def test_create_private_key_with_passphrase(ssh, algo):

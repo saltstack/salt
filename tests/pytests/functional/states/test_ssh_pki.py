@@ -13,6 +13,13 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+try:
+    import bcrypt  # pylint: disable=unused-import
+
+    HAS_BCRYPT = True
+except ImportError:
+    HAS_BCRYPT = False
+
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 pytestmark = [
@@ -56,7 +63,7 @@ def minion_config_overrides():
 
 
 @pytest.fixture
-def ssh(loaders, states):
+def ssh(states):
     yield states.ssh_pki
 
 
@@ -401,7 +408,7 @@ def existing_symlink(request):
 @pytest.mark.parametrize("cert_type", ["user", "host"])
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])
 def test_certificate_managed_with_privkey(
-    ssh, cert_args, rsa_privkey, ca_key, algo, request, cert_type
+    ssh, cert_args, ca_key, algo, request, cert_type
 ):
     privkey = request.getfixturevalue(f"{algo}_privkey")
     cert_args["private_key"] = privkey
@@ -417,6 +424,9 @@ def test_certificate_managed_with_privkey(
     )
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_certificate_managed_with_privkey_enc(
     ssh, cert_args, rsa_privkey_enc, rsa_privkey, ca_key
 ):
@@ -433,6 +443,9 @@ def test_certificate_managed_with_privkey_enc(
     )
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_certificate_managed_with_privkey_ca_enc(
     ssh, cert_args, rsa_privkey, ca_key, ca_key_enc
 ):
@@ -450,6 +463,9 @@ def test_certificate_managed_with_privkey_ca_enc(
     )
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_certificate_managed_with_privkey_enc_ca_enc(
     ssh, cert_args, rsa_privkey, rsa_privkey_enc, ca_key, ca_key_enc
 ):
@@ -469,9 +485,7 @@ def test_certificate_managed_with_privkey_enc_ca_enc(
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])
-def test_certificate_managed_with_pubkey(
-    ssh, cert_args, rsa_privkey, rsa_pubkey, ca_key, algo, request
-):
+def test_certificate_managed_with_pubkey(ssh, cert_args, ca_key, algo, request):
     privkey = request.getfixturevalue(f"{algo}_privkey")
     pubkey = request.getfixturevalue(f"{algo}_pubkey")
     cert_args["public_key"] = pubkey
@@ -569,7 +583,7 @@ def test_certificate_managed_with_signing_policy_user(
     assert cert.extensions == expected_extensions
 
 
-def test_certificate_managed_test_true(ssh, cert_args, rsa_privkey, ca_key):
+def test_certificate_managed_test_true(ssh, cert_args, rsa_privkey):
     cert_args["private_key"] = rsa_privkey
     cert_args["test"] = True
     ret = ssh.certificate_managed(**cert_args)
@@ -879,9 +893,7 @@ def test_certificate_managed_mode(ssh, cert_args, rsa_privkey, ca_key, mode, mod
     assert modules.file.get_mode(cert_args["name"]) == mode
 
 
-def test_certificate_managed_file_managed_create_false(
-    ssh, cert_args, rsa_privkey, ca_key
-):
+def test_certificate_managed_file_managed_create_false(ssh, cert_args, rsa_privkey):
     """
     Ensure create=False is detected and respected
     """
@@ -895,9 +907,7 @@ def test_certificate_managed_file_managed_create_false(
 
 @pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("existing_cert", [{"mode": "0644"}], indirect=True)
-def test_certificate_managed_mode_change_only(
-    ssh, cert_args, rsa_privkey, ca_key, modules
-):
+def test_certificate_managed_mode_change_only(ssh, cert_args, modules):
     """
     This serves as a proxy for all file.managed args
     """
@@ -949,10 +959,9 @@ def test_certificate_managed_backup(
     assert bool(modules.file.list_backups(cert_args["name"])) == bool(backup)
 
 
+@pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("follow", [True, False])
-def test_certificate_managed_follow_symlinks(
-    ssh, cert_args, existing_symlink, follow, existing_cert
-):
+def test_certificate_managed_follow_symlinks(ssh, cert_args, existing_symlink, follow):
     """
     file.managed follow_symlinks arg needs special attention since
     the checking of the existing file is performed by the ssh_pki module
@@ -964,9 +973,10 @@ def test_certificate_managed_follow_symlinks(
     assert bool(ret.changes) == (not follow)
 
 
+@pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("follow", [True, False])
 def test_certificate_managed_follow_symlinks_changes(
-    ssh, cert_args, existing_symlink, follow, existing_cert
+    ssh, cert_args, existing_symlink, follow
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
@@ -981,7 +991,7 @@ def test_certificate_managed_follow_symlinks_changes(
     assert Path(ret.name).is_symlink() == follow
 
 
-def test_certificate_managed_file_managed_error(ssh, cert_args, rsa_privkey, ca_key):
+def test_certificate_managed_file_managed_error(ssh, cert_args, rsa_privkey):
     """
     This serves as a proxy for all file.managed args
     """
@@ -994,7 +1004,18 @@ def test_certificate_managed_file_managed_error(ssh, cert_args, rsa_privkey, ca_
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])
-@pytest.mark.parametrize("passphrase", [None, "hunter1"])
+@pytest.mark.parametrize(
+    "passphrase",
+    [
+        None,
+        pytest.param(
+            "hunter1",
+            marks=pytest.mark.skipif(
+                HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+            ),
+        ),
+    ],
+)
 def test_private_key_managed(ssh, pk_args, algo, passphrase):
     pk_args["algo"] = algo
     pk_args["passphrase"] = passphrase
@@ -1038,6 +1059,9 @@ def test_private_key_managed_existing_new(ssh, pk_args):
     assert cur.public_key().public_numbers() != new.public_key().public_numbers()
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"passphrase": "hunter2"}], indirect=True)
 def test_private_key_managed_existing_new_with_passphrase_change(ssh, pk_args):
@@ -1066,6 +1090,9 @@ def test_private_key_managed_keysize_change(ssh, pk_args):
     assert ret.changes == {"keysize": 2048}
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 def test_private_key_managed_passphrase_introduced(ssh, pk_args):
     pk_args["passphrase"] = "hunter1"
@@ -1077,6 +1104,9 @@ def test_private_key_managed_passphrase_introduced(ssh, pk_args):
     assert new.public_key().public_numbers() == cur.public_key().public_numbers()
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"passphrase": "password"}], indirect=True)
 def test_private_key_managed_passphrase_removed_not_overwrite(ssh, pk_args):
@@ -1087,6 +1117,9 @@ def test_private_key_managed_passphrase_removed_not_overwrite(ssh, pk_args):
     assert "is encrypted with a passphrase. Pass overwrite" in ret.comment
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"passphrase": "password"}], indirect=True)
 def test_private_key_managed_passphrase_removed_overwrite(ssh, pk_args):
@@ -1096,6 +1129,9 @@ def test_private_key_managed_passphrase_removed_overwrite(ssh, pk_args):
     _assert_pk_basic(ret, "rsa")
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"passphrase": "password"}], indirect=True)
 def test_private_key_managed_passphrase_changed_not_overwrite(ssh, pk_args):
@@ -1109,6 +1145,9 @@ def test_private_key_managed_passphrase_changed_not_overwrite(ssh, pk_args):
     )
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"passphrase": "password"}], indirect=True)
 def test_private_key_managed_passphrase_changed_overwrite(ssh, pk_args):
@@ -1165,11 +1204,10 @@ def test_private_key_managed_backup(ssh, pk_args, modules, backup):
     assert bool(modules.file.list_backups(pk_args["name"])) == bool(backup)
 
 
+@pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_symlink", ["existing_pk"], indirect=True)
 @pytest.mark.parametrize("follow", [True, False])
-def test_private_key_managed_follow_symlinks(
-    ssh, pk_args, existing_symlink, follow, existing_pk
-):
+def test_private_key_managed_follow_symlinks(ssh, pk_args, existing_symlink, follow):
     """
     file.managed follow_symlinks arg needs special attention as well since
     the checking of the existing file is performed by the ssh_pki module
@@ -1181,10 +1219,11 @@ def test_private_key_managed_follow_symlinks(
     assert bool(ret.changes) == (not follow)
 
 
+@pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_symlink", ["existing_pk"], indirect=True)
 @pytest.mark.parametrize("follow", [True, False])
 def test_private_key_managed_follow_symlinks_changes(
-    ssh, pk_args, existing_symlink, follow, existing_pk
+    ssh, pk_args, existing_symlink, follow
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
