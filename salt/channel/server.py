@@ -10,7 +10,6 @@ import collections
 import hashlib
 import logging
 import os
-import pathlib
 
 import tornado.gen
 
@@ -21,11 +20,9 @@ import salt.payload
 import salt.transport.frame
 import salt.utils.channel
 import salt.utils.event
-import salt.utils.files
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.verify
 from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
 from salt.utils.cache import CacheCli
 
@@ -241,9 +238,7 @@ class ReqServerChannel:
             )
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=signing_algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=signing_algorithm),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
@@ -256,9 +251,7 @@ class ReqServerChannel:
             return {
                 "enc": "clear",
                 "load": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=algorithm),
             }
         except UnsupportedAlgorithm:
             log.info(
@@ -663,31 +656,23 @@ class ReqServerChannel:
         # sent to the minion that was just authenticated
         if self.opts["master_sign_pubkey"]:
             # append the pre-computed signature to the auth-reply
-            if self.master_key.pubkey_signature():
+            if self.master_key.pubkey_signature:
                 log.debug("Adding pubkey signature to auth-reply")
-                log.debug(self.master_key.pubkey_signature())
-                ret.update({"pub_sig": self.master_key.pubkey_signature()})
+                log.debug(self.master_key.pubkey_signature)
+                ret.update({"pub_sig": self.master_key.pubkey_signature})
             else:
                 # the master has its own signing-keypair, compute the master.pub's
                 # signature and append that to the auth-reply
-
-                # get the key_pass for the signing key
-                key_pass = salt.utils.sdb.sdb_get(
-                    self.opts["signing_key_pass"], self.opts
-                )
                 log.debug("Signing master public key before sending")
-                pub_sign = salt.crypt.sign_message(
-                    self.master_key.get_sign_paths()[1],
-                    ret["pub_key"],
-                    key_pass,
-                    algorithm=sig_algo,
+                pub_sign = self.master_key.sign_key.sign(
+                    ret["pub_key"], algorithm=sig_algo
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     aes = "{}_|-{}".format(
                         salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
                     )
@@ -709,7 +694,7 @@ class ReqServerChannel:
         else:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     ret["token"] = pub.encrypt(mtoken, enc_algo)
                 except UnsupportedAlgorithm as exc:
                     log.info(
@@ -728,7 +713,7 @@ class ReqServerChannel:
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
-        ret["sig"] = self.master_key.key.encrypt(digest)
+        ret["sig"] = self.master_key.encrypt(digest)
         eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
@@ -917,9 +902,9 @@ class PubServerChannel:
         if self.opts["sign_pub_messages"]:
             log.debug("Signing data packet")
             payload["sig_algo"] = self.opts["publish_signing_algorithm"]
-            payload["sig"] = salt.crypt.PrivateKey(
-                self.master_key.rsa_path,
-            ).sign(payload["load"], self.opts["publish_signing_algorithm"])
+            payload["sig"] = self.master_key.sign(
+                payload["load"], self.opts["publish_signing_algorithm"]
+            )
 
         int_payload = {"payload": salt.payload.dumps(payload)}
 
@@ -974,11 +959,8 @@ class MasterPubServerChannel:
     def send_aes_key_event(self):
         data = {"peer_id": self.opts["id"], "peers": {}}
         for peer in self.opts.get("cluster_peers", []):
-            peer_pub = (
-                pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
-            )
-            if peer_pub.exists():
-                pub = salt.crypt.PublicKey.from_file(peer_pub)
+            pub = self.master_key.fetch(f"peers/{peer}.pub")
+            if pub:
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -988,7 +970,7 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", peer_pub)
+                log.warning("Peer key missing %r", "peers/{peer}.pub")
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1072,7 +1054,7 @@ class MasterPubServerChannel:
 
     async def handle_pool_publish(self, payload, _):
         """
-        Handle incomming events from cluster peer.
+        Handle incoming events from cluster peer.
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
@@ -1086,10 +1068,7 @@ class MasterPubServerChannel:
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )
-                pub_path = (
-                    pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
-                )
-                key = salt.crypt.PublicKey.from_file(pub_path)
+                key = self.master_key.fetch(f"peers/{peer}.pub")
                 m_digest = key.decrypt(sig)
                 if m_digest != digest:
                     log.error("Invalid aes signature from peer: %s", peer)
