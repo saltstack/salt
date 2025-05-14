@@ -885,6 +885,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.started = started
 
+    @classmethod
+    def support_ssl(cls):
+        # Required from DaemonizedPublishServer
+        return False
+
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
 
@@ -915,17 +920,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        ioloop = tornado.ioloop.IOLoop()
-        ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.add_callback(self.publisher, publish_payload, io_loop=io_loop)
         try:
-            ioloop.start()
+            io_loop.start()
         finally:
             self.close()
 
-    def _get_sockets(self, context, ioloop):
+    def _get_sockets(self, context, io_loop):
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
-        monitor.start_io_loop(ioloop)
+        monitor.start_io_loop(io_loop)
         _set_tcp_keepalive(pub_sock, self.opts)
         self.dpub_sock = pub_sock  # = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
@@ -968,15 +973,21 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 )
         return pull_sock, pub_sock, monitor
 
-    async def publisher(self, publish_payload, ioloop=None):
-        if ioloop is None:
-            ioloop = tornado.ioloop.IOLoop.current()
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
             self.daemon_pub_sock,
             self.daemon_monitor,
-        ) = self._get_sockets(self.daemon_context, ioloop)
+        ) = self._get_sockets(self.daemon_context, io_loop)
         self.started.set()
         while True:
             try:
@@ -1080,10 +1091,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.sock:
             self.connect()
         await self.sock.send(payload)
-
-    @property
-    def topic_support(self):
-        return self.opts.get("zmq_filtering", False)
 
     def __enter__(self):
         return self
