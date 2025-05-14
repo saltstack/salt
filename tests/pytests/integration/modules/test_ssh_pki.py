@@ -16,6 +16,13 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+try:
+    import bcrypt  # pylint: disable=unused-import
+
+    HAS_BCRYPT = True
+except ImportError:
+    HAS_BCRYPT = False
+
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 log = logging.getLogger(__name__)
@@ -424,6 +431,9 @@ def test_sign_remote_certificate_compound_match(
     assert _belongs_to(cert, rsa_privkey)
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_sign_remote_certificate_enc(ssh_salt_call_cli, cert_args, ca_key, rsa_privkey):
     cert_args["private_key"] += "_enc"
     cert_args["private_key_passphrase"] = "hunter1"
@@ -435,6 +445,9 @@ def test_sign_remote_certificate_enc(ssh_salt_call_cli, cert_args, ca_key, rsa_p
     assert _belongs_to(cert, rsa_privkey)
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_sign_remote_certificate_ca_enc(
     ssh_salt_call_cli, cert_args, ca_key, rsa_privkey
 ):
@@ -474,6 +487,9 @@ def test_sign_remote_certificate_disallowed_policy(ssh_salt_call_cli, cert_args)
     assert "minion not permitted to use specified signing policy" in ret.stderr
 
 
+@pytest.mark.skipif(
+    HAS_BCRYPT is False, reason="Encrypted keys require the bcrypt library"
+)
 def test_get_signing_policy_remote(
     ssh_salt_call_cli, cert_args, ca_minion_config, ca_pub
 ):
