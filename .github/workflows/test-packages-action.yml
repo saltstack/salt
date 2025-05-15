@@ -190,7 +190,7 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
@@ -317,7 +317,7 @@ jobs:
 
 
   test-windows:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}

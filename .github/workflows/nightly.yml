@@ -450,8 +450,8 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: false
+      sign-rpm-packages: false
       sign-windows-packages: false
-    secrets: inherit
 
   build-pkgs-src:
     name: Build Packages
@@ -470,8 +470,8 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: false
+      sign-rpm-packages: false
       sign-windows-packages: false
-    secrets: inherit
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}

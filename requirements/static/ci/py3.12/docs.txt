@@ -260,7 +260,7 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-tornado==6.3.3
+tornado==6.4.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

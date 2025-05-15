@@ -124,7 +124,7 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/base.txt
-tornado==6.3.3
+tornado==6.4.2
     # via -r requirements/base.txt
 urllib3==1.26.20
     # via

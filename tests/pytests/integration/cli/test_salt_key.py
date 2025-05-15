@@ -75,6 +75,15 @@ def test_remove_key(salt_master, salt_key_cli):
             os.unlink(key)
 
 
+def test_remove_all_keys_with_arg(salt_key_cli):
+    """
+    test salt-key -D usage with args
+    """
+    # Remove Key
+    ret = salt_key_cli.run("-D", "junk")
+    assert "Delete all takes no arguments" in ret.stderr
+
+
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
