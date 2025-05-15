@@ -9,6 +9,7 @@ import logging
 import pathlib
 import platform
 import sys
+import tarfile
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
@@ -320,9 +321,13 @@ def test_artifacts(
             repository=repository,
             artifact_name=artifact_name,
         )
-        ctx.info(succeeded)
         if succeeded:
-            ctx.info(f"Downloaded {artifact_name} to {dest}")
-            continue
+            ctx.info(f"Downloaded {succeeded} to {dest}")
         else:
+            ctx.error("Download failed.")
             ctx.exit(1)
+        if succeeded.endswith("tar.xz"):
+            ctx.info(f"Extracting {succeeded} to {dest}")
+            destpath = pathlib.Path(dest)
+            with tarfile.open(str(destpath / succeeded)) as tarball:
+                tarball.extractall(path=dest)  # nosec

@@ -16,6 +16,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       sign-macos-packages:
         type: boolean
         default: false
@@ -44,6 +48,7 @@ on:
         required: true
         type: string
         description: Json job matrix config
+
 
 env:
   COLUMNS: 190
@@ -162,6 +167,7 @@ jobs:
 
   build-rpm-packages:
     name: RPM
+    environment: ${{ inputs.environment }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
@@ -199,6 +205,25 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
 
+      - name: Setup GnuPG
+        if: ${{ inputs.sign-rpm-packages }}
+        env:
+          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: |
+          install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          export GNUPGHOME
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          passphrase-file ${GNUPGHOME}/passphrase
+          EOF
+          echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
+          echo "${SIGNING_GPG_KEY}" | gpg --import -
+
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
@@ -216,7 +241,7 @@ jobs:
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }}
+          }} ${{ inputs.sign-rpm-packages && '--key-id=64CBBC8173D76B3F' || '' }}
 
       - name: Set Artifact Name
         id: set-artifact-name
@@ -368,6 +393,7 @@ jobs:
       SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
       SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
       WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      SM_CODE_SIGNING_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
       PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
@@ -416,15 +442,16 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
 
-      - name: Code signing with Software Trust Manager
-        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v0.0.2
-
       - name: Setup Certificate
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
         shell: bash
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+
+
+      - name: Code signing with Software Trust Manager
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        uses: digicert/ssm-code-signing@v0.0.2
 
       - name: Build Windows Packages
         run: |
