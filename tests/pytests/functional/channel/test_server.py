@@ -16,6 +16,7 @@ from saltfactories.utils import random_string
 import salt.channel.client
 import salt.channel.server
 import salt.config
+import salt.crypt
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -86,7 +87,7 @@ def master_config(root_dir, transport):
         ),
     )
     os.makedirs(master_conf["pki_dir"])
-    salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)
+    master_keys = salt.crypt.MasterKeys(master_conf)
     minions_keys = os.path.join(master_conf["pki_dir"], "minions")
     os.makedirs(minions_keys)
     yield master_conf
@@ -113,7 +114,7 @@ def minion_config(master_config, channel_minion_id):
         signing_algorithm="PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     )
     os.makedirs(minion_conf["pki_dir"])
-    salt.crypt.gen_keys(minion_conf["pki_dir"], "minion", 4096)
+    salt.crypt.AsyncAuth(minion_conf).get_keys()  # generate minion.pem/pub
     minion_pub = os.path.join(minion_conf["pki_dir"], "minion.pub")
     pub_on_master = os.path.join(master_config["pki_dir"], "minions", channel_minion_id)
     shutil.copyfile(minion_pub, pub_on_master)

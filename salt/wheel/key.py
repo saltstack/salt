@@ -286,11 +286,8 @@ def master_key_str():
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
     """
-    keyname = "master.pub"
-    path_to_pubkey = os.path.join(__opts__["pki_dir"], keyname)
-    with salt.utils.files.fopen(path_to_pubkey, "r") as fp_:
-        keyvalue = salt.utils.stringutils.to_unicode(fp_.read())
-    return {"local": {keyname: keyvalue}}
+    master_key = salt.crypt.MasterKeys(__opts__, autocreate=False)
+    return {"local": {f"{master_key.master_id}.pub": master_key.get_pub_str()}}
 
 
 def finger(match, hash_type=None):
