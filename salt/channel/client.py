@@ -245,9 +245,12 @@ class AsyncReqChannel:
 
         # Validate the master's signature.
         if not self.verify_signature(signed_msg["data"], signed_msg["sig"]):
-            raise salt.crypt.AuthenticationError(
-                "Pillar payload signature failed to validate."
-            )
+            # Try to reauth on error
+            yield self.auth.authenticate()
+            if not self.verify_signature(signed_msg["data"], signed_msg["sig"]):
+                raise salt.crypt.AuthenticationError(
+                    "Pillar payload signature failed to validate."
+                )
 
         # Make sure the signed key matches the key we used to decrypt the data.
         data = salt.payload.loads(signed_msg["data"])
