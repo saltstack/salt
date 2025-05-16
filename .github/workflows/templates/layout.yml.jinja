@@ -19,7 +19,11 @@ run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && forma
 <%- block on %>
 
 on:
-  push: {}
+  push:
+    branches:
+      - 3006.x
+      - 3007.x
+      - master
   pull_request:
     types:
       - labeled
@@ -320,7 +324,7 @@ jobs:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
+    if: ${{ !cancelled() && always() }}
     runs-on: ubuntu-22.04
     <%- if workflow_slug == "nightly" %>
     environment: <{ workflow_slug }>

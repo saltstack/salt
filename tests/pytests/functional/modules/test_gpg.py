@@ -810,6 +810,29 @@ def test_verify_with_keyring(gpghome, gnupg, gpg, keyring, sig, signed_data, key
 
 
 @pytest.mark.usefixtures("_pubkeys_present")
+# Can't easily test the other signature validity levels since
+# we would need to sign the pubkey ourselves, which is not
+# exposed by python-gnupg as of release 0.5.2.
+@pytest.mark.parametrize(
+    "ownertrust,text", (("TRUST_NEVER", "Undefined"), ("TRUST_ULTIMATE", "Ultimate"))
+)
+def test_verify_trust_levels(
+    gpghome, gpg, gnupg, key_a_fp, sig, signed_data, ownertrust, text
+):
+    gnupg.trust_keys(key_a_fp, ownertrust)
+    res = gpg.verify(
+        filename=str(signed_data),
+        signature=sig,
+        gnupghome=str(gpghome),
+    )
+    assert res["res"] is True
+    assert "is verified" in res["message"]
+    assert "key_id" in res
+    assert res["key_id"] == key_a_fp[-16:]
+    assert res["trust_level"] == text
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
 @pytest.mark.requires_random_entropy
 def test_encrypt(gpghome, gpg, gnupg, key_b_fp):
     assert gnupg.list_keys(keys=key_b_fp)

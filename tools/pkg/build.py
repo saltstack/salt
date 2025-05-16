@@ -131,6 +131,10 @@ def debian(
         "arch": {
             "help": "The arch to build for",
         },
+        "key_id": {
+            "help": "Signing key id",
+            "required": False,
+        },
     },
 )
 def rpm(
@@ -139,10 +143,12 @@ def rpm(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
+    key_id: str = None,
 ):
     """
     Build the RPM package.
     """
+    onci = "GITHUB_WORKFLOW" in os.environ
     checkout = pathlib.Path.cwd()
     if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
@@ -184,7 +190,25 @@ def rpm(
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
     )
-
+    if key_id:
+        if onci:
+            path = "/github/home/rpmbuild/RPMS/"
+        else:
+            path = "~/rpmbuild/RPMS/"
+        pkgs = list(pathlib.Path(path).glob("**/*.rpm"))
+        if not pkgs:
+            ctx.error("Signing requested but no packages found.")
+            ctx.exit(1)
+        for pkg in pkgs:
+            ctx.info(f"Running 'rpmsign' on {pkg} ...")
+            ctx.run(
+                "rpmsign",
+                "--key-id",
+                key_id,
+                "--addsign",
+                "--digest-algo=sha256",
+                str(pkg),
+            )
     ctx.info("Done")
 
 
@@ -315,6 +339,9 @@ def macos(
         "python_version": {
             "help": "The version of python to build with using relenv",
         },
+        "debug_signing": {
+            "help": "Enable verbose logging for signtool",
+        },
     },
 )
 def windows(
@@ -325,6 +352,7 @@ def windows(
     sign: bool = False,
     relenv_version: str = None,
     python_version: str = None,
+    debug_signing: bool = True,
 ):
     """
     Build the Windows package.
@@ -398,14 +426,20 @@ def windows(
             ]
         )
         env["PATH"] = os.pathsep.join(path_parts)
+        command = ["smksp_registrar.exe", "register"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ctx.run(*command, env=env)
+
         command = ["smksp_registrar.exe", "list"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ctx.run(*command, env=env)
+
         command = ["smctl.exe", "keypair", "ls"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = [
             r"C:\Windows\System32\certutil.exe",
             "-csp",
@@ -418,11 +452,53 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
+        # DIGICERT asked me to add this for troubleshooting
+        command = ["smctl.exe", "healthcheck"]
+        ctx.info("Running Health Check...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = ["smksp_cert_sync.exe"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+        ctx.info(f"{list(pathlib.Path('~/.signingmanager/logs/').glob('*'))}")
+        ctx.run(
+            "powershell.exe",
+            "-C",
+            'Get-WinEvent -LogName "*Microsoft-Windows-AppxPackaging*" -MaxEvents 150',
+            check=False,
+        )
+        ctx.run("smctl.exe", "windows", "certsync", check=False)
+
+        # sign_cmd = ["signtool.exe", "sign"]
+        # if debug_signing:
+        #    sign_cmd.extend(["/v", "/debug"])
+
+        # sign_cmd.extend(
+        #    [
+        #        "/sha1",
+        #        os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+        #        "/tr",
+        #        "http://timestamp.digicert.com",
+        #        "/td",
+        #        "SHA256",
+        #        "/fd",
+        #        "SHA256",
+        #    ]
+        # )
+        sign_cmd = [
+            "smctl.exe",
+            "sign",
+            "-v",
+            "--fingerprint",
+            os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+            "--config-file",
+            "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\smtools-windows-x64\\pkcs11properties.cfg",
+            "--input",
+        ]
 
         for fname in (
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
@@ -430,18 +506,9 @@ def windows(
         ):
             fpath = str(pathlib.Path(fname).resolve())
             ctx.info(f"Signing {fname} ...")
+            cmd = sign_cmd[:] + [fpath]
             ctx.run(
-                "signtool.exe",
-                "sign",
-                "/sha1",
-                os.environ["WIN_SIGN_CERT_SHA1_HASH"],
-                "/tr",
-                "http://timestamp.digicert.com",
-                "/td",
-                "SHA256",
-                "/fd",
-                "SHA256",
-                fpath,
+                *cmd,
                 env=env,
             )
             ctx.info(f"Verifying {fname} ...")

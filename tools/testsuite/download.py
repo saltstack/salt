@@ -7,12 +7,20 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import platform
+import sys
+import tarfile
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.gh
+from tools.precommit.workflows import (
+    PLATFORMS,
+    TEST_SALT_LISTING,
+    TEST_SALT_PKG_LISTING,
+)
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +34,22 @@ download = command_group(
 )
 
 
+def default_platform():
+    if sys.platform == "linux":
+        return "linux"
+    elif sys.platform == "win32":
+        return "windows"
+    elif sys.platform == "darwin":
+        return "macos"
+    return "unknown"
+
+
+def default_arch():
+    if platform.machine() != "x86_64":
+        return "arm64"
+    return "x86_74"
+
+
 @download.command(
     name="onedir-artifact",
     arguments={
@@ -36,7 +60,7 @@ download = command_group(
         "platform": {
             "help": "The onedir platform artifact to download",
             "choices": ("linux", "macos", "windows"),
-            "required": True,
+            "default": default_platform(),
         },
         "arch": {
             "help": "The onedir artifact architecture",
@@ -227,3 +251,83 @@ def download_artifact(
         ctx.exit(0)
     else:
         ctx.exit(1)
+
+
+@download.command(
+    name="test-artifacts",
+    arguments={
+        "run_id": {
+            "help": "The workflow run ID from where to download artifacts from",
+        },
+        "slug": {
+            "help": "Slug of the test run (examples: debian-11, macos-13, windows-2022)",
+        },
+        "repository": {
+            "help": "The repository to query, e.g. saltstack/salt",
+        },
+    },
+)
+def test_artifacts(
+    ctx: Context,
+    run_id: str,
+    slug: str,
+    repository: str = "saltstack/salt",
+):
+    """
+    Download CI artifacts.
+    """
+
+    platdef = None
+    for platform in PLATFORMS:
+        for _ in TEST_SALT_LISTING[platform]:
+            if _.slug == slug:
+                ctx.info(f"Found platform definition {slug}")
+                platdef = _
+                break
+
+    if not platdef:
+        ctx.error(f"No platform definition found for {slug}")
+        ctx.exit(1)
+
+    pkgdef = None
+    for platform in PLATFORMS:
+        for _ in TEST_SALT_PKG_LISTING[platform]:
+            if _.slug == slug:
+                ctx.info(f"Found pkg definition {slug}")
+                pkgdef = _
+                break
+
+    if not pkgdef:
+        ctx.warn(f"No package definition found for {slug}")
+
+    # Download noxdir, onedir, and packages
+    # salt-3007.1+1144.gbd819e6ab3-onedir-linux-x86_64.tar.xz
+    # nox-linux-x86_64-ci-test-onedir
+    # salt-3007.1+1144.gbd819e6ab3-x86_64-rpm
+    artifacts = [
+        (
+            "artifacts/",
+            f"salt-*-onedir-{platdef.platform}-{platdef.arch}.tar.xz",
+        ),
+        ("./", f"nox-{platdef.platform}-{platdef.arch}-ci-test-onedir"),
+    ]
+    if pkgdef:
+        artifacts.append(("artifacts/pkg/", f"salt-*-{pkgdef.arch}-{pkgdef.pkg_type}"))
+    for dest, artifact_name in artifacts:
+        succeeded = tools.utils.gh.download_artifact(
+            ctx,
+            pathlib.Path(dest),
+            int(run_id),
+            repository=repository,
+            artifact_name=artifact_name,
+        )
+        if succeeded:
+            ctx.info(f"Downloaded {succeeded} to {dest}")
+        else:
+            ctx.error("Download failed.")
+            ctx.exit(1)
+        if succeeded.endswith("tar.xz"):
+            ctx.info(f"Extracting {succeeded} to {dest}")
+            destpath = pathlib.Path(dest)
+            with tarfile.open(str(destpath / succeeded)) as tarball:
+                tarball.extractall(path=dest)  # nosec

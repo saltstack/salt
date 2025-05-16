@@ -24,6 +24,11 @@ from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 
+pytestmark = [
+    pytest.mark.core_test,
+    pytest.mark.windows_whitelisted,
+]
+
 DEFAULT_SHELL = "foo/bar"
 MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
@@ -817,14 +822,12 @@ def test_cmd_script_saltenv_from_config():
 def test_cmd_script_saltenv_from_config_windows():
     mock_cp_get_template = MagicMock()
     mock_cp_cache_file = MagicMock()
-    mock_run = MagicMock()
     with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
         with patch.dict(
             cmdmod.__salt__,
             {
                 "cp.cache_file": mock_cp_cache_file,
                 "cp.get_template": mock_cp_get_template,
-                "file.user_to_uid": MagicMock(),
                 "file.remove": MagicMock(),
             },
         ):
@@ -1052,6 +1055,7 @@ def test_runas_env_sudo_group(bundled):
                                         )
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_no_powershell():
     with pytest.raises(CommandExecutionError):
         cmdmod._prep_powershell_cmd(
@@ -1064,8 +1068,10 @@ def test_prep_powershell_cmd_no_powershell():
     [
         ("Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
+        ("try {this} catch {that}", "try {this} catch {that}"),
     ],
 )
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd(cmd, parsed):
     """
     Tests _prep_powershell_cmd returns correct cmd
@@ -1089,6 +1095,7 @@ def test_prep_powershell_cmd(cmd, parsed):
         assert ret == expected
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_encoded():
     """
     Tests _prep_powershell_cmd returns correct cmd when encoded_cmd=True
@@ -1114,6 +1121,7 @@ def test_prep_powershell_cmd_encoded():
         assert ret == expected
 
 
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_cmd_script():
     """
     Tests _prep_powershell_cmd returns correct cmd when called from cmd.script
@@ -1133,7 +1141,7 @@ def test_prep_powershell_cmd_script():
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            f"& {script}",
+            f"& {script}; exit $LASTEXITCODE",
         ]
         assert ret == expected
 
@@ -1147,6 +1155,7 @@ def test_prep_powershell_cmd_script():
         ('{"foo": "bar"}', '{"foo": "bar"}'),  # Should leave unchanged
     ],
 )
+@pytest.mark.skip_unless_on_windows
 def test_prep_powershell_json(text, expected):
     """
     Make sure the output is valid json

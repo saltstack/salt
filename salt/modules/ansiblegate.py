@@ -420,7 +420,7 @@ def playbooks(
     return retdata
 
 
-def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
+def targets(inventory=None, inventories=None, yaml=False, export=False):
     """
     .. versionadded:: 3005
 
@@ -428,6 +428,10 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
 
     :param inventory:
         The inventory file to read the inventory from. Default: "/etc/ansible/hosts"
+
+    :param inventories:
+        The list of inventory files to read the inventory from.
+        Uses `inventory` in case if `inventories` is not specified.
 
     :param yaml:
         Return the inventory as yaml output. Default: False
@@ -443,7 +447,9 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
         salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
 
     """
-    return salt.utils.ansible.targets(inventory=inventory, yaml=yaml, export=export)
+    return salt.utils.ansible.targets(
+        inventory=inventory, inventories=inventories, yaml=yaml, export=export
+    )
 
 
 def discover_playbooks(

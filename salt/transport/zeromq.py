@@ -1041,7 +1041,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         log.debug("Connecting to pub server: %s", self.pull_uri)
         self.ctx = zmq.asyncio.Context()
         self.sock = self.ctx.socket(zmq.PUSH)
-        self.sock.setsockopt(zmq.LINGER, 300)
+        self.sock.setsockopt(zmq.LINGER, -1)
         self.sock.connect(self.pull_uri)
         return self.sock
 

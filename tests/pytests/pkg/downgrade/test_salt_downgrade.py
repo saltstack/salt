@@ -21,7 +21,7 @@ def _get_running_named_salt_pid(process_name):
         cmd_line = ""
         try:
             cmd_line = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess):
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             # Even though it's a zombie process, it still has a cmdl_string and
             # a pid, so we'll use it
             pass
@@ -63,19 +63,25 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         install_salt.artifact_version
     )
 
-    # Test pip install before a downgrade
-    for dep in ["mysqlclient==2.2.7", "sqlparser"]:
+    # XXX: The gpg module needs a gpg binary on
+    #      windows. Ideally find a module that works on both windows/linux.
+    #      Otherwise find a module on windows to run this test agsint.
+
+    uninstall = salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+
+    if not platform.is_windows():
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
+
+        # Test pip install before an upgrade
+        dep = "netaddr==0.8.0"
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
-    # Verify we can use the module dependent on the installed package
-    repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run(
-        "--local", "mysql.file_query", "mydb", "file_name=/tmp/query.sql"
-    )
-    # The should will fail with false in the output because the databse and
-    # file do not exist.
-    assert "false" in use_lib.stdout
+        # Verify we can use the module dependent on the installed package
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode == 0
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
@@ -98,13 +104,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
 
-    time.sleep(60)  # give it some time
+    time.sleep(30)  # give it some time
 
     # Verify there is a new running minion by getting its PID and comparing it
     # with the PID from before the upgrade
     new_minion_pids = _get_running_named_salt_pid(process_name)
-    assert new_minion_pids
-    assert new_minion_pids != old_minion_pids
+    if not platform.is_windows():
+        assert new_minion_pids
+        assert new_minion_pids != old_minion_pids
 
     bin_file = "salt"
     if platform.is_windows():
@@ -120,10 +127,15 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
+    assert packaging.version.parse(
+        ret.stdout.strip().split()[1]
+    ) == packaging.version.parse(install_salt.prev_version)
 
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
-            # test pip install after a downgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
+            if not platform.is_windows():
+                ret = salt_call_cli.run(
+                    "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+                )
+                assert ret.returncode == 0

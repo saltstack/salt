@@ -94,8 +94,7 @@ $prereq_files | ForEach-Object {
     }
 }
 
-$binary_files = @("python.exe", "ssm.exe")
-
+$binary_files = @("python.exe")
 $binary_files | ForEach-Object {
     Write-Host "Creating $_`: " -NoNewline
     Set-Content -Path "$BUILDENV_DIR\$_" -Value "binary"

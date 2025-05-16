@@ -226,6 +226,11 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.loop_interval = int(self.opts["loop_interval"])
         # A serializer for general maint operations
         self.restart_interval = int(self.opts["maintenance_interval"])
+        # Initializes pki_dir with the correct option for clustered environments
+        if "cluster_id" in self.opts and self.opts["cluster_id"]:
+            self.pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            self.pki_dir = self.opts.get("pki_dir", "")
 
     def _post_fork_init(self):
         """

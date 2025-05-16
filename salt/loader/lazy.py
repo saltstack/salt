@@ -1120,7 +1120,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             for name in self.file_mapping:
                 if name in self.loaded_files or name in self.missing_modules:
                     continue
-                self._load_module(name)
+                try:
+                    self._load_module(name)
+                except FileNotFoundError:
+                    log.warning("Module file not found %s", name)
+                    self.missing_modules[name] = f"Module file not found {name}"
 
             self.loaded = True
 

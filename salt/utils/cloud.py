@@ -205,6 +205,8 @@ def __ssh_gateway_arguments(kwargs):
             )
         )
 
+        extended_arguments = f'-oProxyCommand="{extended_arguments}"'
+
         log.info(
             "Using SSH gateway %s@%s:%s %s",
             ssh_gateway_user,
