@@ -48,8 +48,10 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.15
-    # via contextvars
+immutables==0.15 ; python_version < "3.12"
+    # via
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==6.6.0
     # via -r requirements/base.txt
 jaraco.collections==4.1.0
@@ -72,22 +74,24 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==4.9.1 ; sys_platform == "win32"
+lxml==5.4.0 ; sys_platform == "win32" and python_version >= "3.11"
     # via -r requirements/base.txt
 markupsafe==2.1.3
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==8.2.0
+more-itertools==10.7.0 ; python_version >= "3.11"
     # via
+    #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.12"
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.0.4 ; python_version < "3.12"
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 packaging==24.0
@@ -118,7 +122,7 @@ pywin32==306 ; sys_platform == "win32"
     # via
     #   -r requirements/base.txt
     #   wmi
-pyyaml==6.0.1
+pyyaml==6.0.1 ; python_version < "3.12"
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
@@ -126,8 +130,10 @@ requests==2.32.3 ; python_version >= "3.10"
     # via -r requirements/base.txt
 setproctitle==1.3.2
     # via -r requirements/base.txt
-six==1.15.0
-    # via python-dateutil
+six==1.17.0 ; python_version < "3.12"
+    # via
+    #   -r requirements/base.txt
+    #   python-dateutil
 smmap==5.0.1
     # via gitdb
 tempora==5.3.0

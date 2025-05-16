@@ -8,7 +8,7 @@
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
-<%- set gh_actions_workflows_python_version = "3.10" %>
+<%- set gh_actions_workflows_python_version = "3.11" %>
 <%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>

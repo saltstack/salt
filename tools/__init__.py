@@ -27,6 +27,8 @@ RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
         CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
     ],
     add_as_extra_site_packages=True,
+    pip_requirement="pip>=25",
+    setuptools_requirement="setuptools>=71.0.0",
 )
 ptscripts.set_default_config(DEFAULT_REQS_CONFIG)
 ptscripts.register_tools_module("tools.changelog")
