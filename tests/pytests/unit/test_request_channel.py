@@ -518,7 +518,9 @@ def test_req_server_chan_encrypt_v2(
         assert "key" in ret
         assert dictkey in ret
 
-        key = salt.crypt.PrivateKey(str(pki_dir.joinpath("minion", "minion.pem")))
+        key = salt.crypt.PrivateKey.from_file(
+            str(pki_dir.joinpath("minion", "minion.pem"))
+        )
         aes = key.decrypt(ret["key"], encryption_algorithm)
         pcrypt = salt.crypt.Crypticle(master_opts, aes)
         signed_msg = pcrypt.loads(ret[dictkey])
@@ -570,7 +572,9 @@ def test_req_server_chan_encrypt_v1(pki_dir, encryption_algorithm, master_opts):
         assert "key" in ret
         assert dictkey in ret
 
-        key = salt.crypt.PrivateKey(str(pki_dir.joinpath("minion", "minion.pem")))
+        key = salt.crypt.PrivateKey.from_file(
+            str(pki_dir.joinpath("minion", "minion.pem"))
+        )
         aes = key.decrypt(ret["key"], encryption_algorithm)
         pcrypt = salt.crypt.Crypticle(master_opts, aes)
         data = pcrypt.loads(ret[dictkey])
@@ -938,7 +942,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         key = salt.crypt.Crypticle.generate_key_string()
         pcrypt = salt.crypt.Crypticle(master_opts, key)
         pubfn = os.path.join(master_opts["pki_dir"], "minions", "minion")
-        pub = salt.crypt.PublicKey(pubfn)
+        pub = salt.crypt.PublicKey.from_file(pubfn)
         ret[dictkey] = pcrypt.dumps(signed_msg)
         key = salt.utils.stringutils.to_bytes(key)
         ret["key"] = pub.encrypt(key, minion_opts["encryption_algorithm"])
@@ -1197,7 +1201,7 @@ async def test_req_chan_auth_v2_with_master_signing(
 
     assert (
         pki_dir.joinpath("minion", "minion_master.pub").read_text()
-        == pki_dir.joinpath("master", "master.pub").read_text()
+        == pki_dir.joinpath("master", f"{server.master_key.master_id}.pub").read_text()
     )
 
     client = salt.channel.client.AsyncReqChannel.factory(minion_opts, io_loop=io_loop)
@@ -1218,10 +1222,10 @@ async def test_req_chan_auth_v2_with_master_signing(
     assert "publish_port" in ret
 
     # Now create a new master key pair and try auth with it.
-    mapriv = pki_dir.joinpath("master", "master.pem")
+    mapriv = pki_dir.joinpath("master", f"{server.master_key.master_id}.pem")
     mapriv.unlink()
     mapriv.write_text(MASTER2_PRIV_KEY.strip())
-    mapub = pki_dir.joinpath("master", "master.pub")
+    mapub = pki_dir.joinpath("master", f"{server.master_key.master_id}.pub")
     mapub.unlink()
     mapub.write_text(MASTER2_PUB_KEY.strip())
 
@@ -1245,7 +1249,9 @@ async def test_req_chan_auth_v2_with_master_signing(
 
         assert (
             pki_dir.joinpath("minion", "minion_master.pub").read_text()
-            == pki_dir.joinpath("master", "master.pub").read_text()
+            == pki_dir.joinpath(
+                "master", f"{server.master_key.master_id}.pub"
+            ).read_text()
         )
     finally:
         client.close()
@@ -1513,7 +1519,9 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
         master_opts, master_opts["sock_dir"], listen=False
     )
     server.master_key = salt.crypt.MasterKeys(server.opts)
-    pub = salt.crypt.PublicKey(str(pki_dir.joinpath("master", "master.pub")))
+    pub = salt.crypt.PublicKey.from_file(
+        str(pki_dir.joinpath("master", f"{server.master_key.master_id}.pub"))
+    )
     token = pub.encrypt(
         salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
         algorithm=minion_opts["encryption_algorithm"],
@@ -1591,7 +1599,7 @@ def test_req_server_auth_unsupported_enc_algo(
     import tests.pytests.unit.crypt
 
     pub = tests.pytests.unit.crypt.LegacyPublicKey(
-        str(pki_dir.joinpath("master", "master.pub"))
+        str(pki_dir.joinpath("master", f"{server.master_key.master_id}.pub"))
     )
     token = pub.encrypt(
         salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
@@ -1666,7 +1674,7 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
     import tests.pytests.unit.crypt
 
     pub = tests.pytests.unit.crypt.LegacyPublicKey(
-        str(pki_dir.joinpath("master", "master.pub"))
+        str(pki_dir.joinpath("master", f"{server.master_key.master_id}.pub"))
     )
     token = pub.encrypt(
         salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),

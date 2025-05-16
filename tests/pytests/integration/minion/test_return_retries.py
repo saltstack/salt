@@ -125,7 +125,7 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
         cmd = 'import time; time.sleep(6); print(\'{"foo": "bang"}\');\n'
         with salt.utils.files.fopen(tmp_path / "script.py", "w") as fp:
             fp.write(cmd)
-        proc = cli.run("state.sls", sls_name, minion_tgt="*")
+        proc = cli.run("state.sls", sls_name, minion_tgt="*", _timeout=60)
         # At least one minion should have a Pillar timeout
         assert proc.returncode == 1
         minion_timed_out = False
