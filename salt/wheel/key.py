@@ -26,21 +26,17 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-import hashlib
 import logging
 import os
 
+import salt.cache
 import salt.crypt
 import salt.key
 import salt.utils.crypt
 import salt.utils.files
-import salt.utils.platform
 from salt.utils.sanitizers import clean
 
-__func_alias__ = {
-    "list_": "list",
-    "key_str": "print",
-}
+__func_alias__ = {"list_": "list", "key_str": "print", "name_match": "glob_match"}
 
 log = logging.getLogger(__name__)
 
@@ -81,12 +77,12 @@ def list_all():
         return skey.all_keys()
 
 
-def name_match(match):
+def glob_match(match):
     """
     List all the keys based on a glob match
     """
     with salt.key.get_key(__opts__) as skey:
-        return skey.name_match(match)
+        return skey.glob_match(match)
 
 
 def accept(match, include_rejected=False, include_denied=False):
@@ -370,26 +366,8 @@ def gen(id_=None, keysize=2048):
         -----END RSA PRIVATE KEY-----'}
 
     """
-    if id_ is None:
-        id_ = hashlib.sha512(os.urandom(32)).hexdigest()
-    else:
-        id_ = clean.filename(id_)
-    ret = {"priv": "", "pub": ""}
-    priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
-    pub = "{}.pub".format(priv[: priv.rindex(".")])
-    with salt.utils.files.fopen(priv) as fp_:
-        ret["priv"] = salt.utils.stringutils.to_unicode(fp_.read())
-    with salt.utils.files.fopen(pub) as fp_:
-        ret["pub"] = salt.utils.stringutils.to_unicode(fp_.read())
-
-    # The priv key is given the Read-Only attribute. The causes `os.remove` to
-    # fail in Windows.
-    if salt.utils.platform.is_windows():
-        os.chmod(priv, 128)
-
-    os.remove(priv)
-    os.remove(pub)
-    return ret
+    priv, pub = salt.crypt.gen_keys(keysize)
+    return {"priv": priv, "pub": pub}
 
 
 def gen_accept(id_, keysize=2048, force=False):
@@ -434,11 +412,14 @@ def gen_accept(id_, keysize=2048, force=False):
     """
     id_ = clean.id(id_)
     ret = gen(id_, keysize)
-    acc_path = os.path.join(__opts__["pki_dir"], "minions", id_)
-    if os.path.isfile(acc_path) and not force:
+
+    cache = salt.cache.Cache(__opts__, driver=__opts__["keys.cache_driver"])
+    key = cache.fetch("keys", id_)
+
+    if key and not force:
         return {}
-    with salt.utils.files.fopen(acc_path, "w+") as fp_:
-        fp_.write(salt.utils.stringutils.to_str(ret["pub"]))
+
+    cache.store("keys", id_, {"pub": ret["pub"], "state": "accepted"})
     return ret
 
 
