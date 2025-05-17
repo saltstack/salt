@@ -1357,3 +1357,29 @@
 
 # Set a list of clients to enable in in the API
 #netapi_enable_clients: []
+
+
+#####          Master Cluster Settings          #####
+#####################################################
+# Settings for configuring salt master to work in a cluster configuration behind
+# a load balancer.
+
+# When defined, the master will operate in cluster mode. The master will send
+# the cluster key and id to minions instead of its own key and id. The master
+# will also forward its local event bus to other masters defined by
+# ``cluster_peers``
+#cluster_id: master_cluster
+
+# Defines the other masters in the cluster. Can be IP addresses or hostnames
+#cluster_peers:
+#  - master 2
+#  - master 3
+
+# When ``cluster_pki_dir`` is defined, this sets the location of where this
+# cluster will store its cluster public and private key as well as any minion
+# keys. This setting will default to the value of ``pki_dir``, but should be
+# changed to the filesystem location shared between peers in the cluster.
+#cluster_pki_dir: /my/gluster/share/pki
+
+# The port required to be open for a master cluster to properly function
+#cluster_pool_port: 4520

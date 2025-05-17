@@ -1,6 +1,5 @@
 wheel
 setuptools < 80.0.0
-setuptools-scm < 8.0.0
 networkx >= 3.0,< 3.2
 pip >= 23.3,< 24.0 ; python_version < '3.12'
 pip >24 ; python_version >= '3.12'

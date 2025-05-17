@@ -387,7 +387,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                         self.opts["cachedir"], self.opts["user"], self.opts["id"]
                     )
                     # There is currently no concept of a leader in a master
-                    # cluster. Lets fake it till we make it with a little
+                    # cluster. Let's fake it till we make it with a little
                     # waiting period.
                     time.sleep(drop_file_wait)
                     to_rotate = (
