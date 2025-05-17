@@ -1460,6 +1460,9 @@ class SSHThinTestCase(TestCase):
                 assert [x for x in calls if f"{_file}" in x[-2]]
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_binaries_missing(
+        "virtualenv", reason="Needs virtualenv binary"
+    )
     @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")
     def test_thin_dir(self):
         """

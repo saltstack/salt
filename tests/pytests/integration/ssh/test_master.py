@@ -55,7 +55,7 @@ def test_service(salt_ssh_cli, grains):
     os_release = grains["osrelease"]
     if os_family == "RedHat":
         service = "crond"
-    elif os_family == "Arch":
+    elif os_family in ["Suse", "Arch"]:
         service = "sshd"
     elif os_family == "MacOS":
         service = "org.ntp.ntpd"
