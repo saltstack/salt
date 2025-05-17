@@ -100,6 +100,19 @@ with an example output of:
   rule protocol value="icmp" accept
   rule protocol value="ipv6-icmp" accept
   rule service name="snmp" accept
+
+Here, we define a new ipset that include 1.1.1.1/32 and 8.8.8.8/32:
+
+.. code-block:: yaml
+
+  saltmaster:
+    firewalld.ipset_present:
+      - name: ipset_salt
+      - ipset_type: hash:net
+      - entries:
+        - 1.1.1.1/32
+        - 8.8.8.8/32
+
 """
 
 import logging
@@ -186,6 +199,7 @@ def __virtual__():
 
 def present(
     name,
+    target=None,
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
@@ -204,62 +218,11 @@ def present(
     prune_rich_rules=False,
 ):
     """
-    Ensure a zone has specific attributes.
-
-    name
-        The zone to modify.
-
-    default : None
-        Set this zone as the default zone if ``True``.
-
-    masquerade : None
-        Enable or disable masquerade for a zone. By default it will not change it.
-
-    block_icmp : None
-        List of ICMP types to block in the zone.
-
-    prune_block_icmp : False
-        If ``True``, remove all but the specified block_icmp from the zone.
-
-    ports : None
-        List of ports to add to the zone.
-
-    prune_ports : False
-        If ``True``, remove all but the specified ports from the zone.
-
-    port_fwd : None
-        List of port forwards to add to the zone.
-
-    prune_port_fwd : False
-        If ``True``, remove all but the specified port_fwd from the zone.
-
-    services : None
-        List of services to add to the zone.
-
-    prune_services : False
-        If ``True``, remove all but the specified services from the zone.
-        .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
-
-    interfaces : None
-        List of interfaces to add to the zone.
-
-    prune_interfaces : False
-        If ``True``, remove all but the specified interfaces from the zone.
-
-    sources : None
-        List of sources to add to the zone.
-
-    prune_sources : False
-        If ``True``, remove all but the specified sources from the zone.
-
-    rich_rules : None
-        List of rich rules to add to the zone.
-
-    prune_rich_rules : False
-        If ``True``, remove all but the specified rich rules from the zone.
+    Ensure a zone has specific attributes. Alias to zone_present.
     """
-    ret = _present(
+    return zone_present(
         name,
+        target,
         block_icmp,
         prune_block_icmp,
         default,
@@ -278,89 +241,142 @@ def present(
         prune_rich_rules,
     )
 
-    # Reload firewalld service on changes
-    if ret["changes"] != {}:
-        __salt__["firewalld.reload_rules"]()
-
-    return ret
-
 
 def service(name, ports=None, protocols=None):
     """
     Ensure the service exists and encompasses the specified ports and
-    protocols.
+    protocols. Alias to service_present.
+    """
+    return service_present(name, ports, protocols)
 
-    .. versionadded:: 2016.11.0
+
+def service_absent(name):
+    """
+    Ensure the service does not exists.
+
+    name
+        The service to delete.
+
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-    if name not in __salt__["firewalld.get_services"]():
-        __salt__["firewalld.new_service"](name, restart=False)
+    if name in __salt__["firewalld.get_services"](permanent=True):
+        if not __opts__["test"]:
+            __salt__["firewalld.delete_service"](name, True)
+            ret["result"] = True
+            ret["comment"] = f"'{name}' has been deleted."
+            return ret
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' exists, it will be deleted."
+            return ret
+    else:
+        ret["result"] = True
+        ret["comment"] = f"'{name}' does not exist."
+        return ret
 
-    ports = ports or []
+    return ret
+
+
+def service_present(name, ports=None, protocols=None):
+    """
+    Ensure the service exists and encompasses the specified ports and
+    protocols.
+
+    name
+        The service to modify.
+
+    ports: None
+        List of ports to add to the service.
+
+    protocols: None
+        List of protocols to add to the service.
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     try:
-        _current_ports = __salt__["firewalld.get_service_ports"](name)
+        services = __salt__["firewalld.get_services"]()
     except CommandExecutionError as err:
         ret["comment"] = f"Error: {err}"
         return ret
 
-    new_ports = set(ports) - set(_current_ports)
-    old_ports = set(_current_ports) - set(ports)
-
-    for port in new_ports:
+    if name not in services:
         if not __opts__["test"]:
             try:
-                __salt__["firewalld.add_service_port"](name, port)
+                __salt__["firewalld.new_service"](name, restart=False)
             except CommandExecutionError as err:
                 ret["comment"] = f"Error: {err}"
                 return ret
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' will be created."
+            return ret
 
-    for port in old_ports:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.remove_service_port"](name, port)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
+        ret["changes"].update({name: {"old": [], "new": name}})
 
-    if new_ports or old_ports:
-        ret["changes"].update({"ports": {"old": _current_ports, "new": ports}})
+    if ports:
+        ports = ports or []
 
-    protocols = protocols or []
+        try:
+            _current_ports = __salt__["firewalld.get_service_ports"](name)
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
 
-    try:
-        _current_protocols = __salt__["firewalld.get_service_protocols"](name)
-    except CommandExecutionError as err:
-        ret["comment"] = f"Error: {err}"
-        return ret
+        new_ports = set(ports) - set(_current_ports)
+        old_ports = set(_current_ports) - set(ports)
 
-    new_protocols = set(protocols) - set(_current_protocols)
-    old_protocols = set(_current_protocols) - set(protocols)
+        for port in new_ports:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_service_port"](name, port, False)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
 
-    for protocol in new_protocols:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.add_service_protocol"](name, protocol)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
+        for port in old_ports:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_service_port"](name, port, False)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
 
-    for protocol in old_protocols:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.remove_service_protocol"](name, protocol)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
+        if new_ports or old_ports:
+            ret["changes"].update({"ports": {"old": _current_ports, "new": ports}})
 
-    if new_protocols or old_protocols:
-        ret["changes"].update(
-            {"protocols": {"old": _current_protocols, "new": protocols}}
-        )
+    if protocols:
+        protocols = protocols or []
 
-    if ret["changes"] != {}:
-        __salt__["firewalld.reload_rules"]()
+        try:
+            _current_protocols = __salt__["firewalld.get_service_protocols"](name)
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
+
+        new_protocols = set(protocols) - set(_current_protocols)
+        old_protocols = set(_current_protocols) - set(protocols)
+
+        for protocol in new_protocols:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_service_protocol"](name, protocol)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        for protocol in old_protocols:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_service_protocol"](name, protocol)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        if new_protocols or old_protocols:
+            ret["changes"].update(
+                {"protocols": {"old": _current_protocols, "new": protocols}}
+            )
 
     ret["result"] = True
     if ret["changes"] == {}:
@@ -371,6 +387,9 @@ def service(name, ports=None, protocols=None):
         ret["result"] = None
         ret["comment"] = f"Configuration for '{name}' will change."
         return ret
+
+    if ret["changes"] != {}:
+        __salt__["firewalld.reload_rules"]()
 
     ret["comment"] = f"'{name}' was configured."
     return ret
@@ -412,8 +431,37 @@ def _normalize_rich_rules(rich_rules):
     return normalized_rules
 
 
-def _present(
+def zone_absent(name):
+    """
+    Ensure the zone does not exists.
+
+    name
+        The zone to delete.
+
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    if name in __salt__["firewalld.get_zones"](permanent=True):
+        if not __opts__["test"]:
+            __salt__["firewalld.delete_zone"](name, True)
+            ret["result"] = True
+            ret["comment"] = f"'{name}' has been deleted."
+            return ret
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' exists, it will be deleted."
+            return ret
+    else:
+        ret["result"] = True
+        ret["comment"] = f"'{name}' does not exist."
+        return ret
+
+    return ret
+
+
+def zone_present(
     name,
+    target=None,
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
@@ -435,6 +483,61 @@ def _present(
 ):
     """
     Ensure a zone has specific attributes.
+
+    name
+        The zone to modify.
+
+    target: None
+        Set the target zone, zones target is one of: default, ACCEPT, DROP, REJECT.
+
+    default: None
+        Set this zone as the default zone if ``True``.
+
+    masquerade: None
+        Enable or disable masquerade for a zone. By default it will not change it.
+
+    block_icmp: None
+        List of ICMP types to block in the zone.
+
+    prune_block_icmp: False
+        If ``True``, remove all but the specified block_icmp from the zone.
+
+    ports: None
+        List of ports to add to the zone.
+
+    prune_ports: False
+        If ``True``, remove all but the specified ports from the zone.
+
+    port_fwd: None
+        List of port forwards to add to the zone.
+
+    prune_port_fwd: False
+        If ``True``, remove all but the specified port_fwd from the zone.
+
+    services: None
+        List of services to add to the zone.
+
+    prune_services: False
+        If ``True``, remove all but the specified services from the zone.
+        .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
+
+    interfaces: None
+        List of interfaces to add to the zone.
+
+    prune_interfaces: False
+        If ``True``, remove all but the specified interfaces from the zone.
+
+    sources: None
+        List of sources to add to the zone.
+
+    prune_sources: False
+        If ``True``, remove all but the specified sources from the zone.
+
+    rich_rules: None
+        List of rich rules to add to the zone.
+
+    prune_rich_rules: False
+        If ``True``, remove all but the specified rich rules from the zone.
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
@@ -451,8 +554,35 @@ def _present(
             except CommandExecutionError as err:
                 ret["comment"] = f"Error: {err}"
                 return ret
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' will be created."
+            return ret
 
-        ret["changes"].update({name: {"old": zones, "new": name}})
+        ret["changes"].update({name: {"old": [], "new": name}})
+
+    if target is not None:
+        try:
+            target_ret = __salt__["firewalld.get_target"](name)
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
+
+        if target != target_ret:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.set_target"](name, target, permanent=True)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+            ret["changes"].update(
+                {
+                    "target": {
+                        "old": target_ret,
+                        "new": target,
+                    }
+                }
+            )
 
     if block_icmp or prune_block_icmp:
         block_icmp = block_icmp or []
@@ -531,12 +661,13 @@ def _present(
                     return ret
             ret["changes"].update({"default": {"old": default_zone, "new": name}})
 
-    try:
-        masquerade_ret = __salt__["firewalld.get_masquerade"](name, permanent=True)
-    except CommandExecutionError as err:
-        ret["comment"] = f"Error: {err}"
-        return ret
     if masquerade is not None:
+        try:
+            masquerade_ret = __salt__["firewalld.get_masquerade"](name, permanent=True)
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
+
         if masquerade and not masquerade_ret:
             if not __opts__["test"]:
                 try:
@@ -686,7 +817,6 @@ def _present(
         except CommandExecutionError as err:
             ret["comment"] = f"Error: {err}"
             return ret
-
         new_services = set(services) - set(_current_services)
         old_services = []
 
@@ -864,5 +994,118 @@ def _present(
 
     # Changes were made successfully
     ret["result"] = True
+    ret["comment"] = f"'{name}' was configured."
+
+    # Reload firewalld service on changes
+    if ret["changes"] != {}:
+        __salt__["firewalld.reload_rules"]()
+
+    return ret
+
+
+def ipset_absent(name):
+    """
+    Ensure the ipset is absent.
+
+    name
+        The ipset to delete.
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    if name in __salt__["firewalld.get_ipsets"](permanent=True):
+        if not __opts__["test"]:
+            __salt__["firewalld.delete_ipset"](name, permanent=True, restart=True)
+            ret["result"] = True
+            ret["comment"] = f"'{name}' has been deleted."
+            return ret
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' exists, it will be deleted."
+            return ret
+    else:
+        ret["result"] = True
+        ret["comment"] = f"'{name}' does not exist."
+        return ret
+
+    return ret
+
+
+def ipset_present(name, ipset_type, family=None, options=None, entries=None):
+    """
+    Ensure the ipset exists and encompasses the specified entries.
+
+    name
+        The ipset to modify.
+
+    ipset_type
+        Ipset type, please see: firewall-cmd --get-ipset-types.
+
+    family: None
+        Address family, can be inet or inet6.
+
+    options: None
+        List of options to add to the ipset, can be timeout, maxelen or hashsize.
+
+    entries: None
+        List of entry to add to the ipset.
+    """
+
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    if name not in __salt__["firewalld.get_ipsets"](permanent=True):
+        if not __opts__["test"]:
+            __salt__["firewalld.new_ipset"](name, ipset_type, family, options, True)
+        else:
+            ret["result"] = None
+            ret["comment"] = f"'{name}' will be created."
+            return ret
+
+    if entries:
+        entries = entries or []
+
+        try:
+            info_ipset = __salt__["firewalld.info_ipset"](name)[name]
+        except CommandExecutionError as err:
+            ret["comment"] = f"Error: {err}"
+            return ret
+
+        _current_entries = info_ipset.get("entries", [])
+        new_entries = set(entries) - set(_current_entries)
+        old_entries = set(_current_entries) - set(entries)
+
+        for entry in new_entries:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_ipset_entry"](name, entry)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        for entry in old_entries:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_ipset_entry"](name, entry)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+
+        if new_entries or old_entries:
+            ret["changes"].update(
+                {"entries": {"old": _current_entries, "new": entries}}
+            )
+
+    ret["result"] = True
+    if ret["changes"] == {}:
+        ret["comment"] = f"'{name}' is already in the desired state."
+        return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = f"Configuration for '{name}' will change."
+        return ret
+
+    if ret["changes"] != {}:
+        __salt__["firewalld.reload_rules"]()
+
     ret["comment"] = f"'{name}' was configured."
     return ret
