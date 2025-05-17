@@ -1043,7 +1043,7 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
         self.io_loop = tornado.ioloop.IOLoop.current()
-        tcp_master_pool_port = 4520
+        tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
