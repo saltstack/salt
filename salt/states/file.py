@@ -690,7 +690,15 @@ def _gen_recurse_managed_files(
         set(managed_files.items()),
         managed_directories,
         {
-            (link_path, link_target.replace(posixpath.sep, os.path.sep))
+            link_path: (
+                link_target.replace(posixpath.sep, os.path.sep),
+                os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(link_path),
+                        link_target.replace(posixpath.sep, os.path.sep),
+                    )
+                ),
+            )
             for link_path, link_target in managed_symlinks.items()
         },
         keep,
@@ -5044,19 +5052,25 @@ def recurse(
         manage_file(dest, src, replace)
     # On Windows, we need symlink targets to exist, hence
     # symlinks should be managed last.
-    for sdest, ltarget in mng_symlinks:
-        _ret = symlink(
-            sdest,
-            ltarget,
-            makedirs=True,
-            force=force_symlinks,
-            user=user,
-            group=group,
-            mode=sym_mode,
-        )
-        if not _ret:
-            continue
-        merge_ret(sdest, _ret)
+    # In case there are n-level symlinks, we need to order them
+    # such that each target exists before the symlink is created.
+    processed_symlinks = set()
+    while to_process := set(mng_symlinks) - processed_symlinks:
+        for sdest in to_process:
+            ltarget, abstarget = mng_symlinks[sdest]
+            if abstarget in mng_symlinks and abstarget not in processed_symlinks:
+                continue
+            _ret = symlink(
+                sdest,
+                ltarget,
+                makedirs=True,
+                force=force_symlinks,
+                user=user,
+                group=group,
+                mode=sym_mode,
+            )
+            merge_ret(sdest, _ret)
+            processed_symlinks.add(sdest)
 
     if clean:
         # TODO: Use directory(clean=True) instead

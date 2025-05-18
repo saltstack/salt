@@ -56,8 +56,10 @@ def test__gen_recurse_managed_files():
         "salt://target/symlink?saltenv=base",
     )
     assert unexpected not in files
+    expected_dest = f"{os.sep}some{os.sep}path{os.sep}target{os.sep}symlink"
     expected = (
-        f"{os.sep}some{os.sep}path{os.sep}target{os.sep}symlink",
+        f"{os.sep}some{os.sep}path{os.sep}target{os.sep}not_a_symlink{os.sep}symlink",
         f"{os.sep}some{os.sep}path{os.sep}target{os.sep}not_a_symlink{os.sep}symlink",
     )
-    assert expected in links
+    assert expected_dest in links
+    assert links[expected_dest] == expected
