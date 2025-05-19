@@ -383,7 +383,7 @@ Set the default timeout for the salt command and api.
 
 Default: ``15``
 
-How many seconds the event publisher process will wait after a client to stops
+How many seconds the event publisher process will wait after a client stops
 responding before the client will be disconnected.
 
 .. code-block:: yaml
