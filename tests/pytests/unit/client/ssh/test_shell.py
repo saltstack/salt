@@ -119,6 +119,62 @@ def test_ssh_shell_exec_cmd_waits_for_term_close_before_reading_exit_status():
     assert retcode == 0
 
 
+def test_ssh_shell_exec_cmd_detect_host_key_needs_accepted_message():
+    """
+    Ensure the check for host key authenticity in Shell._run_cmd using the
+    shell.KEY_VALID_RE regex matches the last line in the message regarding
+    host authenticity, i.e. '(yes/no)' and '(yes/no/[fingerprint])'
+    """
+    HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO = """
+        The authenticity of host 'bitbucket.org (104.192.141.1)' can't be established.
+        ECDSA key fingerprint is SHA256:FC73VB6C4OQLSCrjEayhMp9UMxS97caD/Yyi2bhW/J0.
+        ECDSA key fingerprint is MD5:dc:05:b9:ef:7e:67:f0:a5:16:2c:28:1a:b8:3a:86:2c.
+        Are you sure you want to continue connecting (yes/no)?"""
+
+    term = MagicMock()
+    term.recv.side_effect = (
+        (HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO, ""),
+        (None, None),
+        (None, None),
+    )
+    shl = shell.Shell({}, "localhost")
+    with patch("salt.utils.vt.Terminal", autospec=True, return_value=term):
+        stdout, stderr, retcode = shl.exec_cmd("do something")
+
+    assert (
+        stdout
+        == f"""The host key needs to be accepted, to auto accept run salt-ssh with the -i flag:
+{HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO}"""
+    )
+    assert stderr == ""
+    assert retcode == 254
+
+    HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO_FINGERPRINT = """
+        The authenticity of host '192.168.186.1 (192.168.186.1)' can't be established.
+        ED25519 key fingerprint is SHA256:YoCAfKKwVzweLXJea3YXz2q7D/6g8VadfbUXgK/wIsh.
+        This host key is known by the following other names/addresses:
+            ~/.ssh/known_hosts:29: [hashed name]
+        Are you sure you want to continue connecting (yes/no/[fingerprint])?"""
+
+    term = MagicMock()
+    term.recv.side_effect = (
+        (HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO_FINGERPRINT, ""),
+        (None, None),
+        (None, None),
+    )
+    shl = shell.Shell({}, "localhost")
+    with patch("salt.utils.vt.Terminal", autospec=True, return_value=term):
+        stdout, stderr, retcode = shl.exec_cmd("do something")
+
+    assert (
+        stdout
+        == f"""The host key needs to be accepted, to auto accept run salt-ssh with the -i flag:
+{HOST_KEY_NOT_ACCEPTED_MESSAGE_WITH_YES_NO_FINGERPRINT}"""
+    )
+    assert stderr == ""
+    assert retcode == 254
+
+
 def test_ssh_shell_exec_cmd_returns_status_code_with_highest_bit_set_if_process_dies():
     """
     Ensure that if a child process dies as the result of a signal instead of exiting
