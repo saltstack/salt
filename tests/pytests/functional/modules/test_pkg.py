@@ -72,6 +72,8 @@ def pkg_name(grains):
             _pkg = "units"
     elif grains["os_family"] == "Debian":
         _pkg = "ifenslave"
+    elif grains["os_family"] == "Suse":
+        _pkg = "wget"
     return _pkg
 
 
