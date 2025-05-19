@@ -37,6 +37,15 @@ RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
 BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"
 
 
+class UpdateProgress:
+    def __init__(self, progress, task):
+        self.progress = progress
+        self.task = task
+
+    def __call__(self, chunk_size):
+        self.progress.update(self.task, advance=chunk_size)
+
+
 class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
