@@ -8,6 +8,7 @@ import logging
 import socket
 import time
 
+import salt.defaults
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
@@ -534,7 +535,7 @@ class IPCMessagePublisher:
 
     @salt.ext.tornado.gen.coroutine
     def _write(self, stream, pack):
-        timeout = self.opts.get("ipc_write_timeout", 15)
+        timeout = self.opts.get("ipc_write_timeout", salt.defaults.IPC_WRITE_TIMEOUT)
         try:
             yield salt.ext.tornado.gen.with_timeout(
                 datetime.timedelta(seconds=timeout),
