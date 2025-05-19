@@ -376,7 +376,7 @@ Set the default timeout for the salt command and api.
 
 .. conf_minion:: ipc_write_timeout
 
-``ipc_wirte_timeout``
+``ipc_write_timeout``
 ---------------------
 
 .. versionadded:: 3006.11
