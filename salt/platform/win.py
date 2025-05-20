@@ -1345,7 +1345,17 @@ def prepend_cmd(cmd):
     # built-in commands such as echo. So, let's check for the binary in the
     # path. If it does not exist, let's assume it's a built-in and requires us
     # to run it in a cmd prompt.
-    first_cmd = cmd.split(" ", 1)[0]
+    if not isinstance(cmd, (list, tuple)):
+        cmd = cmd.split()
+
+    # Let's try to figure out what the fist command is so we can check for
+    # builtin commands such as echo
+    first_cmd = cmd[0].split("\\")[-1].strip("\"'")
+
+    cmd = " ".join(cmd)
+
+    # If the first command can't be found, we'll assume it's a builtin command
+    # We'll need to prepend cmd /c
     if salt.utils.path.which(first_cmd) is None:
         cmd = f'cmd /c "{cmd}"'
 
