@@ -1020,6 +1020,10 @@ VALID_OPTS = immutabletypes.freeze(
         "keys.cache_driver": (type(None), str),
         # optional cache driver for pillar cache
         "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1687,6 +1691,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
         "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 
