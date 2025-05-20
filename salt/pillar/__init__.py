@@ -1306,7 +1306,7 @@ class PillarCache(Pillar):
 
     def clear_pillar(self):
         """
-        Clea the pillar cache, if it exists
+        Clear the pillar cache, if it exists
         """
         return self.cache.flush("pillar", self.pillar_key)
 
