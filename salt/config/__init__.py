@@ -1037,6 +1037,10 @@ VALID_OPTS = immutabletypes.freeze(
         "minimum_auth_version": int,
         # optional cache driver for pillar cache
         "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1719,6 +1723,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "request_server_ttl": 0,
         "minimum_auth_version": 3,
         "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 
