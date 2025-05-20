@@ -1035,6 +1035,10 @@ VALID_OPTS = immutabletypes.freeze(
         "ipc_write_timeout": int,
         # optional cache driver for pillar cache
         "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1712,6 +1716,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "minimum_auth_version": 3,
         "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
         "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 

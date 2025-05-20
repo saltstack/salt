@@ -10,6 +10,7 @@ import time
 from collections import OrderedDict
 
 import salt.config
+from salt.exceptions import SaltCacheError
 import salt.loader
 import salt.syspaths
 from salt.utils.decorators import cached_property
@@ -284,6 +285,32 @@ class Cache:
         fun = f"{self.driver}.contains"
         return self.modules[fun](bank, key, **self.kwargs)
 
+    def clean_expired(self, bank, *args, **kwargs):
+        """
+        Clean expired keys
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
+        """
+        # If the cache driver has a clean_expired() func, call it to clean up
+        # expired keys.
+        clean_expired = f"{self.driver}.clean_expired"
+        if clean_expired in self.modules:
+            self.modules[clean_expired](bank, *args, **{**self.kwargs, **kwargs})
+        else:
+            list_ = f"{self.driver}.list"
+            updated = f"{self.driver}.updated"
+            flush = f"{self.driver}.flush"
+            for key in self.modules[list_](bank, **self.kwargs):
+                ts = self.modules[updated](bank, key, **self.kwargs)
+                if ts is not None and ts <= time.time():
+                    self.modules[flush](bank, key, **self.kwargs)
+
 
 class MemCache(Cache):
     """
@@ -343,6 +370,8 @@ class MemCache(Cache):
                 (created_at, data) = record
             elif len(record) == 3:
                 (created_at, expires, data) = record
+            else:
+                raise SaltCacheError("Unexpected record structure")
 
             if (created_at + (expires or self.expire)) >= now:
                 if self.debug:

@@ -101,7 +101,9 @@ def show_pillar(minion="*", **kwargs):
 
 def clear_pillar_cache(minion="*", **kwargs):
     """
-    Clears the cached values when using pillar_cache
+    Clears the cached values when using pillar_cache.
+    Returns True on success.
+    Returns False if pillar_cache or minion_data_cache are not enabled.
 
     .. versionadded:: 3003
 
@@ -139,7 +141,7 @@ def clear_pillar_cache(minion="*", **kwargs):
         )
         pillar.clear_pillar()
 
-    return {}
+    return True
 
 
 def show_pillar_cache(minion="*", **kwargs):
