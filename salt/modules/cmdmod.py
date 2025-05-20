@@ -269,7 +269,13 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     if not win_shell:
         raise CommandExecutionError(f"PowerShell binary not found: {win_shell}")
 
-    new_cmd = [win_shell, "-NonInteractive", "-NoProfile", "-ExecutionPolicy", "Bypass"]
+    new_cmd = [
+        f'"{win_shell}"',
+        "-NonInteractive",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+    ]
 
     # extract_stack() returns a list of tuples.
     # The last item in the list [-1] is the current method.
@@ -456,9 +462,6 @@ def _run(
             if not HAS_WIN_RUNAS:
                 msg = "missing salt/utils/win_runas.py"
                 raise CommandExecutionError(msg)
-
-        if isinstance(cmd, (list, tuple)):
-            cmd = " ".join(cmd)
 
         cmd = salt.platform.win.prepend_cmd(cmd)
 
