@@ -119,7 +119,7 @@ def test_clear_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files)
                 assert ret == expected
 
                 ret = pillar_runner.clear_pillar_cache("test-host")
-                assert ret == {}
+                assert ret is True
 
                 expected = {
                     "another-host": {
@@ -132,7 +132,7 @@ def test_clear_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files)
                 assert ret == expected
 
                 ret = pillar_runner.clear_pillar_cache()
-                assert ret == {}
+                assert ret is True
 
 
 def test_show_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files):
