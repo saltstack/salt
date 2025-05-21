@@ -7,12 +7,19 @@ from random import randint
 import pytest
 
 import salt.modules.win_useradd as win_useradd
-import salt.platform.win
 import salt.utils.win_runas as win_runas
+
+try:
+    import salt.platform.win
+
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(HAS_WIN32 is False, reason="Win32 Libraries not available"),
 ]
 
 
