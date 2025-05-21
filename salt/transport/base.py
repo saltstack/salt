@@ -406,6 +406,11 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
+    def topic_support(self):
+        """If the transport supports topics."""
+        raise NotImplementedError
+
+    @abstractmethod
     def publish_daemon(
         self,
         publish_payload,
