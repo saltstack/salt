@@ -890,6 +890,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Required from DaemonizedPublishServer
         return False
 
+    def topic_support(self):
+        # Required from DaemonizedPublishServer
+        return self.opts.get("zmq_filtering", False)
+
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
 
@@ -1094,10 +1098,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __enter__(self):
         return self
-
-    @property
-    def topic_support(self):
-        return self.opts.get("zmq_filtering", False)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()

@@ -290,8 +290,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Required from DaemonizedPublishServer
         return True
 
-    @property
     def topic_support(self):
+        # Required from DaemonizedPublishServer
         return not self.opts.get("order_masters", False)
 
     def __setstate__(self, state):
