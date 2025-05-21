@@ -3,6 +3,7 @@ import pytest
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
 ]
 
 
@@ -12,7 +13,6 @@ def account():
         yield _account
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 @pytest.mark.parametrize(
     "exit_code, return_code, result",
     [
@@ -28,7 +28,6 @@ def test_script_exitcode(modules, state_tree, exit_code, return_code, result):
     assert ret.filtered["changes"]["retcode"] == return_code
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 @pytest.mark.parametrize(
     "exit_code, return_code, result",
     [
