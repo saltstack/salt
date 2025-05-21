@@ -22,6 +22,10 @@ attrs==23.1.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   jaraco.text
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==4.1.2
@@ -41,7 +45,7 @@ botocore==1.24.46
     #   s3transfer
 cachetools==3.1.0
     # via google-auth
-cassandra-driver==3.24.0
+cassandra-driver==3.29.2 ; python_version >= "3.11"
     # via -r requirements/static/ci/common.in
 certifi==2024.7.4 ; python_version >= "3.10"
     # via
@@ -68,9 +72,10 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   cherrypy
-cherrypy==18.6.1
+cherrypy==18.10.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
 click==7.1.2
@@ -116,8 +121,10 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
+frozenlist==1.6.0 ; python_version >= "3.11"
     # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
 future==1.0.0
@@ -161,15 +168,21 @@ jaraco.collections==3.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   jaraco.text
+jaraco.functools==4.1.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -221,6 +234,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
@@ -255,6 +269,8 @@ portend==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   cherrypy
+propcache==0.3.1
+    # via yarl
 psutil==5.8.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
@@ -398,7 +414,6 @@ setproctitle==1.3.2
 six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
-    #   cassandra-driver
     #   cheroot
     #   etcd3-py
     #   genshi
@@ -426,9 +441,10 @@ tempora==4.1.1
     #   portend
 textfsm==1.1.3
     # via -r requirements/static/ci/common.in
-timelib==0.2.5
+timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
@@ -465,8 +481,10 @@ xmltodict==0.12.0
     # via moto
 yamllint==1.26.3
     # via -r requirements/static/ci/freebsd.in
-yarl==1.7.2
-    # via aiohttp
+yarl==1.20.0 ; python_version >= "3.11"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   aiohttp
 zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt

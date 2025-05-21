@@ -24,8 +24,16 @@ attrs==23.1.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   jaraco.text
 backports.entry-points-selectable==1.1.0
     # via virtualenv
+backports.tarfile==1.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   jaraco.context
 bcrypt==4.1.2
     # via
     #   -r requirements/static/ci/common.in
@@ -43,7 +51,7 @@ botocore==1.24.46
     #   s3transfer
 cachetools==3.1.0
     # via google-auth
-cassandra-driver==3.24.0
+cassandra-driver==3.24.0 ; python_version < "3.11"
     # via -r requirements/static/ci/common.in
 certifi==2023.07.22 ; python_version < "3.10"
     # via
@@ -71,9 +79,10 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   cherrypy
-cherrypy==18.6.1
+cherrypy==18.6.1 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
 ciscoconfparse==1.5.19
@@ -126,8 +135,10 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.3.0
+frozenlist==1.6.0 ; python_version < "3.11"
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
 future==0.18.3
@@ -173,15 +184,21 @@ jaraco.collections==3.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   jaraco.text
+jaraco.functools==4.1.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -244,6 +261,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
@@ -496,9 +514,10 @@ textfsm==1.1.0
     #   napalm
     #   netmiko
     #   ntc-templates
-timelib==0.2.5
+timelib==0.2.5 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
@@ -543,8 +562,10 @@ yamllint==1.26.3
     # via -r requirements/static/ci/freebsd.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.7.2
-    # via aiohttp
+yarl==1.7.2 ; python_version < "3.11"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   aiohttp
 zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
