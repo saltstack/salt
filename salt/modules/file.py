@@ -6782,6 +6782,9 @@ def manage_file(
                     real_name,
                     __salt__["config.backup_mode"](backup),
                     __opts__["cachedir"],
+                    mode,
+                    user,
+                    group,
                 )
             except OSError as io_error:
                 __clean_tmp(sfn)
@@ -6842,6 +6845,9 @@ def manage_file(
                         real_name,
                         __salt__["config.backup_mode"](backup),
                         __opts__["cachedir"],
+                        mode,
+                        user,
+                        group,
                     )
                 except OSError as io_error:
                     __clean_tmp(tmp)
@@ -6892,6 +6898,9 @@ def manage_file(
                     name,
                     __salt__["config.backup_mode"](backup),
                     __opts__["cachedir"],
+                    mode,
+                    user,
+                    group,
                 )
             except OSError as io_error:
                 __clean_tmp(sfn)
@@ -7097,13 +7106,25 @@ def manage_file(
 
             # Copy into place
             salt.utils.files.copyfile(
-                tmp, name, __salt__["config.backup_mode"](backup), __opts__["cachedir"]
+                tmp,
+                name,
+                __salt__["config.backup_mode"](backup),
+                __opts__["cachedir"],
+                mode,
+                user,
+                group,
             )
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
             salt.utils.files.copyfile(
-                sfn, name, __salt__["config.backup_mode"](backup), __opts__["cachedir"]
+                sfn,
+                name,
+                __salt__["config.backup_mode"](backup),
+                __opts__["cachedir"],
+                mode,
+                user,
+                group,
             )
             __clean_tmp(sfn)
 
