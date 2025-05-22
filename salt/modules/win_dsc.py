@@ -59,7 +59,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     in json format and load that into python. Either return a dict or raise a
     CommandExecutionError.
     """
-    if "convertto-json" not in cmd.lower():
+    if "ConvertTo-Json" not in cmd.lower():
         cmd = f"{cmd} | ConvertTo-Json -Depth {json_depth}"
     log.debug("DSC: %s", cmd)
     results = __salt__["cmd.run_all"](
@@ -300,7 +300,7 @@ def compile_config(
     cmd.append(
         r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
-        '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
+        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) "
         "-Format g}}"
     )
 
@@ -325,7 +325,7 @@ def compile_config(
     cmd.append(
         r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
-        '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
+        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) "
         "-Format g}}"
     )
 
@@ -414,7 +414,7 @@ def apply_config(path, source=None, salt_env="base"):
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = f'Start-DscConfiguration -Path "{config}" -Wait -Force'
+    cmd = f"Start-DscConfiguration -Path '{config}' -Wait -Force"
     _pshell(cmd)
 
     cmd = "$status = Get-DscConfigurationStatus; $status.Status"
@@ -635,7 +635,7 @@ def get_config_status():
     cmd = (
         "Get-DscConfigurationStatus | "
         "Select-Object -Property HostName, Status, MetaData, "
-        '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, '
+        "@{Name='StartDate';Expression={Get-Date ($_.StartDate) -Format g}}, "
         "Type, Mode, RebootRequested, NumberofResources"
     )
     try:
@@ -761,7 +761,7 @@ def set_lcm_config(
                 "or ApplyAndAutoCorrect. Passed {}".format(config_mode)
             )
             raise SaltInvocationError(error)
-        cmd += f'            ConfigurationMode = "{config_mode}";'
+        cmd += f"            ConfigurationMode = '{config_mode}';"
     if config_mode_freq:
         if not isinstance(config_mode_freq, int):
             error = "config_mode_freq must be an integer. Passed {}".format(
@@ -776,7 +776,7 @@ def set_lcm_config(
             raise SaltInvocationError(
                 "refresh_mode must be one of Disabled, Push, or Pull"
             )
-        cmd += f'            RefreshMode = "{refresh_mode}";'
+        cmd += f"            RefreshMode = '{refresh_mode}';"
     if refresh_freq:
         if not isinstance(refresh_freq, int):
             raise SaltInvocationError("refresh_freq must be an integer")
