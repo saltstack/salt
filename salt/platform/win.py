@@ -1354,6 +1354,15 @@ def prepend_cmd(cmd):
 
     cmd = " ".join(cmd)
 
+    # TODO: SDL: This is for testing. Remove this once we've figured out why
+    # TODO: SDL: the unit.platform.test_win test is failing to detect echo
+    # TODO: SDL: as a builtin command
+    print("")
+    print("*" * 80)
+    print("first_cmd: ", first_cmd)
+    print("which_cmd: ", salt.utils.path.which(first_cmd))
+    print("*" * 80)
+
     # If the first command can't be found, we'll assume it's a builtin command
     # We'll need to prepend cmd /c
     if salt.utils.path.which(first_cmd) is None:
