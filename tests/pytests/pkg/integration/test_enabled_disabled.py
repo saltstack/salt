@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -7,6 +9,13 @@ def test_services(install_salt, salt_call_cli):
     """
     Check if Services are enabled/disabled
     """
+
+    # Don't run these tests on upgrade on linux as we change enabled/disabled
+    # state of services in upgrade tests so this isn't a valid test of state of
+    # the services as set by the pkg
+    if install_salt.upgrade and sys.platform == "linux":
+        pytest.skip("Skip test_services on upgrade")
+
     services_disabled = []
     services_enabled = []
     if install_salt.distro_id in ("ubuntu", "debian"):
