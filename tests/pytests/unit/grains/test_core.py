@@ -3121,7 +3121,7 @@ def test__windows_platform_data():
             {"virtual": "Parallels"},
         ),
         (
-            {"kernel": "Windows", "manufacturer": "Nutanix", "product_name": "AHV"},
+            {"kernel": "Windows", "manufacturer": "Nutanix", "productname": "AHV"},
             {"virtual": "kvm", "virtual_subtype": "Nutanix AHV"},
         ),
         (
