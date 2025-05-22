@@ -1,11 +1,13 @@
-import sys
+import logging
 
 import pytest
 from pytestskipmarkers.utils import platform
 
+log = logging.getLogger(__name__)
+
 
 @pytest.mark.skip_unless_on_linux(reason="Linux test only")
-def test_services(install_salt, salt_call_cli):
+def test_services(install_salt, salt_call_cli, request):
     """
     Check if Services are enabled/disabled
     """
@@ -13,7 +15,7 @@ def test_services(install_salt, salt_call_cli):
     # Don't run these tests on upgrade on linux as we change enabled/disabled
     # state of services in upgrade tests so this isn't a valid test of state of
     # the services as set by the pkg
-    if install_salt.upgrade and sys.platform == "linux":
+    if request.config.getoption("--upgrade"):
         pytest.skip("Skip test_services on upgrade")
 
     services_disabled = []
