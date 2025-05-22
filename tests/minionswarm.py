@@ -6,6 +6,7 @@ on a single system to test scale capabilities
 """
 # pylint: disable=resource-leakage
 
+import getpass
 import hashlib
 import optparse  # pylint: disable=deprecated-module
 import os
@@ -17,11 +18,11 @@ import sys
 import tempfile
 import time
 import uuid
-import getpass
+
+import support.runtests
 
 import salt.utils.files
 import salt.utils.yaml
-import support.runtests
 
 OSES = [
     "Arch",
@@ -40,23 +41,24 @@ VERS = [
     "3007.1",
 ]
 
+
 def parse():
     """
     Parse the cli options
     """
     guidance = (
-    	"\n\n   To execute salt commands against minionswarm you must include the configuration\n"
-    	"   file using the -c option. For commands such as salt, salt-key, salt-cp,\n"
-    	"   and salt-run use -c <temp-dir>/master. For example, when using the\n"
-    	"   default for --temp-dir, the configuration directory would be\n"
-    	"   /tmp/sroot/master. If the master runs on a different machine you\n"
-    	"   must execute the command on that machine using the master config file\n"
-    	"   there. For the salt-call command, which is a minion side\n"
-    	"   command, use -c <tmp-dir>/<name>-<minion number>. For example to\n"
-    	"   execute salt-call on the first minion using the default values for\n"
-    	"   temp-dir and name use -c /tmp/sroot/minion-0. The commands salt-api,\n"
-    	"   salt-cloud, salt-extend, salt-master, salt-minion, salt-proxy,\n"
-    	"   salt-ssh, salt-syndic and spm are not supported."
+        "\n\n   To execute salt commands against minionswarm you must include the configuration\n"
+        "   file using the -c option. For commands such as salt, salt-key, salt-cp,\n"
+        "   and salt-run use -c <temp-dir>/master. For example, when using the\n"
+        "   default for --temp-dir, the configuration directory would be\n"
+        "   /tmp/sroot/master. If the master runs on a different machine you\n"
+        "   must execute the command on that machine using the master config file\n"
+        "   there. For the salt-call command, which is a minion side\n"
+        "   command, use -c <tmp-dir>/<name>-<minion number>. For example to\n"
+        "   execute salt-call on the first minion using the default values for\n"
+        "   temp-dir and name use -c /tmp/sroot/minion-0. The commands salt-api,\n"
+        "   salt-cloud, salt-extend, salt-master, salt-minion, salt-proxy,\n"
+        "   salt-ssh, salt-syndic and spm are not supported."
     )
     usage = "usage: python %prog [options]" + guidance
     parser = optparse.OptionParser(usage)
@@ -80,8 +82,8 @@ def parse():
         dest="master",
         default="localhost",
         help="The location of the salt master that this swarm will serve. (default = localhost) "
-             "The standard port used by daemon masters is 4506. Masters can be specified using "
-             "<IP address>:<port>. For example, 192.168.1.2:4506",
+        "The standard port used by daemon masters is 4506. Masters can be specified using "
+        "<IP address>:<port>. For example, 192.168.1.2:4506",
     )
     parser.add_option(
         "--name",
@@ -89,8 +91,8 @@ def parse():
         dest="name",
         default="minion",
         help="Give the minions an alternative id prefix, this is used "
-            "when minions from many systems are being aggregated onto "
-            "a single master. (default = minion)",
+        "when minions from many systems are being aggregated onto "
+        "a single master. (default = minion)",
     )
     parser.add_option(
         "--rand-os",
@@ -146,10 +148,10 @@ def parse():
         action="store_true",
         default=False,
         help="Don't cleanup temporary files/directories. "
-             "If specified, you must manually recursively delete "
-             "the swarm root (see --temp-dir) before running "
-             "minionswarm again, e.g., using the default swarm "
-             "root, rm -fr /tmp/srooot",
+        "If specified, you must manually recursively delete "
+        "the swarm root (see --temp-dir) before running "
+        "minionswarm again, e.g., using the default swarm "
+        "root, rm -fr /tmp/srooot",
     )
     parser.add_option(
         "--root-dir",
@@ -162,9 +164,9 @@ def parse():
         dest="transport",
         default="zeromq",
         help="Declare which transport to use, (default = zeromq). Currently, "
-             "tcp/TLS and ws/TLS are not supported, since they require the "
-             "establishment of a certificate infrastructure and use of PKI "
-             "keys manaaged by that infrastructure."
+        "tcp/TLS and ws/TLS are not supported, since they require the "
+        "establishment of a certificate infrastructure and use of PKI "
+        "keys manaaged by that infrastructure.",
     )
     parser.add_option(
         "--start-delay",
@@ -178,17 +180,17 @@ def parse():
         "--config-dir",
         default="",
         help="Pass in a configuration directory containing base configuration. "
-             "If a configuration directory is specified, at a minimum, it must "
-             "have a master and minion configuration file and these files "
-             "must not be empty. For example, each could have a user: <username> "
-             "entry."
+        "If a configuration directory is specified, at a minimum, it must "
+        "have a master and minion configuration file and these files "
+        "must not be empty. For example, each could have a user: <username> "
+        "entry.",
     )
     parser.add_option(
         "--open-mode",
         dest="open_mode",
         default=True,
         help="Turn off authentication at the Master. Default is True to align "
-             "this version of minionswarm with previous version."
+        "this version of minionswarm with previous version.",
     )
     parser.add_option("-u", "--user", default=support.runtests.this_user())
 
@@ -320,7 +322,9 @@ class MinionSwarm(Swarm):
         self.prep_configs()
         username = getpass.getuser()
         for path in self.confs:
-            cmd = "salt-minion -c {} --user={} --pid-file {}".format(path, username, f"{path}.pid")
+            cmd = "salt-minion -c {} --user={} --pid-file {}".format(
+                path, username, f"{path}.pid"
+            )
             if self.opts["foreground"]:
                 cmd += " -l debug &"
             else:
@@ -408,7 +412,9 @@ class MinionSwarm(Swarm):
 
         cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/minion")
         sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
-        extension_modules_dir_path = os.path.join(self.swarm_root, "var/cache/salt/minion/extmods")
+        extension_modules_dir_path = os.path.join(
+            self.swarm_root, "var/cache/salt/minion/extmods"
+        )
         pki_dir_path = os.path.join(self.swarm_root, "etc/salt/pki/minion")
 
         try:
@@ -426,7 +432,7 @@ class MinionSwarm(Swarm):
             {
                 "cachedir": cachdir_path,
                 "sock_dir": sock_dir_path,
-                "extension_modules" : extension_modules_dir_path,
+                "extension_modules": extension_modules_dir_path,
                 "pki_dir": pki_dir_path,
             }
         )
@@ -465,10 +471,12 @@ class MasterSwarm(Swarm):
     def start_master(self):
         """
         Do the master start.. Run the master as the user under which minionswarm runs.
-	"""
+        """
 
         username = getpass.getuser()
-        cmd = "salt-master '--config-dir={}' --user={} --pid-file {}".format(self.conf, username, f"{self.conf}.pid")
+        cmd = "salt-master '--config-dir={}' --user={} --pid-file {}".format(
+            self.conf, username, f"{self.conf}.pid"
+        )
         if self.opts["foreground"]:
             cmd += " -l debug &"
         else:
@@ -534,7 +542,7 @@ class MasterSwarm(Swarm):
                 "key_logfile": key_logfile_path,
                 "cachedir": cachdir_path,
                 "sock_dir": sock_dir_path,
-                "sqlite_queue_dir" : sqlite_queue_dir_path,
+                "sqlite_queue_dir": sqlite_queue_dir_path,
             }
         )
 
