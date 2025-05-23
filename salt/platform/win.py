@@ -1354,18 +1354,55 @@ def prepend_cmd(cmd):
 
     cmd = " ".join(cmd)
 
-    # TODO: SDL: This is for testing. Remove this once we've figured out why
-    # TODO: SDL: the unit.platform.test_win test is failing to detect echo
-    # TODO: SDL: as a builtin command
-    print("")
-    print("*" * 80)
-    print("first_cmd: ", first_cmd)
-    print("which_cmd: ", salt.utils.path.which(first_cmd))
-    print("*" * 80)
+    # Known builtin cmd commands
+    known_builtins = [
+        "assoc",
+        "break",
+        "call",
+        "cd",
+        "chdir",
+        "cls",
+        "color",
+        "copy",
+        "date",
+        "del",
+        "dir",
+        "echo",
+        "endlocal",
+        "erase",
+        "exit",
+        "for",
+        "ftype",
+        "goto",
+        "if",
+        "md",
+        "mklink",
+        "move",
+        "path",
+        "pause",
+        "popd",
+        "prompt",
+        "pushd",
+        "rd",
+        "rem",
+        "ren",
+        "rmdir",
+        "set",
+        "setlocal",
+        "shift",
+        "start",
+        "time",
+        "title",
+        "type",
+        "ver",
+        "verify",
+        "vol",
+        "::",
+    ]
 
-    # If the first command can't be found, we'll assume it's a builtin command
-    # We'll need to prepend cmd /c
-    if salt.utils.path.which(first_cmd) is None:
+    # If the first command is one of the known builtin commands or if it is a
+    # binary that can't be found, we'll prepend cmd /c
+    if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
         cmd = f'cmd /c "{cmd}"'
 
     # There are a few other things we need to check for that require cmd. If the
