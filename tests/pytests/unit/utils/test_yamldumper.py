@@ -6,6 +6,7 @@ from collections import OrderedDict, defaultdict
 
 import salt.utils.yamldumper
 from salt.utils.context import NamespacedDictWrapper
+from salt.utils.dynamic_dict import DynamicDict
 from salt.utils.odict import HashableOrderedDict
 
 
@@ -40,6 +41,18 @@ def test_yaml_ordered_dump():
     Test yaml.dump with OrderedDict
     """
     data = OrderedDict([("foo", "bar"), ("baz", "qux")])
+    exp_yaml = "{foo: bar, baz: qux}\n"
+    assert (
+        salt.utils.yamldumper.dump(data, Dumper=salt.utils.yamldumper.OrderedDumper)
+        == exp_yaml
+    )
+
+
+def test_yaml_dynamic_dict_dump():
+    """
+    Test yaml.dump with DynamicDict
+    """
+    data = DynamicDict([("foo", "bar"), ("baz", "qux")])
     exp_yaml = "{foo: bar, baz: qux}\n"
     assert (
         salt.utils.yamldumper.dump(data, Dumper=salt.utils.yamldumper.OrderedDumper)
