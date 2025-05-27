@@ -13,7 +13,6 @@ salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_multiple_processes_logging
   - pytests.unit._logging.handlers.test_deferred_stream_handler
 
-
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
@@ -33,7 +32,6 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
   - pytests.unit.states.test_service
   - pytests.functional.modules.test_service
   - pytests.functional.states.test_service
-
 
 salt/modules/ansiblegate.py:
   - pytests.unit.states.test_ansiblegate
@@ -77,6 +75,9 @@ salt/modules/dockermod.py:
 
 salt/modules/file.py:
   - pytests.integration.states.test_cron
+
+salt/modules/win_file.py:
+  - pytests.functional.modules.test_win_file
 
 salt/modules/influxdb08mod.py:
   - pytests.unit.states.test_influxdb08_database
