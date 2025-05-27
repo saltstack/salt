@@ -140,6 +140,12 @@ def pytest_collection_modifyitems(config, items):
                 selected.append(item)
             else:
                 deselected.append(item)
+        # re-order test_salt_upgrade.py to last - this ensures that salt is
+        # set up correctly for integration tests
+        for idx, item in enumerate(selected):
+            if str(item.fspath).endswith("test_salt_upgrade.py"):
+                selected.append(selected.pop(idx))
+                break
     elif config.getoption("--downgrade"):
         for item in items:
             if str(item.fspath).startswith(str(pkg_tests_path / "downgrade")):
