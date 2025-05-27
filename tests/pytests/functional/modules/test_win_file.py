@@ -39,15 +39,12 @@ def windows_user():
 
 @skip_not_windows_admin
 def test_symlink(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    link = os.path.join(tmp_path, "l")
+    file = tmp_path.joinpath("t.txt").touch()
+    assert file.is_file() is True
+    link = tmp_path / "l"
     assert win_file.is_link(link) is False
     assert win_file.symlink(file, link) is True
-    assert os.path.isfile(file) is True
+    assert file.is_file() is True
     assert win_file.is_link(link) is True
 
 
