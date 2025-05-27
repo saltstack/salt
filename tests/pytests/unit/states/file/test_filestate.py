@@ -258,22 +258,17 @@ def test_recurse():
             assert filestate.recurse(name, source) == ret
 
         with patch.object(os.path, "isabs", mock_t):
-            comt = "Invalid source '1' (must be a salt:// URI)"
+            comt = "Recurse failed: Invalid source '1' (must be a salt:// URI)"
             ret.update({"comment": comt})
             assert filestate.recurse(name, 1) == ret
 
-            comt = "Invalid source '//code/flask' (must be a salt:// URI)"
+            comt = (
+                "Recurse failed: Invalid source '//code/flask' (must be a salt:// URI)"
+            )
             ret.update({"comment": comt})
             assert filestate.recurse(name, "//code/flask") == ret
 
-            comt = "Recurse failed: "
-            ret.update({"comment": comt})
-            assert filestate.recurse(name, source) == ret
-
-            comt = (
-                "The directory 'code/flask' does not exist"
-                " on the salt fileserver in saltenv 'base'"
-            )
+            comt = "Recurse failed: none of the specified sources were found"
             ret.update({"comment": comt})
             assert filestate.recurse(name, source) == ret
 
