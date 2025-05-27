@@ -4,6 +4,7 @@ Read/Write multiple returners
 """
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 import salt.minion
 
@@ -14,12 +15,15 @@ CONFIG_KEY = "multi_returner"
 # cache of the master mininon for this returner
 MMINION = None
 
+if TYPE_CHECKING:
+    __opts__: dict[str, Any]
+
 
 def _mminion():
     """
     Create a single mminion for this module to use, instead of reloading all the time
     """
-    global MMINION
+    global MMINION  # pylint: disable=global-statement
 
     if MMINION is None:
         MMINION = salt.minion.MasterMinion(__opts__)
@@ -62,13 +66,21 @@ def save_load(jid, clear_load, minions=None):
     Write load to all returners in multi_returner
     """
     for returner_ in __opts__[CONFIG_KEY]:
-        _mminion().returners[f"{returner_}.save_load"](jid, clear_load)
+        if returner_ == "local_cache":
+            cmd = clear_load.get("cmd")
+            if cmd == "_return":
+                continue
+        _mminion().returners[f"{returner_}.save_load"](jid, clear_load, minions)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     """
     Included for API consistency
     """
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.save_minions"
+        if fstr in _mminion().returners:
+            _mminion().returners[fstr](jid, minions, syndic_id)
 
 
 def get_load(jid):
@@ -104,6 +116,20 @@ def get_jids():
     return ret
 
 
+def get_jid_filter(count, filter_find_job=True):
+    """
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    """
+    ret = {}
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.get_jid_filter"
+        if fstr in _mminion().returners:
+            ret.update(_mminion().returners[fstr](count, filter_find_job))
+    return ret
+
+
 def clean_old_jobs():
     """
     Clean out the old jobs from all returners (if you have it)
@@ -112,3 +138,35 @@ def clean_old_jobs():
         fstr = f"{returner_}.clean_old_jobs"
         if fstr in _mminion().returners:
             _mminion().returners[fstr]()
+
+
+def update_endtime(jid, time):
+    """
+    Update (or store) the end time for a given job
+
+    Endtime is stored as a plain text string
+    """
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.update_endtime"
+        if fstr in _mminion().returners:
+            _mminion().returners[fstr](jid, time)
+
+
+def save_reg(data):
+    """
+    Save the register to msgpack files
+    """
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.save_reg"
+        if fstr in _mminion().returners:
+            return _mminion().returners[fstr](data)
+
+
+def load_reg():
+    """
+    Load the register from msgpack files
+    """
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.load_reg"
+        if fstr in _mminion().returners:
+            return _mminion().returners[fstr]()
