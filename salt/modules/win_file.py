@@ -273,13 +273,11 @@ def gid_to_group(gid):
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     """
     func_name = f"{__virtualname__}.gid_to_group"
-    if __opts__.get("fun", "") == func_name:
-        log.info(
-            "The function %s should not be used on Windows systems; "
-            "see function docs for details.",
-            func_name,
-        )
-
+    log.info(
+        "The function %s should not be used on Windows systems; "
+        "see function docs for details.",
+        func_name,
+    )
     return uid_to_user(gid)
 
 
@@ -307,7 +305,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     """
-    func_name = "{}.group_to_gid".format(__virtualname__)
+    func_name = f"{__virtualname__}.group_to_gid"
     log.info(
         "The function %s should not be used on Windows systems; "
         "see function docs for details.",
@@ -431,7 +429,7 @@ def get_gid(path, follow_symlinks=True):
 
         salt '*' file.get_gid c:\\temp\\test.txt
     """
-    func_name = "{}.get_gid".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_gid"
     log.info(
         "The function %s should not be used on Windows systems; "
         "see function docs for details. The value returned is the "
@@ -476,7 +474,7 @@ def get_group(path, follow_symlinks=True):
 
         salt '*' file.get_group c:\\temp\\test.txt
     """
-    func_name = "{}.get_group".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_group"
     log.info(
         "The function %s should not be used on Windows systems; "
         "see function docs for details. The value returned is the "
@@ -630,7 +628,7 @@ def get_mode(path):
     if not os.path.exists(path):
         raise CommandExecutionError(f"Path not found: {path}")
 
-    func_name = "{}.get_mode".format(__virtualname__)
+    func_name = f"{__virtualname__}.get_mode"
     log.info(
         "The function %s should not be used on Windows systems; "
         "see function docs for details. The value returned is "
@@ -677,7 +675,7 @@ def lchown(path, user, group=None, pgroup=None):
         salt '*' file.lchown c:\\temp\\test.txt myusername "pgroup='None'"
     """
     if group:
-        func_name = "{}.lchown".format(__virtualname__)
+        func_name = f"{__virtualname__}.lchown"
         log.info(
             "The group parameter has no effect when using %s on "
             "Windows systems; see function docs for details.",
@@ -725,7 +723,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     """
     # the group parameter is not used; only provided for API compatibility
     if group is not None:
-        func_name = "{}.chown".format(__virtualname__)
+        func_name = f"{__virtualname__}.chown"
         log.info(
             "The group parameter has no effect when using %s on "
             "Windows systems; see function docs for details.",
@@ -808,7 +806,7 @@ def chgrp(path, group):
 
         salt '*' file.chgrp c:\\temp\\test.txt administrators
     """
-    func_name = "{}.chgrp".format(__virtualname__)
+    func_name = f"{__virtualname__}.chgrp"
     log.info(
         "The function %s should not be used on Windows systems; see "
         "function docs for details.",
@@ -1300,7 +1298,7 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     """
-    func_name = "{}.set_mode".format(__virtualname__)
+    func_name = f"{__virtualname__}.set_mode"
     log.info(
         "The function %s should not be used on Windows systems; "
         "see function docs for details. The value returned is "

@@ -384,15 +384,14 @@ def test_mkdir(tmp_path):
 
 def test_mkdir_error(tmp_path):
     tmp_path = str(tmp_path)
-    # dirs cant be named CON in windows
-    path = os.path.join(tmp_path, "CON")
-    with pytest.raises(CommandExecutionError):
-        win_file.mkdir(path)
+    # dirs can't contain illegal characters on Windows
+    illegal_name = "illegal*name"
+    path = os.path.join(tmp_path, illegal_name)
+    pytest.raises(CommandExecutionError, win_file.mkdir, path)
     assert os.path.isdir(path) is False
     # cant make dir if parent is not made
     path = os.path.join(tmp_path, "a", "b", "c", "salt")
-    with pytest.raises(CommandExecutionError):
-        win_file.mkdir(path)
+    pytest.raises(CommandExecutionError, win_file.mkdir, path)
     assert os.path.isdir(path) is False
 
 
