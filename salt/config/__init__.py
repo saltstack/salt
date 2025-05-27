@@ -1016,6 +1016,8 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # optional cache driver for pillar cache
+        "pillar.cache_driver": (type(None), str),
     }
 )
 
@@ -1325,6 +1327,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
+        "pillar.cache_driver": None,
     }
 )
 
@@ -1679,6 +1682,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "pillar.cache_driver": None,
     }
 )
 
