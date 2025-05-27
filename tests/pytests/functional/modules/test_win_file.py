@@ -39,60 +39,54 @@ def windows_user():
 
 @skip_not_windows_admin
 def test_symlink(tmp_path):
-    file = tmp_path.joinpath("t.txt").touch()
+    file = tmp_path / "t.txt"
+    file.touch()
     assert file.is_file() is True
     link = tmp_path / "l"
-    assert win_file.is_link(link) is False
-    assert win_file.symlink(file, link) is True
+    assert win_file.is_link(str(link)) is False
+    assert win_file.symlink(str(file), str(link)) is True
     assert file.is_file() is True
-    assert win_file.is_link(link) is True
+    assert win_file.is_link(str(link)) is True
 
 
 @skip_not_windows_admin
 def test_symlink_path_taken(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    link = os.path.join(tmp_path, "l")
-    with salt.utils.files.fopen(link, "w"):
-        pass
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    link = tmp_path / "l"
+    link.touch()
+    assert link.is_file() is True
     # symlink should raise error if path name is all ready taken
-    with pytest.raises(CommandExecutionError):
-        win_file.symlink(file, link)
+    pytest.raises(CommandExecutionError, win_file.symlink, str(file), str(link))
 
 
 @skip_not_windows_admin
 def test_symlink_force(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    link = os.path.join(tmp_path, "l")
-    assert win_file.is_link(link) is False
-    assert win_file.symlink(file, link, force=True) is True
-    assert os.path.isfile(file) is True
-    assert win_file.is_link(link) is True
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    link = tmp_path / "l"
+    assert win_file.is_link(str(link)) is False
+    assert win_file.symlink(str(file), str(link), force=True) is True
+    assert file.is_file() is True
+    assert win_file.is_link(str(link)) is True
     # check that symlink returns ture if link is all ready-made
-    assert win_file.symlink(file, link, force=True) is True
+    assert win_file.symlink(str(file), str(link), force=True) is True
 
 
 @skip_not_windows_admin
 def test_symlink_atomic(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    link = os.path.join(tmp_path, "l")
-    assert win_file.is_link(link) is False
-    assert win_file.symlink(file, link, force=True, atomic=True) is True
-    assert os.path.isfile(file) is True
-    assert win_file.is_link(link) is True
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    link = tmp_path / "l"
+    assert win_file.is_link(str(link)) is False
+    assert win_file.symlink(str(file), str(link), force=True, atomic=True) is True
+    assert file.is_file() is True
+    assert win_file.is_link(str(link)) is True
     # check that symlink returns ture if link is all ready-made
-    assert win_file.symlink(file, link, force=True, atomic=True) is True
+    assert win_file.symlink(str(file), str(link), force=True, atomic=True) is True
 
 
 def test_is_not_link(tmp_path):
@@ -103,26 +97,27 @@ def test_is_not_link(tmp_path):
 
 @skip_not_windows_admin
 def test__resolve_symlink(tmp_path):
-    tmp_path = str(tmp_path)
-    link = os.path.join(tmp_path, "l")
-    assert win_file.symlink(tmp_path, link) is True
-    assert win_file._resolve_symlink(link) == tmp_path
+    link = tmp_path / "l"
+    assert win_file.symlink(str(tmp_path), str(link)) is True
+    assert win_file._resolve_symlink(str(link)) == str(tmp_path)
 
 
 def test_get_user(tmp_path, windows_user):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    assert win_file.mkdir(path, owner=windows_user) is True
-    assert os.path.isdir(path)
-    assert win_file.get_user(path) in windows_user
+    path = tmp_path / "dir"
+    assert win_file.mkdir(str(path), owner=windows_user) is True
+    assert path.is_dir() is True
+    assert win_file.get_user(str(path)) in windows_user
 
 
 def test_fake_user(tmp_path, windows_user):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
+    path = tmp_path / "dir"
     windows_user = windows_user + "_fake"
-    with pytest.raises(CommandExecutionError):
-        win_file.mkdir(path, owner=windows_user)
+    pytest.raises(
+        CommandExecutionError,
+        win_file.mkdir,
+        str(path),
+        owner=windows_user,
+    )
 
 
 def test_uid_user(tmp_path):
@@ -163,57 +158,45 @@ def test_get_pgid(tmp_path):
 
 
 def test_get_uid_path_not_found(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    with pytest.raises(CommandExecutionError):
-        win_file.get_uid(path)
+    path = tmp_path / "dir"
+    pytest.raises(CommandExecutionError, win_file.get_uid, str(path))
 
 
 def test_get_user_path_not_found(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    with pytest.raises(CommandExecutionError):
-        win_file.get_user(path)
+    path = tmp_path / "dir"
+    pytest.raises(CommandExecutionError, win_file.get_user, str(path))
 
 
 def test_mode(tmp_path):
-    tmp_path = str(tmp_path)
-    assert win_file.get_mode(tmp_path) is None
+    assert win_file.get_mode(str(tmp_path)) is None
 
 
 def test_mode_path_not_found(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir1")
-    with pytest.raises(CommandExecutionError):
-        win_file.get_mode(path)
+    path = tmp_path / "dir"
+    pytest.raises(CommandExecutionError, win_file.get_mode, str(path))
 
 
 def test_lchown(tmp_path, windows_user):
-    path = str(tmp_path)
-    assert win_file.lchown(path, windows_user) is True
-    assert win_file.get_user(path) == windows_user
+    assert win_file.lchown(str(tmp_path), windows_user) is True
+    assert win_file.get_user(str(tmp_path)) == windows_user
 
 
 def test_chown(tmp_path, windows_user):
-    path = str(tmp_path)
-    assert win_file.chown(path, windows_user) is True
-    assert win_file.get_user(path) == windows_user
+    assert win_file.chown(str(tmp_path), windows_user) is True
+    assert win_file.get_user(str(tmp_path)) == windows_user
 
 
 def test_chpgrp(tmp_path):
-    tmp_path = str(tmp_path)
-    assert win_file.chpgrp(tmp_path, "Administrators") is True
-    assert win_file.get_pgroup(tmp_path) == "Administrators"
+    assert win_file.chpgrp(str(tmp_path), "Administrators") is True
+    assert win_file.get_pgroup(str(tmp_path)) == "Administrators"
 
 
 def test_chgrp(tmp_path):
-    tmp_path = str(tmp_path)
-    assert win_file.chgrp(tmp_path, "Administrators") is None
+    assert win_file.chgrp(str(tmp_path), "Administrators") is None
 
 
 def test_stats(tmp_path, windows_user):
-    tmp_path = str(tmp_path)
-    stats = win_file.stats(tmp_path)
+    stats = win_file.stats(str(tmp_path))
     assert isinstance(stats, dict)
     assert stats["type"] == "dir"
     assert isinstance(stats["inode"], int)
@@ -231,42 +214,35 @@ def test_stats(tmp_path, windows_user):
 
 
 def test_stats_path_not_found(tmp_path, windows_user):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir1")
-    with pytest.raises(CommandExecutionError):
-        win_file.stats(path)
+    path = tmp_path / "dir"
+    pytest.raises(CommandExecutionError, win_file.stats, str(path))
 
 
 def test_version():
-    assert len(win_file.version("C:\\Windows\\System32\\wow64.dll").split(".")) == 4
+    assert len(win_file.version("C:\\Windows\\System32\\cmd.exe").split(".")) == 4
 
 
 def test_version_empty(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    assert win_file.version(file) == ""
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    assert win_file.version(str(file)) == ""
 
 
 def test_version_path_not_found(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with pytest.raises(CommandExecutionError):
-        win_file.version(file)
+    file = tmp_path / "t.txt"
+    assert file.is_file() is False
+    pytest.raises(CommandExecutionError, win_file.version, str(file))
 
 
 def test_version_dir(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    os.mkdir(path)
-    with pytest.raises(CommandExecutionError):
-        win_file.version(path)
+    path = tmp_path / "dir"
+    path.mkdir()
+    pytest.raises(CommandExecutionError, win_file.version, str(path))
 
 
 def test_version_details():
-    details = win_file.version_details("C:\\Windows\\System32\\wow64.dll")
+    details = win_file.version_details("C:\\Windows\\System32\\cmd.exe")
     assert isinstance(details, dict) is True
     assert details["Comments"] is None
     assert details["CompanyName"] == "Microsoft Corporation"
@@ -274,12 +250,10 @@ def test_version_details():
 
 
 def test_get_attributes(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    attributes = win_file.get_attributes(file)
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    attributes = win_file.get_attributes(str(file))
     assert isinstance(attributes, dict) is True
     assert attributes["archive"] is True
     assert attributes["reparsePoint"] is False
@@ -298,14 +272,12 @@ def test_get_attributes(tmp_path):
 
 
 def test_set_attributes(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
     assert (
         win_file.set_attributes(
-            file,
+            str(file),
             archive=True,
             hidden=True,
             normal=False,
@@ -316,7 +288,7 @@ def test_set_attributes(tmp_path):
         )
         is True
     )
-    attributes = win_file.get_attributes(file)
+    attributes = win_file.get_attributes(str(file))
     assert attributes["archive"] is True
     assert attributes["hidden"] is True
     assert attributes["normal"] is False
@@ -326,7 +298,7 @@ def test_set_attributes(tmp_path):
     assert attributes["temporary"] is True
     assert (
         win_file.set_attributes(
-            file,
+            str(file),
             archive=False,
             hidden=False,
             normal=True,
@@ -337,7 +309,7 @@ def test_set_attributes(tmp_path):
         )
         is True
     )
-    attributes = win_file.get_attributes(file)
+    attributes = win_file.get_attributes(str(file))
     assert attributes["archive"] is False
     assert attributes["hidden"] is False
     assert attributes["normal"] is True
@@ -348,88 +320,87 @@ def test_set_attributes(tmp_path):
 
 
 def test_set_mode(tmp_path):
-    path = str(tmp_path)
-    assert win_file.set_mode(path, "") is None
+    assert win_file.set_mode(str(tmp_path), "") is None
 
 
 def test_remove(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    assert win_file.remove(file) is True
-    assert os.path.isfile(file) is False
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    assert win_file.remove(str(file)) is True
+    assert file.is_file() is False
 
 
 def test_remove_force(tmp_path):
-    tmp_path = str(tmp_path)
-    file = os.path.join(tmp_path, "t.txt")
-    with salt.utils.files.fopen(file, "w"):
-        pass
-    assert os.path.isfile(file) is True
-    assert win_file.remove(file, force=True) is True
-    assert os.path.isfile(file) is False
+    file = tmp_path / "t.txt"
+    file.touch()
+    assert file.is_file() is True
+    assert win_file.remove(str(file), force=True) is True
+    assert file.is_file() is False
 
 
 def test_mkdir(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir")
-    assert win_file.mkdir(path) is True
-    assert os.path.isdir(path)
+    path = tmp_path / "dir"
+    assert path.is_dir() is False
+    assert win_file.mkdir(str(path)) is True
+    assert path.is_dir() is True
 
 
 def test_mkdir_error(tmp_path):
-    tmp_path = str(tmp_path)
     # dirs can't contain illegal characters on Windows
     illegal_name = "illegal*name"
-    path = os.path.join(tmp_path, illegal_name)
-    pytest.raises(CommandExecutionError, win_file.mkdir, path)
-    assert os.path.isdir(path) is False
+    path = tmp_path / illegal_name
+    pytest.raises(CommandExecutionError, win_file.mkdir, str(path))
+    assert path.is_dir() is False
+
     # cant make dir if parent is not made
-    path = os.path.join(tmp_path, "a", "b", "c", "salt")
-    pytest.raises(CommandExecutionError, win_file.mkdir, path)
-    assert os.path.isdir(path) is False
+    path = tmp_path / "a" / "b" / "c" / "salt"
+    pytest.raises(CommandExecutionError, win_file.mkdir, str(path))
+    assert path.is_dir() is False
 
 
 def test_makedirs_(tmp_path):
-    tmp_path = str(tmp_path)
-    parent = os.path.join(tmp_path, "dir1\\dir2")
-    path = os.path.join(parent, "dir3")
-    assert win_file.makedirs_(path) is True
-    assert os.path.isdir(parent) is True
-    assert os.path.isdir(path) is False
+    parent = tmp_path / "dir1" / "dir2"
+    path = parent / "dir3"
+    assert win_file.makedirs_(str(path)) is True
+    assert parent.is_dir() is True
+    assert path.is_dir() is False
 
 
 def test_makedirs__path_exists(tmp_path):
-    tmp_path = str(tmp_path)
-    parent = os.path.join(tmp_path, "dir1\\dir2")
-    path = os.path.join(parent, "dir3")
-    assert win_file.makedirs_(path) is True
-    assert os.path.isdir(parent) is True
-    # makdrirs_ should return message that path has all ready been made
-    assert isinstance(win_file.makedirs_(path), str) is True
-    assert os.path.isdir(parent) is True
+    parent = tmp_path / "dir1" / "dir2"
+    path = parent / "dir3"
+    parent.mkdir(parents=True)
+    assert parent.is_dir() is True
+    # makedirs_ should return message that path already exists
+    result = win_file.makedirs_(str(path))
+    assert "already exists" in result
 
 
 def test_makedirs_perms(tmp_path):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir1\\dir2")
-    assert win_file.makedirs_perms(path) is True
-    assert os.path.isdir(path)
-    # make sure makedirs does not fail if path is all ready-made
-    assert win_file.makedirs_perms(path) is True
-    assert os.path.isdir(path)
+    path = tmp_path / "dir1" / "dir2"
+    assert win_file.makedirs_perms(str(path)) is True
+    assert path.is_dir() is True
+    # make sure makedirs does not fail if path exists
+    assert win_file.makedirs_perms(str(path)) is True
+    assert path.is_dir() is True
 
 
 def test_check_perms_path_not_found(tmp_path, windows_user):
-    tmp_path = str(tmp_path)
-    path = os.path.join(tmp_path, "dir1")
+    path = tmp_path / "dir1"
+    assert path.is_dir() is False
     # check_perms will fail due to path not being made
-    with pytest.raises(CommandExecutionError):
-        win_file.check_perms(path, {}, windows_user)
+    pytest.raises(
+        CommandExecutionError, win_file.check_perms, str(path), {}, windows_user
+    )
 
 
-def test_set_perms(tmp_path):
-    path = str(tmp_path)
-    assert win_file.set_perms(path) == {}
+def test_set_perms(tmp_path, windows_user):
+    perms = {windows_user: {"perms": "read_execute", "applies_to": "this_folder_only"}}
+    expected = {
+        "grant": {
+            windows_user: {"applies_to": "this_folder_only", "perms": "read_execute"}
+        }
+    }
+    result = win_file.set_perms(str(tmp_path), grant_perms=perms)
+    assert result == expected
