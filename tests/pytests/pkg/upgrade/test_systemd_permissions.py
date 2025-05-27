@@ -65,13 +65,14 @@ def salt_systemd_setup(
     This fixture is function scoped, so it will be run for each test
     """
 
+    upgrade_version = packaging.version.parse(install_salt.artifact_version)
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+
     # We should have a previous version installed, but if not then use install_previous
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_minion_version = packaging.version.parse(ret.data)
-    if installed_minion_version >= packaging.version.parse(
-        install_salt.artifact_version
-    ):
+    if installed_minion_version >= upgrade_version:
         # Install previous version, downgrading if necessary
         install_salt.install_previous(downgrade=True)
 
@@ -79,12 +80,10 @@ def salt_systemd_setup(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version < packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert installed_minion_version < upgrade_version
+    previous_version = installed_minion_version
 
     # Ensure known state for systemd services - enabled and active
-    test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
         test_cmd = f"systemctl enable {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
@@ -94,15 +93,14 @@ def salt_systemd_setup(
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
+    # Run tests
     yield
 
     # Verify that the new version is installed after the test
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert installed_minion_version == upgrade_version
 
     # Reset systemd services to their preset states
     for test_item in test_list:
@@ -113,11 +111,12 @@ def salt_systemd_setup(
     # Install previous version, downgrading if necessary
     install_salt.install_previous(downgrade=True)
 
+    # For debian/ubuntu, ensure pinning file is for major version of previous
+    # version, not minor
     if install_salt.distro_name in ["debian", "ubuntu"]:
-        # Remove pinning file for previous version
         pref_file = Path("/etc", "apt", "preferences.d", "salt-pin-1001")
         pref_file.parent.mkdir(exist_ok=True)
-        pin = f"{install_salt.artifact_version.rsplit('.', 1)[0]}.*"
+        pin = f"{previous_version.major}.*"
         with salt.utils.files.fopen(pref_file, "w") as fp:
             fp.write(f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001")
 
