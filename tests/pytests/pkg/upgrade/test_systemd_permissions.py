@@ -65,6 +65,16 @@ def salt_systemd_setup(
     This fixture is function scoped, so it will be run for each test
     """
 
+    # We should have a previous version installed, but if not then use install_previous
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    if installed_minion_version >= packaging.version.parse(
+        install_salt.artifact_version
+    ):
+        # Install previous version, downgrading if necessary
+        install_salt.install_previous(downgrade=True)
+
     # Verify that the previous version is installed
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -93,6 +103,12 @@ def salt_systemd_setup(
     assert installed_minion_version == packaging.version.parse(
         install_salt.artifact_version
     )
+
+    # Reset systemd services to their preset states
+    for test_item in test_list:
+        test_cmd = f"systemctl preset {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
     # Install previous version, downgrading if necessary
     install_salt.install_previous(downgrade=True)
