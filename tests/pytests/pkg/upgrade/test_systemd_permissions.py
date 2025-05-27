@@ -65,9 +65,6 @@ def salt_systemd_setup(
     This fixture is function scoped, so it will be run for each test
     """
 
-    # Install previous version, downgrading if necessary
-    install_salt.install_previous(downgrade=True)
-
     # Verify that the previous version is installed
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -96,6 +93,9 @@ def salt_systemd_setup(
     assert installed_minion_version == packaging.version.parse(
         install_salt.artifact_version
     )
+
+    # Install previous version, downgrading if necessary
+    install_salt.install_previous(downgrade=True)
 
     if install_salt.distro_name in ["debian", "ubuntu"]:
         # Remove pinning file for previous version
