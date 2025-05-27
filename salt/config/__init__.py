@@ -4138,7 +4138,7 @@ def apply_master_config(overrides=None, defaults=None):
     if "cluster_id" not in opts:
         opts["cluster_id"] = None
     if opts["cluster_id"] is not None:
-        if not opts.get("cluster_peers", None):
+        if not opts.get("cluster_peers", None) and not opts.get("cluster_secret", None):
             log.warning("Cluster id defined without defining cluster peers")
             opts["cluster_peers"] = []
         if not opts.get("cluster_pki_dir", None):
