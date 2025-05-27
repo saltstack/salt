@@ -186,6 +186,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@users.noreply.github.com"
           git push origin v${{ inputs.salt-version }}
+          git push
 
   publish-pypi:
     name: Publish to PyPi
