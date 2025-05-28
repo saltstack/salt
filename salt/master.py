@@ -1690,7 +1690,7 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = salt.utils.clean_join(
+            this_minion_pubkey = salt.utils.verify.clean_join(
                 self.opts["pki_dir"], "minions", load["id"]
             )
             serialized_load = salt.serializers.msgpack.serialize(load)

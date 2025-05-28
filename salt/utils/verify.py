@@ -507,7 +507,7 @@ def _realpath_windows(path):
 
 def _realpath(path):
     """
-    FCross platform realpath method. On Windows when python 3, this method
+    Cross platform realpath method. On Windows when python 3, this method
     uses the os.readlink method to resolve any filesystem links.
     All other platforms and version use ``os.path.realpath``.
     """
