@@ -1,3 +1,4 @@
+import sys
 import time
 
 import pytest
@@ -75,6 +76,8 @@ class TransportMethodsTest(TestCase):
             "run_func",
             "destroy",
         ]
+        if sys.version_info.major == 3 and sys.version_info.minor > 10:
+            blacklist_methods.extend(["__getstate__", "__setstate__"])
         for name in dir(aes_funcs):
             if name in aes_funcs.expose_methods:
                 continue
@@ -132,6 +135,8 @@ class TransportMethodsTest(TestCase):
             "destroy",
             "connect",
         ]
+        if sys.version_info.major == 3 and sys.version_info.minor > 10:
+            blacklist_methods.extend(["__getstate__", "__setstate__"])
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
                 continue

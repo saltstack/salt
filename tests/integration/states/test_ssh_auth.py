@@ -12,6 +12,8 @@ from tests.support.helpers import with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
+KEY = "AAAAC3NzaC1lZDI1NTE5AAAAIEmY2ZOSneFGN+b7+S9eLPGOqPF2yl9AgTCkZHuWKjC5"
+
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test
@@ -31,23 +33,23 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             makedirs=True,
             contents_newline=False,
             # Explicit no ending line break
-            contents="ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root",
+            contents=f"ssh-ed25519 {KEY.replace('5','2')} root",
         )
 
         ret = self.run_state(
             "ssh_auth.present",
-            name="AAAAB3NzaC1kcQ9J5bYTEyZ==",
-            enc="ssh-rsa",
+            name=f"{KEY}",
+            enc="ssh-ed25519",
             user=username,
             comment=username,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, {"AAAAB3NzaC1kcQ9J5bYTEyZ==": "New"})
+        self.assertSaltStateChangesEqual(ret, {f"{KEY}": "New"})
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
                 fhr.read(),
-                "ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n"
-                "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username),
+                f"ssh-ed25519 {KEY.replace('5', '2')} root\n"
+                f"ssh-ed25519 {KEY} {username}\n",
             )
 
     @pytest.mark.destructive_test
@@ -65,26 +67,26 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write(f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n")
+            kfh.write(f"ssh-ed25519 {KEY.replace('5', '2')} {username}\n")
 
         # Create a bogus key file on base environment
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write(f"ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n")
+            kfh.write(f"ssh-ed25519 {KEY.replace('5', '3')} {username}\n")
 
         ret = self.run_state(
             "ssh_auth.present",
             name="Setup Keys",
             source=f"salt://{key_fname}?saltenv=prod",
-            enc="ssh-rsa",
+            enc="ssh-ed25519",
             user=username,
             comment=username,
         )
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n"
+                fhr.read(), f"ssh-ed25519 {KEY.replace('5', '2')} {username}\n"
             )
 
         os.unlink(authorized_keys_file)
@@ -93,7 +95,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             "ssh_auth.present",
             name="Setup Keys",
             source=f"salt://{key_fname}",
-            enc="ssh-rsa",
+            enc="ssh-ed25519",
             user=username,
             comment=username,
             saltenv="prod",
@@ -101,5 +103,5 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), f"ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {username}\n"
+                fhr.read(), f"ssh-ed25519 {KEY.replace('5', '2')} {username}\n"
             )
