@@ -612,7 +612,7 @@ class Pillar:
         Check to see if the on demand external pillar is allowed.
 
         If this check fails self.ext is set to None, this is important to
-        prevent an on-demand pillare from being rendered when it shoul not be
+        prevent an on-demand pillare from being rendered when it should not be
         allowed.
         """
         if not isinstance(self.ext, dict):

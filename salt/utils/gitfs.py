@@ -170,7 +170,7 @@ LIBGIT2_MINVER = Version("0.20.0")
 
 def split_name(remote):
     """
-    Given a string determin if it a a url or a name and url combination.
+    Given a string determine if it is a url or a name and url combination.
 
     Examples:
 
