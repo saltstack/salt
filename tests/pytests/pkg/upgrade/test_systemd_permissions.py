@@ -111,6 +111,10 @@ def salt_systemd_setup(
     # Install previous version, downgrading if necessary
     install_salt.install_previous(downgrade=True)
 
+    # Ensure services are started on debian/ubuntu
+    if install_salt.distro_name in ["debian", "ubuntu"]:
+        install_salt.restart_services()
+
     # For debian/ubuntu, ensure pinning file is for major version of previous
     # version, not minor
     if install_salt.distro_name in ["debian", "ubuntu"]:
