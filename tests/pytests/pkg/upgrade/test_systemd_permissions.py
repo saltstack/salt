@@ -119,6 +119,30 @@ def salt_systemd_setup(
             fp.write(f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001")
 
 
+@pytest.fixture(scope="function")
+def salt_systemd_mask_services(salt_call_cli):
+    """
+    Fixture to mask systemd services for salt-api, salt-minion, and
+    salt-master services.
+
+    This is required to test the preservation of masked state during upgrades.
+    """
+
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl mask {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+    yield
+
+    # Cleanup: unmask the services after the test
+    for test_item in test_list:
+        test_cmd = f"systemctl unmask {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+
 def test_salt_systemd_disabled_preservation(
     salt_call_cli, install_salt, salt_systemd_setup
 ):
@@ -172,6 +196,30 @@ def test_salt_systemd_enabled_preservation(
         test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
         assert ret.returncode == 0
         assert test_enabled == "enabled"
+
+
+def test_salt_systemd_masked_preservation(
+    salt_call_cli, install_salt, salt_systemd_setup, salt_systemd_mask_services
+):
+    """
+    Test upgrade of Salt packages preserve masked state of systemd services
+    """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
+    # Upgrade Salt (inc. minion, master, etc.) from previous version and test
+    # pylint: disable=pointless-statement
+    install_salt.install(upgrade=True)
+    time.sleep(60)  # give it some time
+
+    # test for masked systemd state
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl show -p UnitFileState {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        test_masked = ret.stdout.strip().split("=")[1].split('"')[0].strip()
+        assert ret.returncode == 0
+        assert test_masked == "masked"
 
 
 @pytest.mark.skip(reason="Broken test")
