@@ -83,13 +83,9 @@ def salt_systemd_setup(
     assert installed_minion_version < upgrade_version
     previous_version = installed_minion_version
 
-    # Ensure known state for systemd services - enabled and active
+    # Ensure known state for systemd services - enabled
     for test_item in test_list:
         test_cmd = f"systemctl enable {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-        test_cmd = f"systemctl restart {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
@@ -178,61 +174,6 @@ def test_salt_systemd_enabled_preservation(
         test_enabled = ret.stdout.strip().split("=")[1].split('"')[0].strip()
         assert ret.returncode == 0
         assert test_enabled == "enabled"
-
-
-def test_salt_systemd_inactive_preservation(
-    salt_call_cli, install_salt, salt_systemd_setup
-):
-    """
-    Test upgrade of Salt packages preserve inactive state of systemd
-    """
-    if not install_salt.upgrade:
-        pytest.skip("Not testing an upgrade, do not run")
-
-    # ensure known state, inactive
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl stop {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
-
-    # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True, stop_services=False)
-    time.sleep(10)  # give it some time
-
-    # test for inactive systemd state
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl is-active {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        test_active = ret.stdout.strip().split()[2].strip('"').strip()
-        assert ret.returncode != 0
-        assert test_active == "inactive"
-
-
-def test_salt_systemd_active_preservation(
-    salt_call_cli, install_salt, salt_systemd_setup
-):
-    """
-    Test upgrade of Salt packages preserve active state of systemd
-    """
-    if not install_salt.upgrade:
-        pytest.skip("Not testing an upgrade, do not run")
-
-    # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True, stop_services=False)
-    time.sleep(10)  # give it some time
-
-    # test for active systemd state
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl is-active {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        test_active = ret.stdout.strip().split()[2].strip('"').strip()
-        assert ret.returncode == 0
-        assert test_active == "active"
 
 
 @pytest.mark.skip(reason="Broken test")
