@@ -33,7 +33,7 @@ from saltfactories.utils import cli_scripts
 
 import salt.utils.files
 from tests.conftest import CODE_DIR
-from tests.support.pytest.helpers import TestAccount
+from tests.support.pytest.helpers import TestAccount, download_file
 
 ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 
@@ -492,6 +492,20 @@ class SaltPkgInstall:
             env = os.environ.copy()
             extra_args = []
             if self.distro_id in ("ubuntu", "debian"):
+
+                pref_file = pathlib.Path(
+                    "/etc", "apt", "preferences.d", "salt-pin-1001"
+                )
+                pref_file.parent.mkdir(exist_ok=True)
+                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                with salt.utils.files.fopen(pref_file, "w") as fp:
+                    fp.write(
+                        f"Package: salt-*\n"
+                        f"Pin: version {pin}\n"
+                        f"Pin-Priority: 1001"
+                    )
+                log.error("Pin to %s", pin)
+
                 env["DEBIAN_FRONTEND"] = "noninteractive"
                 extra_args = [
                     "-o",
@@ -514,6 +528,12 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            ret = self.proc.run(
+                "rpm",
+                "--import",
+                "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+            )
+            self._check_retcode(ret)
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
 
@@ -666,14 +686,37 @@ class SaltPkgInstall:
                 "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
-            if self.distro_name == "photon":
-                # yum version on photon doesn't support expire-cache
-                ret = self.proc.run(self.pkg_mngr, "clean", "all")
-            else:
-                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
-            self._check_retcode(ret)
+
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
+
+            if self.distro_name == "photon":
+                orig_pkgs = pkgs_to_install[:]
+                pkgs_to_install = []
+                for _ in orig_pkgs:
+                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+                self._check_retcode(ret)
+            else:
+                if "3007" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+                self._check_retcode(ret)
+
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
                 # So we explicitly install the correct version here
@@ -690,6 +733,7 @@ class SaltPkgInstall:
                     if dbg_exists:
                         pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
+            # pkgs = [f"{_}=={self.prev_version}" for _ in pkgs_to_install]
             ret = self.proc.run(
                 self.pkg_mngr,
                 cmd_action,
@@ -825,7 +869,13 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
+                batch_file = pkg_path.parent / "install_nsis.cmd"
+                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
+                with salt.utils.files.fopen(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
@@ -1030,7 +1080,6 @@ class SaltPkgInstall:
         else:
             # assume downgrade, since no_install only used in these two cases
             self.install()
-
         return self
 
     def __exit__(self, *_):
@@ -1617,15 +1666,3 @@ class ApiRequest:
 
     def __exit__(self, *args):
         self.session.__exit__(*args)
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth, timeout=60) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
