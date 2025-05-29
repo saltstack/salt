@@ -54,9 +54,7 @@ def salt_systemd_overrides():
 
 @pytest.fixture(scope="function")
 def salt_systemd_setup(
-    salt_call_cli,
-    install_salt,
-    salt_systemd_overrides,
+    salt_call_cli, install_salt, salt_systemd_overrides, debian_disable_policy_rcd
 ):
     """
     Fixture install previous version and set systemd for salt packages
