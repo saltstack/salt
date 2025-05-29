@@ -132,7 +132,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_upgrade(salt_call_cli, install_salt):
+def test_salt_upgrade(salt_call_cli, install_salt, debian_disable_policy_rcd):
     """
     Test an upgrade of Salt, Minion and Master
     """
