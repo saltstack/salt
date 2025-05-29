@@ -531,3 +531,93 @@ def test_cve_2024_37088(salt_master_alt, salt_call_alt, caplog):
         assert ret.returncode == 1
         assert ret.data is None
         assert "Got a bad pillar from master, type str, expecting dict" in caplog.text
+
+
+def test_state_highstate_custom_grains_masterless_mode(
+    salt_master, salt_minion_factory
+):
+    """
+    This test ensure that custom grains in salt://_grains are loaded before pillar compilation
+    to ensure that any use of custom grains in pillar files are available when in masterless mode,
+    this implies that a sync of grains occurs before loading the regular
+    /etc/salt/grains or configuration file grains, as well as the usual grains.
+    Note: cannot use salt_minion and salt_call_cli, since these will be loaded before
+    the pillar and custom_grains files are written, hence using salt_minion_factory.
+    """
+    pillar_top_sls = """
+    base:
+      '*':
+        - defaults
+        """
+
+    pillar_defaults_sls = """
+    mypillar: "{{ grains['custom_grain'] }}"
+    """
+
+    salt_top_sls = """
+    base:
+      '*':
+        - test
+        """
+
+    salt_test_sls = """
+    "donothing":
+      test.nop: []
+    """
+
+    salt_custom_grains_py = """
+    def main():
+        return {'custom_grain': 'test_value'}
+    """
+
+    assert salt_master.is_running()
+    with salt_minion_factory.started():
+        salt_minion = salt_minion_factory
+        salt_call_cli = salt_minion_factory.salt_call_cli()
+        with salt_minion.pillar_tree.base.temp_file(
+            "top.sls", pillar_top_sls
+        ), salt_minion.pillar_tree.base.temp_file(
+            "defaults.sls", pillar_defaults_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "top.sls", salt_top_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "test.sls", salt_test_sls
+        ), salt_minion.state_tree.base.temp_file(
+            "_grains/custom_grain.py", salt_custom_grains_py
+        ):
+            ## need to try masterless mode
+            opts = salt_minion.config.copy()
+            opts["file_client"] = "local"
+
+            ret = salt_call_cli.run("--local", "state.highstate")
+            assert ret.returncode == 0
+            ret = salt_call_cli.run("pillar.items")
+            print(
+                f"DGM test_state_highstate_custom_grains_masterless_mode, ret '{ret}'",
+                flush=True,
+            )
+            assert ret.returncode == 0
+            assert ret.data
+            pillar_items = ret.data
+            assert "mypillar" in pillar_items
+            assert pillar_items["mypillar"] == "test_value"
+
+            ## need to try with master mode
+            ret = salt_call_cli.run("state.highstate")
+            assert ret.returncode == 0
+            ret = salt_call_cli.run("pillar.items")
+            assert ret.returncode == 0
+            assert ret.data
+            pillar_items = ret.data
+            assert "mypillar" not in pillar_items
+
+
+def test_salt_call_versions(salt_call_cli, caplog):
+    """
+    Call test.versions without '--local' to test grains
+    are sync'd without any missing keys in opts
+    """
+    with caplog.at_level(logging.DEBUG):
+        ret = salt_call_cli.run("test.versions")
+        assert ret.returncode == 0
+        assert "Failed to sync grains module: 'master_uri'" not in caplog.messages
