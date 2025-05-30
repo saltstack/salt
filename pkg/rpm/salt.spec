@@ -461,6 +461,15 @@ if [ $1 -gt 1 ] ; then
 fi
 
 
+%pre cloud
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+    _MS_LCUR_USER=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 3)
+    _MS_LCUR_GROUP=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 4)
+    %global _MS_CUR_USER  %{_MS_LCUR_USER}
+    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
+fi
+
 # assumes systemd for RHEL 7 & 8 & 9
 # foregoing %systemd_* scriptlets due to RHEL 7/8 vs. RHEL 9 incompatibilities
 ## - Using hardcoded scriptlet definitions from RHEL 7/8 that are forward-compatible
