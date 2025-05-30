@@ -528,11 +528,12 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
-            ret = self.proc.run(
-                "rpm",
-                "--import",
-                "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
-            )
+            if self.distro_id == "photon":
+                ret = self.proc.run(
+                    "rpm",
+                    "--import",
+                    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+                )
             self._check_retcode(ret)
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
