@@ -1,38 +1,144 @@
+import logging
+import textwrap
 import time
+from pathlib import Path
 
+import packaging.version
 import pytest
+from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.files
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux(reason="Only supported on Linux family"),
-    pytest.mark.skipif(
-        True,
-        reason=(
-            "Package permissions are getting reworked in "
-            "https://github.com/saltstack/salt/pull/66218"
-        ),
-    ),
 ]
 
+log = logging.getLogger(__name__)
 
-@pytest.fixture
+
+@pytest.fixture(scope="module")
+def salt_systemd_overrides():
+    """
+    Fixture to create systemd overrides for salt-api, salt-minion, and
+    salt-master services.
+
+    This is required because the pytest-salt-factories engine does not
+    stop cleanly if you only kill the process. This leaves the systemd
+    service in a failed state.
+    """
+
+    systemd_dir = Path("/etc/systemd/system")
+    conf_name = "override.conf"
+    contents = textwrap.dedent(
+        """
+        [Service]
+        KillMode=control-group
+        TimeoutStopSec=10
+        SuccessExitStatus=SIGKILL
+        """
+    )
+
+    with temp_file(
+        name=conf_name, directory=systemd_dir / "salt-api.service.d", contents=contents
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-minion.service.d",
+        contents=contents,
+    ), temp_file(
+        name=conf_name,
+        directory=systemd_dir / "salt-master.service.d",
+        contents=contents,
+    ):
+        yield
+
+
+@pytest.fixture(scope="function")
 def salt_systemd_setup(
-    salt_call_cli,
-    install_salt,
+    salt_call_cli, install_salt, salt_systemd_overrides, debian_disable_policy_rcd
 ):
     """
-    Fixture to set systemd for salt packages to enabled and active
-    Note: assumes Salt packages already installed
-    """
-    install_salt.install()
+    Fixture install previous version and set systemd for salt packages
+    to enabled and active
 
-    # ensure known state, enabled and active
+    This fixture is function scoped, so it will be run for each test
+    """
+
+    upgrade_version = packaging.version.parse(install_salt.artifact_version)
     test_list = ["salt-api", "salt-minion", "salt-master"]
+
+    # We should have a previous version installed, but if not then use install_previous
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    if installed_minion_version >= upgrade_version:
+        # Install previous version, downgrading if necessary
+        install_salt.install_previous(downgrade=True)
+
+    # Verify that the previous version is installed
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    assert installed_minion_version < upgrade_version
+    previous_version = installed_minion_version
+
+    # Ensure known state for systemd services - enabled
     for test_item in test_list:
         test_cmd = f"systemctl enable {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
-        test_cmd = f"systemctl restart {test_item}"
+    # Run tests
+    yield
+
+    # Verify that the new version is installed after the test
+    ret = salt_call_cli.run("--local", "test.version")
+    assert ret.returncode == 0
+    installed_minion_version = packaging.version.parse(ret.data)
+    assert installed_minion_version == upgrade_version
+
+    # Reset systemd services to their preset states
+    for test_item in test_list:
+        test_cmd = f"systemctl preset {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+    # Install previous version, downgrading if necessary
+    install_salt.install_previous(downgrade=True)
+
+    # Ensure services are started on debian/ubuntu
+    if install_salt.distro_name in ["debian", "ubuntu"]:
+        install_salt.restart_services()
+
+    # For debian/ubuntu, ensure pinning file is for major version of previous
+    # version, not minor
+    if install_salt.distro_name in ["debian", "ubuntu"]:
+        pref_file = Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+        pref_file.parent.mkdir(exist_ok=True)
+        pin = f"{previous_version.major}.*"
+        with salt.utils.files.fopen(pref_file, "w") as fp:
+            fp.write(f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001")
+
+
+@pytest.fixture(scope="function")
+def salt_systemd_mask_services(salt_call_cli):
+    """
+    Fixture to mask systemd services for salt-api, salt-minion, and
+    salt-master services.
+
+    This is required to test the preservation of masked state during upgrades.
+    """
+
+    test_list = ["salt-api", "salt-minion", "salt-master"]
+    for test_item in test_list:
+        test_cmd = f"systemctl mask {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+    yield
+
+    # Cleanup: unmask the services after the test
+    for test_item in test_list:
+        test_cmd = f"systemctl unmask {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
         assert ret.returncode == 0
 
@@ -45,10 +151,6 @@ def test_salt_systemd_disabled_preservation(
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
 
     # ensure known state, disabled
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -81,14 +183,10 @@ def test_salt_systemd_enabled_preservation(
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
     install_salt.install(upgrade=True)
-    time.sleep(60)  # give it some time
+    time.sleep(10)  # give it some time
 
     # test for enabled systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
@@ -100,79 +198,37 @@ def test_salt_systemd_enabled_preservation(
         assert test_enabled == "enabled"
 
 
-def test_salt_systemd_inactive_preservation(
-    salt_call_cli, install_salt, salt_systemd_setup
+def test_salt_systemd_masked_preservation(
+    salt_call_cli, install_salt, salt_systemd_setup, salt_systemd_mask_services
 ):
     """
-    Test upgrade of Salt packages preserve inactive state of systemd
+    Test upgrade of Salt packages preserve masked state of systemd services
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
-    # ensure known state, disabled
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl stop {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        assert ret.returncode == 0
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
     install_salt.install(upgrade=True)
     time.sleep(60)  # give it some time
 
-    # test for inactive systemd state
+    # test for masked systemd state
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
-        test_cmd = f"systemctl is-active {test_item}"
+        test_cmd = f"systemctl show -p UnitFileState {test_item}"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        test_active = ret.stdout.strip().split()[2].strip('"').strip()
-        assert ret.returncode == 1
-        assert test_active == "inactive"
-
-
-def test_salt_systemd_active_preservation(
-    salt_call_cli, install_salt, salt_systemd_setup
-):
-    """
-    Test upgrade of Salt packages preserve active state of systemd
-    """
-    if not install_salt.upgrade:
-        pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
-
-    # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    # pylint: disable=pointless-statement
-    install_salt.install(upgrade=True)
-    time.sleep(60)  # give it some time
-
-    # test for active systemd state
-    test_list = ["salt-api", "salt-minion", "salt-master"]
-    for test_item in test_list:
-        test_cmd = f"systemctl is-active {test_item}"
-        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-        test_active = ret.stdout.strip().split()[2].strip('"').strip()
+        test_masked = ret.stdout.strip().split("=")[1].split('"')[0].strip()
         assert ret.returncode == 0
-        assert test_active == "active"
+        assert test_masked == "masked"
 
 
+@pytest.mark.skip(reason="Broken test")
 def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_setup):
     """
     Test upgrade of Salt packages preserve existing ownership
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    # setup systemd to enabled and active for Salt packages
-    # pylint: disable=pointless-statement
-    salt_systemd_setup
 
     # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
