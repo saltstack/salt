@@ -3,6 +3,7 @@ import pytest
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
 ]
 
 
@@ -12,7 +13,6 @@ def account():
         yield _account
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 @pytest.mark.parametrize(
     "exit_code, return_code, result",
     [
@@ -20,7 +20,7 @@ def account():
         (299, 299, False),
     ],
 )
-def test_windows_script_exitcode(modules, state_tree, exit_code, return_code, result):
+def test_script_exitcode(modules, state_tree, exit_code, return_code, result):
     ret = modules.state.single(
         "cmd.run", name=f"cmd.exe /c exit {exit_code}", success_retcodes=[2, 44, 300]
     )
@@ -28,7 +28,6 @@ def test_windows_script_exitcode(modules, state_tree, exit_code, return_code, re
     assert ret.filtered["changes"]["retcode"] == return_code
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 @pytest.mark.parametrize(
     "exit_code, return_code, result",
     [
@@ -36,7 +35,7 @@ def test_windows_script_exitcode(modules, state_tree, exit_code, return_code, re
         (299, 299, False),
     ],
 )
-def test_windows_script_exitcode_runas(
+def test_script_exitcode_runas(
     modules, state_tree, exit_code, return_code, result, account
 ):
     ret = modules.state.single(
@@ -48,3 +47,33 @@ def test_windows_script_exitcode_runas(
     )
     assert ret.result is result
     assert ret.filtered["changes"]["retcode"] == return_code
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("echo foo", "foo"),
+        ("cmd /c echo foo", "foo"),
+        ("whoami && echo foo", "foo"),
+        ("cmd /c whoami && echo foo", "foo"),
+    ],
+)
+def test_run_builtins(modules, command, expected):
+    result = modules.cmd.run(command)
+    assert expected in result
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("echo foo", "foo"),
+        ("cmd /c echo foo", "foo"),
+        ("whoami && echo foo", "foo"),
+        ("cmd /c whoami && echo foo", "foo"),
+    ],
+)
+def test_run_builtins_runas(modules, account, command, expected):
+    result = modules.cmd.run(
+        cmd=command, runas=account.username, password=account.password
+    )
+    assert expected in result

@@ -18,7 +18,6 @@ from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
 
 import tools.utils
-import tools.utils.repo
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +103,7 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
                     str(fpath),
                     tools.utils.STAGING_BUCKET_NAME,
                     upload_path,
-                    Callback=tools.utils.repo.UpdateProgress(progress, task),
+                    Callback=tools.utils.UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
         pass
@@ -173,7 +172,7 @@ def download_onedir_artifact(
                     Bucket=tools.utils.STAGING_BUCKET_NAME,
                     Key=remote_path,
                     Fileobj=wfh,
-                    Callback=tools.utils.repo.UpdateProgress(progress, task),
+                    Callback=tools.utils.UpdateProgress(progress, task),
                 )
     except ClientError as exc:
         if "Error" not in exc.response:

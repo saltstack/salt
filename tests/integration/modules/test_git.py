@@ -329,19 +329,21 @@ class GitModuleTest(ModuleCase):
         # Stage the file
         self.run_function("git.add", [self.repo, filename])
         # Commit the staged file
-        commit_msg = "Add a line to " + filename
-        ret = self.run_function("git.commit", [self.repo, commit_msg])
+        commit_msg = f"Add a line to {filename}"
+        ret = self.run_function("git.commit", [self.repo, f'"{commit_msg}"'])
         # Make sure the expected line is in the output
-        self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
+        self.assertTrue(bool(re.search(commit_re_prefix, ret)))
+        self.assertTrue(bool(commit_msg in ret))
         # Add another line
         with salt.utils.files.fopen(os.path.join(self.repo, filename), "a") as fp_:
             fp_.write("Added another line\n")
         # Commit the second file without staging
-        commit_msg = "Add another line to " + filename
+        commit_msg = f"Add another line to {filename}"
         ret = self.run_function(
-            "git.commit", [self.repo, commit_msg], filename=filename
+            "git.commit", [self.repo, f'"{commit_msg}"'], filename=filename
         )
-        self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
+        self.assertTrue(bool(re.search(commit_re_prefix, ret)))
+        self.assertTrue(bool(commit_msg in ret))
 
     @pytest.mark.slow_test
     def test_config(self):
@@ -674,7 +676,7 @@ class GitModuleTest(ModuleCase):
             "ERROR",
             self.run_function(
                 "git.commit",
-                [self.repo, "Added a line to " + self.files[1]],
+                [self.repo, f'"Added a line to {self.files[1]}"'],
                 filename=self.files[1],
             ),
         )

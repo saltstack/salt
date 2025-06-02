@@ -1084,13 +1084,13 @@ def test_prep_powershell_cmd(cmd, parsed):
             win_shell="powershell", cmd=cmd, encoded_cmd=False
         )
         expected = [
-            "C:\\powershell.exe",
+            '"C:\\powershell.exe"',
             "-NonInteractive",
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            parsed,
+            f'"{parsed}"',
         ]
         assert ret == expected
 
@@ -1110,13 +1110,13 @@ def test_prep_powershell_cmd_encoded():
             win_shell="powershell", cmd=e_cmd, encoded_cmd=True
         )
         expected = [
-            "C:\\powershell.exe",
+            '"C:\\powershell.exe"',
             "-NonInteractive",
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-EncodedCommand",
-            f"{e_cmd}",
+            f'"{e_cmd}"',
         ]
         assert ret == expected
 
@@ -1135,13 +1135,13 @@ def test_prep_powershell_cmd_script():
             win_shell="powershell", cmd=script, encoded_cmd=False
         )
         expected = [
-            "C:\\powershell.exe",
+            '"C:\\powershell.exe"',
             "-NonInteractive",
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            f"& {script}; exit $LASTEXITCODE",
+            f'"& {script}; exit $LASTEXITCODE"',
         ]
         assert ret == expected
 
