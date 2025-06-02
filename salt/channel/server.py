@@ -130,9 +130,8 @@ class ReqServerChannel:
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
             log.error(
-                "payload and load must be a dict. Payload was: %s and load was %s",
+                "payload and load must be a dict. Payload was: %s",
                 payload,
-                payload.get("load"),
             )
             raise tornado.gen.Return("payload and load must be a dict")
 
@@ -153,45 +152,51 @@ class ReqServerChannel:
         if version > 1:
             sign_messages = True
 
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise tornado.gen.Return(self._auth(payload["load"], sign_messages))
-
-        nonce = None
-        if version > 1:
-            nonce = payload["load"].pop("nonce", None)
-
         # TODO: test
         try:
+            # intercept the "_auth" commands, since the main daemon shouldn't know
+            # anything about our key auth
+            if (
+                payload["enc"] == "clear"
+                and payload.get("load", {}).get("cmd") == "_auth"
+            ):
+                raise tornado.gen.Return(self._auth(payload["load"], sign_messages))
+
+            nonce = None
+            if version > 1:
+                nonce = payload["load"].pop("nonce", None)
+
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
             ret, req_opts = yield self.payload_handler(payload)
-        except Exception as e:  # pylint: disable=broad-except
+
+            req_fun = req_opts.get("fun", "send")
+            if req_fun == "send_clear":
+                raise tornado.gen.Return(ret)
+            elif req_fun == "send":
+                raise tornado.gen.Return(self.crypticle.dumps(ret, nonce))
+            elif req_fun == "send_private":
+                raise tornado.gen.Return(
+                    self._encrypt_private(
+                        ret,
+                        req_opts["key"],
+                        req_opts["tgt"],
+                        nonce,
+                        sign_messages,
+                        payload.get("enc_algo", salt.crypt.OAEP_SHA1),
+                        payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
+                    ),
+                )
+            log.error("Unknown req_fun %s", req_fun)
+
+            # always attempt to return an error to the minion
+            raise tornado.gen.Return("Server-side exception handling payload")
+        except tornado.gen.Return as exc:
+            raise
+        except Exception as exc:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
             raise tornado.gen.Return("Some exception handling minion payload")
-
-        req_fun = req_opts.get("fun", "send")
-        if req_fun == "send_clear":
-            raise tornado.gen.Return(ret)
-        elif req_fun == "send":
-            raise tornado.gen.Return(self.crypticle.dumps(ret, nonce))
-        elif req_fun == "send_private":
-            raise tornado.gen.Return(
-                self._encrypt_private(
-                    ret,
-                    req_opts["key"],
-                    req_opts["tgt"],
-                    nonce,
-                    sign_messages,
-                    payload.get("enc_algo", salt.crypt.OAEP_SHA1),
-                    payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
-                ),
-            )
-        log.error("Unknown req_fun %s", req_fun)
-        # always attempt to return an error to the minion
-        raise tornado.gen.Return("Server-side exception handling payload")
 
     def _encrypt_private(
         self,
