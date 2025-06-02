@@ -230,7 +230,7 @@ class BaseKey:
 class PrivateKey(BaseKey):
 
     def __init__(self, key_bytes, passphrase=None):
-        log.debug("salt.crypt.get_rsa_key: Loading private key")
+        log.debug("Loading private key")
         if passphrase:
             password = passphrase.encode()
         else:
@@ -279,7 +279,7 @@ class PrivateKey(BaseKey):
 
 class PublicKey(BaseKey):
     def __init__(self, key_bytes):
-        log.debug("salt.crypt.get_rsa_pub_key: Loading public key")
+        log.debug("Loading public key")
         try:
             self.key = serialization.load_pem_public_key(key_bytes)
         except ValueError:
@@ -349,13 +349,13 @@ def sign_message(privkey_path, message, passphrase=None, algorithm=PKCS1v15_SHA1
     return PrivateKey.from_file(privkey_path, passphrase).sign(message, algorithm)
 
 
-def verify_signature(key, message, signature, algorithm=PKCS1v15_SHA1):
+def verify_signature(pubkey_path, message, signature, algorithm=PKCS1v15_SHA1):
     """
     Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     """
-    log.debug("salt.crypt.verify_signature: Loading public key")
-    return PublicKey.from_file(key).verify(message, signature, algorithm)
+    log.debug("Loading public key")
+    return PublicKey.from_file(pubkey_path).verify(message, signature, algorithm)
 
 
 def pwdata_decrypt(rsa_key, pwdata):
