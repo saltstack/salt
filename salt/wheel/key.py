@@ -33,10 +33,10 @@ import salt.cache
 import salt.crypt
 import salt.key
 import salt.utils.crypt
-import salt.utils.files
+import salt.utils.versions
 from salt.utils.sanitizers import clean
 
-__func_alias__ = {"list_": "list", "key_str": "print", "name_match": "glob_match"}
+__func_alias__ = {"list_": "list", "key_str": "print"}
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +75,18 @@ def list_all():
     """
     with salt.key.get_key(__opts__) as skey:
         return skey.all_keys()
+
+
+def name_match(match):
+    """
+    Alias to glob_match
+    """
+    salt.utils.versions.warn_until(
+        3010,
+        "'wheel.key.name_match' has been renamed to 'wheel.key.glob_match', and will be removed in the Calcium release."
+        "Please update your workflows to use glob_match instead.",
+    )
+    return glob_match(match)
 
 
 def glob_match(match):
