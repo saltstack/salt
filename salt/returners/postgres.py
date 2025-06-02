@@ -128,6 +128,9 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
 import logging
 import sys
+import ast
+import subprocess
+import json
 from contextlib import contextmanager
 
 import salt.exceptions
@@ -269,6 +272,25 @@ def event_return(events):
             cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__["id"]))
 
 
+def all_minions(tgt,tgt_type):
+    """
+    Retrive all the minions which are expected to return for a job based of the target or target type passed.
+    """
+    if tgt_type == 'glob':
+        salt_command = ['salt',tgt,'--preview-target','--out=text']
+    elif tgt_type == 'compound' or tgt_type == 'list' or tgt_type == 'grain':
+        if tgt_type == "compound":
+            tgt_type = '-C'
+        elif tgt_type == "list":
+            return tgt
+        elif tgt_type == "grain":
+            tgt_type = '-G'
+        salt_command=['salt',tgt_type,tgt,'--preview-target','--out=text']
+    result = subprocess.run(salt_command, capture_output=True, text=True, check=True)
+    minions= ast.literal_eval(result.stdout)
+    return minions
+
+
 def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
     """
     Save the load to the specified jid id
@@ -280,6 +302,10 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
                 VALUES (%s, %s)"""
 
         json_data = salt.utils.json.dumps(salt.utils.data.decode(load))
+        load_dict = json.loads(json_data)
+        if load_dict.get('tgt') and load_dict.get('tgt_type') is not None:
+            load_dict['Minions'] = all_minions(load_dict['tgt'], load_dict['tgt_type'])  #add a key 'Minions' containing list of minions which are expected to return
+        json_data = json.dumps(load_dict)
         try:
             cur.execute(sql, (jid, json_data))
         except psycopg2.IntegrityError:
