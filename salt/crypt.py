@@ -435,7 +435,7 @@ class MasterKeys(dict):
                 self.cache.flush("master_keys", "master.pub")
 
                 # lets create symlinks in case a user downgrades back to a previous version
-                if self.opts["keys.cache_driver"] == "localfs_key_backcompat":
+                if self.opts["keys.cache_driver"] == "localfs_key":
                     os.symlink(
                         os.path.join(self.opts["pki_dir"], f"{self.master_id}.pem"),
                         os.path.join(self.opts["pki_dir"], "master.pem"),
@@ -456,7 +456,7 @@ class MasterKeys(dict):
         if self.opts["master_sign_pubkey"]:
             # if only the signature is available, use that
             if self.opts["master_use_pubkey_signature"]:
-                if self.opts["keys.cache_driver"] == "localfs_key_backcompat":
+                if self.opts["keys.cache_driver"] == "localfs_key":
                     sig_path = os.path.join(
                         self.opts["pki_dir"], self.master_pubkey_signature
                     )
@@ -510,7 +510,7 @@ class MasterKeys(dict):
 
         path = name + ".pem"
         # try to make the error messaging more obvious
-        if self.opts["keys.cache_driver"] == "localfs_key_backcompat":
+        if self.opts["keys.cache_driver"] == "localfs_key":
             path = os.path.join(self.cache._kwargs["cachedir"], name + ".pem")
         else:
             path = f"{self.opts['keys.cache_driver']}:master_keys/{self.master_id}.pub"
@@ -575,7 +575,7 @@ class MasterKeys(dict):
         to the shared location. Otherwise validate the shared key matches our
         key. Failed validation raises MasterExit
         """
-        if self.opts["keys.cache_driver"] == "localfs_key_backcompat":
+        if self.opts["keys.cache_driver"] == "localfs_key":
             shared_path = os.path.join(
                 self.opts["cluster_pki_dir"], "peers", f"{self.master_id}.pub"
             )
@@ -608,9 +608,9 @@ class MasterKeys(dict):
         """
         # we need to replace the path if sign_path is specified
         if sign_path:
-            if self.opts["keys.cache_driver"] != "localfs_key_backcompat":
+            if self.opts["keys.cache_driver"] != "localfs_key":
                 log.error(
-                    "You seem to be calling salt.crypt.MasterKeys.gen_signature() with a signature-path override, but are not using localfs_key_backcompat. This probably isn't doing what you intended"
+                    "You seem to be calling salt.crypt.MasterKeys.gen_signature() with a signature-path override, but are not using localfs_key. This probably isn't doing what you intended"
                 )
             cache = salt.cache.Cache(
                 self.opts,

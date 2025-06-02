@@ -25,7 +25,7 @@ def configure_loader_modules():
                 "pillar_cache": True,
                 "pillar_cache_backend": "disk",
                 "pillar_cache_ttl": 30,
-                "keys.cache_driver": "localfs_key_backcompat",
+                "keys.cache_driver": "localfs_key",
                 "__role": "master",
             }
         }
