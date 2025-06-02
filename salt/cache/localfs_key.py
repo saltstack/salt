@@ -3,7 +3,7 @@ Backward compatible shim layer for pki interaction
 
 .. versionadded:: 3008.0
 
-The ``localfs_keys_backcompat`` is a shim driver meant to allow the salt.cache
+The ``localfs_key`` is a shim driver meant to allow the salt.cache
 subsystem to interact with the existing master pki folder/file structure
 without any migration from previous versions of salt.  It is not meant for
 general purpose use and should not be used outside of the master auth system.
@@ -123,7 +123,7 @@ def store(bank, key, data, cachedir, user, **kwargs):
     savefn = Path(cachedir) / base / key
     base = savefn.parent
 
-    if not clean_path(cachedir, savefn, subdir=True):
+    if not clean_path(cachedir, str(savefn), subdir=True):
         raise SaltCacheError(f"key {key} is not a valid key path.")
 
     try:
@@ -191,6 +191,9 @@ def fetch(bank, key, cachedir, **kwargs):
             ]:
                 keyfile = Path(cachedir, bank, key)
 
+                if not clean_path(cachedir, str(keyfile), subdir=True):
+                    raise SaltCacheError(f"key {key} is not a valid key path.")
+
                 if keyfile.is_file() and not keyfile.is_symlink():
                     with salt.utils.files.fopen(keyfile, "r") as fh_:
                         return {"state": state, "pub": fh_.read()}
@@ -200,6 +203,9 @@ def fetch(bank, key, cachedir, **kwargs):
             # with the filesystem, so return a list of 1
             pubfn_denied = os.path.join(cachedir, "minions_denied", key)
 
+            if not clean_path(cachedir, pubfn_denied, subdir=True):
+                raise SaltCacheError(f"key {key} is not a valid key path.")
+
             if os.path.isfile(pubfn_denied):
                 with salt.utils.files.fopen(pubfn_denied, "r") as fh_:
                     return [fh_.read()]
@@ -208,6 +214,9 @@ def fetch(bank, key, cachedir, **kwargs):
                 cachedir = __opts__["pki_dir"]
 
             keyfile = Path(cachedir, key)
+
+            if not clean_path(cachedir, str(keyfile), subdir=True):
+                raise SaltCacheError(f"key {key} is not a valid key path.")
 
             if keyfile.is_file() and not keyfile.is_symlink():
                 with salt.utils.files.fopen(keyfile, "r") as fh_:
@@ -243,7 +252,7 @@ def updated(bank, key, cachedir, **kwargs):
     for dir in bases:
         keyfile = Path(cachedir, dir, key)
 
-        if not clean_path(cachedir, keyfile, subdir=True):
+        if not clean_path(cachedir, str(keyfile), subdir=True):
             raise SaltCacheError(f"key {key} is not a valid key path.")
 
         if keyfile.is_file() and not keyfile.is_symlink():
@@ -336,10 +345,13 @@ def list_(bank, cachedir, **kwargs):
             )
         for item in items:
             # salt foolishly dumps a file here for key cache, ignore it
-            if bank in ["keys", "denied_keys"] and not valid_id(__opts__, item):
+            keyfile = Path(cachedir, base, item)
+
+            if (
+                bank in ["keys", "denied_keys"] and not valid_id(__opts__, item)
+            ) or not clean_path(cachedir, str(keyfile), subdir=True):
                 log.error("saw invalid id %s, discarding", item)
 
-            keyfile = Path(cachedir, base, item)
             if keyfile.is_file() and not keyfile.is_symlink():
                 ret.append(item)
     return ret
@@ -366,7 +378,7 @@ def contains(bank, key, cachedir, **kwargs):
     for base in bases:
         keyfile = Path(cachedir, base, key)
 
-        if not clean_path(cachedir, keyfile, subdir=True):
+        if not clean_path(cachedir, str(keyfile), subdir=True):
             raise SaltCacheError(f"key {key} is not a valid key path.")
 
         if keyfile.is_file() and not keyfile.is_symlink():

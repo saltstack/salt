@@ -1874,10 +1874,15 @@ class AESFuncs(TransportMethods):
             sig = load.pop("sig")
             this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not salt.crypt.verify_signature(
-                this_minion_pubkey, serialized_load, sig
+            if not this_minion_pubkey or not this_minion_pubkey.verify(
+                serialized_load, sig
             ):
-                log.info("Failed to verify event signature from minion %s.", load["id"])
+                if not this_minion_pubkey:
+                    log.error("Failed to fetch pub key for minion %s.", load["id"])
+                else:
+                    log.info(
+                        "Failed to verify event signature from minion %s.", load["id"]
+                    )
                 if self.opts["drop_messages_signature_fail"]:
                     log.critical(
                         "drop_messages_signature_fail is enabled, dropping "
