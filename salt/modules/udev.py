@@ -178,7 +178,7 @@ def exportdb(subsystems=None):
     :param list subsystems: This parameter limits the returned data to specified
         subsystems such as "pci", "usb", "block", etc.
 
-        .. versionadded :: 3008
+        .. versionadded :: 3008.0
 
     CLI Example:
 
