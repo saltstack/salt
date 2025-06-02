@@ -18,7 +18,7 @@ def configure_loader_modules(tmp_path):
             "cache": "localfs",
             "pki_dir": str(tmp_path),
             "key_cache": True,
-            "keys.cache_driver": "localfs_key_backcompat",
+            "keys.cache_driver": "localfs_key",
             "__role": "master",
         }
     )

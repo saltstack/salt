@@ -615,7 +615,7 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
                 "extension_modules": "/tmp/testing/moduuuuules",
                 "order_masters": False,
                 "gather_job_timeout": 10.001,
-                "keys.cache_driver": "localfs_key_backcompat",
+                "keys.cache_driver": "localfs_key",
                 "__role": "master",
             }
         )

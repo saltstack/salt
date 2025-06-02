@@ -74,7 +74,7 @@ def encrypted_requests(tmp_path):
             "conf_file": str(tmp_path / "config.conf"),
             "fileserver_backend": "local",
             "master_job_cache": False,
-            "keys.cache_driver": "localfs_key_backcompat",
+            "keys.cache_driver": "localfs_key",
             "__role": "master",
         }
     )
@@ -120,7 +120,7 @@ def test_maintenance_duration():
         "master_job_cache": "",
         "pki_dir": "/tmp",
         "eauth_tokens": "",
-        "keys.cache_driver": "localfs_key_backcompat",
+        "keys.cache_driver": "localfs_key",
         "__role": "master",
     }
     mp = salt.master.Maintenance(opts)

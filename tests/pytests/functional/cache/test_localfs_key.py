@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="function")
 def cache(minion_opts):
     opts = minion_opts.copy()
-    opts["cache"] = "localfs_key_backcompat"
+    opts["cache"] = "localfs_key"
     cache = salt.cache.factory(opts)
     try:
         yield cache
