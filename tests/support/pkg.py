@@ -1519,6 +1519,20 @@ class SaltMasterWindows(SaltMaster):
             code_dir=self.factories_manager.code_dir.parent,
         )
 
+        # XXX: Add install path to cli_scripts.generate_scripts?
+        def patch_script(script):
+            text = script.read_text()
+            newlines = []
+            for line in text.splitlines():
+                newlines.append(line)
+                if line == "sys.path.insert(0, CODE_DIR)":
+                    newlines.append(
+                        'sys.path.insert(0, "C:\\Program Files\\Salt Project\\Salt\\Lib\\site-packages")'
+                    )
+            script.write_text(os.linesep.join(newlines))
+
+        patch_script(self.factories_manager.scripts_dir / "cli_salt_master.py")
+
     def _get_impl_class(self):
         return DaemonImpl
 
