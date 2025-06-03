@@ -201,6 +201,10 @@ google-auth==2.27.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   kubernetes
+greenlet==3.2.3
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   sqlalchemy
 idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -433,6 +437,10 @@ psutil==5.9.6 ; python_version >= "3.10"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.2.9
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
 pyasn1-modules==0.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -684,6 +692,10 @@ smmap==5.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   gitdb
+sqlalchemy==2.0.41
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
 sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -743,7 +755,9 @@ typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   napalm
+    #   psycopg
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
