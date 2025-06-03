@@ -202,7 +202,7 @@ def test_salt_systemd_masked_preservation(
     salt_call_cli, install_salt, salt_systemd_setup, salt_systemd_mask_services
 ):
     """
-    Test upgrade of Salt packages preserve masked state of systemd services
+    Test upgrade of Salt packages preserves masked state of systemd services
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
@@ -222,7 +222,6 @@ def test_salt_systemd_masked_preservation(
         assert test_masked == "masked"
 
 
-@pytest.mark.skip(reason="Broken test")
 def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_setup):
     """
     Test upgrade of Salt packages preserve existing ownership
@@ -233,36 +232,19 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
-        if "salt-api" == test_item:
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            assert test_user == "salt"
+        test_cmd = f"ls -dl /run/{test_item}.pid"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            assert test_group == "salt"
+        test_user = ret.stdout.strip().split()[4]
+        test_group = ret.stdout.strip().split()[5]
+
+        if test_item == "salt-minion":
+            assert test_user == "root"
+            assert test_group == "root"
         else:
-            test_name = test_item.strip().split("-")[1]
-            test_cmd = f"ls -dl /run/salt/{test_name}"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_user == "root"
-            else:
-                assert test_user == "salt"
-
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_group == "root"
-            else:
-                assert test_group == "salt"
+            assert test_user == "salt"
+            assert test_group == "salt"
 
     # create master user, and minion user, change conf, restart and test ownership
     test_master_user = "horse"
@@ -303,36 +285,19 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     # test ownership for Minion, Master and Api - horse and donkey
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
-        if "salt-api" == test_item:
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            assert test_user == f"{test_master_user}"
+        test_cmd = f"ls -dl /run/{test_item}.pid"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            assert test_group == f"{test_master_user}"
+        test_user = ret.stdout.strip().split()[4]
+        test_group = ret.stdout.strip().split()[5]
+
+        if test_item == "salt-minion":
+            assert test_user == f"{test_minion_user}"
+            assert test_group == f"{test_minion_user}"
         else:
-            test_name = test_item.strip().split("-")[1]
-            test_cmd = f"ls -dl /run/salt/{test_name}"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_user == f"{test_minion_user}"
-            else:
-                assert test_user == f"{test_master_user}"
-
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_group == f"{test_minion_user}"
-            else:
-                assert test_group == f"{test_master_user}"
+            assert test_user == f"{test_master_user}"
+            assert test_group == f"{test_master_user}"
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
@@ -342,36 +307,19 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
     for test_item in test_list:
-        if "salt-api" == test_item:
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            assert test_user == f"{test_master_user}"
+        test_cmd = f"ls -dl /run/{test_item}.pid"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
 
-            test_cmd = f"ls -dl /run/{test_item}.pid"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            assert test_group == f"{test_master_user}"
+        test_user = ret.stdout.strip().split()[4]
+        test_group = ret.stdout.strip().split()[5]
+
+        if test_item == "salt-minion":
+            assert test_user == f"{test_minion_user}"
+            assert test_group == f"{test_minion_user}"
         else:
-            test_name = test_item.strip().split("-")[1]
-            test_cmd = f"ls -dl /run/salt/{test_name}"
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_user = ret.stdout.strip().split()[4]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_user == f"{test_minion_user}"
-            else:
-                assert test_user == f"{test_master_user}"
-
-            ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
-            test_group = ret.stdout.strip().split()[5]
-            assert ret.returncode == 0
-            if test_item == "salt-minion":
-                assert test_group == f"{test_minion_user}"
-            else:
-                assert test_group == f"{test_master_user}"
+            assert test_user == f"{test_master_user}"
+            assert test_group == f"{test_master_user}"
 
     # restore to defaults to ensure further tests run fine
     ret = salt_call_cli.run(
