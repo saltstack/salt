@@ -17,8 +17,17 @@ def test_salt_ownership_permission(salt_call_cli, install_salt, salt_systemd_set
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    # test ownership for Minion, Master and Api
     test_list = ["salt-api", "salt-minion", "salt-master"]
+
+    # ensure services are started
+    for test_item in test_list:
+        test_cmd = f"systemctl restart {test_item}"
+        ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
+        assert ret.returncode == 0
+
+    time.sleep(10)  # allow some time for restart
+
+    # test ownership for Minion, Master and Api
     for test_item in test_list:
         test_cmd = f"ls -dl /run/{test_item}.pid"
         ret = salt_call_cli.run("--local", "cmd.run", test_cmd)
