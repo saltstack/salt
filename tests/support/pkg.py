@@ -528,6 +528,13 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            if self.distro_id == "photon":
+                ret = self.proc.run(
+                    "rpm",
+                    "--import",
+                    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+                )
+                self._check_retcode(ret)
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
 
@@ -681,25 +688,36 @@ class SaltPkgInstall:
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
 
-            if "3007" in self.prev_version:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--enable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-            else:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--disable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-
-            if self.distro_name == "photon":
-                # yum version on photon doesn't support expire-cache
-                ret = self.proc.run(self.pkg_mngr, "clean", "all")
-            else:
-                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
-            self._check_retcode(ret)
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
+
+            if self.distro_name == "photon":
+                orig_pkgs = pkgs_to_install[:]
+                pkgs_to_install = []
+                for _ in orig_pkgs:
+                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+                self._check_retcode(ret)
+            else:
+                if "3007" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+                self._check_retcode(ret)
+
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
                 # So we explicitly install the correct version here
@@ -1500,6 +1518,20 @@ class SaltMasterWindows(SaltMaster):
             script_name="salt-master",
             code_dir=self.factories_manager.code_dir.parent,
         )
+
+        # XXX: Add install path to cli_scripts.generate_scripts?
+        def patch_script(script):
+            text = script.read_text()
+            newlines = []
+            for line in text.splitlines():
+                newlines.append(line)
+                if line == "sys.path.insert(0, CODE_DIR)":
+                    newlines.append(
+                        'sys.path.insert(0, "C:\\Program Files\\Salt Project\\Salt\\Lib\\site-packages")'
+                    )
+            script.write_text(os.linesep.join(newlines))
+
+        patch_script(self.factories_manager.scripts_dir / "cli_salt_master.py")
 
     def _get_impl_class(self):
         return DaemonImpl
