@@ -1,3 +1,13 @@
+salt (3007.3) stable; urgency=medium
+
+
+  # Added
+
+  * Added the ability to configure the cluster event port and added documentation for it [#66627](https://github.com/saltstack/salt/issues/66627)
+
+
+ -- Salt Project Packaging <saltproject-packaging@vmware.com>  Wed, 04 Jun 2025 10:16:34 +0000
+
 salt (3006.11) stable; urgency=medium
 
   # Fixed

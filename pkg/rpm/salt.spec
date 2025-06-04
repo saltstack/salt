@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.2
+Version: 3007.3
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -734,6 +734,13 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Wed Jun 04 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.3
+
+# Added
+
+- Added the ability to configure the cluster event port and added documentation for it [#66627](https://github.com/saltstack/salt/issues/66627)
+
+
 * Mon Jun 02 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.11
 
 # Fixed

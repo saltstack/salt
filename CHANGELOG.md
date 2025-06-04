@@ -7,6 +7,14 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3007.3 (2025-06-04)
+
+
+### Added
+
+- Added the ability to configure the cluster event port and added documentation for it [#66627](https://github.com/saltstack/salt/issues/66627)
+
+
 ## 3007.2 (2025-05-13)
 ## 3006.11 (2025-06-02)
 
