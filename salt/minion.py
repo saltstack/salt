@@ -3868,7 +3868,6 @@ class SyndicManager(MinionBase):
                     "events": events,
                     "pretag": tagify(self.opts["id"], base="syndic"),
                     "timeout": self._return_retry_timer(),
-                    "sync": True,  # Sync needs to be true unless being called from a coroutine
                 },
             )
         if self.delayed:
