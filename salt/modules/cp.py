@@ -979,7 +979,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__.value()) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
