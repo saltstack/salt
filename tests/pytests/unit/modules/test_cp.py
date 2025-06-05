@@ -142,7 +142,9 @@ def test_push():
     ), patch.multiple(
         "salt.modules.cp",
         _auth=MagicMock(**{"return_value.gen_token.return_value": "token"}),
-        __opts__={"id": "abc", "file_buffer_size": 10},
+        __opts__=salt.loader.dunder.__opts__.with_default(
+            {"id": "abc", "file_buffer_size": 10}
+        ),
     ), patch(
         "salt.utils.files.fopen", mock_open(read_data=b"content")
     ) as m_open, patch(
