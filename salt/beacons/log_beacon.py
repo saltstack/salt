@@ -117,7 +117,7 @@ def beacon(config):
         fp_.seek(loc)
 
         txt = fp_.read()
-        log.info("txt %s", txt)
+        log.trace("txt %s", txt)
 
         d = {}
         for tag in config.get("tags", {}):
