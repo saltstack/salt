@@ -930,7 +930,7 @@ class PubServerChannel:
 
         # If topics are upported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
-        if self.transport.topic_support and load["tgt_type"] in match_targets:
+        if self.transport.topic_support() and load["tgt_type"] in match_targets:
             # add some targeting stuff for lists only (for now)
             if load["tgt_type"] == "list":
                 int_payload["topic_lst"] = load["tgt"]
@@ -1075,7 +1075,7 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
-    async def handle_pool_publish(self, payload, _):
+    async def handle_pool_publish(self, payload):
         """
         Handle incomming events from cluster peer.
         """
