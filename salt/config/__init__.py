@@ -1013,6 +1013,8 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        "request_server_ttl": int,
+        "request_server_aes_session": int,
     }
 )
 
@@ -1673,6 +1675,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "request_server_aes_session": 0,
+        "request_server_ttl": 0,
     }
 )
 

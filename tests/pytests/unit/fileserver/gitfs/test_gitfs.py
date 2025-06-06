@@ -185,7 +185,7 @@ def cache_dir(tmp_path):
 def configure_loader_modules(provider, sock_dir, repo_dir, cache_dir):
     opts = {
         "sock_dir": str(sock_dir),
-        "gitfs_remotes": ["file://" + str(repo_dir)],
+        "gitfs_remotes": [f"file://{repo_dir}"],
         "cachedir": str(cache_dir),
         "gitfs_root": "",
         "fileserver_backend": ["gitfs"],
@@ -346,7 +346,7 @@ def test_ref_types_per_remote(repo_dir, unicode_dirname, tag_name):
     Test the per_remote ref_types config option, using a different
     ref_types setting than the global test.
     """
-    remotes = [{"file://" + repo_dir: [{"ref_types": ["tag"]}]}]
+    remotes = [{f"file://{repo_dir}": [{"ref_types": ["tag"]}]}]
     with patch.dict(gitfs.__opts__, {"gitfs_remotes": remotes}):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
@@ -433,7 +433,7 @@ def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(repo_dir
     opts = {
         "gitfs_disable_saltenv_mapping": True,
         "gitfs_remotes": [
-            {repo_dir: [{"saltenv": [{"bar": [{"ref": "somebranch"}]}]}]}
+            {f"file://{repo_dir}": [{"saltenv": [{"bar": [{"ref": "somebranch"}]}]}]}
         ],
     }
     with patch.dict(gitfs.__opts__, opts):
@@ -452,7 +452,7 @@ def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(repo_d
     option.
     """
     opts = {
-        "gitfs_remotes": [{repo_dir: [{"disable_saltenv_mapping": True}]}],
+        "gitfs_remotes": [{f"file://{repo_dir}": [{"disable_saltenv_mapping": True}]}],
         "gitfs_saltenv": [{"hello": [{"ref": "somebranch"}]}],
     }
 
@@ -474,7 +474,7 @@ def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(repo
     opts = {
         "gitfs_remotes": [
             {
-                repo_dir: [
+                f"file://{repo_dir}": [
                     {"disable_saltenv_mapping": True},
                     {"saltenv": [{"world": [{"ref": "somebranch"}]}]},
                 ]
