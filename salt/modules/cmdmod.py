@@ -417,7 +417,7 @@ def _run(
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = f"The shell {shell} is not available"
             raise CommandExecutionError(msg)
-    elif use_vt:  # Memoization so not much overhead
+    elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
         if windows_codepage:
