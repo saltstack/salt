@@ -1069,6 +1069,10 @@ def test_prep_powershell_cmd_no_powershell():
         ("Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
         ("try {this} catch {that}", "try {this} catch {that}"),
+        (
+            "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
+            "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
+        ),
     ],
 )
 @pytest.mark.skip_unless_on_windows
