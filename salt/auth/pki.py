@@ -73,7 +73,7 @@ def auth(username, password, **kwargs):
               - .*
     """
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "This module has been deprecated as it is known to be insecure.",
     )
     pem = password
