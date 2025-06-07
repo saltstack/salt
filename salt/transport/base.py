@@ -450,13 +450,14 @@ def ssl_context(ssl_options, server_side=False):
     backwards compatability older ssl config settings but adds verify_locations
     and verify_flags options.
     """
-    default_version = ssl.PROTOCOL_TLS
     if server_side:
         default_version = ssl.PROTOCOL_TLS_SERVER
         purpose = ssl.Purpose.CLIENT_AUTH
     elif server_side is not None:
         default_version = ssl.PROTOCOL_TLS_CLIENT
         purpose = ssl.Purpose.SERVER_AUTH
+    else:
+        raise ValueError("server_side must be True or False")
     # Use create_default_context to start with what Python considers resonably
     # secure settings.
     context = ssl.create_default_context(purpose)
