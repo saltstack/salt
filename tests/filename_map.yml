@@ -45,9 +45,6 @@ salt/modules/*apache.py:
   - pytests.unit.states.apache.test_module
   - pytests.unit.states.apache.test_site
 
-salt/modules/augeas_cfg.py:
-  - pytests.unit.states.test_augeas
-
 salt/platform/win.py:
   - pytests.unit.platform.test_win
 
@@ -71,18 +68,6 @@ salt/modules/file.py:
 
 salt/modules/win_file.py:
   - pytests.functional.modules.test_win_file
-
-salt/modules/influxdb08mod.py:
-  - pytests.unit.states.test_influxdb08_database
-  - pytests.unit.states.test_influxdb08_user
-
-salt/modules/mysql.py:
-  - pytests.unit.states.mysql.test_user
-  - pytests.unit.states.mysql.test_query
-  - pytests.unit.states.mysql.test_grants
-
-salt/modules/openvswitch.py:
-  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
   - pytests.unit.states.postgresql.test_cluster
