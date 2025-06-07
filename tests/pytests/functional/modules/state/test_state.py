@@ -716,6 +716,30 @@ def test_retry_option(state, state_tree):
             assert state_return.full_return["duration"] >= 3
 
 
+def test_retry_option_is_true(state, state_tree):
+    """
+    test the retry: True on a simple state with defaults
+    ensure comment is as expected
+    ensure state duration is greater than configured the passed (interval * attempts)
+    """
+    sls_contents = """
+    file_test:
+      file.exists:
+        - name: /path/to/a/non-existent/file.txt
+        - retry: True
+    """
+    expected_comment = (
+        'Attempt 1: Returned a result of "False", with the following '
+        'comment: "Specified path /path/to/a/non-existent/file.txt does not exist"'
+    )
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        ret = state.sls("retry")
+        for state_return in ret:
+            assert state_return.result is False
+            assert expected_comment in state_return.comment
+            assert state_return.full_return["duration"] >= 3
+
+
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_retry_option_success(state, state_tree, tmp_path):
     """

@@ -7,7 +7,16 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3007.3 (2025-06-04)
+
+
+### Added
+
+- Added the ability to configure the cluster event port and added documentation for it [#66627](https://github.com/saltstack/salt/issues/66627)
+
+
 ## 3007.2 (2025-05-13)
+## 3006.11 (2025-06-02)
 
 
 ### Fixed
@@ -40,6 +49,14 @@ Versions are `MAJOR.PATCH`.
   `pkg.list_available` function instead for Windows. [#67171](https://github.com/saltstack/salt/issues/67171)
 - Made the correct PKI directory available for key_cache use [#67185](https://github.com/saltstack/salt/issues/67185)
 - Removed support for end of life Python 3.8 from pre-commit and requirements [#67730](https://github.com/saltstack/salt/issues/67730)
+- Fixes an issue with cmd.run where the command is a built-in command and must be
+  run with cmd. [#54821](https://github.com/saltstack/salt/issues/54821)
+- Show a better error when running cmd.* commands using runas and the
+  runas user does not exist [#56680](https://github.com/saltstack/salt/issues/56680)
+- Make sure the comment field is populated when test=True for the reg state [#65514](https://github.com/saltstack/salt/issues/65514)
+- Fixed result detection of module.run from returned dict [#65842](https://github.com/saltstack/salt/issues/65842)
+- Fix an issue with the osrelease_info grain that was displaying empty strings [#66936](https://github.com/saltstack/salt/issues/66936)
+- support retry: True as per docs [#67049](https://github.com/saltstack/salt/issues/67049)
 - Fixed if arguments are passed to the key delete all, -D, it will throw an error [#67903](https://github.com/saltstack/salt/issues/67903)
 - Set virtual grain for docker using systemd and virt-what [#67905](https://github.com/saltstack/salt/issues/67905)
 - Remove broken salt-common bash-completion links in root filesystem [#67915](https://github.com/saltstack/salt/issues/67915)
