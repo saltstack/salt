@@ -9,7 +9,11 @@ import salt.cache
 import salt.loader
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
-docker = pytest.importorskip("docker")
+pytest.importorskip(
+    "consul",
+    reason="Please install python-consul package to use consul data cache driver",
+)
+docker = pytest.importorskip("docker", minversion="4.0.0")
 
 log = logging.getLogger(__name__)
 
