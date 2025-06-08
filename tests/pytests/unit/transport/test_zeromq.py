@@ -357,6 +357,98 @@ class MockSaltMinionMaster:
         raise tornado.gen.Return((payload, {"fun": "send_clear"}))
 
 
+def test_master_uri():
+    """
+    test _get_master_uri method
+    """
+
+    m_ip = "127.0.0.1"
+    m_port = 4505
+    s_ip = "111.1.0.1"
+    s_port = 4058
+
+    m_ip6 = "1234:5678::9abc"
+    s_ip6 = "1234:5678::1:9abc"
+
+    with patch("salt.transport.zeromq.LIBZMQ_VERSION_INFO", (4, 1, 6)), patch(
+        "salt.transport.zeromq.ZMQ_VERSION_INFO", (16, 0, 1)
+    ):
+        # pass in both source_ip and source_port
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip, source_port=s_port
+            )
+            == f"tcp://{s_ip}:{s_port};{m_ip}:{m_port}"
+        )
+
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6, source_port=s_port
+            )
+            == f"tcp://[{s_ip6}]:{s_port};[{m_ip6}]:{m_port}"
+        )
+
+        # source ip and source_port empty
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip, master_port=m_port)
+            == f"tcp://{m_ip}:{m_port}"
+        )
+
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip6, master_port=m_port)
+            == f"tcp://[{m_ip6}]:{m_port}"
+        )
+
+        # pass in only source_ip
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip
+            )
+            == f"tcp://{s_ip}:0;{m_ip}:{m_port}"
+        )
+
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6
+            )
+            == f"tcp://[{s_ip6}]:0;[{m_ip6}]:{m_port}"
+        )
+
+        # pass in only source_port
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_port=s_port
+            )
+            == f"tcp://0.0.0.0:{s_port};{m_ip}:{m_port}"
+        )
+
+
+def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_master):
+    """
+    ensure master_uri kwarg is respected
+    """
+    opts = temp_salt_minion.config.copy()
+    # minion_config should be 127.0.0.1, we want a different uri that still connects
+    opts.update(
+        {
+            "id": "root",
+            "transport": "zeromq",
+            "auth_tries": 1,
+            "auth_timeout": 5,
+            "master_ip": "127.0.0.1",
+            "master_port": temp_salt_master.config["ret_port"],
+            "master_uri": "tcp://127.0.0.1:{}".format(
+                temp_salt_master.config["ret_port"]
+            ),
+        }
+    )
+    master_uri = "tcp://{master_ip}:{master_port}".format(
+        master_ip="localhost", master_port=opts["master_port"]
+    )
+    with salt.channel.client.ReqChannel.factory(opts, master_uri=master_uri) as channel:
+        assert "127.0.0.1" in channel.transport.master_uri
+
+
 @pytest.mark.parametrize("message", ["", [], ()])
 def test_badload(temp_salt_minion, temp_salt_master, message):
     """
@@ -1633,3 +1725,228 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
             client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
+
+
+def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, caplog):
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "master_sign_pubkey": False,
+            "publish_port": 4505,
+            "auth_mode": 1,
+        }
+    )
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    pub = salt.crypt.PublicKey(str(pki_dir.joinpath("master", "master.pub")))
+    token = pub.encrypt(
+        salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        algorithm=minion_opts["encryption_algorithm"],
+    )
+    nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(
+        str(pki_dir.joinpath("minion", "minion.pub")), "r"
+    ) as fp:
+        pub_key = salt.crypt.clean_key(fp.read())
+
+    load = {
+        "version": 2,
+        "cmd": "_auth",
+        "id": "minion",
+        "token": token,
+        "pub": pub_key,
+        "nonce": "asdfse",
+        "enc_algo": minion_opts["encryption_algorithm"],
+        "sig_algo": "IAMNOTANALGO",
+    }
+    with caplog.at_level(logging.INFO):
+        ret = server._auth(load, sign_messages=True)
+        assert (
+            "Minion tried to authenticate with unsupported signing algorithm: IAMNOTANALGO"
+            in caplog.text
+        )
+        assert "load" in ret
+        assert "ret" in ret["load"]
+        assert ret["load"]["ret"] == "bad sig algo"
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
+def test_req_server_auth_unsupported_enc_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "master_sign_pubkey": False,
+            "publish_port": 4505,
+            "auth_mode": 1,
+        }
+    )
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    import tests.pytests.unit.crypt
+
+    pub = tests.pytests.unit.crypt.LegacyPublicKey(
+        str(pki_dir.joinpath("master", "master.pub"))
+    )
+    token = pub.encrypt(
+        salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+    )
+    nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(
+        str(pki_dir.joinpath("minion", "minion.pub")), "r"
+    ) as fp:
+        pub_key = salt.crypt.clean_key(fp.read())
+
+    load = {
+        "version": 2,
+        "cmd": "_auth",
+        "id": "minion",
+        "token": token,
+        "pub": pub_key,
+        "nonce": "asdfse",
+        "enc_algo": "OAEP-SHA1",
+        "sig_algo": minion_opts["signing_algorithm"],
+    }
+    with caplog.at_level(logging.INFO):
+        ret = server._auth(load, sign_messages=True)
+        assert (
+            "Minion minion tried to authenticate with unsupported encryption algorithm: OAEP-SHA1"
+            in caplog.text
+        )
+        assert "load" in ret
+        assert "ret" in ret["load"]
+        assert ret["load"]["ret"] == "bad enc algo"
+
+
+def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, caplog):
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "master_sign_pubkey": False,
+            "publish_port": 4505,
+            "auth_mode": 1,
+        }
+    )
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    import tests.pytests.unit.crypt
+
+    pub = tests.pytests.unit.crypt.LegacyPublicKey(
+        str(pki_dir.joinpath("master", "master.pub"))
+    )
+    token = pub.encrypt(
+        salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+    )
+    nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(
+        str(pki_dir.joinpath("minion", "minion.pub")), "r"
+    ) as fp:
+        pub_key = salt.crypt.clean_key(fp.read())
+
+    load = {
+        "version": 2,
+        "cmd": "_auth",
+        "id": "minion",
+        "token": token,
+        "pub": pub_key,
+        "nonce": "asdfse",
+        "enc_algo": "IAMNOTAENCALGO",
+        "sig_algo": minion_opts["signing_algorithm"],
+    }
+    with caplog.at_level(logging.INFO):
+        ret = server._auth(load, sign_messages=True)
+        assert (
+            "Minion minion tried to authenticate with unsupported encryption algorithm: IAMNOTAENCALGO"
+            in caplog.text
+        )
+        assert "load" in ret
+        assert "ret" in ret["load"]
+        assert ret["load"]["ret"] == "bad enc algo"
