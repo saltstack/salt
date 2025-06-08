@@ -316,6 +316,7 @@ def test_aes_funcs_black(master_opts):
         "destroy",
         "get_method",
         "run_func",
+        "_handle_minion_event",
     ]
     try:
         for name in dir(aes_funcs):
