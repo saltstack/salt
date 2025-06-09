@@ -220,8 +220,6 @@ TEST_SALT_LISTING = PlatformDefinitions(
             MacOS(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [
-            # Windows(slug="windows-2016", display_name="Windows 2016", arch="amd64"),
-            Windows(slug="windows-2019", display_name="Windows 2019", arch="amd64"),
             Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
         ],
     }
@@ -424,18 +422,6 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
             MacOSPkg(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [
-            WindowsPkg(
-                slug="windows-2019",
-                display_name="Windows 2019",
-                arch="amd64",
-                pkg_type="NSIS",
-            ),
-            WindowsPkg(
-                slug="windows-2019",
-                display_name="Windows 2019",
-                arch="amd64",
-                pkg_type="MSI",
-            ),
             WindowsPkg(
                 slug="windows-2022",
                 display_name="Windows 2022",
