@@ -24,6 +24,8 @@ import win32process
 import win32security
 import win32service
 
+import salt.utils.path
+
 # pylint: enable=3rd-party-module-not-gated
 
 # Set up logging
@@ -1336,3 +1338,78 @@ def CreateProcessWithLogonW(
         ctypes.byref(process_info),
     )
     return process_info
+
+
+def prepend_cmd(cmd):
+    # Some commands are only available when run from a cmd shell. These are
+    # built-in commands such as echo. So, let's check for the binary in the
+    # path. If it does not exist, let's assume it's a built-in and requires us
+    # to run it in a cmd prompt.
+    if not isinstance(cmd, (list, tuple)):
+        cmd = cmd.split()
+
+    # Let's try to figure out what the fist command is so we can check for
+    # builtin commands such as echo
+    first_cmd = cmd[0].split("\\")[-1].strip("\"'")
+
+    cmd = " ".join(cmd)
+
+    # Known builtin cmd commands
+    known_builtins = [
+        "assoc",
+        "break",
+        "call",
+        "cd",
+        "chdir",
+        "cls",
+        "color",
+        "copy",
+        "date",
+        "del",
+        "dir",
+        "echo",
+        "endlocal",
+        "erase",
+        "exit",
+        "for",
+        "ftype",
+        "goto",
+        "if",
+        "md",
+        "mklink",
+        "move",
+        "path",
+        "pause",
+        "popd",
+        "prompt",
+        "pushd",
+        "rd",
+        "rem",
+        "ren",
+        "rmdir",
+        "set",
+        "setlocal",
+        "shift",
+        "start",
+        "time",
+        "title",
+        "type",
+        "ver",
+        "verify",
+        "vol",
+        "::",
+    ]
+
+    # If the first command is one of the known builtin commands or if it is a
+    # binary that can't be found, we'll prepend cmd /c
+    if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
+        cmd = f'cmd /c "{cmd}"'
+
+    # There are a few other things we need to check for that require cmd. If the
+    # cmd contains any of the following, we'll need to make sure it runs in cmd.
+    # We'll add to this list as more things are discovered.
+    check = ["&&", "||"]
+    if not cmd.startswith("cmd") and any(chk in cmd for chk in check):
+        cmd = f'cmd /c "{cmd}"'
+
+    return cmd

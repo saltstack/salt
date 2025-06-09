@@ -551,33 +551,16 @@ def test_windows_env_handling(cmdmod):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1):
+@pytest.mark.parametrize("shell", ["powershell", "pwsh"])
+def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, shell):
     """
     Ensure that powershell processes inline script in args
     """
     val = "i like cheese"
     args = (
-        '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+        '-SecureString (ConvertTo-SecureString -String \\"{}\\" -AsPlainText -Force)'
         " -ErrorAction Stop".format(val)
     )
     script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell="powershell", saltenv="base")
-    assert ret["stdout"] == val
-
-
-@pytest.mark.slow_test
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-@pytest.mark.skip_if_binaries_missing("pwsh")
-def test_windows_powershell_script_args_pwsh(cmdmod, issue_56195_test_ps1):
-    """
-    Ensure that powershell processes inline script in args with powershell
-    core
-    """
-    val = "i like cheese"
-    args = (
-        '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
-        " -ErrorAction Stop".format(val)
-    )
-    script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell="pwsh", saltenv="base")
+    ret = cmdmod.script(script, args=args, shell=shell, saltenv="base")
     assert ret["stdout"] == val
