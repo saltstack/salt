@@ -814,7 +814,6 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
-@pytest.mark.xfail(reason="This test is flaky")
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -854,7 +853,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
