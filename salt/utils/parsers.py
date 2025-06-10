@@ -2505,10 +2505,10 @@ class SaltKeyOptionParser(
             default="",
             help=(
                 "-r REJECT, --reject=REJECT"
-                "Reject the specified public key (use --include-all to match" 
+                "Reject the specified public key (use --include-all to match"
                 "accepted keys in addition to pending keys). Globs are supported."
-                "It may cause dramatic performance salt-msater degradation." 
-                "See [performance guide]"          
+                "It may cause dramatic performance salt-master degradation."
+                "See [performance guide]"
                 "(https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) for details"
             ),
         )
