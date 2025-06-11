@@ -138,3 +138,11 @@ jobs:
     with:
       name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
       upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-docs:
+    needs:
+      - create-github-release
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-docs-html.tar.xz
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}

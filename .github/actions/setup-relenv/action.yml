@@ -48,6 +48,7 @@ runs:
       env:
         RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
+        python3 -m pip install relenv[toolchain]
         python3 -m relenv toolchain fetch --arch=${{ inputs.arch }}
 
     - name: Fetch Native Python Build

@@ -426,14 +426,20 @@ def windows(
             ]
         )
         env["PATH"] = os.pathsep.join(path_parts)
+        command = ["smksp_registrar.exe", "register"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ctx.run(*command, env=env)
+
         command = ["smksp_registrar.exe", "list"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ctx.run(*command, env=env)
+
         command = ["smctl.exe", "keypair", "ls"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = [
             r"C:\Windows\System32\certutil.exe",
             "-csp",
@@ -446,28 +452,53 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
+        # DIGICERT asked me to add this for troubleshooting
+        command = ["smctl.exe", "healthcheck"]
+        ctx.info("Running Health Check...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = ["smksp_cert_sync.exe"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
-
-        sign_cmd = ["signtool.exe", "sign"]
-        if debug_signing:
-            sign_cmd.extend(["/v", "/debug"])
-
-        sign_cmd.extend(
-            [
-                "/sha1",
-                os.environ["WIN_SIGN_CERT_SHA1_HASH"],
-                "/tr",
-                "http://timestamp.digicert.com",
-                "/td",
-                "SHA256",
-                "/fd",
-                "SHA256",
-            ]
+        ctx.info(f"{list(pathlib.Path('~/.signingmanager/logs/').glob('*'))}")
+        ctx.run(
+            "powershell.exe",
+            "-C",
+            'Get-WinEvent -LogName "*Microsoft-Windows-AppxPackaging*" -MaxEvents 150',
+            check=False,
         )
+        ctx.run("smctl.exe", "windows", "certsync", check=False)
+
+        # sign_cmd = ["signtool.exe", "sign"]
+        # if debug_signing:
+        #    sign_cmd.extend(["/v", "/debug"])
+
+        # sign_cmd.extend(
+        #    [
+        #        "/sha1",
+        #        os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+        #        "/tr",
+        #        "http://timestamp.digicert.com",
+        #        "/td",
+        #        "SHA256",
+        #        "/fd",
+        #        "SHA256",
+        #    ]
+        # )
+        sign_cmd = [
+            "smctl.exe",
+            "sign",
+            "-v",
+            "--fingerprint",
+            os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+            "--config-file",
+            "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\smtools-windows-x64\\pkcs11properties.cfg",
+            "--input",
+        ]
 
         for fname in (
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",

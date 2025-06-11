@@ -13,6 +13,8 @@ def test_apply_no_cluster_id():
     assert opts["cluster_id"] is None
     assert "cluster_pki_dir" in opts
     assert opts["cluster_pki_dir"] is None
+    assert "cluster_pool_port" in opts
+    assert opts["cluster_pool_port"] == 4520
 
 
 def test_apply_default_for_cluster():
@@ -33,6 +35,10 @@ def test_apply_default_for_cluster():
     assert "cluster_peers" in opts
     assert [] == opts["cluster_peers"]
 
+    # the cluster pool port defaults to 4520
+    assert "cluster_pool_port" in opts
+    assert opts["cluster_pool_port"] == 4520
+
 
 def test_apply_for_cluster():
     defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
@@ -46,6 +52,7 @@ def test_apply_for_cluster():
             "127.0.0.3",
         ],
         "cluster_pki_dir": cluster_dir,
+        "cluster_pool_port": 5500,
     }
 
     opts = salt.config.apply_master_config(overrides, defaults)
@@ -55,6 +62,10 @@ def test_apply_for_cluster():
     # the cluster pki dir defaults to pki_dir
     assert "cluster_pki_dir" in opts
     assert cluster_dir == opts["cluster_pki_dir"]
+
+    # the cluster pool port defaults to 4520
+    assert "cluster_pool_port" in opts
+    assert opts["cluster_pool_port"] == 5500
 
     # the cluster peers defaults to empty list
     assert "cluster_peers" in opts

@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.1
+Version: 3007.3
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -179,6 +179,7 @@ cd $RPM_BUILD_DIR
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
   build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
   build/venv/bin/relenv fetch --python=${SALT_PYTHON_VERSION}
+  build/venv/bin/pip3 install relenv[toolchain]
   build/venv/bin/relenv toolchain fetch
   cd %{_salt_src}
 	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --relenv-version=${SALT_RELENV_VERSION} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/build/salt --platform linux
@@ -460,6 +461,15 @@ if [ $1 -gt 1 ] ; then
 fi
 
 
+%pre cloud
+if [ $1 -gt 1 ] ; then
+    # Reset permissions to match previous installs - performing upgrade
+    _MS_LCUR_USER=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 3)
+    _MS_LCUR_GROUP=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 4)
+    %global _MS_CUR_USER  %{_MS_LCUR_USER}
+    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
+fi
+
 # assumes systemd for RHEL 7 & 8 & 9
 # foregoing %systemd_* scriptlets due to RHEL 7/8 vs. RHEL 9 incompatibilities
 ## - Using hardcoded scriptlet definitions from RHEL 7/8 that are forward-compatible
@@ -724,45 +734,76 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
-* Sun May 19 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.1
-
-# Removed
-
-- The ``salt.utils.psutil_compat`` was deprecated and now removed in Salt 3008. Please use the ``psutil`` module directly. [#66160](https://github.com/saltstack/salt/issues/66160)
-
-# Fixed
-
-- Fixes multiple issues with the cmd module on Windows. Scripts are called using
-  the ``-File`` parameter to the ``powershell.exe`` binary. ``CLIXML`` data in
-  stderr is now removed (only applies to encoded commands). Commands can now be
-  sent to ``cmd.powershell`` as a list. Makes sure JSON data returned is valid.
-  Strips whitespace from the return when using ``runas``. [#61166](https://github.com/saltstack/salt/issues/61166)
-- Fixed the win_lgpo_netsh salt util to handle non-English systems. This was a
-  rewrite to use PowerShell instead of netsh to make the changes on the system [#61534](https://github.com/saltstack/salt/issues/61534)
-- Fix typo in nftables module to ensure unique nft family values [#65295](https://github.com/saltstack/salt/issues/65295)
-- Corrected x509_v2 CRL creation `last_update` and `next_update` values when system timezone is not UTC [#65837](https://github.com/saltstack/salt/issues/65837)
-- Fix for NoneType can't be used in 'await' expression error. [#66177](https://github.com/saltstack/salt/issues/66177)
-- Log "Publish server binding pub to" messages to debug instead of error level. [#66179](https://github.com/saltstack/salt/issues/66179)
-- Fix syndic startup by making payload handler a coroutine [#66237](https://github.com/saltstack/salt/issues/66237)
-- Fixed `aptpkg.remove` "unable to locate package" error for non-existent package [#66260](https://github.com/saltstack/salt/issues/66260)
-- Fixed pillar.ls doesn't accept kwargs [#66262](https://github.com/saltstack/salt/issues/66262)
-- Fix cache directory setting in Master Cluster tutorial [#66264](https://github.com/saltstack/salt/issues/66264)
-- Change log level of successful master cluster key exchange from error to info. [#66266](https://github.com/saltstack/salt/issues/66266)
-- Made `file.managed` skip download of a remote source if the managed file already exists with the correct hash [#66342](https://github.com/saltstack/salt/issues/66342)
-- Fixed nftables.build_rule breaks ipv6 rules by using the wrong syntax for source and destination addresses [#66382](https://github.com/saltstack/salt/issues/66382)
+* Wed Jun 04 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.3
 
 # Added
 
-- Added the ability to pass a version of chocolatey to install to the
-  chocolatey.bootstrap function. Also added states to bootstrap and
-  unbootstrap chocolatey. [#64722](https://github.com/saltstack/salt/issues/64722)
-- Add Ubuntu 24.04 support [#66180](https://github.com/saltstack/salt/issues/66180)
-- Add Fedora 40 support, replacing Fedora 39 [#66300](https://github.com/saltstack/salt/issues/66300)
+- Added the ability to configure the cluster event port and added documentation for it [#66627](https://github.com/saltstack/salt/issues/66627)
 
-# Security
 
-- Bump to `pydantic==2.6.4` due to https://github.com/advisories/GHSA-mr82-8j83-vxmv [#66433](https://github.com/saltstack/salt/issues/66433)
-- Bump to ``jinja2==3.1.4`` due to https://github.com/advisories/GHSA-h75v-3vvj-5mfj [#66488](https://github.com/saltstack/salt/issues/66488)
+* Mon Jun 02 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.11
+
+# Fixed
+
+- Fixes an issue with cmd.run where the command is a built-in command and must be
+  run with cmd. [#54821](https://github.com/saltstack/salt/issues/54821)
+- Show a better error when running cmd.* commands using runas and the
+  runas user does not exist [#56680](https://github.com/saltstack/salt/issues/56680)
+- Make sure the comment field is populated when test=True for the reg state [#65514](https://github.com/saltstack/salt/issues/65514)
+- Fixed result detection of module.run from returned dict [#65842](https://github.com/saltstack/salt/issues/65842)
+- Fix an issue with the osrelease_info grain that was displaying empty strings [#66936](https://github.com/saltstack/salt/issues/66936)
+- support retry: True as per docs [#67049](https://github.com/saltstack/salt/issues/67049)
+- Fixed if arguments are passed to the key delete all, -D, it will throw an error [#67903](https://github.com/saltstack/salt/issues/67903)
+- Set virtual grain for docker using systemd and virt-what [#67905](https://github.com/saltstack/salt/issues/67905)
+- Remove broken salt-common bash-completion links in root filesystem [#67915](https://github.com/saltstack/salt/issues/67915)
+- Fix refresh of osrelease and related grains on Python 3.10+ [#67932](https://github.com/saltstack/salt/issues/67932)
+- Re-add -oProxyCommand to ssh gateway arguments when ssh_gateway is present. [#67934](https://github.com/saltstack/salt/issues/67934)
+- Repair Git state comment formatting [#67944](https://github.com/saltstack/salt/issues/67944)
+- Use a Jscript Custom Action to stop the salt-minion service on Windows instead
+  of a VBscript Custom Action due to future deprecation and security issues [#67982](https://github.com/saltstack/salt/issues/67982)
+
+
+* Tue May 13 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.2
+
+# Fixed
+
+- Fixed `salt.*.get` shorthand via Salt-SSH [#41794](https://github.com/saltstack/salt/issues/41794)
+- Show a better error when running cmd.* commands using runas and the
+  runas user does not exist [#56680](https://github.com/saltstack/salt/issues/56680)
+- Await on zmq monitor socket's poll method to fix publish server reliability in
+  environment's with a large amount of minions. [#65265](https://github.com/saltstack/salt/issues/65265)
+- Fixed result detection of module.run from returned dict [#65842](https://github.com/saltstack/salt/issues/65842)
+- Fix vault module doesn't respect `server.verify` option during unwrap if verify is set to `False` or CA file on the disk [#66213](https://github.com/saltstack/salt/issues/66213)
+- Make sure the master_event_pub.ipc file has correct reed/write permissions for salt group. [#66228](https://github.com/saltstack/salt/issues/66228)
+- fix #66194: Exchange HTTPClient by AsyncHTTPClient in salt.utils.http [#66330](https://github.com/saltstack/salt/issues/66330)
+- Fixed `salt.*.*` attribute syntax for non-Jinja renderers via Salt-SSH [#66376](https://github.com/saltstack/salt/issues/66376)
+- Add integration tests for startup_states [#66592](https://github.com/saltstack/salt/issues/66592)
+- Fixed accessing wrapper modules in Salt-SSH Jinja templates via attribute syntax [#66600](https://github.com/saltstack/salt/issues/66600)
+- Fixed Salt-SSH crash when key deploy is skipped manually [#66610](https://github.com/saltstack/salt/issues/66610)
+- Fixed gpp module trust level reporting/crash with python-gnupg>=0.5.1 [#66685](https://github.com/saltstack/salt/issues/66685)
+- Update master cluster tutorial haproxy config with proper timeouts for publish port [#66888](https://github.com/saltstack/salt/issues/66888)
+- transports.tcp: ensure pull path is being used before attempting chmod.
+  The fix prevents an unnecessary traceback when the TCP transport is
+  not using unix sockets. No functionaly has changed as the traceback
+  occurs when an async task was about to exit anyway. [#66931](https://github.com/saltstack/salt/issues/66931)
+- Fix an issue with the osrelease_info grain that was displaying empty strings [#66936](https://github.com/saltstack/salt/issues/66936)
+- Added support for MAINTAIN (m) privilege to salt.modules.postgres [#66962](https://github.com/saltstack/salt/issues/66962)
+- make file.symlink/_symlink_check() respect follow_symlinks [#66980](https://github.com/saltstack/salt/issues/66980)
+- Salt master waits for publish servers while starting up. [#66993](https://github.com/saltstack/salt/issues/66993)
+- Fix a stacktrace on Windows with pkg.installed and test=True. The
+  `pkg.list_repo_pkgs` function does not exist on Windows. This uses the
+  `pkg.list_available` function instead for Windows. [#67171](https://github.com/saltstack/salt/issues/67171)
+- Made the correct PKI directory available for key_cache use [#67185](https://github.com/saltstack/salt/issues/67185)
+- Removed support for end of life Python 3.8 from pre-commit and requirements [#67730](https://github.com/saltstack/salt/issues/67730)
+- Fixed if arguments are passed to the key delete all, -D, it will throw an error [#67903](https://github.com/saltstack/salt/issues/67903)
+- Set virtual grain for docker using systemd and virt-what [#67905](https://github.com/saltstack/salt/issues/67905)
+- Remove broken salt-common bash-completion links in root filesystem [#67915](https://github.com/saltstack/salt/issues/67915)
+- Fix refresh of osrelease and related grains on Python 3.10+ [#67932](https://github.com/saltstack/salt/issues/67932)
+- Re-add -oProxyCommand to ssh gateway arguments when ssh_gateway is present. [#67934](https://github.com/saltstack/salt/issues/67934)
+- Repair Git state comment formatting [#67944](https://github.com/saltstack/salt/issues/67944)
+- Use a Jscript Custom Action to stop the salt-minion service on Windows instead
+  of a VBscript Custom Action due to future deprecation and security issues [#67982](https://github.com/saltstack/salt/issues/67982)
+
 
 * Wed Mar 19 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.10
 
@@ -873,6 +914,47 @@ fi
   where it would always wrap the separator with spaces. Adds a new parameter
   named ``no_spaces`` that will not warp the separator with spaces. [#33669](https://github.com/saltstack/salt/issues/33669)
 - Enhance json.find_json to return json even when it contains text on the same line of the last closing parenthesis [#67023](https://github.com/saltstack/salt/issues/67023)
+
+
+* Sun May 19 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.1
+
+# Removed
+
+- The ``salt.utils.psutil_compat`` was deprecated and now removed in Salt 3008. Please use the ``psutil`` module directly. [#66160](https://github.com/saltstack/salt/issues/66160)
+
+# Fixed
+
+- Fixes multiple issues with the cmd module on Windows. Scripts are called using
+  the ``-File`` parameter to the ``powershell.exe`` binary. ``CLIXML`` data in
+  stderr is now removed (only applies to encoded commands). Commands can now be
+  sent to ``cmd.powershell`` as a list. Makes sure JSON data returned is valid.
+  Strips whitespace from the return when using ``runas``. [#61166](https://github.com/saltstack/salt/issues/61166)
+- Fixed the win_lgpo_netsh salt util to handle non-English systems. This was a
+  rewrite to use PowerShell instead of netsh to make the changes on the system [#61534](https://github.com/saltstack/salt/issues/61534)
+- Fix typo in nftables module to ensure unique nft family values [#65295](https://github.com/saltstack/salt/issues/65295)
+- Corrected x509_v2 CRL creation `last_update` and `next_update` values when system timezone is not UTC [#65837](https://github.com/saltstack/salt/issues/65837)
+- Fix for NoneType can't be used in 'await' expression error. [#66177](https://github.com/saltstack/salt/issues/66177)
+- Log "Publish server binding pub to" messages to debug instead of error level. [#66179](https://github.com/saltstack/salt/issues/66179)
+- Fix syndic startup by making payload handler a coroutine [#66237](https://github.com/saltstack/salt/issues/66237)
+- Fixed `aptpkg.remove` "unable to locate package" error for non-existent package [#66260](https://github.com/saltstack/salt/issues/66260)
+- Fixed pillar.ls doesn't accept kwargs [#66262](https://github.com/saltstack/salt/issues/66262)
+- Fix cache directory setting in Master Cluster tutorial [#66264](https://github.com/saltstack/salt/issues/66264)
+- Change log level of successful master cluster key exchange from error to info. [#66266](https://github.com/saltstack/salt/issues/66266)
+- Made `file.managed` skip download of a remote source if the managed file already exists with the correct hash [#66342](https://github.com/saltstack/salt/issues/66342)
+- Fixed nftables.build_rule breaks ipv6 rules by using the wrong syntax for source and destination addresses [#66382](https://github.com/saltstack/salt/issues/66382)
+
+# Added
+
+- Added the ability to pass a version of chocolatey to install to the
+  chocolatey.bootstrap function. Also added states to bootstrap and
+  unbootstrap chocolatey. [#64722](https://github.com/saltstack/salt/issues/64722)
+- Add Ubuntu 24.04 support [#66180](https://github.com/saltstack/salt/issues/66180)
+- Add Fedora 40 support, replacing Fedora 39 [#66300](https://github.com/saltstack/salt/issues/66300)
+
+# Security
+
+- Bump to `pydantic==2.6.4` due to https://github.com/advisories/GHSA-mr82-8j83-vxmv [#66433](https://github.com/saltstack/salt/issues/66433)
+- Bump to ``jinja2==3.1.4`` due to https://github.com/advisories/GHSA-h75v-3vvj-5mfj [#66488](https://github.com/saltstack/salt/issues/66488)
 
 
 * Mon Jul 29 2024 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.9

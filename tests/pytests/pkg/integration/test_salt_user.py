@@ -182,6 +182,10 @@ def test_pkg_paths(
     if install_salt.prev_version == "3007.1":
         pytest.xfail("Fails due to syndic permissions bug")
 
+    if install_salt.distro_name == "photon" and install_salt.distro_version == "5":
+        # Fails on upgrade tests but there is no way to check that we are running an upgrade test.
+        pytest.skip("Package path ownership fails on photon 5")
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:

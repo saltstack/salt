@@ -1126,12 +1126,16 @@ def test_issue_62117(
 
     jinja_contents = '{%- import_yaml "./issue-62117.yaml" as grains %}'
 
-    sls_contents = """
-    {%- from "./issue-62117.jinja" import grains with context %}
+    if salt.utils.platform.is_windows():
+        cmd = "cd"
+    else:
+        cmd = "pwd"
+    sls_contents = f"""
+    {{%- from "./issue-62117.jinja" import grains with context %}}
 
     test_jinja/issue-62117/cmd.run:
       cmd.run:
-        - name: pwd
+        - name: {cmd}
     """
 
     yaml_tempfile = salt_master.state_tree.base.temp_file(f"{name}.yaml", yaml_contents)

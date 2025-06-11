@@ -281,7 +281,7 @@ def test_present_string_dword_existing(reg_vars, clean):
 
 def test_present_test_true(reg_vars, clean):
     expected = {
-        "comment": "",
+        "comment": f"Will add {reg_vars.vname} to {reg_vars.name}",
         "changes": {
             "reg": {
                 "Will add": {
@@ -362,7 +362,7 @@ def test_absent(reg_vars, reset):
 
 def test_absent_test_true(reg_vars, reset):
     expected = {
-        "comment": "",
+        "comment": f"Will remove {reg_vars.vname} to {reg_vars.name}",
         "changes": {
             "reg": {"Will remove": {"Entry": reg_vars.vname, "Key": reg_vars.name}}
         },
@@ -400,3 +400,55 @@ def test_absent_already_absent_test_true(reg_vars, clean):
     with patch.dict(reg.__opts__, {"test": True}):
         ret = reg.absent(reg_vars.name, reg_vars.vname)
     assert ret == expected
+
+
+def test_key_absent(reg_vars, reset):
+    """
+    Test to remove a registry key entry.
+    """
+    expected = {
+        "comment": f"Removed {reg_vars.name}",
+        "changes": {"reg": {"Removed": {"Key": reg_vars.name}}},
+        "name": reg_vars.name,
+        "result": True,
+    }
+    assert reg.key_absent(reg_vars.name) == expected
+
+
+def test_key_absent_already_absent(reg_vars, clean):
+    """
+    Test to remove a registry key entry.
+    """
+    expected = {
+        "comment": f"{reg_vars.name} is already absent",
+        "changes": {},
+        "name": reg_vars.name,
+        "result": True,
+    }
+    assert reg.key_absent(reg_vars.name) == expected
+
+
+def test_key_absent_test_true(reg_vars, reset):
+    expected = {
+        "comment": f"Will remove {reg_vars.name}",
+        "changes": {"reg": {"Will remove": {"Key": reg_vars.name}}},
+        "name": reg_vars.name,
+        "result": None,
+    }
+    with patch.dict(reg.__opts__, {"test": True}):
+        ret = reg.key_absent(reg_vars.name)
+    assert ret == expected
+
+
+def test_key_absent_already_absent_test_true(reg_vars, clean):
+    """
+    Test to remove a registry entry.
+    """
+    expected = {
+        "comment": f"{reg_vars.name} is already absent",
+        "changes": {},
+        "name": reg_vars.name,
+        "result": True,
+    }
+    with patch.dict(reg.__opts__, {"test": True}):
+        assert reg.key_absent(reg_vars.name) == expected
