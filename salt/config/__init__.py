@@ -1052,6 +1052,8 @@ VALID_OPTS = immutabletypes.freeze(
         "sqlalchemy.partman.interval": str,
         "sqlalchemy.partman.jobmon": bool,
         "sqlalchemy.partman.retention": (type(None), str),
+        "returner.sqlalchemy.max_retries": (type(None), int),
+        "returner.sqlalchemy.retry_delay": (type(None), int),
     }
 )
 
@@ -1747,6 +1749,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sqlalchemy.partman.schema": "pgpartman",
         "sqlalchemy.partman.interval": "weekly",
         "sqlalchemy.partman.jobmon": True,
+        "returner.sqlalchemy.max_retries": 15,
+        "returner.sqlalchemy.retry_delay": 5,
     }
 )
 
