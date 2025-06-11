@@ -21,3 +21,4 @@ For understanding and usage of the cache modules see the :ref:`cache` topic.
     mmap_key
     mysql_cache
     redis_cache
+    sqlalchemy
