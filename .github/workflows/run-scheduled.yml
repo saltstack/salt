@@ -1,10 +1,10 @@
-name: Run Nightly Builds
+name: Run Scheduled Builds
 
 on:
   workflow_dispatch: {}
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 0 * * *'  # Every day at 0AM
+    - cron: '0 */8 * * *'  # Run every 8 hours
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
