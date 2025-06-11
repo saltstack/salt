@@ -17,10 +17,12 @@ pytestmark = [
 def symlink_file(tmp_path):
     target = tmp_path / "tgt_symlink"
     target.write_text("this is the symlink target")
+    assert target.is_file()
     symlink = tmp_path / "symlink"
     symlink.symlink_to(target)
     assert symlink.is_symlink()
     assert symlink.read_text() == "this is the symlink target"
+    assert symlink.is_file()
     yield symlink
 
 
@@ -28,9 +30,11 @@ def symlink_file(tmp_path):
 def symlink_dir(tmp_path):
     target = tmp_path / "tgt_symlink"
     target.mkdir()
+    assert target.is_dir()
     symlink = tmp_path / "symlink"
     symlink.symlink_to(target)
     assert symlink.is_symlink()
+    assert symlink.is_dir()
     yield symlink
 
 
@@ -41,10 +45,12 @@ def junction(tmp_path):
     """
     target = tmp_path / "tgt_junction"
     target.mkdir()
+    assert target.is_dir()
     junction = tmp_path / "junction"
     cmd = ["cmd", "/c", "mklink", "/j", str(junction), str(target)]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    assert junction.is_symlink() is False
+    assert not junction.is_symlink()
+    assert junction.is_dir()
     yield junction
 
 
