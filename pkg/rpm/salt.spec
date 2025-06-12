@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.3
+Version: 3007.4
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -734,6 +734,10 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Jun 12 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.4
+No significant changes.
+
+
 * Thu Jun 12 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.12
 
 # Fixed
