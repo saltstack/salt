@@ -5,6 +5,8 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+## 3007.4 (2025-06-12)
+
 # Changelog
 
 ### Fixed
@@ -66,11 +68,6 @@ Versions are `MAJOR.PATCH`.
 
   This release also includes sqlite 3.50.1 to address CVE-2025-29087 [#68033](https://github.com/saltstack/salt/issues/68033)
 
-
-
-## 3007.4 (2025-06-12)
-
-No significant changes.
 
 
 ## 3007.3 (2025-06-04)
