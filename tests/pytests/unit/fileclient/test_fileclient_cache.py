@@ -11,12 +11,16 @@ from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
-
 SUBDIR = "subdir"
 
 
 def _saltenvs():
     return ("base", "dev")
+
+
+@pytest.fixture(params=_saltenvs())
+def saltenv(request):
+    return request.param
 
 
 def _subdir_files():
@@ -101,7 +105,8 @@ def _setup(fs_root, cache_root):
     _new_dir(cache_root)
 
 
-def test_cache_dir(mocked_opts, minion_opts):
+@pytest.mark.parametrize("subdir", [SUBDIR, f"{SUBDIR}{os.sep}"])
+def test_cache_dir(mocked_opts, minion_opts, subdir, saltenv):
     """
     Ensure entire directory is cached to correct location
     """
@@ -110,8 +115,58 @@ def test_cache_dir(mocked_opts, minion_opts):
 
     with patch.dict(fileclient.__opts__, patched_opts):
         client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        assert client.cache_dir(
+            f"salt://{subdir}",
+            saltenv,
+            exclude_pat="*foo.txt",
+            cachedir=None,
+        )
+        for subdir_file in _subdir_files():
+            cache_loc = os.path.join(
+                fileclient.__opts__["cachedir"],
+                "files",
+                saltenv,
+                subdir,
+                subdir_file,
+            )
+            if not subdir_file.endswith("foo.txt"):
+                with salt.utils.files.fopen(cache_loc) as fp_:
+                    content = fp_.read()
+                log.debug("cache_loc = %s", cache_loc)
+                log.debug("content = %s", content)
+                assert subdir_file in content
+                assert SUBDIR in content
+                assert saltenv in content
+            else:
+                assert not os.path.exists(cache_loc)
+
+
+def test_cache_dir_include_empty(mocked_opts, minion_opts, fs_root):
+    """
+    Ensure entire directory is cached to correct location, including empty ones
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
         for saltenv in _saltenvs():
-            assert client.cache_dir(f"salt://{SUBDIR}", saltenv, cachedir=None)
+            # Make an empty directory
+            os.makedirs(os.path.join(fs_root, saltenv, SUBDIR, "emptydir"))
+            os.makedirs(os.path.join(fs_root, saltenv, SUBDIR, "emptydir2"))
+            os.makedirs(
+                os.path.join(
+                    fileclient.__opts__["cachedir"],
+                    "files",
+                    saltenv,
+                    SUBDIR,
+                    "emptydir2",
+                )
+            )
+            os.makedirs(os.path.join(fs_root, saltenv, "emptydir"))
+            assert client.cache_dir(
+                f"salt://{SUBDIR}", saltenv, cachedir=None, include_empty=True
+            )
             for subdir_file in _subdir_files():
                 cache_loc = os.path.join(
                     fileclient.__opts__["cachedir"],
@@ -120,13 +175,6 @@ def test_cache_dir(mocked_opts, minion_opts):
                     SUBDIR,
                     subdir_file,
                 )
-                # Double check that the content of the cached file
-                # identifies it as being from the correct saltenv. The
-                # setUp function creates the file with the name of the
-                # saltenv mentioned in the file, so a simple 'in' check is
-                # sufficient here. If opening the file raises an exception,
-                # this is a problem, so we are not catching the exception
-                # and letting it be raised so that the test fails.
                 with salt.utils.files.fopen(cache_loc) as fp_:
                     content = fp_.read()
                 log.debug("cache_loc = %s", cache_loc)
@@ -134,6 +182,20 @@ def test_cache_dir(mocked_opts, minion_opts):
                 assert subdir_file in content
                 assert SUBDIR in content
                 assert saltenv in content
+            assert os.path.exists(
+                os.path.join(
+                    fileclient.__opts__["cachedir"],
+                    "files",
+                    saltenv,
+                    SUBDIR,
+                    "emptydir",
+                )
+            )
+            assert not os.path.exists(
+                os.path.join(
+                    fileclient.__opts__["cachedir"], "files", saltenv, "emptydir"
+                )
+            )
 
 
 def test_cache_dir_with_alternate_cachedir_and_absolute_path(
@@ -237,6 +299,81 @@ def test_cache_file(mocked_opts, minion_opts):
             assert saltenv in content
 
 
+def test_cache_files(mocked_opts, minion_opts):
+    """
+    Test caching multiple files
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        files = ["salt://foo.txt", f"salt://{SUBDIR}/bar.txt"]
+        for saltenv in _saltenvs():
+            assert client.cache_files(files, saltenv, cachedir=None)
+            for fn in files:
+                fn = fn[7:]
+                cache_loc = os.path.join(
+                    fileclient.__opts__["cachedir"], "files", saltenv, fn
+                )
+                with salt.utils.files.fopen(cache_loc) as fp_:
+                    content = fp_.read()
+                log.debug("cache_loc = %s", cache_loc)
+                log.debug("content = %s", content)
+                assert saltenv in content
+
+
+def test_cache_files_string(mocked_opts, minion_opts):
+    """
+    Test caching multiple files
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        files = ["salt://foo.txt", f"salt://{SUBDIR}/bar.txt"]
+        for saltenv in _saltenvs():
+            assert client.cache_files(",".join(files), saltenv, cachedir=None)
+            for fn in files:
+                fn = fn[7:]
+                cache_loc = os.path.join(
+                    fileclient.__opts__["cachedir"], "files", saltenv, fn
+                )
+                with salt.utils.files.fopen(cache_loc) as fp_:
+                    content = fp_.read()
+                log.debug("cache_loc = %s", cache_loc)
+                log.debug("content = %s", content)
+                assert saltenv in content
+
+
+def test_cache_master(mocked_opts, minion_opts, fs_root):
+    """
+    Test caching multiple files
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        for saltenv in _saltenvs():
+            assert client.cache_master(saltenv=saltenv)
+            for dirpath, _, filenames in os.walk(os.path.join(fs_root, saltenv)):
+                for fn in filenames:
+                    fileserver_path = os.path.relpath(
+                        os.path.join(dirpath, fn), fs_root
+                    )
+                    cachedir_path = os.path.join(
+                        fileclient.__opts__["cachedir"], "files", fileserver_path
+                    )
+                    assert os.path.exists(cachedir_path)
+                    with salt.utils.files.fopen(cachedir_path) as fp_:
+                        content = fp_.read()
+                    log.debug("cache_loc = %s", cachedir_path)
+                    log.debug("content = %s", content)
+                    assert saltenv in content
+
+
 def test_cache_file_with_alternate_cachedir_and_absolute_path(
     mocked_opts, minion_opts, tmp_path
 ):
@@ -335,4 +472,36 @@ def test_cache_dest(mocked_opts, minion_opts):
 
         _check(client.cache_dest(f"salt://{relpath}?saltenv=dev"), _salt("dev"))
 
-        _check("/foo/bar", "/foo/bar")
+        _check(client.cache_dest("/foo/bar"), "/foo/bar")
+
+
+def test_is_cached_salt_proto_saltenv(mocked_opts, minion_opts):
+    """
+    Test that is_cached works with a salt protocol filepath and a saltenv query param
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        file_url = "salt://foo.txt?saltenv=dev"
+        client.cache_file(file_url)
+        assert client.is_cached(file_url)
+
+
+def test_is_cached_local_files(mocked_opts, minion_opts):
+    """
+    Test that is_cached works with local files
+    """
+    patched_opts = minion_opts.copy()
+    patched_opts.update(mocked_opts)
+
+    with patch.dict(fileclient.__opts__, patched_opts):
+        client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+        local_file = os.path.join(
+            patched_opts["cachedir"], "localfiles", "testfile.txt"
+        )
+        os.makedirs(os.path.join(patched_opts["cachedir"], "localfiles"), exist_ok=True)
+        with salt.utils.files.fopen(local_file, "w") as fp:
+            fp.write("test")
+        assert client.is_cached("testfile.txt")
