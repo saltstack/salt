@@ -3,7 +3,10 @@ import pytest
 import salt.crypt
 import salt.key
 import salt.utils.crypt
-from tests.support.pytest.database import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 

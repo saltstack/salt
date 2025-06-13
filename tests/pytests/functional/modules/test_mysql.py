@@ -8,18 +8,16 @@ import time
 import pytest
 from pytestshellutils.utils import format_callback_to_string
 
-import salt.modules.mysql as mysqlmod
 from salt.utils.versions import version_cmp
-from tests.support.pytest.database import available_databases
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.skip_if_binaries_missing("dockerd"),
-    pytest.mark.skipif(
-        mysqlmod.MySQLdb is None, reason="No python mysql client installed."
-    ),
     pytest.mark.parametrize(
         "database_backend",
         available_databases(
