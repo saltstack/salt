@@ -5,6 +5,8 @@ import sys
 import pytest
 from saltfactories.utils.functional import Loaders
 
+from tests.support.pytest.database import *  # pylint: disable=wildcard-import,unused-wildcard-import
+
 log = logging.getLogger(__name__)
 
 
