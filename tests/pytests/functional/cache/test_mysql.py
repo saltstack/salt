@@ -17,6 +17,7 @@ pytestmark = [
     pytest.mark.skipif(
         Version(docker.__version__) < Version("4.0.0"),
         reason="Test does not work in this version of docker-py",
+    )
     pytest.mark.parametrize(
         "database_backend",
         [
