@@ -10,7 +10,6 @@ from pytestshellutils.utils import format_callback_to_string
 
 import salt.modules.mysql as mysqlmod
 from salt.utils.versions import version_cmp
-from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ def test_query(mysql):
 def test_version(mysql, mysql_container):
     ret = mysql.version()
     assert ret
-    assert mysql_container.mysql_version in ret
+    assert mysql_container.version in ret
 
 
 def test_status(mysql):
@@ -115,16 +114,16 @@ def test_user_list(mysql, mysql_combo):
     ret = mysql.user_list()
     assert ret
     assert {
-        "User": mysql_combo.mysql_root_user,
-        "Host": mysql_combo.mysql_host,
+        "User": mysql_combo.root_user,
+        "Host": mysql_combo.host,
     } in ret
 
 
 def test_user_exists(mysql, mysql_combo):
     ret = mysql.user_exists(
-        mysql_combo.mysql_root_user,
-        host=mysql_combo.mysql_host,
-        password=mysql_combo.mysql_passwd,
+        mysql_combo.root_user,
+        host=mysql_combo.host,
+        password=mysql_combo.passwd,
     )
     assert ret
 
@@ -137,14 +136,14 @@ def test_user_exists(mysql, mysql_combo):
 
 
 def test_user_info(mysql, mysql_combo):
-    ret = mysql.user_info(mysql_combo.mysql_root_user, host=mysql_combo.mysql_host)
+    ret = mysql.user_info(mysql_combo.root_user, host=mysql_combo.host)
     assert ret
 
     # Check that a subset of the information
     # is available in the returned user information.
     expected = {
-        "Host": mysql_combo.mysql_host,
-        "User": mysql_combo.mysql_root_user,
+        "Host": mysql_combo.host,
+        "User": mysql_combo.root_user,
         "Select_priv": "Y",
         "Insert_priv": "Y",
         "Update_priv": "Y",
@@ -202,7 +201,7 @@ def test_user_create_chpass_delete(mysql):
 
 
 def test_user_grants(mysql, mysql_combo):
-    ret = mysql.user_grants(mysql_combo.mysql_root_user, host=mysql_combo.mysql_host)
+    ret = mysql.user_grants(mysql_combo.root_user, host=mysql_combo.host)
     assert ret
 
 
@@ -302,20 +301,20 @@ def test_grant_add_revoke(mysql):
 
 def test_grant_replication_replica_add_revoke(mysql, mysql_container):
     # The REPLICATION REPLICA grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in mysql_container.name:
         pytest.skip(
             "The REPLICATION REPLICA grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
     # The REPLICATION REPLICA grant was added in mariadb 10.5.1
-    if version_cmp(mysql_container.mysql_version, "10.5.1") < 0:
+    if version_cmp(mysql_container.version, "10.5.1") < 0:
         pytest.skip(
             "The REPLICATION REPLICA grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
@@ -494,20 +493,20 @@ def test_grant_replication_client_add_revoke(mysql, mysql_container):
 
 def test_grant_binlog_monitor_add_revoke(mysql, mysql_container):
     # The BINLOG MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in mysql_container.name:
         pytest.skip(
             "The BINLOG MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
     # The BINLOG MONITOR grant was added in mariadb 10.5.2
-    if version_cmp(mysql_container.mysql_version, "10.5.2") < 0:
+    if version_cmp(mysql_container.version, "10.5.2") < 0:
         pytest.skip(
             "The BINLOG_MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
@@ -570,20 +569,20 @@ def test_grant_binlog_monitor_add_revoke(mysql, mysql_container):
 
 def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
     # The REPLICA MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in mysql_container.name:
         pytest.skip(
             "The REPLICA MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
     # The REPLICA MONITOR grant was added in mariadb 10.5.9
-    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+    if version_cmp(mysql_container.version, "10.5.9") < 0:
         pytest.skip(
             "The REPLICA MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
@@ -646,20 +645,20 @@ def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
 
 def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
     # The SLAVE MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in mysql_container.name:
         pytest.skip(
             "The SLAVE MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
     # The SLAVE MONITOR grant was added in mariadb 10.5.9
-    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+    if version_cmp(mysql_container.version, "10.5.9") < 0:
         pytest.skip(
             "The SLAVE MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                mysql_container.name, mysql_container.version
             )
         )
 
@@ -722,30 +721,30 @@ def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
 
 def test_plugin_add_status_remove(mysql, mysql_combo):
 
-    if "mariadb" in mysql_combo.mysql_name:
+    if "mariadb" in mysql_combo.name:
         plugin = "simple_password_check"
     else:
         plugin = "auth_socket"
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=mysql_combo.host)
     assert not ret
 
     ret = mysql.plugin_add(plugin)
     assert ret
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=mysql_combo.host)
     assert ret
     assert ret == "ACTIVE"
 
     ret = mysql.plugin_remove(plugin)
     assert ret
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=mysql_combo.host)
     assert not ret
 
 
 def test_plugin_list(mysql, mysql_container):
-    if "mariadb" in mysql_container.mysql_name:
+    if "mariadb" in mysql_container.name:
         plugin = "simple_password_check"
     else:
         plugin = "auth_socket"
