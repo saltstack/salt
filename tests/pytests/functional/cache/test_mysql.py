@@ -8,6 +8,10 @@ import salt.modules.mysql
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
 pytest.importorskip("docker", minversion="4.0.0")
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 log = logging.getLogger(__name__)
 
@@ -19,19 +23,20 @@ pytestmark = [
     ),
     pytest.mark.parametrize(
         "database_backend",
-        [
-            ("mysql-server", "5.5"),
-            ("mysql-server", "5.6"),
-            ("mysql-server", "5.7"),
-            ("mysql-server", "8.0"),
-            ("mariadb", "10.3"),
-            ("mariadb", "10.4"),
-            ("mariadb", "10.5"),
-            ("percona", "5.6"),
-            ("percona", "5.7"),
-            ("percona", "8.0"),
-        ],
-        ids=lambda val: f"{val[0]}-{val[1] or 'default'}",
+        available_databases(
+            [
+                ("mysql-server", "5.5"),
+                ("mysql-server", "5.6"),
+                ("mysql-server", "5.7"),
+                ("mysql-server", "8.0"),
+                ("mariadb", "10.3"),
+                ("mariadb", "10.4"),
+                ("mariadb", "10.5"),
+                ("percona", "5.6"),
+                ("percona", "5.7"),
+                ("percona", "8.0"),
+            ]
+        ),
         indirect=True,
     ),
 ]
