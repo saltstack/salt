@@ -608,14 +608,11 @@ class CPModuleTest(ModuleCase):
         try:
             self.run_function("cp.push", [log_to_xfer])
             tgt_cache_file = os.path.join(
-                RUNTIME_VARS.TMP,
-                "master-minion-root",
-                "cache",
+                RUNTIME_VARS.RUNTIME_CONFIGS["master"]["cachedir"],
                 "minions",
                 "minion",
                 "files",
-                RUNTIME_VARS.TMP,
-                log_to_xfer,
+                os.path.splitdrive(os.path.normpath(log_to_xfer.lstrip(os.sep)))[1],
             )
             self.assertTrue(
                 os.path.isfile(tgt_cache_file), "File was not cached on the master"
