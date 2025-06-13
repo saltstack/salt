@@ -186,3 +186,63 @@ def test_normalize_info():
         "some": "data",
         "key": ["value", "here"],
     }
+
+
+def test_udev_subsystem_filter():
+    udev_db = [
+        {
+            "P": "/devices/LNXSYSTM:00/LNXPWRBN:00",
+            "E": {
+                "MODALIAS": "acpi:LNXPWRBN:",
+                "SUBSYSTEM": "acpi",
+                "DRIVER": "button",
+                "DEVPATH": "/devices/LNXSYSTM:00/LNXPWRBN:00",
+            },
+        },
+        {
+            "P": "/devices/LNXSYSTM:00/LNXPWRBN:00/input/input2",
+            "E": {
+                "SUBSYSTEM": "input",
+                "PRODUCT": "19/0/1/0",
+                "PHYS": '"LNXPWRBN/button/input0"',
+                "NAME": '"Power Button"',
+                "ID_INPUT": 1,
+                "DEVPATH": "/devices/LNXSYSTM:00/LNXPWRBN:00/input/input2",
+                "MODALIAS": "input:b0019v0000p0001e0000-e0,1,k74,ramlsfw",
+                "ID_PATH_TAG": "acpi-LNXPWRBN_00",
+                "TAGS": ":seat:",
+                "PROP": 0,
+                "ID_FOR_SEAT": "input-acpi-LNXPWRBN_00",
+                "KEY": "10000000000000 0",
+                "USEC_INITIALIZED": 2010022,
+                "ID_PATH": "acpi-LNXPWRBN:00",
+                "EV": 3,
+                "ID_INPUT_KEY": 1,
+            },
+        },
+        {
+            "P": "/devices/LNXSYSTM:00/LNXPWRBN:00/input/input2/event2",
+            "E": {
+                "SUBSYSTEM": "input",
+                "XKBLAYOUT": "us",
+                "MAJOR": 13,
+                "ID_INPUT": 1,
+                "DEVPATH": "/devices/LNXSYSTM:00/LNXPWRBN:00/input/input2/event2",
+                "ID_PATH_TAG": "acpi-LNXPWRBN_00",
+                "DEVNAME": "/dev/input/event2",
+                "TAGS": ":power-switch:",
+                "BACKSPACE": "guess",
+                "MINOR": 66,
+                "USEC_INITIALIZED": 2076101,
+                "ID_PATH": "acpi-LNXPWRBN:00",
+                "XKBMODEL": "pc105",
+                "ID_INPUT_KEY": 1,
+            },
+            "N": "input/event2",
+        },
+    ]
+
+    filtered = udev._filter_subsystems(udev_db, ["acpi", "usb"])
+
+    assert len(filtered) == 1
+    assert filtered[0]["P"] == "/devices/LNXSYSTM:00/LNXPWRBN:00"
