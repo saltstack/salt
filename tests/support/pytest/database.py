@@ -9,11 +9,16 @@ from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
 import salt.sqlalchemy
+from salt.utils.versions import Version
 
 try:
+    import docker
     from docker.errors import APIError
+
+    DOCKER_VERSION = Version(docker.__version__)
 except ImportError:
     APIError = OSError
+    DOCKER_VERSION = Version("0")
 
 log = logging.getLogger(__name__)
 
@@ -117,17 +122,32 @@ def db_param(db_name, version, driver_name=None):
     :param driver_name: Python module to import for the driver (e.g., 'psycopg2')
     :return: pytest.param with conditional skip
     """
-    if driver_name is None:
-        return pytest.param((db_name, version), id=f"{db_name}-{version or 'default'}")
-    else:
+    marks = []
+
+    if driver_name:
         has_driver = _has_driver(driver_name)
-        return pytest.param(
-            (db_name, version),
-            marks=pytest.mark.skipif(
-                not has_driver, reason=f"{driver_name} not installed"
+        if not has_driver:
+            marks += [
+                pytest.mark.skipif(
+                    not has_driver, reason=f"{driver_name} not installed"
+                )
+            ]
+
+    # sqlite doesnt need an external docker
+    if db_name not in {"sqlite", "no_database"}:
+        marks += [
+            pytest.mark.skip_if_binaries_missing("dockerd"),
+            pytest.mark.skipif(
+                DOCKER_VERSION < Version("4.0.0"),
+                reason="Test does not work in this version of docker-py",
             ),
-            id=f"{db_name}-{version or 'default'}",
-        )
+        ]
+
+    return pytest.param(
+        (db_name, version),
+        marks=marks,
+        id=f"{db_name}-{version or 'default'}",
+    )
 
 
 def available_databases(subset=None):
