@@ -3,7 +3,13 @@ import pytest
 import salt.crypt
 import salt.key
 import salt.utils.crypt
-from tests.support.pytest.database import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from tests.support.pytest.database import (
+    available_databases,
+    database_backend,
+    master_opts,
+)
+
+__all__ = ["database_backend", "master_opts"]
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 
@@ -27,7 +33,11 @@ pytestmark = [
 @pytest.fixture
 def base_key(master_opts, database_backend):
     """Create a base CkMinions instance without any data"""
-    return salt.key.get_key(master_opts)
+    instance = salt.key.get_key(master_opts)
+    assert isinstance(instance, salt.key.SqlAlchemyKey) == (
+        database_backend.name != "no_database"
+    )
+    return instance
 
 
 @pytest.fixture(scope="function")
@@ -857,3 +867,101 @@ def test_finger_all(key):
     # Verify the hash type changed
     assert result["minions"]["web-1"] == md5_fingerprint
     assert result["minions"]["web-1"] != fingerprint
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "Web*",
+        "WEB*",
+        "web?",
+        "web[12]",
+        "web_?",
+        "web%?",
+        ["Web*", "web?"],
+        ["web2", "Web1", "web1", "web1"],
+        "web2,Web1,web1,web1",
+        [],
+    ],
+)
+def test_glob_match_preserves_base_semantics(key, pattern):
+    names = ["Web1", "web1", "web2", "web_1", "web%1", "other"]
+    k = key({name: {"state": "accepted", "pub": ""} for name in names})
+    assert k.glob_match(pattern) == salt.key.Key.glob_match(k, pattern)
+
+
+def test_glob_match_includes_local_keys(key, monkeypatch):
+    k = key({"minion": {"state": "accepted", "pub": ""}})
+    monkeypatch.setattr(
+        k, "local_keys", lambda: {"local": ["master.pub", "master.pem"]}
+    )
+    assert k.glob_match("master.pub", full=True) == {"local": ["master.pub"]}
+    assert k.glob_match("*", full=True)["local"] == ["master.pub", "master.pem"]
+
+
+def test_list_keys_uses_case_insensitive_display_order(key):
+    names = ["zeta", "Alpha", "beta"]
+    k = key({name: {"state": "accepted", "pub": ""} for name in names})
+    assert k.list_keys()[k.ACC] == ["Alpha", "beta", "zeta"]
+    assert k.glob_match("*")[k.ACC] == ["Alpha", "beta", "zeta"]
+    assert k.list_match(["zeta", "Alpha"])[k.ACC] == ["zeta", "Alpha"]
+
+
+@pytest.mark.parametrize("state", [None, "unknown"])
+def test_sqlalchemy_key_skips_invalid_states(key, state, caplog):
+    k = key()
+    if not isinstance(k, salt.key.SqlAlchemyKey):
+        pytest.skip("Exercise malformed database metadata directly")
+    k.cache.store("keys", "good", {"state": "accepted", "pub": ""})
+    k.cache.store("keys", "bad", {"state": state, "pub": ""})
+    assert k.list_match("good,bad") == {k.ACC: ["good"]}
+    assert k.glob_match("*") == {k.ACC: ["good"]}
+    assert "unexpected key state returned for bad" in caplog.text
+
+
+def test_sqlalchemy_key_queries_exclude_expired_rows(key):
+    k = key({"live": {"state": "accepted", "pub": ""}})
+    if not isinstance(k, salt.key.SqlAlchemyKey):
+        pytest.skip("The local key cache does not support expiry")
+    k.cache.store("keys", "expired", {"state": "accepted", "pub": ""}, expires=-1)
+    k.cache.store("denied_keys", "expired-denied", ["public key"], expires=-1)
+    assert k.list_keys()[k.ACC] == ["live"]
+    assert not k.list_keys()[k.DEN]
+    assert k.list_match("expired,expired-denied") == {}
+    assert k.glob_match("expired*") == {}
+
+
+def test_sqlalchemy_key_large_list_match(key):
+    k = key({name: {"state": "accepted", "pub": ""} for name in ("target", "outside")})
+    if not isinstance(k, salt.key.SqlAlchemyKey):
+        pytest.skip("Exercise database parameter limits without filesystem probes")
+    names = ["target", *(f"missing-{idx}" for idx in range(65_536)), "target"]
+    assert k.list_match(names) == {k.ACC: ["target", "target"]}
+    assert k.glob_match(names) == {k.ACC: ["target", "target"]}
+    assert k.glob_match(",".join(names)) == {k.ACC: ["target", "target"]}
+    assert k.dict_match({k.ACC: names}) == {k.ACC: ["target", "target"]}
+
+
+def test_sqlalchemy_key_large_glob_match(key):
+    k = key(
+        {
+            name: {"state": "accepted", "pub": ""}
+            for name in ("target", "Target", "outside")
+        }
+    )
+    if not isinstance(k, salt.key.SqlAlchemyKey):
+        pytest.skip("Exercise database parameter limits without filesystem probes")
+    patterns = ["tar*", "targ??", *(f"missing-{idx}*" for idx in range(1001))]
+    assert k.glob_match(patterns) == salt.key.Key.glob_match(k, patterns)
+
+
+def test_sqlalchemy_key_sort_breaks_case_ties(key):
+    names = ["web1", "Web1", "WEB1"]
+    k = key({name: {"state": "accepted", "pub": ""} for name in names})
+    if not isinstance(k, salt.key.SqlAlchemyKey):
+        pytest.skip("Exercise deterministic ordering in the database key backend")
+    expected = ["WEB1", "Web1", "web1"]
+    assert k.list_keys()[k.ACC] == expected
+    assert k.glob_match("*")[k.ACC] == expected
+    assert k.glob_match(names) == salt.key.Key.glob_match(k, names)
+    assert k.list_match(names)[k.ACC] == names

@@ -12,7 +12,9 @@ from salt.sqlalchemy import Session
 from salt.sqlalchemy.models import model_for
 from salt.utils.jid import gen_jid
 from tests.support.mock import patch
-from tests.support.pytest.database import available_databases
+from tests.support.pytest.database import available_databases, database_backend
+
+__all__ = ["database_backend"]
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 

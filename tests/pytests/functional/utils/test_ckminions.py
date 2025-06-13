@@ -2,7 +2,13 @@ import pytest
 
 import salt.utils.minions
 from tests.support.mock import patch
-from tests.support.pytest.database import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from tests.support.pytest.database import (
+    available_databases,
+    database_backend,
+    master_opts,
+)
+
+__all__ = ["database_backend", "master_opts"]
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 
@@ -25,19 +31,20 @@ pytestmark = [
 
 def assert_matching_results(ckminions, compound_tgt, direct_tgt, tgt_type):
     """Helper function to assert that compound and direct targeting return the same results"""
-    # compound_result = ckminions.check_minions(compound_tgt, tgt_type="compound")
+    compound_result = ckminions.check_minions(compound_tgt, tgt_type="compound")
     direct_result = ckminions.check_minions(direct_tgt, tgt_type=tgt_type)
-
-    # assert compound_result["minions"] == direct_result["minions"], \
-    #    f"Compound ({compound_tgt}) and direct ({direct_tgt}) targeting returned different results"
-
+    assert set(compound_result["minions"]) == set(direct_result["minions"])
     return direct_result
 
 
 @pytest.fixture
 def base_ckminions(master_opts, database_backend):
     """Create a base CkMinions instance without any data"""
-    return salt.utils.minions.CkMinions.factory(master_opts)
+    instance = salt.utils.minions.CkMinions.factory(master_opts)
+    assert isinstance(instance, salt.utils.minions.SQLAlchemyCkMinions) == (
+        database_backend.name != "no_database"
+    )
+    return instance
 
 
 @pytest.fixture(scope="function")
@@ -344,9 +351,8 @@ def test_compound_matching_rejects_dangerous_input(ckminions):
 
         # The result should be empty or contain the literal string
         # without executing the embedded code
-        assert (
-            len(result["minions"]) == 0
-        ), f"Expression {expr} should be rejected or return no matches"
+        message = f"Expression {expr} should be rejected or return no matches"
+        assert len(result["minions"]) == 0, message
 
 
 def test_connected_ids(ckminions):
@@ -385,3 +391,146 @@ def test_connected_ids(ckminions):
         ck = ckminions(minion_data)
         connected_ids = ck.connected_ids()
         assert {"server1", "server2", "server3", "server4"} == connected_ids
+
+
+@pytest.mark.parametrize("greedy", [False, True])
+@pytest.mark.parametrize(
+    "data,expr,options,expected",
+    [
+        ({"os": "Ubuntu"}, "os:ubuntu", {}, {"target"}),
+        ({"os": "Ubuntu"}, "'os':ubuntu", {}, {"target"}),
+        ({"os": "Ubuntu"}, '"os":ubuntu', {}, {"target"}),
+        ({"os": "Ubuntu"}, "!!str os:ubuntu", {}, {"target"}),
+        ({"os": "Ubuntu"}, "&a os:ubuntu", {}, {"target"}),
+        ({"'os'": "Ubuntu"}, "'os':ubuntu", {}, {"target"}),
+        ({"os\0": "Ubuntu"}, '"os\\0":ubuntu', {}, {"target"}),
+        ({"os": "Ubuntu"}, "os:ubuntu", {"exact_match": True}, {"target"}),
+        ({"os": "ubuntu"}, "os:ubu", {"regex_match": True}, {"target"}),
+        ({"role": "web1"}, "role:web?", {}, {"target"}),
+        ({"role": "app"}, "role:[ab]*", {}, {"target"}),
+        ({"ipv6": ["fe80::1"]}, "ipv6:fe80::1", {}, {"target"}),
+        ({"url": "https://host/path"}, "url:https://host/path", {}, {"target"}),
+        ({"value": 1.5}, "value:1.5", {}, {"target"}),
+        ({"value": -2}, "value:-2", {}, {"target"}),
+        ({"value": None}, "value:none", {}, {"target"}),
+        ({100: "prod"}, "100:prod", {}, {"target"}),
+        ({"env": {100: "prod"}}, "env:100:prod", {}, {"target"}),
+        ({100: "prod", "os": "Ubuntu"}, "os:ubuntu", {}, {"target"}),
+        (
+            {"__salt_sqlalchemy__": "literal", "os": "Ubuntu"},
+            "os:ubuntu",
+            {},
+            {"target"},
+        ),
+        ([{"os": "Ubuntu"}], "os:ubuntu", {}, {"target"}),
+        ({"os": "Ubuntu"}, "*:os:ubuntu", {}, {"target"}),
+        ({"os": "Ubuntu"}, "os|ubuntu", {"delimiter": "|"}, {"target"}),
+        ({"os": "Ubuntu"}, "**", {"delimiter": "*"}, {"target", "other"}),
+        ({"role": "web"}, "role", {}, set()),
+        ({"os": "Debian"}, "os:ubuntu", {}, set()),
+    ],
+)
+def test_cache_match_preserves_base_semantics(
+    ckminions, data, expr, options, expected, greedy
+):
+    ck = ckminions({"target": data, "other": {"unrelated": True}})
+    kwargs = {"delimiter": ":", "greedy": greedy, "search_type": "grains", **options}
+    result = ck._check_cache_minions(expr, **kwargs)
+    reference = salt.utils.minions.CkMinions._check_cache_minions(ck, expr, **kwargs)
+    assert set(result["minions"]) == set(reference["minions"]) == expected
+
+
+@pytest.mark.parametrize("bank,prefix", [("grains", "G"), ("pillar", "I")])
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "{prefix}@os:ubuntu",
+        "{prefix}@'os':ubuntu",
+        '{prefix}@"os":ubuntu',
+        "{prefix}@role:web or {prefix}*@**",
+    ],
+)
+def test_cached_target_cannot_bypass_acl(ckminions, bank, prefix, expr):
+    ck = ckminions(
+        {
+            "web": {"os": "Ubuntu", "role": "web"},
+            "db": {"os": "Ubuntu", "role": "database"},
+        },
+        bank=bank,
+    )
+    target = expr.format(prefix=prefix)
+    assert not ck.validate_tgt(f"{prefix}@role:web", target, "compound")
+
+
+def test_pillar_exact_match_preserves_case_folding(ckminions):
+    ck = ckminions({"target": {"environment": "Prod"}}, bank="pillar")
+    result = ck.check_minions("environment:prod", tgt_type="pillar_exact")
+    assert set(result["minions"]) == {"target"}
+
+
+@pytest.mark.parametrize("greedy", [False, True])
+def test_cache_match_excludes_missing_and_expired_data(ckminions, greedy):
+    ck = ckminions({"live": {"os": "Ubuntu"}, "expired": {"os": "Ubuntu"}})
+    ck.key.cache.store("keys", "missing", {"state": "accepted", "pub": ""})
+    ck.cache.store("grains", "expired", {"os": "Ubuntu"}, expires=-1)
+    result = ck._check_cache_minions("os:ubuntu", ":", greedy, "grains")
+    assert set(result["minions"]) == {"live"}
+
+
+@pytest.mark.parametrize("greedy,expected", [(False, {"cached"}), (True, set())])
+def test_cached_minion_without_accepted_key(ckminions, greedy, expected):
+    ck = ckminions({"cached": {"os": "Ubuntu"}})
+    ck.key.cache.flush("keys", "cached")
+    result = ck._check_cache_minions("os:ubuntu", ":", greedy, "grains")
+    assert set(result["minions"]) == expected
+
+
+def test_cache_match_honors_explicit_minion_subset(ckminions):
+    ck = ckminions({"allowed": {"role": "web"}, "other": {"role": "web"}})
+    result = ck._check_cache_minions(
+        "role:web", ":", True, "grains", minions=["allowed"]
+    )
+    assert set(result["minions"]) == {"allowed"}
+
+
+@pytest.mark.parametrize(
+    "extra_grains", [{}, {100: "custom"}, {"__salt_sqlalchemy__": "literal"}]
+)
+def test_connected_ids_returns_first_matching_address_per_family(
+    ckminions, extra_grains
+):
+    ipv4 = ["192.0.2.10", "192.0.2.11", "192.0.2.12"]
+    ipv6 = ["2001:db8::10", "2001:db8::11", "2001:db8::12"]
+    grains = {"ipv4": ipv4, "ipv6": ipv6, **extra_grains}
+    ck = ckminions({"server": grains, "expired": grains})
+    ck.cache.store("grains", "expired", grains, expires=-1)
+    with patch(
+        "salt.utils.network.local_port_tcp", return_value=set(ipv4[1:] + ipv6[1:])
+    ):
+        assert ck.connected_ids(show_ip=True) == {
+            ("server", ipv4[1]),
+            ("server", ipv6[1]),
+        }
+
+
+def test_large_minion_subset(ckminions):
+    grains = {"role": "web", "ipv4": ["192.0.2.10"]}
+    ck = ckminions({"target": grains, "outside": grains})
+    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+        pytest.skip("Exercise database parameter limits without filesystem probes")
+    subset = ["target", *(f"missing-{idx}" for idx in range(65_536))]
+    result = ck._check_cache_minions("role:web", ":", True, "grains", minions=subset)
+    assert set(result["minions"]) == {"target"}
+    assert list(ck._iter_minion_grains_addresses(subset=subset)) == [
+        ("target", "ipv4", "192.0.2.10")
+    ]
+
+
+def test_cache_match_across_streaming_batches(ckminions):
+    ck = ckminions()
+    if getattr(ck, "dialect_name", None) != "postgresql":
+        pytest.skip("The streaming cache matcher is PostgreSQL-only")
+    data = {f"minion-{idx}": {"os": "Ubuntu"} for idx in range(501)}
+    ck = ckminions(data)
+    result = ck._check_cache_minions("os:ubuntu", ":", True, "grains")
+    assert set(result["minions"]) == set(data)
