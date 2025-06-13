@@ -968,6 +968,13 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
 
     client.transport.send = mocksend
 
+    # Minion should try to authenticate on bad signature
+    @salt.ext.tornado.gen.coroutine
+    def mockauthenticate():
+        pass
+
+    client.auth.authenticate = MagicMock(wraps=mockauthenticate)
+
     # Note the 'ver' value in 'load' does not represent the the 'version' sent
     # in the top level of the transport's message.
     load = {
@@ -987,6 +994,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
             dictkey="pillar",
         )
     assert "Pillar payload signature failed to validate." == excinfo.value.message
+    client.auth.authenticate.assert_called_once()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(
