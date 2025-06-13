@@ -151,13 +151,40 @@ class AsyncReqChannel:
     def ttype(self):
         return self.transport.ttype
 
-    def _package_load(self, load):
+    def _package_load(self, load, nonce=None):
+        """
+        Prepare the load to be sent over the wire.
+
+        For aes channels add a nonce, timestamp and signed token to the load
+        before encrypting it using our aes session key. Then wrap the encrypted
+        load with some meta data. For 'clear' encryption, no extra feilds are
+        added to the load. The unencyrpted load is wrapped with meta data.
+        """
+        if self.crypt == "aes":
+            if nonce is None:
+                nonce = uuid.uuid4().hex
+            try:
+                load["nonce"] = nonce
+                load["ts"] = int(time.time())
+                load["tok"] = self.auth.gen_token(b"salt")
+                load["id"] = self.opts["id"]
+            except TypeError:
+                # Backwards compatability for non dict loads, let the load get
+                # sent and fail to authenticate.
+                log.warning(
+                    "Invalid load passed to request channel. Type is %s should be dict.",
+                    type(load),
+                )
+
+            load = self.auth.session_crypticle.dumps(load)
+
         ret = {
             "enc": self.crypt,
             "load": load,
-            "version": 2,
+            "version": 3,
         }
         if self.crypt == "aes":
+            ret["id"] = self.opts["id"]
             ret["enc_algo"] = self.opts["encryption_algorithm"]
             ret["sig_algo"] = self.opts["signing_algorithm"]
         return ret
@@ -193,12 +220,12 @@ class AsyncReqChannel:
             timeout = self.timeout
         if tries is None:
             tries = self.tries
-        nonce = uuid.uuid4().hex
-        load["nonce"] = nonce
         if not self.auth.authenticated:
             yield self.auth.authenticate()
+
+        nonce = uuid.uuid4().hex
         ret = yield self._send_with_retry(
-            self._package_load(self.auth.crypticle.dumps(load)),
+            self._package_load(load, nonce),
             tries,
             timeout,
         )
@@ -207,7 +234,7 @@ class AsyncReqChannel:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
             ret = yield self._send_with_retry(
-                self._package_load(self.auth.crypticle.dumps(load)),
+                self._package_load(load, nonce),
                 tries,
                 timeout,
             )
@@ -252,15 +279,13 @@ class AsyncReqChannel:
         :param dict load: A load to send across the wire
         :param int timeout: The number of seconds on a response before failing
         """
-        nonce = uuid.uuid4().hex
-        if load and isinstance(load, dict):
-            load["nonce"] = nonce
 
         @tornado.gen.coroutine
         def _do_transfer():
             # Yield control to the caller. When send() completes, resume by populating data with the Future.result
+            nonce = uuid.uuid4().hex
             data = yield self.transport.send(
-                self._package_load(self.auth.crypticle.dumps(load)),
+                self._package_load(load, nonce),
                 timeout=timeout,
             )
             # we may not have always data
@@ -268,7 +293,7 @@ class AsyncReqChannel:
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data, raw, nonce=nonce)
+                data = self.auth.session_crypticle.loads(data, raw, nonce=nonce)
             if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise tornado.gen.Return(data)
@@ -476,7 +501,7 @@ class AsyncPubChannel:
         return {
             "enc": self.crypt,
             "load": load,
-            "version": 2,
+            "version": 3,
         }
 
     @tornado.gen.coroutine
