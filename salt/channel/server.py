@@ -383,7 +383,7 @@ class ReqServerChannel:
 
             pub_path = os.path.join(pki_dir, "minions", id_)
             try:
-                pub = salt.crypt.PublicKey(pub_path)
+                pub = salt.crypt.PublicKey.from_file(pub_path)
             except OSError:
                 log.warning(
                     "Salt minion claiming to be %s attempted to communicate with "
