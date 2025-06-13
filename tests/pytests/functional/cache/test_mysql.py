@@ -17,6 +17,22 @@ pytestmark = [
     pytest.mark.skipif(
         Version(docker.__version__) < Version("4.0.0"),
         reason="Test does not work in this version of docker-py",
+    pytest.mark.parametrize(
+        "database_backend",
+        [
+            ("mysql-server", "5.5"),
+            ("mysql-server", "5.6"),
+            ("mysql-server", "5.7"),
+            ("mysql-server", "8.0"),
+            ("mariadb", "10.3"),
+            ("mariadb", "10.4"),
+            ("mariadb", "10.5"),
+            ("percona", "5.6"),
+            ("percona", "5.7"),
+            ("percona", "8.0"),
+        ],
+        ids=lambda val: f"{val[0]}-{val[1] or 'default'}",
+        indirect=True,
     ),
     pytest.mark.parametrize(
         "database_backend",
