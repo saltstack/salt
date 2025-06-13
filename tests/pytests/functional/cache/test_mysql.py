@@ -3,36 +3,32 @@ import logging
 import pytest
 
 import salt.cache
-import salt.loader
-from salt.utils.versions import Version
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
-
-docker = pytest.importorskip("docker")
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.skip_if_binaries_missing("dockerd"),
-    pytest.mark.skipif(
-        Version(docker.__version__) < Version("4.0.0"),
-        reason="Test does not work in this version of docker-py",
-    ),
     pytest.mark.parametrize(
         "database_backend",
-        [
-            ("mysql-server", "5.5"),
-            ("mysql-server", "5.6"),
-            ("mysql-server", "5.7"),
-            ("mysql-server", "8.0"),
-            ("mariadb", "10.3"),
-            ("mariadb", "10.4"),
-            ("mariadb", "10.5"),
-            ("percona", "5.6"),
-            ("percona", "5.7"),
-            ("percona", "8.0"),
-        ],
-        ids=lambda val: f"{val[0]}-{val[1] or 'default'}",
+        available_databases(
+            [
+                ("mysql-server", "5.5"),
+                ("mysql-server", "5.6"),
+                ("mysql-server", "5.7"),
+                ("mysql-server", "8.0"),
+                ("mariadb", "10.3"),
+                ("mariadb", "10.4"),
+                ("mariadb", "10.5"),
+                ("percona", "5.6"),
+                ("percona", "5.7"),
+                ("percona", "8.0"),
+            ]
+        ),
         indirect=True,
     ),
 ]
