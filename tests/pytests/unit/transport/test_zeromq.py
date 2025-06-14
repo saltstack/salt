@@ -1613,6 +1613,11 @@ async def test_req_chan_bad_payload_to_decode(pki_dir, io_loop, caplog):
         "auth_mode": 1,
         "acceptance_wait_time": 3,
         "acceptance_wait_time_max": 3,
+        "keys.cache_driver": "localfs_key",
+        "master_sign_key_name": "master_sign",
+        "optimization_order": [0, 1, 2],
+        "permissive_pki_access": True,
+        "cluster_id": None,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1764,7 +1769,7 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
         master_opts, master_opts["sock_dir"], listen=False
     )
     server.master_key = salt.crypt.MasterKeys(server.opts)
-    pub = salt.crypt.PublicKey(str(pki_dir.joinpath("master", "master.pub")))
+    pub = salt.crypt.PublicKey.from_file(str(pki_dir.joinpath("master", "master.pub")))
     token = pub.encrypt(
         salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
         algorithm=minion_opts["encryption_algorithm"],

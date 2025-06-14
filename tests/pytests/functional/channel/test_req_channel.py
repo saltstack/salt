@@ -2,7 +2,6 @@ import ctypes
 import logging
 import multiprocessing
 import pathlib
-import shutil
 import time
 
 import pytest
@@ -148,6 +147,12 @@ def req_server_opts(tmp_path):
         "zmq_monitor": False,
         "request_server_ttl": 60,
         "publish_session": 600,
+        "keys.cache_driver": "localfs_key",
+        "id": "master",
+        "optimization_order": [0, 1, 2],
+        "__role": "master",
+        "master_sign_key_name": "master_sign",
+        "permissive_pki_access": True,
     }
 
 
@@ -169,12 +174,12 @@ def minion1_id():
 def minion1_key(minion1_id, tmp_path, req_server_opts):
     minionpki = tmp_path / minion1_id
     minionpki.mkdir()
-    key1 = pathlib.Path(salt.crypt.gen_keys(minionpki, minion1_id, 2048))
+    priv, pub = salt.crypt.gen_keys(2048)
 
     pki = pathlib.Path(req_server_opts["pki_dir"])
     (pki / "minions").mkdir(exist_ok=True)
-    shutil.copy2(key1.with_suffix(".pub"), pki / "minions" / minion1_id)
-    yield salt.crypt.PrivateKey(key1)
+    (pki / "minions" / minion1_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
 
 
 @pytest.fixture
@@ -186,12 +191,12 @@ def minion2_id():
 def minion2_key(minion2_id, tmp_path, req_server_opts):
     minionpki = tmp_path / minion2_id
     minionpki.mkdir()
-    key2 = pathlib.Path(salt.crypt.gen_keys(minionpki, minion2_id, 2048))
+    priv, pub = salt.crypt.gen_keys(2048)
 
     pki = pathlib.Path(req_server_opts["pki_dir"])
     (pki / "minions").mkdir(exist_ok=True)
-    shutil.copy2(key2.with_suffix(".pub"), pki / "minions" / minion2_id)
-    yield salt.crypt.PrivateKey(key2)
+    (pki / "minions" / minion2_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
 
 
 def req_channel_crypt_ids(value):

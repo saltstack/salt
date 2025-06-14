@@ -1130,6 +1130,7 @@ def _git_pillar_base_config(tmp_path):
         "cachedir": str(tmp_path / "cache"),
         "sock_dir": str(tmp_path / "sock_drawer"),
         "conf_file": str(tmp_path / "config.conf"),
+        "keys.cache_driver": "localfs_key",
         "fileserver_backend": ["local"],
         "master_job_cache": False,
         "file_client": "local",
@@ -1167,13 +1168,12 @@ def allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = ["git"]
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
-
+    (accepted_pki / "minion.pub").write_text(pub)
     return salt.master.AESFuncs(opts=opts)
 
 
@@ -1210,12 +1210,12 @@ def not_allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = []
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
+    (accepted_pki / "minion.pub").write_text(pub)
 
     return salt.master.AESFuncs(opts=opts)
 
