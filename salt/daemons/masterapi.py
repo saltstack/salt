@@ -56,6 +56,27 @@ log = logging.getLogger(__name__)
 # Things to do in lower layers:
 # only accept valid minion ids
 
+MINION_EVENT_BLACKLIST = (
+    "salt/job/*/publish",
+    "salt/job/*/new",
+    "salt/job/*/return",
+    "salt/key",
+    "salt/cloud/*",
+    "salt/run/*",
+    "salt/cluster/*",
+    "salt/wheel/*/new",
+    "salt/wheel/*/return",
+    "salt/run/*",
+    "salt/cloud/*",
+)
+
+
+def valid_minion_tag(tag, blacklist=MINION_EVENT_BLACKLIST):
+    for black in blacklist:
+        if fnmatch.fnmatch(tag, black):
+            return False
+    return True
+
 
 def init_git_pillar(opts):
     """
@@ -795,6 +816,9 @@ class RemoteFuncs:
                     event_data = event["data"]
                 else:
                     event_data = event
+                if not valid_minion_tag(event["tag"]):
+                    log.warning("Filtering blacklisted event tag %s", event["tag"])
+                    continue
                 self.event.fire_event(event_data, event["tag"])  # old dup event
                 if load.get("pretag") is not None:
                     self.event.fire_event(

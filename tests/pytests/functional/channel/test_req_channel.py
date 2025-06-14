@@ -1,6 +1,8 @@
 import ctypes
 import logging
 import multiprocessing
+import pathlib
+import time
 
 import pytest
 import tornado.gen
@@ -9,6 +11,7 @@ from pytestshellutils.utils.processes import terminate_process
 import salt.channel.client
 import salt.channel.server
 import salt.config
+import salt.crypt
 import salt.exceptions
 import salt.master
 import salt.utils.platform
@@ -100,6 +103,12 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def _handle_payload(self, payload):
         if self.req_channel_crypt == "clear":
             raise tornado.gen.Return((payload, {"fun": "send_clear"}))
+        for key in (
+            "id",
+            "ts",
+            "tok",
+        ):
+            payload["load"].pop(key, None)
         raise tornado.gen.Return((payload, {"fun": "send"}))
 
 
@@ -115,6 +124,79 @@ def req_server_channel(salt_master, req_channel_crypt):
         terminate_process(
             pid=req_server_channel_process.pid, kill_children=True, slow_stop=False
         )
+
+
+@pytest.fixture
+def req_server_opts(tmp_path):
+    sock_dir = tmp_path / "sock"
+    pki_dir = tmp_path / "pki"
+    cache_dir = tmp_path / "cache"
+    sock_dir.mkdir()
+    pki_dir.mkdir()
+    cache_dir.mkdir()
+    yield {
+        "sock_dir": sock_dir,
+        "pki_dir": pki_dir,
+        "cachedir": cache_dir,
+        "key_pass": "meh",
+        "keysize": 2048,
+        "cluster_id": None,
+        "master_sign_pubkey": False,
+        "pub_server_niceness": None,
+        "con_cache": False,
+        "zmq_monitor": False,
+        "request_server_ttl": 60,
+        "publish_session": 600,
+        "keys.cache_driver": "localfs_key",
+        "id": "master",
+        "optimization_order": [0, 1, 2],
+        "__role": "master",
+        "master_sign_key_name": "master_sign",
+        "permissive_pki_access": True,
+    }
+
+
+@pytest.fixture
+def req_server(req_server_opts):
+    server = salt.channel.server.ReqServerChannel.factory(req_server_opts)
+    try:
+        yield server
+    finally:
+        server.close()
+
+
+@pytest.fixture
+def minion1_id():
+    yield "minion1"
+
+
+@pytest.fixture
+def minion1_key(minion1_id, tmp_path, req_server_opts):
+    minionpki = tmp_path / minion1_id
+    minionpki.mkdir()
+    priv, pub = salt.crypt.gen_keys(2048)
+
+    pki = pathlib.Path(req_server_opts["pki_dir"])
+    (pki / "minions").mkdir(exist_ok=True)
+    (pki / "minions" / minion1_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
+
+
+@pytest.fixture
+def minion2_id():
+    yield "minion2"
+
+
+@pytest.fixture
+def minion2_key(minion2_id, tmp_path, req_server_opts):
+    minionpki = tmp_path / minion2_id
+    minionpki.mkdir()
+    priv, pub = salt.crypt.gen_keys(2048)
+
+    pki = pathlib.Path(req_server_opts["pki_dir"])
+    (pki / "minions").mkdir(exist_ok=True)
+    (pki / "minions" / minion2_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
 
 
 def req_channel_crypt_ids(value):
@@ -142,6 +224,8 @@ def test_basic(push_channel):
     """
     Test a variety of messages, make sure we get the expected responses
     """
+    if push_channel.crypt == "aes":
+        pytest.skip(reason="test not valid for encrypted channel")
     msgs = [
         {"foo": "bar"},
         {"bar": "baz"},
@@ -156,6 +240,8 @@ def test_normalization(push_channel):
     """
     Since we use msgpack, we need to test that list types are converted to lists
     """
+    if push_channel.crypt == "aes":
+        pytest.skip(reason="test not valid for encrypted channel")
     types = {
         "list": list,
     }
@@ -172,6 +258,8 @@ def test_badload(push_channel, req_channel_crypt):
     """
     Test a variety of bad requests, make sure that we get some sort of error
     """
+    if push_channel.crypt == "aes":
+        pytest.skip(reason="test not valid for encrypted channel")
     msgs = ["", [], tuple()]
     if req_channel_crypt == "clear":
         for msg in msgs:
@@ -181,3 +269,186 @@ def test_badload(push_channel, req_channel_crypt):
         for msg in msgs:
             with pytest.raises(salt.exceptions.AuthenticationError):
                 push_channel.send(msg, timeout=5, tries=1)
+
+
+async def test_req_channel_ttl_v2(req_server, io_loop):
+    req_server.opts["request_server_ttl"] = 60
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+    payload = {
+        "enc": "aes",
+        "version": 2,
+        "load": req_server.crypticle.dumps(
+            {
+                "ts": int(time.time() - 61),
+            }
+        ),
+    }
+    ret = await req_server.handle_message(payload)
+    ret = req_server.crypticle.loads(ret)
+    assert ret == payload
+
+
+async def test_req_channel_ttl_valid(req_server, io_loop, minion1_id, minion1_key):
+    req_server.opts["request_server_ttl"] = 60
+    req_server.opts["publish_session"] = 600
+    tok = minion1_key.encrypt(b"salt")
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+    key = req_server.session_key(minion1_id)
+
+    crypticle = salt.crypt.Crypticle(req_server.opts, key)
+    payload = {
+        "enc": "aes",
+        "id": minion1_id,
+        "version": 3,
+        "load": crypticle.dumps(
+            {
+                "ts": int(time.time()),
+                "id": minion1_id,
+                "tok": tok,
+            }
+        ),
+    }
+    ret = await req_server.handle_message(payload)
+    ret = crypticle.loads(ret)
+    assert ret == payload
+
+
+async def test_req_channel_ttl_expired(
+    req_server, io_loop, caplog, minion1_id, minion1_key
+):
+    req_server.opts["request_server_ttl"] = 60
+    req_server.opts["publish_session"] = 600
+    tok = minion1_key.encrypt(b"salt")
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+    key = req_server.session_key(minion1_id)
+    crypticle = salt.crypt.Crypticle(req_server.opts, key)
+    payload = {
+        "enc": "aes",
+        "id": minion1_id,
+        "version": 3,
+        "load": crypticle.dumps(
+            {
+                "ts": int(time.time() - 61),
+                "id": minion1_id,
+                "tok": tok,
+            }
+        ),
+    }
+    with caplog.at_level(logging.WARNING):
+        ret = await req_server.handle_message(payload)
+        assert f"Received request from {minion1_id} with expired ttl" in caplog.text
+        assert ret == "bad load"
+
+
+async def test_req_channel_id_invalid_chars(
+    req_server, minion1_id, minion1_key, io_loop, caplog
+):
+    req_server.opts["request_server_ttl"] = 60
+    req_server.opts["publish_session"] = 600
+    tok = minion1_key.encrypt(b"salt")
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+    key = req_server.session_key(minion1_id)
+    crypticle = salt.crypt.Crypticle(req_server.opts, key)
+    payload = {
+        "enc": "aes",
+        "id": f"{minion1_id}\0",
+        "version": 3,
+        "load": crypticle.dumps(
+            {
+                "ts": int(time.time()),
+                "id": f"{minion1_id}\0",
+                "tok": tok,
+            }
+        ),
+    }
+    with caplog.at_level(logging.WARNING):
+        ret = await req_server.handle_message(payload)
+        assert (
+            "Bad load from minion: SaltDeserializationError: Encountered invalid id"
+            in caplog.text
+        )
+        assert ret == "bad load"
+
+
+async def test_req_channel_id_mismatch(
+    req_server, io_loop, caplog, minion1_id, minion1_key
+):
+
+    id2 = "minion2"
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+    key = req_server.session_key(minion1_id)
+    crypticle = salt.crypt.Crypticle(req_server.opts, key)
+    payload = {
+        "enc": "aes",
+        "id": minion1_id,
+        "version": 3,
+        "load": crypticle.dumps(
+            {
+                "ts": int(time.time()),
+                "id": id2,
+            }
+        ),
+    }
+    with caplog.at_level(logging.WARNING):
+        ret = await req_server.handle_message(payload)
+        assert (
+            f"Request id mismatch. Found '{id2}' but expected '{minion1_id}'"
+            in caplog.text
+        )
+        assert ret == "bad load"
+
+
+async def test_req_channel_v2_invalid_token(
+    req_server,
+    io_loop,
+    caplog,
+    tmp_path,
+    minion1_id,
+    minion1_key,
+    minion2_key,
+    minion2_id,
+):
+
+    tok2 = minion2_key.encrypt(b"salt")
+
+    async def handler(payload):
+        return payload, {"fun": "send"}
+
+    req_server.post_fork(handler, io_loop)
+
+    # Minion 1 is trying to impersonate minion2's token.
+    payload = {
+        "enc": "aes",
+        "version": 2,
+        "load": req_server.crypticle.dumps(
+            {
+                "ts": int(time.time()),
+                "id": minion1_id,
+                "tok": tok2,
+            }
+        ),
+    }
+    with caplog.at_level(logging.WARNING):
+        ret = await req_server.handle_message(payload)
+        assert "Unable to decrypt token:" in caplog.text
+        assert ret == "bad load"

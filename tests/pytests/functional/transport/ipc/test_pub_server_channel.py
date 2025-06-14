@@ -96,8 +96,8 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
 
     https://github.com/saltstack/salt/issues/36469
     """
-    if transport == "tcp":
-        pytest.skip("Test not applicable to the ZeroMQ transport.")
+    # if transport == "tcp":
+    #    pytest.skip("Test not applicable to the ZeroMQ transport.")
 
     def _send_small(opts, sid, num=10):
         loop = asyncio.new_event_loop()
@@ -136,7 +136,8 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
                 await server_channel.publish(load)
 
         asyncio.run(send())
-        time.sleep(0.3)
+        # Allow some time for sends to finish
+        time.sleep(3)
         server_channel.close()
         loop.close()
         asyncio.set_event_loop(None)

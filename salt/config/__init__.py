@@ -1018,6 +1018,8 @@ VALID_OPTS = immutabletypes.freeze(
         "publish_signing_algorithm": str,
         # the cache driver to be used to manage keys for both minion and master
         "keys.cache_driver": (type(None), str),
+        "request_server_ttl": int,
+        "request_server_aes_session": int,
     }
 )
 
@@ -1683,6 +1685,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
+        "request_server_aes_session": 0,
+        "request_server_ttl": 0,
     }
 )
 
