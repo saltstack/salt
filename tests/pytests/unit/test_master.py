@@ -82,6 +82,9 @@ def encrypted_requests(tmp_path):
             "master_job_cache": False,
             "keys.cache_driver": "localfs_key",
             "__role": "master",
+            "optimization_order": [0, 1, 2],
+            "master_sign_key_name": "master_sign",
+            "id": "master",
         }
     )
 
@@ -128,6 +131,8 @@ def test_maintenance_duration():
         "eauth_tokens": "",
         "keys.cache_driver": "localfs_key",
         "__role": "master",
+        "optimization_order": [0, 1, 2],
+        "master_sign_key_name": "master_sign",
     }
     mp = salt.master.Maintenance(opts)
     with patch("salt.utils.verify.check_max_open_files") as check_files, patch.object(
@@ -1099,20 +1104,18 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
     """
-    salt.crypt.gen_keys(tmp_path, "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
 
     minions = pathlib.Path(encrypted_requests.opts["pki_dir"]) / "minions"
     minions.mkdir()
 
-    with salt.utils.files.fopen(minions / "minion", "wb") as wfp:
-        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
-            wfp.write(rfp.read())
+    with salt.utils.files.fopen(minions / "minion", "w") as wfp:
+        wfp.write(pub)
 
-    priv = salt.crypt.PrivateKey(tmp_path / "minion.pem")
     with pytest.raises(salt.exceptions.SaltValidationError):
         encrypted_requests.pub_ret(
             {
-                "tok": priv.encrypt(b"salt"),
+                "tok": salt.crypt.PrivateKey.from_str(priv).encrypt(b"salt"),
                 "id": "minion",
                 "jid": "asdf/../../../sdf",
                 "return": {},
