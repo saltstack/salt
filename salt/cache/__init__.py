@@ -4,6 +4,7 @@ Loader mechanism for caching data, with data expiration, etc.
 .. versionadded:: 2016.11.0
 """
 
+import datetime
 import logging
 import time
 
@@ -62,9 +63,12 @@ class Cache:
             self.cachedir = opts.get("cachedir", salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = kwargs.get(
-            "driver", opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
-        )
+
+        if kwargs.get("driver"):
+            self.driver = kwargs["driver"]
+        else:
+            self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir
@@ -121,7 +125,7 @@ class Cache:
 
         return data
 
-    def store(self, bank, key, data):
+    def store(self, bank, key, data, expires=None):
         """
         Store data using the specified module
 
@@ -138,12 +142,28 @@ class Cache:
             The data which will be stored in the cache. This data should be
             in a format which can be serialized by msgpack.
 
-        :raises SaltCacheError:
+        :param expires:
+            how many seconds from now the data should be considered stale.
+
+         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.store"
-        return self.modules[fun](bank, key, data, **self._kwargs)
+        try:
+            return self.modules[fun](bank, key, data, expires=expires, **self._kwargs)
+        except TypeError:
+            # if the backing store doesnt natively support expiry, we handle it as a fallback
+            if expires:
+                expires_at = datetime.datetime.now().astimezone() + datetime.timedelta(
+                    seconds=expires
+                )
+                expires_at = int(expires_at.timestamp())
+                return self.modules[fun](
+                    bank, key, {"data": data, "_expires": expires_at}, **self._kwargs
+                )
+            else:
+                return self.modules[fun](bank, key, data, **self._kwargs)
 
     def fetch(self, bank, key):
         """
@@ -167,7 +187,17 @@ class Cache:
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.fetch"
-        return self.modules[fun](bank, key, **self._kwargs)
+        ret = self.modules[fun](bank, key, **self._kwargs)
+
+        # handle fallback if necessary
+        if isinstance(ret, dict) and set(ret.keys()) == {"data", "_expires"}:
+            now = datetime.datetime.now().astimezone().timestamp()
+            if ret["_expires"] > now:
+                return ret["data"]
+            else:
+                return {}
+        else:
+            return ret
 
     def updated(self, bank, key):
         """
@@ -309,21 +339,28 @@ class MemCache(Cache):
         if self.debug:
             self.call += 1
         now = time.time()
+        expires = None
         record = self.storage.pop((bank, key), None)
         # Have a cached value for the key
-        if record is not None and record[0] + self.expire >= now:
-            if self.debug:
-                self.hit += 1
-                log.debug(
-                    "MemCache stats (call/hit/rate): %s/%s/%s",
-                    self.call,
-                    self.hit,
-                    float(self.hit) / self.call,
-                )
-            # update atime and return
-            record[0] = now
-            self.storage[(bank, key)] = record
-            return record[1]
+        if record is not None:
+            if len(record) == 2:
+                (created_at, data) = record
+            elif len(record) == 3:
+                (created_at, expires, data) = record
+
+            if (created_at + (expires or self.expire)) >= now:
+                if self.debug:
+                    self.hit += 1
+                    log.debug(
+                        "MemCache stats (call/hit/rate): %s/%s/%s",
+                        self.call,
+                        self.hit,
+                        float(self.hit) / self.call,
+                    )
+                # update atime and return
+                record[0] = now
+                self.storage[(bank, key)] = record
+                return data
 
         # Have no value for the key or value is expired
         data = super().fetch(bank, key)
@@ -332,18 +369,18 @@ class MemCache(Cache):
                 MemCache.__cleanup(self.expire)
             if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [now, data]
+        self.storage[(bank, key)] = [now, self.expire, data]
         return data
 
-    def store(self, bank, key, data):
+    def store(self, bank, key, data, expires=None):
         self.storage.pop((bank, key), None)
-        super().store(bank, key, data)
+        super().store(bank, key, data, expires=expires)
         if len(self.storage) >= self.max:
             if self.cleanup:
                 MemCache.__cleanup(self.expire)
             if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [time.time(), data]
+        self.storage[(bank, key)] = [time.time(), expires, data]
 
     def flush(self, bank, key=None):
         if key is None:
