@@ -17,6 +17,7 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 import logging
 
 import salt.utils.files
+import salt.utils.versions
 
 # pylint: disable=import-error
 try:
@@ -30,7 +31,7 @@ try:
             from Cryptodome.Util import asn1
         except ImportError:
             from Crypto.Util import asn1  # nosec
-        import OpenSSL
+        import OpenSSL  # pylint: disable=W8410
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
@@ -71,6 +72,10 @@ def auth(username, password, **kwargs):
             your_user:
               - .*
     """
+    salt.utils.versions.warn_until(
+        3008,
+        "This module has been deprecated as it is known to be insecure.",
+    )
     pem = password
     cacert_file = __salt__["config.get"]("external_auth:pki:ca_file")
 

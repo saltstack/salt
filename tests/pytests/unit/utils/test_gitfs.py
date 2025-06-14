@@ -4,6 +4,7 @@ import time
 import pytest
 
 import salt.config
+import salt.exceptions
 import salt.fileserver.gitfs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
@@ -262,3 +263,74 @@ def test_checkout_pygit2(_prepare_provider):
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
     assert "_" == _prepare_provider.get_cache_basename()
+
+
+def test_find_file(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    assert gitfs.find_file("asdf") == {"path": "", "rel": ""}
+
+
+def test_find_file_bad_path(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("sdf/../../../asdf")
+
+
+def test_find_file_bad_env(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("asdf", tgt_env="asd/../../../sdf")

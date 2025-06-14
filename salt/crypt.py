@@ -756,6 +756,7 @@ class AsyncAuth:
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
+            self._session_crypticle = Crypticle(self.opts, creds["session"])
             self._authenticate_future = tornado.concurrent.Future()
             self._authenticate_future.set_result(True)
 
@@ -771,6 +772,10 @@ class AsyncAuth:
                 continue
             setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
         return result
+
+    @property
+    def session_crypticle(self):
+        return self._session_crypticle
 
     @property
     def creds(self):
@@ -913,11 +918,13 @@ class AsyncAuth:
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
+                    self._session_crypticle = Crypticle(self.opts, creds["session"])
                 elif self._creds["aes"] != creds["aes"]:
                     log.debug("%s The master's aes key has changed.", self)
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
+                    self._session_crypticle = Crypticle(self.opts, creds["session"])
 
                 self._authenticate_future.set_result(
                     True
@@ -1005,7 +1012,6 @@ class AsyncAuth:
         clear_signed_data = payload["load"]
         clear_signature = payload["sig"]
         payload = salt.payload.loads(clear_signed_data)
-
         if "pub_key" in payload:
             auth["aes"] = self.verify_master(
                 payload, master_pub="token" in sign_in_payload
@@ -1023,6 +1029,11 @@ class AsyncAuth:
                     m_pub_fn,
                 )
                 raise SaltClientError("Invalid master key")
+
+            key = self.get_keys()
+            auth["session"] = key.decrypt(
+                payload["session"], self.opts["encryption_algorithm"]
+            )
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
         if os.path.exists(master_pubkey_path) and not PublicKey.from_file(
@@ -1576,10 +1587,12 @@ class SAuth(AsyncAuth):
                 log.error("%s Got new master aes key.", self)
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
+                self._session_crypticle = Crypticle(self.opts, creds["session"])
             elif self._creds["aes"] != creds["aes"]:
                 log.error("%s The master's aes key has changed.", self)
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
+                self._session_crypticle = Crypticle(self.opts, creds["session"])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
