@@ -8,6 +8,7 @@ import errno
 import glob
 import logging
 import os
+import pathlib
 import shutil
 import time
 
@@ -231,6 +232,8 @@ def save_minions(jid, minions, syndic_id=None):
     """
     Save/update the serialized list of minions for a given job
     """
+    import salt.utils.verify
+
     # Ensure we have a list for Python 3 compatibility
     minions = list(minions)
 
@@ -254,10 +257,20 @@ def save_minions(jid, minions, syndic_id=None):
         else:
             raise
 
-    if syndic_id is not None:
-        minions_path = os.path.join(jid_dir, SYNDIC_MINIONS_P.format(syndic_id))
-    else:
-        minions_path = os.path.join(jid_dir, MINIONS_P)
+    try:
+        if syndic_id is not None:
+            name = SYNDIC_MINIONS_P.format(syndic_id)
+        else:
+            name = MINIONS_P
+        minions_path = salt.utils.verify.clean_join(jid_dir, name)
+        target_name = pathlib.Path(minions_path).resolve().name
+        if name != target_name:
+            raise salt.exceptions.SaltValidationError(
+                f"Filenames do not match: {name} != {target_name}"
+            )
+    except salt.exceptions.SaltValidationError as exc:
+        log.error("Error %s", exc)
+        return
 
     try:
         if not os.path.exists(jid_dir):

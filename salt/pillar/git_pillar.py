@@ -437,7 +437,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     opts["__git_pillar"] = True
     git_pillar = salt.utils.gitfs.GitPillar(
         opts,
-        repos,
+        list(repos),
         per_remote_overrides=PER_REMOTE_OVERRIDES,
         per_remote_only=PER_REMOTE_ONLY,
         global_only=GLOBAL_ONLY,

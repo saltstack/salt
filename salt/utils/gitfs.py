@@ -169,6 +169,25 @@ PYGIT2_MINVER = Version("0.20.3")
 LIBGIT2_MINVER = Version("0.20.0")
 
 
+def split_name(remote):
+    """
+    Given a string determine if it is a url or a name and url combination.
+
+    Examples:
+
+       None, "https://github.com/saltstack/salt.git" == split_name("https://github.com/saltstack/salt.git")
+
+       "__env__", "https://github.com/saltstack/salt.git" == split_name("__env__ https://github.com/saltstack/salt.git")
+    """
+    parts = remote.split(" ", 1)
+    if len(parts) == 1:
+        return None, remote
+    maybename, maybeurl = parts
+    if not salt.utils.verify.url(maybename):
+        return maybename, maybeurl
+    return None, remote
+
+
 def enforce_types(key, val):
     """
     Force params to be strings unless they should remain a different type
@@ -2625,7 +2644,27 @@ class GitBase:
             per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
-        for remote in remotes:
+        # In case a tuple is passed.
+        remotes = list(remotes)
+        for remote in list(remotes):
+
+            if isinstance(remote, dict):
+                for key in list(remote):
+                    name, url = split_name(key)
+                    if not salt.utils.verify.url(url):
+                        log.warning("Found bad url data %r", key)
+                        remote.pop(key)
+                        continue
+                # None of the remotes were valid
+                if not remote:
+                    remotes.remove(remote)
+            else:
+                name, url = split_name(remote)
+                if not salt.utils.verify.url(url):
+                    log.warning("Found bad url data %r", remote)
+                    remotes.remove(remote)
+                    continue
+
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
@@ -3243,14 +3282,15 @@ class GitFS(GitBase):
         if os.path.isabs(path):
             return fnd
 
-        dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
-        hashes_glob = salt.utils.path.join(
+        # dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
+        dest = salt.utils.verify.clean_join(self.cache_root, "refs", tgt_env, path)
+        hashes_glob = salt.utils.verify.clean_join(
             self.hash_cachedir, tgt_env, f"{path}.hash.*"
         )
-        blobshadest = salt.utils.path.join(
+        blobshadest = salt.utils.verify.clean_join(
             self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
+        lk_fn = salt.utils.verify.clean_join(self.hash_cachedir, tgt_env, f"{path}.lk")
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
