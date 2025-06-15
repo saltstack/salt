@@ -39,7 +39,7 @@ def _auth():
     Return the auth object
     """
     if "auth" not in __context__:
-        __context__["auth"] = salt.crypt.SAuth(__opts__)
+        __context__["auth"] = salt.crypt.SAuth(__opts__.value())
     return __context__["auth"]
 
 
@@ -48,7 +48,7 @@ def _gather_pillar(pillarenv, pillar_override):
     Whenever a state run starts, gather the pillar data fresh
     """
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        __opts__.value(),
         __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
@@ -986,7 +986,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__.value()) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
