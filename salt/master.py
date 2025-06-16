@@ -1721,6 +1721,9 @@ class AESFuncs(TransportMethods):
                     )
             load["sig"] = sig
 
+        if "tok" in load:
+            load.pop("tok")
+
         try:
             salt.utils.job.store_job(
                 self.opts, load, event=self.event, mminion=self.mminion
