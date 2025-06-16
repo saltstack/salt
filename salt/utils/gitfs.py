@@ -3311,14 +3311,18 @@ class GitFS(GitBase):
             return fnd
 
         # dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
-        dest = salt.utils.verify.clean_join(self.cache_root, "refs", tgt_env, path)
+        dest = salt.utils.verify.clean_join(
+            self.cache_root, "refs", tgt_env, path, subdir=True
+        )
         hashes_glob = salt.utils.verify.clean_join(
-            self.hash_cachedir, tgt_env, f"{path}.hash.*"
+            self.hash_cachedir, tgt_env, f"{path}.hash.*", subdir=True
         )
         blobshadest = salt.utils.verify.clean_join(
-            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
+            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1", subdir=True
         )
-        lk_fn = salt.utils.verify.clean_join(self.hash_cachedir, tgt_env, f"{path}.lk")
+        lk_fn = salt.utils.verify.clean_join(
+            self.hash_cachedir, tgt_env, f"{path}.lk", subdir=True
+        )
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
