@@ -2592,6 +2592,23 @@ class GitBase:
                 global_only,
             )
 
+    @staticmethod
+    def validate_remote(remote):
+        """
+        Validate a remote repository config.
+
+        Remotes should be in url format with the exception of some ssh remotes
+        which can be in a `git@...` format. This method handles the special ssh
+        remote case by prepending `ssh://` prior to url validation.
+        """
+        name, url = split_name(remote)
+        _ = url.split("@")[0]
+        if "://" not in _:
+            url = f"ssh://{url}"
+        if salt.utils.verify.url(url):
+            return True
+        return False
+
     def init_remotes(
         self,
         remotes,
@@ -2649,8 +2666,7 @@ class GitBase:
 
             if isinstance(remote, dict):
                 for key in list(remote):
-                    name, url = split_name(key)
-                    if not salt.utils.verify.url(url):
+                    if not self.validate_remote(key):
                         log.warning("Found bad url data %r", key)
                         remote.pop(key)
                         continue
@@ -2658,8 +2674,7 @@ class GitBase:
                 if not remote:
                     remotes.remove(remote)
             else:
-                name, url = split_name(remote)
-                if not salt.utils.verify.url(url):
+                if not self.validate_remote(key):
                     log.warning("Found bad url data %r", remote)
                     remotes.remove(remote)
                     continue

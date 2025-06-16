@@ -334,3 +334,15 @@ def test_find_file_bad_env(tmp_path):
     gitfs = salt.utils.gitfs.GitFS(opts, remotes)
     with pytest.raises(salt.exceptions.SaltValidationError):
         gitfs.find_file("asdf", tgt_env="asd/../../../sdf")
+
+
+@pytest.mark.parametrize(
+    "remote,valid",
+    [
+        ("git@github.com/saltstack/salt", True),
+        ("https://github.com/salttack/salt.git", True),
+        ("https://github.com/\nsaltstack/salt.git", False),
+    ],
+)
+def test_remote_validation(remote, valid):
+    assert salt.utils.gitfs.GitFS.validate_remote(remote) is valid
