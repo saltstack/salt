@@ -346,6 +346,8 @@ def test_find_file_bad_env(tmp_path):
         ("ssh://git@github.com:22/saltstack/salt.git", True),
         ("https://github.com/salttack/salt.git", True),
         ("https://github.com/\nsaltstack/salt.git", False),
+        ("https://git:mypassword@github.com/saltstack/salt.git", True),
+        ("file:///srv/git/salt.git", True),
     ],
 )
 def test_remote_validation(remote, valid):
@@ -369,6 +371,11 @@ def test_remote_validation(remote, valid):
             "https://github.com/salttack/salt.git",
             "https://github.com/salttack/salt.git",
         ),
+        (
+            "https://git:mypassword@github.com/saltstack/salt.git",
+            "https://git:mypassword@github.com/saltstack/salt.git",
+        ),
+        ("file:///srv/git/salt.git", "file:///srv/git/salt.git"),
     ],
 )
 def test_remote_to_url(remote, result):
