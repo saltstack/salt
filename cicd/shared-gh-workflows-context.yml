@@ -12,3 +12,29 @@ pr-testrun-slugs:
   - macos-15-pkg
 full-testrun-slugs:
   - all
+supported-testrun-operating-systems:
+  - amazonlinux-2-arm64
+  - amazonlinux-2
+  - amazonlinux-2023-arm64
+  - amazonlinux-2023
+  - debian-11-arm64
+  - debian-11
+  - debian-12-arm64
+  - debian-12
+  - fedora-40-arm64
+  - fedora-40
+  - opensuse-15
+  - photonos-4-arm64
+  - photonos-4
+  - photonos-5-arm64
+  - photonos-5
+  - rockylinux-8-arm64
+  - rockylinux-8
+  - rockylinux-9-arm64
+  - rockylinux-9
+  - ubuntu-22.04-arm64
+  - ubuntu-22.04
+  - ubuntu-24.04-arm64
+  - ubuntu-24.04
+  - windows-2022
+  - windows-2025
