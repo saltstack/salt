@@ -506,7 +506,9 @@ def generate_workflows(ctx: Context):
         "photon": [],
         "redhat": [],
     }
-    for slug in sorted(tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]):
+    for slug in sorted(
+        tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]
+    ):
         if slug.endswith("-arm64"):
             continue
         if not slug.startswith(("amazonlinux", "rockylinux", "fedora", "photonos")):
@@ -527,7 +529,9 @@ def generate_workflows(ctx: Context):
                 build_rpms_listing.append((distro, release, arch))
 
     build_debs_listing = []
-    for slug in sorted(tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]):
+    for slug in sorted(
+        tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]
+    ):
         if not slug.startswith(("debian-", "ubuntu-")):
             continue
         if slug.endswith("-arm64"):
