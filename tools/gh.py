@@ -47,7 +47,9 @@ def sync_os_labels(
             "description": f"{description_prefix} ALL OS'es",
         },
     }
-    for slug in tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]:
+    for slug in tools.utils.get_cicd_shared_context()[
+        "supported-testrun-operating-systems"
+    ]:
         name = f"test:os:{slug}"
         known_os[name] = {
             "name": name,
