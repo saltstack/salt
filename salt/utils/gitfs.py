@@ -14,6 +14,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import re
 import shlex
 import shutil
 import stat
@@ -231,7 +232,7 @@ def enforce_types(key, val):
     else:
         try:
             return expected(val)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.error(
                 "Failed to enforce type for key=%s with val=%s, falling back "
                 "to a string",
@@ -2599,12 +2600,16 @@ class GitBase:
 
         Remotes should be in url format with the exception of some ssh remotes
         which can be in a `git@...` format. This method handles the special ssh
-        remote case by prepending `ssh://` prior to url validation.
+        remote case by converting to `ssh://` style prior to url validation.
         """
         name, url = split_name(remote)
-        _ = url.split("@")[0]
-        if "://" not in _:
-            url = f"ssh://{url}"
+        pattern = r"^([^@]+)@([^:]+):(.+)$"
+        if match := re.match(pattern, url):
+            user, host, path = match.groups()
+            if not path.startswith("/"):
+                path = f"/{path}"
+            url = f"ssh://{user}@{host}{path}"
+
         if salt.utils.verify.url(url):
             return True
         return False

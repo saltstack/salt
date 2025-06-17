@@ -339,7 +339,8 @@ def test_find_file_bad_env(tmp_path):
 @pytest.mark.parametrize(
     "remote,valid",
     [
-        ("git@github.com/saltstack/salt", True),
+        ("git@github.com:/saltstack/salt", True),
+        ("git@github.com:saltstack/salt", True),
         ("https://github.com/salttack/salt.git", True),
         ("https://github.com/\nsaltstack/salt.git", False),
     ],
