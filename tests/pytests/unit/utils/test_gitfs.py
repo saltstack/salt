@@ -341,9 +341,35 @@ def test_find_file_bad_env(tmp_path):
     [
         ("git@github.com:/saltstack/salt", True),
         ("git@github.com:saltstack/salt", True),
+        ("git@github.com/saltstack/salt", False),
+        ("ssh://git@github.com/saltstack/salt.git", True),
+        ("ssh://git@github.com:22/saltstack/salt.git", True),
         ("https://github.com/salttack/salt.git", True),
         ("https://github.com/\nsaltstack/salt.git", False),
     ],
 )
 def test_remote_validation(remote, valid):
     assert salt.utils.gitfs.GitFS.validate_remote(remote) is valid
+
+
+@pytest.mark.parametrize(
+    "remote,result",
+    [
+        ("git@github.com:/saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        ("git@github.com:saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        (
+            "ssh://git@github.com/saltstack/salt.git",
+            "ssh://git@github.com/saltstack/salt.git",
+        ),
+        (
+            "ssh://git@github.com:22/saltstack/salt.git",
+            "ssh://git@github.com:22/saltstack/salt.git",
+        ),
+        (
+            "https://github.com/salttack/salt.git",
+            "https://github.com/salttack/salt.git",
+        ),
+    ],
+)
+def test_remote_to_url(remote, result):
+    assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result

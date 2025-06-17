@@ -2594,22 +2594,31 @@ class GitBase:
             )
 
     @staticmethod
-    def validate_remote(remote):
+    def remote_to_url(remote):
         """
-        Validate a remote repository config.
+        Convert a remote to a URL
 
         Remotes should be in url format with the exception of some ssh remotes
         which can be in a `git@...` format. This method handles the special ssh
-        remote case by converting to `ssh://` style prior to url validation.
+        remote case by converting to `ssh://` style URLs.
         """
-        name, url = split_name(remote)
-        pattern = r"^([^@]+)@([^:]+):(.+)$"
-        if match := re.match(pattern, url):
+        pattern = r"^([^@:/]+)@([^:]+):(.+)$"
+        if match := re.match(pattern, remote):
             user, host, path = match.groups()
             if not path.startswith("/"):
                 path = f"/{path}"
             url = f"ssh://{user}@{host}{path}"
+            return url
+        return remote
 
+    @staticmethod
+    def validate_remote(remote):
+        """
+        Validate a remote repository config.
+
+        """
+        _, remote = split_name(remote)
+        url = GitFS.remote_to_url(remote)
         if salt.utils.verify.url(url):
             return True
         return False
