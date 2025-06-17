@@ -90,7 +90,7 @@ def setup_testsuite(
      * Setup the local checkout for running the tests in Windows 2019, from the
        artifacts in the latest nightly build from branch 3006.x
 
-         tools ts setup --platform linux --slug windows-2019 --nightly 3006.x
+         tools ts setup --platform linux --slug windows-2025 --nightly 3006.x
     """
     if TYPE_CHECKING:
         assert platform is not None

@@ -177,18 +177,6 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
             ),
             Linux(
-                slug="ubuntu-20.04",
-                display_name="Ubuntu 20.04",
-                arch="x86_64",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
-            ),
-            Linux(
-                slug="ubuntu-20.04-arm64",
-                display_name="Ubuntu 20.04 Arm64",
-                arch="arm64",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
-            ),
-            Linux(
                 slug="ubuntu-22.04",
                 display_name="Ubuntu 22.04",
                 arch="x86_64",
@@ -372,20 +360,6 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
                 pkg_type="rpm",
                 fips=True,
                 container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
-            ),
-            LinuxPkg(
-                slug="ubuntu-20.04",
-                display_name="Ubuntu 20.04",
-                arch="x86_64",
-                pkg_type="deb",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
-            ),
-            LinuxPkg(
-                slug="ubuntu-20.04-arm64",
-                display_name="Ubuntu 20.04 Arm64",
-                arch="arm64",
-                pkg_type="deb",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
             ),
             LinuxPkg(
                 slug="ubuntu-22.04",
