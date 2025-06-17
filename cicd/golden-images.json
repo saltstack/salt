@@ -189,26 +189,6 @@
     "is_windows": "false",
     "ssh_username": "rocky"
   },
-  "ubuntu-20.04-arm64": {
-    "ami": "ami-0bf8ea4c07a88d6c5",
-    "ami_description": "CI Image of Ubuntu 20.04 arm64",
-    "ami_name": "salt-project/ci/ubuntu/20.04/arm64/20240912.2136",
-    "arch": "arm64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "m6g.large",
-    "is_windows": "false",
-    "ssh_username": "ubuntu"
-  },
-  "ubuntu-20.04": {
-    "ami": "ami-08a84f7455622c3d5",
-    "ami_description": "CI Image of Ubuntu 20.04 x86_64",
-    "ami_name": "salt-project/ci/ubuntu/20.04/x86_64/20240912.2136",
-    "arch": "x86_64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "t3a.large",
-    "is_windows": "false",
-    "ssh_username": "ubuntu"
-  },
   "ubuntu-22.04-arm64": {
     "ami": "ami-0415a2d2279277d61",
     "ami_description": "CI Image of Ubuntu 22.04 arm64",
@@ -248,26 +228,6 @@
     "instance_type": "t3a.large",
     "is_windows": "false",
     "ssh_username": "ubuntu"
-  },
-  "windows-2016": {
-    "ami": "ami-030cdb60764141f56",
-    "ami_description": "CI Image of Windows 2016 x86_64",
-    "ami_name": "salt-project/ci/windows/2016/x86_64/20240913.1756",
-    "arch": "x86_64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "t3a.xlarge",
-    "is_windows": "true",
-    "ssh_username": "Administrator"
-  },
-  "windows-2019": {
-    "ami": "ami-08f10b0d4914572de",
-    "ami_description": "CI Image of Windows 2019 x86_64",
-    "ami_name": "salt-project/ci/windows/2019/x86_64/20240913.1756",
-    "arch": "x86_64",
-    "cloudwatch-agent-available": "true",
-    "instance_type": "t3a.xlarge",
-    "is_windows": "true",
-    "ssh_username": "Administrator"
   },
   "windows-2022": {
     "ami": "ami-07eda52ffbd76a4c6",
