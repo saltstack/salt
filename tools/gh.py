@@ -46,33 +46,13 @@ def sync_os_labels(
             "color": color,
             "description": f"{description_prefix} ALL OS'es",
         },
-        "test:os:macos-12": {
-            "name": "test:os:macos-12",
-            "color": color,
-            "description": f"{description_prefix} MacOS 12",
-        },
-        "test:os:macos-13": {
-            "name": "test:os:macos-13",
-            "color": color,
-            "description": f"{description_prefix} MacOS 13",
-        },
-        "test:os:macos-13-arm64": {
-            "name": "test:os:macos-13-arm64",
-            "color": color,
-            "description": f"{description_prefix} MacOS 13 Arm64",
-        },
     }
-    for slug, details in tools.utils.get_golden_images().items():
+    for slug in tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]:
         name = f"test:os:{slug}"
-        ami_description = (
-            details["ami_description"]
-            .replace("CI Image of ", "")
-            .replace("arm64", "Arm64")
-        )
         known_os[name] = {
             "name": name,
             "color": color,
-            "description": f"{description_prefix} {ami_description}",
+            "description": f"{description_prefix} {slug}",
         }
 
     ctx.info(known_os)

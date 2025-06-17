@@ -23,6 +23,12 @@ supported-testrun-operating-systems:
   - debian-12
   - fedora-40-arm64
   - fedora-40
+  - macos-13
+  - macos-13-arm64
+  - macos-14
+  - macos-14-arm64
+  - macos-15
+  - macos-15-arm64
   - opensuse-15
   - photonos-4-arm64
   - photonos-4

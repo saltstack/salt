@@ -153,7 +153,7 @@ def download_nox_artifact(
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(tools.utils.get_golden_images()),
+            "choices": sorted(tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]),
         },
         "repository": {
             "help": "The repository to query, e.g. saltstack/salt",

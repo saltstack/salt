@@ -427,14 +427,3 @@ def get_cicd_shared_context():
     """
     shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
     return yaml.safe_load(shared_context_file.read_text())
-
-
-@cache
-def get_golden_images():
-    """
-    Return the golden images information stored on file.
-    """
-    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-        "r", encoding="utf-8"
-    ) as rfh:
-        return json.load(rfh)
