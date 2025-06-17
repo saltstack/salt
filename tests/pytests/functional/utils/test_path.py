@@ -48,7 +48,9 @@ def junction(tmp_path):
     assert target.is_dir()
     junction = tmp_path / "junction"
     cmd = ["cmd", "/c", "mklink", "/j", str(junction), str(target)]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
+    )
     assert not junction.is_symlink()
     assert junction.is_dir()
     yield junction
