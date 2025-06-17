@@ -51,7 +51,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(tools.utils.get_golden_images()),
+            "choices": sorted(tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]),
         },
         "pkg": {
             "help": "Also download package test artifacts",
