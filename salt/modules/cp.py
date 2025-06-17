@@ -21,6 +21,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
+from salt.loader.context import NamedLoaderContext
 from salt.loader.dunder import (
     __context__,
     __file_client__,
@@ -986,7 +987,12 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.channel.client.ReqChannel.factory(__opts__.value()) as channel:
+    if isinstance(__opts__, NamedLoaderContext):
+        opts = __opts__.value()
+    else:
+        opts = __opts__
+
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
