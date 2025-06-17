@@ -220,6 +220,7 @@ TEST_SALT_LISTING = PlatformDefinitions(
         ],
         "windows": [
             Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
+            Windows(slug="windows-2025", display_name="Windows 2025", arch="amd64"),
         ],
     }
 )
@@ -430,6 +431,18 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
             WindowsPkg(
                 slug="windows-2022",
                 display_name="Windows 2022",
+                arch="amd64",
+                pkg_type="MSI",
+            ),
+            WindowsPkg(
+                slug="windows-2025",
+                display_name="Windows 2025",
+                arch="amd64",
+                pkg_type="NSIS",
+            ),
+            WindowsPkg(
+                slug="windows-2025",
+                display_name="Windows 2025",
                 arch="amd64",
                 pkg_type="MSI",
             ),
