@@ -49,4 +49,4 @@ cheetah3>=3.2.2
 mako
 wempy
 sqlalchemy
-psycopg
+psycopg[binary]

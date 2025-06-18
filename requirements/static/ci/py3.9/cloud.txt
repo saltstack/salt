@@ -4,6 +4,8 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/cloud.txt requirements/static/ci/cloud.in
 #
+--trusted-host artprod.dev.bloomberg.com
+
 apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

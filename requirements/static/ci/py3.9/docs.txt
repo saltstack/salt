@@ -4,6 +4,8 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/docs.txt requirements/static/ci/docs.in
 #
+--trusted-host artprod.dev.bloomberg.com
+
 alabaster==0.7.13
     # via sphinx
 autocommand==2.2.2

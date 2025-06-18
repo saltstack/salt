@@ -4,6 +4,8 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.13/docs.txt requirements/base.txt requirements/static/ci/docs.in requirements/zeromq.txt
 #
+--trusted-host artprod.dev.bloomberg.com
+
 aiohappyeyeballs==2.4.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
