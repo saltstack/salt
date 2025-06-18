@@ -1566,7 +1566,12 @@ class AESFuncs(TransportMethods):
         rpath = os.path.join(self.opts["cachedir"], "minions", load["id"], "files")
         cpath = os.path.join(rpath, normpath)
         # One last safety check here
-        if not salt.utils.verify.clean_path(rpath, cpath):
+        if not salt.utils.verify.clean_path(
+            rpath,
+            cpath,
+            subdir=True,
+            realpath=not self.opts["fileserver_followsymlinks"],
+        ):
             log.warning(
                 "Attempt to write received file outside of master cache "
                 "directory! Requested path: %s. Access denied.",
