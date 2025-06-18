@@ -1069,9 +1069,38 @@ def test_prep_powershell_cmd_no_powershell():
         ("Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
         ("try {this} catch {that}", "try {this} catch {that}"),
+        ("[bool]@{value = 0}", "[bool]@{value = 0}"),
         (
             "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
             "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
+        ),
+        (
+            "if (1 -eq 1) { exit 0 } else { exit 1 }",
+            "if (1 -eq 1) { exit 0 } else { exit 1 }",
+        ),
+        (
+            "do { $count++; $a++; } while ($x[$a] -ne 0)",
+            "do { $count++; $a++; } while ($x[$a] -ne 0)",
+        ),
+        (
+            "while ($val -ne 3) { $val++; Write-Host $val }",
+            "while ($val -ne 3) { $val++; Write-Host $val }",
+        ),
+        (
+            "trap { 'Error found.' }",
+            "trap { 'Error found.' }",
+        ),
+        (
+            "for ($i=1; $i -le 10; $i++) { Write-Host $i }",
+            "for ($i=1; $i -le 10; $i++) { Write-Host $i }",
+        ),
+        (
+            "foreach ($file in Get-ChildItem) { Write-Host $file }",
+            "foreach ($file in Get-ChildItem) { Write-Host $file }",
+        ),
+        (
+            'data { if ($null) { "To get help for this cmdlet, type Get-Help New-Dictionary." } }',
+            'data { if ($null) { "To get help for this cmdlet, type Get-Help New-Dictionary." } }',
         ),
     ],
 )
