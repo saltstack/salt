@@ -29,7 +29,7 @@ def master_minion(salt_master):
 
 
 @pytest.fixture(scope="module")
-def second_minion(salt_master, salt_minion_id):
+def second_minion(salt_master):
     config_overrides = {
         "return_retry_timer_max": 0,
         "return_retry_timer": 5,
