@@ -161,7 +161,6 @@ def test_push():
             dict(
                 loc=fh_.tell(),  # pylint: disable=resource-leakage
                 cmd="_file_recv",
-                tok="token",
                 path=["saltines", "test.file"],
                 size=10,
                 data=b"",  # data is empty here because load['data'] is overwritten
