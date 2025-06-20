@@ -567,11 +567,13 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 request = await asyncio.wait_for(self._socket.recv(), 0.3)
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
+            except zmq.error.Again:
+                continue
             except asyncio.exceptions.TimeoutError:
                 continue
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Exception in request handler", exc_info=True)
-                break
+                continue
 
     async def handle_message(self, stream, payload):
         try:
