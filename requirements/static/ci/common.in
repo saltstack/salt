@@ -55,3 +55,4 @@ genshi>=0.7.3
 cheetah3>=3.2.2
 mako
 wempy
+sqlalchemy
