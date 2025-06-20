@@ -142,6 +142,8 @@ gitpython==3.1.43
     # via -r requirements/static/ci/common.in
 google-auth==2.35.0
     # via kubernetes
+greenlet==3.2.4
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.in
 idna==3.10
@@ -450,6 +452,8 @@ six==1.16.0
     #   websocket-client
 smmap==5.0.1
     # via gitdb
+sqlalchemy==2.0.43
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.1
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -475,7 +479,9 @@ transitions==0.9.2
 trustme==1.2.0
     # via -r requirements/pytest.txt
 typing-extensions==4.12.2
-    # via pytest-system-statistics
+    # via
+    #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
