@@ -290,6 +290,41 @@ def test_directory_clean_require_in(modules, tmp_path, state_tree):
     assert wrong_file.exists() is False
 
 
+def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
+    """
+    file.directory test with clean=True and require_in file,
+    the comment cannot be "removed": "Removed due to clean"
+    """
+    name = tmp_path / "a-directory"
+    name.mkdir()
+    dir = name / "one"
+    dir.mkdir()
+    good_file = dir / "good-file"
+    print("good file", good_file)
+
+    sls_contents = """
+    some_dir:
+      file.directory:
+        - name: {name}
+        - clean: true
+
+    {good_file}:
+      file.managed:
+        - require_in:
+          - file: some_dir
+    """.format(
+        name=name, good_file=good_file
+    )
+
+    with pytest.helpers.temp_file("clean-require-in.sls", sls_contents, state_tree):
+        ret = modules.state.sls("clean-require-in")
+        for state_run in ret:
+            assert (
+                state_run.comment == "Empty file"
+                or state_run.comment == f"The directory {name} is in the correct state"
+            )
+
+
 def test_directory_clean_require_in_with_id(modules, tmp_path, state_tree):
     """
     file.directory test with clean=True and require_in file with an ID
