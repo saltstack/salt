@@ -425,6 +425,17 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
 )
 
 
+def slugs():
+    """
+    List of supported test slugs
+    """
+    all_slugs = []
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    return all_slugs
+
+
 class NeedsTracker:
     def __init__(self):
         self._needs = []
@@ -480,9 +491,7 @@ def generate_workflows(ctx: Context):
         "photon": [],
         "redhat": [],
     }
-    for slug in sorted(
-        tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]
-    ):
+    for slug in sorted(slugs()):
         if slug.endswith("-arm64"):
             continue
         if not slug.startswith(("amazonlinux", "rockylinux", "fedora", "photonos")):
@@ -503,9 +512,7 @@ def generate_workflows(ctx: Context):
                 build_rpms_listing.append((distro, release, arch))
 
     build_debs_listing = []
-    for slug in sorted(
-        tools.utils.get_cicd_shared_context()["supported-testrun-operating-systems"]
-    ):
+    for slug in sorted(slugs()):
         if not slug.startswith(("debian-", "ubuntu-")):
             continue
         if slug.endswith("-arm64"):

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
+import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
 from tools.utils import ExitCode
@@ -51,11 +52,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(
-                tools.utils.get_cicd_shared_context()[
-                    "supported-testrun-operating-systems"
-                ]
-            ),
+            "choices": sorted(tools.precommit.workflows.slugs()),
         },
         "pkg": {
             "help": "Also download package test artifacts",
