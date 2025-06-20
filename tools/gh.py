@@ -9,6 +9,7 @@ import logging
 
 from ptscripts import Context, command_group
 
+import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
 
@@ -47,9 +48,7 @@ def sync_os_labels(
             "description": f"{description_prefix} ALL OS'es",
         },
     }
-    for slug in tools.utils.get_cicd_shared_context()[
-        "supported-testrun-operating-systems"
-    ]:
+    for slug in tools.precommit.workflows.slugs():
         name = f"test:os:{slug}"
         known_os[name] = {
             "name": name,
