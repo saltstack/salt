@@ -361,13 +361,24 @@ class ReqServerChannel:
         return payload
 
     def validate_token(self, payload, required=True):
-        if "tok" in payload["load"] and "id" in payload["load"]:
+        """
+        Validate the token (tok) and minion id (id) in the payload. If the
+        payload and token exist they will be validated even if required is
+        False.
+
+        When required is False and either the tok or id is not found in the
+        load, this check will pass.
+
+        This method has a side effect of removing the 'tok' key from the load
+        so that it is not passed along to request handlers.
+        """
+        tok = payload["load"].pop("tok", None)
+        id_ = payload["load"].get("id", None)
+        if tok is not None and id_ is not None:
             if "cluster_id" in self.opts and self.opts["cluster_id"]:
                 pki_dir = self.opts["cluster_pki_dir"]
             else:
                 pki_dir = self.opts.get("pki_dir", "")
-            id_ = payload["load"]["id"]
-
             pub_path = os.path.join(pki_dir, "minions", id_)
             try:
                 pub = salt.crypt.PublicKey(pub_path)
@@ -379,8 +390,8 @@ class ReqServerChannel:
                 )
                 return False
             try:
-                if pub.decrypt(payload["load"]["tok"]) != b"salt":
-                    log.error("Minion token did not validate: %s", payload["id"])
+                if pub.decrypt(tok) != b"salt":
+                    log.error("Minion token did not validate: %s", id_)
                     return False
             except ValueError as err:
                 log.error("Unable to decrypt token: %s", err)
