@@ -80,4 +80,6 @@ genshi>=0.7.11
 cheetah3>=3.2.6.post1
 mako
 wempy
+sqlalchemy>=2.0.57; python_version < '3.11'
+sqlalchemy>=2.1.8; python_version >= '3.11'
 psycopg2-binary; sys_platform != 'win32'
