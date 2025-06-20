@@ -550,6 +550,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   gitdb
+sqlalchemy==2.0.51
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -598,6 +600,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   referencing
+    #   sqlalchemy
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock

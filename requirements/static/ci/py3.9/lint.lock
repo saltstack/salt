@@ -238,6 +238,10 @@ googleapis-common-protos==1.75.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.2.5
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   sqlalchemy
 h11==0.14.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -850,6 +854,10 @@ sniffio==1.3.0
     #   anyio
     #   httpcore
     #   httpx
+sqlalchemy==2.0.51
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -936,6 +944,7 @@ typing-extensions==4.14.1
     #   pylint
     #   pyopenssl
     #   referencing
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via

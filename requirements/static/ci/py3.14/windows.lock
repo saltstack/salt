@@ -155,6 +155,8 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.5.2
+    # via sqlalchemy
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
@@ -536,6 +538,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   gitdb
+sqlalchemy==2.0.51
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 sspilib==0.5.0
@@ -580,6 +584,7 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock

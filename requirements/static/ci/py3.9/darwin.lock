@@ -607,6 +607,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   gitdb
+sqlalchemy==2.0.51
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -666,6 +668,7 @@ typing-extensions==4.14.1
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   referencing
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via

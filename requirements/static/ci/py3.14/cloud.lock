@@ -202,6 +202,10 @@ googleapis-common-protos==1.75.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.5.2
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   sqlalchemy
 idna==3.18
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -769,6 +773,10 @@ smmap==5.0.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   gitdb
+sqlalchemy==2.0.51
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -833,6 +841,7 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock

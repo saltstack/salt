@@ -178,6 +178,8 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.5.2 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
 idna==3.18
@@ -634,6 +636,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   gitdb
+sqlalchemy==2.0.51
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -687,6 +691,7 @@ typing-extensions==4.14.1
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 urllib3==2.7.0
     # via

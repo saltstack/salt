@@ -76,3 +76,4 @@ genshi>=0.7.11
 cheetah3>=3.2.6.post1
 mako
 wempy
+sqlalchemy
