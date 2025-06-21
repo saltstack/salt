@@ -169,25 +169,6 @@ PYGIT2_MINVER = Version("0.20.3")
 LIBGIT2_MINVER = Version("0.20.0")
 
 
-def split_name(remote):
-    """
-    Given a string determine if it is a url or a name and url combination.
-
-    Examples:
-
-       None, "https://github.com/saltstack/salt.git" == split_name("https://github.com/saltstack/salt.git")
-
-       "__env__", "https://github.com/saltstack/salt.git" == split_name("__env__ https://github.com/saltstack/salt.git")
-    """
-    parts = remote.split(" ", 1)
-    if len(parts) == 1:
-        return None, remote
-    maybename, maybeurl = parts
-    if not salt.utils.verify.url(maybename):
-        return maybename, maybeurl
-    return None, remote
-
-
 def enforce_types(key, val):
     """
     Force params to be strings unless they should remain a different type
@@ -2593,8 +2574,27 @@ class GitBase:
                 global_only,
             )
 
-    @staticmethod
-    def remote_to_url(remote):
+    @classmethod
+    def split_name(cls, remote):
+        """
+        Given a string determine if it is a url or a name and url combination.
+
+        Examples:
+
+           None, "https://github.com/saltstack/salt.git" == split_name("https://github.com/saltstack/salt.git")
+
+           "__env__", "https://github.com/saltstack/salt.git" == split_name("__env__ https://github.com/saltstack/salt.git")
+        """
+        parts = remote.split(" ", 1)
+        if len(parts) == 1:
+            return None, remote
+        maybename, maybeurl = parts
+        if not salt.utils.verify.url(maybename):
+            return maybename, maybeurl
+        return None, remote
+
+    @classmethod
+    def remote_to_url(cls, remote):
         """
         Convert a remote to a URL
 
@@ -2611,14 +2611,14 @@ class GitBase:
             return url
         return remote
 
-    @staticmethod
-    def validate_remote(remote):
+    @classmethod
+    def validate_remote(cls, remote):
         """
         Validate a remote repository config.
 
         """
-        _, remote = split_name(remote)
-        url = GitFS.remote_to_url(remote)
+        _, remote = cls.split_name(remote)
+        url = cls.remote_to_url(remote)
         if salt.utils.verify.url(url):
             return True
         return False
@@ -2688,7 +2688,7 @@ class GitBase:
                 if not remote:
                     remotes.remove(remote)
             else:
-                if not self.validate_remote(key):
+                if not self.validate_remote(remote):
                     log.warning("Found bad url data %r", remote)
                     remotes.remove(remote)
                     continue
