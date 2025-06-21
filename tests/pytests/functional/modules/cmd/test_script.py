@@ -5,6 +5,7 @@ import salt.utils.path
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
 ]
 
 
@@ -55,7 +56,6 @@ def issue_56195(state_tree):
         yield
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 def test_windows_script_args_powershell(cmd, shell, issue_56195):
     """
     Ensure that powershell processes an inline script with args where the args
@@ -73,7 +73,6 @@ def test_windows_script_args_powershell(cmd, shell, issue_56195):
     assert ret["stdout"] == password
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 def test_windows_script_args_powershell_runas(cmd, shell, account, issue_56195):
     """
     Ensure that powershell processes an inline script with args where the args
@@ -98,7 +97,6 @@ def test_windows_script_args_powershell_runas(cmd, shell, account, issue_56195):
     assert ret["stdout"] == password
 
 
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 def test_windows_script_exitcode(cmd, shell, exitcode_script):
     ret = cmd.script("salt://exit_code.ps1", shell=shell, saltenv="base")
     assert ret["retcode"] == exitcode_script

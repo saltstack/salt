@@ -63,7 +63,7 @@ env:
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
@@ -190,7 +190,7 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
@@ -298,7 +298,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -317,7 +317,7 @@ jobs:
 
 
   test-windows:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
@@ -336,7 +336,6 @@ jobs:
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
-
 
       - name: "Set `TIMESTAMP` environment variable"
         shell: bash
@@ -442,7 +441,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -451,7 +450,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/
             !artifacts/pkg/*

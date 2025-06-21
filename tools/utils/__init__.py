@@ -40,6 +40,15 @@ SHARED_WORKFLOW_CONTEXT_FILEPATH = (
 )
 
 
+class UpdateProgress:
+    def __init__(self, progress, task):
+        self.progress = progress
+        self.task = task
+
+    def __call__(self, chunk_size):
+        self.progress.update(self.task, advance=chunk_size)
+
+
 class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
@@ -299,6 +308,8 @@ def get_salt_releases(
             )
             ctx.exit(1)
         for release in ret.json():
+            if release.get("draft", False):
+                continue
             name = release["name"]
             if name.startswith("v"):
                 name = name[1:]

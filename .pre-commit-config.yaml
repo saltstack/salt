@@ -1077,6 +1077,7 @@ repos:
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-ci-cloud-3.9-requirements
         name: Cloud CI Py3.9 Requirements
@@ -1149,6 +1150,7 @@ repos:
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
 
   # ----- Doc CI Requirements --------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
@@ -1301,6 +1303,7 @@ repos:
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
 
   # ----- Changelog ------------------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-ci-changelog-3.9-requirements
         name: Changelog CI Py3.9 Requirements

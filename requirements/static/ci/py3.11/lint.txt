@@ -48,7 +48,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tomlkit==0.12.3
     # via pylint
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   docker

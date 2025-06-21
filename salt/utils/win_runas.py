@@ -88,7 +88,7 @@ def create_env(user_token, inherit, timeout=1):
         raise exc
 
 
-def runas(cmdLine, username, password=None, cwd=None):
+def runas(cmd, username, password=None, cwd=None):
     """
     Run a command as another user. If the process is running as an admin or
     system account this method does not require a password. Other non
@@ -96,6 +96,10 @@ def runas(cmdLine, username, password=None, cwd=None):
     Commands are run in with the highest level privileges possible for the
     account provided.
     """
+    # Sometimes this comes in as an int. LookupAccountName can't handle an int
+    # Let's make it a string if it's anything other than a string
+    if not isinstance(username, str):
+        username = str(username)
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)
@@ -127,7 +131,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     # runas.
     if not impersonation_token:
         log.debug("No impersonation token, using unprivileged runas")
-        return runas_unpriv(cmdLine, username, password, cwd)
+        return runas_unpriv(cmd, username, password, cwd)
 
     if domain == "NT AUTHORITY":
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
@@ -199,9 +203,6 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Create the environment for the user
     env = create_env(user_token, False)
 
-    if "&&" in cmdLine:
-        cmdLine = f'cmd /c "{cmdLine}"'
-
     hProcess = None
     try:
         # Start the process in a suspended state.
@@ -209,7 +210,7 @@ def runas(cmdLine, username, password=None, cwd=None):
             int(user_token),
             logonflags=1,
             applicationname=None,
-            commandline=cmdLine,
+            commandline=cmd,
             currentdirectory=cwd,
             creationflags=creationflags,
             startupinfo=startup_info,
@@ -265,6 +266,10 @@ def runas_unpriv(cmd, username, password, cwd=None):
     """
     Runas that works for non-privileged users
     """
+    # Sometimes this comes in as an int. LookupAccountName can't handle an int
+    # Let's make it a string if it's anything other than a string
+    if not isinstance(username, str):
+        username = str(username)
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)
@@ -299,9 +304,6 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdOutput=c2pwrite,
         hStdError=errwrite,
     )
-
-    if "&&" in cmd:
-        cmd = f'cmd /c "{cmd}"'
 
     try:
         # Run command and return process info structure

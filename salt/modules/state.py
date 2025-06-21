@@ -1926,7 +1926,7 @@ def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
         ret = {}
         for chunk in chunks:
             if chunk.get("__id__", "") == id_:
-                ret.update(st_.state.call_chunk(chunk, {}, chunks))
+                ret.update(st_.state.call_chunk(chunk, {}, chunks)[0])
 
         _set_retcode(ret, highstate=highstate)
         # Work around Windows multiprocessing bug, set __opts__['test'] back to

@@ -104,7 +104,10 @@ def test_compare_versions(binary, install_salt):
     """
     Test compare versions
     """
-    version = install_salt.artifact_version
+    if install_salt.use_prev_version:
+        version = install_salt.prev_version
+    else:
+        version = install_salt.artifact_version
     if binary in install_salt.binary_paths:
         if install_salt.upgrade:
             install_salt.install()

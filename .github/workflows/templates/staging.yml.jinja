@@ -30,6 +30,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       skip-test-pypi-publish:
         type: boolean
         default: false
@@ -151,19 +155,6 @@ on:
           pinentry-mode loopback
           EOF
 
-      - name: Get Secrets
-        id: get-secrets
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-test-pypi \
-            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
-            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
-          echo "::add-mask::$TWINE_PASSWORD"
-          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
-
       - name: Download PyPi Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -172,7 +163,7 @@ on:
 
       - name: Publish to Test PyPi
         env:
-          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+          TWINE_PASSWORD: "${{ secrets.PYPI_TEST_PASSWORD }}"
         run: |
           tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 

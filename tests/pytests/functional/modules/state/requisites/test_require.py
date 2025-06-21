@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import pytest
@@ -535,6 +536,104 @@ def test_parallel_state_with_requires(state, state_tree):
         for item in range(1, 10):
             _id = f"cmd_|-blah-{item}_|-sleep 2_|-run"
             assert "__parallel__" in ret[_id]
+
+
+@pytest.mark.skip_on_windows
+def test_parallel_state_with_requires_on_parallel(state, state_tree):
+    """
+    Parallel states requiring other parallel states should not block
+    state execution while waiting on their requisites.
+
+    Issue #59959
+    """
+    sls_contents = """
+        service_a:
+          cmd.run:
+              - name: sleep 2
+              - parallel: True
+
+        service_b1:
+          cmd.run:
+              - name: sleep 5
+              - parallel: True
+              - require:
+                  - service_a
+
+        service_b2:
+          cmd.run:
+              - name: 'true'
+              - parallel: True
+              - require:
+                  - service_b1
+
+        service_c:
+          cmd.run:
+              - name: 'true'
+              - parallel: True
+              - require:
+                  - service_a
+    """
+
+    with pytest.helpers.temp_file("requisite_parallel.sls", sls_contents, state_tree):
+        ret = state.sls(
+            "requisite_parallel",
+            __pub_jid="1",  # Because these run in parallel we need a fake JID)
+        )
+        start_b1 = datetime.datetime.combine(
+            datetime.date.today(),
+            datetime.time.fromisoformat(
+                ret["cmd_|-service_b1_|-sleep 5_|-run"]["start_time"]
+            ),
+        )
+        start_c = datetime.datetime.combine(
+            datetime.date.today(),
+            datetime.time.fromisoformat(
+                ret["cmd_|-service_c_|-true_|-run"]["start_time"]
+            ),
+        )
+        start_diff = start_c - start_b1
+        # Expected order:
+        #   a > (b1, c) > b2
+        # When b2 blocks while waiting for b1, c has to wait for b1 as well.
+        # c should approximately start at the same time as b1 though.
+        assert start_diff < datetime.timedelta(seconds=5)  # b1 sleeps for 5 seconds
+        for state_ret in ret.raw.values():
+            assert "__parallel__" in state_ret
+
+
+@pytest.mark.skip_on_windows
+def test_regular_state_requires_parallel(state, state_tree, tmp_path):
+    """
+    Regular states requiring parallel states should block until all
+    requisites are executed.
+    """
+    tmpfile = tmp_path / "foo"
+    sls_contents = f"""
+        service_a:
+          cmd.run:
+              - name: sleep 3
+              - parallel: True
+
+        service_b:
+          cmd.run:
+              - name: 'touch {tmpfile}'
+              - parallel: True
+              - require:
+                  - service_a
+
+        service_c:
+          cmd.run:
+              - name: 'test -f {tmpfile}'
+              - require:
+                  - service_b
+    """
+
+    with pytest.helpers.temp_file("requisite_parallel_2.sls", sls_contents, state_tree):
+        ret = state.sls(
+            "requisite_parallel_2",
+            __pub_jid="1",  # Because these run in parallel we need a fake JID)
+        )
+        assert ret[f"cmd_|-service_c_|-test -f {tmpfile}_|-run"]["result"] is True
 
 
 def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):

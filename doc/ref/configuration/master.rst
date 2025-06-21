@@ -218,10 +218,9 @@ When defined, the master will operate in cluster mode. The master will send the
 cluster key and id to minions instead of its own key and id. The master will
 also forward its local event bus to other masters defined by ``cluster_peers``
 
-
 .. code-block:: yaml
 
-    cluster_id: master
+    cluster_id: master_cluster
 
 .. conf_master:: cluster_peers
 
@@ -230,8 +229,8 @@ also forward its local event bus to other masters defined by ``cluster_peers``
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined, this setting is a list of other master
-(hostnames or ips) that will be in the cluster.
+When ``cluster_peers`` is defined, this setting is a list of other master
+(hostnames or IPs) that will be in the cluster.
 
 .. code-block:: yaml
 
@@ -246,15 +245,29 @@ When ``cluster_id`` is defined, this setting is a list of other master
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined, this sets the location of where this cluster
-will store its cluster public and private key as well as any minion keys. This
-setting will default to the value of ``pki_dir``, but should be changed
-to the filesystem location shared between peers in the cluster.
+When ``cluster_pki_dir`` is defined, this sets the location of where this
+cluster will store its cluster public and private key as well as any minion
+keys. This setting will default to the value of ``pki_dir``, but should be
+changed to the filesystem location shared between peers in the cluster.
 
 .. code-block:: yaml
 
-    cluster_pki: /my/gluster/share/pki
+    cluster_pki_dir: /my/gluster/share/pki
 
+
+.. conf_master:: cluster_port
+
+``cluster_pool_port``
+---------------------
+
+.. versionadded:: 3007.2
+
+When ``cluster_pool_port`` is defined, it sets the TCP port number HAProxy
+listens on for incoming TCP connections. The default is ``4520``
+
+.. code-block:: yaml
+
+    cluster_pool_port: 4520
 
 .. conf_master:: extension_modules
 

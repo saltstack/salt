@@ -384,6 +384,13 @@ class Shell:
             cmd_lst.append(f"/bin/sh {cmd_part}")
         return cmd_lst
 
+    def _sanitize_str(self, text, sanitize_text):
+        """Remove all occurrences of sanitize_text from text"""
+        if not sanitize_text:
+            return text
+        replace_str = "*" * 6
+        return re.sub(r"\b" + re.escape(sanitize_text) + r"\b", replace_str, text)
+
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         """
         Execute a shell command via VT. This is blocking and assumes that ssh
@@ -415,15 +422,11 @@ class Shell:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
-                    if self.passwd:
-                        stdout = stdout.replace(self.passwd, ("*" * 6))
                     ret_stdout += stdout
                     buff = old_stdout + stdout
                 else:
                     buff = stdout
                 if stderr:
-                    if self.passwd:
-                        stderr = stderr.replace(self.passwd, ("*" * 6))
                     ret_stderr += stderr
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
@@ -456,7 +459,7 @@ class Shell:
                         ret_stdout = (
                             "The host key needs to be accepted, to "
                             "auto accept run salt-ssh with the -i "
-                            "flag:\n{}".format(stdout)
+                            f"flag:\n{self._sanitize_str(stdout, self.passwd)}"
                         )
                         return ret_stdout, "", 254
                 elif buff and SUDO_PROMPT_RE.search(buff):
@@ -489,4 +492,6 @@ class Shell:
                     "VT reported both exitstatus and signalstatus as None. "
                     "This is likely a bug."
                 )
+        ret_stdout = self._sanitize_str(ret_stdout, self.passwd)
+        ret_stderr = self._sanitize_str(ret_stderr, self.passwd)
         return ret_stdout, ret_stderr, ret_status

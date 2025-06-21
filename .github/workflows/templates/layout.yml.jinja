@@ -19,7 +19,11 @@ run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && forma
 <%- block on %>
 
 on:
-  push: {}
+  push:
+    branches:
+      - 3006.x
+      - 3007.x
+      - master
   pull_request:
     types:
       - labeled
@@ -219,20 +223,6 @@ jobs:
         id: nox-archive-hash
         run: |
           echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
-
-      <%- if prepare_actual_release %>
-
-      - name: Check Existing Releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
-          if [ "${{ github.event.repository.private }}" = "true" ]; then
-            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
-          fi
-
-
-      <%- endif %>
 
       - name: Write Changed Files To A Local File
         run:

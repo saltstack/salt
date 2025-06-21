@@ -10,6 +10,7 @@ import re
 import socket
 import stat
 import sys
+import urllib.parse
 
 import salt.defaults.exitcodes
 import salt.utils.files
@@ -17,7 +18,12 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt._logging import LOG_LEVELS
-from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemExit
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltClientError,
+    SaltSystemExit,
+    SaltValidationError,
+)
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -533,20 +539,34 @@ def clean_path(root, path, subdir=False, realpath=True):
     """
     if not os.path.isabs(root):
         root = os.path.join(os.getcwd(), root)
-    root = os.path.normpath(root)
+    normroot = os.path.normpath(root)
     if not os.path.isabs(path):
-        path = os.path.join(root, path)
-    path = os.path.normpath(path)
+        path = os.path.join(normroot, path)
+    normpath = os.path.normpath(path)
     if realpath:
-        root = _realpath(root)
-        path = _realpath(path)
+        normroot = _realpath(normroot)
+        normpath = _realpath(normpath)
     if subdir:
-        if os.path.commonpath([path, root]) == root:
-            return path
+        if os.path.commonpath([normpath, normroot]) == normroot:
+            return normpath
     else:
-        if os.path.dirname(path) == root:
-            return path
+        if os.path.dirname(normpath) == normroot:
+            return normpath
     return ""
+
+
+def clean_join(root, *paths, subdir=False, realpath=True):
+    """
+    Performa a join and then check the result against the clean_path method. If
+    clean_path fails a SaltValidationError is raised.
+    """
+    parent = root
+    for path in paths:
+        child = os.path.join(parent, path)
+        if not clean_path(parent, child, subdir, realpath):
+            raise SaltValidationError(f"Invalid path: {path!r}")
+        parent = child
+    return child
 
 
 def valid_id(opts, id_):
@@ -777,3 +797,41 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     if skip_extra is False:
         # Run the extra verification checks
         zmq_version()
+
+
+SCHEMES = (
+    "http",
+    "https",
+    "ssh",
+    "ftp",
+    "sftp",
+    "file",
+)
+
+
+class URLValidator:
+
+    PCHAR = r"^([a-z0-9\-._~!$&'();=:@,]|%\d\d)+$"
+    ALL_VALID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
+
+    @classmethod
+    def pchar_matcher(cls):
+        return re.compile(cls.PCHAR, re.IGNORECASE)
+
+    def __init__(self, schemes=SCHEMES):
+        self.schemes = schemes
+
+    def __call__(self, data):
+        if any([x not in self.ALL_VALID for x in data]):
+            return False
+        parsed = urllib.parse.urlparse(data)
+        if parsed.scheme not in self.schemes:
+            return False
+        matcher = self.pchar_matcher()
+        for part in parsed.path.split("/"):
+            if part and not matcher.match(part):
+                return False
+        return True
+
+
+url = URLValidator()

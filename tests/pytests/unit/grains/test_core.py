@@ -428,6 +428,47 @@ def test__linux_lsb_distrib_data():
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="platform.freedesktop_os_release not available in Python < 3.10",
+)
+def test__freedesktop_os_release_cache_is_invalidated():
+    OS_RELEASE_DATA = {
+        "NAME": "openSUSE Leap",
+        "ID": "opensuse-leap",
+        "PRETTY_NAME": "openSUSE Leap 15.6",
+        "VERSION": "15.6",
+        "ID_LIKE": "suse opensuse",
+        "VERSION_ID": "15.6",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:opensuse:leap:15.6",
+        "BUG_REPORT_URL": "https://bugs.opensuse.org",
+        "HOME_URL": "https://www.opensuse.org/",
+        "DOCUMENTATION_URL": "https://en.opensuse.org/Portal:Leap",
+        "LOGO": "distributor-logo-Leap",
+    }
+
+    class FreeDesktopOSReleaseMock:
+        def __call__(self):
+            if hasattr(platform, "_os_release_cache"):
+                assert platform._os_release_cache is None
+            return OS_RELEASE_DATA
+
+    with patch.object(
+        core, "_linux_lsb_distrib_data", MagicMock(return_value=({}, None))
+    ), patch.object(
+        core, "_freedesktop_os_release", FreeDesktopOSReleaseMock()
+    ), patch.object(
+        core,
+        "_legacy_linux_distribution_data",
+        MagicMock(return_value={"osrelease": "15.6"}),
+    ):
+        platform._os_release_cache = {"this-cache-should-be-invalidated": "foobar"}
+        ret = core._linux_distribution_data()
+        assert ret == {"osrelease": "15.6"}
+
+
+@pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
     Test to return a list of all enabled services
@@ -1539,6 +1580,33 @@ def test_astralinuxse_os_grains():
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_openeuler_os_grains():
+    """
+    Test that OS grains are parsed correctly for openEuler
+    """
+    # /etc/os-release data taken from openEuler 24.03 (LTS-SP1)
+    _os_release_data = {
+        "PRETTY_NAME": "openEuler 24.03 (LTS-SP1)",
+        "NAME": "openEuler",
+        "ID": "openEuler",
+        "ANSI_COLOR": "0;31",
+        "VERSION": "24.03 (LTS-SP1)",
+        "VERSION_ID": "24.03",
+    }
+    expectation = {
+        "os": "openEuler",
+        "os_family": "RedHat",
+        "oscodename": "openEuler 24.03 (LTS-SP1)",
+        "osfullname": "openEuler",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "openEuler-24",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
 @pytest.mark.skip_unless_on_windows
 def test_windows_platform_data():
     """
@@ -1582,12 +1650,17 @@ def test_windows_platform_data():
         "2016Server",
         "2019Server",
         "2022Server",
+        "2025Server",
     ]
     assert returned_grains["osrelease"] in valid_releases
 
 
 def test__windows_os_release_grain(subtests):
     versions = {
+        "Windows 11 Enterprise": "11",
+        "Windows 11 Pro": "11",
+        "Windows 11 Home": "11",
+        "Windows 11 Education": "11",
         "Windows 10 Home": "10",
         "Windows 10 Pro": "10",
         "Windows 10 Pro for Workstations": "10",
@@ -1906,6 +1979,58 @@ def test_podman_virtual_with_systemd_detect_virt():
         ret = core._virtual(osdata)
         assert ret["virtual"] == "container"
         assert ret["virtual_subtype"] == "Podman"
+
+
+@pytest.mark.skip_on_windows
+def test_docker_virtual_with_systemd_detect_virt():
+    """
+    Test if virtual grains are parsed correctly in Docker using systemd-detect-virt.
+    """
+
+    def _which_side_effect(path):
+        if path == "systemd-detect-virt":
+            return "/usr/bin/systemd-detect-virt"
+        return None
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path,
+        "which",
+        MagicMock(return_value=True, side_effect=_which_side_effect),
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "docker"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Docker"
+
+
+@pytest.mark.skip_on_windows
+def test_docker_virtual_with_virt_what():
+    """
+    Test if virtual grains are parsed correctly in Docker using virt-what.
+    """
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(salt.utils.path, "which", MagicMock(return_value=True)), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": "docker"}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "Docker"
 
 
 @pytest.mark.skip_on_windows
@@ -2963,6 +3088,7 @@ def test_virtual_has_virtual_grain():
 
 
 def test__windows_platform_data():
+
     pass
 
 
@@ -3076,6 +3202,25 @@ def test_windows_virtual_has_virtual_grain():
 def test_osdata_virtual_key_win():
     osdata_grains = core.os_data()
     assert "virtual" in osdata_grains
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    "osrelease, expected",
+    [
+        ("2025Server", (2025,)),
+        ("2012ServerR2", (2012, 2)),
+        ("11", (11,)),
+        ("8.1", (8, 1)),
+    ],
+)
+def test_windows_osdata_osrelease_info(osrelease, expected):
+    platform_data = core._windows_platform_data()
+    platform_data["osrelease"] = osrelease
+    mock_platform_data = MagicMock(return_value=platform_data)
+    with patch.object(core, "_windows_platform_data", mock_platform_data):
+        os_data = core.os_data()
+        assert os_data["osrelease_info"] == expected
 
 
 @pytest.mark.skip_unless_on_linux

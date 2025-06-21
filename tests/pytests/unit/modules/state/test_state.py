@@ -107,7 +107,7 @@ class MockState:
             """
             Mock call_chunk method
             """
-            return {"": "ABC"}
+            return {"": "ABC"}, False
 
         @staticmethod
         def call_chunks(data):

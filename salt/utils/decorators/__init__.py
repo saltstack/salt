@@ -863,3 +863,11 @@ def ensure_unicode_args(function):
         return function(*args, **kwargs)
 
     return wrapped
+
+
+try:
+    from functools import cached_property
+except ImportError:
+    # this should only be needed on <3.8
+    def cached_property(func):
+        return func

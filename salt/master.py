@@ -206,6 +206,35 @@ class SMaster:
             log.debug("Pinging all connected minions due to key rotation")
             salt.utils.master.ping_all_connected_minions(opts)
 
+    def populate_secrets(self):
+        if self.opts["cluster_id"]:
+            # Setup the secrets here because the PubServerChannel may need
+            # them as well.
+            SMaster.secrets["cluster_aes"] = {
+                "secret": multiprocessing.Array(
+                    ctypes.c_char,
+                    salt.utils.stringutils.to_bytes(self.read_or_generate_key()),
+                ),
+                "serial": multiprocessing.Value(
+                    ctypes.c_longlong,
+                    lock=False,  # We'll use the lock from 'secret'
+                ),
+                "reload": self.read_or_generate_key,
+            }
+
+        self.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
+
 
 class Maintenance(salt.utils.process.SignalHandlingProcess):
     """
@@ -226,6 +255,11 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.loop_interval = int(self.opts["loop_interval"])
         # A serializer for general maint operations
         self.restart_interval = int(self.opts["maintenance_interval"])
+        # Initializes pki_dir with the correct option for clustered environments
+        if "cluster_id" in self.opts and self.opts["cluster_id"]:
+            self.pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            self.pki_dir = self.opts.get("pki_dir", "")
 
     def _post_fork_init(self):
         """
@@ -382,7 +416,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                         self.opts["cachedir"], self.opts["user"], self.opts["id"]
                     )
                     # There is currently no concept of a leader in a master
-                    # cluster. Lets fake it till we make it with a little
+                    # cluster. Let's fake it till we make it with a little
                     # waiting period.
                     time.sleep(drop_file_wait)
                     to_rotate = (
@@ -778,33 +812,9 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            if self.opts["cluster_id"]:
-                # Setup the secrets here because the PubServerChannel may need
-                # them as well.
-                SMaster.secrets["cluster_aes"] = {
-                    "secret": multiprocessing.Array(
-                        ctypes.c_char,
-                        salt.utils.stringutils.to_bytes(self.read_or_generate_key()),
-                    ),
-                    "serial": multiprocessing.Value(
-                        ctypes.c_longlong,
-                        lock=False,  # We'll use the lock from 'secret'
-                    ),
-                    "reload": self.read_or_generate_key,
-                }
-
-            SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
-                ),
-                "serial": multiprocessing.Value(
-                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
-                ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
-            }
+            # Setup the secrets here because the PubServerChannel may need
+            # them as well.
+            self.populate_secrets()
 
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
@@ -1360,7 +1370,6 @@ class AESFuncs(TransportMethods):
         "_file_recv",
         "_pillar",
         "_minion_event",
-        "_handle_minion_event",
         "_return",
         "_syndic_return",
         "minion_runner",
@@ -1405,6 +1414,9 @@ class AESFuncs(TransportMethods):
             self.pki_dir = self.opts["cluster_pki_dir"]
         else:
             self.pki_dir = self.opts.get("pki_dir", "")
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
 
     def __setup_fileserver(self):
         """
@@ -1437,18 +1449,25 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.pki_dir, "minions", id_)
+
+        key = self.key_cache.fetch("keys", id_)
+
+        if not key:
+            log.error("Unexpectedly got no pub key for %s", id_)
+            return False
+
         try:
-            pub = salt.crypt.PublicKey(pub_path)
-        except OSError:
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except (OSError, KeyError):
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
                 "master, but key could not be read and verification was denied.",
                 id_,
+                exc_info=True,
             )
             return False
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load public key "%s": %s', pub_path, err)
+            log.error('Unable to load public key "%s": %s', id_, err)
         try:
             if pub.decrypt(token) == b"salt":
                 return True
@@ -1726,11 +1745,10 @@ class AESFuncs(TransportMethods):
             # Can overwrite master files!!
             return False
 
-        cpath = os.path.join(
-            self.opts["cachedir"], "minions", load["id"], "files", normpath
-        )
+        rpath = os.path.join(self.opts["cachedir"], "minions", load["id"], "files")
+        cpath = os.path.join(rpath, normpath)
         # One last safety check here
-        if not os.path.normpath(cpath).startswith(self.opts["cachedir"]):
+        if not salt.utils.verify.clean_path(rpath, cpath):
             log.warning(
                 "Attempt to write received file outside of master cache "
                 "directory! Requested path: %s. Access denied.",
@@ -1858,14 +1876,17 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = os.path.join(
-                self.pki_dir, "minions/{}".format(load["id"])
-            )
+            this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not salt.crypt.verify_signature(
-                this_minion_pubkey, serialized_load, sig
+            if not this_minion_pubkey or not this_minion_pubkey.verify(
+                serialized_load, sig
             ):
-                log.info("Failed to verify event signature from minion %s.", load["id"])
+                if not this_minion_pubkey:
+                    log.error("Failed to fetch pub key for minion %s.", load["id"])
+                else:
+                    log.info(
+                        "Failed to verify event signature from minion %s.", load["id"]
+                    )
                 if self.opts["drop_messages_signature_fail"]:
                     log.critical(
                         "drop_messages_signature_fail is enabled, dropping "
@@ -1971,7 +1992,7 @@ class AESFuncs(TransportMethods):
         auth_cache = os.path.join(self.opts["cachedir"], "publish_auth")
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load["jid"]))
+        jid_fn = salt.utils.verify.clean_join(auth_cache, str(load["jid"]))
         with salt.utils.files.fopen(jid_fn, "r") as fp_:
             if not load["id"] == fp_.read():
                 return {}
@@ -2474,8 +2495,12 @@ class ClearFuncs(TransportMethods):
                     },
                 }
         jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if jid is None or isinstance(jid, dict):
+            if jid and "error" in jid:
+                load = jid
+            else:
+                load = {"error": "Master failed to assign jid"}
+            return load
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         if self.opts.get("order_masters"):

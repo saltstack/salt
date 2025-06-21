@@ -37,9 +37,17 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
+try:
+    import gnupg
+
+    HAS_GPG_BINDINGS = True
+except ImportError:
+    HAS_GPG_BINDINGS = False
+
+
 __virtualname__ = "gpg"
 
+# Map of letters indicating key validity to pretty string (for display)
 LETTER_TRUST_DICT = immutabletypes.freeze(
     {
         "e": "Expired",
@@ -53,6 +61,22 @@ LETTER_TRUST_DICT = immutabletypes.freeze(
     }
 )
 
+
+# Map of allowed `trust_level` param values in `trust_key`
+# to trust parameter for python-gnupg trust_keys (to manage owner trust)
+TRUST_KEYS_TRUST_LEVELS = immutabletypes.freeze(
+    {
+        "expired": "TRUST_EXPIRED",
+        "unknown": "TRUST_UNDEFINED",
+        "not_trusted": "TRUST_NEVER",
+        "marginally": "TRUST_MARGINAL",
+        "fully": "TRUST_FULLY",
+        "ultimately": "TRUST_ULTIMATE",
+    }
+)
+
+# Map of allowed `trust_level` param values in `trust_key`
+# to owner trust numeric values
 NUM_TRUST_DICT = immutabletypes.freeze(
     {
         "expired": "1",
@@ -64,6 +88,7 @@ NUM_TRUST_DICT = immutabletypes.freeze(
     }
 )
 
+# Map of owner trust numeric values to pretty string (for display)
 INV_NUM_TRUST_DICT = immutabletypes.freeze(
     {
         "1": "Expired",
@@ -75,35 +100,32 @@ INV_NUM_TRUST_DICT = immutabletypes.freeze(
     }
 )
 
-VERIFY_TRUST_LEVELS = immutabletypes.freeze(
-    {
-        "0": "Undefined",
-        "1": "Never",
-        "2": "Marginal",
-        "3": "Fully",
-        "4": "Ultimate",
-    }
-)
-
-TRUST_KEYS_TRUST_LEVELS = immutabletypes.freeze(
-    {
-        "expired": "TRUST_EXPIRED",
-        "unknown": "TRUST_UNDEFINED",
-        "never": "TRUST_NEVER",
-        "marginally": "TRUST_MARGINAL",
-        "fully": "TRUST_FULLY",
-        "ultimately": "TRUST_ULTIMATE",
-    }
-)
+# Map of signature validity numeric values to pretty string (for display)
+if not HAS_GPG_BINDINGS:
+    VERIFY_TRUST_LEVELS = {}
+elif salt.utils.versions.version_cmp(gnupg.__version__, "0.5.1") >= 0:
+    VERIFY_TRUST_LEVELS = immutabletypes.freeze(
+        {
+            "0": "Expired",
+            "1": "Undefined",
+            "2": "Never",
+            "3": "Marginal",
+            "4": "Fully",
+            "5": "Ultimate",
+        }
+    )
+else:
+    VERIFY_TRUST_LEVELS = immutabletypes.freeze(
+        {
+            "0": "Undefined",
+            "1": "Never",
+            "2": "Marginal",
+            "3": "Fully",
+            "4": "Ultimate",
+        }
+    )
 
 _DEFAULT_KEY_SERVER = "keys.openpgp.org"
-
-try:
-    import gnupg
-
-    HAS_GPG_BINDINGS = True
-except ImportError:
-    HAS_GPG_BINDINGS = False
 
 
 def _gpg():

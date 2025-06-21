@@ -522,6 +522,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             while self._run.is_set():
                 await asyncio.sleep(0.3)
             await self.site.stop()
+            self._socket.close()
 
         io_loop.spawn_callback(server)
 
@@ -549,6 +550,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     def close(self):
         self._run.clear()
+        self._socket.close()
 
 
 class RequestClient(salt.transport.base.RequestClient):

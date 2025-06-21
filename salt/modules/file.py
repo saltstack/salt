@@ -1115,7 +1115,7 @@ def find(path, *args, **kwargs):
         regex   = path-regex                # case sensitive
         iregex  = path-regex                # case insensitive
         type    = file-types                # match any listed type
-        user    = users                     # match any listed user
+        owner   = users                     # match any listed user
         group   = groups                    # match any listed group
         size    = [+-]number[size-unit]     # default unit = byte
         mtime   = interval                  # modified since date
@@ -1205,7 +1205,7 @@ def find(path, *args, **kwargs):
         path:  file absolute path
         size:  file size in bytes
         type:  file type
-        user:  user name
+        owner: user name
 
     CLI Examples:
 
@@ -4233,9 +4233,10 @@ def stats(path, hash_type=None, follow_symlinks=True):
         salt '*' file.stats /etc/passwd
     """
     path = os.path.expanduser(path)
+    exists = os.path.exists if follow_symlinks else os.path.lexists
 
     ret = {}
-    if not os.path.exists(path):
+    if not exists(path):
         try:
             # Broken symlinks will return False for os.path.exists(), but still
             # have a uid and gid
@@ -4279,7 +4280,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
         ret["type"] = "pipe"
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
-    ret["target"] = os.path.realpath(path)
+    ret["target"] = os.path.realpath(path) if follow_symlinks else os.path.abspath(path)
     return ret
 
 

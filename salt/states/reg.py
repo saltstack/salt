@@ -72,6 +72,8 @@ Value:
 import logging
 
 import salt.utils.stringutils
+import salt.utils.win_dacl as dacl
+import salt.utils.win_reg as reg
 
 log = logging.getLogger(__name__)
 
@@ -80,31 +82,6 @@ def __virtual__():
     """
     Load this state if the reg module exists
     """
-    if "reg.read_value" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: missing util function: reg.read_value",
-        )
-
-    if "reg.set_value" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: missing util function: reg.set_value",
-        )
-
-    if "reg.delete_value" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: missing util function: reg.delete_value",
-        )
-
-    if "reg.delete_key_recursive" not in __utils__:
-        return (
-            False,
-            "reg state module failed to load: "
-            "missing util function: reg.delete_key_recursive",
-        )
-
     return "reg"
 
 
@@ -396,12 +373,12 @@ def present(
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_current = __utils__["reg.read_value"](
+    reg_current = reg.read_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
     # Cast the vdata according to the vtype
-    vdata_decoded = __utils__["reg.cast_vdata"](vdata=vdata, vtype=vtype)
+    vdata_decoded = reg.cast_vdata(vdata=vdata, vtype=vtype)
 
     # Check if the key already exists
     # If so, check perms
@@ -411,7 +388,7 @@ def present(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
             salt.utils.stringutils.to_unicode(name, "utf-8"),
         )
-        return __utils__["dacl.check_perms"](
+        return dacl.check_perms(
             obj_name="\\".join([hive, key]),
             obj_type="registry32" if use_32bit_registry else "registry",
             ret=ret,
@@ -437,10 +414,11 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {"reg": {"Will add": add_change}}
+        ret["comment"] = rf"Will add {vname} to {hive}\{key}"
         return ret
 
     # Configure the value
-    ret["result"] = __utils__["reg.set_value"](
+    ret["result"] = reg.set_value(
         hive=hive,
         key=key,
         vname=vname,
@@ -457,7 +435,7 @@ def present(
         ret["comment"] = rf"Added {vname} to {hive}\{key}"
 
     if ret["result"]:
-        ret = __utils__["dacl.check_perms"](
+        ret = dacl.check_perms(
             obj_name="\\".join([hive, key]),
             obj_type="registry32" if use_32bit_registry else "registry",
             ret=ret,
@@ -517,7 +495,7 @@ def absent(name, vname=None, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_check = __utils__["reg.read_value"](
+    reg_check = reg.read_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
@@ -533,10 +511,11 @@ def absent(name, vname=None, use_32bit_registry=False):
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {"reg": {"Will remove": remove_change}}
+        ret["comment"] = rf"Will remove {vname} to {hive}\{key}"
         return ret
 
     # Delete the value
-    ret["result"] = __utils__["reg.delete_value"](
+    ret["result"] = reg.delete_value(
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not ret["result"]:
@@ -595,26 +574,27 @@ def key_absent(name, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not __utils__["reg.read_value"](
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )["success"]:
+    if not reg.read_value(hive=hive, key=key, use_32bit_registry=use_32bit_registry)[
+        "success"
+    ]:
         ret["comment"] = f"{name} is already absent"
         return ret
 
     ret["changes"] = {"reg": {"Removed": {"Key": rf"{hive}\{key}"}}}
+    ret["comment"] = rf"Removed {hive}\{key}"
 
     # Check for test option
     if __opts__["test"]:
         ret["result"] = None
+        ret["changes"] = {"reg": {"Will remove": {"Key": rf"{hive}\{key}"}}}
+        ret["comment"] = rf"Will remove {hive}\{key}"
         return ret
 
     # Delete the value
-    __utils__["reg.delete_key_recursive"](
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )
-    if __utils__["reg.read_value"](
-        hive=hive, key=key, use_32bit_registry=use_32bit_registry
-    )["success"]:
+    reg.delete_key_recursive(hive=hive, key=key, use_32bit_registry=use_32bit_registry)
+    if reg.read_value(hive=hive, key=key, use_32bit_registry=use_32bit_registry)[
+        "success"
+    ]:
         ret["result"] = False
         ret["changes"] = {}
         ret["comment"] = f"Failed to remove registry key {name}"

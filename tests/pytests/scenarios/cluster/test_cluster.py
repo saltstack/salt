@@ -1,5 +1,5 @@
 """
-Cluster scinarios.
+Cluster scenarios.
 """
 
 import getpass
