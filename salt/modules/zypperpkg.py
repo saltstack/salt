@@ -1,11 +1,14 @@
 """
 Package support for openSUSE via the zypper package manager
+
 :depends: - ``rpm`` Python module.  Install with ``zypper install rpm-python``
+
 .. important::
     If you feel that Salt should be using this module to manage packages on a
     minion, and it is using a different module (or gives an error similar to
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
+
 """
 
 import configparser
@@ -115,6 +118,7 @@ class _Zypper:
     def _reset(self):
         """
         Resets values of the call setup.
+
         :return:
         """
         self.__cmd = ["zypper", "--non-interactive"]
@@ -157,6 +161,7 @@ class _Zypper:
     def __getattr__(self, item):
         """
         Call configurator.
+
         :param item:
         :return:
         """
@@ -215,6 +220,7 @@ class _Zypper:
     def _is_error(self):
         """
         Is this is an error code?
+
         :return:
         """
         if self.exit_code:
@@ -233,6 +239,7 @@ class _Zypper:
     def _is_zypper_lock(self):
         """
         Is this is a lock error code?
+
         :return:
         """
         return self.exit_code == self.LOCK_EXIT_CODE
@@ -257,6 +264,7 @@ class _Zypper:
     def _is_xml_mode(self):
         """
         Is Zypper's output is in XML format?
+
         :return:
         """
         return (
@@ -267,6 +275,7 @@ class _Zypper:
         """
         Check and set the result of a zypper command. In case of an error,
         either raise a CommandExecutionError or extract the error.
+
         result
             The result of a zypper command called with cmd.run_all
         """
@@ -311,6 +320,7 @@ class _Zypper:
     def __call(self, *args, **kwargs):
         """
         Call Zypper.
+
         :param state:
         :return:
         """
@@ -422,10 +432,12 @@ __zypper__ = _Zypper()
 class Wildcard:
     """
     .. versionadded:: 2017.7.0
+
     Converts string wildcard to a zypper query.
     Example:
        '1.2.3.4*' is '1.2.3.4.whatever.is.here' and is equal to:
        '1.2.3.4 >= and < 1.2.3.5'
+
     :param ptn: Pattern
     :return: Query range
     """
@@ -445,6 +457,7 @@ class Wildcard:
     def __call__(self, pkg_name, pkg_version):
         """
         Convert a string wildcard to a zypper query.
+
         :param pkg_name:
         :param pkg_version:
         :return:
@@ -480,6 +493,7 @@ class Wildcard:
     def _get_scope_versions(self, pkg_versions):
         """
         Get available difference between next possible matches.
+
         :return:
         """
         get_in_versions = []
@@ -491,6 +505,7 @@ class Wildcard:
     def _set_version(self, version):
         """
         Stash operator from the version, if any.
+
         :return:
         """
         if not version:
@@ -528,14 +543,19 @@ def _clean_cache():
 def list_upgrades(refresh=True, root=None, **kwargs):
     """
     List all available package upgrades on this system
+
     refresh
         force a refresh if set to True (default).
         If set to False it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.list_upgrades
     """
     if refresh:
@@ -566,26 +586,36 @@ list_updates = salt.utils.functools.alias_function(list_upgrades, "list_updates"
 def info_installed(*names, **kwargs):
     """
     Return the information of the named package(s), installed on the system.
+
     :param names:
         Names of the packages to get information about.
+
     :param attr:
         Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
         Valid attributes are:
             version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
             build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url,
             summary, description.
+
     :param errors:
         Handle RPM field errors. If 'ignore' is chosen, then various mistakes are simply ignored and omitted
         from the texts or strings. If 'report' is chonen, then a field with a mistake is not returned, instead
         a 'N/A (broken)' (not available, broken) text is placed.
+
         Valid attributes are:
             ignore, report
+
     :param all_versions:
         Include information for all versions of the packages installed on the minion.
+
     :param root:
         Operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
@@ -616,14 +646,19 @@ def info_installed(*names, **kwargs):
 def info_available(*names, **kwargs):
     """
     Return the information of the named package available for the system.
+
     refresh
         force a refresh if set to True (default).
         If set to False it depends on zypper if a refresh is
         executed or not.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.info_available <package1>
         salt '*' pkg.info_available <package1> <package2> <package3> ...
     """
@@ -678,8 +713,11 @@ def info_available(*names, **kwargs):
 def parse_arch(name):
     """
     Parse name and architecture from the specified package name.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.parse_arch zsh.x86_64
     """
     _name, _arch = None, None
@@ -698,16 +736,22 @@ def latest_version(*names, **kwargs):
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
+
     If the latest version of a given package is already installed, an empty
     dict will be returned for that package.
+
     refresh
         force a refresh if set to True (default).
         If set to False it depends on zypper if a refresh is
         executed or not.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     """
@@ -742,14 +786,19 @@ available_version = salt.utils.functools.alias_function(
 def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
+
     refresh
         force a refresh if set to True (default).
         If set to False it depends on zypper if a refresh is
         executed or not.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.upgrade_available <package name>
     """
     # The "not not" tactic is intended here as it forces the return to be False.
@@ -761,10 +810,14 @@ def version(*names, **kwargs):
     Returns a string representing the package version or an empty dict if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     """
@@ -774,14 +827,20 @@ def version(*names, **kwargs):
 def version_cmp(ver1, ver2, ignore_epoch=False, **kwargs):
     """
     .. versionadded:: 2015.5.4
+
     Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
     ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
     making the comparison.
+
     ignore_epoch : False
         Set to ``True`` to ignore the epoch when comparing versions
+
         .. versionadded:: 2015.8.10,2016.3.2
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     """
     return __salt__["lowpkg.version_cmp"](ver1, ver2, ignore_epoch=ignore_epoch)
@@ -800,29 +859,44 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
     """
     List the packages currently installed as a dict. By default, the dict
     contains versions as a comma separated string::
+
         {'<package_name>': '<version>[,<version>...]'}
+
     versions_as_list:
         If set to true, the versions are provided as a list
+
         {'<package_name>': ['<version>', '<version>']}
+
     root:
         operate on a different root directory.
+
     includes:
         List of types of packages to include (package, patch, pattern, product)
         By default packages are always included
+
     attr:
         If a list of package attributes is specified, returned value will
         contain them in addition to version, eg.::
+
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
+
         Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
         ``install_date``, ``install_date_time_t``.
+
         If ``all`` is specified, all valid attributes will be returned.
+
             .. versionadded:: 2018.3.0
+
     removed:
         not supported
+
     purge_desired:
         not supported
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs attr=version,arch
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
@@ -933,17 +1007,22 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
 def list_repo_pkgs(*args, **kwargs):
     """
     .. versionadded:: 2017.7.5,2018.3.1
+
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
     names. This is recommended as it speeds up the function considerably.
+
     This function can be helpful in discovering the version or repo to specify
     in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
     The return data will be a dictionary mapping package names to a list of
     version numbers, ordered from newest to oldest. If ``byrepo`` is set to
     ``True``, then the return dictionary will contain repository names at the
     top level, and each repository will map packages to lists of version
     numbers. For example:
+
     .. code-block:: python
+
         # With byrepo=False (default)
         {
             'bash': ['4.3-83.3.1',
@@ -959,16 +1038,22 @@ def list_repo_pkgs(*args, **kwargs):
                 'bash': ['4.3-83.3.1']
             }
         }
+
     fromrepo : None
         Only include results from the specified repo(s). Multiple repos can be
         specified, comma-separated.
+
     byrepo : False
         When ``True``, the return data for each package will be organized by
         repository.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_repo_pkgs
         salt '*' pkg.list_repo_pkgs foo bar baz
         salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
@@ -1080,10 +1165,14 @@ def _get_repo_info(alias, repos_cfg=None, root=None):
 def get_repo(repo, root=None, **kwargs):  # pylint: disable=unused-argument
     """
     Display a repo.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.get_repo alias
     """
     return _get_repo_info(repo, root=root)
@@ -1092,10 +1181,14 @@ def get_repo(repo, root=None, **kwargs):  # pylint: disable=unused-argument
 def list_repos(root=None, **kwargs):
     """
     Lists all repos.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
        salt '*' pkg.list_repos
     """
     repos_cfg = _get_configured_repos(root=root)
@@ -1109,10 +1202,14 @@ def list_repos(root=None, **kwargs):
 def del_repo(repo, root=None):
     """
     Delete a repo.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.del_repo alias
     """
     repos_cfg = _get_configured_repos(root=root)
@@ -1135,31 +1232,44 @@ def mod_repo(repo, **kwargs):
     """
     Modify one or more values for a repo. If the repo does not exist, it will
     be created, so long as the following values are specified:
+
     repo or alias
         alias by which Zypper refers to the repo
+
     url, mirrorlist or baseurl
         the URL for Zypper to reference
+
     enabled
         Enable or disable (True or False) repository,
         but do not remove if disabled.
+
     name
         This is used as the descriptive name value in the repo file.
+
     refresh
         Enable or disable (True or False) auto-refresh of the repository.
+
     cache
         Enable or disable (True or False) RPM files caching.
+
     gpgcheck
         Enable or disable (True or False) GPG check for this repository.
+
     gpgautoimport : False
         If set to True, automatically trust and import public GPG key for
         the repository.
+
     root
         operate on a different root directory.
+
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
     URL can only be deleted if a ``mirrorlist`` is specified (or vice versa).
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.mod_repo alias alias=new_alias
         salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
     """
@@ -1292,22 +1402,35 @@ def refresh_db(force=None, root=None, gpgautoimport=False, **kwargs):
     with ``--force`` if the "force=True" flag is passed on the CLI or
     ``refreshdb_force`` is set to ``true`` in the pillar. The CLI option
     overrides the pillar setting.
+
     It will return a dict::
+
         {'<database name>': Bool}
+
     gpgautoimport : False
         If set to True, automatically trust and import public GPG key for
         the repository.
+
         .. versionadded:: 3007.0
+
     repos
         Refresh just the specified repos
+
         .. versionadded:: 3007.0
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.refresh_db [force=true|false]
+
     Pillar Example:
+
     .. code-block:: yaml
+
        zypper:
          refreshdb_force: false
     """
@@ -1379,86 +1502,128 @@ def install(
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
         <salt.modules.config.get>` called ``systemd.scope``, with a value of
         ``False`` (no quotes).
+
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package(s), add refresh=True to force a 'zypper refresh'
     before package is installed.
+
     name
         The name of the package to be installed. Note that this parameter is
         ignored if either ``pkgs`` or ``sources`` is passed. Additionally,
         please note that this option can only be used to install packages from
         a software repository. To install a package file manually, use the
         ``sources`` option.
+
         CLI Example:
+
         .. code-block:: bash
+
             salt '*' pkg.install <package name>
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     fromrepo
         Specify a package repository to install from.
+
     downloadonly
         Only download the packages, do not install.
+
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     version
         Can be either a version number, or the combination of a comparison
         operator (<, >, <=, >=, =) and a version number (ex. '>1.2.3-4').
         This parameter is ignored if ``pkgs`` or ``sources`` is passed.
+
+        .. note::
+            Remember that versions that contain a single `.` will be interpreted
+            as numbers and must be double-quoted. For example, version
+            ``3006.10`` will be rendered as ``3006.1``. To pass ``3006.10``
+            you'll need to use double-quotes. ``version="'3006.10'"``
+
     resolve_capabilities
         If this option is set to True zypper will take capabilities into
         account. In this case names which are just provided by a package
         will get installed. Default is False.
+
     Multiple Package Installation Options:
+
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list. A specific version number can be specified
         by using a single-element dict representing the package and its
         version. As with the ``version`` parameter above, comparison operators
         can be used to target a specific version of a package.
+
         CLI Examples:
+
         .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4"}]'
             salt '*' pkg.install pkgs='["foo", {"bar": "<1.2.3-4"}]'
+
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
         or local path to the package.
+
         CLI Example:
+
         .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+
     ignore_repo_failure
         Zypper returns error code 106 if one of the repositories are not available for various reasons.
         In case to set strict check, this parameter needs to be set to True. Default: False.
+
     no_recommends
         Do not install recommended packages, only required ones.
+
     root
         operate on a different root directory.
+
     diff_attr:
         If a list of package attributes is specified, returned value will
         contain them, eg.::
+
             {'<package>': {
                 'old': {
                     'version': '<old-version>',
                     'arch': '<old-arch>'},
+
                 'new': {
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
+
         Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
         ``install_date``, ``install_date_time_t``.
+
         If ``all`` is specified, all valid attributes will be returned.
+
         .. versionadded:: 2018.3.0
+
+
     Returns a dict containing the new package names and versions::
+
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
+
     If an attribute list is specified in ``diff_attr``, the dict will also contain
     any specified attribute, eg.::
+
         {'<package>': {
             'old': {
                 'version': '<old-version>',
                 'arch': '<old-arch>'},
+
             'new': {
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
@@ -1635,71 +1800,105 @@ def upgrade(
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
         <salt.modules.config.get>` called ``systemd.scope``, with a value of
         ``False`` (no quotes).
+
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Run a full system upgrade, a zypper upgrade
+
     name
         The name of the package to be installed. Note that this parameter is
         ignored if ``pkgs`` is passed or if ``dryrun`` is set to True.
+
         CLI Example:
+
         .. code-block:: bash
+
             salt '*' pkg.install name=<package name>
+
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list. Note that this parameter is ignored if
         ``dryrun`` is set to True.
+
         CLI Examples:
+
         .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
+
     refresh
         force a refresh if set to True (default).
         If set to False it depends on zypper if a refresh is
         executed.
+
     dryrun
         If set to True, it creates a debug solver log file and then perform
         a dry-run upgrade (no changes are made). Default: False
+
     dist_upgrade
         Perform a system dist-upgrade. Default: False
+
     fromrepo
         Specify a list of package repositories to upgrade from. Default: None
+
     novendorchange
         If set to True, no allow vendor changes. Default: False
+
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     no_recommends
         Do not install recommended packages, only required ones.
+
     root
         Operate on a different root directory.
+
     diff_attr:
         If a list of package attributes is specified, returned value will
         contain them, eg.::
+
             {'<package>': {
                 'old': {
                     'version': '<old-version>',
                     'arch': '<old-arch>'},
+
                 'new': {
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
+
         Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
         ``install_date``, ``install_date_time_t``.
+
         If ``all`` is specified, all valid attributes will be returned.
+
         .. versionadded:: 3006.0
+
     Returns a dictionary containing the changes:
+
     .. code-block:: python
+
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
+
     If an attribute list is specified in ``diff_attr``, the dict will also contain
     any specified attribute, eg.::
+
     .. code-block:: python
+
         {'<package>': {
             'old': {
                 'version': '<old-version>',
                 'arch': '<old-arch>'},
+
             'new': {
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.upgrade
         salt '*' pkg.upgrade name=mypackage
         salt '*' pkg.upgrade pkgs='["package1", "package2"]'
@@ -1845,10 +2044,14 @@ def normalize_name(name):
     """
     Strips the architecture from the specified package name, if necessary.
     Circumstances where this would be done include:
+
     * If the arch is 32 bit and the package name ends in a 32-bit arch.
     * If the arch matches the OS arch, or is ``noarch``.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.normalize_name zsh.x86_64
     """
     try:
@@ -1878,26 +2081,41 @@ def remove(
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
         <salt.modules.config.get>` called ``systemd.scope``, with a value of
         ``False`` (no quotes).
+
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages with ``zypper -n remove``
+
     name
         The name of the package to be deleted.
+
+
     Multiple Package Options:
+
     pkgs
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
     root
         Operate on a different root directory.
+
     .. versionadded:: 0.16.0
+
+
     Returns a dict containing the changes.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+
     .. versionchanged:: 3007.0
         Can now remove also PTF packages which require a different handling in the backend.
+
     Can now remove also PTF packages which require a different handling in the backend.
     """
     return _uninstall(name=name, pkgs=pkgs, root=root)
@@ -1915,22 +2133,35 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
         `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
         <salt.modules.config.get>` called ``systemd.scope``, with a value of
         ``False`` (no quotes).
+
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper -n remove -u``
+
     name
         The name of the package to be deleted.
+
+
     Multiple Package Options:
+
     pkgs
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
     root
         Operate on a different root directory.
+
     .. versionadded:: 0.16.0
+
+
     Returns a dict containing the changes.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
@@ -1941,19 +2172,27 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
 def list_holds(pattern=None, full=True, root=None, **kwargs):
     """
     .. versionadded:: 3005
+
     List information on locked packages.
+
     .. note::
         This function returns the computed output of ``list_locks``
         to show exact locked packages.
+
     pattern
         Regular expression used to match the package name
+
     full : True
         Show the full hold definition including version and epoch. Set to
         ``False`` to return just the name of the package(s) being held.
+
     root
         Operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.list_holds
         salt '*' pkg.list_holds full=False
     """
@@ -2002,14 +2241,20 @@ def list_holds(pattern=None, full=True, root=None, **kwargs):
 def list_locks(root=None):
     """
     List current package locks.
+
     root
         operate on a different root directory.
+
     Return a dict containing the locked package with attributes::
+
         {'<package>': {'case_sensitive': '<case_sensitive>',
                        'match_type': '<match_type>'
                        'type': '<type>'}}
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.list_locks
     """
     locks = {}
@@ -2038,10 +2283,14 @@ def clean_locks(root=None):
     """
     Remove unused locks that do not currently (with regard to repositories
     used) lock any package.
+
     root
         Operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.clean_locks
     """
     LCK = "removed"
@@ -2062,17 +2311,24 @@ def clean_locks(root=None):
 def unhold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
+
     Remove a package hold.
+
     name
         A package name to unhold, or a comma-separated list of package names to
         unhold.
+
     pkgs
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold <package1>,<package2>,<package3>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
@@ -2124,17 +2380,24 @@ def unhold(name=None, pkgs=None, root=None, **kwargs):
 def hold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
+
     Add a package hold.  Specify one of ``name`` and ``pkgs``.
+
     name
         A package name to hold, or a comma-separated list of package names to
         hold.
+
     pkgs
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold <package1>,<package2>,<package3>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
@@ -2176,11 +2439,16 @@ def hold(name=None, pkgs=None, root=None, **kwargs):
 def verify(*names, **kwargs):
     """
     Runs an rpm -Va on a system, and returns the results in a dict
+
     Files with an attribute of config, doc, ghost, license or readme in the
     package header can be ignored using the ``ignore_types`` keyword argument.
+
     The root parameter can also be passed via the keyword argument.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.verify
         salt '*' pkg.verify httpd
         salt '*' pkg.verify 'httpd postfix'
@@ -2194,9 +2462,13 @@ def file_list(*packages, **kwargs):
     List the files that belong to a package. Not specifying any packages will
     return a list of *every* file on the system's rpm database (not generally
     recommended).
+
     The root parameter can also be passed via the keyword argument.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
         salt '*' pkg.file_list
@@ -2209,9 +2481,13 @@ def file_dict(*packages, **kwargs):
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of *every* file on the system's
     rpm database (not generally recommended).
+
     The root parameter can also be passed via the keyword argument.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
         salt '*' pkg.file_list
@@ -2223,30 +2499,45 @@ def modified(*packages, **flags):
     """
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
+
     .. versionadded:: 2015.5.0
+
     Filtering by flags (True or False):
+
     size
         Include only files where size changed.
+
     mode
         Include only files which file's mode has been changed.
+
     checksum
         Include only files which MD5 checksum has been changed.
+
     device
         Include only files which major and minor numbers has been changed.
+
     symlink
         Include only files which are symbolic link contents.
+
     owner
         Include only files where owner has been changed.
+
     group
         Include only files where group has been changed.
+
     time
         Include only files where modification time of the file has been changed.
+
     capabilities
         Include only files where capabilities differ or not. Note: supported only on newer RPM versions.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.modified
         salt '*' pkg.modified httpd
         salt '*' pkg.modified httpd postfix
@@ -2262,11 +2553,16 @@ def owner(*paths, **kwargs):
     be passed. If a single path is passed, a string will be returned,
     and if multiple paths are passed, a dictionary of file/package name
     pairs will be returned.
+
     If the file is not owned by a package, or is not present on the minion,
     then an empty string will be returned for that path.
+
     The root parameter can also be passed via the keyword argument.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
     """
@@ -2365,14 +2661,19 @@ def _get_installed_patterns(root=None):
 def list_patterns(refresh=False, root=None):
     """
     List all known patterns from available repos.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_patterns
     """
     if refresh:
@@ -2384,10 +2685,14 @@ def list_patterns(refresh=False, root=None):
 def list_installed_patterns(root=None):
     """
     List installed patterns on the system.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_installed_patterns
     """
     return _get_installed_patterns(root=root)
@@ -2396,42 +2701,60 @@ def list_installed_patterns(root=None):
 def search(criteria, refresh=False, **kwargs):
     """
     List known packages, available to the system.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     match (str)
         One of `exact`, `words`, `substrings`. Search for an `exact` match
         or for the whole `words` only. Default to `substrings` to patch
         partial words.
+
     provides (bool)
         Search for packages which provide the search strings.
+
     recommends (bool)
         Search for packages which recommend the search strings.
+
     requires (bool)
         Search for packages which require the search strings.
+
     suggests (bool)
         Search for packages which suggest the search strings.
+
     conflicts (bool)
         Search packages conflicting with search strings.
+
     obsoletes (bool)
         Search for packages which obsolete the search strings.
+
     file_list (bool)
         Search for a match in the file list of packages.
+
     search_descriptions (bool)
         Search also in package summaries and descriptions.
+
     case_sensitive (bool)
         Perform case-sensitive search.
+
     installed_only (bool)
         Show only installed packages.
+
     not_installed_only (bool)
         Show only packages which are not installed.
+
     details (bool)
         Show version and repository
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.search <criteria>
     """
     ALLOWED_SEARCH_OPTIONS = {
@@ -2501,18 +2824,25 @@ def _get_first_aggregate_text(node_list):
 def list_products(all=False, refresh=False, root=None):
     """
     List all available or installed SUSE products.
+
     all
         List all products available or only installed. Default is False.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     Includes handling for OEM products, which read the OEM productline file
     and overwrite the release value.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_products
         salt '*' pkg.list_products all=True
     """
@@ -2573,14 +2903,19 @@ def list_products(all=False, refresh=False, root=None):
 def download(*packages, **kwargs):
     """
     Download packages to the local disk.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
     """
@@ -2628,11 +2963,16 @@ def download(*packages, **kwargs):
 def list_downloaded(root=None, **kwargs):
     """
     .. versionadded:: 2017.7.0
+
     List prefetched packages downloaded by Zypper in the local disk.
+
     root
         operate on a different root directory.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.list_downloaded
     """
     CACHE_DIR = "/var/cache/zypp/packages/"
@@ -2661,11 +3001,16 @@ def diff(*paths, **kwargs):
     Return a formatted diff between current files and original in a package.
     NOTE: this function includes all files (configuration and not), but does
     not work on binary content.
+
     The root parameter can also be passed via the keyword argument.
+
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
     """
     ret = {}
@@ -2715,15 +3060,21 @@ def _get_patches(installed_only=False, root=None):
 def list_patches(refresh=False, root=None, **kwargs):
     """
     .. versionadded:: 2017.7.0
+
     List all known advisory patches from available repos.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_patches
     """
     if refresh:
@@ -2735,11 +3086,16 @@ def list_patches(refresh=False, root=None, **kwargs):
 def list_installed_patches(root=None, **kwargs):
     """
     .. versionadded:: 2017.7.0
+
     List installed advisory patches on the system.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_installed_patches
     """
     return _get_patches(installed_only=True, root=root)
@@ -2748,12 +3104,17 @@ def list_installed_patches(root=None, **kwargs):
 def list_provides(root=None, **kwargs):
     """
     .. versionadded:: 2018.3.0
+
     List package provides of installed packages as a dict.
     {'<provided_name>': ['<package_name>', '<package_name>', ...]}
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.list_provides
     """
     ret = __context__.get("pkg.list_provides")
@@ -2782,16 +3143,20 @@ def list_provides(root=None, **kwargs):
 def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
     """
     .. versionadded:: 2018.3.0
+
     Convert name provides in ``pkgs`` into real package names if
     ``resolve_capabilities`` parameter is set to True. In case of
     ``resolve_capabilities`` is set to False the package list
     is returned unchanged.
+
     refresh
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
     root
         operate on a different root directory.
+
     resolve_capabilities
         If this option is set to True the input will be checked if
         a package with this name exists. If not, this function will
@@ -2799,8 +3164,11 @@ def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
         the output is exchanged with the real package name.
         In case this option is set to False (Default) the input will
         be returned unchanged.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.resolve_capabilities resolve_capabilities=True w3m_ssl
     """
     if refresh:
@@ -2841,12 +3209,17 @@ def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
 def services_need_restart(root=None, **kwargs):
     """
     .. versionadded:: 3003
+
     List services that use files which have been changed by the
     package manager. It might be needed to restart them.
+
     root
         operate on a different root directory.
+
     CLI Examples:
+
     .. code-block:: bash
+
         salt '*' pkg.services_need_restart
     """
     cmd = ["ps", "-sss"]
@@ -2854,4 +3227,4 @@ def services_need_restart(root=None, **kwargs):
     zypper_output = __zypper__(root=root).nolock.call(*cmd)
     services = zypper_output.split()
 
-    return service
+    return services
