@@ -121,7 +121,7 @@ def clear_pillar_cache(minion="*", **kwargs):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 
-    ckminions = salt.utils.minions.CkMinions(__opts__)
+    ckminions = salt.utils.minions.CkMinions.factory(__opts__)
     ret = ckminions.check_minions(minion)
 
     pillarenv = kwargs.pop("pillarenv", None)
@@ -164,7 +164,7 @@ def show_pillar_cache(minion="*", **kwargs):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 
-    ckminions = salt.utils.minions.CkMinions(__opts__)
+    ckminions = salt.utils.minions.CkMinions.factory(__opts__)
     ret = ckminions.check_minions(minion)
 
     pillarenv = kwargs.pop("pillarenv", None)
