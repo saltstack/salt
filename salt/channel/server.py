@@ -379,7 +379,11 @@ class ReqServerChannel:
                 pki_dir = self.opts["cluster_pki_dir"]
             else:
                 pki_dir = self.opts.get("pki_dir", "")
-            pub_path = os.path.join(pki_dir, "minions", id_)
+            try:
+                pub_path = salt.utils.verify.clean_join(pki_dir, "minions", id_)
+            except salt.exceptions.SaltValidationError:
+                log.warning("Invalid minion id: %s", id_)
+                return False
             try:
                 pub = salt.crypt.PublicKey(pub_path)
             except OSError:
