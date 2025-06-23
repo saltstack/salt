@@ -212,7 +212,7 @@ def save_load(jid, load, minions=None):
     _set(client, f"{path}/jobs/{jid}/{_LOAD}", load, ttl=ttl)
     if load.get("tgt"):
         if minions is None:
-            ckminions = salt.utils.minions.CkMinions(__opts__)
+            ckminions = salt.utils.minions.CkMinions.factory(__opts__)
             minions = ckminions.check_minions(
                 load["tgt"], load.get("tgt_type", "glob")
             )["minions"]

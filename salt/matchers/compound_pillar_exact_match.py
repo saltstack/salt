@@ -19,5 +19,5 @@ def mmatch(expr, delimiter, greedy, opts=None):
     if not opts:
         opts = __opts__
 
-    ckminions = salt.utils.minions.CkMinions(opts)
+    ckminions = salt.utils.minions.CkMinions.factory(opts)
     return ckminions._check_compound_minions(expr, delimiter, greedy, pillar_exact=True)

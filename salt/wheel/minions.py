@@ -17,5 +17,5 @@ def connected():
         cache_cli = CacheCli(opts)
         minions = cache_cli.get_cached()
     else:
-        minions = list(salt.utils.minions.CkMinions(opts).connected_ids())
+        minions = list(salt.utils.minions.CkMinions.factory(opts).connected_ids())
     return minions
