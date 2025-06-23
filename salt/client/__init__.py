@@ -409,7 +409,7 @@ class LocalClient:
         return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
-        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions.factory(self.opts).check_minions(
             tgt, tgt_type=expr_form
         )
         return _res["minions"]
@@ -1674,7 +1674,7 @@ class LocalClient:
             for id_, min_ret in ret.items():
                 if min_ret.get("failed") is True:
                     if connected_minions is None:
-                        connected_minions = salt.utils.minions.CkMinions(
+                        connected_minions = salt.utils.minions.CkMinions.factory(
                             self.opts
                         ).connected_ids()
                     if (

@@ -69,7 +69,7 @@ class LoadAuth:
 
     @cached_property
     def ckminions(self):
-        return self._ckminions or salt.utils.minions.CkMinions(self.opts)
+        return self._ckminions or salt.utils.minions.CkMinions.factory(self.opts)
 
     def load_name(self, load):
         """

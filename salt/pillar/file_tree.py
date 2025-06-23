@@ -489,7 +489,7 @@ def _ext_pillar(
         if len(ext_pillar_dirs) > 0:
             for nodegroup in ext_pillar_dirs:
                 if os.path.isdir(nodegroups_dir) and nodegroup in master_ngroups:
-                    ckminions = salt.utils.minions.CkMinions(__opts__)
+                    ckminions = salt.utils.minions.CkMinions.factory(__opts__)
                     _res = ckminions.check_minions(
                         master_ngroups[nodegroup], "compound"
                     )

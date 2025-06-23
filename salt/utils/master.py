@@ -405,7 +405,7 @@ class MasterPillarUtil:
     def _tgt_to_list(self):
         # Return a list of minion ids that match the target and tgt_type
         minion_ids = []
-        ckminions = salt.utils.minions.CkMinions(self.opts)
+        ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         _res = ckminions.check_minions(self.tgt, self.tgt_type)
         minion_ids = _res["minions"]
         if not minion_ids:
@@ -634,7 +634,7 @@ class CacheWorker(Process):
         """
         Gather currently connected minions and update the cache
         """
-        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
+        new_mins = list(salt.utils.minions.CkMinions.factory(self.opts).connected_ids())
         cc = cache_cli(self.opts)
         cc.get_cached()
         cc.put_cache([new_mins])
@@ -841,7 +841,7 @@ def ping_all_connected_minions(opts):
     Ping all connected minions.
     """
     if opts["minion_data_cache"]:
-        tgt = list(salt.utils.minions.CkMinions(opts).connected_ids())
+        tgt = list(salt.utils.minions.CkMinions.factory(opts).connected_ids())
         form = "list"
     else:
         tgt = "*"

@@ -129,7 +129,7 @@ class ReqServerChannel:
         else:
             self.cache_cli = False
             # Make an minion checker object
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+            self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
         if hasattr(self.transport, "post_fork"):
@@ -885,7 +885,7 @@ class PubServerChannel:
 
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.transport = transport
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
@@ -910,7 +910,7 @@ class PubServerChannel:
         self.state = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.present = {}
         self.master_key = salt.crypt.MasterKeys(self.opts)
 

@@ -218,7 +218,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     # if you have a tgt, save that for the UI etc
     if "tgt" in clear_load and clear_load["tgt"] != "":
         if minions is None:
-            ckminions = salt.utils.minions.CkMinions(__opts__)
+            ckminions = salt.utils.minions.CkMinions.factory(__opts__)
             # Retrieve the minions list
             _res = ckminions.check_minions(
                 clear_load["tgt"], clear_load.get("tgt_type", "glob")
