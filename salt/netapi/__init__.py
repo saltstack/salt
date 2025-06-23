@@ -77,7 +77,7 @@ class NetapiClient:
         self.resolver = salt.auth.Resolver(apiopts)
         self.loadauth = salt.auth.LoadAuth(apiopts)
         self.key = salt.daemons.masterapi.access_keys(apiopts)
-        self.ckminions = salt.utils.minions.CkMinions(apiopts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(apiopts)
 
     def _is_master_running(self):
         """

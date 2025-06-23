@@ -56,7 +56,7 @@ def compound_matches(expr, minion_id):
             log.warning("Got invalid minion ID.")
             return {"res": False}
         log.debug("Evaluating if minion '%s' is matched by '%s'.", minion_id, expr)
-        ckminions = salt.utils.minions.CkMinions(__opts__)
+        ckminions = salt.utils.minions.CkMinions.factory(__opts__)
         # Compound expressions are usually evaluated in greedy mode since you
         # want to make sure the executing user has privileges to run a command on
         # any possibly matching minion, including those with uncached data.
