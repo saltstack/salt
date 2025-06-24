@@ -253,6 +253,7 @@ def configure_orm(opts):
 
         ENGINE_REGISTRY[name] = {}
         ENGINE_REGISTRY[name]["engine"] = _engine
+        ENGINE_REGISTRY[name]["dialect"] = _engine.dialect.name
         ENGINE_REGISTRY[name]["session"] = _Session
         ENGINE_REGISTRY[name]["ro_engine"] = _ro_engine
         ENGINE_REGISTRY[name]["ro_session"] = _ROSession
@@ -308,6 +309,20 @@ def reconfigure_orm(opts):
     """
     dispose_orm()
     configure_orm(opts)
+
+
+def get_engine(name=None):
+    """
+    Get a SQLAlchemy engine by name
+    """
+    if not name:
+        name = "default"
+    try:
+        return ENGINE_REGISTRY[name]["engine"]
+    except KeyError:
+        raise salt.exceptions.SaltInvocationError(
+            f"ORM not configured for '{name}' yet. Did you forget to call salt.sqlalchemy.configure_orm?"
+        )
 
 
 def Session(name=None):
