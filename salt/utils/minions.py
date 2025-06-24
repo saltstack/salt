@@ -9,14 +9,12 @@ import re
 
 import salt.cache
 import salt.key
-import salt.payload
 import salt.roster
+import salt.sqlalchemy
 import salt.transport
 import salt.utils.data
-import salt.utils.files
 import salt.utils.network
 import salt.utils.stringutils
-import salt.utils.versions
 from salt._compat import ipaddress
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
@@ -215,6 +213,14 @@ class CkMinions:
         else:
             self.acc = "accepted"
 
+    @staticmethod
+    def factory(opts):
+        # we can only use this codepath with postgres
+        if opts.get("minion_data_cache") and opts.get("cache") == "sqlalchemy":
+            return SQLAlchemyCkMinions(opts)
+        else:
+            return CkMinions(opts)
+
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
         Return minions found by looking at nodegroups
@@ -317,10 +323,13 @@ class CkMinions:
         data and matched by the condition.
         """
         cache_enabled = self.opts.get("minion_data_cache", False)
+        if search_type.startswith("pillar"):
+            bank = "pillar"
+        else:
+            bank = "grains"
 
         def list_cached_minions():
-            # we use grains as a equivalent for minion list
-            return self.cache.list("grains")
+            return self.cache.list(bank)
 
         if greedy:
             if not minions:
@@ -338,10 +347,11 @@ class CkMinions:
             if not cminions:
                 return {"minions": minions, "missing": []}
             minions = set(minions)
+
             for id_ in cminions:
                 if greedy and id_ not in minions:
                     continue
-                mdata = self.cache.fetch(search_type, id_)
+                mdata = self.cache.fetch(bank, id_)
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -662,15 +672,36 @@ class CkMinions:
 
         return {"minions": list(minions), "missing": []}
 
+    def _iter_minion_grains_addresses(self, subset=None):
+        """
+        generator of (minion_id, address) tuple mappings
+        """
+        search = subset or self.cache.list("grains")
+        if search is None:
+            return
+
+        for id_ in search:
+            try:
+                grains = self.cache.fetch("grains", id_)
+            except SaltCacheError:
+                # If a SaltCacheError is explicitly raised during the fetch operation,
+                # permission was denied to open the cached data.p file. Continue on as
+                # in the releases <= 2016.3. (An explicit error raise was added in PR
+                # #35388. See issue #36867 for more information.
+                continue
+            if grains is None:
+                continue
+            for ipv4 in grains.get("ipv4", []):
+                yield (id_, ipv4)
+            for ipv6 in grains.get("ipv6", []):
+                yield (id_, ipv6)
+
     def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):
-            search = self.cache.list("grains")
-            if search is None:
-                return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
             if self.opts.get("detect_remote_minions", False):
                 addrs = addrs.union(
@@ -684,33 +715,14 @@ class CkMinions:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("::1")
                 addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
-            if subset:
-                search = subset
-            for id_ in search:
-                try:
-                    grains = self.cache.fetch("grains", id_)
-                except SaltCacheError:
-                    # If a SaltCacheError is explicitly raised during the fetch operation,
-                    # permission was denied to open the cached data.p file. Continue on as
-                    # in the releases <= 2016.3. (An explicit error raise was added in PR
-                    # #35388. See issue #36867 for more information.
-                    continue
-                if grains is None:
-                    continue
-                for ipv4 in grains.get("ipv4", []):
-                    if ipv4 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv4))
-                        else:
-                            minions.add(id_)
-                        break
-                for ipv6 in grains.get("ipv6", []):
-                    if ipv6 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv6))
-                        else:
-                            minions.add(id_)
-                        break
+
+            for id_, address in self._iter_minion_grains_addresses(subset=subset):
+                if address in addrs:
+                    if show_ip:
+                        minions.add((id_, address))
+                    else:
+                        minions.add(id_)
+
         return minions
 
     def _all_minions(self, expr=None, minions=None):
@@ -1169,3 +1181,236 @@ class CkMinions:
             if good:
                 return True
         return False
+
+
+try:
+    from sqlalchemy import or_, select, text
+
+    from salt.sqlalchemy.models import model_for
+except ImportError:
+    # stubs to appease pyright
+    model_for = select = text = or_ = print
+
+
+class SQLAlchemyCkMinions(CkMinions):
+    """
+    A SQlA optimized subclass of CkMinions to leverage database speed.
+    Generally the optimizations are limited to Postgresql's contains indexing
+    operations.
+    """
+
+    def __init__(self, opts):
+        if not salt.sqlalchemy.orm_configured():
+            salt.sqlalchemy.configure_orm(opts)
+
+        self.dialect_name = salt.sqlalchemy.get_engine().dialect.name
+
+        super().__init__(opts)
+
+    def _check_cache_minions(
+        self,
+        expr,
+        delimiter,
+        greedy,
+        search_type,
+        regex_match=False,
+        exact_match=False,
+        minions=None,
+    ):
+        """
+        Helper function to search for minions in master caches
+        If 'greedy' return accepted minions that matched by the condition or absent in the cache.
+        If not 'greedy' return the only minions have cache data and matched by the condition.
+        """
+        # for now the below implementation is pg-only
+        if self.dialect_name != "postgresql":
+            return super()._check_cache_minions(
+                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
+            )
+
+        if search_type.startswith("pillar"):
+            bank = "pillar"
+        else:
+            bank = "grains"
+
+        # if its an exact match with no globs, we can just use a rough equivalent
+        # jsonb query and let postgres do the work. if its a regex or glob we
+        # do the work in python instead because pg isn't smart enough
+        raw_tokens = expr.split(delimiter)
+        exact_tokens = []
+        while len(raw_tokens):
+            token = raw_tokens.pop(0)
+            # because @> contains can't much { key: ANY(str) }, we must roll
+            # back 2 levels from the regex/glob so match_dict can work
+            if regex_match and re.escape(token) != token:
+                if exact_tokens:
+                    raw_tokens.append(exact_tokens.pop())
+                raw_tokens.append(token)
+                break
+            if not exact_match and "*" in token:
+                if exact_tokens:
+                    raw_tokens.append(exact_tokens.pop())
+                raw_tokens.append(token)
+                break
+            exact_tokens.append(token)
+
+        # we can convert the first N non-glob/non-regex tokens into a set of contains queries
+        # if a glob or regex exists its simpler to fetch the data first then use subdict_match
+        # rather than deconstruct and re-implement inside pg. This could have a pathological worst
+        # case but generally I expect 99% of queries to be exact match foo:bar:baz queries.
+        # we have to generate many contains for a given set of tokens because subdict_match
+        # looks into arrays
+        # Pg12+ supports json_path expressions, unfortunately with testing PG's query optimizer
+        # refuses to use the available GIN index when contains queries do, so we will this
+        # unfortunate query generator as is.
+        # at the moment
+        if not exact_tokens:
+            # if we dont have enough specificity to do any kind of contains queries, just punt
+            return super()._check_cache_minions(
+                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
+            )
+
+        # the basic idea here is to generate every contains @> operand we can to approximate
+        # salt.utils.data.subdict_match exact_match behavior, which matches foo:bar
+        # to {foo: bar}, {foo: {bar: true}}, { foo: [{bar: true]}, etc.
+        def _recurse_contains(lhs=None, tokens=None):
+            fragments = []
+
+            if not tokens:
+                return fragments
+
+            tokens = tokens[:]
+
+            if not lhs and len(tokens) == 1:
+                rhs = tokens[0]
+                fragments.append({rhs: True})
+                fragments.append({rhs: {}})
+                fragments.append({rhs: []})
+            elif len(tokens) == 2:
+                lhs = tokens.pop(0)
+                rhs = tokens.pop(0)
+                fragments.append({lhs: rhs})
+                fragments.append({lhs: [rhs]})
+                if rhs.isdigit():
+                    fragments.append({lhs: int(rhs)})
+                    fragments.append({lhs: [int(rhs)]})
+
+                if rhs.lower() == "true":
+                    fragments.append({lhs: True})
+                if rhs.lower() == "false":
+                    fragments.append({lhs: False})
+                fragments.append({lhs: {rhs: True}})
+                fragments.append({lhs: {rhs: {}}})
+                fragments.append({lhs: {rhs: []}})
+
+                fragments.append({lhs: [rhs]})
+                fragments.append({lhs: [{rhs: True}]})
+                fragments.append({lhs: [{rhs: {}}]})
+                fragments.append({lhs: [{rhs: []}]})
+            else:
+                lhs = tokens.pop(0)
+                for fragment in _recurse_contains(lhs=lhs, tokens=tokens):
+                    fragments.append({lhs: fragment})
+                    fragments.append({lhs: [fragment]})
+
+            return fragments
+
+        fragments = _recurse_contains(tokens=exact_tokens)
+        Cache = model_for("Cache")
+        if not minions:
+            minions = self._pki_minions()
+
+        if not exact_tokens and len(minions) > 1000:
+            log.error(
+                "Someone is running a query across the full cache, this is going to be very slow: expr %s, search_type: %s",
+                expr,
+                search_type,
+            )
+
+        # if we have raw_tokens leftover, it means we need to pass the result
+        # into subdict_match
+        if len(raw_tokens) > 0:
+            stmt = select(Cache.key, Cache.data)
+        else:
+            stmt = select(Cache.key)
+
+        if "cluster_id" in self.cache.kwargs:
+            stmt = stmt.where(Cache.cluster == self.cache.kwargs["cluster_id"])
+
+        if len(exact_tokens) == 1:
+            # special case: if we have only a single exact token, it means
+            # its a query like G@role:web* ; and postgres cannot @> contains a single key
+            # so we use a ? instead
+            stmt = stmt.where(Cache.bank == bank, Cache.data.has_key(exact_tokens[0]))
+        else:
+            stmt = stmt.where(
+                Cache.bank == bank,
+                or_(Cache.data.contains(fragment) for fragment in fragments),
+            )
+
+        with salt.sqlalchemy.ROSession() as session:
+            session.execute(text("SET LOCAL random_page_cost = 0;"))
+            results = session.execute(stmt).all()
+            session.commit()
+
+        pki_minions = set(minions)
+        cache_minions = set(self.cache.list(bank))
+        not_in_cache = pki_minions - cache_minions
+
+        # if raw tokens are left over, it means some were glob/regex, so we
+        # do a second pass with subdict_match
+        cache_hits = set()
+        if raw_tokens:
+            for id_, mdata in results:
+                if salt.utils.data.subdict_match(
+                    mdata,
+                    expr,
+                    delimiter=delimiter,
+                    regex_match=regex_match,
+                    exact_match=exact_match,
+                ):
+                    cache_hits.add(id_)
+        else:
+            for (id_,) in results:
+                cache_hits.add(id_)
+
+        if greedy:
+            # accepted minions that matched by the condition or absent in the cache
+            return {
+                "minions": list((pki_minions & cache_hits) | not_in_cache),
+                "missing": [],
+            }
+        else:
+            # only minions have cache data and matched by the condition
+            return {"minions": list(pki_minions & cache_hits), "missing": []}
+
+    def _iter_minion_grains_addresses(self, subset=None):
+        """
+        generator of (minion_id, address) tuple mappings
+        this fetches from a view calculating the results via cache grains
+        see salt.returners.pgjsonb for schema/ddl/details
+        """
+        with salt.sqlalchemy.ROSession() as session:
+            Cache = model_for("Cache")
+
+            stmt = select(
+                Cache.key,
+                Cache.data["ipv4"].label("ipv4"),
+                Cache.data["ipv6"].label("ipv6"),
+            )
+
+            stmt = stmt.where(Cache.bank == "grains")
+
+            if "cluster_id" in self.cache.kwargs:
+                stmt = stmt.where(Cache.cluster == self.cache.kwargs["cluster_id"])
+
+            if subset:
+                stmt = stmt.where(Cache.key.in_(subset))
+
+            rows = session.execute(stmt).all()
+            for row in rows:
+                for addr in row.ipv4 or []:
+                    yield (row.key, str(addr))
+                for addr in row.ipv6 or []:
+                    yield (row.key, str(addr))
+            session.commit()

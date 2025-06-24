@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from contextlib import contextmanager
 
@@ -7,12 +8,97 @@ import pytest
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
+import salt.sqlalchemy
+
 try:
     from docker.errors import APIError
 except ImportError:
     APIError = OSError
 
 log = logging.getLogger(__name__)
+
+__all__ = ["database_backend", "master_opts", "available_databases"]
+
+
+@pytest.fixture(scope="module")
+def database_backend(request, salt_factories):
+    backend_type, version = request.param
+
+    docker_image = DockerImage(
+        name=backend_type.replace("postgresql", "postgres"),
+        tag=version,
+        container_id=random_string(f"{backend_type}-{version}-"),
+    )
+
+    if platform.is_fips_enabled():
+        if (
+            docker_image.name in ("mysql-server", "percona")
+            and docker_image.tag == "8.0"
+        ):
+            pytest.skip(f"These tests fail on {docker_image.name}:{docker_image.tag}")
+
+    if backend_type == "postgresql":
+        with make_postgresql_backend(salt_factories, docker_image) as container:
+            yield container
+    elif backend_type in ("mysql-server", "percona", "mariadb"):
+        with make_mysql_backend(salt_factories, docker_image, request) as container:
+            yield container
+    elif backend_type == "sqlite":
+        # just a stub to make sqlite act the same as ms/pg
+        yield DatabaseCombo(
+            name="sqlite", dialect="sqlite", version=version, user=None, passwd=None
+        )
+    elif backend_type == "no_database":
+        # this isn't a real thing, its just a tuple to represent when no db is
+        # in use for parametrization
+        yield DatabaseCombo(
+            name="no_database", dialect="n/a", version="0", user=None, passwd=None
+        )
+
+    else:
+        raise ValueError(f"Unknown backend type: {backend_type}")
+
+
+@pytest.fixture(scope="module")
+def master_opts(master_opts, database_backend, tmp_path_factory):
+    if database_backend.name == "no_database":
+        return master_opts
+
+    opts = master_opts.copy()
+
+    # make all the things use database
+    opts["cache"] = "sqlalchemy"
+    opts["master_job_cache"] = "sqlalchemy"
+    opts["keys.cache_driver"] = "sqlalchemy"
+    opts["pillar.cache_driver"] = "sqlalchemy"
+    opts["eauth_tokens.cache_driver"] = "sqlalchemy"
+    opts["sqlalchemy.echo"] = True
+
+    if database_backend.dialect in {"mysql", "postgresql"}:
+        if database_backend.dialect == "mysql":
+            driver = "mysql+pymysql"
+        elif database_backend.dialect == "postgresql":
+            driver = "postgresql+psycopg"
+
+        opts["sqlalchemy.drivername"] = driver
+        opts["sqlalchemy.username"] = database_backend.user
+        opts["sqlalchemy.password"] = database_backend.passwd
+        opts["sqlalchemy.port"] = database_backend.port
+        opts["sqlalchemy.database"] = database_backend.database
+        opts["sqlalchemy.host"] = "0.0.0.0"
+        opts["sqlalchemy.disable_connection_pool"] = True
+    elif database_backend.dialect == "sqlite":
+        opts["sqlalchemy.dsn"] = "sqlite:///" + os.path.join(
+            tmp_path_factory.mktemp("sqlite"), "salt.db"
+        )
+    else:
+        raise ValueError(f"Unsupported returner param: {database_backend}")
+
+    salt.sqlalchemy.reconfigure_orm(opts)
+    salt.sqlalchemy.drop_all()
+    salt.sqlalchemy.create_all()
+
+    return opts
 
 
 def _has_driver(driver_name):
@@ -52,6 +138,7 @@ def available_databases(subset=None):
     """
     driver_map = {
         "sqlite": None,
+        "no_database": None,
         "postgresql": "psycopg",
         "mysql-server": "pymysql",
         "percona": "pymysql",
@@ -164,38 +251,6 @@ def check_container_started(timeout_at, container, container_test):
         return False
     time.sleep(0.5)
     return True
-
-
-@pytest.fixture(scope="module")
-def database_backend(request, salt_factories):
-    backend_type, version = request.param
-
-    docker_image = DockerImage(
-        name=backend_type.replace("postgresql", "postgres"),
-        tag=version,
-        container_id=random_string(f"{backend_type}-{version}-"),
-    )
-
-    if platform.is_fips_enabled():
-        if (
-            docker_image.name in ("mysql-server", "percona")
-            and docker_image.tag == "8.0"
-        ):
-            pytest.skip(f"These tests fail on {docker_image.name}:{docker_image.tag}")
-
-    if backend_type == "postgresql":
-        with make_postgresql_backend(salt_factories, docker_image) as container:
-            yield container
-    elif backend_type in ("mysql-server", "percona", "mariadb"):
-        with make_mysql_backend(salt_factories, docker_image, request) as container:
-            yield container
-    elif backend_type == "sqlite":
-        # just a stub to make sqlite act the same as ms/pg
-        yield DatabaseCombo(
-            name="sqlite", dialect="sqlite", version=version, user=None, passwd=None
-        )
-    else:
-        raise ValueError(f"Unknown backend type: {backend_type}")
 
 
 @contextmanager

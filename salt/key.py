@@ -14,25 +14,27 @@ import salt.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
-import salt.transport
+import salt.sqlalchemy
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
-import salt.utils.json
 import salt.utils.kinds
-import salt.utils.minions
 import salt.utils.sdb
-import salt.utils.stringutils
-import salt.utils.user
 from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 
 
 def get_key(opts):
-    return Key(opts)
+    if opts.get("keys.cache_driver") == "sqlalchemy":
+        if not salt.sqlalchemy.orm_configured():
+            salt.sqlalchemy.configure_orm(opts)
+
+        return SqlAlchemyKey(opts)
+    else:
+        return Key(opts)
 
 
 class KeyCLI:
@@ -562,14 +564,12 @@ class Key:
         Accept a dictionary of keys and return the current state of the
         specified keys
         """
-        ret = {}
-        cur_keys = self.list_keys()
-        for status, keys in match_dict.items():
-            for key in salt.utils.data.sorted_ignorecase(keys):
-                for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
-                    if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
-                        ret.setdefault(keydir, []).append(key)
-        return ret
+        matches = []
+        # not sure why this interface was ever added. just toss to glob match
+        for match_list in match_dict.values():
+            matches.extend(match_list)
+
+        return self.glob_match(matches)
 
     def list_keys(self):
         """
@@ -797,14 +797,21 @@ class Key:
                                         "master AES key is rotated or auth is revoked "
                                         "with 'saltutil.revoke_auth'.".format(key)
                                     )
+                        deleted = False
                         if status == "minions_denied":
                             self.cache.flush("denied_keys", key)
+                            deleted = True
                         else:
-                            self.cache.flush("keys", key)
-                        eload = {"result": True, "act": "delete", "id": key}
-                        self.event.fire_event(
-                            eload, salt.utils.event.tagify(prefix="key")
-                        )
+                            val = self.cache.fetch("keys", key)
+                            if val and self.STATE_MAP[val["state"]] == status:
+                                self.cache.flush("keys", key)
+                                deleted = True
+
+                        if deleted:
+                            eload = {"result": True, "act": "delete", "id": key}
+                            self.event.fire_event(
+                                eload, salt.utils.event.tagify(prefix="key")
+                            )
                     except OSError:
                         pass
         if self.opts.get("preserve_minions") is True:
@@ -925,3 +932,135 @@ class Key:
 
     def __exit__(self, *args):
         self.event.destroy()
+
+
+try:
+    from sqlalchemy import or_, select
+
+    from salt.sqlalchemy.models import model_for
+except ImportError:
+    # stubs to appease pyright
+    model_for = select = or_ = print
+
+
+class SqlAlchemyKey(Key):
+    def __init__(self, opts, *args, **kwargs):
+        # unfortunately real null can't be used as a pk in certain backends so
+        # it must be mapped to a string null
+        self.cluster_id = opts["cluster_id"] or "null"
+        super().__init__(opts, *args, **kwargs)
+
+    def list_keys(self):
+        """
+        Return a dict of managed keys and what the key status are
+        """
+        ret = {
+            "minions_pre": [],
+            "minions_rejected": [],
+            "minions": [],
+            "minions_denied": [],
+        }
+
+        Cache = model_for("Cache")
+        with salt.sqlalchemy.ROSession() as session:
+            stmt = (
+                select(Cache.key, Cache.data["state"])
+                .where(
+                    or_(Cache.bank == "keys", Cache.bank == "denied_keys"),
+                    Cache.cluster == self.cluster_id,
+                )
+                .order_by(Cache.key)
+            )
+            results = session.execute(stmt).all()
+            session.commit()
+
+            for id_, state in results:
+                if state == "accepted":
+                    ret["minions"].append(id_)
+                elif state == "pending":
+                    ret["minions_pre"].append(id_)
+                elif state == "rejected":
+                    ret["minions_rejected"].append(id_)
+
+        for id_ in self.cache.list("denied_keys"):
+            ret["minions_denied"].append(id_)
+
+        return ret
+
+    def list_match(self, match):
+        """
+        Accept a glob which to match the of a key and return the key's location
+        """
+        ret = {}
+        if isinstance(match, str):
+            match = match.split(",")
+
+        ret = {}
+
+        Cache = model_for("Cache")
+        with salt.sqlalchemy.ROSession() as session:
+            stmt = (
+                select(Cache.key, Cache.bank, Cache.data["state"])
+                .where(
+                    Cache.cluster == self.cluster_id,
+                    Cache.key.in_(match),
+                    or_(Cache.bank == "keys", Cache.bank == "denied_keys"),
+                )
+                .order_by(Cache.key)
+            )
+
+            results = session.execute(stmt).all()
+            for _id, bank, state in results:
+                # backward compatibility stuff requires denied_keys be handled differently
+                if bank == "denied_keys":
+                    state = "denied"
+
+                ret.setdefault(self.STATE_MAP[state], [])
+                ret[self.STATE_MAP[state]].append(_id)
+            session.commit()
+
+        return ret
+
+    def glob_match(self, match, full=False):  # pylint: disable=unused-argument
+        """
+        Return the minions found by looking via globs
+        """
+        ret = {}
+
+        # optimization:
+        # if there is no glob in the expression, we can just treat it as a single element list
+        if isinstance(match, str) and "*" not in match:
+            return self.list_match(match)
+
+        if isinstance(match, list):
+            match = ",".join(match)
+
+        # we want to translate shell globs to an equivalent ILIKE query
+        match = match.replace("_", "\\_")
+        match = match.replace("%", "\\%")
+        match = match.replace("*", "%")
+        match = match.split(",")
+
+        Cache = model_for("Cache")
+        with salt.sqlalchemy.ROSession() as session:
+            stmt = (
+                select(Cache.key, Cache.bank, Cache.data["state"])
+                .where(
+                    Cache.cluster == self.cluster_id,
+                    or_(Cache.bank == "keys", Cache.bank == "denied_keys"),
+                    or_(Cache.key.ilike(ex) for ex in match),
+                )
+                .order_by(Cache.key)
+            )
+
+            results = session.execute(stmt).all()
+            for _id, bank, state in results:
+                # backward compatibility stuff requires denied_keys be handled differently
+                if bank == "denied_keys":
+                    state = "denied"
+
+                ret.setdefault(self.STATE_MAP[state], [])
+                ret[self.STATE_MAP[state]].append(_id)
+            session.commit()
+
+        return ret
