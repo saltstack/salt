@@ -380,3 +380,31 @@ def test_remote_validation(remote, valid):
 )
 def test_remote_to_url(remote, result):
     assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result
+
+
+def test_find_file_subdir(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "refs").mkdir()
+    (root / "refs" / "base").mkdir()
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    gitfs.cache_root = str(root)
+    ret = gitfs.find_file("foo/init.sls")
+    assert ret == {"path": "", "rel": ""}
