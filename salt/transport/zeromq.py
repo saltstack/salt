@@ -572,7 +572,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             except asyncio.exceptions.TimeoutError:
                 continue
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception in request handler", exc_info=True)
+                log.error(
+                    "Exception in request handler",
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
                 continue
 
     async def handle_message(self, stream, payload):
