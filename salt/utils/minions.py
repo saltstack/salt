@@ -9,16 +9,17 @@ import re
 import time
 
 import salt.cache
+import salt.key
 import salt.payload
 import salt.roster
+import salt.sqlalchemy
 import salt.transport
+import salt.utils.args
 import salt.utils.data
-import salt.utils.files
 import salt.utils.network
 import salt.utils.resource_registry
 import salt.utils.resources
 import salt.utils.stringutils
-import salt.utils.versions
 from salt._compat import ipaddress
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
@@ -438,6 +439,14 @@ class CkMinions:
         """
         return salt.utils.resource_registry.get_registry(self.opts)
 
+    @staticmethod
+    def factory(opts):
+        # Cache matching falls back to the base implementation by dialect.
+        if opts.get("minion_data_cache") and opts.get("cache") == "sqlalchemy":
+            return SQLAlchemyCkMinions(opts)
+        else:
+            return CkMinions(opts)
+
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
         Return minions found by looking at nodegroups
@@ -447,7 +456,10 @@ class CkMinions:
         )
 
     def _check_glob_minions(
-        self, expr, greedy, minions=None
+        self,
+        expr,
+        greedy,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via globs
@@ -484,7 +496,11 @@ class CkMinions:
         return {"minions": result_minions, "missing": []}
 
     def _check_list_minions(
-        self, expr, greedy, ignore_missing=False, minions=None
+        self,
+        expr,
+        greedy,
+        ignore_missing=False,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via a list
@@ -537,7 +553,10 @@ class CkMinions:
         return {"minions": matched + extra, "missing": missing}
 
     def _check_pcre_minions(
-        self, expr, greedy, minions=None
+        self,
+        expr,
+        greedy,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via regular expressions
@@ -598,10 +617,13 @@ class CkMinions:
         have a cache entry are considered.
         """
         cache_enabled = self.opts.get("minion_data_cache", False)
+        if search_type.startswith("pillar"):
+            bank = "pillar"
+        else:
+            bank = "grains"
 
         def list_cached_minions():
-            # we use grains as a equivalent for minion list
-            return self.cache.list("grains")
+            return self.cache.list(bank)
 
         if greedy:
             if not minions:
@@ -628,7 +650,7 @@ class CkMinions:
                 if id_ not in minions:
                     continue
                 evaluated.add(id_)
-                mdata = self.cache.fetch(search_type, id_)
+                mdata = self.cache.fetch(bank, id_)
                 if mdata is None:
                     minions.discard(id_)
                     continue
@@ -907,7 +929,7 @@ class CkMinions:
                             log.error('Invalid beginning operator after "(": %s', word)
                             return {"minions": [], "missing": []}
                         if word == "not":
-                            if not results[-1] in ("&", "|", "("):
+                            if results[-1] not in ("&", "|", "("):
                                 results.append("&")
                             results.append("(")
                             results.append("set(all_minions())")
@@ -1024,6 +1046,27 @@ class CkMinions:
 
         return {"minions": list(minions), "missing": []}
 
+    def _iter_minion_grains_addresses(self, subset=None):
+        """Yield (minion_id, address_family, address) tuples from cached grains."""
+        search = subset or self.cache.list("grains")
+        if search is None:
+            return
+
+        for id_ in search:
+            try:
+                grains = self.cache.fetch("grains", id_)
+            except SaltCacheError:
+                # If a SaltCacheError is explicitly raised during the fetch operation,
+                # permission was denied to open the cached data.p file. Continue on as
+                # in the releases <= 2016.3. (An explicit error raise was added in PR
+                # #35388. See issue #36867 for more information.
+                continue
+            if grains is None:
+                continue
+            for family in ("ipv4", "ipv6"):
+                for address in grains.get(family, []):
+                    yield (id_, family, address)
+
     def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
@@ -1080,9 +1123,6 @@ class CkMinions:
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):
-            search = self.cache.list("grains")
-            if search is None:
-                return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
             if self.opts.get("detect_remote_minions", False):
                 addrs = addrs.union(
@@ -1096,33 +1136,18 @@ class CkMinions:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("::1")
                 addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
-            if subset:
-                search = subset
-            for id_ in search:
-                try:
-                    grains = self.cache.fetch("grains", id_)
-                except SaltCacheError:
-                    # If a SaltCacheError is explicitly raised during the fetch operation,
-                    # permission was denied to open the cached data.p file. Continue on as
-                    # in the releases <= 2016.3. (An explicit error raise was added in PR
-                    # #35388. See issue #36867 for more information.
-                    continue
-                if grains is None:
-                    continue
-                for ipv4 in grains.get("ipv4", []):
-                    if ipv4 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv4))
-                        else:
-                            minions.add(id_)
-                        break
-                for ipv6 in grains.get("ipv6", []):
-                    if ipv6 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv6))
-                        else:
-                            minions.add(id_)
-                        break
+
+            matched_families = set()
+            for id_, family, address in self._iter_minion_grains_addresses(
+                subset=subset
+            ):
+                if address in addrs and (id_, family) not in matched_families:
+                    matched_families.add((id_, family))
+                    if show_ip:
+                        minions.add((id_, address))
+                    else:
+                        minions.add(id_)
+
         return minions
 
     def _all_minions(self, expr=None, minions=None):
@@ -1773,3 +1798,158 @@ class CkMinions:
             if good:
                 return True
         return False
+
+
+try:
+    from sqlalchemy import ARRAY, any_, case, func, literal, or_, select
+
+    from salt.sqlalchemy.models import model_for, utcnow
+except ImportError:
+    # stubs to appease pyright
+    model_for = utcnow = select = func = or_ = ARRAY = any_ = case = literal = print
+
+
+class SQLAlchemyCkMinions(CkMinions):
+    """Use bulk SQL queries while retaining Salt's Python matcher semantics."""
+
+    def __init__(self, opts):
+        if not salt.sqlalchemy.orm_configured():
+            salt.sqlalchemy.configure_orm(opts)
+
+        self.dialect_name = salt.sqlalchemy.get_engine().dialect.name
+
+        super().__init__(opts)
+
+    def _check_cache_minions(
+        self,
+        expr,
+        delimiter,
+        greedy,
+        search_type,
+        regex_match=False,
+        exact_match=False,
+        minions=None,
+    ):
+        """Stream candidate rows, then apply Salt's matcher semantics."""
+        if (
+            self.dialect_name != "postgresql"
+            or not self.opts.get("minion_data_cache", False)
+            or not isinstance(expr, str)
+            or not isinstance(delimiter, str)
+            or not delimiter
+            or "*" in delimiter
+        ):
+            return super()._check_cache_minions(
+                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
+            )
+
+        first_token, separator, _ = expr.partition(delimiter)
+        if not separator or first_token == "*" or "\0" in first_token:
+            return super()._check_cache_minions(
+                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
+            )
+
+        bank = "pillar" if search_type.startswith("pillar") else "grains"
+        Cache = model_for("Cache")
+        first_key = Cache.data.has_key(first_token)
+        loaded_token = salt.utils.args.yamlify_arg(first_token)
+        if isinstance(loaded_token, str) and loaded_token != first_token:
+            if "\0" in loaded_token:
+                return super()._check_cache_minions(
+                    expr,
+                    delimiter,
+                    greedy,
+                    search_type,
+                    regex_match,
+                    exact_match,
+                    minions,
+                )
+            # Traversal retries missing literal keys through YAML normalization.
+            first_key = or_(first_key, Cache.data.has_key(loaded_token))
+        stmt = select(Cache.key, Cache.data).where(
+            Cache.bank == bank,
+            Cache.cluster == self.cache.kwargs["cluster_id"],
+            or_(Cache.expires_at.is_(None), Cache.expires_at > utcnow()),
+            or_(
+                first_key,
+                # Non-string/NUL dictionary keys and reserved tags use the codec.
+                Cache.data.has_key(salt.sqlalchemy._JSON_TAG),
+                # traverse_dict_and_list also searches dictionaries inside lists.
+                func.jsonb_typeof(Cache.data) == "array",
+            ),
+        )
+        if greedy:
+            candidates = set(minions or self._pki_minions())
+            if not candidates:
+                return {"minions": [], "missing": []}
+            stmt = stmt.where(
+                Cache.key
+                == any_(literal(list(candidates), type_=ARRAY(Cache.key.type)))
+            )
+
+        # JSON containment cannot express case folding, prefix regexes, string
+        # coercion, delimiters in values, or the reversible JSON codec safely.
+        with salt.sqlalchemy.ROSession() as session:
+            with session.execute(stmt.execution_options(yield_per=500)) as rows:
+                hits = [
+                    id_
+                    for id_, data in rows
+                    if salt.utils.data.subdict_match(
+                        data,
+                        expr,
+                        delimiter=delimiter,
+                        regex_match=regex_match,
+                        exact_match=exact_match,
+                    )
+                ]
+            session.commit()
+        return {"minions": hits, "missing": []}
+
+    def _iter_minion_grains_addresses(self, subset=None):
+        """Yield live cached addresses in bulk, retaining their address family."""
+        subset_ids = set(subset or ())
+        with salt.sqlalchemy.ROSession() as session:
+            Cache = model_for("Cache")
+
+            stmt = select(
+                Cache.key,
+                Cache.data["ipv4"].label("ipv4"),
+                Cache.data["ipv6"].label("ipv6"),
+                case(
+                    (
+                        Cache.data[salt.sqlalchemy._JSON_TAG].as_string().is_not(None),
+                        Cache.data,
+                    ),
+                    else_=None,
+                ).label("tagged_data"),
+            )
+
+            stmt = stmt.where(
+                Cache.bank == "grains",
+                Cache.cluster == self.cache.kwargs["cluster_id"],
+                or_(Cache.expires_at.is_(None), Cache.expires_at > utcnow()),
+            )
+
+            if subset:
+                if self.dialect_name == "postgresql":
+                    stmt = stmt.where(
+                        Cache.key
+                        == any_(literal(list(subset_ids), type_=ARRAY(Cache.key.type)))
+                    )
+                elif len(subset_ids) <= 500:
+                    # Larger subsets are filtered below to bound SQL parameters.
+                    stmt = stmt.where(Cache.key.in_(subset_ids))
+
+            rows = session.execute(stmt).all()
+            for row in rows:
+                if subset and row.key not in subset_ids:
+                    continue
+                for family in ("ipv4", "ipv6"):
+                    addresses = (
+                        row.tagged_data.get(family)
+                        if row.tagged_data is not None
+                        else getattr(row, family)
+                    )
+                    for addr in addresses or []:
+                        yield (row.key, family, str(addr))
+            session.commit()

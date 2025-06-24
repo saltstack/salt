@@ -14,15 +14,13 @@ import salt.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
-import salt.transport
+import salt.sqlalchemy
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
-import salt.utils.json
 import salt.utils.kinds
-import salt.utils.minions
 import salt.utils.sdb
 import salt.utils.stringutils
 import salt.utils.user
@@ -32,7 +30,13 @@ log = logging.getLogger(__name__)
 
 
 def get_key(opts):
-    return Key(opts)
+    if opts.get("keys.cache_driver") == "sqlalchemy":
+        if not salt.sqlalchemy.orm_configured():
+            salt.sqlalchemy.configure_orm(opts)
+
+        return SqlAlchemyKey(opts)
+    else:
+        return Key(opts)
 
 
 class KeyCLI:
@@ -760,14 +764,12 @@ class Key:
         Accept a dictionary of keys and return the current state of the
         specified keys
         """
-        ret = {}
-        cur_keys = self.list_keys()
-        for status, keys in match_dict.items():
-            for key in salt.utils.data.sorted_ignorecase(keys):
-                for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
-                    if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
-                        ret.setdefault(keydir, []).append(key)
-        return ret
+        matches = []
+        # not sure why this interface was ever added. just toss to glob match
+        for match_list in match_dict.values():
+            matches.extend(match_list)
+
+        return self.glob_match(matches)
 
     def list_keys(self):
         """
@@ -1030,14 +1032,21 @@ class Key:
                                         "master AES key is rotated or auth is revoked "
                                         "with 'saltutil.revoke_auth'.".format(key)
                                     )
+                        deleted = False
                         if status == "minions_denied":
                             self.cache.flush("denied_keys", key)
+                            deleted = True
                         else:
-                            self.cache.flush("keys", key)
-                        eload = {"result": True, "act": "delete", "id": key}
-                        self.event.fire_event(
-                            eload, salt.utils.event.tagify(prefix="key")
-                        )
+                            val = self.cache.fetch("keys", key)
+                            if val and self.STATE_MAP[val["state"]] == status:
+                                self.cache.flush("keys", key)
+                                deleted = True
+
+                        if deleted:
+                            eload = {"result": True, "act": "delete", "id": key}
+                            self.event.fire_event(
+                                eload, salt.utils.event.tagify(prefix="key")
+                            )
                     except OSError:
                         pass
         if self.opts.get("preserve_minions") is True:
@@ -1739,3 +1748,126 @@ class ClientKey(Key):
                         key=pub, sum_type=hash_type
                     )
         return ret
+
+
+try:
+    from sqlalchemy import ARRAY, any_, literal, or_, select
+
+    from salt.sqlalchemy.models import model_for, utcnow
+except ImportError:
+    # stubs to appease pyright
+    model_for = utcnow = select = or_ = ARRAY = any_ = literal = print
+
+
+class SqlAlchemyKey(Key):
+    KEYS_CACHE = "keys"
+    DENIED_CACHE = "denied_keys"
+
+    def __init__(self, opts, *args, **kwargs):
+        # A real NULL cannot be used as a primary key on every backend.
+        self.cluster_id = opts.get("cluster_id") or salt.sqlalchemy.STANDALONE_CLUSTER
+        super().__init__(opts, *args, **kwargs)
+
+    def _key_rows(self, *conditions):
+        """Fetch live key metadata without loading each key's public key."""
+        Cache = model_for("Cache")
+        stmt = select(Cache.key, Cache.bank, Cache.data["state"]).where(
+            Cache.cluster == self.cluster_id,
+            Cache.bank.in_((self.KEYS_CACHE, self.DENIED_CACHE)),
+            or_(Cache.expires_at.is_(None), Cache.expires_at > utcnow()),
+            *conditions,
+        )
+        with salt.sqlalchemy.Session() as session:
+            rows = session.execute(stmt).all()
+            session.commit()
+        return rows
+
+    def _key_status(self, id_, bank, state):
+        if bank == self.DENIED_CACHE:
+            return self.DEN
+        if isinstance(state, str) and state in self.STATE_MAP:
+            return self.STATE_MAP[state]
+        log.error("unexpected key state returned for %s: %s", id_, state)
+        return None
+
+    def list_keys(self):
+        """Return keys grouped by state, using Salt's display ordering."""
+        ret = {self.PEND: [], self.REJ: [], self.ACC: [], self.DEN: []}
+        for id_, bank, state in self._key_rows():
+            status = self._key_status(id_, bank, state)
+            if status is not None:
+                ret[status].append(id_)
+        return {
+            status: sorted(keys, key=lambda name: (name.lower(), name))
+            for status, keys in ret.items()
+        }
+
+    def list_match(self, match):
+        """Look up exact key names in bulk, preserving the requested order."""
+        if isinstance(match, str):
+            match = match.split(",")
+        match = list(match)
+        Cache = model_for("Cache")
+        if salt.sqlalchemy.get_engine().dialect.name == "postgresql":
+            conditions = (
+                Cache.key == any_(literal(match, type_=ARRAY(Cache.key.type))),
+            )
+        elif len(match) <= 500:
+            # Leave room below SQLite's historical 999-variable limit.
+            conditions = (Cache.key.in_(match),)
+        else:
+            # The requested-order loop below filters the bulk result.
+            conditions = ()
+        rows = {(bank, id_): state for id_, bank, state in self._key_rows(*conditions)}
+        ret = {}
+        for id_ in match:
+            for bank in (self.KEYS_CACHE, self.DENIED_CACHE):
+                if (bank, id_) not in rows:
+                    continue
+                status = self._key_status(id_, bank, rows[bank, id_])
+                if status is not None:
+                    ret.setdefault(status, []).append(id_)
+        return ret
+
+    def glob_match(self, match, full=False):
+        """Use SQL prefixes as a prefilter and Python for shell glob semantics."""
+        if full or os.path.normcase("A") != "A":
+            return super().glob_match(match, full=full)
+        patterns = match.split(",") if isinstance(match, str) else match
+        if not patterns:
+            return {}
+        if not any(char in pattern for pattern in patterns for char in "*?["):
+            return {
+                status: sorted(keys, key=lambda name: (name.lower(), name))
+                for status, keys in self.list_match(patterns).items()
+            }
+
+        Cache = model_for("Cache")
+        conditions = ()
+        if len(patterns) <= 500:
+            prefixes = []
+            for pattern in patterns:
+                prefix = ""
+                for char in pattern:
+                    if char in "*?[":
+                        break
+                    prefix += char
+                prefix = (
+                    prefix.replace("\\", "\\\\").replace("_", "\\_").replace("%", "\\%")
+                )
+                prefixes.append(Cache.key.like(prefix + "%", escape="\\"))
+            conditions = (or_(*prefixes),)
+        # Larger pattern lists use the Python pass to bound SQL parameters.
+
+        ret = {}
+        for id_, bank, state in self._key_rows(*conditions):
+            status = self._key_status(id_, bank, state)
+            if status is None:
+                continue
+            for pattern in patterns:
+                if fnmatch.fnmatchcase(id_, pattern):
+                    ret.setdefault(status, []).append(id_)
+        return {
+            status: sorted(keys, key=lambda name: (name.lower(), name))
+            for status, keys in ret.items()
+        }
