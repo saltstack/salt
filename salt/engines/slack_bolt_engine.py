@@ -584,6 +584,7 @@ class SlackClient:
 
         def just_data(m_data):
             """Always try to return the user and channel anyway"""
+            message_source = "user"
             if "user" not in m_data:
                 if "message" in m_data and "user" in m_data["message"]:
                     log.debug(
@@ -595,6 +596,10 @@ class SlackClient:
                 elif "comment" in m_data and "user" in m_data["comment"]:
                     log.debug("Comment was added, so we look for user in the comment.")
                     user_id = m_data["comment"]["user"]
+                elif "subtype" in m_data and m_data['subtype'] == "bot_message":
+                    user_id = m_data.get("bot_id")
+                    message_source = "bot"
+                    user_name = m_data.get("username")
             else:
                 user_id = m_data.get("user")
             channel_id = m_data.get("channel")
@@ -602,10 +607,12 @@ class SlackClient:
                 channel_name = "private chat"
             else:
                 channel_name = all_slack_channels.get(channel_id)
+            if message_source == "user":
+                user_name = all_slack_users.get(user_id)
             data = {
                 "message_data": m_data,
                 "user_id": user_id,
-                "user_name": all_slack_users.get(user_id),
+                "user_name": user_name,
                 "channel_name": channel_name,
             }
             if not data["user_name"]:
@@ -984,6 +991,13 @@ class SlackClient:
         # Check for pillar string representation of dict and convert it to dict
         if "pillar" in kwargs:
             kwargs.update(pillar=ast.literal_eval(kwargs["pillar"]))
+        if "test" in kwargs and cmd.lower() in ["state.apply", "state.highstate"]:
+            if str(kwargs["test"]).lower() in ["true", "false"]:
+                if kwargs["test"].lower() == "true":
+                    kwargs["test"] = True
+                else:
+                    kwargs["test"] = False
+
 
         # Check for target. Otherwise assume None
         target = msg["target"]["target"]
