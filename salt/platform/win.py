@@ -1350,14 +1350,18 @@ def prepend_cmd(cmd):
     if isinstance(cmd, str):
         cmd = shlex.split(cmd, posix=False)
 
+    # This is needed for handling paths with spaces
     new_cmd = []
     for item in cmd:
+        # If item starts with ', escape any "
         if item.startswith("'"):
-            item = item.replace("\"", "\\\"").replace("'", "\"")
-        elif item.startswith("\""):
-            item = item.replace("'", "\\\"")
+            item = item.replace('"', '\\"').replace("'", '"')
+        # If item starts with ", convert ' to escaped "
+        elif item.startswith('"'):
+            item = item.replace("'", '\\"')
+        # If there are spaces in item, wrap it in "
         elif " " in item:
-            item = f"\"{item}\""
+            item = f'"{item}"'
         new_cmd.append(item)
     cmd = new_cmd
 
@@ -1411,16 +1415,19 @@ def prepend_cmd(cmd):
         "::",
     ]
 
+    # The command itself needs to be quoted itself if prepending c
+    joined_cmd = " ".join(cmd)
+
     # If the first command is one of the known builtin commands or if it is a
     # binary that can't be found, we'll prepend cmd /c
     if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
-        cmd = ["cmd", "/c"] + cmd
+        cmd = ["cmd", "/c", f'"{joined_cmd}"']
 
     # There are a few other things we need to check for that require cmd. If the
     # cmd contains any of the following, we'll need to make sure it runs in cmd.
     # We'll add to this list as more things are discovered.
     check = ["&&", "||"]
     if "cmd" not in cmd[0] and any(chk in cmd for chk in check):
-        cmd = ["cmd", "/c"] + cmd
+        cmd = ["cmd", "/c", f'"{joined_cmd}"']
 
     return " ".join(cmd)
