@@ -295,12 +295,11 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
     file.directory test with clean=True and require_in file,
     the comment cannot be "removed": "Removed due to clean"
     """
-    name = tmp_path / "a-directory"
+    name = tmp_path / "b-directory"
     name.mkdir()
     dir = name / "one"
     dir.mkdir()
     good_file = dir / "good-file"
-    print("good file", good_file)
 
     sls_contents = """
     some_dir:
