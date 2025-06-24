@@ -13,6 +13,7 @@ import collections
 import ctypes
 import logging
 import os
+import shlex
 from ctypes import wintypes
 
 # pylint: disable=3rd-party-module-not-gated
@@ -1345,14 +1346,24 @@ def prepend_cmd(cmd):
     # built-in commands such as echo. So, let's check for the binary in the
     # path. If it does not exist, let's assume it's a built-in and requires us
     # to run it in a cmd prompt.
-    if not isinstance(cmd, (list, tuple)):
-        cmd = cmd.split()
+
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd, posix=False)
+
+    new_cmd = []
+    for item in cmd:
+        if item.startswith("'"):
+            item = item.replace("\"", "\\\"").replace("'", "\"")
+        elif item.startswith("\""):
+            item = item.replace("'", "\\\"")
+        elif " " in item:
+            item = f"\"{item}\""
+        new_cmd.append(item)
+    cmd = new_cmd
 
     # Let's try to figure out what the fist command is so we can check for
     # builtin commands such as echo
     first_cmd = cmd[0].split("\\")[-1].strip("\"'")
-
-    cmd = " ".join(cmd)
 
     # Known builtin cmd commands
     known_builtins = [
@@ -1403,13 +1414,13 @@ def prepend_cmd(cmd):
     # If the first command is one of the known builtin commands or if it is a
     # binary that can't be found, we'll prepend cmd /c
     if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
-        cmd = f'cmd /c "{cmd}"'
+        cmd = ["cmd", "/c"] + cmd
 
     # There are a few other things we need to check for that require cmd. If the
     # cmd contains any of the following, we'll need to make sure it runs in cmd.
     # We'll add to this list as more things are discovered.
     check = ["&&", "||"]
-    if not cmd.startswith("cmd") and any(chk in cmd for chk in check):
-        cmd = f'cmd /c "{cmd}"'
+    if "cmd" not in cmd[0] and any(chk in cmd for chk in check):
+        cmd = ["cmd", "/c"] + cmd
 
-    return cmd
+    return " ".join(cmd)

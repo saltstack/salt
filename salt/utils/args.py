@@ -270,13 +270,7 @@ def shlex_split(s, **kwargs):
     Only split if variable is a string
     """
     if isinstance(s, str):
-        # On PY2, shlex.split will fail with unicode types if there are
-        # non-ascii characters in the string. So, we need to make sure we
-        # invoke it with a str type, and then decode the resulting string back
-        # to unicode to return it.
-        return salt.utils.data.decode(
-            shlex.split(salt.utils.stringutils.to_str(s), **kwargs)
-        )
+        return shlex.split(s, **kwargs)
     else:
         return s
 
