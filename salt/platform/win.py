@@ -1360,7 +1360,7 @@ def prepend_cmd(cmd):
         elif item.startswith('"'):
             item = item.replace("'", '\\"')
         # If there are spaces in item, wrap it in "
-        elif " " in item:
+        elif " " in item and "=" not in item:
             item = f'"{item}"'
         new_cmd.append(item)
     cmd = new_cmd

@@ -418,7 +418,7 @@ def _run(
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = f"The shell {shell} is not available"
             raise CommandExecutionError(msg)
-    elif use_vt:  # Memozation so not much overhead
+    elif use_vt:  # Memoization so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
         if windows_codepage:
@@ -427,6 +427,16 @@ def _run(
             previous_windows_codepage = salt.utils.win_chcp.get_codepage_id()
             if windows_codepage != previous_windows_codepage:
                 change_windows_codepage = True
+
+    # munge the cmd and cwd through the template
+    (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
+    ret = {}
+
+    # If the pub jid is here then this is a remote ex or salt call command and needs to be
+    # checked if blacklisted
+    if "__pub_jid" in kwargs:
+        if not _check_avail(cmd):
+            raise CommandExecutionError(f'The shell command "{cmd}" is not permitted')
 
     # The powershell binary is "powershell"
     # The powershell core binary is "pwsh"
@@ -446,16 +456,6 @@ def _run(
             cmd = salt.platform.win.prepend_cmd(cmd)
         print(cmd)
         print("*" * 80)
-
-    # munge the cmd and cwd through the template
-    (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
-    ret = {}
-
-    # If the pub jid is here then this is a remote ex or salt call command and needs to be
-    # checked if blacklisted
-    if "__pub_jid" in kwargs:
-        if not _check_avail(cmd):
-            raise CommandExecutionError(f'The shell command "{cmd}" is not permitted')
 
     env = _parse_env(env)
 
