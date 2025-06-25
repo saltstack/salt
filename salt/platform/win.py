@@ -1369,6 +1369,8 @@ def prepend_cmd(cmd):
     # builtin commands such as echo
     first_cmd = cmd[0].split("\\")[-1].strip("\"'")
 
+    cmd = " ".join(cmd)
+
     # Known builtin cmd commands
     known_builtins = [
         "assoc",
@@ -1415,19 +1417,19 @@ def prepend_cmd(cmd):
         "::",
     ]
 
-    # The command itself needs to be quoted itself if prepending c
-    joined_cmd = " ".join(cmd)
-
     # If the first command is one of the known builtin commands or if it is a
-    # binary that can't be found, we'll prepend cmd /c
+    # binary that can't be found, we'll prepend cmd /c. The command itself needs
+    # to be quoted
     if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
-        cmd = ["cmd", "/c", f'"{joined_cmd}"']
+        log.debug("Command is either builtin or not found: %s", first_cmd)
+        cmd = f'cmd /c "{cmd}"'
 
-    # There are a few other things we need to check for that require cmd. If the
-    # cmd contains any of the following, we'll need to make sure it runs in cmd.
+    # There are a few more things we need to check that require cmd. If the cmd
+    # contains any of the following, we'll need to make sure it runs in cmd.
     # We'll add to this list as more things are discovered.
     check = ["&&", "||"]
-    if "cmd" not in cmd[0] and any(chk in cmd for chk in check):
-        cmd = ["cmd", "/c", f'"{joined_cmd}"']
+    if "cmd" not in cmd and any(chk in cmd for chk in check):
+        log.debug("Found logic that requires cmd: %s", check)
+        cmd = f'cmd /c "{cmd}"'
 
-    return " ".join(cmd)
+    return cmd
