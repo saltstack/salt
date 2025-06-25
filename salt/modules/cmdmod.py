@@ -431,6 +431,10 @@ def _run(
     # The powershell binary is "powershell"
     # The powershell core binary is "pwsh"
     # you can also pass a path here as long as the binary name is one of the two
+    print("*" * 80)
+    print("BEFORE")
+    print(cmd)
+    print("-" * 80)
     if salt.utils.platform.is_windows():
         if runas:
             if not HAS_WIN_RUNAS:
@@ -440,6 +444,8 @@ def _run(
             cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
         else:
             cmd = salt.platform.win.prepend_cmd(cmd)
+        print(cmd)
+        print("*" * 80)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
