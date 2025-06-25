@@ -1072,6 +1072,7 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
+
                 if platform == "windows" and "3006" in version:
                     # The salt_master_cli.py script used by the windows pakcage
                     # tests doesn't play nice with trying to go from 3006.x to
@@ -1079,10 +1080,6 @@ def workflow_config(
                     ctx.info("3006.x upgrade/downgrade tests do not work on windows")
                     continue
 
-                # Skip upgrade tests on photonos due to lack of package pinning
-                # support.
-
-                # XXX We could still run upgrades between minor versions for photon.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1092,7 +1089,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs and "photon" not in _.slug
+                    if _.slug in requested_slugs
                 ]
                 pkg_test_matrix[platform] += [
                     dict(

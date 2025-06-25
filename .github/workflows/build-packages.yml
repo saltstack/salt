@@ -50,6 +50,7 @@ on:
         description: Json job matrix config
 
 
+
 env:
   COLUMNS: 190
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
@@ -447,7 +448,6 @@ jobs:
         shell: bash
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
-
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}

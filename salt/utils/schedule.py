@@ -1032,10 +1032,6 @@ class Schedule:
                 if interval < self.loop_interval:
                     self.loop_interval = interval
 
-                data["_next_scheduled_fire_time"] = now + datetime.timedelta(
-                    seconds=data["_seconds"]
-                )
-
         def _handle_once(data, loop_interval):
             """
             Handle schedule item with once
@@ -1065,7 +1061,6 @@ class Schedule:
                         log.error(data["_error"])
                         return
                 data["_next_fire_time"] = once
-                data["_next_scheduled_fire_time"] = once
                 # If _next_fire_time is less than now, continue
                 if once < now - loop_interval:
                     data["_continue"] = True
@@ -1169,8 +1164,6 @@ class Schedule:
                 if not data["_next_fire_time"]:
                     data["_next_fire_time"] = when
 
-                data["_next_scheduled_fire_time"] = when
-
                 if data["_next_fire_time"] < when and not run and not data["_run"]:
                     data["_next_fire_time"] = when
                     data["_run"] = True
@@ -1195,9 +1188,6 @@ class Schedule:
                 # executed before or already executed in the past.
                 try:
                     data["_next_fire_time"] = croniter.croniter(
-                        data["cron"], now
-                    ).get_next(datetime.datetime)
-                    data["_next_scheduled_fire_time"] = croniter.croniter(
                         data["cron"], now
                     ).get_next(datetime.datetime)
                 except (ValueError, KeyError):
@@ -1544,13 +1534,6 @@ class Schedule:
             if "_splay" not in data:
                 data["_splay"] = None
 
-            if (
-                "run_on_start" in data
-                and data["run_on_start"]
-                and "_run_on_start" not in data
-            ):
-                data["_run_on_start"] = True
-
             if not now:
                 now = datetime.datetime.now()
 
@@ -1585,11 +1568,21 @@ class Schedule:
                 )
                 continue
 
+            uses_time_elements = True in [
+                True for item in time_elements if item in data
+            ]
+
+            # _run_on_start is later set to False, on the first run, after
+            # being read. So, only set it when it is not already set.
+            if "_run_on_start" not in data:
+                # default to True for time elements
+                data["_run_on_start"] = data.get("run_on_start", uses_time_elements)
+
             if "run_explicit" in data:
                 _handle_run_explicit(data, loop_interval)
                 run = data["run"]
 
-            if True in [True for item in time_elements if item in data]:
+            if uses_time_elements:
                 _handle_time_elements(data)
             elif "once" in data:
                 _handle_once(data, loop_interval)

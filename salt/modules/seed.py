@@ -237,17 +237,18 @@ def mkconfig(
     pubkeyfn = os.path.join(tmp, "minion.pub")
     privkeyfn = os.path.join(tmp, "minion.pem")
     preseeded = pub_key and priv_key
-    if preseeded:
-        log.debug("Writing minion.pub to %s", pubkeyfn)
-        log.debug("Writing minion.pem to %s", privkeyfn)
-        with salt.utils.files.fopen(pubkeyfn, "w") as fic:
-            fic.write(salt.utils.stringutils.to_str(_file_or_content(pub_key)))
-        with salt.utils.files.fopen(privkeyfn, "w") as fic:
-            fic.write(salt.utils.stringutils.to_str(_file_or_content(priv_key)))
-        os.chmod(pubkeyfn, 0o600)
-        os.chmod(privkeyfn, 0o600)
-    else:
-        salt.crypt.gen_keys(tmp, "minion", 2048)
+    log.debug("Writing minion.pub to %s", pubkeyfn)
+    log.debug("Writing minion.pem to %s", privkeyfn)
+
+    if not priv_key or not pub_key:
+        (priv_key, pub_key) = salt.crypt.gen_keys(2048)
+
+    with salt.utils.files.fopen(pubkeyfn, "w") as fic:
+        fic.write(salt.utils.stringutils.to_str(_file_or_content(pub_key)))
+    with salt.utils.files.fopen(privkeyfn, "w") as fic:
+        fic.write(salt.utils.stringutils.to_str(_file_or_content(priv_key)))
+    os.chmod(pubkeyfn, 0o600)
+    os.chmod(privkeyfn, 0o600)
     if approve_key and not preseeded:
         with salt.utils.files.fopen(pubkeyfn) as fp_:
             pubkey = salt.utils.stringutils.to_unicode(fp_.read())

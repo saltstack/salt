@@ -38,41 +38,6 @@ def test_gen_keys():
                 save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
 
 
-@pytest.mark.slow_test
-def test_gen_keys_with_passphrase():
-    with patch("os.umask", MagicMock()), patch("os.chmod", MagicMock()), patch(
-        "os.chown", MagicMock()
-    ), patch("os.access", MagicMock(return_value=True)):
-        with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem, patch(
-            "M2Crypto.RSA.RSA.save_pub_key", MagicMock()
-        ) as save_pub:
-            with patch("os.path.isfile", return_value=True):
-                assert (
-                    salt.crypt.gen_keys(
-                        "/keydir", "keyname", 2048, passphrase="password"
-                    )
-                    == f"/keydir{os.sep}keyname.pem"
-                )
-                save_pem.assert_not_called()
-                save_pub.assert_not_called()
-
-            with patch("os.path.isfile", return_value=False):
-                assert (
-                    salt.crypt.gen_keys(
-                        "/keydir", "keyname", 2048, passphrase="password"
-                    )
-                    == f"/keydir{os.sep}keyname.pem"
-                )
-                callback = save_pem.call_args[1]["callback"]
-                save_pem.assert_called_once_with(
-                    f"/keydir{os.sep}keyname.pem",
-                    cipher="des_ede3_cbc",
-                    callback=callback,
-                )
-                assert callback(None) == b"password"
-                save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
-
-
 def test_sign_message():
     key = M2Crypto.RSA.load_key_string(salt.utils.stringutils.to_bytes(PRIVKEY_DATA))
     with patch("salt.crypt.get_rsa_key", return_value=key):

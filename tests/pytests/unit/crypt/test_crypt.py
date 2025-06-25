@@ -5,16 +5,19 @@ tests.pytests.unit.test_crypt
 Unit tests for salt's crypt module
 """
 
+import os.path
 import uuid
 
 import pytest
 
+import salt.cache
 import salt.crypt
 import salt.master
 import salt.payload
 import salt.utils.files
 from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import dedent
+from tests.support.mock import ANY, MagicMock, call
 
 from . import PRIV_KEY, PRIV_KEY2, PUB_KEY, PUB_KEY2
 
@@ -114,16 +117,28 @@ def test_master_keys_without_cluster_id(tmp_path, master_opts):
     master_opts["pki_dir"] = str(tmp_path)
     assert master_opts["cluster_id"] is None
     assert master_opts["cluster_pki_dir"] is None
-    mkeys = salt.crypt.MasterKeys(master_opts)
+
+    # __init__ autocreate's keys by default, but we turn it off to test more easily
+    mkeys = salt.crypt.MasterKeys(master_opts, autocreate=False)
+    original_store = mkeys.cache.store
+    mkeys.cache.store = store_mock = MagicMock(wraps=original_store)
+
+    mkeys._setup_keys()
+
     expected_master_pub = str(tmp_path / "master.pub")
     expected_master_rsa = str(tmp_path / "master.pem")
-    assert expected_master_pub == mkeys.master_pub_path
-    assert expected_master_rsa == mkeys.master_rsa_path
-    assert mkeys.cluster_pub_path is None
-    assert mkeys.cluster_rsa_path is None
-    assert mkeys.pub_path == expected_master_pub
-    assert mkeys.rsa_path == expected_master_rsa
-    assert mkeys.key == mkeys.master_key
+
+    assert os.path.exists(expected_master_pub)
+    assert os.path.exists(expected_master_rsa)
+
+    expected_calls = [
+        call("master_keys", "master.pem", ANY),
+        call("master_keys", "master.pub", ANY),
+        call("master_keys", master_opts["id"].removesuffix("_master") + ".pem", ANY),
+        call("master_keys", master_opts["id"].removesuffix("_master") + ".pub", ANY),
+    ]
+    # Assert all calls match the pattern
+    store_mock.assert_has_calls(expected_calls, any_order=False)
 
 
 def test_master_keys_with_cluster_id(tmp_path, master_opts):
@@ -138,19 +153,40 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
     master_opts["cluster_id"] = "cluster1"
     master_opts["cluster_pki_dir"] = str(cluster_pki_path)
 
-    mkeys = salt.crypt.MasterKeys(master_opts)
-
     expected_master_pub = str(master_pki_path / "master.pub")
     expected_master_rsa = str(master_pki_path / "master.pem")
     expected_cluster_pub = str(cluster_pki_path / "cluster.pub")
     expected_cluster_rsa = str(cluster_pki_path / "cluster.pem")
-    assert expected_master_pub == mkeys.master_pub_path
-    assert expected_master_rsa == mkeys.master_rsa_path
-    assert expected_cluster_pub == mkeys.cluster_pub_path
-    assert expected_cluster_rsa == mkeys.cluster_rsa_path
-    assert mkeys.pub_path == expected_cluster_pub
-    assert mkeys.rsa_path == expected_cluster_rsa
-    assert mkeys.key == mkeys.cluster_key
+
+    # __init__ autocreate's keys by default, but we turn it off to test more easily
+    mkeys = salt.crypt.MasterKeys(master_opts, autocreate=False)
+    original_store = mkeys.cache.store
+    original_flush = mkeys.cache.flush
+    mkeys.cache.store = store_mock = MagicMock(wraps=original_store)
+    mkeys.cache.flush = flush_mock = MagicMock(wraps=original_flush)
+
+    mkeys._setup_keys()
+
+    assert os.path.exists(expected_master_pub)
+    assert os.path.exists(expected_master_rsa)
+    assert os.path.exists(expected_cluster_pub)
+    assert os.path.exists(expected_cluster_rsa)
+
+    expected_calls = [
+        call("master_keys", "master.pem", ANY),
+        call("master_keys", "master.pub", ANY),
+        call("master_keys", master_opts["id"].removesuffix("_master") + ".pem", ANY),
+        call("master_keys", master_opts["id"].removesuffix("_master") + ".pub", ANY),
+        call(
+            "master_keys",
+            os.path.join("peers", master_opts["id"].removesuffix("_master") + ".pub"),
+            ANY,
+        ),
+        call("master_keys", "cluster.pem", ANY),
+        call("master_keys", "cluster.pub", ANY),
+    ]
+    # Assert all calls match the pattern
+    store_mock.assert_has_calls(expected_calls, any_order=False)
 
 
 def test_pwdata_decrypt():
