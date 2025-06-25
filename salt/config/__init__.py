@@ -1663,12 +1663,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fileserver_interval": 3600,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
-<<<<<<< HEAD
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
-=======
         "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
->>>>>>> f1de671598e (Ipc leak fix)
     }
 )
 
