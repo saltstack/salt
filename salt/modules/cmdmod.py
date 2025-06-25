@@ -327,6 +327,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         else:
             new_cmd.extend(["-Command", f'"& {cmd.strip()}"'])
 
+    new_cmd = " ".join(new_cmd)
     log.debug(new_cmd)
     return new_cmd
 
@@ -430,8 +431,15 @@ def _run(
     # The powershell binary is "powershell"
     # The powershell core binary is "pwsh"
     # you can also pass a path here as long as the binary name is one of the two
-    if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
-        cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
+    if salt.utils.platform.is_windows():
+        if runas:
+            if not HAS_WIN_RUNAS:
+                msg = "missing salt/utils/win_runas.py"
+                raise CommandExecutionError(msg)
+        if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
+            cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
+        else:
+            cmd = salt.platform.win.prepend_cmd(cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -471,14 +479,6 @@ def _run(
             ),
         )
         log.info(log_callback(msg))
-
-    if salt.utils.platform.is_windows():
-        if runas:
-            if not HAS_WIN_RUNAS:
-                msg = "missing salt/utils/win_runas.py"
-                raise CommandExecutionError(msg)
-
-        cmd = salt.platform.win.prepend_cmd(cmd)
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not
