@@ -380,8 +380,9 @@ def flush(bank, key=None, cachedir=None, **kwargs):
             if key is None:
                 target = os.path.join(cachedir, base)
                 if not os.path.isdir(target):
-                    return False
+                    continue
                 shutil.rmtree(target)
+                flushed = True
             else:
                 target = os.path.join(cachedir, base, key)
 
