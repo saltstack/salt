@@ -275,7 +275,16 @@ class CkMinions:
         """
         Return the minions found by looking via regular expressions
         """
-        reg = re.compile(expr)
+        try:
+            reg = re.compile(expr)
+        except re.error as exc:
+            log.error(
+                f"Something went wrong compiling expression to pcre '{expr}': {exc}"
+            )
+            return {
+                "minions": [],
+                "missing": [],
+            }
 
         if not minions:
             minions = self._pki_minions()
