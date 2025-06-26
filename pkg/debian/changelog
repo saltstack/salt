@@ -1,3 +1,15 @@
+salt (3007.5) stable; urgency=medium
+
+
+  # Fixed
+
+  * Zeromq RequestServer continues to serve requests after encountering an
+    un*handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
+  * * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
+ -- Salt Project Packaging <saltproject-packaging@vmware.com>  Thu, 26 Jun 2025 18:22:57 +0000
+
 salt (3006.13) stable; urgency=medium
 
   # Fixed

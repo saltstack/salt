@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.4
+Version: 3007.5
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -734,6 +734,15 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Jun 26 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.5
+
+# Fixed
+
+- Zeromq RequestServer continues to serve requests after encountering an
+  un-handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
+- * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
 * Thu Jun 26 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.13
 
 # Fixed

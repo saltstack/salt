@@ -7,6 +7,16 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3007.5 (2025-06-26)
+
+
+### Fixed
+
+- Zeromq RequestServer continues to serve requests after encountering an
+  un-handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
+- * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
 ## 3007.4 (2025-06-12)
 ## 3006.13 (2025-06-26)
 
