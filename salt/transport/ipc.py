@@ -2,6 +2,7 @@
 IPC transport classes
 """
 
+import datetime
 import errno
 import logging
 import socket
@@ -17,6 +18,7 @@ from tornado.ioloop import TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream, StreamClosedError
 from tornado.locks import Lock
 
+import salt.defaults
 import salt.transport.frame
 import salt.utils.msgpack
 from salt.utils.versions import warn_until
@@ -531,8 +533,18 @@ class IPCMessagePublisher:
 
     @tornado.gen.coroutine
     def _write(self, stream, pack):
+        timeout = self.opts.get("ipc_write_timeout", salt.defaults.IPC_WRITE_TIMEOUT)
         try:
-            yield stream.write(pack)
+            yield tornado.gen.with_timeout(
+                datetime.timedelta(seconds=timeout),
+                stream.write(pack),
+                quiet_exceptions=(StreamClosedError,),
+            )
+        except tornado.gen.TimeoutError:
+            log.trace("Failed to relay event to client after %d seconds", timeout)
+            if not stream.closed():
+                stream.close()
+            self.streams.discard(stream)
         except StreamClosedError:
             log.trace("Client disconnected from IPC %s", self.socket_path)
             self.streams.discard(stream)
@@ -695,7 +707,9 @@ class IPCMessageSubscriber(IPCClient):
                 self._read_stream_future = None
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception occurred in Subscriber while handling stream: %s", exc
+                    "Exception occurred in Subscriber while handling stream: %s",
+                    exc,
+                    exc_info_on_level=logging.DEBUG,
                 )
                 self._read_stream_future = None
                 exc_to_raise = exc

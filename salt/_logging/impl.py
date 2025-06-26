@@ -285,6 +285,10 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         else:
             extra["exc_info_on_loglevel"] = exc_info_on_loglevel
 
+        # this is required for log lines to work as expected because we are
+        # adding a stackframe with this function
+        stacklevel = stacklevel + 1
+
         try:
             LOGGING_LOGGER_CLASS._log(
                 self,

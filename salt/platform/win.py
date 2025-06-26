@@ -13,6 +13,7 @@ import collections
 import ctypes
 import logging
 import os
+import shlex
 from ctypes import wintypes
 
 # pylint: disable=3rd-party-module-not-gated
@@ -1345,8 +1346,24 @@ def prepend_cmd(cmd):
     # built-in commands such as echo. So, let's check for the binary in the
     # path. If it does not exist, let's assume it's a built-in and requires us
     # to run it in a cmd prompt.
-    if not isinstance(cmd, (list, tuple)):
-        cmd = cmd.split()
+
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd, posix=False)
+
+    # This is needed for handling paths with spaces
+    new_cmd = []
+    for item in cmd:
+        # If item starts with ', escape any "
+        if item.startswith("'"):
+            item = item.replace('"', '\\"').replace("'", '"')
+        # If item starts with ", convert ' to escaped "
+        elif item.startswith('"'):
+            item = item.replace("'", '\\"')
+        # If there are spaces in item, wrap it in "
+        elif " " in item and "=" not in item:
+            item = f'"{item}"'
+        new_cmd.append(item)
+    cmd = new_cmd
 
     # Let's try to figure out what the fist command is so we can check for
     # builtin commands such as echo
@@ -1401,15 +1418,18 @@ def prepend_cmd(cmd):
     ]
 
     # If the first command is one of the known builtin commands or if it is a
-    # binary that can't be found, we'll prepend cmd /c
+    # binary that can't be found, we'll prepend cmd /c. The command itself needs
+    # to be quoted
     if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
+        log.debug("Command is either builtin or not found: %s", first_cmd)
         cmd = f'cmd /c "{cmd}"'
 
-    # There are a few other things we need to check for that require cmd. If the
-    # cmd contains any of the following, we'll need to make sure it runs in cmd.
+    # There are a few more things we need to check that require cmd. If the cmd
+    # contains any of the following, we'll need to make sure it runs in cmd.
     # We'll add to this list as more things are discovered.
     check = ["&&", "||"]
-    if not cmd.startswith("cmd") and any(chk in cmd for chk in check):
+    if "cmd" not in cmd and any(chk in cmd for chk in check):
+        log.debug("Found logic that requires cmd: %s", check)
         cmd = f'cmd /c "{cmd}"'
 
     return cmd

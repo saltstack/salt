@@ -600,9 +600,9 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False, downgrade=False):
+    def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if self.distro_id in ("ubuntu", "debian"):
+        if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
 
     def stop_services(self):

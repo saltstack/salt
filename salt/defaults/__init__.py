@@ -60,3 +60,5 @@ It's used to differentiate from `None`, `True`, `False` which, in some
 cases are proper defaults and are also proper values to pass.
 """
 NOT_SET = _Constant("NOT_SET")
+
+IPC_WRITE_TIMEOUT = 15

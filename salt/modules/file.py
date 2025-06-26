@@ -4112,7 +4112,7 @@ def readlink(path, canonicalize=False):
     if not os.path.isabs(path):
         raise SaltInvocationError(f"Path to link must be absolute: {path}")
 
-    if not os.path.islink(path):
+    if not salt.utils.path.islink(path):
         raise SaltInvocationError(f"A valid link was not specified: {path}")
 
     if canonicalize:

@@ -300,8 +300,7 @@ def compile_config(
     cmd.append(
         r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
-        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) "
-        "-Format g}}"
+        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) -Format g}}"
     )
 
     cmd = " ".join(cmd)
