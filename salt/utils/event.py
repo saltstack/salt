@@ -1424,11 +1424,9 @@ class StateFire:
 
         load.update(
             {
-                "id": self.opts["id"],
                 "tag": tag,
                 "data": data,
                 "cmd": "_minion_event",
-                "tok": self.auth.gen_token(b"salt"),
             }
         )
 

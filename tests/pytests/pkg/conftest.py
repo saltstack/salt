@@ -136,6 +136,12 @@ def pytest_collection_modifyitems(config, items):
                 selected.append(item)
             else:
                 deselected.append(item)
+        # re-order test_salt_upgrade.py to last - this ensures that salt is
+        # set up correctly for integration tests
+        for idx, item in enumerate(selected):
+            if str(item.fspath).endswith("test_salt_upgrade.py"):
+                selected.append(selected.pop(idx))
+                break
     elif config.getoption("--downgrade"):
         for item in items:
             if str(item.fspath).startswith(str(pkg_tests_path / "downgrade")):
@@ -548,3 +554,23 @@ def api_request(pkg_tests_account, salt_api):
         port=salt_api.config["rest_cherrypy"]["port"], account=pkg_tests_account
     ) as session:
         yield session
+
+
+@pytest.fixture(scope="module")
+def debian_disable_policy_rcd(grains):
+    """
+    This fixture is used to disable the /usr/sbin/policy-rc.d file on
+    Debian-based systems. This is present on container images and prevents the
+    restart of services during package installation or upgrade.
+    This is needed where we want to test pkg behaviour exactly as it would be on
+    a real system.
+
+    """
+    if grains["os_family"] == "Debian":
+        policy_rcd_path = pathlib.Path("/usr/sbin/policy-rc.d")
+        if policy_rcd_path.exists():
+            policy_rcd_path.rename(policy_rcd_path.with_suffix(".disabled"))
+            yield
+            policy_rcd_path.with_suffix(".disabled").rename(policy_rcd_path)
+    else:
+        yield
