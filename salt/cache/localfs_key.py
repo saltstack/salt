@@ -273,7 +273,7 @@ def flush(bank, key=None, cachedir=None, **kwargs):
     Remove the key from the cache bank with all the key content.
     flush can take a legacy bank or a keys/denied_keys modern bank
     """
-    if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
+    if bank in ["keys", "denied_keys"] and not (valid_id(__opts__, key) or key is None):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
     if cachedir is None:
@@ -297,8 +297,9 @@ def flush(bank, key=None, cachedir=None, **kwargs):
             if key is None:
                 target = os.path.join(cachedir, base)
                 if not os.path.isdir(target):
-                    return False
+                    continue
                 shutil.rmtree(target)
+                flushed = True
             else:
                 target = os.path.join(cachedir, base, key)
 
