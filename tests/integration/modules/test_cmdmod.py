@@ -393,10 +393,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.run with quoted command
         """
-        cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
-        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
         if salt.utils.platform.is_windows():
-            expected_result = "'SELECT * FROM foo WHERE bar=\"baz\"'"
+            cmd = """echo SELECT * FROM foo WHERE bar="baz" """
+        else:
+            cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
+        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
         result = self.run_function("cmd.run_stdout", [cmd]).strip()
         self.assertEqual(result, expected_result)
 
