@@ -839,7 +839,10 @@ class Key:
         for status, keys in self.list_keys().items():
             for key in keys:
                 try:
-                    self.cache.flush("keys", key)
+                    if status == "minions_denied":
+                        self.cache.flush("denied_keys", key)
+                    else:
+                        self.cache.flush("keys", key)
                     eload = {"result": True, "act": "delete", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
                 except OSError:
