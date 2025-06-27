@@ -265,6 +265,7 @@ def test_get_cachedir_basename_pygit2(_prepare_provider):
     assert "_" == _prepare_provider.get_cache_basename()
 
 
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 def test_find_file(tmp_path):
     opts = {
         "cachedir": f"{tmp_path / 'cache'}",
@@ -288,6 +289,7 @@ def test_find_file(tmp_path):
     assert gitfs.find_file("asdf") == {"path": "", "rel": ""}
 
 
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 def test_find_file_bad_path(tmp_path):
     opts = {
         "cachedir": f"{tmp_path / 'cache'}",
@@ -312,6 +314,7 @@ def test_find_file_bad_path(tmp_path):
         gitfs.find_file("sdf/../../../asdf")
 
 
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 def test_find_file_bad_env(tmp_path):
     opts = {
         "cachedir": f"{tmp_path / 'cache'}",
@@ -382,6 +385,7 @@ def test_remote_to_url(remote, result):
     assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result
 
 
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 def test_find_file_subdir(tmp_path):
     root = tmp_path / "root"
     root.mkdir()
