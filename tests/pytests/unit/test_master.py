@@ -11,6 +11,16 @@ import salt.utils.platform
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
+try:
+    import pygit2  # pylint: disable=unused-import
+
+    HAS_PYGIT2 = True
+except ImportError:
+    HAS_PYGIT2 = False
+
+
+skipif_no_pygit2 = pytest.mark.skipif(not HAS_PYGIT2, reason="Missing pygit2")
+
 
 @pytest.fixture
 def encrypted_requests(tmp_path):
@@ -280,6 +290,7 @@ def allowed_funcs(tmp_path):
     return salt.master.AESFuncs(opts=opts)
 
 
+@skipif_no_pygit2
 def test_on_demand_allowed_command_injection(allowed_funcs, tmp_path, caplog):
     """
     Verify on demand pillars validate remote urls
