@@ -5,7 +5,10 @@ import pytest
 import salt.cache
 import salt.sqlalchemy
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
-from tests.support.pytest.database import available_databases
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 
