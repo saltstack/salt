@@ -2,7 +2,6 @@
 Functions to work with JSON
 """
 
-import datetime
 import json
 import logging
 
@@ -14,22 +13,6 @@ log = logging.getLogger(__name__)
 
 # One to one mappings
 JSONEncoder = json.JSONEncoder
-
-
-def default(o):
-    """
-    Custom JSON serializer for objects not natively serializable by the default JSON serializer.
-
-    This function is designed to be used as a helper for json.dumps() or json.dump() to convert
-    datetime.date and datetime.datetime objects to their ISO format representations, which are
-    string formats that JSON can serialize.
-
-    :param o: The object to serialize.
-    :return: The serialized object.
-    """
-    if isinstance(o, (datetime.date, datetime.datetime)):
-        return o.isoformat()
-    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 
 def __split(raw):
@@ -188,4 +171,4 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
-    return json_module.dumps(obj, default=default, **kwargs)
+    return json_module.dumps(obj, **kwargs)
