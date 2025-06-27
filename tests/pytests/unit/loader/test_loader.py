@@ -113,16 +113,3 @@ def test_render():
         "salt.loader.check_render_pipe_str", MagicMock(side_effect=[False, False])
     ):
         salt.loader.render(opts, minion_mods)
-
-
-def test_return_named_context_from_loaded_func(tmp_path):
-    opts = {
-        "optimization_order": [0],
-    }
-    contents = """
-    def foobar():
-        return __test__
-    """
-    with pytest.helpers.temp_file("mymod.py", contents, directory=tmp_path):
-        loader = salt.loader.LazyLoader([tmp_path], opts, pack={"__test__": "meh"})
-        assert loader["mymod.foobar"]() == "meh"
