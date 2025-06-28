@@ -966,7 +966,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
     client.transport.send = mocksend
 
     # Minion should try to authenticate on bad signature
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mockauthenticate():
         pass
 
