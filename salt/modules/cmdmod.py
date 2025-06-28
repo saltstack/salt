@@ -303,7 +303,22 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
 
         # Commands that are a specific keyword behave differently. They fail if
         # you add a "&" to the front. Add those here as we find them:
-        keywords = ["$", "&", ".", "Configuration", "try"]
+        keywords = [
+            "(",
+            "[",
+            "$",
+            "&",
+            ".",
+            "data",
+            "do",
+            "for",
+            "foreach",
+            "if",
+            "trap",
+            "while",
+            "try",
+            "Configuration",
+        ]
 
         for keyword in keywords:
             if cmd.lower().startswith(keyword.lower()):
@@ -312,6 +327,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         else:
             new_cmd.extend(["-Command", f'"& {cmd.strip()}"'])
 
+    new_cmd = " ".join(new_cmd)
     log.debug(new_cmd)
     return new_cmd
 
@@ -402,7 +418,7 @@ def _run(
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = f"The shell {shell} is not available"
             raise CommandExecutionError(msg)
-    elif use_vt:  # Memozation so not much overhead
+    elif use_vt:  # Memoization so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
         if windows_codepage:
@@ -411,12 +427,6 @@ def _run(
             previous_windows_codepage = salt.utils.win_chcp.get_codepage_id()
             if windows_codepage != previous_windows_codepage:
                 change_windows_codepage = True
-
-    # The powershell binary is "powershell"
-    # The powershell core binary is "pwsh"
-    # you can also pass a path here as long as the binary name is one of the two
-    if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
-        cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -427,6 +437,19 @@ def _run(
     if "__pub_jid" in kwargs:
         if not _check_avail(cmd):
             raise CommandExecutionError(f'The shell command "{cmd}" is not permitted')
+
+    # The powershell binary is "powershell"
+    # The powershell core binary is "pwsh"
+    # you can also pass a path here as long as the binary name is one of the two
+    if salt.utils.platform.is_windows():
+        if runas:
+            if not HAS_WIN_RUNAS:
+                msg = "missing salt/utils/win_runas.py"
+                raise CommandExecutionError(msg)
+        if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
+            cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
+        else:
+            cmd = salt.platform.win.prepend_cmd(cmd)
 
     env = _parse_env(env)
 
@@ -456,14 +479,6 @@ def _run(
             ),
         )
         log.info(log_callback(msg))
-
-    if salt.utils.platform.is_windows():
-        if runas:
-            if not HAS_WIN_RUNAS:
-                msg = "missing salt/utils/win_runas.py"
-                raise CommandExecutionError(msg)
-
-        cmd = salt.platform.win.prepend_cmd(cmd)
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not

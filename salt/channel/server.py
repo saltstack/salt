@@ -374,14 +374,29 @@ class ReqServerChannel:
         return payload
 
     def validate_token(self, payload, required=True):
-        if "tok" in payload["load"] and "id" in payload["load"]:
+        """
+        Validate the token (tok) and minion id (id) in the payload. If the
+        payload and token exist they will be validated even if required is
+        False.
+
+        When required is False and either the tok or id is not found in the
+        load, this check will pass.
+
+        This method has a side effect of removing the 'tok' key from the load
+        so that it is not passed along to request handlers.
+        """
+        tok = payload["load"].pop("tok", None)
+        id_ = payload["load"].get("id", None)
+        if tok is not None and id_ is not None:
             if "cluster_id" in self.opts and self.opts["cluster_id"]:
                 pki_dir = self.opts["cluster_pki_dir"]
             else:
                 pki_dir = self.opts.get("pki_dir", "")
-            id_ = payload["load"]["id"]
-
-            pub_path = os.path.join(pki_dir, "minions", id_)
+            try:
+                pub_path = salt.utils.verify.clean_join(pki_dir, "minions", id_)
+            except salt.exceptions.SaltValidationError:
+                log.warning("Invalid minion id: %s", id_)
+                return False
             try:
                 pub = salt.crypt.PublicKey.from_file(pub_path)
             except OSError:
@@ -392,8 +407,8 @@ class ReqServerChannel:
                 )
                 return False
             try:
-                if pub.decrypt(payload["load"]["tok"]) != b"salt":
-                    log.error("Minion token did not validate: %s", payload["id"])
+                if pub.decrypt(tok) != b"salt":
+                    log.error("Minion token did not validate: %s", id_)
                     return False
             except ValueError as err:
                 log.error("Unable to decrypt token: %s", err)
@@ -1019,7 +1034,7 @@ class PubServerChannel:
 
         # If topics are upported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
-        if self.transport.topic_support and load["tgt_type"] in match_targets:
+        if self.transport.topic_support() and load["tgt_type"] in match_targets:
             # add some targeting stuff for lists only (for now)
             if load["tgt_type"] == "list":
                 int_payload["topic_lst"] = load["tgt"]
@@ -1161,7 +1176,7 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
-    async def handle_pool_publish(self, payload, _):
+    async def handle_pool_publish(self, payload):
         """
         Handle incoming events from cluster peer.
         """

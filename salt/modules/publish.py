@@ -122,8 +122,6 @@ def _publish(
         master_uri = __opts__["master_uri"]
 
     log.info("Publishing '%s' to %s", fun, master_uri)
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token(b"salt")
     load = {
         "cmd": "minion_pub",
         "fun": fun,
@@ -131,7 +129,6 @@ def _publish(
         "tgt": tgt,
         "tgt_type": tgt_type,
         "ret": returner,
-        "tok": tok,
         "tmo": timeout,
         "form": form,
         "id": __opts__["id"],
@@ -157,7 +154,6 @@ def _publish(
                 load = {
                     "cmd": "pub_ret",
                     "id": __opts__["id"],
-                    "tok": tok,
                     "jid": peer_data["jid"],
                 }
                 ret = channel.send(load)
@@ -187,7 +183,6 @@ def _publish(
             load = {
                 "cmd": "pub_ret",
                 "id": __opts__["id"],
-                "tok": tok,
                 "jid": peer_data["jid"],
             }
             ret = channel.send(load)
@@ -332,13 +327,10 @@ def runner(fun, arg=None, timeout=5):
     if "master_uri" not in __opts__:
         return "No access to master. If using salt-call with --local, please remove."
     log.info("Publishing runner '%s' to %s", fun, __opts__["master_uri"])
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token(b"salt")
     load = {
         "cmd": "minion_runner",
         "fun": fun,
         "arg": arg,
-        "tok": tok,
         "tmo": timeout,
         "id": __opts__["id"],
         "no_parse": __opts__.get("no_parse", []),

@@ -965,6 +965,13 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
 
     client.transport.send = mocksend
 
+    # Minion should try to authenticate on bad signature
+    @salt.ext.tornado.gen.coroutine
+    def mockauthenticate():
+        pass
+
+    client.auth.authenticate = MagicMock(wraps=mockauthenticate)
+
     # Note the 'ver' value in 'load' does not represent the the 'version' sent
     # in the top level of the transport's message.
     load = {
@@ -984,6 +991,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
             dictkey="pillar",
         )
     assert "Pillar payload signature failed to validate." == excinfo.value.message
+    client.auth.authenticate.assert_called_once()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(
@@ -1955,3 +1963,79 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
         assert "load" in ret
         assert "ret" in ret["load"]
         assert ret["load"]["ret"] == "bad enc algo"
+
+
+async def test_request_server_continue_on_errors(io_loop):
+    opts = {}
+    server = salt.transport.zeromq.RequestServer(opts)
+
+    class Socket:
+        def __init__(self):
+            self.calls = 0
+
+        async def recv(self):
+            self.calls += 1
+            raise zmq.error.Again()
+
+    server._socket = Socket()
+
+    def stop():
+        server._event.set()
+
+    io_loop.call_later(0.1, stop)
+
+    await server.request_handler()
+
+    assert server._socket.calls > 1
+
+
+async def test_request_server_continue_on_errors_log_info(io_loop, caplog):
+    opts = {}
+    server = salt.transport.zeromq.RequestServer(opts)
+
+    class Socket:
+        def __init__(self):
+            self.calls = 0
+
+        async def recv(self):
+            self.calls += 1
+            raise Exception()
+
+    server._socket = Socket()
+
+    def stop():
+        server._event.set()
+
+    io_loop.call_later(0.1, stop)
+
+    with caplog.at_level(logging.INFO):
+        await server.request_handler()
+        assert server._socket.calls > 1
+        assert "Exception in request handler" in caplog.text
+        assert "Traceback" not in caplog.text
+
+
+async def test_request_server_continue_on_errors_log_debug(io_loop, caplog):
+    opts = {}
+    server = salt.transport.zeromq.RequestServer(opts)
+
+    class Socket:
+        def __init__(self):
+            self.calls = 0
+
+        async def recv(self):
+            self.calls += 1
+            raise Exception()
+
+    server._socket = Socket()
+
+    def stop():
+        server._event.set()
+
+    io_loop.call_later(0.1, stop)
+
+    with caplog.at_level(logging.DEBUG):
+        await server.request_handler()
+        assert server._socket.calls > 1
+        assert "Exception in request handler" in caplog.text
+        assert "Traceback" in caplog.text

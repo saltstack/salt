@@ -60,11 +60,7 @@ from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
-from salt.utils.debug import (
-    enable_sigusr1_handler,
-    enable_sigusr2_handler,
-    inspect_stack,
-)
+from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
@@ -1508,24 +1504,12 @@ class AESFuncs(TransportMethods):
             return False
         if not isinstance(self.opts["peer"], dict):
             return False
-        if any(
-            key not in clear_load for key in ("fun", "arg", "tgt", "ret", "tok", "id")
-        ):
+        if any(key not in clear_load for key in ("fun", "arg", "tgt", "ret", "id")):
             return False
         # If the command will make a recursive publish don't run
         if clear_load["fun"].startswith("publish."):
             return False
         # Check the permissions for this minion
-        if not self.__verify_minion(clear_load["id"], clear_load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning(
-                "Minion id %s is not who it says it is and is attempting "
-                "to issue a peer command",
-                clear_load["id"],
-            )
-            return False
-        clear_load.pop("tok")
         perms = []
         for match in self.opts["peer"]:
             if re.match(match, clear_load["id"]):
@@ -1565,23 +1549,6 @@ class AESFuncs(TransportMethods):
         """
         if any(key not in load for key in verify_keys):
             return False
-        if "tok" not in load:
-            log.error(
-                "Received incomplete call from %s for '%s', missing '%s'",
-                load["id"],
-                inspect_stack()["co_name"],
-                "tok",
-            )
-            return False
-        if not self.__verify_minion(load["id"], load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning("Minion id %s is not who it says it is!", load["id"])
-            return False
-
-        if "tok" in load:
-            load.pop("tok")
-
         return load
 
     def _master_tops(self, load):
@@ -1592,7 +1559,7 @@ class AESFuncs(TransportMethods):
         :param dict load: A payload received from a minion
         :return: The results from an external node classifier
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
@@ -1641,7 +1608,7 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: Mine data from the specified minions
         """
-        load = self.__verify_load(load, ("id", "tgt", "fun", "tok"))
+        load = self.__verify_load(load, ("id", "tgt", "fun"))
         if load is False:
             return {}
         else:
@@ -1656,7 +1623,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: True if the data has been stored in the mine
         """
-        load = self.__verify_load(load, ("id", "data", "tok"))
+        load = self.__verify_load(load, ("id", "data"))
         if load is False:
             return {}
         return self.masterapi._mine(load, skip_verify=True)
@@ -1670,7 +1637,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: Boolean indicating whether or not the given function was deleted from the mine
         """
-        load = self.__verify_load(load, ("id", "fun", "tok"))
+        load = self.__verify_load(load, ("id", "fun"))
         if load is False:
             return {}
         else:
@@ -1682,7 +1649,7 @@ class AESFuncs(TransportMethods):
 
         :param dict load: A payload received from a minion
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         else:
@@ -1717,20 +1684,6 @@ class AESFuncs(TransportMethods):
                 load["path"],
             )
             return False
-        if "tok" not in load:
-            log.error(
-                "Received incomplete call from %s for '%s', missing '%s'",
-                load["id"],
-                inspect_stack()["co_name"],
-                "tok",
-            )
-            return False
-        if not self.__verify_minion(load["id"], load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning("Minion id %s is not who it says it is!", load["id"])
-            return {}
-        load.pop("tok")
 
         # Join path
         sep_path = os.sep.join(load["path"])
@@ -1748,7 +1701,12 @@ class AESFuncs(TransportMethods):
         rpath = os.path.join(self.opts["cachedir"], "minions", load["id"], "files")
         cpath = os.path.join(rpath, normpath)
         # One last safety check here
-        if not salt.utils.verify.clean_path(rpath, cpath):
+        if not salt.utils.verify.clean_path(
+            rpath,
+            cpath,
+            subdir=True,
+            realpath=not self.opts["fileserver_followsymlinks"],
+        ):
             log.warning(
                 "Attempt to write received file outside of master cache "
                 "directory! Requested path: %s. Access denied.",
@@ -1820,7 +1778,7 @@ class AESFuncs(TransportMethods):
 
         :param dict load: The minion payload
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         # Route to master event bus
@@ -1969,7 +1927,7 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: The runner function data
         """
-        load = self.__verify_load(clear_load, ("fun", "arg", "id", "tok"))
+        load = self.__verify_load(clear_load, ("fun", "arg", "id"))
         if load is False:
             return {}
         else:
@@ -1985,7 +1943,7 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: Return data corresponding to a given JID
         """
-        load = self.__verify_load(load, ("jid", "id", "tok"))
+        load = self.__verify_load(load, ("jid", "id"))
         if load is False:
             return {}
         # Check that this minion can access this data
@@ -2081,8 +2039,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: True if key was revoked, False if not
         """
-        load = self.__verify_load(load, ("id", "tok"))
-
+        load = self.__verify_load(load, ("id",))
         if not self.opts.get("allow_minion_key_revoke", False):
             log.warning(
                 "Minion %s requested key revoke, but allow_minion_key_revoke "
@@ -2090,7 +2047,6 @@ class AESFuncs(TransportMethods):
                 load["id"],
             )
             return load
-
         if load is False:
             return load
         else:
