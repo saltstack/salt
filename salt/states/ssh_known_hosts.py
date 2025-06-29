@@ -186,14 +186,18 @@ def present(
                 changes={"old": result["old"], "new": result["new"]},
                 comment=f"{name}'s key saved to {config} (key: {new_key})",
             )
-        else:
-            fingerprint = result["new"][0]["fingerprint"]
+        elif fingerprint:
+            new_fingerprint = result["new"][0]["fingerprint"]
             return dict(
                 ret,
                 changes={"old": result["old"], "new": result["new"]},
-                comment="{}'s key saved to {} (fingerprint: {})".format(
-                    name, config, fingerprint
-                ),
+                comment=f"{name}'s key saved to {config} (fingerprint: {new_fingerprint})",
+            )
+        else:
+            return dict(
+                ret,
+                changes={"old": result["old"], "new": result["new"]},
+                comment=f"{name}'s key(s) saved to {config}",
             )
 
 
