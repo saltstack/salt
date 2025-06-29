@@ -789,12 +789,11 @@ def _get_matched_host_line_numbers(lines, enc):
     number of known_hosts entries with encryption key type matching enc,
     one by one.
     """
-    enc = enc if enc else "rsa"
     for i, line in enumerate(lines):
         if i % 2 == 0:
             line_no = int(line.strip().split()[-1])
             line_enc = lines[i + 1].strip().split()[-2]
-            if line_enc != enc:
+            if enc is not None and line_enc != enc:
                 continue
             yield line_no
 
@@ -1116,7 +1115,9 @@ def set_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
-    stored_keys = [h["key"] for h in stored_host_entries] if stored_host_entries else []
+    stored_keys = (
+        [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc] if stored_host_entries else []
+    )
     stored_fingerprints = (
         [h["fingerprint"] for h in stored_host_entries] if stored_host_entries else []
     )
@@ -1165,9 +1166,8 @@ def set_known_host(
             }
 
         if check_required:
-            for key in known_keys:
-                if key in stored_keys:
-                    return {"status": "exists", "keys": stored_keys}
+            if set(known_keys) == set(stored_keys):
+                return {"status": "exists", "keys": stored_keys}
 
     full = _get_known_hosts_file(config=config, user=user)
 
