@@ -149,8 +149,8 @@ def gen_keys(keysize, passphrase=None, e=65537):
     :param int keysize: The number of bits in the key
     :param str passphrase: The passphrase which should be used to encrypt the private key
 
-    :rtype: str
-    :return: Path on the filesystem to the RSA private key
+    :rtype: tuple(str, str)
+    :return: Private and public key strings as tuple
     """
     gen = rsa.generate_private_key(e, keysize)
 

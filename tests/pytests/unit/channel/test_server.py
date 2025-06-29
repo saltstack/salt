@@ -57,6 +57,8 @@ def root_dir(tmp_path):
 
 def test_req_server_validate_token_removes_token(root_dir):
     opts = {
+        "id": "minion",
+        "__role": "minion",
         "master_uri": "tcp://127.0.0.1:4505",
         "cachedir": str(root_dir / "var" / "cache"),
         "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
@@ -64,6 +66,10 @@ def test_req_server_validate_token_removes_token(root_dir):
         "key_pass": "",
         "keysize": 2048,
         "master_sign_pubkey": False,
+        "keys.cache_driver": "localfs_key",
+        "optimization_order": (0, 1, 2),
+        "permissive_pki_access": False,
+        "cluster_id": "",
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {
@@ -78,6 +84,8 @@ def test_req_server_validate_token_removes_token(root_dir):
 
 def test_req_server_validate_token_removes_token_id_traversal(root_dir):
     opts = {
+        "id": "minion",
+        "__role": "minion",
         "master_uri": "tcp://127.0.0.1:4505",
         "cachedir": str(root_dir / "var" / "cache"),
         "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
@@ -85,6 +93,10 @@ def test_req_server_validate_token_removes_token_id_traversal(root_dir):
         "key_pass": "",
         "keysize": 2048,
         "master_sign_pubkey": False,
+        "keys.cache_driver": "localfs_key",
+        "optimization_order": (0, 1, 2),
+        "permissive_pki_access": False,
+        "cluster_id": "",
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {

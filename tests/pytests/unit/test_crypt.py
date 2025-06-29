@@ -52,6 +52,7 @@ async def test_auth_aes_key_rotation(minion_root, io_loop):
         "master_uri": "tcp://127.0.0.1:4505",
         "keysize": 4096,
         "acceptance_wait_time": 60,
+        "keys.cache_driver": "localfs_key",
         "acceptance_wait_time_max": 60,
     }
     credskey = (
@@ -59,8 +60,10 @@ async def test_auth_aes_key_rotation(minion_root, io_loop):
         opts["id"],  # minion ID
         opts["master_uri"],  # master ID
     )
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
-
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
     aes = crypt.Crypticle.generate_key_string()
     session = crypt.Crypticle.generate_key_string()
 
@@ -129,7 +132,10 @@ def test_sauth_aes_key_rotation(minion_root, io_loop):
         opts["id"],  # minion ID
         opts["master_uri"],  # master ID
     )
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
 
     aes = crypt.Crypticle.generate_key_string()
     session = crypt.Crypticle.generate_key_string()
