@@ -442,6 +442,22 @@ Set the default timeout for the salt command and api.
 
 .. conf_master:: loop_interval
 
+.. conf_minion:: ipc_write_timeout
+
+``ipc_write_timeout``
+---------------------
+
+.. versionadded:: 3006.11
+
+Default: ``15``
+
+How many seconds the event publisher process will wait after a client stops
+responding before the client will be disconnected.
+
+.. code-block:: yaml
+
+    ipc_write_timeout: 15
+
 ``loop_interval``
 -----------------
 

@@ -7,7 +7,18 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3007.5 (2025-06-26)
+
+
+### Fixed
+
+- Zeromq RequestServer continues to serve requests after encountering an
+  un-handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
+- * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
 ## 3007.4 (2025-06-12)
+## 3006.13 (2025-06-26)
 
 
 ### Fixed
@@ -80,6 +91,25 @@ Versions are `MAJOR.PATCH`.
 
 
 ## 3007.2 (2025-05-13)
+- Return target path for symlinks and junctions on Windows [#54484](https://github.com/saltstack/salt/issues/54484)
+- Fixed `Pillar payload signature failed to validate` error on master failover [#62318](https://github.com/saltstack/salt/issues/62318)
+- Fixes an issue running powershell commands that begin with parenthesis or
+  other commands that do not require an ampersand [#67190](https://github.com/saltstack/salt/issues/67190)
+- Make x509 module compatible with M2Crypto 0.44.0. [#67782](https://github.com/saltstack/salt/issues/67782)
+- Fix syndic event forwarding [#67936](https://github.com/saltstack/salt/issues/67936)
+- Fix cp.push module function and its integration test [#67941](https://github.com/saltstack/salt/issues/67941)
+- logging regression: fix loglines/findCaller introspection [#68057](https://github.com/saltstack/salt/issues/68057)
+- Handle git@github.com:saltstack/salt style remotes in remote url validation [#68069](https://github.com/saltstack/salt/issues/68069)
+- Fix GitFS file_find for file in sub-directories [#68072](https://github.com/saltstack/salt/issues/68072)
+- Fix install in Ubuntu 24.04 noble Docker by using groupadd rather than addgroup. [#68073](https://github.com/saltstack/salt/issues/68073)
+- Token validation removes token from request handler payload [#68076](https://github.com/saltstack/salt/issues/68076)
+- Fix minion connectivity issues by ensuring auth notices refreshed session token [#68079](https://github.com/saltstack/salt/issues/68079)
+- Fix file_recv path verification to allow subdirs used by cp.push [#68087](https://github.com/saltstack/salt/issues/68087)
+- Fixes an issue on Windows where cmd.run wasn't handling commands sent as a
+  list [#68095](https://github.com/saltstack/salt/issues/68095)
+- Disconnect ipc clients that stop consuming [#68114](https://github.com/saltstack/salt/issues/68114)
+
+
 ## 3006.12 (2025-06-12)
 
 

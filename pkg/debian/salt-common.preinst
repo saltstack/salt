@@ -25,7 +25,7 @@ case "$1" in
     # 1. create group if not existing
     if ! getent group | grep -q "^$SALT_GROUP:" ; then
        echo -n "Adding group $SALT_GROUP.."
-       addgroup --quiet --system $SALT_GROUP 2>/dev/null ||true
+       groupadd --system $SALT_GROUP 2>/dev/null ||true
        echo "..done"
     fi
     # 2. create homedir if not existing

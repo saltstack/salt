@@ -334,3 +334,77 @@ def test_find_file_bad_env(tmp_path):
     gitfs = salt.utils.gitfs.GitFS(opts, remotes)
     with pytest.raises(salt.exceptions.SaltValidationError):
         gitfs.find_file("asdf", tgt_env="asd/../../../sdf")
+
+
+@pytest.mark.parametrize(
+    "remote,valid",
+    [
+        ("git@github.com:/saltstack/salt", True),
+        ("git@github.com:saltstack/salt", True),
+        ("git@github.com/saltstack/salt", False),
+        ("ssh://git@github.com/saltstack/salt.git", True),
+        ("ssh://git@github.com:22/saltstack/salt.git", True),
+        ("https://github.com/salttack/salt.git", True),
+        ("https://github.com/\nsaltstack/salt.git", False),
+        ("https://git:mypassword@github.com/saltstack/salt.git", True),
+        ("file:///srv/git/salt.git", True),
+    ],
+)
+def test_remote_validation(remote, valid):
+    assert salt.utils.gitfs.GitFS.validate_remote(remote) is valid
+
+
+@pytest.mark.parametrize(
+    "remote,result",
+    [
+        ("git@github.com:/saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        ("git@github.com:saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        (
+            "ssh://git@github.com/saltstack/salt.git",
+            "ssh://git@github.com/saltstack/salt.git",
+        ),
+        (
+            "ssh://git@github.com:22/saltstack/salt.git",
+            "ssh://git@github.com:22/saltstack/salt.git",
+        ),
+        (
+            "https://github.com/salttack/salt.git",
+            "https://github.com/salttack/salt.git",
+        ),
+        (
+            "https://git:mypassword@github.com/saltstack/salt.git",
+            "https://git:mypassword@github.com/saltstack/salt.git",
+        ),
+        ("file:///srv/git/salt.git", "file:///srv/git/salt.git"),
+    ],
+)
+def test_remote_to_url(remote, result):
+    assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result
+
+
+def test_find_file_subdir(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "refs").mkdir()
+    (root / "refs" / "base").mkdir()
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    gitfs.cache_root = str(root)
+    ret = gitfs.find_file("foo/init.sls")
+    assert ret == {"path": "", "rel": ""}

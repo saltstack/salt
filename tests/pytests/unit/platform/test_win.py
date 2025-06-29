@@ -21,6 +21,15 @@ pytestmark = [
         ('cmd /c "echo foo"', 'cmd /c "echo foo"'),
         ("whoami && echo foo", 'cmd /c "whoami && echo foo"'),
         ("whoami || echo foo", 'cmd /c "whoami || echo foo"'),
+        ("icacls 'C:\\Program Files'", 'icacls "C:\\Program Files"'),
+        (
+            "icacls 'C:\\Program Files' && echo 1",
+            'cmd /c "icacls "C:\\Program Files" && echo 1"',
+        ),
+        (
+            ["secedit", "/export", "/cfg", "C:\\A Path\\with\\a\\space"],
+            'secedit /export /cfg "C:\\A Path\\with\\a\\space"',
+        ),
     ],
 )
 def test_prepend_cmd(command, expected):
