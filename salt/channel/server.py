@@ -743,7 +743,7 @@ class ReqServerChannel:
         # and an empty request comes in
         try:
             pub = salt.crypt.PublicKey.from_str(key["pub"])
-        except salt.crypt.InvalidKeyError as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Corrupt or missing public key "%s": %s',
                 load["id"],
