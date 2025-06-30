@@ -173,7 +173,7 @@ class SaltCP:
             else salt.utils.itertools.read_file
         )
 
-        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions.factory(self.opts).check_minions(
             tgt, tgt_type=selected_target_option or "glob"
         )
         minions = _res["minions"]

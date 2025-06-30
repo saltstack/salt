@@ -446,7 +446,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
 
     @cached_property
     def ckminions(self):
-        return salt.utils.minions.CkMinions(self.application.opts)
+        return salt.utils.minions.CkMinions.factory(self.application.opts)
 
     @property
     def token(self):

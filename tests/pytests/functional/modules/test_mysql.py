@@ -8,17 +8,33 @@ import time
 import pytest
 from pytestshellutils.utils import format_callback_to_string
 
-import salt.modules.mysql as mysqlmod
 from salt.utils.versions import version_cmp
-from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from tests.support.pytest.database import (  # pylint: disable=unused-import
+    available_databases,
+    database_backend,
+)
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.skip_if_binaries_missing("dockerd"),
-    pytest.mark.skipif(
-        mysqlmod.MySQLdb is None, reason="No python mysql client installed."
+    pytest.mark.parametrize(
+        "database_backend",
+        available_databases(
+            [
+                ("mysql-server", "5.5", "MySQLdb"),
+                ("mysql-server", "5.6", "MySQLdb"),
+                ("mysql-server", "5.7", "MySQLdb"),
+                ("mysql-server", "8.0", "MySQLdb"),
+                ("mariadb", "10.3", "MySQLdb"),
+                ("mariadb", "10.4", "MySQLdb"),
+                ("mariadb", "10.5", "MySQLdb"),
+                ("percona", "5.6", "MySQLdb"),
+                ("percona", "5.7", "MySQLdb"),
+                ("percona", "8.0", "MySQLdb"),
+            ]
+        ),
+        indirect=True,
     ),
     pytest.mark.skip_on_fips_enabled_platform,
 ]
@@ -61,13 +77,13 @@ class CallWrapper:
 
 
 @pytest.fixture(scope="module")
-def mysql(modules, mysql_container, loaders):
+def mysql(modules, database_backend, loaders):
     for name in list(modules):
         if not name.startswith("mysql."):
             continue
         modules._dict[name] = CallWrapper(
             modules._dict[name],
-            mysql_container,
+            database_backend,
             loaders.context,
         )
     return modules.mysql
@@ -79,10 +95,10 @@ def test_query(mysql):
     assert ret["results"] == (("1",),)
 
 
-def test_version(mysql, mysql_container):
+def test_version(mysql, database_backend):
     ret = mysql.version()
     assert ret
-    assert mysql_container.mysql_version in ret
+    assert database_backend.version in ret
 
 
 def test_status(mysql):
@@ -111,20 +127,20 @@ def test_db_create_alter_remove(mysql):
     assert ret
 
 
-def test_user_list(mysql, mysql_combo):
+def test_user_list(mysql, database_backend):
     ret = mysql.user_list()
     assert ret
     assert {
-        "User": mysql_combo.mysql_root_user,
-        "Host": mysql_combo.mysql_host,
+        "User": database_backend.root_user,
+        "Host": database_backend.host,
     } in ret
 
 
-def test_user_exists(mysql, mysql_combo):
+def test_user_exists(mysql, database_backend):
     ret = mysql.user_exists(
-        mysql_combo.mysql_root_user,
-        host=mysql_combo.mysql_host,
-        password=mysql_combo.mysql_passwd,
+        database_backend.root_user,
+        host=database_backend.host,
+        password=database_backend.passwd,
     )
     assert ret
 
@@ -136,15 +152,15 @@ def test_user_exists(mysql, mysql_combo):
     assert not ret
 
 
-def test_user_info(mysql, mysql_combo):
-    ret = mysql.user_info(mysql_combo.mysql_root_user, host=mysql_combo.mysql_host)
+def test_user_info(mysql, database_backend):
+    ret = mysql.user_info(database_backend.root_user, host=database_backend.host)
     assert ret
 
     # Check that a subset of the information
     # is available in the returned user information.
     expected = {
-        "Host": mysql_combo.mysql_host,
-        "User": mysql_combo.mysql_root_user,
+        "Host": database_backend.host,
+        "User": database_backend.root_user,
         "Select_priv": "Y",
         "Insert_priv": "Y",
         "Update_priv": "Y",
@@ -201,8 +217,8 @@ def test_user_create_chpass_delete(mysql):
     assert ret
 
 
-def test_user_grants(mysql, mysql_combo):
-    ret = mysql.user_grants(mysql_combo.mysql_root_user, host=mysql_combo.mysql_host)
+def test_user_grants(mysql, database_backend):
+    ret = mysql.user_grants(database_backend.root_user, host=database_backend.host)
     assert ret
 
 
@@ -300,22 +316,22 @@ def test_grant_add_revoke(mysql):
     assert ret
 
 
-def test_grant_replication_replica_add_revoke(mysql, mysql_container):
+def test_grant_replication_replica_add_revoke(mysql, database_backend):
     # The REPLICATION REPLICA grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in database_backend.name:
         pytest.skip(
             "The REPLICATION REPLICA grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
     # The REPLICATION REPLICA grant was added in mariadb 10.5.1
-    if version_cmp(mysql_container.mysql_version, "10.5.1") < 0:
+    if version_cmp(database_backend.version, "10.5.1") < 0:
         pytest.skip(
             "The REPLICATION REPLICA grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
@@ -376,7 +392,7 @@ def test_grant_replication_replica_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_grant_replication_slave_add_revoke(mysql, mysql_container):
+def test_grant_replication_slave_add_revoke(mysql, database_backend):
     # Create the database
     ret = mysql.db_create("salt")
     assert ret
@@ -434,7 +450,7 @@ def test_grant_replication_slave_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_grant_replication_client_add_revoke(mysql, mysql_container):
+def test_grant_replication_client_add_revoke(mysql, database_backend):
     # Create the database
     ret = mysql.db_create("salt")
     assert ret
@@ -492,22 +508,22 @@ def test_grant_replication_client_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_grant_binlog_monitor_add_revoke(mysql, mysql_container):
+def test_grant_binlog_monitor_add_revoke(mysql, database_backend):
     # The BINLOG MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in database_backend.name:
         pytest.skip(
             "The BINLOG MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
     # The BINLOG MONITOR grant was added in mariadb 10.5.2
-    if version_cmp(mysql_container.mysql_version, "10.5.2") < 0:
+    if version_cmp(database_backend.version, "10.5.2") < 0:
         pytest.skip(
             "The BINLOG_MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
@@ -568,22 +584,22 @@ def test_grant_binlog_monitor_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
+def test_grant_replica_monitor_add_revoke(mysql, database_backend):
     # The REPLICA MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in database_backend.name:
         pytest.skip(
             "The REPLICA MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
     # The REPLICA MONITOR grant was added in mariadb 10.5.9
-    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+    if version_cmp(database_backend.version, "10.5.9") < 0:
         pytest.skip(
             "The REPLICA MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
@@ -644,22 +660,22 @@ def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
+def test_grant_slave_monitor_add_revoke(mysql, database_backend):
     # The SLAVE MONITOR grant is only available for mariadb
-    if "mariadb" not in mysql_container.mysql_name:
+    if "mariadb" not in database_backend.name:
         pytest.skip(
             "The SLAVE MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
     # The SLAVE MONITOR grant was added in mariadb 10.5.9
-    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+    if version_cmp(database_backend.version, "10.5.9") < 0:
         pytest.skip(
             "The SLAVE MONITOR grant is unavailable "
             "for the {}:{} docker image.".format(
-                mysql_container.mysql_name, mysql_container.mysql_version
+                database_backend.name, database_backend.version
             )
         )
 
@@ -720,32 +736,32 @@ def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
     assert ret
 
 
-def test_plugin_add_status_remove(mysql, mysql_combo):
+def test_plugin_add_status_remove(mysql, database_backend):
 
-    if "mariadb" in mysql_combo.mysql_name:
+    if "mariadb" in database_backend.name:
         plugin = "simple_password_check"
     else:
         plugin = "auth_socket"
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=database_backend.host)
     assert not ret
 
     ret = mysql.plugin_add(plugin)
     assert ret
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=database_backend.host)
     assert ret
     assert ret == "ACTIVE"
 
     ret = mysql.plugin_remove(plugin)
     assert ret
 
-    ret = mysql.plugin_status(plugin, host=mysql_combo.mysql_host)
+    ret = mysql.plugin_status(plugin, host=database_backend.host)
     assert not ret
 
 
-def test_plugin_list(mysql, mysql_container):
-    if "mariadb" in mysql_container.mysql_name:
+def test_plugin_list(mysql, database_backend):
+    if "mariadb" in database_backend.name:
         plugin = "simple_password_check"
     else:
         plugin = "auth_socket"
