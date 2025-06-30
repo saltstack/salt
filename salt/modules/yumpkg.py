@@ -1038,7 +1038,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
+    cmd.extend(["check-update"] if _yum() in ("dnf", "dnf5") else ["list", "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -2245,6 +2245,7 @@ def hold(
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
 
@@ -2326,6 +2327,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
 
@@ -2427,6 +2429,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
     pattern : \w+(?:[.-][^-]+)*
