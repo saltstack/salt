@@ -412,6 +412,43 @@ __func_alias__ = {
 }
 
 
+def _get_http_params_from_source(source):
+    """
+    Extract http params from source if source is a dictionary
+    """
+    if not source or not isinstance(source, dict):
+        return [source, {}]
+
+    valid_http_params = [
+        "cert",
+        "params",
+        "headers",
+        "backend",
+        "port",
+        "username",
+        "password",
+        "auth",
+        "agent",
+    ]
+    http_params = {}
+
+    for key, value_ in source.items():
+        if key in valid_http_params:
+            if key == "cert" and isinstance(value_, dict):
+                if not "key" in value_:
+                    value_ = value_["cert"]
+                else:
+                    value_ = [value_["cert"], value_["key"]]
+            http_params[key] = value_
+
+    url = source.pop("url")
+
+    if not url:
+        raise CommandExecutionError("URL is required in source parameter")
+
+    return [url, http_params]
+
+
 def _http_ftp_check(source):
     """
     Check if source or sources is http, https or ftp.
@@ -2643,6 +2680,16 @@ def managed(
                   - salt://file_that_does_not_exist
                   - salt://file_that_exists
 
+        Sources can also be defined as dictionary:
+
+        .. code-block:: yaml
+
+            file_override_example:
+              file.managed:
+                - source:
+                  - url: https://host/file_that_exists
+                    cert: [mycrt.pem, mykey.pem]
+
     source_hash
         This can be one of the following:
             1. a source hash string
@@ -3367,6 +3414,8 @@ def managed(
         [x for x in (contents, contents_pillar, contents_grains) if x is not None]
     )
 
+    source, http_params = _get_http_params_from_source(source)
+
     if source and contents_count > 0:
         return _error(
             ret,
@@ -3570,7 +3619,7 @@ def managed(
             # We're doing this after basic checks to not slow down
             # runs where it does not matter.
             source, source_hash = __salt__["file.source_list"](
-                source, source_hash, __env__
+                source, source_hash, __env__, http_params
             )
             source_sum = None
             if (
@@ -3596,6 +3645,7 @@ def managed(
                     keyring=keyring,
                     gnupghome=gnupghome,
                     sig_backend=sig_backend,
+                    http_params=http_params,
                 )
                 hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
         except (CommandExecutionError, OSError) as err:
@@ -3696,6 +3746,7 @@ def managed(
                     ignore_whitespace=ignore_whitespace,
                     ignore_comment_characters=ignore_comment_characters,
                     new_file_diff=new_file_diff,
+                    http_params=http_params,
                     **kwargs,
                 )
                 if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
@@ -3778,6 +3829,7 @@ def managed(
             keyring=keyring,
             gnupghome=gnupghome,
             sig_backend=sig_backend,
+            http_params=http_params,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3843,6 +3895,7 @@ def managed(
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
                 new_file_diff=new_file_diff,
+                http_params=http_params,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3937,6 +3990,7 @@ def managed(
                 ignore_whitespace=ignore_whitespace,
                 ignore_comment_characters=ignore_comment_characters,
                 new_file_diff=new_file_diff,
+                http_params=http_params,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -9499,6 +9553,7 @@ def cached(
     keyring=None,
     gnupghome=None,
     sig_backend="gpg",
+    http_params=None,
 ):
     """
     .. versionadded:: 2017.7.3
@@ -9676,6 +9731,7 @@ def cached(
                 keyring=keyring,
                 gnupghome=gnupghome,
                 sig_backend=sig_backend,
+                http_params=http_params,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
