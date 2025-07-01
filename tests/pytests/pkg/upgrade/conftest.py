@@ -15,7 +15,7 @@ import salt.utils.files
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def salt_systemd_overrides():
     """
     Fixture to create systemd overrides for salt-api, salt-minion, and
@@ -36,6 +36,7 @@ def salt_systemd_overrides():
         SuccessExitStatus=SIGKILL
         """
     )
+    assert not (systemd_dir / "salt-api.service.d" / conf_name).exists()
 
     with temp_file(
         name=conf_name, directory=systemd_dir / "salt-api.service.d", contents=contents
@@ -49,6 +50,7 @@ def salt_systemd_overrides():
         contents=contents,
     ):
         yield
+    assert not (systemd_dir / "salt-api.service.d" / conf_name).exists()
 
 
 @pytest.fixture(scope="function")
