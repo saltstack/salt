@@ -1116,7 +1116,9 @@ def set_known_host(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     stored_keys = (
-        [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc] if stored_host_entries else []
+        [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc]
+        if stored_host_entries
+        else []
     )
     stored_fingerprints = (
         [h["fingerprint"] for h in stored_host_entries] if stored_host_entries else []
