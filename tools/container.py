@@ -99,6 +99,27 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
         elif platform == "x86_64":
             if "arm" in architecture or "aarch64" in architecture:
                 cmd.extend(["--platform", "linux/amd64"])
+    if "--platform" in cmd:
+        proc = ctx.run(*["docker", "image", "ls"], capture=True, check=True)
+        if "multiarch/qemu-user-static" not in proc.stdout.decode():
+            ctx.info(
+                "Installing multiarch/qemu-user-static image for emulation support"
+            )
+            ctx.run(
+                *[
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--privileged",
+                    "multiarch/qemu-user-static",
+                    "--reset",
+                    "-p",
+                    "yes",
+                ],
+                capture=True,
+                check=True,
+            )
+
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
     if onci:
