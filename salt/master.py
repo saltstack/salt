@@ -2600,8 +2600,6 @@ class ClearFuncs(TransportMethods):
         clear_load["jid"] = jid
         delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
 
-        # TODO Error reporting over the master event bus
-        self.event.fire_event({"minions": minions}, clear_load["jid"])
         new_job_load = {
             "jid": clear_load["jid"],
             "tgt_type": clear_load["tgt_type"],

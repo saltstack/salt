@@ -1397,6 +1397,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/lib/ssh/sftp-server",
         # Photon OS 5
         "/usr/libexec/sftp-server",
+        # openSUSE Tumbleweed and SL Micro 6.0
+        "/usr/libexec/ssh/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
