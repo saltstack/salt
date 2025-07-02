@@ -290,6 +290,7 @@ def test_directory_clean_require_in(modules, tmp_path, state_tree):
     assert wrong_file.exists() is False
 
 
+@pytest.mark.skip_on_windows
 def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
     """
     file.directory test with clean=True and require_in file,
