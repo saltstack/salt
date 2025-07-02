@@ -67,6 +67,10 @@ def salt_test_upgrade(
 
     old_minion_pids = _get_running_named_salt_pid(process_minion_name)
     old_master_pids = _get_running_named_salt_pid(process_master_name)
+    ret = salt_call_cli.run("--local", "cmd.run", "ps aux | grep salt")
+    assert ret.returncode == 0
+
+    log.error("Salt processes running: %s", ret.data)
     assert old_minion_pids
     assert old_master_pids
 
