@@ -67,10 +67,11 @@ def salt_test_upgrade(
 
     old_minion_pids = _get_running_named_salt_pid(process_minion_name)
     old_master_pids = _get_running_named_salt_pid(process_master_name)
+    log.error("XX Starting")
     ret = salt_call_cli.run("--local", "cmd.run", "ps aux | grep salt")
     assert ret.returncode == 0
 
-    log.error("Salt processes running: %s", ret.data)
+    log.error("XX Salt processes running: %s", ret.data)
     assert old_minion_pids
     assert old_master_pids
 
@@ -127,7 +128,9 @@ def _get_running_named_salt_pid(process_name):
     for proc in psutil.process_iter():
         try:
             cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+            log.error("XX cmdl_strg: %s", cmdl_strg)
         except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
+            log.error("XX Skipping process %s (%s)", proc.name(), proc.pid)
             continue
         if process_name in cmdl_strg:
             pids.append(proc.pid)
