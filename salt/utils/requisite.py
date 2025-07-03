@@ -69,6 +69,9 @@ class RequisiteType(str, Enum):
         self._value_ = value
         self.weight = weight
 
+    def __str__(self):
+        return self.value
+
     # The items here are listed in order of precedence for determining
     # the order of execution, so do not change the order unless you
     # are intentionally changing the precedence
