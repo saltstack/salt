@@ -67,14 +67,6 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in salt.transport.TRANSPORTS:
-        try:
-            load["tok"] = _auth().gen_token(b"salt")
-        except AttributeError:
-            log.error(
-                "Mine could not authenticate with master. Mine could not be retrieved."
-            )
-            return False
     with salt.channel.client.ReqChannel.factory(opts) as channel:
         return channel.send(load)
 

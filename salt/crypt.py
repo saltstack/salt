@@ -149,8 +149,8 @@ def gen_keys(keysize, passphrase=None, e=65537):
     :param int keysize: The number of bits in the key
     :param str passphrase: The passphrase which should be used to encrypt the private key
 
-    :rtype: str
-    :return: Path on the filesystem to the RSA private key
+    :rtype: tuple(str, str)
+    :return: Private and public key strings as tuple
     """
     gen = rsa.generate_private_key(e, keysize)
 
@@ -919,7 +919,10 @@ class AsyncAuth:
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
-                elif self._creds["aes"] != creds["aes"]:
+                elif (
+                    self._creds["aes"] != creds["aes"]
+                    or self._creds["session"] != creds["session"]
+                ):
                     log.debug("%s The master's aes key has changed.", self)
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
@@ -1588,7 +1591,10 @@ class SAuth(AsyncAuth):
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
                 self._session_crypticle = Crypticle(self.opts, creds["session"])
-            elif self._creds["aes"] != creds["aes"]:
+            elif (
+                self._creds["aes"] != creds["aes"]
+                or self._creds["session"] != creds["session"]
+            ):
                 log.error("%s The master's aes key has changed.", self)
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])

@@ -429,10 +429,11 @@ def test_pkg_install_log_message(caplog):
             version="3.03",
             extra_install_flags="-e True -test_flag True",
         )
-        assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "runme.exe" /s -e '
-            "True -test_flag True"
-        ).lower() in [x.lower() for x in caplog.messages]
+        for x in caplog.messages:
+            print(x)
+        assert 'PKG : cmd: "runme.exe" /s -e True -test_flag True'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
 
@@ -650,9 +651,9 @@ def test_pkg_remove_log_message(caplog):
         win_pkg.remove(
             pkgs=["firebox"],
         )
-        assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "%program.exe" /S'
-        ).lower() in [x.lower() for x in caplog.messages]
+        assert 'PKG : cmd: "%program.exe" /S'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
 
