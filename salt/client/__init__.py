@@ -594,38 +594,20 @@ class LocalClient:
         import salt.cli.batch
         import salt.utils.args
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "batch": batch,
-            "failhard": kwargs.get("failhard", self.opts.get("failhard", False)),
-            "raw": kwargs.get("raw", False),
-        }
+        opts = salt.cli.batch.batch_get_opts(
+            tgt,
+            fun,
+            batch,
+            self.opts,
+            arg=arg,
+            tgt_type=tgt_type,
+            ret=ret,
+            kwarg=kwarg,
+            **kwargs,
+        )
 
-        if "timeout" in kwargs:
-            opts["timeout"] = kwargs["timeout"]
-        if "gather_job_timeout" in kwargs:
-            opts["gather_job_timeout"] = kwargs["gather_job_timeout"]
-        if "batch_wait" in kwargs:
-            opts["batch_wait"] = int(kwargs["batch_wait"])
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
 
-        eauth = {}
-        if "eauth" in kwargs:
-            eauth["eauth"] = kwargs.pop("eauth")
-        if "username" in kwargs:
-            eauth["username"] = kwargs.pop("username")
-        if "password" in kwargs:
-            eauth["password"] = kwargs.pop("password")
-        if "token" in kwargs:
-            eauth["token"] = kwargs.pop("token")
-
-        for key, val in self.opts.items():
-            if key not in opts:
-                opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret, _ in batch.run():
             yield ret

@@ -56,6 +56,7 @@ import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 import salt.wheel
+from salt.cli.batch_async import BatchAsync, batch_async_required
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import TRANSPORTS
@@ -2111,6 +2112,7 @@ class ClearFuncs(TransportMethods):
     expose_methods = (
         "ping",
         "publish",
+        "publish_batch",
         "get_token",
         "mk_token",
         "wheel",
@@ -2306,6 +2308,24 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
+    async def publish_batch(self, clear_load, minions, missing):
+        """
+        This method sends out publications to the minions in case of using batch
+        """
+        batch_load = {}
+        batch_load.update(clear_load)
+        batch = BatchAsync(
+            self.local.opts,
+            lambda: self._prep_jid(clear_load, {}),
+            batch_load,
+        )
+        asyncio.create_task(batch.start())
+
+        return {
+            "enc": "clear",
+            "load": {"jid": batch.batch_jid, "minions": minions, "missing": missing},
+        }
+
     async def publish(self, clear_load):
         """
         This method sends out publications to the minions, it can only be used
@@ -2450,6 +2470,9 @@ class ClearFuncs(TransportMethods):
                         ),
                     },
                 }
+        if extra.get("batch", None) and batch_async_required(self.opts, minions, extra):
+            return await self.publish_batch(clear_load, minions, missing)
+
         jid = self._prep_jid(clear_load, extra)
         if jid is None or isinstance(jid, dict):
             if jid and "error" in jid:
