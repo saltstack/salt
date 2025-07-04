@@ -569,9 +569,9 @@ def onedir_dependencies(
             ]
         )
 
-    # Cryptography needs openssl dir set to link to the proper openssl libs.
+    # Cryptography needs OPENSSL_DIR set to link to the proper openssl libs.
     if platform == "macos":
-        env["OPENSSL_DIR"] = f"{dest}"
+        env["OPENSSL_DIR"] = f"-L{dest}"
 
     version_info = ctx.run(
         str(python_bin),
