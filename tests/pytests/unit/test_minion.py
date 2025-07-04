@@ -922,6 +922,7 @@ async def test_master_type_failover(minion_opts):
             "master": ["master1", "master2"],
             "__role": "",
             "retry_dns": 0,
+            "master_tries": 1,
         }
     )
 
