@@ -20,7 +20,7 @@ requests==2.32.3
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   virustotal3
-urllib3==2.2.3
+urllib3==2.5.0
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   requests
