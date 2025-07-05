@@ -545,7 +545,15 @@ def test_windows_env_handling(cmdmod):
     Ensure that nt.environ is used properly with cmd.run*
     """
     out = cmdmod.run("cmd /c set", env={"abc": "123", "ABC": "456"}).splitlines()
-    assert "abc=123" in out
+    if sys.version_info.major == 3 and sys.version_info.minor < 11:
+        assert "abc=123" in out
+        assert "ABC=456" in out
+    else:
+        # in 3.11 and greater Python's subprocess module will not allow abc
+        # and ABC environment variables to be set.
+        assert "ABC=456" in out
+    out = cmdmod.run("cmd /c set", env={"xyz": "123", "ABC": "456"}).splitlines()
+    assert "xyz=123" in out
     assert "ABC=456" in out
 
 
