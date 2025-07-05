@@ -64,10 +64,11 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
+
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -210,10 +211,10 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -291,10 +292,11 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
+
 
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
