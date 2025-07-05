@@ -19,7 +19,8 @@ python-gnupg>=0.4.7
 requests>=2.25.1
 setproctitle>=1.2.3
 timelib>=0.2.5
-urllib3>=1.26.5
+urllib3>=1.26.5,<2.0.0; python_version < '3.10'
+urllib3>=2.5.0; python_version >= '3.10'
 # Watchdog pulls in a GPL-3 package, argh, which cannot be shipped on the
 # windows distribution package.
 #

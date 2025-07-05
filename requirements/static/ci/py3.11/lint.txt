@@ -49,7 +49,7 @@ bcrypt==4.1.2
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.21.46
+boto3==1.39.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
@@ -58,7 +58,7 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-botocore==1.24.46
+botocore==1.39.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   boto3
@@ -304,7 +304,6 @@ markupsafe==2.1.2
     #   -r requirements/base.txt
     #   jinja2
     #   mako
-    #   moto
     #   werkzeug
 mccabe==0.6.1
     # via pylint
@@ -320,7 +319,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1
+moto==5.1.6
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
@@ -468,7 +467,6 @@ pytz==2022.1
     #   -c requirements/static/ci/py3.11/linux.txt
     #   apscheduler
     #   croniter
-    #   moto
     #   python-telegram-bot
     #   tempora
     #   twilio
@@ -484,6 +482,7 @@ pyyaml==6.0.1
     #   ansible-core
     #   clustershell
     #   kubernetes
+    #   responses
     #   yamllint
 pyzmq==23.2.0
     # via
@@ -517,7 +516,7 @@ resolvelib==0.5.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   ansible-core
-responses==0.10.6
+responses==0.25.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   moto
@@ -534,7 +533,7 @@ rsa==4.7.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   google-auth
-s3transfer==0.5.2
+s3transfer==0.13.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   boto3
@@ -566,7 +565,6 @@ six==1.16.0
     #   python-consul
     #   python-dateutil
     #   pyvmomi
-    #   responses
     #   textfsm
     #   vcert
     #   virtualenv
@@ -624,7 +622,7 @@ tzlocal==3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   apscheduler
-urllib3==1.26.20
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -634,6 +632,7 @@ urllib3==1.26.20
     #   kubernetes
     #   python-etcd
     #   requests
+    #   responses
 vcert==0.7.4 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
