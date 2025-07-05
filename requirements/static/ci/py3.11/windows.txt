@@ -18,13 +18,13 @@ attrs==23.1.0
     #   pytest-system-statistics
 bcrypt==4.1.2
     # via -r requirements/static/ci/common.in
-boto3==1.21.46
+boto3==1.39.3
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.24.46
+botocore==1.39.3
     # via
     #   boto3
     #   moto
@@ -203,7 +203,6 @@ markupsafe==2.1.2
     #   -r requirements/base.txt
     #   jinja2
     #   mako
-    #   moto
     #   werkzeug
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -215,7 +214,7 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1
+moto==5.1.6
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -349,7 +348,6 @@ pythonnet==3.0.1
 pytz==2022.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
-    #   moto
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
@@ -369,6 +367,7 @@ pyyaml==6.0.1
     #   clustershell
     #   kubernetes
     #   pytest-salt-factories
+    #   responses
     #   yamllint
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via
@@ -390,13 +389,13 @@ requests==2.32.3 ; python_version >= "3.10"
     #   pywinrm
     #   requests-ntlm
     #   responses
-responses==0.10.6
+responses==0.25.7
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rsa==4.7.2
     # via google-auth
-s3transfer==0.5.2
+s3transfer==0.13.0
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.in
@@ -419,7 +418,6 @@ six==1.15.0
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
-    #   responses
     #   textfsm
     #   websocket-client
 smmap==4.0.0
@@ -446,7 +444,7 @@ trustme==1.1.0
     # via -r requirements/pytest.txt
 typing-extensions==4.4.0
     # via pytest-system-statistics
-urllib3==1.26.20
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   -r requirements/base.txt
@@ -456,6 +454,7 @@ urllib3==1.26.20
     #   kubernetes
     #   python-etcd
     #   requests
+    #   responses
 virtualenv==20.17.0
     # via
     #   -r requirements/static/ci/common.in

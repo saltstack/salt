@@ -210,7 +210,7 @@ typing-extensions==4.8.0
     #   myst-docutils
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==1.26.20
+urllib3==1.26.20 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
