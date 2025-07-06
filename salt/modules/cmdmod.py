@@ -264,18 +264,11 @@ def _check_avail(cmd):
 
 def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     """
-    Prep cmd when shell is powershell. If we were called by script(), then fake
-    out the Windows shell to run a Powershell script. Otherwise, just run a
-    Powershell command.
+    Prep cmd when shell is powershell.exe or pwsh.exe. If we were called by script(), then
+    run it via the -File parameter, Otherwise, run the command via the -Command parameter.
     """
-    # Find the full path to the shell
-    win_shell = salt.utils.path.which(win_shell)
-
-    if not win_shell:
-        raise CommandExecutionError(f"PowerShell binary not found: {win_shell}")
-
     new_cmd = [
-        f'"{win_shell}"',
+        win_shell,
         "-NonInteractive",
         "-NoProfile",
         "-ExecutionPolicy",
@@ -287,52 +280,16 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     # The third item[2] in each tuple is the name of that method.
     stack = traceback.extract_stack(limit=3)
     if stack[-3][2] == "script":
-        # If this is cmd.script, then we're running a file
-        # You might be tempted to use -File here instead of -Command
-        # The problem with using -File is that any arguments that contain
-        # powershell commands themselves will not be evaluated
-        # See GitHub issue #56195
+        new_cmd.append("-File")
+        new_cmd.extend(cmd)
+    elif encoded_cmd:
+        new_cmd.extend(["-EncodedCommand", cmd])
+    else:
         new_cmd.append("-Command")
         if isinstance(cmd, list):
             cmd = " ".join(cmd)
-        # We need to append $LASTEXITCODE here to return the actual exit code
-        # from the script. Otherwise, it will always return 1 on any non-zero
-        # exit code failure. Issue: #60884
-        new_cmd.append(f'"& {cmd.strip()}; exit $LASTEXITCODE"')
-    elif encoded_cmd:
-        new_cmd.extend(["-EncodedCommand", f'"{cmd}"'])
-    else:
-        # Strip whitespace
-        if isinstance(cmd, list):
-            cmd = " ".join(cmd)
+        new_cmd.append(cmd)
 
-        # Commands that are a specific keyword behave differently. They fail if
-        # you add a "&" to the front. Add those here as we find them:
-        keywords = [
-            "(",
-            "[",
-            "$",
-            "&",
-            ".",
-            "data",
-            "do",
-            "for",
-            "foreach",
-            "if",
-            "trap",
-            "while",
-            "try",
-            "Configuration",
-        ]
-
-        for keyword in keywords:
-            if cmd.lower().startswith(keyword.lower()):
-                new_cmd.extend(["-Command", f'"{cmd.strip()}"'])
-                break
-        else:
-            new_cmd.extend(["-Command", f'"& {cmd.strip()}"'])
-
-    new_cmd = " ".join(new_cmd)
     log.debug(new_cmd)
     return new_cmd
 
@@ -454,10 +411,23 @@ def _run(
             if not HAS_WIN_RUNAS:
                 msg = "missing salt/utils/win_runas.py"
                 raise CommandExecutionError(msg)
-        if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
-            cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
+
+        if shell:
+            # Find the full path to the shell
+            win_shell = salt.utils.path.which(shell)
+            if not win_shell:
+                raise CommandExecutionError(f"shell binary not found: {win_shell}")
+
+            # Prepare the command to be executed
+            win_shell_lower = win_shell.lower()
+            if any(win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]):
+                cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
+            elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
+                cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
+            else:
+                raise CommandExecutionError(f"unsupported shell type: {win_shell}")
         else:
-            cmd = salt.platform.win.prepend_cmd(cmd)
+            win_shell = None
 
     env = _parse_env(env)
 
@@ -3002,15 +2972,17 @@ def script(
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if salt.utils.platform.is_windows():
-        if shell.lower() not in ["powershell", "pwsh"]:
-            cmd_path = _cmd_quote(path, escape=False)
-        else:
-            cmd_path = path
+        cmd_path = path
     else:
         cmd_path = _cmd_quote(path)
 
+    if isinstance(args, (list, tuple)):
+        new_cmd = [cmd_path, *args] if args else [cmd_path]
+    else:
+        new_cmd = [cmd_path, str(args)] if args else [cmd_path]
+
     ret = _run(
-        cmd_path + " " + str(args) if args else cmd_path,
+        new_cmd,
         cwd=cwd,
         stdin=stdin,
         output_encoding=output_encoding,
@@ -4181,7 +4153,6 @@ def powershell(
         cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
-        cmd = f"{{ {cmd} }}"
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
