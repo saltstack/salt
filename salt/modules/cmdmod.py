@@ -2966,7 +2966,20 @@ def script(
                 "stderr": "",
                 "cache_error": True,
             }
-        shutil.copyfile(fn_, path)
+        try:
+            shutil.copyfile(fn_, path)
+        except FileNotFoundError:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
+                _cleanup_tempfile(cwd)
+            return {
+                "pid": 0,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "",
+                "cache_error": True,
+            }
     if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
@@ -2981,30 +2994,39 @@ def script(
     else:
         new_cmd = [cmd_path, str(args)] if args else [cmd_path]
 
-    ret = _run(
-        new_cmd,
-        cwd=cwd,
-        stdin=stdin,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        bg=bg,
-        password=password,
-        success_retcodes=success_retcodes,
-        success_stdout=success_stdout,
-        success_stderr=success_stderr,
-        **kwargs,
-    )
+    ret = {}
+    try:
+        ret = _run(
+            new_cmd,
+            cwd=cwd,
+            stdin=stdin,
+            output_encoding=output_encoding,
+            output_loglevel=output_loglevel,
+            log_callback=log_callback,
+            runas=runas,
+            group=group,
+            shell=shell,
+            python_shell=python_shell,
+            env=env,
+            umask=umask,
+            timeout=timeout,
+            reset_system_locale=reset_system_locale,
+            saltenv=saltenv,
+            use_vt=use_vt,
+            bg=bg,
+            password=password,
+            success_retcodes=success_retcodes,
+            success_stdout=success_stdout,
+            success_stderr=success_stderr,
+            **kwargs,
+        )
+    except Exception as exc:
+        log.error(
+            "cmd.script: Unable to run script '%s': %s",
+            new_cmd,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
     _cleanup_tempfile(path)
     # If a temp working directory was created (Windows), let's remove that
     if win_cwd:
