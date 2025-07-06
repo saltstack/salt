@@ -2931,9 +2931,17 @@ def script(
                 obj_name=cwd, principal=runas, permissions="full_control"
             )
 
-    path = salt.utils.files.mkstemp(
-        dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
-    )
+    (_, ext) = os.path.splitext(salt.utils.url.split_env(source)[0])
+
+    if salt.utils.platform.is_windows() and not shell:
+        extension_map = {
+            '.bat': 'cmd',
+            '.cmd': 'cmd',
+            '.ps1': 'powershell',
+        }
+        shell = extension_map.get(ext)
+
+    path = salt.utils.files.mkstemp(dir=cwd, suffix=ext)
 
     if template:
         if "pillarenv" in kwargs or "pillar" in kwargs:
