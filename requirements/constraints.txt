@@ -1,5 +1,4 @@
-wheel <= 0.45.1
-setuptools >= 65.6.3,< 69.0
-setuptools-scm < 8.0.0
+wheel
+setuptools < 80.0.0
 pip >= 23.3,< 24.0 ; python_version < '3.12'
 pip >24 ; python_version >= '3.12'
