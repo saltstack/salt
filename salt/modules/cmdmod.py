@@ -4171,7 +4171,7 @@ def powershell(
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = "try { " + cmd + ' } catch { "{}" }'
+    cmd = "try { " + cmd + ' } catch { Write-Error $_ }'
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
