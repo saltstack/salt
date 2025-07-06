@@ -670,10 +670,7 @@ def test_run_all_output_loglevel_debug(caplog):
     stdout = b"test"
     proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
-    if salt.utils.platform.is_windows():
-        expected = "Executing command 'cmd' in directory"
-    else:
-        expected = "Executing command 'some' in directory"
+    expected = "Executing command 'some' in directory"
     with patch("salt.utils.timed_subprocess.TimedProc", proc):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             ret = cmdmod.run_all("some command", output_loglevel="debug")
@@ -1060,17 +1057,15 @@ def test_runas_env_sudo_group(bundled):
 
 
 @pytest.mark.skip_unless_on_windows
-def test_prep_powershell_cmd_no_powershell():
+def test__run_no_powershell():
     with pytest.raises(CommandExecutionError):
-        cmdmod._prep_powershell_cmd(
-            win_shell="unk_bin", cmd="Some-Command", encoded_cmd=False
-        )
+        cmdmod._run(shell="unk_bin", cmd="Some-Command", encoded_cmd=False)
 
 
 @pytest.mark.parametrize(
     "cmd, parsed",
     [
-        ("Write-Host foo", "& Write-Host foo"),
+        ("Write-Host foo", "Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
         ("try {this} catch {that}", "try {this} catch {that}"),
         ("[bool]@{value = 0}", "[bool]@{value = 0}"),
@@ -1113,25 +1108,19 @@ def test_prep_powershell_cmd(cmd, parsed):
     """
     Tests _prep_powershell_cmd returns correct cmd
     """
-    stack = [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
-    with patch("traceback.extract_stack", return_value=stack), patch(
-        "salt.utils.path.which", return_value="C:\\powershell.exe"
-    ):
-        ret = cmdmod._prep_powershell_cmd(
-            win_shell="powershell", cmd=cmd, encoded_cmd=False
-        )
-        expected = " ".join(
-            [
-                '"C:\\powershell.exe"',
-                "-NonInteractive",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                f'"{parsed}"',
-            ],
-        )
-        assert ret == expected
+    ret = cmdmod._prep_powershell_cmd(
+        win_shell="powershell.exe", cmd=cmd, encoded_cmd=False
+    )
+    expected = [
+        "powershell.exe",
+        "-NonInteractive",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        f"{parsed}",
+    ]
+    assert ret == expected
 
 
 @pytest.mark.skip_unless_on_windows
@@ -1139,27 +1128,21 @@ def test_prep_powershell_cmd_encoded():
     """
     Tests _prep_powershell_cmd returns correct cmd when encoded_cmd=True
     """
-    stack = [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
     # This is the encoded command for 'Write-Host "Encoded HOLO"'
     e_cmd = "VwByAGkAdABlAC0ASABvAHMAdAAgACIARQBuAGMAbwBkAGUAZAAgAEgATwBMAE8AIgA="
-    with patch("traceback.extract_stack", return_value=stack), patch(
-        "salt.utils.path.which", return_value="C:\\powershell.exe"
-    ):
-        ret = cmdmod._prep_powershell_cmd(
-            win_shell="powershell", cmd=e_cmd, encoded_cmd=True
-        )
-        expected = " ".join(
-            [
-                '"C:\\powershell.exe"',
-                "-NonInteractive",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-EncodedCommand",
-                f'"{e_cmd}"',
-            ],
-        )
-        assert ret == expected
+    ret = cmdmod._prep_powershell_cmd(
+        win_shell="powershell.exe", cmd=e_cmd, encoded_cmd=True
+    )
+    expected = [
+        "powershell.exe",
+        "-NonInteractive",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-EncodedCommand",
+        f"{e_cmd}",
+    ]
+    assert ret == expected
 
 
 @pytest.mark.skip_unless_on_windows
@@ -1168,24 +1151,22 @@ def test_prep_powershell_cmd_script():
     Tests _prep_powershell_cmd returns correct cmd when called from cmd.script
     """
     stack = [["", "", ""], ["", "", "script"], ["", "", ""], ["", "", ""]]
-    script = r"C:\some\script.ps1"
     with patch("traceback.extract_stack", return_value=stack), patch(
-        "salt.utils.path.which", return_value="C:\\powershell.exe"
+        "salt.utils.path.which", return_value="powershell.exe"
     ):
+        script = r"C:\some\script.ps1"
         ret = cmdmod._prep_powershell_cmd(
-            win_shell="powershell", cmd=script, encoded_cmd=False
+            win_shell="powershell.exe", cmd=[script], encoded_cmd=False
         )
-        expected = " ".join(
-            [
-                '"C:\\powershell.exe"',
-                "-NonInteractive",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                f'"& {script}; exit $LASTEXITCODE"',
-            ],
-        )
+        expected = [
+            "powershell.exe",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            script,
+        ]
         assert ret == expected
 
 
