@@ -100,20 +100,25 @@ def _check_cb(cb_):
     return lambda x: x
 
 
-def _python_shell_default(python_shell, __pub_jid):
+def _python_shell_default(python_shell, shell=False):
     """
-    Set python_shell default based on remote execution and __opts__['cmd_safe']
+    Set python_shell default based on the shell parameter and __opts__['cmd_safe']
     """
-    try:
-        # Default to python_shell=True when run directly from remote execution
-        # system. Cross-module calls won't have a jid.
-        if __pub_jid and python_shell is None:
-            return True
-        elif __opts__.get("cmd_safe", True) is False and python_shell is None:
-            # Override-switch for python_shell
-            return True
-    except NameError:
-        pass
+    if shell:
+        if salt.utils.platform.is_windows():
+            # On Windows python_shell / subprocess 'shell' parameter must always be
+            # False as we prepend the shell manually
+            return False
+        else:
+            # Non-Windows requires python_shell to be enabled
+            return True if python_shell is None else python_shell
+    else:
+        try:
+            if __opts__.get("cmd_safe", True) is False and python_shell is None:
+                # Override-switch for python_shell
+                return True
+        except NameError:
+            pass
     return python_shell
 
 
@@ -343,7 +348,7 @@ def _run(
     log_callback=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -373,7 +378,9 @@ def _run(
     """
     if "pillar" in kwargs and not pillar_override:
         pillar_override = kwargs["pillar"]
-    if output_loglevel != "quiet" and _is_valid_shell(shell) is False:
+    if shell is None and python_shell and not salt.utils.platform.is_windows():
+        shell = DEFAULT_SHELL
+    if output_loglevel != "quiet" and shell and _is_valid_shell(shell) is False:
         log.warning(
             "Attempt to run a shell command with what may be an invalid shell! "
             "Check to ensure that the shell <%s> is valid for this user.",
@@ -415,9 +422,10 @@ def _run(
 
     change_windows_codepage = False
     if not salt.utils.platform.is_windows():
-        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
-            msg = f"The shell {shell} is not available"
-            raise CommandExecutionError(msg)
+        if shell:
+            if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+                msg = f"The shell {shell} is not available"
+                raise CommandExecutionError(msg)
     elif use_vt:  # Memoization so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
@@ -555,10 +563,14 @@ def _run(
                     env_cmd.extend(["-u", runas])
                 if group:
                     env_cmd.extend(["-g", group])
-                if shell != DEFAULT_SHELL:
-                    env_cmd.extend(["-s", "--", shell, "-c"])
+                if shell:
+                    if shell != DEFAULT_SHELL:
+                        env_cmd.extend(["-s", "--", shell, "-c"])
+                    else:
+                        env_cmd.extend(["-i", "--"])
                 else:
-                    env_cmd.extend(["-i", "--"])
+                    # do not invoke a shell at all
+                    env_cmd.extend(["--"])
             elif __grains__["os"] in ["FreeBSD"]:
                 env_cmd = [
                     "su",
@@ -571,7 +583,11 @@ def _run(
             elif __grains__["os_family"] in ["AIX"]:
                 env_cmd = ["su", "-", runas, "-c"]
             else:
-                env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+                # su invokes a shell by design
+                if shell:
+                    env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+                else:
+                    env_cmd = ["su", "-", runas, "-c"]
 
             if not salt.utils.pkg.check_bundled():
                 if __grains__["os"] in ["FreeBSD"]:
@@ -984,7 +1000,7 @@ def _run_quiet(
     stdin=None,
     output_encoding=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     template=None,
@@ -1033,7 +1049,7 @@ def _run_all_quiet(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     template=None,
@@ -1089,7 +1105,7 @@ def run(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1357,7 +1373,7 @@ def run(
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -1633,10 +1649,17 @@ def shell(
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     """
-    if "python_shell" in kwargs:
-        python_shell = kwargs.pop("python_shell")
+    if shell:
+        if salt.utils.platform.is_windows():
+            # shell invocations are handled manually
+            python_shell = False
+        else:
+            if "python_shell" in kwargs:
+                python_shell = kwargs.pop("python_shell")
+            else:
+                python_shell = True
     else:
-        python_shell = True
+        python_shell = False
     return run(
         cmd,
         cwd=cwd,
@@ -1675,7 +1698,7 @@ def run_stdout(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1870,7 +1893,7 @@ def run_stdout(
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -1909,7 +1932,7 @@ def run_stderr(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2104,7 +2127,7 @@ def run_stderr(
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -2143,7 +2166,7 @@ def run_all(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2381,7 +2404,7 @@ def run_all(
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -2425,7 +2448,7 @@ def retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2606,8 +2629,7 @@ def retcode(
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -2644,7 +2666,7 @@ def _retcode_quiet(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -2702,7 +2724,7 @@ def script(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     template=None,
@@ -2908,7 +2930,7 @@ def script(
             saltenv = __opts__.get("saltenv", "base")
         except NameError:
             saltenv = "base"
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
 
     def _cleanup_tempfile(path):
         try:
@@ -3028,7 +3050,7 @@ def script_retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     template="jinja",
@@ -3373,7 +3395,7 @@ def run_chroot(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=True,
     binds=None,
     env=None,
@@ -4129,7 +4151,7 @@ def powershell(
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
-        python_shell = True
+        python_shell = False
 
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
@@ -4494,7 +4516,7 @@ def powershell_all(
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
-        python_shell = True
+        python_shell = False
 
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
@@ -4606,7 +4628,7 @@ def run_bg(
     cwd=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -4811,8 +4833,7 @@ def run_bg(
 
         salt '*' cmd.run_bg cmd='ls -lR / | sed -e s/=/:/g > /tmp/dontwait'
     """
-
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     res = _run(
         cmd,
         stdin=None,
