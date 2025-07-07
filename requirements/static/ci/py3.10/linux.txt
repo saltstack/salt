@@ -79,7 +79,7 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
-cherrypy==18.6.1
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
