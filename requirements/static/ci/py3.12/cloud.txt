@@ -301,11 +301,12 @@ mock==5.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-more-itertools==5.0.0
+more-itertools==10.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
+    #   -r requirements/static/pkg/linux.in
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -584,7 +585,6 @@ six==1.16.0
     #   jsonschema
     #   kazoo
     #   kubernetes
-    #   more-itertools
     #   profitbricks
     #   pypsexec
     #   python-dateutil

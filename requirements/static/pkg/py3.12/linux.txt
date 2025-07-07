@@ -54,8 +54,9 @@ markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==5.0.0
+more-itertools==10.7.0
     # via
+    #   -r requirements/static/pkg/linux.in
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -99,7 +100,6 @@ setproctitle==1.3.2
 six==1.16.0
     # via
     #   cheroot
-    #   more-itertools
     #   python-dateutil
 tempora==4.1.1
     # via portend
