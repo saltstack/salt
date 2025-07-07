@@ -239,10 +239,11 @@ mercurial==6.0.1
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==5.0.0
+more-itertools==10.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/pytest.txt
+    #   -r requirements/static/pkg/linux.in
     #   cheroot
     #   cherrypy
     #   jaraco.classes
@@ -495,7 +496,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   more-itertools
     #   ncclient
     #   python-consul
     #   python-dateutil
