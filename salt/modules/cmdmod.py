@@ -212,6 +212,21 @@ def _parse_env(env):
     return env
 
 
+def _ensure_env_str(env):
+    """
+    Ensure that environment variables are strings
+    """
+    if not env:
+        env = {}
+    if not isinstance(env, dict):
+        env = {}
+    for key, val in env.items():
+        if not isinstance(val, str):
+            env[key] = str(val)
+        if not isinstance(key, str):
+            env[str(key)] = env.pop(key)
+
+
 def _gather_pillar(pillarenv, pillar_override):
     """
     Whenever a state run starts, gather the pillar data fresh
@@ -672,7 +687,8 @@ def _run(
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
 
-    if clean_env:
+    if clean_env or (runas and salt.utils.platform.is_windows()):
+        # always use a clean environment with CreateProcess on Windows
         run_env = env
 
     else:
@@ -689,6 +705,8 @@ def _run(
 
     if "NOTIFY_SOCKET" not in env:
         run_env.pop("NOTIFY_SOCKET", None)
+
+    _ensure_env_str(run_env)
 
     if python_shell is None:
         python_shell = False
