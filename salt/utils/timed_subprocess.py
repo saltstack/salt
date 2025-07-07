@@ -70,12 +70,6 @@ class TimedProc:
                 if not isinstance(args, (list, tuple, str)):
                     # Handle corner case where someone does a 'cmd.run 3'
                     args = str(args)
-            # Ensure that environment variables are strings
-            for key, val in kwargs.get("env", {}).items():
-                if not isinstance(val, str):
-                    kwargs["env"][key] = str(val)
-                if not isinstance(key, str):
-                    kwargs["env"][str(key)] = kwargs["env"].pop(key)
             args = salt.utils.data.decode(args)
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
