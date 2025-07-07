@@ -53,6 +53,8 @@ except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
+    import pywintypes
+
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
@@ -792,15 +794,41 @@ def _run(
         # This is where the magic happens
 
         if runas and salt.utils.platform.is_windows():
-
             # We can't use TimedProc with runas on Windows
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(windows_codepage)
+            new_kwargs.update(
+                {
+                    "redirect_stderr": True if stderr == subprocess.STDOUT else False,
+                }
+            )
 
-            ret = win_runas(cmd, runas, password, cwd)
+            try:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(windows_codepage)
+                try:
+                    proc = win_runas(cmd, runas, password, **new_kwargs)
+                except (OSError, pywintypes.error) as exc:
+                    msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
+                        cmd if output_loglevel is not None else "REDACTED",
+                        new_kwargs,
+                        exc,
+                    )
+                    raise CommandExecutionError(msg)
+                except TimedProcTimeoutError as exc:
+                    ret["stdout"] = str(exc)
+                    ret["stderr"] = ""
+                    ret["retcode"] = ""
+                    ret["pid"] = ""
+                    # ok return code for timeouts?
+                    ret["retcode"] = 1
+                    return ret
+            finally:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
+            proc_pid = proc.get("pid")
+            proc_retcode = proc.get("retcode")
+            proc_stdout = proc.get("stdout")
+            proc_stderr = proc.get("stderr")
 
         else:
             try:
@@ -815,7 +843,6 @@ def _run(
                         exc,
                     )
                     raise CommandExecutionError(msg)
-
                 try:
                     proc.run()
                 except TimedProcTimeoutError as exc:
@@ -830,61 +857,67 @@ def _run(
                 if change_windows_codepage:
                     salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if output_loglevel != "quiet" and output_encoding is not None:
-                log.debug(
-                    "Decoding output from command %s using %s encoding",
-                    cmd,
-                    output_encoding,
+            proc_pid = proc.process.pid
+            proc_retcode = proc.process.returncode
+            proc_stdout = proc.stdout
+            proc_stderr = proc.stderr
+
+        if output_loglevel != "quiet" and output_encoding is not None:
+            log.debug(
+                "Decoding output from command %s using %s encoding",
+                cmd,
+                output_encoding,
+            )
+
+        try:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding
+            )
+        except TypeError:
+            # stdout is None
+            out = ""
+        except UnicodeDecodeError:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stdout from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
 
-            try:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding
+        try:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding
+            )
+        except TypeError:
+            # stderr is None
+            err = ""
+        except UnicodeDecodeError:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stderr from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
-            except TypeError:
-                # stdout is None
-                out = ""
-            except UnicodeDecodeError:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stdout from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
 
-            try:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding
-                )
-            except TypeError:
-                # stderr is None
-                err = ""
-            except UnicodeDecodeError:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stderr from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
+        # Encoded commands dump CLIXML data in stderr. It's not an actual error
+        if encoded_cmd and "CLIXML" in err:
+            err = ""
+        if rstrip:
+            if out is not None:
+                out = out.rstrip()
+            if err is not None:
+                err = err.rstrip()
 
-            # Encoded commands dump CLIXML data in stderr. It's not an actual error
-            if encoded_cmd and "CLIXML" in err:
-                err = ""
-            if rstrip:
-                if out is not None:
-                    out = out.rstrip()
-                if err is not None:
-                    err = err.rstrip()
-            ret["pid"] = proc.process.pid
-            ret["retcode"] = proc.process.returncode
-            ret["stdout"] = out
-            ret["stderr"] = err
+        ret["pid"] = proc_pid
+        ret["retcode"] = proc_retcode
+        ret["stdout"] = out
+        ret["stderr"] = err
 
         if ret["retcode"] in success_retcodes:
             ret["retcode"] = 0
@@ -893,6 +926,7 @@ def _run(
             + [stde in ret["stderr"] for stde in success_stderr]
         ):
             ret["retcode"] = 0
+
     else:
         formatted_timeout = ""
         if timeout:
