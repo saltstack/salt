@@ -138,7 +138,7 @@ timelib==0.3.0
     # via -r requirements/base.txt
 tornado==6.4.1
     # via -r requirements/base.txt
-urllib3==1.26.20
+urllib3==2.5.0
     # via
     #   -r requirements/base.txt
     #   requests
