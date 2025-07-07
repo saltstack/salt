@@ -42,7 +42,18 @@ SYSTEM_SID = "S-1-5-18"
 LOCAL_SRV_SID = "S-1-5-19"
 NETWORK_SRV_SID = "S-1-5-19"
 
+# STARTUPINFO
+STARTF_USESHOWWINDOW = 0x00000001
+STARTF_USESTDHANDLES = 0x00000100
+
+# dwLogonFlags
 LOGON_WITH_PROFILE = 0x00000001
+
+# Process Creation Flags
+CREATE_NEW_CONSOLE = 0x00000010
+CREATE_NO_WINDOW = 0x08000000
+CREATE_SUSPENDED = 0x00000004
+CREATE_UNICODE_ENVIRONMENT = 0x00000400
 
 WINSTA_ALL = (
     win32con.WINSTA_ACCESSCLIPBOARD
@@ -1094,7 +1105,6 @@ def set_user_perm(obj, perm, sid):
     sd = win32security.GetUserObjectSecurity(obj, info)
     dacl = sd.GetSecurityDescriptorDacl()
     ace_cnt = dacl.GetAceCount()
-    found = False
     for idx in range(0, ace_cnt):
         (aceType, aceFlags), ace_mask, ace_sid = dacl.GetAce(idx)
         ace_exists = (
@@ -1150,7 +1160,7 @@ def CreateProcessWithTokenW(
         startupinfo = STARTUPINFO()
     if currentdirectory is not None:
         currentdirectory = ctypes.create_unicode_buffer(currentdirectory)
-    if environment is not None:
+    if environment is not None and isinstance(environment, dict):
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     ret = advapi32.CreateProcessWithTokenW(
@@ -1322,7 +1332,7 @@ def CreateProcessWithLogonW(
         commandline = ctypes.create_unicode_buffer(commandline)
     if startupinfo is None:
         startupinfo = STARTUPINFO()
-    if environment is not None:
+    if environment is not None and isinstance(environment, dict):
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     advapi32.CreateProcessWithLogonW(
