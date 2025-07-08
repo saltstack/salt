@@ -13,7 +13,7 @@ lxml>=4.6.3
 pyasn1>=0.4.8
 pycparser>=2.21
 pymssql>=2.2.11
-pyopenssl>=23.2.0
+pyopenssl>=25.1.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 requests>=2.25.1
@@ -29,6 +29,8 @@ wheel>=0.38.1
 xmltodict>=0.13.0
 
 importlib-metadata>=8.7.0
-
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
+
+# cryptography is a dependency of openssl
+cryptography>=43.0.1
