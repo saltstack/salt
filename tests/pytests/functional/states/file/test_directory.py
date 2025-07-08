@@ -5,6 +5,7 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.win_dacl
 import salt.utils.win_functions
 
 pytestmark = [
@@ -290,7 +291,6 @@ def test_directory_clean_require_in(modules, tmp_path, state_tree):
     assert wrong_file.exists() is False
 
 
-@pytest.mark.skip_on_windows
 def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
     """
     file.directory test with clean=True and require_in file,
@@ -298,9 +298,22 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
     """
     name = tmp_path / "b-directory"
     name.mkdir()
+    if IS_WINDOWS:
+        principal = salt.utils.win_functions.get_current_user()
+        salt.utils.win_dacl.set_owner(obj_name=str(name), principal=principal)
     dir = name / "one"
     dir.mkdir()
     good_file = dir / "good-file"
+    good_file.write_text("good")
+
+    assert good_file.exists()
+    assert good_file.is_file()
+
+    assert name.exists()
+    assert name.is_dir()
+
+    assert dir.exists()
+    assert dir.is_dir()
 
     sls_contents = """
     some_dir:
@@ -318,10 +331,19 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
 
     with pytest.helpers.temp_file("clean-require-in.sls", sls_contents, state_tree):
         ret = modules.state.sls("clean-require-in")
+        expected_file = (
+            f"File {good_file} exists with proper permissions. No changes made."
+        )
+        if IS_WINDOWS:
+            expected_dir = f"Directory {name} is in the correct state"
+        else:
+            expected_dir = f"The directory {name} is in the correct state"
         for state_run in ret:
+            assert dir.exists()
+            assert good_file.exists()
+            assert good_file.read_text() == "good"
             assert (
-                state_run.comment == "Empty file"
-                or state_run.comment == f"The directory {name} is in the correct state"
+                state_run.comment == expected_file or state_run.comment == expected_dir
             )
 
 
