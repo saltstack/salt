@@ -16,7 +16,6 @@ on:
         required: true
         type: string
         description: The python version to run tests with
-        default: "3.11"
       salt-version:
         type: string
         required: true
@@ -988,7 +987,9 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -1025,11 +1026,6 @@ jobs:
       - name: Install System Dependencies
         run: |
           echo true
-
-      - name: Setup Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
