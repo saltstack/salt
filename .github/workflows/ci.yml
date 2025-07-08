@@ -415,6 +415,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "0.19.4"
       python-version: "3.10.17"
+      ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -430,6 +431,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.19.4"
       python-version: "3.10.17"
+      ci-python-version: "3.11"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -443,7 +445,8 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.11"
+      python-version: "3.10.17"
+      ci-python-version: "3.11"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.17
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -461,7 +464,7 @@ jobs:
       nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
-      python-version: "3.11"
+      ci-python-version: "3.11"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.17
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -477,7 +480,7 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.11"
+      ci-python-version: "3.11"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.17

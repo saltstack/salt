@@ -250,6 +250,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
