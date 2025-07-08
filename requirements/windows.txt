@@ -29,3 +29,6 @@ wheel>=0.38.1
 xmltodict>=0.13.0
 
 importlib-metadata>=3.3.0
+
+jaraco.text>=4.0.0
+jaraco.functools>=4.1.0

@@ -19,4 +19,7 @@ vultr>=1.0.1
 # ImportLib-Metadata
 importlib-metadata>=3.3.0
 zipp>=3.19.1
+
 more-itertools>=9.1.0
+jaraco.text>=4.0.0
+jaraco.functools>=4.1.0
