@@ -289,7 +289,7 @@ ntc-templates==1.4.1
     # via junos-eznc
 oscrypto==1.2.0
     # via certvalidator
-packaging==22.0
+packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt

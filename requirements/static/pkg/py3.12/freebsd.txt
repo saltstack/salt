@@ -72,7 +72,7 @@ more-itertools==5.0.0
     #   jaraco.text
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==22.0
+packaging==24.0
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
