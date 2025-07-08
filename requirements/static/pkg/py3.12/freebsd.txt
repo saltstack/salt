@@ -33,8 +33,10 @@ distro==1.5.0
     #   -r requirements/static/pkg/freebsd.in
 idna==3.7
     # via requests
-immutables==0.15
-    # via contextvars
+immutables==0.21
+    # via
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==6.0.0
     # via -r requirements/static/pkg/freebsd.in
 jaraco.classes==3.2.1
