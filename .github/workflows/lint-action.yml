@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      full:
+        required: true
+        type: string
+        description: When this is true lint will run against all files
 
 
 env:
@@ -49,7 +53,7 @@ jobs:
           nox --forcecolor -e lint-salt -- ${{ join(fromJSON(inputs.changed-files)['salt_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
+        if: inputs.full || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
@@ -89,7 +93,7 @@ jobs:
           nox --forcecolor -e lint-tests -- ${{ join(fromJSON(inputs.changed-files)['tests_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
+        if: inputs.full || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |

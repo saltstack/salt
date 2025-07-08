@@ -35,6 +35,7 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      full: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
 
   <%- endif %>
 
