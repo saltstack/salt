@@ -12,9 +12,9 @@ aiohttp==3.12.13
     #   etcd3-py
 aiosignal==1.2.0
     # via aiohttp
-ansible-core==2.16.3
+ansible-core==2.17.12
     # via ansible
-ansible==9.1.0 ; python_version >= "3.10"
+ansible==10.7.0 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
