@@ -25,6 +25,10 @@ attrs==23.1.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
+    #   jaraco.text
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==4.1.2
@@ -165,15 +169,23 @@ jaraco.collections==3.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
+    #   jaraco.text
+jaraco.functools==4.2.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -225,6 +237,7 @@ more-itertools==10.7.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 moto==5.1.6
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
