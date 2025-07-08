@@ -10,7 +10,7 @@ on:
         description: JSON string containing information about changed files
       full:
         required: true
-        type: string
+        type: boolean
         description: When this is true lint will run against all files
 
 

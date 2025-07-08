@@ -8,13 +8,18 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      full:
+        required: true
+        type: boolean
+        description: Is this a full testrun or not
+
 
 jobs:
   Test-NSIS-Logic:
     name: Logic Tests
     runs-on:
       - windows-latest
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
 
     steps:
 
@@ -42,7 +47,7 @@ jobs:
     name: Stress Tests
     runs-on:
       - windows-latest
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['nsis_tests'] }}
 
     steps:
 
