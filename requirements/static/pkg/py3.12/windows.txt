@@ -37,8 +37,10 @@ gitpython==3.1.41
     # via -r requirements/windows.txt
 idna==3.7
     # via requests
-immutables==0.15
-    # via contextvars
+immutables==0.21
+    # via
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==6.0.0
     # via -r requirements/windows.txt
 ioloop==0.1a0

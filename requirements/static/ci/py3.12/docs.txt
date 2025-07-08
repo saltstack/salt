@@ -57,9 +57,10 @@ idna==3.7
     #   requests
 imagesize==1.4.1
     # via sphinx
-immutables==0.15
+immutables==0.21
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 jaraco.classes==3.2.1
     # via

@@ -212,10 +212,11 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.15
+immutables==0.21
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==6.0.0
     # via
