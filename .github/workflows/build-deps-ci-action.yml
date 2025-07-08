@@ -291,11 +291,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
