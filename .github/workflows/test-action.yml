@@ -12,11 +12,11 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
-      python-version:
-        required: false
+      ci-python-version:
+        required: true
         type: string
         description: The python version to run tests with
-        default: "3.10"
+        default: "3.11"
       salt-version:
         type: string
         required: true
@@ -94,10 +94,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -406,10 +406,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -722,10 +722,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Salt Version
         run: |
@@ -990,7 +990,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: "Throttle Builds"
         shell: bash
@@ -1295,7 +1295,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -1344,10 +1344,10 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Install Nox
         run: |
