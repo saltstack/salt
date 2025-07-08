@@ -35,10 +35,20 @@ attrs==23.1.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   jaraco.text
 backports.entry-points-selectable==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   virtualenv
+backports.tarfile==1.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   jaraco.context
 bcrypt==4.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -238,17 +248,24 @@ jaraco.collections==3.4.0
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   jaraco.text
+jaraco.functools==4.2.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -329,6 +346,7 @@ more-itertools==10.7.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 moto==5.1.6
     # via
     #   -c requirements/static/ci/py3.10/linux.txt

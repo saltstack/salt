@@ -50,12 +50,14 @@ jaraco.context==6.0.1
     # via jaraco.text
 jaraco.functools==4.2.1
     # via
+    #   -r requirements/base.txt
     #   -r requirements/darwin.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==4.0.0
     # via
+    #   -r requirements/base.txt
     #   -r requirements/darwin.txt
     #   jaraco.collections
 jinja2==3.1.6
