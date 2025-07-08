@@ -201,6 +201,10 @@ google-auth==2.27.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   kubernetes
+greenlet==3.2.3
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   sqlalchemy
 idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -684,6 +688,10 @@ smmap==5.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   gitdb
+sqlalchemy==2.0.41
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
 sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -744,6 +752,7 @@ typing-extensions==4.8.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   napalm
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
