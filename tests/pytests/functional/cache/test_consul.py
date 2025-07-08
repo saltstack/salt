@@ -14,7 +14,7 @@ pytest.importorskip(
     "consul",
     reason="Please install python-consul package to use consul data cache driver",
 )
-docker = pytest.importorskip("docker")
+docker = pytest.importorskip("docker", minversion="4.0.0")
 
 log = logging.getLogger(__name__)
 
