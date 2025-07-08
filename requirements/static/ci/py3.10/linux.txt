@@ -4,8 +4,12 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/linux.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.4
-    # via etcd3-py
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.12.13
+    # via
+    #   -r requirements/static/ci/common.in
+    #   etcd3-py
 aiosignal==1.2.0
     # via aiohttp
 ansible-core==2.16.3
@@ -301,6 +305,10 @@ portend==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
+propcache==0.3.2
+    # via
+    #   aiohttp
+    #   yarl
 psutil==5.8.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -566,7 +574,7 @@ yamllint==1.26.3
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.7.2
+yarl==1.20.1
     # via aiohttp
 zc.lockfile==1.4
     # via
