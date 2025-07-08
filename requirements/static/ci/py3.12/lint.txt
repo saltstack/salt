@@ -774,10 +774,11 @@ zc.lockfile==3.0.post1
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   cherrypy
-zipp==3.16.2
+zipp==3.23.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
