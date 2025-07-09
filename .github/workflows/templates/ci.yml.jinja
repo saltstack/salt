@@ -35,7 +35,7 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   <%- endif %>
 
@@ -49,7 +49,7 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   <%- endif %>
 

@@ -243,7 +243,7 @@ jobs:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
   nsis-tests:
     name: NSIS Tests
     uses: ./.github/workflows/nsis-tests.yml
@@ -251,7 +251,7 @@ jobs:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
