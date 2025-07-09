@@ -9,6 +9,11 @@ on:
         type: string
         required: true
         description: Slug of os to test.
+      ci-python-version:
+        type: string
+        required: false
+        default: "3.11"
+        description: Python version the wofklow run should use
 
 env:
   COLUMNS: 190
@@ -241,6 +246,9 @@ jobs:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+      ci-python-version: ${{ inputs.ci-python-version }}
+
   nsis-tests:
     name: NSIS Tests
     uses: ./.github/workflows/nsis-tests.yml
@@ -259,10 +267,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -394,10 +402,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
