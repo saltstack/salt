@@ -23,7 +23,7 @@ jobs:
   Salt:
     name: Lint Salt's Source Code
     runs-on: ubuntu-22.04
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
@@ -63,7 +63,7 @@ jobs:
   Tests:
     name: Lint Salt's Test Suite
     runs-on: ubuntu-22.04
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
