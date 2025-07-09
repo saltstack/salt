@@ -420,7 +420,10 @@ def _run(
 
             # Prepare the command to be executed
             win_shell_lower = win_shell.lower()
-            if any(win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]):
+            if any(
+                win_shell_lower.endswith(word)
+                for word in ["powershell.exe", "pwsh.exe"]
+            ):
                 cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
             elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
                 cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
@@ -2935,9 +2938,9 @@ def script(
 
     if salt.utils.platform.is_windows() and not shell:
         extension_map = {
-            '.bat': 'cmd',
-            '.cmd': 'cmd',
-            '.ps1': 'powershell',
+            ".bat": "cmd",
+            ".cmd": "cmd",
+            ".ps1": "powershell",
         }
         shell = extension_map.get(ext)
 
@@ -2992,15 +2995,10 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if salt.utils.platform.is_windows():
-        cmd_path = path
-    else:
-        cmd_path = _cmd_quote(path)
-
     if isinstance(args, (list, tuple)):
-        new_cmd = [cmd_path, *args] if args else [cmd_path]
+        new_cmd = [path, *args] if args else [path]
     else:
-        new_cmd = [cmd_path, str(args)] if args else [cmd_path]
+        new_cmd = [path, str(args)] if args else [path]
 
     ret = {}
     try:
@@ -3028,7 +3026,7 @@ def script(
             success_stderr=success_stderr,
             **kwargs,
         )
-    except Exception as exc:
+    except (CommandExecutionError, SaltInvocationError) as exc:
         log.error(
             "cmd.script: Unable to run script '%s': %s",
             new_cmd,
@@ -4171,7 +4169,7 @@ def powershell(
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = "try { " + cmd + ' } catch { Write-Error $_ }'
+    cmd = "try { " + cmd + " } catch { Write-Error $_ }"
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.

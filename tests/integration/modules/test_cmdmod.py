@@ -566,36 +566,33 @@ class CMDModuleTest(ModuleCase):
         """
         Test the hide_output argument
         """
-        if salt.utils.platform.is_windows():
-            ls_command = ["dir", "c:\\"]
-            shell = SHELL
-        else:
-            ls_command = ["ls", "/"]
-            shell = None
+        ls_command = (
+            ["ls", "/"] if not salt.utils.platform.is_windows() else ["dir", "c:\\"]
+        )
 
         error_command = ["thiscommanddoesnotexist"]
 
         # cmd.run
-        out = self.run_function("cmd.run", ls_command, shell=shell, hide_output=True)
+        out = self.run_function("cmd.run", ls_command, shell=SHELL, hide_output=True)
         self.assertEqual(out, "")
 
         # cmd.shell
-        out = self.run_function("cmd.shell", ls_command, shell=shell, hide_output=True)
+        out = self.run_function("cmd.shell", ls_command, shell=SHELL, hide_output=True)
         self.assertEqual(out, "")
 
         # cmd.run_stdout
         out = self.run_function(
-            "cmd.run_stdout", ls_command, shell=shell, hide_output=True
+            "cmd.run_stdout", ls_command, shell=SHELL, hide_output=True
         )
         self.assertEqual(out, "")
 
         # cmd.run_stderr
-        out = self.run_function("cmd.shell", ls_command, shell=shell, hide_output=True)
+        out = self.run_function("cmd.shell", ls_command, shell=SHELL, hide_output=True)
         self.assertEqual(out, "")
 
         # cmd.run_all (command should have produced stdout)
         out = self.run_function(
-            "cmd.run_all", ls_command, shell=shell, hide_output=True
+            "cmd.run_all", ls_command, shell=SHELL, hide_output=True
         )
         self.assertEqual(out["stdout"], "")
         self.assertEqual(out["stderr"], "")
@@ -604,7 +601,8 @@ class CMDModuleTest(ModuleCase):
         out = self.run_function(
             "cmd.run_all", error_command, shell=SHELL, hide_output=True
         )
-        self.assertIn("Unable to run command", out)
+        self.assertEqual(out["stdout"], "")
+        self.assertEqual(out["stderr"], "")
 
     @pytest.mark.slow_test
     def test_cmd_run_whoami(self):

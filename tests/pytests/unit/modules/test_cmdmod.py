@@ -1066,6 +1066,7 @@ def test__run_no_powershell():
     "cmd, parsed",
     [
         ("Write-Host foo", "Write-Host foo"),
+        ("& Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
         ("try {this} catch {that}", "try {this} catch {that}"),
         ("[bool]@{value = 0}", "[bool]@{value = 0}"),
@@ -1118,7 +1119,7 @@ def test_prep_powershell_cmd(cmd, parsed):
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        f"{parsed}",
+        parsed,
     ]
     assert ret == expected
 
@@ -1140,7 +1141,7 @@ def test_prep_powershell_cmd_encoded():
         "-ExecutionPolicy",
         "Bypass",
         "-EncodedCommand",
-        f"{e_cmd}",
+        e_cmd,
     ]
     assert ret == expected
 

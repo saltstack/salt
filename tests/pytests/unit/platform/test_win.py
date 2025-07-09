@@ -18,10 +18,10 @@ pytestmark = [
         ("cmd /c hostname", 'cmd.exe /c "cmd /c hostname"'),
         ("echo foo", 'cmd.exe /c "echo foo"'),
         ('cmd /c "echo foo"', 'cmd.exe /c "cmd /c "echo foo""'),
-        ("icacls 'C:\\Program Files'", 'cmd.exe /c "icacls \'C:\\Program Files\'"'),
+        ("icacls 'C:\\Program Files'", "cmd.exe /c \"icacls 'C:\\Program Files'\""),
         (
             "icacls 'C:\\Program Files' && echo 1",
-            'cmd.exe /c "icacls \'C:\\Program Files\' && echo 1"',
+            "cmd.exe /c \"icacls 'C:\\Program Files' && echo 1\"",
         ),
         (
             ["secedit", "/export", "/cfg", "C:\\A Path\\with\\a\\space"],
@@ -32,7 +32,7 @@ pytestmark = [
             'cmd.exe /c ""C:\\a space\\a space.bat" "foo foo" "bar bar""',
         ),
         (
-            ''' echo "&<>[]|{}^=;!'+,`~ " ''',
+            """ echo "&<>[]|{}^=;!'+,`~ " """,
             '''cmd.exe /c " echo "&<>[]|{}^=;!'+,`~ " "''',
         ),
     ],
@@ -41,6 +41,6 @@ def test_prepend_cmd(command, expected):
     """
     Test that the command is prepended with "cmd /c" and quoted
     """
-    win_shell = 'cmd.exe'
+    win_shell = "cmd.exe"
     result = win.prepend_cmd(win_shell, command)
     assert result == expected
