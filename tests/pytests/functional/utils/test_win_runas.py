@@ -50,11 +50,11 @@ def test_compound_runas(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas(
-        cmd=salt.platform.win.prepend_cmd('cmd', cmd),
+        cmd=salt.platform.win.prepend_cmd("cmd", cmd),
         username=user.username,
         password=user.password,
     )
-    assert expected in result["stdout"].decode()
+    assert expected in result["stdout"]
 
 
 @pytest.mark.parametrize(
@@ -69,36 +69,36 @@ def test_compound_runas_unpriv(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas_unpriv(
-        cmd=salt.platform.win.prepend_cmd('cmd', cmd),
+        cmd=salt.platform.win.prepend_cmd("cmd", cmd),
         username=user.username,
         password=user.password,
     )
-    assert expected in result["stdout"].decode()
+    assert expected in result["stdout"]
 
 
 def test_runas_str_user(user):
     result = win_runas.runas(
         cmd="whoami", username=user.username, password=user.password
     )
-    assert user.username in result["stdout"].decode()
+    assert user.username in result["stdout"]
 
 
 def test_runas_int_user(int_user):
     result = win_runas.runas(
         cmd="whoami", username=int(int_user.username), password=int_user.password
     )
-    assert str(int_user.username) in result["stdout"].decode()
+    assert str(int_user.username) in result["stdout"]
 
 
 def test_runas_unpriv_str_user(user):
     result = win_runas.runas_unpriv(
         cmd="whoami", username=user.username, password=user.password
     )
-    assert user.username in result["stdout"].decode()
+    assert user.username in result["stdout"]
 
 
 def test_runas_unpriv_int_user(int_user):
     result = win_runas.runas_unpriv(
         cmd="whoami", username=int(int_user.username), password=int_user.password
     )
-    assert str(int_user.username) in result["stdout"].decode()
+    assert str(int_user.username) in result["stdout"]
