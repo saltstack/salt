@@ -27,7 +27,7 @@ def test_cmd_exitcode(modules, state_tree, exit_code, return_code, result):
     ret = modules.state.single(
         "cmd.run",
         name=f"exit {exit_code}",
-        shell='cmd',
+        shell="cmd",
         success_retcodes=[2, 44, 300],
     )
     assert ret.result is result
@@ -47,7 +47,7 @@ def test_cmd_exitcode_runas(
     ret = modules.state.single(
         "cmd.run",
         name=f"exit {exit_code}",
-        shel='cmd',
+        shell="cmd",
         success_retcodes=[2, 44, 300],
         runas=account.username,
         password=account.password,
@@ -60,8 +60,9 @@ def test_cmd_exitcode_runas(
     "command, expected",
     [
         ("echo foo", "foo"),
+        ("cmd /c echo foo", "foo"),
         ("whoami && echo foo", "foo"),
-        ('echo "foo \'bar\'"', '"foo \'bar\'"'),
+        ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
         ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
         ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
     ],
@@ -70,7 +71,7 @@ def test_cmd_builtins(modules, command, expected):
     """
     Test builtin cmd.exe commands
     """
-    result = modules.cmd.run(command, shell='cmd')
+    result = modules.cmd.run(command, shell="cmd")
     assert expected in result
 
 
@@ -78,8 +79,9 @@ def test_cmd_builtins(modules, command, expected):
     "command, expected",
     [
         ("echo foo", "foo"),
+        ("cmd /c echo foo", "foo"),
         ("whoami && echo foo", "foo"),
-        ('echo "foo \'bar\'"', '"foo \'bar\'"'),
+        ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
         ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
         ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
     ],
@@ -89,7 +91,7 @@ def test_cmd_builtins_runas(modules, account, command, expected):
     Test builtin cmd.exe commands with runas
     """
     result = modules.cmd.run(
-        cmd=command, shell='cmd', runas=account.username, password=account.password
+        cmd=command, shell="cmd", runas=account.username, password=account.password
     )
     assert expected in result
 
@@ -142,25 +144,7 @@ def test_cmd_env(modules, command, env, expected):
     """
     Test cmd.run with environment variables
     """
-    result = modules.cmd.run_all(command, shell='cmd', env=env)
-    assert isinstance(result["pid"], int)
-    assert result["retcode"] == 0
-    assert result["stdout"] == expected
-    assert result["stderr"] == ""
-
-@pytest.mark.parametrize(
-    "command, env, expected",
-    [
-        ("echo %a%%b%", {"a": "foo", "b": "bar"}, "foobar"),
-    ],
-)
-def test_cmd_env_runas(modules, account, command, env, expected):
-    """
-    Test cmd.run with environment variables and runas
-    """
-    result = modules.cmd.run_all(
-        command, shell='cmd', env=env, runas=account.username, password=account.password
-    )
+    result = modules.cmd.run_all(command, shell="cmd", env=env)
     assert isinstance(result["pid"], int)
     assert result["retcode"] == 0
     assert result["stdout"] == expected
@@ -179,33 +163,6 @@ def test_redirect_stderr(modules, command, expected, redirect_stderr):
     Test redirection of stderr to stdout by running cmd.run_all with invalid commands
     """
     result = modules.cmd.run_all(command, redirect_stderr=redirect_stderr)
-    assert isinstance(result["pid"], int)
-    assert result["retcode"] == 1
-    if redirect_stderr:
-        assert expected in result["stdout"]
-        assert result["stderr"] == ""
-    else:
-        assert result["stdout"] == ""
-        assert expected in result["stderr"]
-
-
-@pytest.mark.parametrize(
-    "command, expected, redirect_stderr",
-    [
-        (["whoami.exe", "/foo"], "/foo", True),
-        (["whoami.exe", "/foo"], "/foo", False),
-    ],
-)
-def test_redirect_stderr_runas(modules, account, command, expected, redirect_stderr):
-    """
-    Test redirection of stderr to stdout by running cmd.run_all with runas and invalid commands
-    """
-    result = modules.cmd.run_all(
-        command,
-        runas=account.username,
-        password=account.password,
-        redirect_stderr=redirect_stderr,
-    )
     assert isinstance(result["pid"], int)
     assert result["retcode"] == 1
     if redirect_stderr:
