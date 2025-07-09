@@ -12,6 +12,10 @@ on:
         required: true
         type: boolean
         description: Is this a full testrun or not
+      ci-python-version:
+        required: true
+        type: string
+        description: The version of python to use for the workflow run
 
 
 jobs:
@@ -26,10 +30,10 @@ jobs:
     - name: Checkout Salt
       uses: actions/checkout@v4
 
-    - name: Set Up Python 3.10
+    - name: Set Up Python ${{ inputs.ci-python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "${{ inputs.ci-python-version }}"
 
     - name: Install NSIS
       run: .\pkg\windows\install_nsis.cmd -CICD
@@ -54,10 +58,10 @@ jobs:
       - name: Checkout Salt
         uses: actions/checkout@v4
 
-      - name: Set Up Python 3.10
+      - name: Set Up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Install NSIS
         run: .\pkg\windows\install_nsis.cmd -CICD

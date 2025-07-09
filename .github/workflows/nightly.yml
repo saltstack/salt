@@ -297,6 +297,7 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+      ci-python-version: "3.11"
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
