@@ -1979,13 +1979,13 @@ def upgrade(
     return ret
 
 
-def _uninstall(name=None, pkgs=None, root=None):
+def _uninstall(name=None, pkgs=None, version=None, root=None):
     """
     Remove and purge do identical things but with different Zypper commands,
     this function performs the common logic.
     """
     try:
-        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, version=version)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2063,7 +2063,7 @@ def normalize_name(name):
 
 
 def remove(
-    name=None, pkgs=None, root=None, **kwargs
+    name=None, pkgs=None, version=None, root=None, **kwargs
 ):  # pylint: disable=unused-argument
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -2113,10 +2113,10 @@ def remove(
 
     Can now remove also PTF packages which require a different handling in the backend.
     """
-    return _uninstall(name=name, pkgs=pkgs, root=root)
+    return _uninstall(name=name, pkgs=pkgs, version=version, root=root)
 
 
-def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-argument
+def purge(name=None, pkgs=None, version=None, root=None, **kwargs):  # pylint: disable=unused-argument
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -2161,7 +2161,7 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     """
-    return _uninstall(name=name, pkgs=pkgs, root=root)
+    return _uninstall(name=name, pkgs=pkgs, version=version, root=root)
 
 
 def list_holds(pattern=None, full=True, root=None, **kwargs):
