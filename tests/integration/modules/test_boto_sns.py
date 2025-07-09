@@ -1,6 +1,7 @@
 """
 Validate the boto_sns module
 """
+
 import re
 
 import pytest
@@ -99,7 +100,7 @@ class BotoSNSTest(ModuleCase):
         )
 
     def _get_arn(self, name):
-        return "arn:aws:sns:us-east-1:{}:{}".format(self.account_id, name)
+        return f"arn:aws:sns:us-east-1:{self.account_id}:{name}"
 
     @property
     def account_id(self):

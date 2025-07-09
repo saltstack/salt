@@ -2,7 +2,6 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-
 import contextlib
 import logging
 import sys
@@ -51,7 +50,7 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop(make_current=False)
         if args is None:
             args = []
         if kwargs is None:
@@ -64,7 +63,8 @@ class SyncWrapper:
         self.cls = cls
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
-        self.obj = cls(*args, **kwargs)
+        with current_ioloop(self.io_loop):
+            self.obj = cls(*args, **kwargs)
         self._async_methods = list(
             set(async_methods + getattr(self.obj, "async_methods", []))
         )
@@ -82,7 +82,7 @@ class SyncWrapper:
             self._async_methods += self.obj._coroutines
 
     def __repr__(self):
-        return "<SyncWrapper(cls={})".format(self.cls)
+        return f"<SyncWrapper(cls={self.cls})"
 
     def close(self):
         for method in self._close_methods:

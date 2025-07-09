@@ -41,9 +41,9 @@ class SPMTest(ShellCase, SPMCase):
 
         spm_file = os.path.join(config["spm_build_dir"], "apache-201506-2.spm")
 
-        build = self.run_spm("build {} -c {}".format(self.formula_dir, self._tmp_spm))
+        build = self.run_spm(f"build {self.formula_dir} -c {self._tmp_spm}")
 
-        install = self.run_spm("install {} -c {} -y".format(spm_file, self._tmp_spm))
+        install = self.run_spm(f"install {spm_file} -c {self._tmp_spm} -y")
 
         self.assertTrue(
             os.path.exists(os.path.join(config["formula_path"], "apache", "apache.sls"))
@@ -59,15 +59,15 @@ class SPMTest(ShellCase, SPMCase):
 
         spm_file = os.path.join(config["spm_build_dir"], "apache-201506-2.spm")
 
-        build = self.run_spm("build {} -c {}".format(self.formula_dir, self._tmp_spm))
+        build = self.run_spm(f"build {self.formula_dir} -c {self._tmp_spm}")
 
-        install = self.run_spm("install {} -c {} -y".format(spm_file, self._tmp_spm))
+        install = self.run_spm(f"install {spm_file} -c {self._tmp_spm} -y")
 
         self.assertTrue(
             os.path.exists(os.path.join(config["formula_path"], "apache", "apache.sls"))
         )
 
         # check if it forces the install after its already been installed it
-        install = self.run_spm("install {} -c {} -y -f".format(spm_file, self._tmp_spm))
+        install = self.run_spm(f"install {spm_file} -c {self._tmp_spm} -y -f")
 
         self.assertEqual(["... installing apache"], install)

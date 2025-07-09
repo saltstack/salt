@@ -68,12 +68,12 @@ def _do(name, gnome_kwargs, preferences):
         gnome_kwargs.update({"key": key, "value": value})
 
         if _check_current_value(gnome_kwargs, value):
-            messages.append("{} is already set to {}".format(key, value))
+            messages.append(f"{key} is already set to {value}")
         else:
             result = __salt__["gnome.set"](**gnome_kwargs)
             if result["retcode"] == 0:
-                messages.append("Setting {} to {}".format(key, value))
-                ret["changes"][key] = "{}:{}".format(key, value)
+                messages.append(f"Setting {key} to {value}")
+                ret["changes"][key] = f"{key}:{value}"
                 ret["result"] = True
             else:
                 messages.append(result["stdout"])
@@ -108,7 +108,7 @@ def wm_preferences(
     visual_bell=None,
     visual_bell_type=None,
     workspace_names=None,
-    **kwargs
+    **kwargs,
 ):
     """
     wm_preferences: sets values in the org.gnome.desktop.wm.preferences schema
@@ -160,7 +160,7 @@ def desktop_lockdown(
     disable_save_to_disk=None,
     disable_user_switching=None,
     user_administration_disabled=None,
-    **kwargs
+    **kwargs,
 ):
     """
     desktop_lockdown: sets values in the org.gnome.desktop.lockdown schema
@@ -227,7 +227,7 @@ def desktop_interface(
     toolbar_icons_size=None,
     toolbar_style=None,
     toolkit_accessibility=None,
-    **kwargs
+    **kwargs,
 ):
     """
     desktop_interface: sets values in the org.gnome.desktop.interface schema

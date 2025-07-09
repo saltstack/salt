@@ -113,9 +113,9 @@ def _rand_key_name(length):
 
 
 def _check_skip(grains):
-    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
-        return True
-    if grains["os"] == "AlmaLinux" and grains["osmajorrelease"] == 9:
+    if (grains["os"] in ("CentOS Stream", "AlmaLinux", "Rocky")) and grains[
+        "osmajorrelease"
+    ] == 9:
         return True
     return False
 
@@ -686,7 +686,7 @@ class GitPythonMixin:
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
@@ -704,7 +704,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
@@ -714,7 +714,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):

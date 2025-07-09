@@ -2,7 +2,6 @@
     Test for the salt.modules.tuned
 """
 
-
 import pytest
 
 from salt.modules import tuned

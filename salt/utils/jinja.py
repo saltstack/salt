@@ -239,9 +239,7 @@ class PrintableDict(OrderedDict):
         for key, value in self.items():
             if isinstance(value, str):
                 # keeps quotes around strings
-                # pylint: disable=repr-flag-used-in-string
                 output.append(f"{key!r}: {value!r}")
-                # pylint: enable=repr-flag-used-in-string
             else:
                 # let default output
                 output.append(f"{key!r}: {value!s}")
@@ -252,9 +250,7 @@ class PrintableDict(OrderedDict):
         for key, value in self.items():
             # Raw string formatter required here because this is a repr
             # function.
-            # pylint: disable=repr-flag-used-in-string
             output.append(f"{key!r}: {value!r}")
-            # pylint: enable=repr-flag-used-in-string
         return "{" + ", ".join(output) + "}"
 
 

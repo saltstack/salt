@@ -2,7 +2,6 @@
 Test case for the vault execution module
 """
 
-
 import pytest
 
 import salt.modules.vault as vault

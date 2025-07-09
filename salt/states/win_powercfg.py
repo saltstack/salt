@@ -14,7 +14,6 @@ powercfg.
             - power: dc
 """
 
-
 import logging
 
 import salt.utils.data
@@ -89,7 +88,7 @@ def set_timeout(name, value, power="ac", scheme=None):
     name = name.lower()
     if name not in ["monitor", "disk", "standby", "hibernate"]:
         ret["result"] = False
-        ret["comment"] = '"{}" is not a valid setting'.format(name)
+        ret["comment"] = f'"{name}" is not a valid setting'
         log.debug(ret["comment"])
         return ret
 
@@ -97,12 +96,12 @@ def set_timeout(name, value, power="ac", scheme=None):
     power = power.lower()
     if power not in ["ac", "dc"]:
         ret["result"] = False
-        ret["comment"] = '"{}" is not a power type'.format(power)
+        ret["comment"] = f'"{power}" is not a power type'
         log.debug(ret["comment"])
         return ret
 
     # Get current settings
-    old = __salt__["powercfg.get_{}_timeout".format(name)](scheme=scheme)
+    old = __salt__[f"powercfg.get_{name}_timeout"](scheme=scheme)
 
     # Check current settings
     if old[power] == value:
@@ -121,12 +120,10 @@ def set_timeout(name, value, power="ac", scheme=None):
         return ret
 
     # Set the timeout value
-    __salt__["powercfg.set_{}_timeout".format(name)](
-        timeout=value, power=power, scheme=scheme
-    )
+    __salt__[f"powercfg.set_{name}_timeout"](timeout=value, power=power, scheme=scheme)
 
     # Get the setting after the change
-    new = __salt__["powercfg.get_{}_timeout".format(name)](scheme=scheme)
+    new = __salt__[f"powercfg.get_{name}_timeout"](scheme=scheme)
 
     changes = salt.utils.data.compare_dicts(old, new)
 

@@ -198,10 +198,10 @@ def _walk(path, value, metrics, timestamp, skip):
     )
     if isinstance(value, Mapping):
         for key, val in value.items():
-            _walk("{}.{}".format(path, key), val, metrics, timestamp, skip)
+            _walk(f"{path}.{key}", val, metrics, timestamp, skip)
     elif isinstance(value, list):
         for item in value:
-            _walk("{}.{}".format(path, item), item, metrics, timestamp, skip)
+            _walk(f"{path}.{item}", item, metrics, timestamp, skip)
 
     else:
         try:

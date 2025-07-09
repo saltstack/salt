@@ -44,7 +44,7 @@ def present(name, profile="splunk", **kwargs):
     target = __salt__["splunk_search.get"](name, profile=profile)
     if target:
         if __opts__["test"]:
-            ret["comment"] = "Would update {}".format(name)
+            ret["comment"] = f"Would update {name}"
             return ret
         # found a search... updating
         result = __salt__["splunk_search.update"](name, profile=profile, **kwargs)
@@ -64,7 +64,7 @@ def present(name, profile="splunk", **kwargs):
             ret["changes"]["new"] = newvalues
     else:
         if __opts__["test"]:
-            ret["comment"] = "Would create {}".format(name)
+            ret["comment"] = f"Would create {name}"
             return ret
         # creating a new search
         result = __salt__["splunk_search.create"](name, profile=profile, **kwargs)
@@ -74,7 +74,7 @@ def present(name, profile="splunk", **kwargs):
             ret["changes"]["new"] = kwargs
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {}".format(name)
+            ret["comment"] = f"Failed to create {name}"
     return ret
 
 
@@ -96,7 +96,7 @@ def absent(name, profile="splunk"):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "{} is absent.".format(name),
+        "comment": f"{name} is absent.",
     }
 
     target = __salt__["splunk_search.get"](name, profile=profile)
@@ -104,14 +104,14 @@ def absent(name, profile="splunk"):
         if __opts__["test"]:
             ret = {}
             ret["name"] = name
-            ret["comment"] = "Would delete {}".format(name)
+            ret["comment"] = f"Would delete {name}"
             ret["result"] = None
             return ret
 
         result = __salt__["splunk_search.delete"](name, profile=profile)
         if result:
-            ret["comment"] = "{} was deleted".format(name)
+            ret["comment"] = f"{name} was deleted"
         else:
-            ret["comment"] = "Failed to delete {}".format(name)
+            ret["comment"] = f"Failed to delete {name}"
             ret["result"] = False
     return ret

@@ -47,7 +47,6 @@ Connection module for Amazon EFS
 :depends: boto3
 """
 
-
 import logging
 
 import salt.utils.versions

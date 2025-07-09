@@ -25,7 +25,7 @@ Module Documentation
 """
 
 import logging
-import xmlrpc.client
+import xmlrpc.client  # nosec
 
 __opts__ = {
     "cobbler.url": "http://localhost/cobbler_api",

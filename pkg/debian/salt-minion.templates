@@ -1,0 +1,5 @@
+Template: salt-minion/user
+Type: string
+Default: root
+Description: User for salt-minion
+  User to run the salt-minion process as

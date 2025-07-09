@@ -17,8 +17,8 @@ def test_utils_jinja_cache_removed_file_from_root(temp_salt_minion, tmp_path):
     cache_root = tmp_path / "cache"
     cache_root.mkdir(parents=True, exist_ok=True)
     filename = "jinja_cache"
-    sls_file = file_root / "{}.sls".format(filename)
-    jinja_file = file_root / "{}.jinja".format(filename)
+    sls_file = file_root / f"{filename}.sls"
+    jinja_file = file_root / f"{filename}.jinja"
     sls_file.write_text("{% include '" + filename + ".jinja' %}")
     jinja_file.write_text("{% set this = 'that' %}")
 

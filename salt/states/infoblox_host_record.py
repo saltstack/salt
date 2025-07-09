@@ -53,19 +53,19 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
         if obj:
             # warn user that the host name was updated and does not match
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "please update the name: {} to equal the updated data name {}".format(
-                name, data["name"]
+            ret["comment"] = (
+                "please update the name: {} to equal the updated data name {}".format(
+                    name, data["name"]
+                )
             )
             return ret
 
     if obj:
         if not ensure_data:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "infoblox record already created (supplied fields not ensured to match)"
+            ret["comment"] = (
+                "infoblox record already created (supplied fields not ensured to match)"
+            )
             return ret
 
         obj = __salt__["infoblox.get_host_advanced"](name=name, **api_opts)
@@ -131,7 +131,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create infoblox record {}".format(name)
+        ret["comment"] = f"would attempt to create infoblox record {name}"
         return ret
 
     new_obj_ref = __salt__["infoblox.create_host"](data=data, **api_opts)

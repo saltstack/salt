@@ -299,7 +299,7 @@ def shutdown(opts):
             __context__["napalm_device"]["network_device"].get(
                 "HOSTNAME", "[unknown hostname]"
             ),
-            ":{}".format(port) if port else "",
+            f":{port}" if port else "",
             error,
         )
 

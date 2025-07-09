@@ -201,7 +201,7 @@ def ec2_credentials_create(
     tenant_id=None,
     tenant=None,
     profile=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Create EC2-compatible credentials for user per tenant
@@ -262,7 +262,7 @@ def ec2_credentials_delete(
     if not user_id:
         return {"Error": "Could not resolve User ID"}
     kstone.ec2.delete(user_id, access_key)
-    return 'ec2 key "{}" deleted under user id "{}"'.format(access_key, user_id)
+    return f'ec2 key "{access_key}" deleted under user id "{user_id}"'
 
 
 def ec2_credentials_get(
@@ -355,11 +355,13 @@ def endpoint_get(service, region=None, profile=None, interface=None, **connectio
     e = [
         _f
         for _f in [
-            e
-            if e["service_id"] == service_id
-            and (e["region"] == region if region else True)
-            and (e["interface"] == interface if interface else True)
-            else None
+            (
+                e
+                if e["service_id"] == service_id
+                and (e["region"] == region if region else True)
+                and (e["interface"] == interface if interface else True)
+                else None
+            )
             for e in endpoints.values()
         ]
         if _f
@@ -408,7 +410,7 @@ def endpoint_create(
     profile=None,
     url=None,
     interface=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Create an endpoint for an Openstack service
@@ -481,7 +483,7 @@ def role_create(name, profile=None, **connection_args):
 
     kstone = auth(profile, **connection_args)
     if "Error" not in role_get(name=name, profile=profile, **connection_args):
-        return {"Error": 'Role "{}" already exists'.format(name)}
+        return {"Error": f'Role "{name}" already exists'}
     kstone.roles.create(name)
     return role_get(name=name, profile=profile, **connection_args)
 
@@ -511,9 +513,9 @@ def role_delete(role_id=None, name=None, profile=None, **connection_args):
     role = kstone.roles.get(role_id)
     kstone.roles.delete(role)
 
-    ret = "Role ID {} deleted".format(role_id)
+    ret = f"Role ID {role_id} deleted"
     if name:
-        ret += " ({})".format(name)
+        ret += f" ({name})"
     return ret
 
 
@@ -601,7 +603,7 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
             "id"
         ]
     kstone.services.delete(service_id)
-    return 'Keystone service ID "{}" deleted'.format(service_id)
+    return f'Keystone service ID "{service_id}" deleted'
 
 
 def service_get(service_id=None, name=None, profile=None, **connection_args):
@@ -734,10 +736,10 @@ def tenant_delete(tenant_id=None, name=None, profile=None, **connection_args):
     if not tenant_id:
         return {"Error": "Unable to resolve tenant id"}
     getattr(kstone, _TENANTS, None).delete(tenant_id)
-    ret = "Tenant ID {} deleted".format(tenant_id)
+    ret = f"Tenant ID {tenant_id} deleted"
     if name:
 
-        ret += " ({})".format(name)
+        ret += f" ({name})"
     return ret
 
 
@@ -896,7 +898,7 @@ def tenant_update(
     description=None,
     enabled=None,
     profile=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Update a tenant's information (keystone tenant-update)
@@ -945,7 +947,7 @@ def project_update(
     description=None,
     enabled=None,
     profile=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Update a tenant's information (keystone project-update)
@@ -988,7 +990,7 @@ def project_update(
             description=description,
             enabled=enabled,
             profile=profile,
-            **connection_args
+            **connection_args,
         )
     else:
         return False
@@ -1063,7 +1065,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
     try:
         user = kstone.users.get(user_id)
     except keystoneclient.exceptions.NotFound:
-        msg = "Could not find user '{}'".format(user_id)
+        msg = f"Could not find user '{user_id}'"
         log.error(msg)
         return {"Error": msg}
 
@@ -1089,7 +1091,7 @@ def user_create(
     profile=None,
     project_id=None,
     description=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Create a user (keystone user-create)
@@ -1146,10 +1148,10 @@ def user_delete(user_id=None, name=None, profile=None, **connection_args):
     if not user_id:
         return {"Error": "Unable to resolve user id"}
     kstone.users.delete(user_id)
-    ret = "User ID {} deleted".format(user_id)
+    ret = f"User ID {user_id} deleted"
     if name:
 
-        ret += " ({})".format(name)
+        ret += f" ({name})"
     return ret
 
 
@@ -1162,7 +1164,7 @@ def user_update(
     profile=None,
     project=None,
     description=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Update a user's information (keystone user-update)
@@ -1228,7 +1230,7 @@ def user_update(
             if tenant_id:
                 kstone.users.update_tenant(user_id, tenant_id)
 
-    ret = "Info updated for user ID {}".format(user_id)
+    ret = f"Info updated for user ID {user_id}"
     return ret
 
 
@@ -1306,9 +1308,9 @@ def user_password_update(
         kstone.users.update(user=user_id, password=password)
     else:
         kstone.users.update_password(user=user_id, password=password)
-    ret = "Password updated for user ID {}".format(user_id)
+    ret = f"Password updated for user ID {user_id}"
     if name:
-        ret += " ({})".format(name)
+        ret += f" ({name})"
     return ret
 
 
@@ -1322,7 +1324,7 @@ def user_role_add(
     profile=None,
     project_id=None,
     project_name=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Add role for user in tenant (keystone user-role-add)
@@ -1393,7 +1395,7 @@ def user_role_remove(
     profile=None,
     project_id=None,
     project_name=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Remove role for user in tenant (keystone user-role-remove)
@@ -1460,7 +1462,7 @@ def user_role_list(
     profile=None,
     project_id=None,
     project_name=None,
-    **connection_args
+    **connection_args,
 ):
     """
     Return a list of available user_roles (keystone user-roles-list)

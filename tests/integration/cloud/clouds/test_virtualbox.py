@@ -63,9 +63,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         @return:
         @rtype: dict
         """
-        output = self.run_cloud(
-            "-d {} --assume-yes --log-level=debug".format(machine_name)
-        )
+        output = self.run_cloud(f"-d {machine_name} --assume-yes --log-level=debug")
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
     def setUp(self):
@@ -130,7 +128,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         Simply create a machine and make sure it was created
         """
         machines = self.run_cloud(
-            "-p {} {} --log-level=debug".format(PROFILE_NAME, INSTANCE_NAME)
+            f"-p {PROFILE_NAME} {INSTANCE_NAME} --log-level=debug"
         )
         self.assertIn(INSTANCE_NAME, machines.keys())
 
@@ -231,7 +229,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
             except Exception:  # pylint: disable=broad-except
-                self.fail("{} is not a valid IP address".format(ip_str))
+                self.fail(f"{ip_str} is not a valid IP address")
 
     def setUp(self):
         """
@@ -295,7 +293,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
     def test_deploy(self):
         machines = self.run_cloud(
-            "-p {} {} --log-level=debug".format(DEPLOY_PROFILE_NAME, INSTANCE_NAME)
+            f"-p {DEPLOY_PROFILE_NAME} {INSTANCE_NAME} --log-level=debug"
         )
         self.assertIn(INSTANCE_NAME, machines.keys())
         machine = machines[INSTANCE_NAME]

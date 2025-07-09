@@ -77,10 +77,8 @@ function Write-Result($result, $ForegroundColor="Green") {
 
 $yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
 $dict_versions = @{}
-$yaml | ForEach-Object {
-    $val1, $val2 =  $_ -split ": "
-    $dict_versions[$val1] = $val2.Trim("""")
-}
+$dict_versions["python_version"]=($yaml | Select-String -Pattern "python_version: (.*)").matches.groups[1].Value.Trim("""")
+$dict_versions["relenv_version"]=($yaml | Select-String -Pattern "relenv_version: (.*)").matches.groups[1].Value.Trim("""")
 
 if ( [String]::IsNullOrEmpty($Version) ) {
     $Version = $dict_versions["python_version"]
@@ -178,13 +176,10 @@ $BUILD_DIR    = "$SCRIPT_DIR\buildenv"
 $RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
 $SYS_PY_BIN   = (python -c "import sys; print(sys.executable)")
 $BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
-$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
 
 if ( $Architecture -eq "x64" ) {
-    $SALT_DEP_URL = "$SALT_DEP_URL/64"
     $ARCH         = "amd64"
 } else {
-    $SALT_DEP_URL = "$SALT_DEP_URL/32"
     $ARCH         = "x86"
 }
 
@@ -251,7 +246,7 @@ if ( $env:VIRTUAL_ENV ) {
 #-------------------------------------------------------------------------------
 # Installing Relenv
 #-------------------------------------------------------------------------------
-Write-Host "Installing Relenv: " -NoNewLine
+Write-Host "Installing Relenv ($RelenvVersion): " -NoNewLine
 pip install relenv==$RelenvVersion --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {

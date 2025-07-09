@@ -111,7 +111,7 @@ def test_save():
 
     # Test that beacons contents are written to config file.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
@@ -131,7 +131,7 @@ def test_save():
 
     # Test that when beacons is empty then an empty config file is written.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:

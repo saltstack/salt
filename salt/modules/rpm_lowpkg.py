@@ -22,20 +22,6 @@ try:
 except ImportError:
     HAS_RPM = False
 
-try:
-    import rpmUtils.miscutils
-
-    HAS_RPMUTILS = True
-except ImportError:
-    HAS_RPMUTILS = False
-
-try:
-    import rpm_vercmp
-
-    HAS_PY_RPM = True
-except ImportError:
-    HAS_PY_RPM = False
-
 
 log = logging.getLogger(__name__)
 
@@ -110,14 +96,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
+                f"Unable to retrieve {path} from saltenv '{saltenv}'"
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{} does not exist on minion".format(path))
+            raise CommandExecutionError(f"{path} does not exist on minion")
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{} does not exist on minion".format(path))
+            raise SaltInvocationError(f"{path} does not exist on minion")
 
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
     # with 'none'
@@ -495,7 +481,7 @@ def diff(package_path, path):
     )
     res = __salt__["cmd.shell"](cmd.format(package_path, path), output_loglevel="trace")
     if res and res.startswith("Binary file"):
-        return "File '{}' is binary and its content has been modified.".format(path)
+        return f"File '{path}' is binary and its content has been modified."
 
     return res
 
@@ -710,7 +696,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     """
-    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
+    def normalize(x):
+        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 
@@ -727,18 +716,11 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
-        elif HAS_PY_RPM:
-            cmp_func = rpm_vercmp.vercmp
         else:
             log.warning(
                 "Please install a package that provides rpm.labelCompare for "
                 "more accurate version comparisons."
             )
-        if cmp_func is None and HAS_RPMUTILS:
-            try:
-                cmp_func = rpmUtils.miscutils.compareEVR
-            except AttributeError:
-                log.debug("rpmUtils.miscutils.compareEVR is not available")
 
         # If one EVR is missing a release but not the other and they
         # otherwise would be equal, ignore the release. This can happen if
@@ -753,6 +735,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
         if cmp_func is None:
             ver1 = f"{ver1_e}:{ver1_v}-{ver1_r}"
             ver2 = f"{ver2_e}:{ver2_v}-{ver2_r}"
+
             if salt.utils.path.which("rpmdev-vercmp"):
                 log.warning(
                     "Installing the rpmdevtools package may surface dev tools in"
@@ -762,7 +745,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
-                        return "0:{}".format(ver)
+                        return f"0:{ver}"
 
                     try:
                         if ":" not in ver:
@@ -802,23 +785,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     " comparisons"
                 )
         else:
-            if HAS_PY_RPM:
-                ver1 = f"{ver1_v}-{ver1_r}"
-                ver2 = f"{ver2_v}-{ver2_r}"
-
-                # handle epoch version comparison first
-                # rpm_vercmp.vercmp does not handle epoch version comparison
-                ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)
-                if ret in (1, -1):
-                    return ret
-                cmp_result = cmp_func(ver1, ver2)
-            else:
-                cmp_result = cmp_func(
-                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
-                )
+            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
-                    "Comparison result '{}' is invalid".format(cmp_result)
+                    f"Comparison result '{cmp_result}' is invalid"
                 )
             return cmp_result
 

@@ -12,6 +12,12 @@ on:
         description: >
           The Salt version to get from staging to upload to VirusTotal.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      ci-python-version:
+        type: string
+        required: false
+        default: "3.11"
+        description: >
+          Python version to use for workflow run
 
 permissions:
   contents: read
@@ -20,8 +26,9 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
 
 jobs:
   upload-virustotal:
@@ -30,16 +37,16 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - repo-release
     steps:
 
     - name: Checkout Salt
       uses: actions/checkout@v4
 
-    - name: Set Up Python 3.10
+    - name: Set Up Python ${{ inputs.ci-python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "${{ inputs.ci-python-version }}"
+
 
     - name: Setup Python Tools Scripts
       uses: ./.github/actions/setup-python-tools-scripts

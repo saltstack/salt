@@ -35,7 +35,6 @@ Additional contributions to build true map-reduce functionality into this module
 would be welcome.
 """
 
-
 # Import Python libraries
 import logging
 from uuid import uuid4

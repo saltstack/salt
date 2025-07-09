@@ -55,20 +55,20 @@ def present(name, passwd, admin=False, grants=None, **client_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {} is present and up to date".format(name),
+        "comment": f"User {name} is present and up to date",
     }
 
     if not __salt__["influxdb.user_exists"](name, **client_args):
         create = True
         if __opts__["test"]:
-            ret["comment"] = "User {} will be created".format(name)
+            ret["comment"] = f"User {name} will be created"
             ret["result"] = None
             return ret
         else:
             if not __salt__["influxdb.create_user"](
                 name, passwd, admin=admin, **client_args
             ):
-                ret["comment"] = "Failed to create user {}".format(name)
+                ret["comment"] = f"Failed to create user {name}"
                 ret["result"] = False
                 return ret
     else:
@@ -104,7 +104,7 @@ def present(name, passwd, admin=False, grants=None, **client_args):
                 del db_privileges[database]
             if database not in db_privileges:
                 ret["changes"][
-                    "Grant on database {} to user {}".format(database, name)
+                    f"Grant on database {database} to user {name}"
                 ] = privilege
                 if not __opts__["test"]:
                     __salt__["influxdb.grant_privilege"](
@@ -113,19 +113,19 @@ def present(name, passwd, admin=False, grants=None, **client_args):
 
     if ret["changes"]:
         if create:
-            ret["comment"] = "Created user {}".format(name)
+            ret["comment"] = f"Created user {name}"
             ret["changes"][name] = "User created"
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "User {} will be updated with the following changes:".format(name)
+                ret["comment"] = (
+                    f"User {name} will be updated with the following changes:"
+                )
                 for k, v in ret["changes"].items():
-                    ret["comment"] += "\n{} => {}".format(k, v)
+                    ret["comment"] += f"\n{k} => {v}"
                 ret["changes"] = {}
             else:
-                ret["comment"] = "Updated user {}".format(name)
+                ret["comment"] = f"Updated user {name}"
 
     return ret
 
@@ -141,21 +141,21 @@ def absent(name, **client_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {} is not present".format(name),
+        "comment": f"User {name} is not present",
     }
 
     if __salt__["influxdb.user_exists"](name, **client_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {} will be removed".format(name)
+            ret["comment"] = f"User {name} will be removed"
             return ret
         else:
             if __salt__["influxdb.remove_user"](name, **client_args):
-                ret["comment"] = "Removed user {}".format(name)
+                ret["comment"] = f"Removed user {name}"
                 ret["changes"][name] = "removed"
                 return ret
             else:
-                ret["comment"] = "Failed to remove user {}".format(name)
+                ret["comment"] = f"Failed to remove user {name}"
                 ret["result"] = False
                 return ret
     return ret

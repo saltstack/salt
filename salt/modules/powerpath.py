@@ -88,7 +88,7 @@ def add_license(key):
         result["output"] = "PowerPath is not installed"
         return result
 
-    cmd = "/sbin/emcpreg -add {}".format(key)
+    cmd = f"/sbin/emcpreg -add {key}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     result["retcode"] = ret["retcode"]
@@ -112,7 +112,7 @@ def remove_license(key):
         result["output"] = "PowerPath is not installed"
         return result
 
-    cmd = "/sbin/emcpreg -remove {}".format(key)
+    cmd = f"/sbin/emcpreg -remove {key}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     result["retcode"] = ret["retcode"]

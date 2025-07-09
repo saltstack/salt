@@ -39,7 +39,7 @@ class VMWareTest(CloudTest):
         ]
 
         ret_val = self.run_cloud(
-            "-p vmware-test {}".format(self.instance_name), timeout=TIMEOUT
+            f"-p vmware-test {self.instance_name}", timeout=TIMEOUT
         )
         disk_datastore_str = "                [{}] {}/Hard disk 2-flat.vmdk".format(
             disk_datastore, self.instance_name
@@ -50,7 +50,7 @@ class VMWareTest(CloudTest):
         self.assertIn(
             disk_datastore_str,
             ret_val,
-            msg="Hard Disk 2 did not use the Datastore {} ".format(disk_datastore),
+            msg=f"Hard Disk 2 did not use the Datastore {disk_datastore} ",
         )
 
         self.assertDestroyInstance()
@@ -61,7 +61,7 @@ class VMWareTest(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p vmware-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            f"-p vmware-test {self.instance_name} --no-deploy", timeout=TIMEOUT
         )
 
         # check if instance returned with salt installed
@@ -90,7 +90,7 @@ class VMWareTest(CloudTest):
         )
         # create the instance
         ret_val = self.run_cloud(
-            "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+            f"-p {profile_name} {self.instance_name}", timeout=TIMEOUT
         )
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
@@ -102,14 +102,14 @@ class VMWareTest(CloudTest):
         """
         # salt-cloud -p my-instant-clone IC3
         profile_name = "vmware-test-instant-clone"
-        self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
+        self.run_cloud("-a remove_all_snapshots cloud-tests-template-base")
 
         # create the instance
         log_format = "%(message)s"
         handler = TstSuiteLoggingHandler(format=log_format, level=logging.INFO)
         with handler:
             ret_val = self.run_cloud(
-                "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+                f"-p {profile_name} {self.instance_name}", timeout=TIMEOUT
             )
             # This sometimes times out before it get's an IP, so we check the logs
             if ret_val == []:

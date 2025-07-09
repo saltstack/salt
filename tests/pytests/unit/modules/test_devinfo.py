@@ -42,9 +42,17 @@ def test_devices():
         "E": {"ID_BUS": "ata"},
     }
 
+    def _udev_info(key):
+        if key == "sda":
+            return hd
+        if key == "sdb":
+            return usb
+        if key == "sr0":
+            return cdrom
+
     with patch.dict(
         devinfo.__salt__,
-        {"udev.info": lambda d: {"sda": hd, "sdb": usb, "sr0": cdrom}[d]},
+        {"udev.info": _udev_info},
     ), patch.dict(devinfo.__grains__, {"disks": ["sda", "sdb", "sr0"]}):
         assert devinfo.filter_({"e.id_bus": "ata"}, {}) == ["sda", "sr0"]
         assert devinfo.filter_({"e.id_bus": "usb"}, {}) == ["sdb"]

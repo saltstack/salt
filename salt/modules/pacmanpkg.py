@@ -8,6 +8,7 @@ A module to wrap pacman calls, since Arch is the best
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
+
 import copy
 import fnmatch
 import logging
@@ -363,7 +364,6 @@ def group_info(name):
 
 
 def group_diff(name):
-
     """
     .. versionadded:: 2016.11.0
 
@@ -552,7 +552,7 @@ def install(
         cmd.append("-S")
         if refresh is True:
             cmd.append("-y")
-        if sysupgrade is True or (sysupgrade is None and refresh is True):
+        if sysupgrade is True:
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []
@@ -567,11 +567,9 @@ def install(
                     if prefix == "=":
                         wildcards.append((param, verstr))
                     else:
-                        errors.append(
-                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
-                        )
+                        errors.append(f"Invalid wildcard for {param}{prefix}{verstr}")
                     continue
-                targets.append("{}{}{}".format(param, prefix, verstr))
+                targets.append(f"{param}{prefix}{verstr}")
 
         if wildcards:
             # Resolve wildcard matches

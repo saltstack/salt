@@ -267,7 +267,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{}_present".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_present"
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
         self.assertTrue(resource_present_result["result"])
@@ -288,7 +288,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self._create_resource(vpc_id=vpc.id, name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{}_present".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_present"
             ](name="test", vpc_name="test", **self.extra_kwargs)
         self.assertTrue(resource_present_result["result"])
         self.assertEqual(resource_present_result["changes"], {})
@@ -300,11 +300,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     def test_present_with_failure(self):
         vpc = self._create_vpc(name="test")
         with patch(
-            "moto.ec2.models.{}".format(self.backend_create),
+            f"moto.ec2.models.{self.backend_create}",
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_present_result = self.salt_states[
-                "boto_vpc.{}_present".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_present"
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
             self.assertFalse(resource_present_result["result"])
@@ -322,7 +322,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         """
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{}_absent".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_absent"
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(resource_absent_result["changes"], {})
@@ -339,7 +339,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
 
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{}_absent".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_absent"
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(
@@ -359,11 +359,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self._create_resource(vpc_id=vpc.id, name="test")
 
         with patch(
-            "moto.ec2.models.{}".format(self.backend_delete),
+            f"moto.ec2.models.{self.backend_delete}",
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{}_absent".format(self.resource_type)
+                f"boto_vpc.{self.resource_type}_absent"
             ]("test")
             self.assertFalse(resource_absent_result["result"])
             self.assertTrue("Mocked error" in resource_absent_result["comment"])

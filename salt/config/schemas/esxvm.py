@@ -7,7 +7,6 @@
     ESX Virtual Machine configuration schemas
 """
 
-
 from salt.utils.schema import (
     AnyOfItem,
     ArrayItem,

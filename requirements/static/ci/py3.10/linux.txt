@@ -4,11 +4,11 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.10/linux.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.2
+aiohttp==3.9.4
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
-ansible-core==2.16.2
+ansible-core==2.16.3
     # via ansible
 ansible==9.1.0 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
@@ -26,24 +26,31 @@ attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   jaraco.text
 backports.entry-points-selectable==1.1.0
     # via virtualenv
+backports.tarfile==1.2.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   jaraco.context
 bcrypt==4.1.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.21.46
+boto3==1.39.3
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.24.46
+botocore==1.39.3
     # via
     #   boto3
     #   moto
@@ -54,10 +61,10 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   python-telegram-bot
     #   requests
@@ -80,7 +87,7 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
-cherrypy==18.6.1
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -93,11 +100,14 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-croniter==0.3.29 ; sys_platform != "win32"
-    # via -r requirements/static/ci/common.in
-cryptography==42.0.0
+croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
+cryptography==42.0.5
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   ansible-core
     #   etcd3-py
@@ -113,11 +123,11 @@ distro==1.5.0
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
@@ -125,12 +135,14 @@ exceptiongroup==1.0.4
     # via pytest
 filelock==3.0.12
     # via virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.3.0
     # via
     #   aiohttp
     #   aiosignal
+future==1.0.0
+    # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
@@ -143,7 +155,7 @@ google-auth==2.1.0
     # via kubernetes
 hglib==2.6.1
     # via -r requirements/static/ci/linux.in
-idna==3.2
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   etcd3-py
@@ -170,17 +182,23 @@ jaraco.collections==3.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   jaraco.text
+jaraco.functools==4.2.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
-jinja2==3.1.3
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -224,21 +242,22 @@ markupsafe==2.1.2
     #   -r requirements/base.txt
     #   jinja2
     #   mako
-    #   moto
     #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==5.0.0
+more-itertools==10.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/pytest.txt
+    #   -r requirements/static/pkg/linux.in
     #   cheroot
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1
+    #   jaraco.text
+moto==5.1.6
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -255,12 +274,11 @@ netaddr==0.7.19
     # via junos-eznc
 oscrypto==1.2.0
     # via certvalidator
-packaging==22.0
+packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
-    #   docker
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -276,13 +294,13 @@ pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
     # via virtualenv
-pluggy==0.13.0
+pluggy==1.4.0
     # via pytest
 portend==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
-psutil==5.8.0
+psutil==5.8.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -315,7 +333,7 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
     # via twilio
-pymysql==1.0.2
+pymysql==1.1.1
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via
@@ -341,12 +359,15 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc29
+pytest-salt-factories==1.0.1
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.8.0
-    # via pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
+    # via
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -354,9 +375,9 @@ pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==1.4.2
+pytest-timeout==2.3.1
     # via -r requirements/pytest.txt
-pytest==7.2.0
+pytest==8.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -390,7 +411,7 @@ pytz==2022.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   apscheduler
-    #   moto
+    #   croniter
     #   python-telegram-bot
     #   tempora
     #   twilio
@@ -405,6 +426,7 @@ pyyaml==6.0.1
     #   junos-eznc
     #   kubernetes
     #   pytest-salt-factories
+    #   responses
     #   yamllint
     #   yamlordereddictloader
 pyzmq==23.2.0
@@ -416,11 +438,10 @@ redis-py-cluster==2.1.3
     # via -r requirements/static/ci/linux.in
 redis==3.5.3
     # via redis-py-cluster
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   apache-libcloud
     #   docker
     #   etcd3-py
@@ -433,7 +454,7 @@ requests==2.31.0
     #   vcert
 resolvelib==0.5.4
     # via ansible-core
-responses==0.10.6
+responses==0.25.7
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
@@ -443,7 +464,7 @@ rpm-vercmp==0.1.2
     #   -r requirements/static/pkg/linux.in
 rsa==4.7.2
     # via google-auth
-s3transfer==0.5.2
+s3transfer==0.13.0
     # via boto3
 scp==0.13.2
     # via junos-eznc
@@ -466,12 +487,11 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   more-itertools
     #   ncclient
     #   python-consul
     #   python-dateutil
     #   pyvmomi
-    #   responses
+    #   textfsm
     #   transitions
     #   vcert
     #   virtualenv
@@ -482,7 +502,7 @@ slack-sdk==3.19.5
     # via slack-bolt
 smmap==4.0.0
     # via gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -490,6 +510,8 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   portend
+textfsm==1.1.3
+    # via -r requirements/static/ci/common.in
 timelib==0.2.5
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -507,19 +529,19 @@ trustme==1.1.0
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==4.8.0
-    # via
-    #   pytest-shell-utilities
-    #   pytest-system-statistics
+    # via pytest-system-statistics
 tzlocal==3.0
     # via apscheduler
-urllib3==1.26.18
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes
     #   python-etcd
     #   requests
+    #   responses
 vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
@@ -529,12 +551,10 @@ virtualenv==20.7.2
 watchdog==0.10.3
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
-    # via
-    #   docker
-    #   kubernetes
+    # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   moto
     #   pytest-httpserver

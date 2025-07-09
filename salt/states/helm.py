@@ -99,7 +99,7 @@ def repo_managed(
 
         except CommandExecutionError as err:
             ret["result"] = False
-            ret["comment"] = "Failed to add some repositories: {}.".format(err)
+            ret["comment"] = f"Failed to add some repositories: {err}."
 
     return ret
 
@@ -154,7 +154,7 @@ def repo_updated(name, namespace=None, flags=None, kvflags=None):
 
         except CommandExecutionError as err:
             ret["result"] = False
-            ret["comment"] = "Failed to update some repositories: {}.".format(err)
+            ret["comment"] = f"Failed to update some repositories: {err}."
 
     return ret
 
@@ -226,7 +226,7 @@ def release_present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Helm release {} is present".format(name),
+        "comment": f"Helm release {name} is present",
     }
 
     if "helm.status" not in __salt__:
@@ -332,7 +332,7 @@ def release_absent(name, namespace=None, flags=None, kvflags=None):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Helm release {} is absent.".format(name),
+        "comment": f"Helm release {name} is absent.",
     }
 
     if "helm.uninstall" not in __salt__:

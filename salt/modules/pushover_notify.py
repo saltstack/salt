@@ -15,7 +15,6 @@ Module for sending messages to Pushover (https://www.pushover.net)
           token: abAHuZyCLtdH8P4zhmFZmgUHUsv1ei8
 """
 
-
 import logging
 import urllib.parse
 

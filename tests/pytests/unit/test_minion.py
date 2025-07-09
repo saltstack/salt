@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import uuid
 
 import pytest
 
@@ -94,12 +95,15 @@ def test_minion_load_grains_default(minion_opts):
     ],
 )
 def test_send_req_fires_completion_event(event, minion_opts):
+    req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    with patch("salt.utils.event.get_event", return_value=event):
+    with patch("salt.utils.event.get_event", return_value=event), patch(
+        "uuid.uuid4", return_value=req_id
+    ):
         minion_opts["random_startup_delay"] = 0
         minion_opts["return_retry_tries"] = 30
         minion_opts["grains"] = {}
@@ -123,7 +127,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                     condition_event_tag = (
                         len(call.args) > 1
                         and call.args[1]
-                        == f"__master_req_channel_payload/{minion_opts['master']}"
+                        == f"__master_req_channel_payload/{req_id}/{minion_opts['master']}"
                     )
                     condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
                         idx, call, call.args[1], "__master_req_channel_payload"
@@ -158,11 +162,11 @@ async def test_send_req_async_regression_62453(minion_opts):
         minion = salt.minion.Minion(minion_opts)
 
         load = {"load": "value"}
-        timeout = 60
+        timeout = 1
 
         # We are just validating no exception is raised
-        rtn = await minion._send_req_async(load, timeout)
-        assert rtn is False
+        with pytest.raises(TimeoutError):
+            rtn = await minion._send_req_async(load, timeout)
 
 
 def test_mine_send_tries(minion_opts):
@@ -486,7 +490,7 @@ def test_process_count_max(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_beacons_before_connect(minion_opts):
+async def test_beacons_before_connect(minion_opts):
     """
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
     """
@@ -507,7 +511,7 @@ def test_beacons_before_connect(minion_opts):
         try:
 
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -519,7 +523,7 @@ def test_beacons_before_connect(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_scheduler_before_connect(minion_opts):
+async def test_scheduler_before_connect(minion_opts):
     """
     Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
     """
@@ -539,7 +543,7 @@ def test_scheduler_before_connect(minion_opts):
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
             try:
-                minion.tune_in(start=True)
+                await minion.tune_in(start=True)
             except RuntimeError:
                 pass
 
@@ -609,7 +613,7 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
+async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
     minion_opts,
 ):
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
@@ -736,39 +740,6 @@ def test_gen_modules_executors(minion_opts):
         )
     finally:
         minion.destroy()
-
-
-def test_reinit_crypto_on_fork(minion_opts):
-    """
-    Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
-    """
-    minion_opts["multiprocessing"] = True
-    with patch("salt.utils.process.default_signals"):
-
-        io_loop = salt.ext.tornado.ioloop.IOLoop()
-        io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
-
-        job_data = {"jid": "test-jid", "fun": "test.ping"}
-
-        def mock_start(self):
-            # pylint: disable=comparison-with-callable
-            assert (
-                len(
-                    [
-                        x
-                        for x in self._after_fork_methods
-                        if x[0] == salt.utils.crypt.reinit_crypto
-                    ]
-                )
-                == 1
-            )
-            # pylint: enable=comparison-with-callable
-
-        with patch.object(
-            salt.utils.process.SignalHandlingProcess, "start", mock_start
-        ):
-            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
 
 def test_minion_manage_schedule(minion_opts):

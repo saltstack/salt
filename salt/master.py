@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+
 import collections
 import copy
 import ctypes
@@ -36,7 +37,6 @@ import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
-import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -60,11 +60,7 @@ from salt.ext.tornado.stack_context import StackContext
 from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
 from salt.utils.ctx import RequestContext
-from salt.utils.debug import (
-    enable_sigusr1_handler,
-    enable_sigusr2_handler,
-    inspect_stack,
-)
+from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
@@ -159,12 +155,27 @@ class SMaster:
                 if "serial" in secret_map:
                     secret_map["serial"].value = 0
             if event:
-                event.fire_event({"rotate_{}_key".format(secret_key): True}, tag="key")
+                event.fire_event({f"rotate_{secret_key}_key": True}, tag="key")
 
         if opts.get("ping_on_rotate"):
             # Ping all minions to get them to pick up the new key
             log.debug("Pinging all connected minions due to key rotation")
             salt.utils.master.ping_all_connected_minions(opts)
+
+    @classmethod
+    def populate_secrets(cls):
+        cls.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
 
 
 class Maintenance(salt.utils.process.SignalHandlingProcess):
@@ -321,7 +332,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 log.error("Found dropfile with incorrect permissions, ignoring...")
             os.remove(dfn)
-        except os.error:
+        except OSError:
             pass
 
         if self.opts.get("publish_session"):
@@ -400,7 +411,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         update_intervals = self.fileserver.update_intervals()
         self.buckets = {}
         for backend in self.fileserver.backends():
-            fstr = "{}.update".format(backend)
+            fstr = f"{backend}.update"
             try:
                 update_func = self.fileserver.servers[fstr]
             except KeyError:
@@ -430,7 +441,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                 # nothing to pass to the backend's update func, so we'll just
                 # set the value to None.
                 try:
-                    interval_key = "{}_update_interval".format(backend)
+                    interval_key = f"{backend}_update_interval"
                     interval = self.opts[interval_key]
                 except KeyError:
                     interval = DEFAULT_INTERVAL
@@ -607,7 +618,7 @@ class Master(SMaster):
         try:
             os.chdir("/")
         except OSError as err:
-            errors.append("Cannot change to root directory ({})".format(err))
+            errors.append(f"Cannot change to root directory ({err})")
 
         if self.opts.get("fileserver_verify_config", True):
             # Avoid circular import
@@ -625,7 +636,7 @@ class Master(SMaster):
                 try:
                     fileserver.init()
                 except salt.exceptions.FileserverConfigError as exc:
-                    critical_errors.append("{}".format(exc))
+                    critical_errors.append(f"{exc}")
 
         if not self.opts["fileserver_backend"]:
             errors.append("No fileserver backends are configured")
@@ -701,18 +712,7 @@ class Master(SMaster):
 
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
-            SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
-                ),
-                "serial": multiprocessing.Value(
-                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
-                ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
-            }
+            SMaster.populate_secrets()
 
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
@@ -769,8 +769,10 @@ class Master(SMaster):
                     mod = ".".join(proc.split(".")[:-1])
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                    cls = _tmp.__getattribute__(cls)
-                    name = "ExtProcess({})".format(cls.__qualname__)
+                    cls = _tmp.__getattribute__(  # pylint: disable=unnecessary-dunder-call
+                        cls
+                    )
+                    name = f"ExtProcess({cls.__qualname__})"
                     self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
@@ -884,7 +886,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     # Cannot delete read-only files on Windows.
                     os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
-            except os.error:
+            except OSError:
                 pass
 
         # Wait for kill should be less then parent's ProcessManager.
@@ -910,7 +912,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             for ind in range(int(self.opts["worker_threads"])):
-                name = "MWorker-{}".format(ind)
+                name = f"MWorker-{ind}"
                 self.process_manager.add_process(
                     MWorker,
                     args=(self.opts, self.master_key, self.key, req_channels),
@@ -948,8 +950,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Create a salt master worker process
 
         :param dict opts: The salt options
-        :param dict mkey: The user running the salt master and the AES key
-        :param dict key: The user running the salt master and the RSA key
+        :param dict mkey: The user running the salt master and the RSA key
+        :param dict key: The user running the salt master and the AES key
 
         :rtype: MWorker
         :return: Master worker
@@ -1129,7 +1131,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     log.info(
                         "%s decrementing inherited ReqServer niceness to 0", self.name
                     )
-                    log.info(os.nice())
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
@@ -1154,7 +1155,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         )
         self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
-        salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 
@@ -1197,7 +1197,6 @@ class AESFuncs(TransportMethods):
         "_file_recv",
         "_pillar",
         "_minion_event",
-        "_handle_minion_event",
         "_return",
         "_syndic_return",
         "minion_runner",
@@ -1270,10 +1269,10 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.opts["pki_dir"], "minions", id_)
+        pub_path = salt.utils.verify.clean_join(self.opts["pki_dir"], "minions", id_)
 
         try:
-            pub = salt.crypt.get_rsa_pub_key(pub_path)
+            pub = salt.crypt.PublicKey(pub_path)
         except OSError:
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
@@ -1284,7 +1283,7 @@ class AESFuncs(TransportMethods):
         except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load public key "%s": %s', pub_path, err)
         try:
-            if salt.crypt.public_decrypt(pub, token) == b"salt":
+            if pub.decrypt(token) == b"salt":
                 return True
         except ValueError as err:
             log.error("Unable to decrypt token: %s", err)
@@ -1323,24 +1322,12 @@ class AESFuncs(TransportMethods):
             return False
         if not isinstance(self.opts["peer"], dict):
             return False
-        if any(
-            key not in clear_load for key in ("fun", "arg", "tgt", "ret", "tok", "id")
-        ):
+        if any(key not in clear_load for key in ("fun", "arg", "tgt", "ret", "id")):
             return False
         # If the command will make a recursive publish don't run
         if clear_load["fun"].startswith("publish."):
             return False
         # Check the permissions for this minion
-        if not self.__verify_minion(clear_load["id"], clear_load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning(
-                "Minion id %s is not who it says it is and is attempting "
-                "to issue a peer command",
-                clear_load["id"],
-            )
-            return False
-        clear_load.pop("tok")
         perms = []
         for match in self.opts["peer"]:
             if re.match(match, clear_load["id"]):
@@ -1380,23 +1367,6 @@ class AESFuncs(TransportMethods):
         """
         if any(key not in load for key in verify_keys):
             return False
-        if "tok" not in load:
-            log.error(
-                "Received incomplete call from %s for '%s', missing '%s'",
-                load["id"],
-                inspect_stack()["co_name"],
-                "tok",
-            )
-            return False
-        if not self.__verify_minion(load["id"], load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning("Minion id %s is not who it says it is!", load["id"])
-            return False
-
-        if "tok" in load:
-            load.pop("tok")
-
         return load
 
     def _master_tops(self, load):
@@ -1407,7 +1377,7 @@ class AESFuncs(TransportMethods):
         :param dict load: A payload received from a minion
         :return: The results from an external node classifier
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
@@ -1456,7 +1426,7 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: Mine data from the specified minions
         """
-        load = self.__verify_load(load, ("id", "tgt", "fun", "tok"))
+        load = self.__verify_load(load, ("id", "tgt", "fun"))
         if load is False:
             return {}
         else:
@@ -1471,7 +1441,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: True if the data has been stored in the mine
         """
-        load = self.__verify_load(load, ("id", "data", "tok"))
+        load = self.__verify_load(load, ("id", "data"))
         if load is False:
             return {}
         return self.masterapi._mine(load, skip_verify=True)
@@ -1485,7 +1455,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: Boolean indicating whether or not the given function was deleted from the mine
         """
-        load = self.__verify_load(load, ("id", "fun", "tok"))
+        load = self.__verify_load(load, ("id", "fun"))
         if load is False:
             return {}
         else:
@@ -1497,7 +1467,7 @@ class AESFuncs(TransportMethods):
 
         :param dict load: A payload received from a minion
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         else:
@@ -1532,20 +1502,6 @@ class AESFuncs(TransportMethods):
                 load["path"],
             )
             return False
-        if "tok" not in load:
-            log.error(
-                "Received incomplete call from %s for '%s', missing '%s'",
-                load["id"],
-                inspect_stack()["co_name"],
-                "tok",
-            )
-            return False
-        if not self.__verify_minion(load["id"], load["tok"]):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warning("Minion id %s is not who it says it is!", load["id"])
-            return {}
-        load.pop("tok")
 
         # Join path
         sep_path = os.sep.join(load["path"])
@@ -1560,11 +1516,15 @@ class AESFuncs(TransportMethods):
             # Can overwrite master files!!
             return False
 
-        cpath = os.path.join(
-            self.opts["cachedir"], "minions", load["id"], "files", normpath
-        )
+        rpath = os.path.join(self.opts["cachedir"], "minions", load["id"], "files")
+        cpath = os.path.join(rpath, normpath)
         # One last safety check here
-        if not os.path.normpath(cpath).startswith(self.opts["cachedir"]):
+        if not salt.utils.verify.clean_path(
+            rpath,
+            cpath,
+            subdir=True,
+            realpath=not self.opts["fileserver_followsymlinks"],
+        ):
             log.warning(
                 "Attempt to write received file outside of master cache "
                 "directory! Requested path: %s. Access denied.",
@@ -1575,7 +1535,7 @@ class AESFuncs(TransportMethods):
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"
@@ -1636,7 +1596,7 @@ class AESFuncs(TransportMethods):
 
         :param dict load: The minion payload
         """
-        load = self.__verify_load(load, ("id", "tok"))
+        load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
         # Route to master event bus
@@ -1692,8 +1652,8 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = os.path.join(
-                self.opts["pki_dir"], "minions/{}".format(load["id"])
+            this_minion_pubkey = salt.utils.verify.clean_join(
+                self.opts["pki_dir"], "minions", load["id"]
             )
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(
@@ -1782,7 +1742,7 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: The runner function data
         """
-        load = self.__verify_load(clear_load, ("fun", "arg", "id", "tok"))
+        load = self.__verify_load(clear_load, ("fun", "arg", "id"))
         if load is False:
             return {}
         else:
@@ -1798,14 +1758,14 @@ class AESFuncs(TransportMethods):
         :rtype: dict
         :return: Return data corresponding to a given JID
         """
-        load = self.__verify_load(load, ("jid", "id", "tok"))
+        load = self.__verify_load(load, ("jid", "id"))
         if load is False:
             return {}
         # Check that this minion can access this data
         auth_cache = os.path.join(self.opts["cachedir"], "publish_auth")
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load["jid"]))
+        jid_fn = salt.utils.verify.clean_join(auth_cache, str(load["jid"]))
         with salt.utils.files.fopen(jid_fn, "r") as fp_:
             if not load["id"] == fp_.read():
                 return {}
@@ -1894,8 +1854,7 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: True if key was revoked, False if not
         """
-        load = self.__verify_load(load, ("id", "tok"))
-
+        load = self.__verify_load(load, ("id",))
         if not self.opts.get("allow_minion_key_revoke", False):
             log.warning(
                 "Minion %s requested key revoke, but allow_minion_key_revoke "
@@ -1903,7 +1862,6 @@ class AESFuncs(TransportMethods):
                 load["id"],
             )
             return load
-
         if load is False:
             return load
         else:
@@ -2120,7 +2078,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")
             data = {
-                "fun": "wheel.{}".format(fun),
+                "fun": f"wheel.{fun}",
                 "jid": jid,
                 "tag": tag,
                 "user": username,
@@ -2223,7 +2181,7 @@ class ClearFuncs(TransportMethods):
         else:
             auth_list = auth_check.get("auth_list", [])
 
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+        err_msg = f'Authentication failure of type "{auth_type}" occurred.'
 
         if auth_check.get("error"):
             # Authentication error occurred: do not continue.

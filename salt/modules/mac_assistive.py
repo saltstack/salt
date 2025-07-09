@@ -69,15 +69,15 @@ def install(app_id, enable=True, tries=3, wait=10):
             except sqlite3.Error as exc:
                 if "attempt to write a readonly database" not in str(exc):
                     raise CommandExecutionError(
-                        "Error installing app({}): {}".format(app_id, exc)
+                        f"Error installing app({app_id}): {exc}"
                     )
                 elif num_tries < tries:
-                    time.sleep(wait)
                     num_tries += 1
                 else:
                     raise CommandExecutionError(
-                        "Error installing app({}): {}".format(app_id, exc)
+                        f"Error installing app({app_id}): {exc}"
                     )
+        time.sleep(wait)
 
 
 def installed(app_id):
@@ -100,7 +100,7 @@ def installed(app_id):
             return db.installed(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error checking if app({}) is installed: {}".format(app_id, exc)
+                f"Error checking if app({app_id}) is installed: {exc}"
             )
 
 
@@ -129,7 +129,7 @@ def enable_(app_id, enabled=True):
                 return db.disable(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error setting enable to {} on app({}): {}".format(enabled, app_id, exc)
+                f"Error setting enable to {enabled} on app({app_id}): {exc}"
             )
 
 
@@ -153,7 +153,7 @@ def enabled(app_id):
             return db.enabled(app_id)
         except sqlite3.Error as exc:
             raise CommandExecutionError(
-                "Error checking if app({}) is enabled: {}".format(app_id, exc)
+                f"Error checking if app({app_id}) is enabled: {exc}"
             )
 
 
@@ -175,9 +175,7 @@ def remove(app_id):
         try:
             return db.remove(app_id)
         except sqlite3.Error as exc:
-            raise CommandExecutionError(
-                "Error removing app({}): {}".format(app_id, exc)
-            )
+            raise CommandExecutionError(f"Error removing app({app_id}): {exc}")
 
 
 class TccDB:
@@ -188,6 +186,7 @@ class TccDB:
         self.connection = None
         self.ge_mojave_and_catalina = False
         self.ge_bigsur_and_later = False
+        self.ge_sonoma_and_later = False
 
     def _check_table_digest(self):
         # This logic comes from https://github.com/jacobsalmela/tccutil which is
@@ -203,9 +202,11 @@ class TccDB:
             elif digest in ("3d1c2a0e97", "cef70648de"):
                 # BigSur and later
                 self.ge_bigsur_and_later = True
+            elif digest in ("34abf99d20",):
+                self.ge_sonoma_and_later = True
             else:
                 raise CommandExecutionError(
-                    "TCC Database structure unknown for digest '{}'".format(digest)
+                    f"TCC Database structure unknown for digest '{digest}'"
                 )
 
     def _get_client_type(self, app_id):
@@ -311,10 +312,56 @@ class TccDB:
                 (app_id, client_type, auth_value),
             )
             self.connection.commit()
+        elif self.ge_sonoma_and_later:
+            # CREATE TABLE access (
+            #   service        TEXT        NOT NULL,
+            #   client         TEXT        NOT NULL,
+            #   client_type    INTEGER     NOT NULL,
+            #   auth_value     INTEGER     NOT NULL,
+            #   auth_reason    INTEGER     NOT NULL,
+            #   auth_version   INTEGER     NOT NULL,
+            #   csreq          BLOB,
+            #   policy_id      INTEGER,
+            #   indirect_object_identifier_type    INTEGER,
+            #   indirect_object_identifier         TEXT NOT NULL DEFAULT 'UNUSED',
+            #   indirect_object_code_identity      BLOB,
+            #   flags          INTEGER,
+            #   last_modified  INTEGER     NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)),
+            #   pid            INTEGER,
+            #   pid_version    INTEGER,
+            #   boot_uuid      TEXT NOT NULL DEFAULT 'UNUSED',
+            #   last_reminded  INTEGER     NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)),
+            #   PRIMARY KEY (service, client, client_type, indirect_object_identifier),
+            #   FOREIGN KEY (policy_id)
+            self.connection.execute(
+                """
+                    INSERT or REPLACE INTO access VALUES(
+                        'kTCCServiceAccessibility',
+                        ?,
+                        ?,
+                        ?,
+                        4,
+                        1,
+                        NULL,
+                        NULL,
+                        NULL,
+                        'UNUSED',
+                        NULL,
+                        0,
+                        0,
+                        0,
+                        0,
+                        'UNUSED',
+                        ?
+                    )
+                    """,
+                (app_id, client_type, auth_value, time.time()),
+            )
+            self.connection.commit()
         return True
 
     def enabled(self, app_id):
-        if self.ge_bigsur_and_later:
+        if self.ge_bigsur_and_later or self.ge_sonoma_and_later:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"
@@ -330,7 +377,7 @@ class TccDB:
     def enable(self, app_id):
         if not self.installed(app_id):
             return False
-        if self.ge_bigsur_and_later:
+        if self.ge_bigsur_and_later or self.ge_sonoma_and_later:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"
@@ -346,7 +393,7 @@ class TccDB:
     def disable(self, app_id):
         if not self.installed(app_id):
             return False
-        if self.ge_bigsur_and_later:
+        if self.ge_bigsur_and_later or self.ge_sonoma_and_later:
             column = "auth_value"
         elif self.ge_mojave_and_catalina:
             column = "allowed"

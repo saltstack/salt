@@ -6,8 +6,14 @@
 #
 apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
-certifi==2023.07.22
-    # via requests
+autocommand==2.2.2
+    # via jaraco.text
+backports.tarfile==1.2.0
+    # via jaraco.context
+certifi==2023.07.22 ; python_version < "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==1.14.6
     # via cryptography
 charset-normalizer==3.2.0
@@ -18,9 +24,11 @@ cherrypy==18.6.1
     # via -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.0
+croniter==2.0.5 ; sys_platform != "win32"
+    # via -r requirements/base.txt
+cryptography==42.0.5
     # via
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
@@ -28,7 +36,7 @@ gitdb==4.0.7
     # via gitpython
 gitpython==3.1.41
     # via -r requirements/darwin.txt
-idna==3.2
+idna==3.7
     # via
     #   -r requirements/darwin.txt
     #   requests
@@ -40,14 +48,21 @@ jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
     # via cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
+    # via jaraco.text
+jaraco.functools==4.2.1
     # via
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
-    # via jaraco.collections
-jinja2==3.1.3
+jaraco.text==4.0.0
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
+    #   jaraco.collections
+jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -59,19 +74,21 @@ markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==8.2.0
+more-itertools==10.7.0
     # via
+    #   -r requirements/darwin.txt
     #   cheroot
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==22.0
+packaging==24.0
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
-psutil==5.8.0
+psutil==5.8.0 ; python_version <= "3.9"
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/darwin.txt
@@ -84,16 +101,20 @@ pycryptodomex==3.19.1
 pyopenssl==24.0.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
-    # via -r requirements/darwin.txt
+    # via
+    #   -r requirements/darwin.txt
+    #   croniter
 python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2022.1
-    # via tempora
+    # via
+    #   croniter
+    #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==23.2.0
+pyzmq==25.1.2 ; sys_platform == "darwin"
     # via -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -110,14 +131,18 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/darwin.txt
-urllib3==1.26.18
-    # via requests
+urllib3==1.26.20 ; python_version < "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 vultr==1.0.1
     # via -r requirements/darwin.txt
 zc.lockfile==2.0
     # via cherrypy
-zipp==3.5.0
-    # via importlib-metadata
+zipp==3.21.0
+    # via
+    #   -r requirements/darwin.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

@@ -430,7 +430,7 @@ winrepo_dir
 
 This setting is maintained for backwards compatibility with legacy minions. It
 points to the location in the ``file_roots`` where the winrepo files are kept.
-The default is: ``C:\salt\srv\salt\win\repo``
+The default is: ``C:\ProgramData\Salt Project\Salt\srv\salt\win\repo``
 
 winrepo_dir_ng
 --------------
@@ -521,7 +521,7 @@ package manager commands to manage software on Windows minions.
 
 .. _list-pkgs:
 
-List installed packages
+List Installed Packages
 =======================
 
 Use :mod:`pkg.list_pkgs <salt.modules.win_pkg.list_pkgs>` to display a list of

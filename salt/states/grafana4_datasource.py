@@ -152,12 +152,12 @@ def present(
 
     if not datasource:
         if __opts__["test"]:
-            ret["comment"] = "Datasource {} will be created".format(name)
+            ret["comment"] = f"Datasource {name} will be created"
             return ret
         __salt__["grafana4.create_datasource"](profile=profile, **data)
         datasource = __salt__["grafana4.get_datasource"](name, profile=profile)
         ret["result"] = True
-        ret["comment"] = "New data source {} added".format(name)
+        ret["comment"] = f"New data source {name} added"
         ret["changes"] = data
         return ret
 
@@ -168,16 +168,16 @@ def present(
             datasource[key] = None
 
     if data == datasource:
-        ret["comment"] = "Data source {} already up-to-date".format(name)
+        ret["comment"] = f"Data source {name} already up-to-date"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Datasource {} will be updated".format(name)
+        ret["comment"] = f"Datasource {name} will be updated"
         return ret
     __salt__["grafana4.update_datasource"](datasource["id"], profile=profile, **data)
     ret["result"] = True
     ret["changes"] = deep_diff(datasource, data, ignore=["id", "orgId", "readOnly"])
-    ret["comment"] = "Data source {} updated".format(name)
+    ret["comment"] = f"Data source {name} updated"
     return ret
 
 
@@ -203,17 +203,17 @@ def absent(name, orgname=None, profile="grafana"):
 
     if not datasource:
         ret["result"] = True
-        ret["comment"] = "Data source {} already absent".format(name)
+        ret["comment"] = f"Data source {name} already absent"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Datasource {} will be deleted".format(name)
+        ret["comment"] = f"Datasource {name} will be deleted"
         return ret
     __salt__["grafana4.delete_datasource"](datasource["id"], profile=profile)
 
     ret["result"] = True
     ret["changes"][name] = "Absent"
-    ret["comment"] = "Data source {} was deleted".format(name)
+    ret["comment"] = f"Data source {name} was deleted"
 
     return ret
 

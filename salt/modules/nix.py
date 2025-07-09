@@ -18,7 +18,6 @@ For more information on nix, see the `nix documentation`_.
 .. _`nix-daemon`: https://nixos.org/nix/manual/#ssec-multi-user
 """
 
-
 import itertools
 import logging
 import os

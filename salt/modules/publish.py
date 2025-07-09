@@ -94,7 +94,7 @@ def _publish(
             matching_master_uris = [
                 master
                 for master in __opts__["master_uri_list"]
-                if "//{}:".format(via_master) in master
+                if f"//{via_master}:" in master
             ]
 
             if not matching_master_uris:
@@ -122,8 +122,6 @@ def _publish(
         master_uri = __opts__["master_uri"]
 
     log.info("Publishing '%s' to %s", fun, master_uri)
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token(b"salt")
     load = {
         "cmd": "minion_pub",
         "fun": fun,
@@ -131,7 +129,6 @@ def _publish(
         "tgt": tgt,
         "tgt_type": tgt_type,
         "ret": returner,
-        "tok": tok,
         "tmo": timeout,
         "form": form,
         "id": __opts__["id"],
@@ -144,7 +141,7 @@ def _publish(
         try:
             peer_data = channel.send(load)
         except SaltReqTimeoutError:
-            return "'{}' publish timed out".format(fun)
+            return f"'{fun}' publish timed out"
         if not peer_data:
             return {}
         # CLI args are passed as strings, re-cast to keep time.sleep happy
@@ -157,7 +154,6 @@ def _publish(
                 load = {
                     "cmd": "pub_ret",
                     "id": __opts__["id"],
-                    "tok": tok,
                     "jid": peer_data["jid"],
                 }
                 ret = channel.send(load)
@@ -187,7 +183,6 @@ def _publish(
             load = {
                 "cmd": "pub_ret",
                 "id": __opts__["id"],
-                "tok": tok,
                 "jid": peer_data["jid"],
             }
             ret = channel.send(load)
@@ -332,13 +327,10 @@ def runner(fun, arg=None, timeout=5):
     if "master_uri" not in __opts__:
         return "No access to master. If using salt-call with --local, please remove."
     log.info("Publishing runner '%s' to %s", fun, __opts__["master_uri"])
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token(b"salt")
     load = {
         "cmd": "minion_runner",
         "fun": fun,
         "arg": arg,
-        "tok": tok,
         "tmo": timeout,
         "id": __opts__["id"],
         "no_parse": __opts__.get("no_parse", []),
@@ -348,4 +340,4 @@ def runner(fun, arg=None, timeout=5):
         try:
             return channel.send(load)
         except SaltReqTimeoutError:
-            return "'{}' runner publish timed out".format(fun)
+            return f"'{fun}' runner publish timed out"

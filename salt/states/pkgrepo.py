@@ -99,24 +99,23 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - key_url: https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public
         - aptkey: False
 
 Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
 """
-
 
 import sys
 
@@ -365,15 +364,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        )
 
     if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        )
     if "key_text" in kwargs and ("key_url" in kwargs):
         ret["result"] = False
         ret["comment"] = 'You may not use both "key_url" and "key_text" argument.'
@@ -409,12 +408,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            ret["comment"] = (
+                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            )
             return ret
 
-    repo = name
+    kwargs["name"] = repo = name
+
     if __grains__["os"] in ("Ubuntu", "Mint"):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
@@ -438,9 +438,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
         if "humanname" in kwargs:
             kwargs["name"] = kwargs.pop("humanname")
-        if "name" not in kwargs:
-            # Fall back to the repo name if humanname not provided
-            kwargs["name"] = repo
 
         kwargs["enabled"] = (
             not salt.utils.data.is_true(disabled)
@@ -463,7 +460,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to examine repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to examine repo '{name}': {exc}"
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
@@ -545,7 +542,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                         break
         else:
             ret["result"] = True
-            ret["comment"] = "Package repo '{}' already configured".format(name)
+            ret["comment"] = f"Package repo '{name}' already configured"
             return ret
 
     if __opts__["test"]:
@@ -580,7 +577,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # This is another way to pass information back from the mod_repo
         # function.
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
     try:
@@ -596,10 +593,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["changes"] = {"repo": repo}
 
         ret["result"] = True
-        ret["comment"] = "Configured package repo '{}'".format(name)
+        ret["comment"] = f"Configured package repo '{name}'"
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Failed to confirm config of repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to confirm config of repo '{name}': {exc}"
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -705,7 +702,7 @@ def absent(name, **kwargs):
         repo = __salt__["pkg.get_repo"](stripname, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
     if repo and (
@@ -726,7 +723,7 @@ def absent(name, **kwargs):
             repo = {}
 
     if not repo:
-        ret["comment"] = "Package repo {} is absent".format(name)
+        ret["comment"] = f"Package repo {name} is absent"
         ret["result"] = True
         return ret
 
@@ -749,7 +746,7 @@ def absent(name, **kwargs):
     repos = __salt__["pkg.list_repos"]()
     if stripname not in repos:
         ret["changes"]["repo"] = name
-        ret["comment"] = "Removed repo {}".format(name)
+        ret["comment"] = f"Removed repo {name}"
 
         if not remove_key:
             ret["result"] = True
@@ -758,13 +755,13 @@ def absent(name, **kwargs):
                 removed_keyid = __salt__["pkg.del_repo_key"](stripname, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but failed to remove key: {}".format(exc)
+                ret["comment"] += f", but failed to remove key: {exc}"
             else:
                 ret["result"] = True
                 ret["changes"]["keyid"] = removed_keyid
-                ret["comment"] += ", and keyid {}".format(removed_keyid)
+                ret["comment"] += f", and keyid {removed_keyid}"
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove repo {}".format(name)
+        ret["comment"] = f"Failed to remove repo {name}"
 
     return ret

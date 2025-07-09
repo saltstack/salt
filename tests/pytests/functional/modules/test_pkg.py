@@ -123,7 +123,7 @@ def test_mod_del_repo(grains, modules):
 
     try:
         # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
-        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] < 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")
@@ -135,12 +135,8 @@ def test_mod_del_repo(grains, modules):
         elif grains["os_family"] == "RedHat":
             repo = "saltstack"
             name = "SaltStack repo for RHEL/CentOS {}".format(grains["osmajorrelease"])
-            baseurl = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
-                grains["osmajorrelease"]
-            )
-            gpgkey = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/SALTSTACK-GPG-KEY.pub".format(
-                grains["osmajorrelease"]
-            )
+            baseurl = "https://packages.broadcom.com/artifactory/saltproject-rpm/"
+            gpgkey = "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public"
             gpgcheck = 1
             enabled = 1
             ret = modules.pkg.mod_repo(
@@ -213,22 +209,29 @@ def test_mod_del_repo_multiline_values(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.owner("/bin/ls")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+
+    ret = modules.pkg.owner(binary)
     assert len(ret) != 0
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
 @pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
-def test_which(modules):
+def test_which(modules, grains):
     """
     test finding the package owning a file
     """
-    ret = modules.pkg.which("/usr/local/bin/salt-call")
+    binary = "/bin/ls"
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+    ret = modules.pkg.which(binary)
     assert len(ret) != 0
 
 
@@ -296,14 +299,14 @@ def test_hold_unhold(grains, modules, states, test_pkg):
             except AssertionError:
                 pass
         else:
-            pytest.fail("Could not install versionlock package from {}".format(pkgs))
+            pytest.fail(f"Could not install versionlock package from {pkgs}")
 
     modules.pkg.install(test_pkg)
 
     try:
         hold_ret = modules.pkg.hold(test_pkg)
         if versionlock_pkg and "-versionlock is not installed" in str(hold_ret):
-            pytest.skip("{}  `{}` is installed".format(hold_ret, versionlock_pkg))
+            pytest.skip(f"{hold_ret}  `{versionlock_pkg}` is installed")
         assert test_pkg in hold_ret
         assert hold_ret[test_pkg]["result"] is True
 
@@ -336,7 +339,7 @@ def test_refresh_db(grains, minion_opts):
     loader = Loaders(minion_opts)
     ret = loader.modules.pkg.refresh_db()
     if not isinstance(ret, dict):
-        pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
+        pytest.skip(f"Upstream repo did not return coherent results: {ret}")
 
     if grains["os_family"] == "RedHat":
         assert ret in (True, None)
@@ -395,7 +398,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     Test running a system upgrade when there are packages that need upgrading
     """
     if grains["os"] == "Arch":
-        pytest.skipTest("Arch moved to Python 3.8 and we're not ready for it yet")
+        pytest.skip("Arch moved to Python 3.8 and we're not ready for it yet")
 
     modules.pkg.upgrade()
 
@@ -433,9 +436,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
         ret = modules.pkg.install(target, version=old)
         if not isinstance(ret, dict):
             if ret.startswith("ERROR"):
-                pytest.skipTest(
-                    "Could not install older {} to complete test.".format(target)
-                )
+                pytest.skip(f"Could not install older {target} to complete test.")
 
         # Run a system upgrade, which should catch the fact that the
         # targeted package needs upgrading, and upgrade it.
@@ -449,7 +450,7 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules):
     else:
         ret = modules.pkg.list_upgrades()
         if ret == "" or ret == {}:
-            pytest.skipTest(
+            pytest.skip(
                 "No updates available for this machine.  Skipping pkg.upgrade test."
             )
         else:
@@ -477,19 +478,17 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
 
     cmd_pkg = []
     if grains["os_family"] == "RedHat":
-        cmd_pkg = modules.cmd.run("yum list {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"yum list {test_pkg}")
     elif salt.utils.platform.is_windows():
         cmd_pkg = modules.pkg.list_available(test_pkg)
     elif grains["os_family"] == "Debian":
-        cmd_pkg = modules.cmd.run("apt list {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"apt list {test_pkg}")
     elif grains["os_family"] == "Arch":
-        cmd_pkg = modules.cmd.run("pacman -Si {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"pacman -Si {test_pkg}")
     elif grains["os_family"] == "FreeBSD":
-        cmd_pkg = modules.cmd.run(
-            "pkg search -S name -qQ version -e {}".format(test_pkg)
-        )
+        cmd_pkg = modules.cmd.run(f"pkg search -S name -qQ version -e {test_pkg}")
     elif grains["os_family"] == "Suse":
-        cmd_pkg = modules.cmd.run("zypper info {}".format(test_pkg))
+        cmd_pkg = modules.cmd.run(f"zypper info {test_pkg}")
     elif grains["os_family"] == "MacOS":
         brew_bin = salt.utils.path.which("brew")
         mac_user = modules.file.get_user(brew_bin)
@@ -499,7 +498,7 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
                     os.listdir("/Users/")
                 )
             )
-        cmd_pkg = modules.cmd.run("brew info {}".format(test_pkg), run_as=mac_user)
+        cmd_pkg = modules.cmd.run(f"brew info {test_pkg}", run_as=mac_user)
     else:
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
     pkg_latest = modules.pkg.latest_version(test_pkg)

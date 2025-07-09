@@ -31,7 +31,7 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
 
 import atexit
 import logging
-import xmlrpc.client
+import xmlrpc.client  # nosec
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def _get_spacewalk_configuration(spacewalk_url=""):
                     return False
 
                 ret = {
-                    "api_url": "{}://{}/rpc/api".format(protocol, spacewalk_server),
+                    "api_url": f"{protocol}://{spacewalk_server}/rpc/api",
                     "username": username,
                     "password": password,
                 }
@@ -120,7 +120,7 @@ def _get_session(server):
 
     config = _get_spacewalk_configuration(server)
     if not config:
-        raise Exception("No config for '{}' found on master".format(server))
+        raise Exception(f"No config for '{server}' found on master")
 
     session = _get_client_and_key(
         config["api_url"], config["username"], config["password"]
@@ -163,7 +163,7 @@ def api(server, command, *args, **kwargs):
     else:
         arguments = args
 
-    call = "{} {}".format(command, arguments)
+    call = f"{command} {arguments}"
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
@@ -185,7 +185,7 @@ def api(server, command, *args, **kwargs):
     try:
         output = endpoint(key, *arguments)
     except Exception as e:  # pylint: disable=broad-except
-        output = "API call failed: {}".format(e)
+        output = f"API call failed: {e}"
 
     return {call: output}
 
@@ -360,10 +360,8 @@ def unregister(name, server_url):
         for system in systems_list:
             out = client.system.deleteSystem(key, system["id"])
             if out == 1:
-                return {name: "Successfully unregistered from {}".format(server_url)}
+                return {name: f"Successfully unregistered from {server_url}"}
             else:
-                return {name: "Failed to unregister from {}".format(server_url)}
+                return {name: f"Failed to unregister from {server_url}"}
     else:
-        return {
-            name: "System does not exist in spacewalk server ({})".format(server_url)
-        }
+        return {name: f"System does not exist in spacewalk server ({server_url})"}

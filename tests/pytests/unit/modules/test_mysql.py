@@ -6,7 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import logging
 
 import pytest
@@ -861,7 +860,7 @@ def _test_call(function, expected_sql, *args, **kwargs):
                     .execute("{}".format(expected_sql["sql"]), expected_sql["sql_args"])
                 )
             else:
-                calls = call().cursor().execute("{}".format(expected_sql))
+                calls = call().cursor().execute(f"{expected_sql}")
             connect_mock.assert_has_calls((calls,), True)
 
 

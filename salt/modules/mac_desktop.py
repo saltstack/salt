@@ -48,7 +48,7 @@ def set_output_volume(volume):
 
         salt '*' desktop.set_output_volume <volume>
     """
-    cmd = 'osascript -e "set volume output volume {}"'.format(volume)
+    cmd = f'osascript -e "set volume output volume {volume}"'
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
     _check_cmd(call)
 
@@ -125,6 +125,6 @@ def _check_cmd(call):
         if std_out:
             comment += std_out
 
-        raise CommandExecutionError("Error running command: {}".format(comment))
+        raise CommandExecutionError(f"Error running command: {comment}")
 
     return call

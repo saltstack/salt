@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import pytest
 
 import salt.modules.postfix as postfix

@@ -5,6 +5,7 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
+
 import functools
 import io
 import logging
@@ -365,9 +366,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
                 "__name__",
                 hasattr(dtype, "__class__") and getattr(dtype.__class__, "name", dtype),
             )
-            errmsg = "{} within '{}'".format(typename, within)
+            errmsg = f"{typename} within '{within}'"
         else:
-            errmsg = "within '{}'".format(within)
+            errmsg = f"within '{within}'"
     return (valid, _value, errmsg)
 
 
@@ -386,7 +387,7 @@ def __space_delimited_list(value):
         return (
             False,
             value,
-            "{} is not a valid space-delimited value.\n".format(value),
+            f"{value} is not a valid space-delimited value.\n",
         )
 
 
@@ -548,8 +549,7 @@ def _parse_interfaces(interface_files=None):
         # Add this later.
         if os.path.exists(_DEB_NETWORK_DIR):
             interface_files += [
-                "{}/{}".format(_DEB_NETWORK_DIR, dir)
-                for dir in os.listdir(_DEB_NETWORK_DIR)
+                f"{_DEB_NETWORK_DIR}/{dir}" for dir in os.listdir(_DEB_NETWORK_DIR)
             ]
 
         if os.path.isfile(_DEB_NETWORK_FILE):
@@ -689,7 +689,7 @@ def _filter_malformed_interfaces(*, adapters):
         if iface_name == "source":
             continue
         if "data" not in adapters[iface_name]:
-            msg = "Interface file malformed for interface: {}.".format(iface_name)
+            msg = f"Interface file malformed for interface: {iface_name}."
             log.error(msg)
             adapters.pop(iface_name)
             continue
@@ -908,7 +908,6 @@ def _parse_settings_bond_0(opts, iface, bond_def):
 
 
 def _parse_settings_bond_1(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond1.
     If an option has a value that is not expected, this
@@ -995,7 +994,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
 
 
 def _parse_settings_bond_3(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond3.
     If an option has a value that is not expected, this
@@ -1082,7 +1080,6 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 
 
 def _parse_settings_bond_5(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond5.
     If an option has a value that is not expected, this
@@ -1121,7 +1118,6 @@ def _parse_settings_bond_5(opts, iface, bond_def):
 
 
 def _parse_settings_bond_6(opts, iface, bond_def):
-
     """
     Filters given options and outputs valid settings for bond6.
     If an option has a value that is not expected, this
@@ -1201,7 +1197,7 @@ def _parse_bridge_opts(opts, iface):
             try:
                 port, cost_or_prio = opts[opt].split()
                 int(cost_or_prio)
-                config.update({opt: "{} {}".format(port, cost_or_prio)})
+                config.update({opt: f"{port} {cost_or_prio}"})
             except ValueError:
                 _raise_error_iface(iface, opt, ["interface integer"])
 
@@ -1295,9 +1291,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
             if tmp_ethtool:
                 for item in tmp_ethtool:
-                    adapters[iface]["data"][addrfam][
-                        _DEB_CONFIG_PPPOE_OPTS[item]
-                    ] = tmp_ethtool[item]
+                    adapters[iface]["data"][addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = (
+                        tmp_ethtool[item]
+                    )
             iface_data[addrfam]["addrfam"] = addrfam
 
     opts.pop("mode", None)
@@ -1350,7 +1346,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             iface_data["inet6"][opt] = opts[opt]
 
     # Remove incomplete/disabled inet blocks
-    for (addrfam, opt) in [("inet", "enable_ipv4"), ("inet6", "enable_ipv6")]:
+    for addrfam, opt in [("inet", "enable_ipv4"), ("inet6", "enable_ipv6")]:
         if opts.get(opt, None) is False:
             iface_data.pop(addrfam)
         elif iface_data[addrfam].get("addrfam", "") != addrfam:
@@ -1633,15 +1629,15 @@ def build_bond(iface, **settings):
     if "test" in settings and settings["test"]:
         return _read_temp(data)
 
-    _write_file(iface, data, _DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
-    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
+    _write_file(iface, data, _DEB_NETWORK_CONF_FILES, f"{iface}.conf")
+    path = os.path.join(_DEB_NETWORK_CONF_FILES, f"{iface}.conf")
     if deb_major == "5":
         for line_type in ("alias", "options"):
             cmd = [
                 "sed",
                 "-i",
                 "-e",
-                r"/^{}\s{}.*/d".format(line_type, iface),
+                rf"/^{line_type}\s{iface}.*/d",
                 "/etc/modprobe.conf",
             ]
             __salt__["cmd.run"](cmd, python_shell=False)
@@ -1785,7 +1781,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     """
-    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
+    path = os.path.join(_DEB_NETWORK_CONF_FILES, f"{iface}.conf")
     return _read_file(path)
 
 
@@ -1891,10 +1887,10 @@ def get_routes(iface):
         salt '*' ip.get_routes eth0
     """
 
-    filename = os.path.join(_DEB_NETWORK_UP_DIR, "route-{}".format(iface))
+    filename = os.path.join(_DEB_NETWORK_UP_DIR, f"route-{iface}")
     results = _read_file(filename)
 
-    filename = os.path.join(_DEB_NETWORK_DOWN_DIR, "route-{}".format(iface))
+    filename = os.path.join(_DEB_NETWORK_DOWN_DIR, f"route-{iface}")
     results += _read_file(filename)
 
     return results
@@ -2035,20 +2031,20 @@ def build_network_settings(**settings):
 
         for item in _read_file(_DEB_RESOLV_FILE):
             if domain_prog.match(item):
-                item = "domain {}".format(domainname)
+                item = f"domain {domainname}"
             elif search_prog.match(item):
-                item = "search {}".format(searchdomain)
+                item = f"search {searchdomain}"
             new_contents.append(item)
 
         # A domain line didn't exist so we'll add one in
         # with the new domainname
         if "domain" not in resolve:
-            new_contents.insert(0, "domain {}".format(domainname))
+            new_contents.insert(0, f"domain {domainname}")
 
         # A search line didn't exist so we'll add one in
         # with the new search domain
         if "search" not in resolve:
-            new_contents.insert("domain" in resolve, "search {}".format(searchdomain))
+            new_contents.insert("domain" in resolve, f"search {searchdomain}")
 
         new_resolv = "\n".join(new_contents)
 

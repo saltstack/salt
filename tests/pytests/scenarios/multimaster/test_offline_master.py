@@ -22,7 +22,7 @@ def test_minion_hangs_on_master_failure_50814(
     event_count = 3
     while True:
         check_event_start_time = time.time()
-        event_tag = "myco/foo/bar/{}".format(event_count)
+        event_tag = f"myco/foo/bar/{event_count}"
         ret = mm_master_2_salt_cli.run(
             "event.send", event_tag, minion_tgt=salt_mm_minion_1.id
         )
@@ -69,7 +69,7 @@ def test_minion_hangs_on_master_failure_50814(
         event_count = 1
         while True:
             check_event_start_time = time.time()
-            event_tag = "myco/foo/bar/{}".format(event_count)
+            event_tag = f"myco/foo/bar/{event_count}"
             ret = mm_master_2_salt_cli.run(
                 "event.send", event_tag, minion_tgt=salt_mm_minion_1.id
             )

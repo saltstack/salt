@@ -2,9 +2,10 @@
 Genshi Renderer for Salt
 """
 
-
 try:
-    from genshi.template import MarkupTemplate, NewTextTemplate, OldTextTemplate
+    from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
+    from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module
+    from genshi.template import OldTextTemplate  # pylint: disable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:

@@ -25,7 +25,6 @@ Example configuration
       identity_api_version: 3
 """
 
-
 HAS_SHADE = False
 try:
     import shade
@@ -69,7 +68,7 @@ def get_entity(ent_type, **kwargs):
     Attempt to query Keystone for more information about an entity
     """
     try:
-        func = "keystoneng.{}_get".format(ent_type)
+        func = f"keystoneng.{ent_type}_get"
         ent = __salt__[func](**kwargs)
     except OpenStackCloudException as e:
         # NOTE(SamYaple): If this error was something other than Forbidden we

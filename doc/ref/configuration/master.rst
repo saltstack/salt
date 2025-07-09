@@ -96,6 +96,14 @@ The user to run the Salt processes
 
     user: root
 
+.. note::
+
+    Starting with version `3006.0`, Salt's offical packages ship with a default
+    configuration which runs the Master as a non-priviledged user. The Master's
+    configuration file has the `user` option set to `user: salt`. Unless you
+    are absolutly sure want to run salt as some other user, care should be
+    taken to preserve this setting in your Master configuration file..
+
 .. conf_master:: ret_port
 
 ``enable_ssh_minions``
@@ -365,6 +373,22 @@ Default: ``5``
 Set the default timeout for the salt command and api.
 
 .. conf_master:: loop_interval
+
+.. conf_minion:: ipc_write_timeout
+
+``ipc_write_timeout``
+---------------------
+
+.. versionadded:: 3006.11
+
+Default: ``15``
+
+How many seconds the event publisher process will wait after a client stops
+responding before the client will be disconnected.
+
+.. code-block:: yaml
+
+    ipc_write_timeout: 15
 
 ``loop_interval``
 -----------------
@@ -2024,6 +2048,20 @@ The number of seconds between AES key rotations on the master.
     publish_session: Default: 86400
 
 .. conf_master:: ssl
+
+
+``publish_signing_algorithm``
+-----------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+The RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``. Minions must be at version ``3006.9`` or greater if this
+is changed from the default setting.
+
 
 ``ssl``
 -------

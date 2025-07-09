@@ -1,6 +1,7 @@
 """
 Common functions for working with RPM packages
 """
+
 import collections
 import datetime
 import logging
@@ -105,7 +106,7 @@ def resolve_name(name, arch, osarch=None):
         osarch = get_osarch()
 
     if not check_32(arch, osarch) and arch not in (osarch, "noarch"):
-        name += ".{}".format(arch)
+        name += f".{arch}"
     return name
 
 
@@ -123,7 +124,7 @@ def parse_pkginfo(line, osarch=None):
 
     name = resolve_name(name, arch, osarch)
     if release:
-        version += "-{}".format(release)
+        version += f"-{release}"
     if epoch not in ("(none)", "0"):
         version = ":".join((epoch, version))
 

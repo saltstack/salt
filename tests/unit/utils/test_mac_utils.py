@@ -1,6 +1,7 @@
 """
 mac_utils tests
 """
+
 import os
 import plistlib
 import subprocess

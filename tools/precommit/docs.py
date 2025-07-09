@@ -1,6 +1,7 @@
 """
 Check salt code base for for missing or wrong docs
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -99,10 +100,7 @@ def build_path_cache():
                 # rest_cherrypy, rest_tornado
                 subpackage = parts.pop(0)
                 stub_path = (
-                    stub_path
-                    / package
-                    / "all"
-                    / "salt.netapi.{}.rst".format(subpackage)
+                    stub_path / package / "all" / f"salt.netapi.{subpackage}.rst"
                 )
         else:
             stub_path = (
@@ -122,7 +120,7 @@ build_path_cache()
 
 def build_file_list(files, extension):
     if not files:
-        _files = tools.utils.REPO_ROOT.rglob("*{}".format(extension))
+        _files = tools.utils.REPO_ROOT.rglob(f"*{extension}")
     else:
         _files = [fpath.resolve() for fpath in files if fpath.suffix == extension]
     _files = [path.relative_to(tools.utils.REPO_ROOT) for path in _files]
@@ -315,7 +313,7 @@ def check_module_indexes(ctx: Context, files: list[pathlib.Path]) -> int:
                     if module.name == "__init__.py":
                         modules.add(module.parent.stem)
                         continue
-                    modules.add("{}.{}".format(module.parent.stem, module.stem))
+                    modules.add(f"{module.parent.stem}.{module.stem}")
                     continue
                 if module.name == "__init__.py":
                     continue

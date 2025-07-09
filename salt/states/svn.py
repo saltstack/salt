@@ -101,7 +101,7 @@ def latest(
     opts = tuple()
 
     if os.path.exists(target) and not os.path.isdir(target):
-        return _fail(ret, 'The path "{}" exists and is not a directory.'.format(target))
+        return _fail(ret, f'The path "{target}" exists and is not a directory.')
 
     if __opts__["test"]:
         if rev:
@@ -123,11 +123,11 @@ def latest(
             )
             svn_cmd = "svn.diff"
         except exceptions.CommandExecutionError:
-            return _fail(ret, "{} exists but is not a svn working copy.".format(target))
+            return _fail(ret, f"{target} exists but is not a svn working copy.")
 
         current_rev = current_info[0]["Revision"]
 
-        opts += ("-r", "{}:{}".format(current_rev, new_rev))
+        opts += ("-r", f"{current_rev}:{new_rev}")
 
         if trust:
             opts += ("--trust-server-cert",)
@@ -173,7 +173,7 @@ def latest(
             fmt="dict",
         )[0]["Revision"]
         if current_rev != new_rev:
-            ret["changes"]["revision"] = "{} => {}".format(current_rev, new_rev)
+            ret["changes"]["revision"] = f"{current_rev} => {new_rev}"
 
     else:
         out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
@@ -260,11 +260,11 @@ def export(
     opts = ()
 
     if not overwrite and os.path.exists(target) and not os.path.isdir(target):
-        return _fail(ret, 'The path "{}" exists and is not a directory.'.format(target))
+        return _fail(ret, f'The path "{target}" exists and is not a directory.')
     if __opts__["test"]:
         if not os.path.exists(target):
             return _neutral_test(
-                ret, "{} doesn't exist and is set to be checked out.".format(target)
+                ret, f"{target} doesn't exist and is set to be checked out."
             )
         svn_cmd = "svn.list"
         rev = "HEAD"
@@ -288,7 +288,7 @@ def export(
 
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
     ret["changes"]["new"] = name
-    ret["changes"]["comment"] = "{} was Exported to {}".format(name, target)
+    ret["changes"]["comment"] = f"{name} was Exported to {target}"
     ret["comment"] = out
 
     return ret

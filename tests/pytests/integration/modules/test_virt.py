@@ -1,12 +1,14 @@
 """
 Validate the virt module
 """
+
 import logging
 from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -15,7 +17,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.timeout_unless_on_windows(120, func_only=True),
+    pytest.mark.timeout_unless_on_windows(120),
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
 
@@ -41,7 +43,12 @@ def virt_minion_0(
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
-    config_overrides = {"user": "root"}
+    config_overrides = {
+        "user": "root",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master.salt_minion_daemon(
         virt_minion_0_id,
         name=virt_minion_0_id,
@@ -78,7 +85,12 @@ def virt_minion_1(
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
-    config_overrides = {"user": "root"}
+    config_overrides = {
+        "user": "root",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master.salt_minion_daemon(
         virt_minion_1_id,
         name=virt_minion_1_id,
@@ -351,7 +363,7 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain, grains):
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
         ret = salt_cli.run(
             "virt.define_xml_path",
-            "/{}.xml".format(virt_domain),
+            f"/{virt_domain}.xml",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret
@@ -391,7 +403,7 @@ class TestVirtMigrateTest:
             )
         ret = salt_cli.run(
             "virt.define_xml_path",
-            "/{}.xml".format(virt_domain),
+            f"/{virt_domain}.xml",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret
@@ -418,13 +430,11 @@ class TestVirtMigrateTest:
         assert domains == []
 
     def test_ssh_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain, grains
+        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
     ):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
-        if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 3:
-            pytest.skip("Skipping this test on PhotonOS 3")
         ret = salt_cli.run("virt.list_active_vms", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
 
@@ -449,7 +459,7 @@ class TestVirtMigrateTest:
         ret = salt_cli.run(
             "virt.migrate",
             virt_domain,
-            "qemu+ssh://{}/system".format(virt_minion_1.uri),
+            f"qemu+ssh://{virt_minion_1.uri}/system",
             minion_tgt=virt_minion_0.id,
         )
         assert ret.returncode == 0, ret

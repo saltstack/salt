@@ -8,6 +8,7 @@ import threading
 
 import salt.exceptions
 import salt.utils.data
+import salt.utils.platform
 import salt.utils.stringutils
 
 
@@ -33,9 +34,8 @@ class TimedProc:
             if not self.stdin_raw_newlines:
                 # Translate a newline submitted as '\n' on the CLI to an actual
                 # newline character.
-                self.stdin = salt.utils.stringutils.to_bytes(
-                    self.stdin.replace("\\n", "\n")
-                )
+                self.stdin = self.stdin.replace("\\n", "\n")
+            self.stdin = salt.utils.stringutils.to_bytes(self.stdin)
             kwargs["stdin"] = subprocess.PIPE
 
         if not self.with_communicate:
@@ -44,7 +44,7 @@ class TimedProc:
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError(
-                "Error: timeout {} must be a number".format(self.timeout)
+                f"Error: timeout {self.timeout} must be a number"
             )
         if kwargs.get("shell", False):
             args = salt.utils.data.decode(args, to_str=True)
@@ -53,11 +53,12 @@ class TimedProc:
             self.process = subprocess.Popen(args, **kwargs)
         except (AttributeError, TypeError):
             if not kwargs.get("shell", False):
+                use_posix = not salt.utils.platform.is_windows()
                 if not isinstance(args, (list, tuple)):
                     try:
-                        args = shlex.split(args)
+                        args = shlex.split(args, posix=use_posix)
                     except AttributeError:
-                        args = shlex.split(str(args))
+                        args = shlex.split(str(args), posix=use_posix)
                 str_args = []
                 for arg in args:
                     if not isinstance(arg, str):

@@ -42,7 +42,7 @@ def _add_var(var, value):
     """
     makeconf = _get_makeconf()
     layman = "source /var/lib/layman/make.conf"
-    fullvar = '{}="{}"'.format(var, value)
+    fullvar = f'{var}="{value}"'
     if __salt__["file.contains"](makeconf, layman):
         # TODO perhaps make this a function in the file module?
         cmd = [
@@ -77,9 +77,7 @@ def set_var(var, value):
 
     # If var already in file, replace its value
     if old_value is not None:
-        __salt__["file.sed"](
-            makeconf, "^{}=.*".format(var), '{}="{}"'.format(var, value)
-        )
+        __salt__["file.sed"](makeconf, f"^{var}=.*", f'{var}="{value}"')
     else:
         _add_var(var, value)
 
@@ -108,7 +106,7 @@ def remove_var(var):
 
     # If var is in file
     if old_value is not None:
-        __salt__["file.sed"](makeconf, "^{}=.*".format(var), "")
+        __salt__["file.sed"](makeconf, f"^{var}=.*", "")
 
     new_value = get_var(var)
     return {var: {"old": old_value, "new": new_value}}
@@ -135,10 +133,8 @@ def append_var(var, value):
 
     # If var already in file, add to its value
     if old_value is not None:
-        appended_value = "{} {}".format(old_value, value)
-        __salt__["file.sed"](
-            makeconf, "^{}=.*".format(var), '{}="{}"'.format(var, appended_value)
-        )
+        appended_value = f"{old_value} {value}"
+        __salt__["file.sed"](makeconf, f"^{var}=.*", f'{var}="{appended_value}"')
     else:
         _add_var(var, value)
 

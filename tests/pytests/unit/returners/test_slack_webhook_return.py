@@ -3,6 +3,7 @@
 
     Unit tests for the Slack Webhook Returner.
 """
+
 import pytest
 
 import salt.returners.slack_webhook_return as slack_webhook
@@ -183,9 +184,9 @@ def expected_payload(minion_name, author_icon):
                     "Function: state.apply\nFunction Args: ['config.vim']\nJID:"
                     " 20181227105933129338\nTotal: 4\nDuration: 27.03 secs"
                 ),
-                "author_link": "{}".format(minion_name),
-                "author_name": "{}".format(minion_name),
-                "fallback": "{} | Failed".format(minion_name),
+                "author_link": f"{minion_name}",
+                "author_name": f"{minion_name}",
+                "fallback": f"{minion_name} | Failed",
                 "author_icon": author_icon,
             },
             {"color": "good", "title": "Unchanged: 2"},
@@ -257,7 +258,7 @@ def test_generate_payload_for_state_apply(
     """
     Test _generate_payload private method
     """
-    test_title = "{} | Failed".format(minion_name)
+    test_title = f"{minion_name} | Failed"
     test_report = slack_webhook._generate_report(ret, show_tasks)
 
     custom_grains = slack_webhook.__grains__
@@ -289,7 +290,7 @@ def test_generate_payload_for_test_ping(minion_name, author_icon, show_tasks):
     expected_payload = {
         "attachments": [
             {
-                "fallback": "{} | Succeeded".format(minion_name),
+                "fallback": f"{minion_name} | Succeeded",
                 "color": "#272727",
                 "author_name": minion_name,
                 "author_link": minion_name,
@@ -301,7 +302,7 @@ def test_generate_payload_for_test_ping(minion_name, author_icon, show_tasks):
         ]
     }
 
-    test_title = "{} | Succeeded".format(minion_name)
+    test_title = f"{minion_name} | Succeeded"
     test_report = slack_webhook._generate_report(test_ping_ret, show_tasks)
 
     custom_grains = slack_webhook.__grains__

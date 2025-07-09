@@ -4,7 +4,6 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
-
 import logging
 import os
 import time
@@ -22,21 +21,6 @@ import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper
-
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        try:
-            from Crypto.Cipher import PKCS1_OAEP  # nosec
-        except ImportError:
-            pass
-
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +128,7 @@ class AsyncReqChannel:
         auth,
         timeout=REQUEST_CHANNEL_TIMEOUT,
         tries=REQUEST_CHANNEL_TRIES,
-        **kwargs
+        **kwargs,
     ):
         self.opts = dict(opts)
         self.transport = transport
@@ -166,12 +150,43 @@ class AsyncReqChannel:
     def ttype(self):
         return self.transport.ttype
 
-    def _package_load(self, load):
-        return {
+    def _package_load(self, load, nonce=None):
+        """
+        Prepare the load to be sent over the wire.
+
+        For aes channels add a nonce, timestamp and signed token to the load
+        before encrypting it using our aes session key. Then wrap the encrypted
+        load with some meta data. For 'clear' encryption, no extra feilds are
+        added to the load. The unencyrpted load is wrapped with meta data.
+        """
+        if self.crypt == "aes":
+            if nonce is None:
+                nonce = uuid.uuid4().hex
+            try:
+                load["nonce"] = nonce
+                load["ts"] = int(time.time())
+                load["tok"] = self.auth.gen_token(b"salt")
+                load["id"] = self.opts["id"]
+            except TypeError:
+                # Backwards compatability for non dict loads, let the load get
+                # sent and fail to authenticate.
+                log.warning(
+                    "Invalid load passed to request channel. Type is %s should be dict.",
+                    type(load),
+                )
+
+            load = self.auth.session_crypticle.dumps(load)
+
+        ret = {
             "enc": self.crypt,
             "load": load,
-            "version": 2,
+            "version": 3,
         }
+        if self.crypt == "aes":
+            ret["id"] = self.opts["id"]
+            ret["enc_algo"] = self.opts["encryption_algorithm"]
+            ret["sig_algo"] = self.opts["signing_algorithm"]
+        return ret
 
     @salt.ext.tornado.gen.coroutine
     def _send_with_retry(self, load, tries, timeout):
@@ -204,12 +219,12 @@ class AsyncReqChannel:
             timeout = self.timeout
         if tries is None:
             tries = self.tries
-        nonce = uuid.uuid4().hex
-        load["nonce"] = nonce
         if not self.auth.authenticated:
             yield self.auth.authenticate()
+
+        nonce = uuid.uuid4().hex
         ret = yield self._send_with_retry(
-            self._package_load(self.auth.crypticle.dumps(load)),
+            self._package_load(load, nonce),
             tries,
             timeout,
         )
@@ -218,15 +233,11 @@ class AsyncReqChannel:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
             ret = yield self._send_with_retry(
-                self._package_load(self.auth.crypticle.dumps(load)),
+                self._package_load(load, nonce),
                 tries,
                 timeout,
             )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
+        aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
         # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -234,9 +245,12 @@ class AsyncReqChannel:
 
         # Validate the master's signature.
         if not self.verify_signature(signed_msg["data"], signed_msg["sig"]):
-            raise salt.crypt.AuthenticationError(
-                "Pillar payload signature failed to validate."
-            )
+            # Try to reauth on error
+            yield self.auth.authenticate()
+            if not self.verify_signature(signed_msg["data"], signed_msg["sig"]):
+                raise salt.crypt.AuthenticationError(
+                    "Pillar payload signature failed to validate."
+                )
 
         # Make sure the signed key matches the key we used to decrypt the data.
         data = salt.payload.loads(signed_msg["data"])
@@ -249,7 +263,9 @@ class AsyncReqChannel:
         raise salt.ext.tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.verify_signature(self.master_pubkey_path, data, sig)
+        return salt.crypt.PublicKey(self.master_pubkey_path).verify(
+            data, sig, self.opts["signing_algorithm"]
+        )
 
     @salt.ext.tornado.gen.coroutine
     def _crypted_transfer(self, load, timeout, raw=False):
@@ -265,15 +281,13 @@ class AsyncReqChannel:
         :param dict load: A load to send across the wire
         :param int timeout: The number of seconds on a response before failing
         """
-        nonce = uuid.uuid4().hex
-        if load and isinstance(load, dict):
-            load["nonce"] = nonce
 
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
             # Yield control to the caller. When send() completes, resume by populating data with the Future.result
+            nonce = uuid.uuid4().hex
             data = yield self.transport.send(
-                self._package_load(self.auth.crypticle.dumps(load)),
+                self._package_load(load, nonce),
                 timeout=timeout,
             )
             # we may not have always data
@@ -281,9 +295,10 @@ class AsyncReqChannel:
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data, raw, nonce=nonce)
+                data = self.auth.session_crypticle.loads(data, raw, nonce=nonce)
             if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
+
             raise salt.ext.tornado.gen.Return(data)
 
         if not self.auth.authenticated:
@@ -374,7 +389,7 @@ class AsyncPubChannel:
 
     async_methods = [
         "connect",
-        "_decode_messages",
+        "_decode_payload",
     ]
     close_methods = [
         "close",
@@ -447,7 +462,7 @@ class AsyncPubChannel:
         except Exception as exc:  # pylint: disable=broad-except
             if "-|RETRY|-" not in str(exc):
                 raise salt.exceptions.SaltClientError(
-                    "Unable to sign_in to master: {}".format(exc)
+                    f"Unable to sign_in to master: {exc}"
                 )  # TODO: better error message
 
     def close(self):
@@ -480,7 +495,7 @@ class AsyncPubChannel:
         return {
             "enc": self.crypt,
             "load": load,
-            "version": 2,
+            "version": 3,
         }
 
     @salt.ext.tornado.gen.coroutine
@@ -584,7 +599,10 @@ class AsyncPubChannel:
 
             # Verify that the signature is valid
             if not salt.crypt.verify_signature(
-                self.master_pubkey_path, payload["load"], payload.get("sig")
+                self.master_pubkey_path,
+                payload["load"],
+                payload.get("sig"),
+                algorithm=payload["sig_algo"],
             ):
                 raise salt.crypt.AuthenticationError(
                     "Message signature failed to validate."

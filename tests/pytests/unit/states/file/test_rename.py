@@ -58,14 +58,14 @@ def test_rename(tmp_path):
 
     mock_lex = MagicMock(side_effect=[False, True, True])
     with patch.object(os.path, "isabs", mock_f):
-        comt = "Specified file {} is not an absolute path".format(name)
+        comt = f"Specified file {name} is not an absolute path"
         ret.update({"comment": comt, "name": name})
         assert filestate.rename(name, source) == ret
 
     mock_lex = MagicMock(return_value=False)
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "lexists", mock_lex):
-            comt = 'Source file "{}" has already been moved out of place'.format(source)
+            comt = f'Source file "{source}" has already been moved out of place'
             ret.update({"comment": comt, "result": True})
             assert filestate.rename(name, source) == ret
 
@@ -94,7 +94,7 @@ def test_rename(tmp_path):
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "lexists", mock_lex):
             with patch.dict(filestate.__opts__, {"test": True}):
-                comt = 'File "{}" is set to be moved to "{}"'.format(source, name)
+                comt = f'File "{source}" is set to be moved to "{name}"'
                 ret.update({"name": name, "comment": comt, "result": None})
                 assert filestate.rename(name, source) == ret
 
@@ -103,7 +103,7 @@ def test_rename(tmp_path):
         with patch.object(os.path, "lexists", mock_lex):
             with patch.object(os.path, "isdir", mock_f):
                 with patch.dict(filestate.__opts__, {"test": False}):
-                    comt = "The target directory {} is not present".format(tmp_path)
+                    comt = f"The target directory {tmp_path} is not present"
                     ret.update({"name": name, "comment": comt, "result": False})
                     assert filestate.rename(name, source) == ret
 
@@ -116,7 +116,7 @@ def test_rename(tmp_path):
                         with patch.object(
                             shutil, "move", MagicMock(side_effect=IOError)
                         ):
-                            comt = 'Failed to move "{}" to "{}"'.format(source, name)
+                            comt = f'Failed to move "{source}" to "{name}"'
                             ret.update({"name": name, "comment": comt, "result": False})
                             assert filestate.rename(name, source) == ret
 
@@ -127,7 +127,7 @@ def test_rename(tmp_path):
                 with patch.object(os.path, "islink", mock_f):
                     with patch.dict(filestate.__opts__, {"test": False}):
                         with patch.object(shutil, "move", MagicMock()):
-                            comt = 'Moved "{}" to "{}"'.format(source, name)
+                            comt = f'Moved "{source}" to "{name}"'
                             ret.update(
                                 {
                                     "name": name,
@@ -180,7 +180,7 @@ def test_rename(tmp_path):
     ), patch.object(
         os, "unlink", MagicMock()
     ):
-        comt = 'Moved "{}" to "{}"'.format(source, name)
+        comt = f'Moved "{source}" to "{name}"'
         ret.update(
             {
                 "name": name,

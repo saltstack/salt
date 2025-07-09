@@ -17,7 +17,6 @@ relies on the CIMC proxy module to interface with the device.
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -477,9 +476,9 @@ def user(name, id="", user="", priv="", password="", status="active"):
 
         if not conf:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to find requested user id on device. Please verify id is valid."
+            ret["comment"] = (
+                "Unable to find requested user id on device. Please verify id is valid."
+            )
             return ret
 
         updates = __salt__["cimc.set_user"](str(id), user, password, priv, status)

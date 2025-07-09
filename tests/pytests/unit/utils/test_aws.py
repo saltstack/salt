@@ -4,6 +4,7 @@
 
     Test the salt aws functions
 """
+
 import io
 import os
 import time

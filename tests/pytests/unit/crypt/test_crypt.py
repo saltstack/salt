@@ -12,6 +12,7 @@ import pytest
 import salt.crypt
 import salt.master
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
@@ -152,6 +153,7 @@ def test_cryptical_dumps_invalid_nonce():
         assert master_crypt.loads(ret, nonce="abcde")
 
 
+@pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_verify_signature(tmp_path):
     tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
     tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())
@@ -162,6 +164,7 @@ def test_verify_signature(tmp_path):
     assert salt.crypt.verify_signature(str(tmp_path.joinpath("foo.pub")), msg, sig)
 
 
+@pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_verify_signature_bad_sig(tmp_path):
     tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
     tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())

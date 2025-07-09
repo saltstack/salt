@@ -36,7 +36,6 @@ the API key will be updated on all the YubiCloud servers.
 
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)

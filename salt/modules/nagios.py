@@ -2,7 +2,6 @@
 Run nagios plugins/checks from salt and get the return as data.
 """
 
-
 import logging
 import os
 import stat
@@ -33,9 +32,7 @@ def _execute_cmd(plugin, args="", run_type="cmd.retcode"):
 
     all_plugins = list_plugins()
     if plugin in all_plugins:
-        data = __salt__[run_type](
-            "{}{} {}".format(PLUGINDIR, plugin, args), python_shell=False
-        )
+        data = __salt__[run_type](f"{PLUGINDIR}{plugin} {args}", python_shell=False)
 
     return data
 

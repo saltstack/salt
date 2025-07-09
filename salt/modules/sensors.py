@@ -42,7 +42,7 @@ def sense(chip, fahrenheit=False):
     if fahrenheit is True:
         extra_args = "-f"
     sensors = __salt__["cmd.run"](
-        "/usr/bin/sensors {} {}".format(chip, extra_args), python_shell=False
+        f"/usr/bin/sensors {chip} {extra_args}", python_shell=False
     ).splitlines()
     ret = {}
     for sensor in sensors:

@@ -11,7 +11,6 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
     target machine.
 """
 
-
 import logging
 import re
 
@@ -60,7 +59,7 @@ def create_disk(name, size):
         salt '*' vmctl.create_disk /path/to/disk.img size=10G
     """
     ret = False
-    cmd = "vmctl create {} -s {}".format(name, size)
+    cmd = f"vmctl create {name} -s {size}"
 
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
@@ -89,7 +88,7 @@ def load(path):
         salt '*' vmctl.load path=/etc/vm.switches.conf
     """
     ret = False
-    cmd = "vmctl load {}".format(path)
+    cmd = f"vmctl load {path}"
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     if result["retcode"] == 0:
         ret = True
@@ -227,7 +226,7 @@ def start(
         name = _id_to_name(id)
 
     if nics > 0:
-        cmd.append("-i {}".format(nics))
+        cmd.append(f"-i {nics}")
 
     # Paths cannot be appended as otherwise the inserted whitespace is treated by
     # vmctl as being part of the path.
@@ -235,10 +234,10 @@ def start(
         cmd.extend(["-b", bootpath])
 
     if memory:
-        cmd.append("-m {}".format(memory))
+        cmd.append(f"-m {memory}")
 
     if switch:
-        cmd.append("-n {}".format(switch))
+        cmd.append(f"-n {switch}")
 
     if local_iface:
         cmd.append("-L")

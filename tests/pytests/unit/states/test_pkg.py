@@ -11,6 +11,7 @@ import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
 import salt.utils.state as state_utils
+from salt.loader.dunder import __opts__
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
@@ -21,7 +22,7 @@ log = logging.getLogger(__name__)
 def configure_loader_modules(minion_opts):
     return {
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         pkg: {
             "__env__": "base",
@@ -619,7 +620,7 @@ def test_removed_purged_with_changes_test_true(list_pkgs, action):
             "pkg_resource.version_clean": MagicMock(return_value=None),
         },
     ):
-        expected = {"pkga": {"new": "{}".format(action), "old": ""}}
+        expected = {"pkga": {"new": f"{action}", "old": ""}}
         pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
 
         # Run state with test=true
@@ -689,7 +690,7 @@ def test_held_unheld(package_manager):
                         "name": pkg,
                         "changes": {"new": "hold", "old": ""},
                         "result": True,
-                        "comment": "Package {} is now being held.".format(pkg),
+                        "comment": f"Package {pkg} is now being held.",
                     }
                 }
             )
@@ -706,7 +707,7 @@ def test_held_unheld(package_manager):
                         "name": pkg,
                         "changes": {"new": "", "old": "hold"},
                         "result": True,
-                        "comment": "Package {} is no longer held.".format(pkg),
+                        "comment": f"Package {pkg} is no longer held.",
                     }
                 }
             )

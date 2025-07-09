@@ -34,7 +34,7 @@ async def test_get_no_mid(http_client, salt_minion, salt_sub_minion):
 @pytest.mark.slow_test
 async def test_get(http_client, salt_minion):
     response = await http_client.fetch(
-        "/minions/{}".format(salt_minion.id),
+        f"/minions/{salt_minion.id}",
         method="GET",
         follow_redirects=False,
     )
@@ -104,7 +104,7 @@ async def test_post_with_incorrect_client(http_client):
 async def test_mem_leak_in_event_listener(http_client, salt_minion, app):
     for i in range(10):
         await http_client.fetch(
-            "/minions/{}".format(salt_minion.id),
+            f"/minions/{salt_minion.id}",
             method="GET",
             follow_redirects=False,
         )

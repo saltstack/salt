@@ -94,7 +94,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     )
             else:
                 self.sock.setsockopt(zmq.SUBSCRIBE, b"")
-            pub_uri = "tcp://{}:{}".format(self.interface, self.port)
+            pub_uri = f"tcp://{self.interface}:{self.port}"
             self.sock.connect(pub_uri)
         else:
             end = time.time() + 120
@@ -254,7 +254,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.master_config["interface"],
             self.master_config["publish_port"],
             self.aes_key,
-            **self.collector_kwargs
+            **self.collector_kwargs,
         )
 
     def run(self):

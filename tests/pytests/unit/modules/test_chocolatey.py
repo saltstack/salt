@@ -1,6 +1,7 @@
 """
 Test for the chocolatey module
 """
+
 import os
 
 import pytest
@@ -200,6 +201,20 @@ def test_version_check_remote_true():
     list_side_effect = [
         {"ack": ["3.1.1"]},
         {"ack": ["3.1.1"], "Wolfpack": ["3.0.17"], "blackbird": ["1.0.79.3"]},
+    ]
+    with patch.object(chocolatey, "list_", side_effect=list_side_effect):
+        expected = {"ack": {"available": ["3.1.1"], "installed": ["3.1.1"]}}
+        result = chocolatey.version("ack", check_remote=True)
+        assert result == expected
+
+
+def test_version_check_remote_true_capitalization():
+    """
+    Test version when remote is True
+    """
+    list_side_effect = [
+        {"Ack": ["3.1.1"]},
+        {"Ack": ["3.1.1"], "Wolfpack": ["3.0.17"], "blackbird": ["1.0.79.3"]},
     ]
     with patch.object(chocolatey, "list_", side_effect=list_side_effect):
         expected = {"ack": {"available": ["3.1.1"], "installed": ["3.1.1"]}}

@@ -2,7 +2,6 @@
 Unit Tests for functions located in salt.utils.doc.py.
 """
 
-
 import salt.utils.doc
 from tests.support.unit import TestCase
 

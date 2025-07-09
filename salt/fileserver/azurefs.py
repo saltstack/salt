@@ -45,7 +45,6 @@ permissions.
     Do not include the leading ? for sas_token if generated from the web
 """
 
-
 import base64
 import logging
 import os

@@ -28,7 +28,6 @@ Example States
         - description: 'OpenStack Image'
 """
 
-
 __virtualname__ = "keystone_service"
 
 

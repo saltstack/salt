@@ -4,7 +4,6 @@
     TestCase for salt.modules.servicenow
 """
 
-
 import pytest
 
 import salt.modules.servicenow as servicenow

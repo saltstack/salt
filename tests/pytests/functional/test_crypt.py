@@ -7,6 +7,7 @@ import salt.crypt
 
 @pytest.mark.windows_whitelisted
 def test_generated_keys(tmp_path):
-    priv = salt.crypt.gen_keys(tmp_path, "aaa", 2048)
-    assert "\r" not in pathlib.Path(priv).read_text()
-    assert "\r" not in pathlib.Path(priv.replace(".pem", ".pub")).read_text()
+    priv = pathlib.Path(salt.crypt.gen_keys(tmp_path, "aaa", 2048))
+    pub = priv.with_suffix(".pub")
+    assert "\r" not in priv.read_text(encoding="utf-8")
+    assert "\r" not in pub.read_text(encoding="utf-8")

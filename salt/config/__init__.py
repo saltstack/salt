@@ -1,6 +1,7 @@
 """
 All salt configuration loading and defaults should be in this module
 """
+
 import codecs
 import glob
 import logging
@@ -12,6 +13,8 @@ import types
 import urllib.parse
 from copy import deepcopy
 
+import salt.crypt
+import salt.defaults
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.features
@@ -40,8 +43,6 @@ from salt._logging import (
 try:
     import psutil
 
-    if not hasattr(psutil, "virtual_memory"):
-        raise ImportError("Version of psutil too old.")
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -88,7 +89,7 @@ def _gather_buffer_space():
 
     Result is in bytes.
     """
-    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
+    if HAS_PSUTIL:
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
@@ -996,6 +997,15 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_interval": int,
         "request_channel_timeout": int,
         "request_channel_tries": int,
+        # RSA encryption for minion
+        "encryption_algorithm": str,
+        # RSA signing for minion
+        "signing_algorithm": str,
+        # Master publish channel signing
+        "publish_signing_algorithm": str,
+        "request_server_ttl": int,
+        "request_server_aes_session": int,
+        "ipc_write_timeout": int,
     }
 )
 
@@ -1304,6 +1314,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "features": {},
+        "encryption_algorithm": "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA1",
     }
 )
 
@@ -1650,6 +1662,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "maintenance_interval": 3600,
         "fileserver_interval": 3600,
         "features": {},
+        "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "request_server_aes_session": 0,
+        "request_server_ttl": 0,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
     }
 )
 
@@ -2027,7 +2043,7 @@ def _read_conf_file(path):
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
         except salt.utils.yaml.YAMLError as err:
-            message = "Error parsing configuration file: {} - {}".format(path, err)
+            message = f"Error parsing configuration file: {path} - {err}"
             log.error(message)
             if path.endswith("_schedule.conf"):
                 # Create empty dictionary of config options
@@ -2124,7 +2140,7 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
     if not os.path.isfile(path):
-        template = "{}.template".format(path)
+        template = f"{path}.template"
         if os.path.isfile(template):
             log.debug("Writing %s based on %s", path, template)
             with salt.utils.files.fopen(path, "w") as out:
@@ -2204,6 +2220,18 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
             salt.utils.dictupdate.update(configuration, opts, True, True)
 
     return configuration
+
+
+def should_prepend_root_dir(key, opts):
+    """
+    Prepend root dir only when the key exists, has a value, and that value is
+    not a URI.
+    """
+    return (
+        key in opts
+        and opts[key] is not None
+        and urllib.parse.urlparse(os.path.splitdrive(opts[key])[1]).scheme == ""
+    )
 
 
 def prepend_root_dir(opts, path_options):
@@ -2481,7 +2509,7 @@ def syndic_config(
                 ),
             )
         ),
-        "user": opts.get("syndic_user", opts["user"]),
+        "user": opts.get("syndic_user", master_opts["user"]),
         "sock_dir": os.path.join(
             opts["cachedir"], opts.get("syndic_sock_dir", opts["sock_dir"])
         ),
@@ -2489,6 +2517,7 @@ def syndic_config(
         "cachedir": master_opts["cachedir"],
     }
     opts.update(syndic_opts)
+
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         "pki_dir",
@@ -2502,8 +2531,7 @@ def syndic_config(
         "autosign_grains_dir",
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
-        # If this is not a URI and instead a local path
-        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     salt.features.setup_features(opts)
@@ -2755,8 +2783,8 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
-        prepend_root_dirs.append(opts["log_file"])
+    if should_prepend_root_dir("log_file", opts):
+        prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
     salt.features.setup_features(opts)
@@ -2801,7 +2829,7 @@ def apply_cloud_config(overrides, defaults=None):
                     if alias not in config["providers"]:
                         config["providers"][alias] = {}
 
-                    detail["provider"] = "{}:{}".format(alias, driver)
+                    detail["provider"] = f"{alias}:{driver}"
                     config["providers"][alias][driver] = detail
             elif isinstance(details, dict):
                 if "driver" not in details:
@@ -2818,7 +2846,7 @@ def apply_cloud_config(overrides, defaults=None):
                 if alias not in config["providers"]:
                     config["providers"][alias] = {}
 
-                details["provider"] = "{}:{}".format(alias, driver)
+                details["provider"] = f"{alias}:{driver}"
                 config["providers"][alias][driver] = details
 
     # Migrate old configuration
@@ -3089,7 +3117,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         for entry in val:
 
             if "driver" not in entry:
-                entry["driver"] = "-only-extendable-{}".format(ext_count)
+                entry["driver"] = f"-only-extendable-{ext_count}"
                 ext_count += 1
 
             if key not in providers:
@@ -3132,7 +3160,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                                 details["driver"], provider_alias, alias, provider
                             )
                         )
-                    details["extends"] = "{}:{}".format(alias, provider)
+                    details["extends"] = f"{alias}:{provider}"
                     # change provider details '-only-extendable-' to extended
                     # provider name
                     details["driver"] = provider
@@ -3153,10 +3181,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                 else:
                     if driver in providers.get(extends):
-                        details["extends"] = "{}:{}".format(extends, driver)
+                        details["extends"] = f"{extends}:{driver}"
                     elif "-only-extendable-" in providers.get(extends):
                         details["extends"] = "{}:{}".format(
-                            extends, "-only-extendable-{}".format(ext_count)
+                            extends, f"-only-extendable-{ext_count}"
                         )
                     else:
                         # We're still not aware of what we're trying to extend
@@ -3826,7 +3854,7 @@ def apply_minion_config(
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile"):
-        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -3846,6 +3874,17 @@ def apply_minion_config(
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
     _update_discovery_config(opts)
+
+    if opts["encryption_algorithm"] not in salt.crypt.VALID_ENCRYPTION_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The encryption algorithm '{opts['encryption_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_ENCRYPTION_ALGORITHMS)}."
+        )
+    if opts["signing_algorithm"] not in salt.crypt.VALID_SIGNING_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The signging algorithm '{opts['signing_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
 
     return opts
 
@@ -3870,7 +3909,7 @@ def _update_discovery_config(opts):
         for key in opts["discovery"]:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError(
-                    "Unknown discovery option: {}".format(key)
+                    f"Unknown discovery option: {key}"
                 )
         if opts.get("__role") != "minion":
             for key in ["attempts", "pause", "match"]:
@@ -4051,11 +4090,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile", "ssh_log_file"):
-        log_setting = opts.get(config_key, "")
-        if log_setting is None:
-            continue
-
-        if urllib.parse.urlparse(log_setting).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -4108,6 +4143,12 @@ def apply_master_config(overrides=None, defaults=None):
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
     _update_discovery_config(opts)
+
+    if opts["publish_signing_algorithm"] not in salt.crypt.VALID_SIGNING_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The  publish signging algorithm '{opts['publish_signing_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
 
     return opts
 
@@ -4256,11 +4297,7 @@ def apply_spm_config(overrides, defaults):
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("spm_logfile",):
-        log_setting = opts.get(config_key, "")
-        if log_setting is None:
-            continue
-
-        if urllib.parse.urlparse(log_setting).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)

@@ -6,7 +6,6 @@ Control the OpenBSD packet filter (PF).
 .. versionadded:: 2019.2.0
 """
 
-
 import logging
 import re
 
@@ -127,10 +126,10 @@ def loglevel(level):
             "debug",
         ]
     if level not in all_levels:
-        raise SaltInvocationError("Unknown loglevel: {}".format(level))
+        raise SaltInvocationError(f"Unknown loglevel: {level}")
 
     result = __salt__["cmd.run_all"](
-        "pfctl -x {}".format(level), output_loglevel="trace", python_shell=False
+        f"pfctl -x {level}", output_loglevel="trace", python_shell=False
     )
 
     if result["retcode"] != 0:
@@ -171,7 +170,7 @@ def load(file="/etc/pf.conf", noop=False):
 
     if result["retcode"] != 0:
         raise CommandExecutionError(
-            "Problem loading the ruleset from {}".format(file),
+            f"Problem loading the ruleset from {file}",
             info={"errors": [result["stderr"]], "changes": False},
         )
 
@@ -214,9 +213,9 @@ def flush(modifier):
         modifier = modifier.title()
 
     if modifier not in all_modifiers:
-        raise SaltInvocationError("Unknown modifier: {}".format(modifier))
+        raise SaltInvocationError(f"Unknown modifier: {modifier}")
 
-    cmd = "pfctl -v -F {}".format(modifier)
+    cmd = f"pfctl -v -F {modifier}"
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
     if result["retcode"] == 0:
@@ -228,7 +227,7 @@ def flush(modifier):
         ret["comment"] = result["stderr"]
     else:
         raise CommandExecutionError(
-            "Could not flush {}".format(modifier),
+            f"Could not flush {modifier}",
             info={"errors": [result["stderr"]], "changes": False},
         )
 
@@ -279,7 +278,7 @@ def table(command, table, **kwargs):
         "zero",
     ]
     if command not in all_commands:
-        raise SaltInvocationError("Unknown table command: {}".format(command))
+        raise SaltInvocationError(f"Unknown table command: {command}")
 
     cmd = ["pfctl", "-t", table, "-T", command]
 
@@ -316,7 +315,7 @@ def table(command, table, **kwargs):
             ret = {"comment": result["stderr"], "matches": False}
         else:
             raise CommandExecutionError(
-                "Could not apply {} on table {}".format(command, table),
+                f"Could not apply {command} on table {table}",
                 info={"errors": [result["stderr"]], "changes": False},
             )
 
@@ -351,16 +350,16 @@ def show(modifier):
         modifier = modifier.title()
 
     if modifier not in all_modifiers:
-        raise SaltInvocationError("Unknown modifier: {}".format(modifier))
+        raise SaltInvocationError(f"Unknown modifier: {modifier}")
 
-    cmd = "pfctl -s {}".format(modifier)
+    cmd = f"pfctl -s {modifier}"
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
     if result["retcode"] == 0:
         ret["comment"] = result["stdout"].split("\n")
     else:
         raise CommandExecutionError(
-            "Could not show {}".format(modifier),
+            f"Could not show {modifier}",
             info={"errors": [result["stderr"]], "changes": False},
         )
 

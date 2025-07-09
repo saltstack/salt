@@ -4,7 +4,6 @@
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
 """
 
-
 import logging
 
 import pytest

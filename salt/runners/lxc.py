@@ -4,7 +4,6 @@ Control Linux Containers via Salt
 :depends: lxc execution module
 """
 
-
 import copy
 import logging
 import os
@@ -41,7 +40,7 @@ def _do(name, fun, path=None):
 
     with salt.client.get_local_client(__opts__["conf_file"]) as client:
         cmd_ret = client.cmd_iter(
-            host, "lxc.{}".format(fun), [name], kwarg={"path": path}, timeout=60
+            host, f"lxc.{fun}", [name], kwarg={"path": path}, timeout=60
         )
         data = next(cmd_ret)
         data = data.get(host, {}).get("ret", None)
@@ -72,7 +71,7 @@ def _do_names(names, fun, path=None):
                 cmds.append(
                     client.cmd_iter(
                         host,
-                        "lxc.{}".format(fun),
+                        f"lxc.{fun}",
                         [name],
                         kwarg={"path": path},
                         timeout=60,
@@ -248,7 +247,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         except (TypeError, KeyError):
             pass
         if not alive:
-            ret["comment"] = "Host {} is not reachable".format(host)
+            ret["comment"] = f"Host {host} is not reachable"
             ret["result"] = False
             return ret
 
@@ -264,7 +263,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                         host,
                     )
         if host not in data:
-            ret["comment"] = "Host '{}' was not found".format(host)
+            ret["comment"] = f"Host '{host}' was not found"
             ret["result"] = False
             return ret
 
@@ -391,7 +390,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 time.sleep(1)
                 if ping:
                     return "OK"
-                raise Exception("Unresponsive {}".format(mid_))
+                raise Exception(f"Unresponsive {mid_}")
 
             ping = salt.utils.cloud.wait_for_fun(testping, timeout=21, mid=mid)
             if ping != "OK":

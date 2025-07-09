@@ -143,7 +143,7 @@ def synchronized(
 
     if not os.path.exists(name) and not force and not prepare:
         ret["result"] = False
-        ret["comment"] = "Destination directory {dest} was not found.".format(dest=name)
+        ret["comment"] = f"Destination directory {name} was not found."
     else:
         if not os.path.exists(name) and prepare:
             os.makedirs(name)

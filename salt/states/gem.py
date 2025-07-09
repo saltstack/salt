@@ -118,7 +118,7 @@ def installed(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The gem {} would have been installed".format(name)
+        ret["comment"] = f"The gem {name} would have been installed"
         return ret
     if __salt__["gem.install"](
         name,
@@ -169,7 +169,7 @@ def removed(name, ruby=None, user=None, gem_bin=None):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The gem {} would have been removed".format(name)
+        ret["comment"] = f"The gem {name} would have been removed"
         return ret
     if __salt__["gem.uninstall"](name, ruby, gem_bin=gem_bin, runas=user):
         ret["result"] = True
@@ -203,7 +203,7 @@ def sources_add(name, ruby=None, user=None):
         ret["comment"] = "Gem source is already added."
         return ret
     if __opts__["test"]:
-        ret["comment"] = "The gem source {} would have been added.".format(name)
+        ret["comment"] = f"The gem source {name} would have been added."
         return ret
     if __salt__["gem.sources_add"](source_uri=name, ruby=ruby, runas=user):
         ret["result"] = True

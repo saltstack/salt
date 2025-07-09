@@ -82,7 +82,10 @@ class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         test.collatz
         """
         self.assertEqual(
-            self.run_function("test.collatz", ["40"],)[
+            self.run_function(
+                "test.collatz",
+                ["40"],
+            )[
                 0
             ][-1],
             2,

@@ -2,7 +2,6 @@
     Test for salt.modules.vmctl
 """
 
-
 import pytest
 
 import salt.modules.vmctl as vmctl

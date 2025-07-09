@@ -74,7 +74,7 @@ def publish_server(opts, **kwargs):
         import salt.transport.local
 
         return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
-    raise Exception("Transport type not found: {}".format(ttype))
+    raise Exception(f"Transport type not found: {ttype}")
 
 
 def publish_client(opts, io_loop):
@@ -94,7 +94,7 @@ def publish_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPubClient(opts, io_loop)
-    raise Exception("Transport type not found: {}".format(ttype))
+    raise Exception(f"Transport type not found: {ttype}")
 
 
 class TransportWarning(Warning):

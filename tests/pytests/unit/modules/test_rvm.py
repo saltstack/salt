@@ -2,7 +2,6 @@
     Test cases for salt.modules.rvm
 """
 
-
 import pytest
 
 import salt.modules.rvm as rvm

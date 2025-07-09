@@ -1,6 +1,7 @@
 """
 Unit tests for Spacewalk runner
 """
+
 import salt.runners.spacewalk as spacewalk
 from tests.support.mock import Mock, call, patch
 

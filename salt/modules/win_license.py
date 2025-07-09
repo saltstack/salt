@@ -6,7 +6,6 @@ This module allows you to manage windows licensing via slmgr.vbs
     salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
 """
 
-
 import logging
 import re
 
@@ -53,7 +52,7 @@ def install(product_key):
 
         salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     """
-    cmd = r"cscript C:\Windows\System32\slmgr.vbs /ipk {}".format(product_key)
+    cmd = rf"cscript C:\Windows\System32\slmgr.vbs /ipk {product_key}"
     return __salt__["cmd.run"](cmd)
 
 

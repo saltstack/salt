@@ -13,8 +13,10 @@ import collections
 import ctypes
 import logging
 import os
+import shlex
 from ctypes import wintypes
 
+# pylint: disable=3rd-party-module-not-gated
 import ntsecuritycon
 import psutil
 import win32api
@@ -22,6 +24,10 @@ import win32con
 import win32process
 import win32security
 import win32service
+
+import salt.utils.path
+
+# pylint: enable=3rd-party-module-not-gated
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -154,7 +160,7 @@ class NTSTATUS(wintypes.LONG):
     def __repr__(self):
         name = self.__class__.__name__
         status = wintypes.ULONG.from_buffer(self)
-        return "{}({})".format(name, status.value)
+        return f"{name}({status.value})"
 
 
 PNTSTATUS = ctypes.POINTER(NTSTATUS)
@@ -163,7 +169,7 @@ PNTSTATUS = ctypes.POINTER(NTSTATUS)
 class BOOL(wintypes.BOOL):
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, bool(self))
+        return f"{name}({bool(self)})"
 
 
 class HANDLE(wintypes.HANDLE):
@@ -182,12 +188,17 @@ class HANDLE(wintypes.HANDLE):
 
     def Close(self, CloseHandle=kernel32.CloseHandle):
         if self and not getattr(self, "closed", False):
-            CloseHandle(self.Detach())
+            try:
+                CloseHandle(self.Detach())
+            except OSError:
+                # Suppress the error when there is no handle (WinError 6)
+                if ctypes.get_last_error() == 6:
+                    pass
 
     __del__ = Close
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, int(self))
+        return f"{self.__class__.__name__}({int(self)})"
 
 
 class LARGE_INTEGER(wintypes.LARGE_INTEGER):
@@ -202,7 +213,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, self.value)
+        return f"{name}({self.value})"
 
     def as_time(self):
         time100ns = self.value - self._unix_epoch
@@ -258,7 +269,7 @@ class LUID(ctypes.Structure):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, int(self))
+        return f"{name}({int(self)})"
 
 
 LPLUID = ctypes.POINTER(LUID)
@@ -309,7 +320,7 @@ class TOKEN_SOURCE(ctypes.Structure):
 LPTOKEN_SOURCE = ctypes.POINTER(TOKEN_SOURCE)
 py_source_context = TOKEN_SOURCE(b"PYTHON  ")
 py_origin_name = __name__.encode()
-py_logon_process_name = "{}-{}".format(py_origin_name, os.getpid())
+py_logon_process_name = f"{py_origin_name}-{os.getpid()}"
 SIZE_T = ctypes.c_size_t
 
 
@@ -340,7 +351,7 @@ class ContiguousUnicode(ctypes.Structure):
 
     def _get_unicode_string(self, name):
         wchar_size = ctypes.sizeof(WCHAR)
-        s = getattr(self, "_{}".format(name))
+        s = getattr(self, f"_{name}")
         length = s.Length // wchar_size
         buf = s.Buffer
         if buf:
@@ -372,7 +383,7 @@ class ContiguousUnicode(ctypes.Structure):
         addr = ctypes.addressof(self) + ctypes.sizeof(cls)
         for n, v in zip(self._string_names_, values):
             ptr = ctypes.cast(addr, PWCHAR)
-            ustr = getattr(self, "_{}".format(n))
+            ustr = getattr(self, f"_{n}")
             length = ustr.Length = len(v) * wchar_size
             full_length = length + wchar_size
             if (n == name and value is None) or (
@@ -398,13 +409,13 @@ class ContiguousUnicode(ctypes.Structure):
 
     @classmethod
     def from_address_copy(cls, address, size=None):
-        x = ctypes.Structure.__new__(cls)
+        x = ctypes.Structure.__new__(cls)  # pylint: disable=no-value-for-parameter
         if size is not None:
             ctypes.resize(x, size)
         ctypes.memmove(ctypes.byref(x), address, ctypes.sizeof(x))
         delta = ctypes.addressof(x) - address
         for n in cls._string_names_:
-            ustr = getattr(x, "_{}".format(n))
+            ustr = getattr(x, f"_{n}")
             addr = ctypes.c_void_p.from_buffer(ustr.Buffer)
             if addr:
                 addr.value += delta
@@ -1328,3 +1339,97 @@ def CreateProcessWithLogonW(
         ctypes.byref(process_info),
     )
     return process_info
+
+
+def prepend_cmd(cmd):
+    # Some commands are only available when run from a cmd shell. These are
+    # built-in commands such as echo. So, let's check for the binary in the
+    # path. If it does not exist, let's assume it's a built-in and requires us
+    # to run it in a cmd prompt.
+
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd, posix=False)
+
+    # This is needed for handling paths with spaces
+    new_cmd = []
+    for item in cmd:
+        # If item starts with ', escape any "
+        if item.startswith("'"):
+            item = item.replace('"', '\\"').replace("'", '"')
+        # If item starts with ", convert ' to escaped "
+        elif item.startswith('"'):
+            item = item.replace("'", '\\"')
+        # If there are spaces in item, wrap it in "
+        elif " " in item and "=" not in item:
+            item = f'"{item}"'
+        new_cmd.append(item)
+    cmd = new_cmd
+
+    # Let's try to figure out what the fist command is so we can check for
+    # builtin commands such as echo
+    first_cmd = cmd[0].split("\\")[-1].strip("\"'")
+
+    cmd = " ".join(cmd)
+
+    # Known builtin cmd commands
+    known_builtins = [
+        "assoc",
+        "break",
+        "call",
+        "cd",
+        "chdir",
+        "cls",
+        "color",
+        "copy",
+        "date",
+        "del",
+        "dir",
+        "echo",
+        "endlocal",
+        "erase",
+        "exit",
+        "for",
+        "ftype",
+        "goto",
+        "if",
+        "md",
+        "mklink",
+        "move",
+        "path",
+        "pause",
+        "popd",
+        "prompt",
+        "pushd",
+        "rd",
+        "rem",
+        "ren",
+        "rmdir",
+        "set",
+        "setlocal",
+        "shift",
+        "start",
+        "time",
+        "title",
+        "type",
+        "ver",
+        "verify",
+        "vol",
+        "::",
+    ]
+
+    # If the first command is one of the known builtin commands or if it is a
+    # binary that can't be found, we'll prepend cmd /c. The command itself needs
+    # to be quoted
+    if first_cmd in known_builtins or salt.utils.path.which(first_cmd) is None:
+        log.debug("Command is either builtin or not found: %s", first_cmd)
+        cmd = f'cmd /c "{cmd}"'
+
+    # There are a few more things we need to check that require cmd. If the cmd
+    # contains any of the following, we'll need to make sure it runs in cmd.
+    # We'll add to this list as more things are discovered.
+    check = ["&&", "||"]
+    if "cmd" not in cmd and any(chk in cmd for chk in check):
+        log.debug("Found logic that requires cmd: %s", check)
+        cmd = f'cmd /c "{cmd}"'
+
+    return cmd

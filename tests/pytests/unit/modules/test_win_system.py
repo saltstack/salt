@@ -1,6 +1,7 @@
 """
     :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 """
+
 import pytest
 
 import salt.modules.cmdmod as cmdmod

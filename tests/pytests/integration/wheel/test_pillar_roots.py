@@ -37,7 +37,7 @@ def test_write_subdir(client, salt_master):
 def test_cvr_2021_25282(client, pillar_file_path):
     ret = client.cmd(
         "pillar_roots.write",
-        kwarg={"data": "foo", "path": "../{}".format(pillar_file_path.name)},
+        kwarg={"data": "foo", "path": f"../{pillar_file_path.name}"},
     )
     assert not pillar_file_path.parent.parent.joinpath(pillar_file_path.name).is_file()
     assert ret.find("Invalid path") != -1
@@ -46,7 +46,7 @@ def test_cvr_2021_25282(client, pillar_file_path):
 def test_cvr_2021_25282_subdir(client, pillar_file_path):
     ret = client.cmd(
         "pillar_roots.write",
-        kwarg={"data": "foo", "path": "../../{}".format(pillar_file_path.name)},
+        kwarg={"data": "foo", "path": f"../../{pillar_file_path.name}"},
     )
     assert not pillar_file_path.parent.parent.parent.joinpath(
         pillar_file_path.name

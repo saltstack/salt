@@ -7,7 +7,6 @@ Interface to Red Hat tuned-adm module
 :platform:      Linux
 """
 
-
 import re
 
 import salt.utils.path
@@ -111,7 +110,7 @@ def profile(profile_name):
     """
 
     # run tuned-adm with the profile specified
-    result = __salt__["cmd.retcode"]("tuned-adm profile {}".format(profile_name))
+    result = __salt__["cmd.retcode"](f"tuned-adm profile {profile_name}")
     if int(result) != 0:
         return False
-    return "{}".format(profile_name)
+    return f"{profile_name}"

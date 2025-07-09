@@ -1,6 +1,7 @@
 """
 Tests for the SVN state
 """
+
 import logging
 
 import pytest
@@ -133,7 +134,7 @@ def no_test_latest_existing_repo(svn, svn_mod, repo_url, repo_revision, repo_tar
     assert ret.result is True
     assert ret.changes
     assert "revision" in ret.changes
-    assert ret.changes["revision"] == "{} => {}".format(current_rev, repo_revision)
+    assert ret.changes["revision"] == f"{current_rev} => {repo_revision}"
     assert repo_target.joinpath(".svn").is_dir()
 
 

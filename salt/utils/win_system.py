@@ -5,6 +5,7 @@ Functions shared with salt.modules.win_system and salt.grains.pending_reboot
 
 .. versionadded:: 3001
 """
+
 # NOTE: DO NOT USE RAW STRINGS IN THIS MODULE! UNICODE_LITERALS DOES NOT PLAY
 # NICELY WITH RAW STRINGS CONTAINING \u or \U.
 

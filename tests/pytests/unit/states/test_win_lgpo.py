@@ -1,6 +1,7 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import copy
 
 import pytest

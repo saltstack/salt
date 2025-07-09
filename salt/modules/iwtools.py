@@ -36,10 +36,10 @@ def scan(iface, style=None):
     if not _valid_iface(iface):
         raise SaltInvocationError("The interface specified is not valid")
 
-    out = __salt__["cmd.run"]("iwlist {} scan".format(iface))
+    out = __salt__["cmd.run"](f"iwlist {iface} scan")
     if "Network is down" in out:
-        __salt__["cmd.run"]("ip link set {} up".format(iface))
-        out = __salt__["cmd.run"]("iwlist {} scan".format(iface))
+        __salt__["cmd.run"](f"ip link set {iface} up")
+        out = __salt__["cmd.run"](f"iwlist {iface} scan")
     ret = {}
     tmp = {}
     for line in out.splitlines():
@@ -101,7 +101,7 @@ def set_mode(iface, mode):
             )
         )
     __salt__["ip.down"](iface)
-    out = __salt__["cmd.run"]("iwconfig {} mode {}".format(iface, mode))
+    out = __salt__["cmd.run"](f"iwconfig {iface} mode {mode}")
     __salt__["ip.up"](iface)
 
     return mode
@@ -112,7 +112,7 @@ def _valid_iface(iface):
     Validate the specified interface
     """
     ifaces = list_interfaces()
-    if iface in ifaces.keys():
+    if iface in ifaces:
         return True
     return False
 

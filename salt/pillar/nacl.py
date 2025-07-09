@@ -18,7 +18,6 @@ Set ``nacl.config`` in your config.
 
 """
 
-
 import salt
 
 __virtualname__ = "nacl"

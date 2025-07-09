@@ -48,7 +48,7 @@ def exists(name, region, user=None, opts=False):
     if not does_exist:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "AWS SQS queue {} is set to be created".format(name)
+            ret["comment"] = f"AWS SQS queue {name} is set to be created"
             return ret
         created = __salt__["aws_sqs.create_queue"](name, region, opts, user)
         if created["retcode"] == 0:
@@ -58,7 +58,7 @@ def exists(name, region, user=None, opts=False):
             ret["comment"] = created["stderr"]
 
     else:
-        ret["comment"] = "{} exists in {}".format(name, region)
+        ret["comment"] = f"{name} exists in {region}"
 
     return ret
 
@@ -86,7 +86,7 @@ def absent(name, region, user=None, opts=False):
     if does_exist:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "AWS SQS queue {} is set to be removed".format(name)
+            ret["comment"] = f"AWS SQS queue {name} is set to be removed"
             return ret
         removed = __salt__["aws_sqs.delete_queue"](name, region, opts, user)
         if removed["retcode"] == 0:
@@ -95,6 +95,6 @@ def absent(name, region, user=None, opts=False):
             ret["result"] = False
             ret["comment"] = removed["stderr"]
     else:
-        ret["comment"] = "{} does not exist in {}".format(name, region)
+        ret["comment"] = f"{name} does not exist in {region}"
 
     return ret

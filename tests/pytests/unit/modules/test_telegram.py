@@ -4,7 +4,6 @@
     Test cases for salt.modules.telegram.
 """
 
-
 import pytest
 
 import salt.modules.telegram as telegram

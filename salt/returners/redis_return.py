@@ -212,8 +212,8 @@ def returner(ret):
     serv = _get_serv(ret)
     pipeline = serv.pipeline(transaction=False)
     minion, jid = ret["id"], ret["jid"]
-    pipeline.hset("ret:{}".format(jid), minion, salt.utils.json.dumps(ret))
-    pipeline.expire("ret:{}".format(jid), _get_ttl())
+    pipeline.hset(f"ret:{jid}", minion, salt.utils.json.dumps(ret))
+    pipeline.expire(f"ret:{jid}", _get_ttl())
     pipeline.set("{}:{}".format(minion, ret["fun"]), jid)
     pipeline.sadd("minions", minion)
     pipeline.execute()
@@ -224,7 +224,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid
     """
     serv = _get_serv(ret=None)
-    serv.setex("load:{}".format(jid), _get_ttl(), salt.utils.json.dumps(load))
+    serv.setex(f"load:{jid}", _get_ttl(), salt.utils.json.dumps(load))
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -238,7 +238,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     """
     serv = _get_serv(ret=None)
-    data = serv.get("load:{}".format(jid))
+    data = serv.get(f"load:{jid}")
     if data:
         return salt.utils.json.loads(data)
     return {}
@@ -250,7 +250,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
     ret = {}
-    for minion, data in serv.hgetall("ret:{}".format(jid)).items():
+    for minion, data in serv.hgetall(f"ret:{jid}").items():
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret
@@ -263,14 +263,14 @@ def get_fun(fun):
     serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers("minions"):
-        ind_str = "{}:{}".format(minion, fun)
+        ind_str = f"{minion}:{fun}"
         try:
             jid = serv.get(ind_str)
         except Exception:  # pylint: disable=broad-except
             continue
         if not jid:
             continue
-        data = serv.get("{}:{}".format(minion, jid))
+        data = serv.get(f"{minion}:{jid}")
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret

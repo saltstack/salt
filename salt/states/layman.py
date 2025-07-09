@@ -31,15 +31,15 @@ def present(name):
 
     # Overlay already present
     if name in __salt__["layman.list_local"]():
-        ret["comment"] = "Overlay {} already present".format(name)
+        ret["comment"] = f"Overlay {name} already present"
     elif __opts__["test"]:
-        ret["comment"] = "Overlay {} is set to be added".format(name)
+        ret["comment"] = f"Overlay {name} is set to be added"
         ret["result"] = None
         return ret
     else:
         # Does the overlay exist?
         if name not in __salt__["layman.list_all"]():
-            ret["comment"] = "Overlay {} not found".format(name)
+            ret["comment"] = f"Overlay {name} not found"
             ret["result"] = False
         else:
             # Attempt to add the overlay
@@ -47,12 +47,12 @@ def present(name):
 
             # The overlay failed to add
             if len(changes) < 1:
-                ret["comment"] = "Overlay {} failed to add".format(name)
+                ret["comment"] = f"Overlay {name} failed to add"
                 ret["result"] = False
             # Success
             else:
                 ret["changes"]["added"] = changes
-                ret["comment"] = "Overlay {} added.".format(name)
+                ret["comment"] = f"Overlay {name} added."
 
     return ret
 
@@ -68,9 +68,9 @@ def absent(name):
 
     # Overlay is already absent
     if name not in __salt__["layman.list_local"]():
-        ret["comment"] = "Overlay {} already absent".format(name)
+        ret["comment"] = f"Overlay {name} already absent"
     elif __opts__["test"]:
-        ret["comment"] = "Overlay {} is set to be deleted".format(name)
+        ret["comment"] = f"Overlay {name} is set to be deleted"
         ret["result"] = None
         return ret
     else:
@@ -79,11 +79,11 @@ def absent(name):
 
         # The overlay failed to delete
         if len(changes) < 1:
-            ret["comment"] = "Overlay {} failed to delete".format(name)
+            ret["comment"] = f"Overlay {name} failed to delete"
             ret["result"] = False
         # Success
         else:
             ret["changes"]["deleted"] = changes
-            ret["comment"] = "Overlay {} deleted.".format(name)
+            ret["comment"] = f"Overlay {name} deleted."
 
     return ret

@@ -20,7 +20,7 @@ def test_present_has_target():
     name = "saltdude"
     target = "dude@saltstack.com"
     ret = {
-        "comment": "Alias {} already present".format(name),
+        "comment": f"Alias {name} already present",
         "changes": {},
         "name": name,
         "result": True,
@@ -38,7 +38,7 @@ def test_present_has_not_target_test():
     name = "saltdude"
     target = "dude@saltstack.com"
     ret = {
-        "comment": "Alias {} -> {} is set to be added".format(name, target),
+        "comment": f"Alias {name} -> {target} is set to be added",
         "changes": {},
         "name": name,
         "result": None,
@@ -57,7 +57,7 @@ def test_present_set_target():
     name = "saltdude"
     target = "dude@saltstack.com"
     ret = {
-        "comment": "Set email alias {} -> {}".format(name, target),
+        "comment": f"Set email alias {name} -> {target}",
         "changes": {"alias": name},
         "name": name,
         "result": True,
@@ -78,7 +78,7 @@ def test_present_set_target_failed():
     name = "saltdude"
     target = "dude@saltstack.com"
     ret = {
-        "comment": "Failed to set alias {} -> {}".format(name, target),
+        "comment": f"Failed to set alias {name} -> {target}",
         "changes": {},
         "name": name,
         "result": False,
@@ -98,7 +98,7 @@ def test_absent_already_gone():
     """
     name = "saltdude"
     ret = {
-        "comment": "Alias {} already absent".format(name),
+        "comment": f"Alias {name} already absent",
         "changes": {},
         "name": name,
         "result": True,
@@ -115,7 +115,7 @@ def test_absent_not_gone_test():
     """
     name = "saltdude"
     ret = {
-        "comment": "Alias {} is set to be removed".format(name),
+        "comment": f"Alias {name} is set to be removed",
         "changes": {},
         "name": name,
         "result": None,
@@ -133,7 +133,7 @@ def test_absent_rm_alias():
     """
     name = "saltdude"
     ret = {
-        "comment": "Removed alias {}".format(name),
+        "comment": f"Removed alias {name}",
         "changes": {"alias": name},
         "name": name,
         "result": True,
@@ -153,7 +153,7 @@ def test_absent_rm_alias_failed():
     """
     name = "saltdude"
     ret = {
-        "comment": "Failed to remove alias {}".format(name),
+        "comment": f"Failed to remove alias {name}",
         "changes": {},
         "name": name,
         "result": False,

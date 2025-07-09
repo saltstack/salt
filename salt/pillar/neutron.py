@@ -42,7 +42,6 @@ name after the Keystone profile name:
       - neutron: my_openstack_config neutron_networks
 """
 
-
 import logging
 
 try:

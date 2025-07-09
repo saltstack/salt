@@ -2,7 +2,6 @@
     Test parallels desktop execution module functions
 """
 
-
 import textwrap
 
 import pytest
@@ -234,12 +233,12 @@ def test_exists():
     runas = "macdev"
 
     # Validate exists
-    mock_list = MagicMock(return_value="Name: {}\nState: running".format(name))
+    mock_list = MagicMock(return_value=f"Name: {name}\nState: running")
     with patch.object(parallels, "list_vms", mock_list):
         assert parallels.exists(name, runas=runas)
 
     # Validate not exists
-    mock_list = MagicMock(return_value="Name: {}\nState: running".format(name))
+    mock_list = MagicMock(return_value=f"Name: {name}\nState: running")
     with patch.object(parallels, "list_vms", mock_list):
         assert not parallels.exists("winvm", runas=runas)
 

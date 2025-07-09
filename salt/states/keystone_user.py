@@ -29,7 +29,6 @@ Example States
         - description: 'my user'
 """
 
-
 __virtualname__ = "keystone_user"
 
 

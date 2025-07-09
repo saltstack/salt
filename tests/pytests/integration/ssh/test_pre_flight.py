@@ -207,7 +207,7 @@ def test_ssh_pre_flight_script(salt_ssh_cli, caplog, _create_roster, tmp_path, a
     try:
         script = pathlib.Path.home() / "hacked"
         tmp_preflight = pathlib.Path("/tmp", "ssh_pre_flight.sh")
-        tmp_preflight.write_text(f"touch {script}")
+        tmp_preflight.write_text(f"touch {script}", encoding="utf-8")
         os.chown(tmp_preflight, account.info.uid, account.info.gid)
         ret = salt_ssh_cli.run("test.ping")
         assert not script.is_file()
@@ -239,7 +239,7 @@ def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
     try:
         script = pathlib.Path("/tmp", "itworked")
         preflight = pathlib.Path("/ssh_pre_flight.sh")
-        preflight.write_text(f"touch {str(script)}")
+        preflight.write_text(f"touch {str(script)}", encoding="utf-8")
         tmp_preflight = pathlib.Path("/tmp", preflight.name)
 
         _custom_roster(salt_ssh_cli.roster_file, {"ssh_pre_flight": str(preflight)})
@@ -255,7 +255,8 @@ def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
             fi
             x=$(( $x + 1 ))
         done
-        """
+        """,
+            encoding="utf-8",
         )
         run_script.chmod(0o0777)
         # pylint: disable=W1509

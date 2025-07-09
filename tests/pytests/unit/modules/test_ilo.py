@@ -4,7 +4,6 @@
     Test cases for salt.modules.ilo
 """
 
-
 import tempfile
 
 import pytest

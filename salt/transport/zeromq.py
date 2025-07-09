@@ -1,6 +1,7 @@
 """
 Zeromq transport classes
 """
+
 import errno
 import hashlib
 import logging
@@ -454,7 +455,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:
@@ -607,14 +608,16 @@ class AsyncReqMessageClient:
                 try:
                     recv = yield self.socket.recv()
                 except zmq.eventloop.future.CancelledError as exc:
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                     return
 
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            future.set_exception(exc)
+            if not future.done():
+                future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
@@ -743,9 +746,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         @salt.ext.tornado.gen.coroutine
         def on_recv(packages):
-            for package in packages:
-                payload = salt.payload.loads(package)
-                yield publish_payload(payload)
+            try:
+                for package in packages:
+                    payload = salt.payload.loads(package)
+                    yield publish_payload(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Un-handled error in publisher %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
 
         pull_sock.on_recv(on_recv)
         try:

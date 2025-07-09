@@ -54,7 +54,7 @@ def send_msg(name, recipient, profile):
         profile=profile,
     )
     ret["result"] = True
-    ret["comment"] = "Sent message to {}: {}".format(recipient, name)
+    ret["comment"] = f"Sent message to {recipient}: {name}"
     return ret
 
 
@@ -84,10 +84,10 @@ def send_msg_multi(name, profile, recipients=None, rooms=None):
 
     comment = ""
     if recipients:
-        comment += " users {}".format(recipients)
+        comment += f" users {recipients}"
     if rooms:
-        comment += " rooms {}".format(rooms)
-    comment += ", message: {}".format(name)
+        comment += f" rooms {rooms}"
+    comment += f", message: {name}"
 
     if __opts__["test"]:
         ret["comment"] = "Need to send" + comment

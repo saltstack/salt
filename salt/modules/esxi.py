@@ -34,7 +34,6 @@ type manor.
 
 """
 
-
 import logging
 from functools import wraps
 

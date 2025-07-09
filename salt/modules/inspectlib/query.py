@@ -35,7 +35,7 @@ class SysInfo:
 
     def __init__(self, systype):
         if systype.lower() == "solaris":
-            raise SIException("Platform {} not (yet) supported.".format(systype))
+            raise SIException(f"Platform {systype} not (yet) supported.")
 
     def _grain(self, grain):
         """
@@ -47,7 +47,7 @@ class SysInfo:
         """
         Get a size of a disk.
         """
-        out = __salt__["cmd.run_all"]("df {}".format(device))
+        out = __salt__["cmd.run_all"](f"df {device}")
         if out["retcode"]:
             msg = "Disk size info error: {}".format(out["stderr"])
             log.error(msg)
@@ -464,13 +464,13 @@ class Query(EnvLoader):
 
             fmt = fmt.lower()
             if fmt == "b":
-                return "{} Bytes".format(size)
+                return f"{size} Bytes"
             elif fmt == "kb":
-                return "{} Kb".format(round((float(size) / 0x400), 2))
+                return f"{round((float(size) / 0x400), 2)} Kb"
             elif fmt == "mb":
-                return "{} Mb".format(round((float(size) / 0x400 / 0x400), 2))
+                return f"{round((float(size) / 0x400 / 0x400), 2)} Mb"
             elif fmt == "gb":
-                return "{} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
+                return f"{round((float(size) / 0x400 / 0x400 / 0x400), 2)} Gb"
 
         filter = kwargs.get("filter")
         offset = kwargs.get("offset", 0)
@@ -478,13 +478,15 @@ class Query(EnvLoader):
         timeformat = kwargs.get("time", "tz")
         if timeformat not in ["ticks", "tz"]:
             raise InspectorQueryException(
-                'Unknown "{}" value for parameter "time"'.format(timeformat)
+                f'Unknown "{timeformat}" value for parameter "time"'
             )
-        tfmt = (
-            lambda param: timeformat == "tz"
-            and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param))
-            or int(param)
-        )
+
+        def tfmt(param):
+            return (
+                timeformat == "tz"
+                and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param))
+                or int(param)
+            )
 
         size_fmt = kwargs.get("size")
         if size_fmt is not None and size_fmt.lower() not in ["b", "kb", "mb", "gb"]:
@@ -525,9 +527,9 @@ class Query(EnvLoader):
                 pld_files.append(pld_data.path)
             else:
                 pld_files[pld_data.path] = {
-                    "uid": self._id_resolv(pld_data.uid, named=(owners == "id")),
+                    "uid": self._id_resolv(pld_data.uid, named=owners == "id"),
                     "gid": self._id_resolv(
-                        pld_data.gid, named=(owners == "id"), uid=False
+                        pld_data.gid, named=owners == "id", uid=False
                     ),
                     "size": _size_format(pld_data.p_size, fmt=size_fmt),
                     "mode": oct(pld_data.mode),

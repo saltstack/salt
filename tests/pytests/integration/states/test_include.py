@@ -1,6 +1,7 @@
 """
 Integration tests for the jinja includes in states
 """
+
 import logging
 
 import pytest

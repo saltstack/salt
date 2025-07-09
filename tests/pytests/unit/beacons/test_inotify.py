@@ -220,8 +220,8 @@ def test_multi_files_exclude(tmp_path):
     dp2 = str(tmp_path / "subdir2")
     os.mkdir(dp1)
     os.mkdir(dp2)
-    _exclude1 = "{}/subdir1/*tmpfile*$".format(str(tmp_path))
-    _exclude2 = "{}/subdir2/*filetmp*$".format(str(tmp_path))
+    _exclude1 = f"{str(tmp_path)}/subdir1/*tmpfile*$"
+    _exclude2 = f"{str(tmp_path)}/subdir2/*filetmp*$"
     config = [
         {
             "files": {

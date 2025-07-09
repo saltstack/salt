@@ -48,7 +48,6 @@ Module to provide Elasticsearch compatibility to Salt
     Some functionality might be limited by elasticsearch-py and Elasticsearch server versions.
 """
 
-
 import logging
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError

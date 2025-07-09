@@ -104,7 +104,7 @@ class PamMessage(Structure):
     ]
 
     def __repr__(self):
-        return "<PamMessage {} '{}'>".format(self.msg_style, self.msg)
+        return f"<PamMessage {self.msg_style} '{self.msg}'>"
 
 
 class PamResponse(Structure):
@@ -118,7 +118,7 @@ class PamResponse(Structure):
     ]
 
     def __repr__(self):
-        return "<PamResponse {} '{}'>".format(self.resp_retcode, self.resp)
+        return f"<PamResponse {self.resp_retcode} '{self.resp}'>"
 
 
 CONV_FUNC = CFUNCTYPE(
@@ -236,8 +236,7 @@ def authenticate(username, password):
     ret = subprocess.run(
         [str(pyexe), str(pyfile)],
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
     )
     if ret.returncode == 0:

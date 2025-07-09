@@ -132,7 +132,7 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create record {}".format(name)
+        ret["comment"] = f"would attempt to create record {name}"
         return ret
 
     new_obj_ref = __salt__["infoblox.create_ipv4_range"](data, **api_opts)
@@ -199,7 +199,7 @@ def absent(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
     if __salt__["infoblox.delete_object"](objref=obj["_ref"]):
         ret["result"] = True
         ret["changes"] = {
-            "old": "Found {} - {}".format(start_addr, end_addr),
+            "old": f"Found {start_addr} - {end_addr}",
             "new": "Removed",
         }
     return ret

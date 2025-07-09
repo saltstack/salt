@@ -2,7 +2,6 @@
 Functions for StringIO objects
 """
 
-
 import io
 
 readable_types = (io.StringIO,)

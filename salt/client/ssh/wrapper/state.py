@@ -1317,3 +1317,18 @@ def single(fun, name, test=None, **kwargs):
 
     # If for some reason the json load fails, return the stdout
     return stdout
+
+
+def test(*args, **kwargs):
+    """
+    .. versionadded:: 3001
+
+    Alias for `state.apply` with the kwarg `test` forced to `True`.
+
+    This is a nicety to avoid the need to type out `test=True` and the possibility of
+    a typo causing changes you do not intend.
+    """
+    kwargs["test"] = True
+    ret = apply_(*args, **kwargs)
+
+    return ret

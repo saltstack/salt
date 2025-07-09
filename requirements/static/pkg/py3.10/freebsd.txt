@@ -4,8 +4,14 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/pkg/py3.10/freebsd.txt requirements/base.txt requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
-certifi==2023.07.22
-    # via requests
+autocommand==2.2.2
+    # via jaraco.text
+backports.tarfile==1.2.0
+    # via jaraco.context
+certifi==2024.7.4 ; python_version >= "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==1.14.6
     # via cryptography
 charset-normalizer==3.2.0
@@ -16,15 +22,18 @@ cherrypy==18.6.1
     # via -r requirements/static/pkg/freebsd.in
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==42.0.0
+croniter==2.0.5 ; sys_platform != "win32"
+    # via -r requirements/base.txt
+cryptography==42.0.5
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   pyopenssl
 distro==1.5.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
-idna==3.2
+idna==3.7
     # via requests
 immutables==0.15
     # via contextvars
@@ -34,14 +43,19 @@ jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
     # via cherrypy
-jaraco.functools==2.0
+jaraco.context==6.0.1
+    # via jaraco.text
+jaraco.functools==4.2.1
     # via
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
-    # via jaraco.collections
-jinja2==3.1.3
+jaraco.text==4.0.0
+    # via
+    #   -r requirements/base.txt
+    #   jaraco.collections
+jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
@@ -57,13 +71,14 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==22.0
+packaging==24.0
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
-psutil==5.8.0
+psutil==5.8.0 ; python_version >= "3.10"
     # via -r requirements/base.txt
 pycparser==2.21 ; python_version >= "3.9"
     # via
@@ -74,16 +89,20 @@ pycryptodomex==3.19.1
 pyopenssl==24.0.0
     # via -r requirements/static/pkg/freebsd.in
 python-dateutil==2.8.1
-    # via -r requirements/static/pkg/freebsd.in
+    # via
+    #   -r requirements/static/pkg/freebsd.in
+    #   croniter
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/freebsd.in
 pytz==2022.1
-    # via tempora
+    # via
+    #   croniter
+    #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==23.2.0
     # via -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.10"
     # via -r requirements/base.txt
 setproctitle==1.3.2
     # via -r requirements/static/pkg/freebsd.in
@@ -96,8 +115,10 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/freebsd.in
-urllib3==1.26.18
-    # via requests
+urllib3==2.5.0 ; python_version >= "3.10"
+    # via
+    #   -r requirements/base.txt
+    #   requests
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.12.0

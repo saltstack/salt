@@ -102,7 +102,6 @@
 
 """
 
-
 import copy
 import logging
 
@@ -132,7 +131,6 @@ class Sequence(list, Aggregate):
 
 
 def Scalar(obj):
-
     """
     Shortcut for Sequence creation
 

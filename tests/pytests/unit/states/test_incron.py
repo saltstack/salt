@@ -27,7 +27,7 @@ def test_present():
 
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-    comt4 = "Incron {} for user root failed to commit with error \nabsent".format(name)
+    comt4 = f"Incron {name} for user root failed to commit with error \nabsent"
     mock_dict = MagicMock(
         return_value={"crons": [{"path": path, "cmd": cmd, "mask": mask}]}
     )
@@ -36,20 +36,20 @@ def test_present():
         incron.__salt__, {"incron.list_tab": mock_dict, "incron.set_job": mock}
     ):
         with patch.dict(incron.__opts__, {"test": True}):
-            comt = "Incron {} is set to be added".format(name)
+            comt = f"Incron {name} is set to be added"
             ret.update({"comment": comt})
             assert incron.present(name, path, mask, cmd) == ret
 
         with patch.dict(incron.__opts__, {"test": False}):
-            comt = "Incron {} already present".format(name)
+            comt = f"Incron {name} already present"
             ret.update({"comment": comt, "result": True})
             assert incron.present(name, path, mask, cmd) == ret
 
-            comt = "Incron {} added to root's incrontab".format(name)
+            comt = f"Incron {name} added to root's incrontab"
             ret.update({"comment": comt, "changes": {"root": "salt"}})
             assert incron.present(name, path, mask, cmd) == ret
 
-            comt = "Incron {} updated".format(name)
+            comt = f"Incron {name} updated"
             ret.update({"comment": comt})
             assert incron.present(name, path, mask, cmd) == ret
 
@@ -69,7 +69,7 @@ def test_absent():
 
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    comt4 = "Incron {} for user root failed to commit with error new".format(name)
+    comt4 = f"Incron {name} for user root failed to commit with error new"
     mock_dict = MagicMock(
         return_value={"crons": [{"path": path, "cmd": cmd, "mask": mask}]}
     )
@@ -78,16 +78,16 @@ def test_absent():
         incron.__salt__, {"incron.list_tab": mock_dict, "incron.rm_job": mock}
     ):
         with patch.dict(incron.__opts__, {"test": True}):
-            comt = "Incron {} is absent".format(name)
+            comt = f"Incron {name} is absent"
             ret.update({"comment": comt})
             assert incron.absent(name, path, mask, cmd) == ret
 
         with patch.dict(incron.__opts__, {"test": False}):
-            comt = "Incron {} already absent".format(name)
+            comt = f"Incron {name} already absent"
             ret.update({"comment": comt, "result": True})
             assert incron.absent(name, path, mask, cmd) == ret
 
-            comt = "Incron {} removed from root's crontab".format(name)
+            comt = f"Incron {name} removed from root's crontab"
             ret.update({"comment": comt, "changes": {"root": "salt"}})
             assert incron.absent(name, path, mask, cmd) == ret
 

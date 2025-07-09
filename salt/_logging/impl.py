@@ -108,9 +108,9 @@ DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(lev
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
-        self.bracketname = "[{:<17}]".format(str(self.name))
-        self.bracketlevel = "[{:<8}]".format(str(self.levelname))
-        self.bracketprocess = "[{:>5}]".format(str(self.process))
+        self.bracketname = f"[{str(self.name):<17}]"
+        self.bracketlevel = f"[{str(self.levelname):<8}]"
+        self.bracketprocess = f"[{str(self.process):>5}]"
 
 
 class SaltColorLogRecord(SaltLogRecord):
@@ -124,11 +124,11 @@ class SaltColorLogRecord(SaltLogRecord):
         self.colorname = "{}[{:<17}]{}".format(
             LOG_COLORS["name"], str(self.name), reset
         )
-        self.colorlevel = "{}[{:<8}]{}".format(clevel, str(self.levelname), reset)
+        self.colorlevel = f"{clevel}[{str(self.levelname):<8}]{reset}"
         self.colorprocess = "{}[{:>5}]{}".format(
             LOG_COLORS["process"], str(self.process), reset
         )
-        self.colormsg = "{}{}{}".format(cmsg, self.getMessage(), reset)
+        self.colormsg = f"{cmsg}{self.getMessage()}{reset}"
 
 
 def get_log_record_factory():
@@ -157,6 +157,9 @@ LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
+
+    ONCECACHE = set()
+
     def __new__(cls, *args):
         """
         We override `__new__` in our logging logger class in order to provide
@@ -169,7 +172,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             logging.getLogger(__name__)
 
         """
-        instance = super().__new__(cls)
+        instance = super().__new__(cls)  # pylint: disable=no-value-for-parameter
 
         try:
             max_logger_length = len(
@@ -233,9 +236,15 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         stack_info=False,
         stacklevel=1,
         exc_info_on_loglevel=None,
+        once=False,
     ):
         if extra is None:
             extra = {}
+
+        if once:
+            if str(args) in self.ONCECACHE:
+                return
+            self.ONCECACHE.add(str(args))
 
         # pylint: disable=no-member
         current_jid = RequestContext.current.get("data", {}).get("jid", None)
@@ -265,22 +274,17 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                         exc_info_on_loglevel
                     )
                 )
+        # XXX: extra is never None
         if extra is None:
             extra = {"exc_info_on_loglevel": exc_info_on_loglevel}
         else:
             extra["exc_info_on_loglevel"] = exc_info_on_loglevel
 
-        if sys.version_info < (3, 8):
-            LOGGING_LOGGER_CLASS._log(
-                self,
-                level,
-                msg,
-                args,
-                exc_info=exc_info,
-                extra=extra,
-                stack_info=stack_info,
-            )
-        else:
+        # this is required for log lines to work as expected because we are
+        # adding a stackframe with this function
+        stacklevel = stacklevel + 1
+
+        try:
             LOGGING_LOGGER_CLASS._log(
                 self,
                 level,
@@ -290,6 +294,18 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                 extra=extra,
                 stack_info=stack_info,
                 stacklevel=stacklevel,
+            )
+        except TypeError:
+            # stacklevel was introduced in Py 3.8
+            # must be running on old OS with Python 3.6 or 3.7
+            LOGGING_LOGGER_CLASS._log(
+                self,
+                level,
+                msg,
+                args,
+                exc_info=exc_info,
+                extra=extra,
+                stack_info=stack_info,
             )
 
     def makeRecord(
@@ -413,6 +429,7 @@ def set_logging_options_dict(opts):
     except AttributeError:
         pass
     set_logging_options_dict.__options_dict__ = opts
+    set_lowest_log_level_by_opts(opts)
 
 
 def freeze_logging_options_dict():
@@ -725,7 +742,7 @@ def setup_logfile_handler(
                     syslog_opts["address"] = str(path.resolve().parent)
             except OSError as exc:
                 raise LoggingRuntimeError(
-                    "Failed to setup the Syslog logging handler: {}".format(exc)
+                    f"Failed to setup the Syslog logging handler: {exc}"
                 ) from exc
         elif parsed_log_path.path:
             # In case of udp or tcp with a facility specified
@@ -735,7 +752,7 @@ def setup_logfile_handler(
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise LoggingRuntimeError(
-                    "The syslog facility '{}' is not known".format(facility_name)
+                    f"The syslog facility '{facility_name}' is not known"
                 )
         else:
             # This is the case of udp or tcp without a facility specified
@@ -746,7 +763,7 @@ def setup_logfile_handler(
             # This python syslog version does not know about the user provided
             # facility name
             raise LoggingRuntimeError(
-                "The syslog facility '{}' is not known".format(facility_name)
+                f"The syslog facility '{facility_name}' is not known"
             )
         syslog_opts["facility"] = facility
 
@@ -766,7 +783,7 @@ def setup_logfile_handler(
             handler = SysLogHandler(**syslog_opts)
         except OSError as exc:
             raise LoggingRuntimeError(
-                "Failed to setup the Syslog logging handler: {}".format(exc)
+                f"Failed to setup the Syslog logging handler: {exc}"
             ) from exc
     else:
         # make sure, the logging directory exists and attempt to create it if necessary

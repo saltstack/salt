@@ -37,7 +37,6 @@ they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
 """
 
-
 import copy
 
 import requests
@@ -122,18 +121,18 @@ def present(
     _ensure_annotations(new_dashboard)
 
     # Create dashboard if it does not exist
-    url = "db/{}".format(name)
+    url = f"db/{name}"
     old_dashboard = _get(url, profile)
     if not old_dashboard:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Dashboard {} is set to be created.".format(name)
+            ret["comment"] = f"Dashboard {name} is set to be created."
             return ret
 
         response = _update(new_dashboard, profile)
         if response.get("status") == "success":
-            ret["comment"] = "Dashboard {} created.".format(name)
-            ret["changes"]["new"] = "Dashboard {} created.".format(name)
+            ret["comment"] = f"Dashboard {name} created."
+            ret["changes"]["new"] = f"Dashboard {name} created."
         else:
             ret["result"] = False
             ret["comment"] = "Failed to create dashboard {}, response={}".format(
@@ -174,7 +173,7 @@ def present(
             dashboard_diff = DictDiffer(
                 _cleaned(updated_dashboard), _cleaned(old_dashboard)
             )
-            ret["comment"] = "Dashboard {} updated.".format(name)
+            ret["comment"] = f"Dashboard {name} updated."
             ret["changes"] = _dashboard_diff(
                 _cleaned(new_dashboard), _cleaned(old_dashboard)
             )
@@ -204,17 +203,17 @@ def absent(name, profile="grafana"):
     if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
-    url = "db/{}".format(name)
+    url = f"db/{name}"
     existing_dashboard = _get(url, profile)
     if existing_dashboard:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Dashboard {} is set to be deleted.".format(name)
+            ret["comment"] = f"Dashboard {name} is set to be deleted."
             return ret
 
         _delete(url, profile)
-        ret["comment"] = "Dashboard {} deleted.".format(name)
-        ret["changes"]["new"] = "Dashboard {} deleted.".format(name)
+        ret["comment"] = f"Dashboard {name} deleted."
+        ret["changes"]["new"] = f"Dashboard {name} deleted."
         return ret
 
     ret["comment"] = "Dashboard absent"
@@ -459,6 +458,7 @@ def _update(dashboard, profile):
         request_url,
         headers={"Authorization": "Bearer {}".format(profile.get("grafana_token"))},
         json=payload,
+        timeout=120,
     )
     return response.json()
 

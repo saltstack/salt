@@ -62,11 +62,9 @@ if ( $BuildDir ) {
 } else {
     $BUILD_DIR = "$SCRIPT_DIR\buildenv"
 }
-$PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
-$BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
 $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
@@ -74,12 +72,10 @@ $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architectu
 
 if ( $ARCH -eq "64bit" ) {
     $ARCH         = "AMD64"
-    $ARCH_X       = "x64"
-    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/64"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64"
 } else {
     $ARCH         = "x86"
-    $ARCH_X       = "x86"
-    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/32"
+    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32"
 }
 
 #-------------------------------------------------------------------------------
@@ -119,17 +115,6 @@ if ( Test-Path -Path $BUILD_CONF_DIR) {
     Write-Host "Removing Configs Directory: " -NoNewline
     Remove-Item -Path $BUILD_CONF_DIR -Recurse -Force
     if ( ! (Test-Path -Path $BUILD_CONF_DIR) ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-if ( Test-Path -Path $PREREQ_DIR ) {
-    Write-Host "Removing PreReq Directory: " -NoNewline
-    Remove-Item -Path $PREREQ_DIR -Recurse -Force
-    if ( ! (Test-Path -Path $PREREQ_DIR) ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
         Write-Result "Failed" -ForegroundColor Red
@@ -181,29 +166,6 @@ $scripts | ForEach-Object {
             exit 1
         }
     }
-}
-
-# Copy VCRedist 2013 to the prereqs directory
-New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
-$file = "vcredist_$ARCH_X`_2013.exe"
-Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
-if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-# Copy Universal C Runtimes to the prereqs directory
-Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
-$file = "ucrt_$ARCH_X.zip"
-Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
-if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
 }
 
 #-------------------------------------------------------------------------------

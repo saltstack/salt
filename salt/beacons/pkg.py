@@ -3,6 +3,7 @@ Watch for pkgs that have upgrades, then fire an event.
 
 .. versionadded:: 2016.3.0
 """
+
 import logging
 
 __virtualname__ = "pkg"

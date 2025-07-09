@@ -26,7 +26,7 @@ def test_value_already_present():
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "{} is already present".format(value),
+        "comment": f"{value} is already present",
     }
 
     with patch.dict(xml.__salt__, {"xml.get_value": MagicMock(return_value=value)}):
@@ -48,7 +48,7 @@ def test_value_update():
         "name": name,
         "changes": {name: {"new": value, "old": old_value}},
         "result": True,
-        "comment": "{} updated".format(name),
+        "comment": f"{name} updated",
     }
 
     with patch.dict(xml.__salt__, {"xml.get_value": MagicMock(return_value=old_value)}):
@@ -71,7 +71,7 @@ def test_value_update_test():
         "name": name,
         "changes": {name: {"old": old_value, "new": value}},
         "result": None,
-        "comment": "{} will be updated".format(name),
+        "comment": f"{name} will be updated",
     }
 
     with patch.dict(xml.__salt__, {"xml.get_value": MagicMock(return_value=old_value)}):
@@ -91,7 +91,7 @@ def test_value_update_invalid_xpath():
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "xpath query {} not found in {}".format(xpath, name),
+        "comment": f"xpath query {xpath} not found in {name}",
     }
 
     with patch.dict(xml.__salt__, {"xml.get_value": MagicMock(return_value=False)}):

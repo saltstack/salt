@@ -4,7 +4,6 @@
     Test cases for salt.modules.grub_legacy
 """
 
-
 import errno
 
 import pytest

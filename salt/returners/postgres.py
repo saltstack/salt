@@ -174,7 +174,7 @@ def _get_options(ret=None):
     }
 
     _options = salt.returners.get_returner_options(
-        "returner.{}".format(__virtualname__),
+        f"returner.{__virtualname__}",
         ret,
         attrs,
         __salt__=__salt__,
@@ -204,7 +204,7 @@ def _get_serv(ret=None, commit=False):
 
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
-            "postgres returner could not connect to database: {exc}".format(exc=exc)
+            f"postgres returner could not connect to database: {exc}"
         )
 
     cursor = conn.cursor()

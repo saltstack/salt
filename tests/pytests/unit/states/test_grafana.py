@@ -64,7 +64,7 @@ def test_dashboard_present():
         with patch.dict(grafana.__opts__, {"test": True}):
             pytest.raises(SaltInvocationError, grafana.dashboard_present, name)
 
-            comt = "Dashboard {} is set to be created.".format(name)
+            comt = f"Dashboard {name} is set to be created."
             ret.update({"comment": comt})
             assert grafana.dashboard_present(name, True) == ret
 

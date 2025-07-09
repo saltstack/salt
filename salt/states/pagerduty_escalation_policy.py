@@ -96,7 +96,7 @@ def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):
                 if schedule:
                     target_id = schedule["schedule"]["id"]
             if target_id is None:
-                raise Exception("unidentified target: {}".format(target))
+                raise Exception(f"unidentified target: {target}")
             target["id"] = target_id
 
     r = __salt__["pagerduty_util.resource_present"](
@@ -106,7 +106,7 @@ def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):
         profile,
         subdomain,
         api_key,
-        **kwargs
+        **kwargs,
     )
     return r
 
@@ -143,7 +143,7 @@ def _diff(state_data, resource_object):
             else:
                 resource_value = resource_object[k]
         if v != resource_value:
-            objects_differ = "{} {} {}".format(k, v, resource_value)
+            objects_differ = f"{k} {v} {resource_value}"
             break
 
     if objects_differ:

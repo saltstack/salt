@@ -48,7 +48,7 @@ async def test_accepts_arg_kwarg_keys(
                 arg = _low.pop("arg")
                 body = urllib.parse.urlencode(_low)
                 for _arg in arg:
-                    body += "&arg={}".format(_arg)
+                    body += f"&arg={_arg}"
             response = await http_client.fetch(
                 "/",
                 method="POST",
@@ -70,7 +70,7 @@ async def test_accepts_arg_kwarg_keys(
                 _low = low2.copy()
                 arg = _low.pop("arg")
                 body = urllib.parse.urlencode(_low)
-                body += "&arg={}".format(arg)
+                body += f"&arg={arg}"
             response = await http_client.fetch(
                 "/",
                 method="POST",

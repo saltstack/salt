@@ -106,7 +106,6 @@ and include this change.
 :platform:      Linux
 """
 
-
 import os
 
 
@@ -178,9 +177,7 @@ def baseline_snapshot(
     if tag:
         snapshot = _get_baseline_from_tag(config, tag)
         if not snapshot:
-            ret.update(
-                {"result": False, "comment": 'Baseline tag "{}" not found'.format(tag)}
-            )
+            ret.update({"result": False, "comment": f'Baseline tag "{tag}" not found'})
             return ret
         number = snapshot["id"]
 

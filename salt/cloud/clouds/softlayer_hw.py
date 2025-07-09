@@ -241,7 +241,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{}/creating".format(name),
+        f"salt/cloud/{name}/creating",
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -311,7 +311,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{}/requesting".format(name),
+        f"salt/cloud/{name}/requesting",
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -406,7 +406,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{}/created".format(name),
+        f"salt/cloud/{name}/created",
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -514,7 +514,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -535,7 +535,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

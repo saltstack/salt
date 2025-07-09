@@ -190,7 +190,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             cmd, arg = command.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                ret["error"] = "Command {} is not supported (yet)".format(cmd)
+                ret["error"] = f"Command {cmd} is not supported (yet)"
                 return ret
 
             method = METHOD_MAP[cmd]
@@ -199,7 +199,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             parts = salt.utils.args.shlex_split(arg)
 
             if len(parts) not in nargs:
-                err = "{} takes {} args: {}".format(method, nargs, parts)
+                err = f"{method} takes {nargs} args: {parts}"
                 raise ValueError(err)
             if method == "set":
                 path = make_path(parts[0])
@@ -217,9 +217,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             elif method == "insert":
                 label, where, path = parts
                 if where not in ("before", "after"):
-                    raise ValueError(
-                        'Expected "before" or "after", not {}'.format(where)
-                    )
+                    raise ValueError(f'Expected "before" or "after", not {where}')
                 path = make_path(path)
                 args = {"path": path, "label": label, "before": where == "before"}
             elif method == "remove":
@@ -230,9 +228,9 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             # if command.split fails arg will not be set
             if "arg" not in locals():
                 arg = command
-            ret[
-                "error"
-            ] = "Invalid formatted command, see debug log for details: {}".format(arg)
+            ret["error"] = (
+                f"Invalid formatted command, see debug log for details: {arg}"
+            )
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)
@@ -374,7 +372,7 @@ def setvalue(*args):
         try:
             aug.set(target_path, str(value))
         except ValueError as err:
-            ret["error"] = "Multiple values: {}".format(err)
+            ret["error"] = f"Multiple values: {err}"
 
     try:
         aug.save()

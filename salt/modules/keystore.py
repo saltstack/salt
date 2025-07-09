@@ -2,7 +2,6 @@
 Module to interact with keystores
 """
 
-
 import logging
 import os
 from datetime import datetime
@@ -162,9 +161,7 @@ def add(name, keystore, passphrase, certificate, private_key=None):
     try:
         cert_string = __salt__["x509.get_pem_entry"](certificate)
     except SaltInvocationError:
-        raise SaltInvocationError(
-            "Invalid certificate file or string: {}".format(certificate)
-        )
+        raise SaltInvocationError(f"Invalid certificate file or string: {certificate}")
 
     if private_key:
         # Accept PEM input format, but convert to DES for loading into new keystore

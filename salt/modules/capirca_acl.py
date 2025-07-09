@@ -481,7 +481,7 @@ def _get_term_object(
     pillarenv=None,
     saltenv=None,
     merge_pillar=True,
-    **term_fields
+    **term_fields,
 ):
     """
     Return an instance of the ``_Term`` class given the term options.
@@ -558,7 +558,7 @@ def _get_policy_object(
                     pillarenv=pillarenv,
                     saltenv=saltenv,
                     merge_pillar=merge_pillar,
-                    **term_fields
+                    **term_fields,
                 )
             filter_terms.append(term)
         policy_filters.append((header, filter_terms))
@@ -597,17 +597,15 @@ def _revision_tag(
         if "$Id:$" in line:
             if not revision_id:  # if no explicit revision ID required
                 continue  # jump to next line, ignore this one
-            line = line.replace("$Id:$", "$Id: {rev_id} $".format(rev_id=revision_id))
+            line = line.replace("$Id:$", f"$Id: {revision_id} $")
         if "$Revision:$" in line:
             if not revision_no:  # if no explicit revision number required
                 continue  # jump to next line, ignore this one
-            line = line.replace(
-                "$Revision:$", "$Revision: {rev_no} $".format(rev_no=revision_no)
-            )
+            line = line.replace("$Revision:$", f"$Revision: {revision_no} $")
         if "$Date:$" in line:
             if not revision_date:
                 continue  # jump
-            line = line.replace("$Date:$", "$Date: {ts} $".format(ts=timestamp))
+            line = line.replace("$Date:$", f"$Date: {timestamp} $")
         new_text.append(line)
     return "\n".join(new_text)
 
@@ -632,7 +630,7 @@ def get_term_config(
     revision_date_format="%Y/%m/%d",
     source_service=None,
     destination_service=None,
-    **term_fields
+    **term_fields,
 ):
     """
     Return the configuration of a single policy term.

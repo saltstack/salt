@@ -53,7 +53,7 @@ class F5Mgmt:
                 wsdls=["LocalLB.VirtualServer", "LocalLB.Pool"],
             )
         except Exception:  # pylint: disable=broad-except
-            raise Exception("Unable to connect to {}".format(self.lb))
+            raise Exception(f"Unable to connect to {self.lb}")
 
         return True
 
@@ -123,9 +123,7 @@ class F5Mgmt:
                 profiles=[vs_profile_seq],
             )
         except Exception as e:  # pylint: disable=broad-except
-            raise Exception(
-                "Unable to create `{}` virtual server\n\n{}".format(name, e)
-            )
+            raise Exception(f"Unable to create `{name}` virtual server\n\n{e}")
         return True
 
     def create_pool(self, name, method="ROUND_ROBIN"):
@@ -144,7 +142,7 @@ class F5Mgmt:
                     pool_names=[name], lb_methods=[supported_method], members=[[]]
                 )
             except Exception as e:  # pylint: disable=broad-except
-                raise Exception("Unable to create `{}` pool\n\n{}".format(name, e))
+                raise Exception(f"Unable to create `{name}` pool\n\n{e}")
         else:
             raise Exception("Unsupported method")
         return True
@@ -154,7 +152,7 @@ class F5Mgmt:
         Add a node to a pool
         """
         if not self.check_pool(pool_name):
-            raise CommandExecutionError("{} pool does not exists".format(pool_name))
+            raise CommandExecutionError(f"{pool_name} pool does not exists")
 
         members_seq = self.bigIP.LocalLB.Pool.typefactory.create(
             "Common.IPPortDefinitionSequence"
@@ -173,9 +171,7 @@ class F5Mgmt:
                 pool_names=[pool_name], members=[members_seq]
             )
         except Exception as e:  # pylint: disable=broad-except
-            raise Exception(
-                "Unable to add `{}` to `{}`\n\n{}".format(name, pool_name, e)
-            )
+            raise Exception(f"Unable to add `{name}` to `{pool_name}`\n\n{e}")
         return True
 
     def check_pool(self, name):
@@ -229,7 +225,7 @@ def create_vs(lb, name, ip, port, protocol, profile, pool_name):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
 
     F5 = F5Mgmt(lb, username, password)
     F5.create_vs(name, ip, port, protocol, profile, pool_name)
@@ -250,7 +246,7 @@ def create_pool(lb, name, method="ROUND_ROBIN"):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
     F5 = F5Mgmt(lb, username, password)
     F5.create_pool(name, method)
     return True
@@ -269,7 +265,7 @@ def add_pool_member(lb, name, port, pool_name):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
     F5 = F5Mgmt(lb, username, password)
     F5.add_pool_member(name, port, pool_name)
     return True
@@ -288,7 +284,7 @@ def check_pool(lb, name):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
     F5 = F5Mgmt(lb, username, password)
     return F5.check_pool(name)
 
@@ -306,7 +302,7 @@ def check_virtualserver(lb, name):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
     F5 = F5Mgmt(lb, username, password)
     return F5.check_virtualserver(name)
 
@@ -324,6 +320,6 @@ def check_member_pool(lb, member, pool_name):
     if __opts__["load_balancers"].get(lb, None):
         (username, password) = list(__opts__["load_balancers"][lb].values())
     else:
-        raise Exception("Unable to find `{}` load balancer".format(lb))
+        raise Exception(f"Unable to find `{lb}` load balancer")
     F5 = F5Mgmt(lb, username, password)
     return F5.check_member_pool(member, pool_name)

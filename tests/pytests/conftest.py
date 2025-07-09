@@ -2,6 +2,7 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import functools
 import inspect
 import logging
@@ -53,7 +54,7 @@ def salt_eauth_account_factory():
 
 @pytest.fixture(scope="session")
 def salt_auto_account_factory():
-    return TestAccount(username="saltdev_auto", password="saltdev")
+    return TestAccount(username="saltdev-auto")
 
 
 @pytest.fixture(scope="session")
@@ -164,7 +165,7 @@ def salt_master_factory(
         "redundant_minions": "N@min or N@mins",
         "nodegroup_loop_a": "N@nodegroup_loop_b",
         "nodegroup_loop_b": "N@nodegroup_loop_a",
-        "missing_minion": "L@{},ghostminion".format(salt_minion_id),
+        "missing_minion": f"L@{salt_minion_id},ghostminion",
         "list_group": "N@multiline_nodegroup",
         "one_list_group": "N@one_minion_list",
         "list_group2": "N@list_nodegroup",
@@ -176,7 +177,7 @@ def salt_master_factory(
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": "http://127.0.0.1:{}".format(vault_port),
+        "url": f"http://127.0.0.1:{vault_port}",
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -190,6 +191,9 @@ def salt_master_factory(
     config_overrides = {
         "pytest-master": {"log": {"level": "DEBUG"}},
         "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -213,7 +217,7 @@ def salt_master_factory(
     config_overrides["external_auth"] = {
         "pam": {
             salt_auth_account_1_factory.username: ["test.*"],
-            "{}%".format(salt_auth_account_2_factory.group_name): [
+            f"{salt_auth_account_2_factory.group_name}%": [
                 "@wheel",
                 "@runner",
                 "test.*",
@@ -311,7 +315,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": "http://127.0.0.1:{}".format(vault_port),
+        "url": f"http://127.0.0.1:{vault_port}",
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -320,6 +324,8 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -351,6 +357,8 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
         "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -375,6 +383,9 @@ def salt_proxy_factory(salt_master_factory):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
@@ -413,9 +424,15 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         "metaproxy": "deltaproxy",
         "master": "127.0.0.1",
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
@@ -442,9 +459,16 @@ def temp_salt_master(
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
@@ -456,9 +480,15 @@ def temp_salt_minion(temp_salt_master):
         "open_mode": True,
         "transport": temp_salt_master.config["transport"],
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
         defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
@@ -511,7 +541,7 @@ def tmp_path_world_rw(request):
     Temporary path which is world read/write for tests that run under a different account
     """
     tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
-    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path = tempdir_path / f"world-rw-{id(request.node)}"
     path.mkdir(exist_ok=True)
     path.chmod(0o777)
     try:
@@ -642,6 +672,7 @@ def io_loop():
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------
+
 
 # ----- Helpers ----------------------------------------------------------------------------------------------------->
 @pytest.helpers.proxy.register

@@ -51,9 +51,9 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def tearDownClass(cls):
-        cls.opkg_vim_info = (
-            cls.opkg_vim_files
-        ) = cls.installed = cls.removed = cls.packages = None
+        cls.opkg_vim_info = cls.opkg_vim_files = cls.installed = cls.removed = (
+            cls.packages
+        ) = None
 
     def setup_loader_modules(self):  # pylint: disable=no-self-use
         """

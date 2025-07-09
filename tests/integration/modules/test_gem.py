@@ -4,6 +4,7 @@ Integration tests for Ruby Gem module
 
 import pytest
 
+import salt.utils.platform
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
 
@@ -31,6 +32,7 @@ class GemModuleTest(ModuleCase):
         if check_status() is False:
             self.skipTest("External resource 'https://rubygems.org' is not available")
 
+        self.GEM_BIN = "gem.cmd" if salt.utils.platform.is_windows() else "gem"
         self.GEM = "tidy"
         self.GEM_VER = "1.1.2"
         self.OLD_GEM = "brass"
@@ -53,6 +55,11 @@ class GemModuleTest(ModuleCase):
                 self.run_function("gem.uninstall", [self.GEM])
 
         self.addCleanup(uninstall_gem)
+
+    def run_function(self, function, *args, **kwargs):
+        """Override run_function to use the gem binary"""
+        kwargs["gem_bin"] = self.GEM_BIN
+        return super().run_function(function, *args, **kwargs)
 
     @pytest.mark.slow_test
     def test_install_uninstall(self):

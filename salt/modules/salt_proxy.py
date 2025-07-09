@@ -33,7 +33,7 @@ def _write_proxy_conf(proxyfile):
             proxy_conf.write(
                 salt.utils.stringutils.to_str("master: {}".format(__grains__["master"]))
             )
-        msg = "Wrote proxy file {}".format(proxyfile)
+        msg = f"Wrote proxy file {proxyfile}"
         log.debug(msg)
 
     return msg
@@ -50,18 +50,18 @@ def _proxy_conf_file(proxyfile, test):
         try:
             if not test:
                 changes_new.append(_write_proxy_conf(proxyfile))
-                msg = "Salt Proxy: Wrote proxy conf {}".format(proxyfile)
+                msg = f"Salt Proxy: Wrote proxy conf {proxyfile}"
             else:
-                msg = "Salt Proxy: Update required to proxy conf {}".format(proxyfile)
+                msg = f"Salt Proxy: Update required to proxy conf {proxyfile}"
         except OSError as err:
             success = False
-            msg = "Salt Proxy: Error writing proxy file {}".format(err)
+            msg = f"Salt Proxy: Error writing proxy file {err}"
             log.error(msg)
             changes_new.append(msg)
         changes_new.append(msg)
         log.debug(msg)
     else:
-        msg = "Salt Proxy: {} already exists, skipping".format(proxyfile)
+        msg = f"Salt Proxy: {proxyfile} already exists, skipping"
         changes_old.append(msg)
         log.debug(msg)
     return success, changes_new, changes_old
@@ -90,18 +90,14 @@ def _proxy_process(proxyname, test):
     if not _is_proxy_running(proxyname):
         if not test:
             __salt__["cmd.run_all"](
-                "salt-proxy --proxyid={} -l info -d".format(shlex.quote(proxyname)),
+                f"salt-proxy --proxyid={shlex.quote(proxyname)} -l info -d",
                 timeout=5,
             )
-            changes_new.append(
-                "Salt Proxy: Started proxy process for {}".format(proxyname)
-            )
+            changes_new.append(f"Salt Proxy: Started proxy process for {proxyname}")
         else:
-            changes_new.append(
-                "Salt Proxy: process {} will be started".format(proxyname)
-            )
+            changes_new.append(f"Salt Proxy: process {proxyname} will be started")
     else:
-        changes_old.append("Salt Proxy: already running for {}".format(proxyname))
+        changes_old.append(f"Salt Proxy: already running for {proxyname}")
     return True, changes_new, changes_old
 
 

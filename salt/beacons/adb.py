@@ -3,6 +3,7 @@ Beacon to emit adb device state changes for Android devices
 
 .. versionadded:: 2016.3.0
 """
+
 import logging
 
 import salt.utils.beacons

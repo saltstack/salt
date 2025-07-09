@@ -2,6 +2,7 @@
 Module to provide Postgres compatibility to salt for debian family specific tools.
 
 """
+
 import logging
 import shlex
 
@@ -74,7 +75,7 @@ def cluster_create(
         cmd += ["--data-checksums"]
     if wal_segsize:
         cmd += ["--wal-segsize", wal_segsize]
-    cmdstr = " ".join([shlex.quote(c) for c in cmd])
+    cmdstr = shlex.join(cmd)
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     if ret.get("retcode", 0) != 0:
         log.error("Error creating a Postgresql cluster %s/%s", version, name)
@@ -95,7 +96,7 @@ def cluster_list(verbose=False):
         salt '*' postgres.cluster_list verbose=True
     """
     cmd = [salt.utils.path.which("pg_lsclusters"), "--no-header"]
-    ret = __salt__["cmd.run_all"](" ".join([shlex.quote(c) for c in cmd]))
+    ret = __salt__["cmd.run_all"](shlex.join(cmd))
     if ret.get("retcode", 0) != 0:
         log.error("Error listing clusters")
     cluster_dict = _parse_pg_lscluster(ret["stdout"])
@@ -139,7 +140,7 @@ def cluster_remove(version, name="main", stop=False):
     if stop:
         cmd += ["--stop"]
     cmd += [str(version), name]
-    cmdstr = " ".join([shlex.quote(c) for c in cmd])
+    cmdstr = shlex.join(cmd)
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
     if ret.get("retcode", 0) != 0:

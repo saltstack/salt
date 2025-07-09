@@ -201,7 +201,7 @@ def load(mod, persist=False):
         salt '*' kmod.load bhyve
     """
     pre_mods = lsmod()
-    response = __salt__["cmd.run_all"]("kldload {}".format(mod), python_shell=False)
+    response = __salt__["cmd.run_all"](f"kldload {mod}", python_shell=False)
     if response["retcode"] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -217,7 +217,7 @@ def load(mod, persist=False):
             # It's compiled into the kernel
             return [None]
     else:
-        return "Module {} not found".format(mod)
+        return f"Module {mod} not found"
 
 
 def is_loaded(mod):
@@ -254,7 +254,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove vmm
     """
     pre_mods = lsmod()
-    res = __salt__["cmd.run_all"]("kldunload {}".format(mod), python_shell=False)
+    res = __salt__["cmd.run_all"](f"kldunload {mod}", python_shell=False)
     if res["retcode"] == 0:
         post_mods = lsmod()
         mods = _rm_mods(pre_mods, post_mods)

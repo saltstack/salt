@@ -8,6 +8,7 @@ import errno
 import glob
 import logging
 import os
+import pathlib
 import shutil
 import time
 
@@ -89,7 +90,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     So do what you have to do to make sure that stays the case
     """
     if recurse_count >= 5:
-        err = "prep_jid could not store a jid after {} tries.".format(recurse_count)
+        err = f"prep_jid could not store a jid after {recurse_count} tries."
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
@@ -231,13 +232,15 @@ def save_minions(jid, minions, syndic_id=None):
     """
     Save/update the serialized list of minions for a given job
     """
+    import salt.utils.verify
+
     # Ensure we have a list for Python 3 compatibility
     minions = list(minions)
 
     log.debug(
         "Adding minions for job %s%s: %s",
         jid,
-        " from syndic master '{}'".format(syndic_id) if syndic_id else "",
+        f" from syndic master '{syndic_id}'" if syndic_id else "",
         minions,
     )
 
@@ -254,10 +257,20 @@ def save_minions(jid, minions, syndic_id=None):
         else:
             raise
 
-    if syndic_id is not None:
-        minions_path = os.path.join(jid_dir, SYNDIC_MINIONS_P.format(syndic_id))
-    else:
-        minions_path = os.path.join(jid_dir, MINIONS_P)
+    try:
+        if syndic_id is not None:
+            name = SYNDIC_MINIONS_P.format(syndic_id)
+        else:
+            name = MINIONS_P
+        minions_path = salt.utils.verify.clean_join(jid_dir, name)
+        target_name = pathlib.Path(minions_path).resolve().name
+        if name != target_name:
+            raise salt.exceptions.SaltValidationError(
+                f"Filenames do not match: {name} != {target_name}"
+            )
+    except salt.exceptions.SaltValidationError as exc:
+        log.error("Error %s", exc)
+        return
 
     try:
         if not os.path.exists(jid_dir):
@@ -287,6 +300,7 @@ def get_load(jid):
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
+    exc = None
     for index in range(1, num_tries + 1):
         with salt.utils.files.fopen(load_p, "rb") as rfh:
             try:
@@ -297,7 +311,8 @@ def get_load(jid):
                     time.sleep(0.25)
     else:
         log.critical("Failed to unpack %s", load_p)
-        raise exc
+        if exc is not None:
+            raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]

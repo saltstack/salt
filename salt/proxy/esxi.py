@@ -277,7 +277,6 @@ for standing up an ESXi host from scratch.
 
 """
 
-
 import logging
 import os
 

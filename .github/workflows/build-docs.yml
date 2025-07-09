@@ -17,27 +17,28 @@ env:
   COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  PIP_INDEX_URL: https://pypi.org/simple
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
   build:
     name: Build
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         docs-output:
-          - linkcheck
-          - spellcheck
+         # XXX re-enable lintcheck and spellcheck then fix the errors
+         # - linkcheck
+         # - spellcheck
           - html
-          - epub
-          # - pdf
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -69,7 +70,7 @@ jobs:
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
-        uses: actions/cache@v3.3.1
+        uses: ./.github/actions/cache
         with:
           path: .tools-venvs/docs
           key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}

@@ -4,6 +4,7 @@ noxfile
 
 Nox configuration script
 """
+
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 import contextlib
@@ -106,7 +107,7 @@ def session_warn(session, message):
     try:
         session.warn(message)
     except AttributeError:
-        session.log("WARNING: {}".format(message))
+        session.log(f"WARNING: {message}")
 
 
 def session_run_always(session, *command, **kwargs):
@@ -131,15 +132,15 @@ def session_run_always(session, *command, **kwargs):
 
 def find_session_runner(session, name, python_version, onedir=False, **kwargs):
     if onedir:
-        name += "-onedir-{}".format(ONEDIR_PYTHON_PATH)
+        name += f"-onedir-{ONEDIR_PYTHON_PATH}"
     else:
-        name += "-{}".format(python_version)
+        name += f"-{python_version}"
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
         for signature in s.signatures:
             for key, value in kwargs.items():
-                param = "{}={!r}".format(key, value)
+                param = f"{key}={value!r}"
                 if param not in signature:
                     break
             else:
@@ -210,7 +211,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a windows requirements file for {}".format(pydir))
+        session.error(f"Could not find a windows requirements file for {pydir}")
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -223,7 +224,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a darwin requirements file for {}".format(pydir))
+        session.error(f"Could not find a darwin requirements file for {pydir}")
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -236,7 +237,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a freebsd requirements file for {}".format(pydir))
+        session.error(f"Could not find a freebsd requirements file for {pydir}")
     else:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -249,7 +250,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a linux requirements file for {}".format(pydir))
+        session.error(f"Could not find a linux requirements file for {pydir}")
 
 
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
@@ -568,7 +569,7 @@ def test_parametrized(session, coverage, transport, crypto):
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--transport={}".format(transport),
+        f"--transport={transport}",
     ] + session.posargs
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
@@ -1013,7 +1014,7 @@ def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
         if arg == "--log-file" or arg.startswith("--log-file="):
             break
     else:
-        args.append("--log-file={}".format(RUNTESTS_LOGFILE))
+        args.append(f"--log-file={RUNTESTS_LOGFILE}")
     args.extend(cmd_args)
 
     if PRINT_SYSTEM_INFO_ONLY and "--sys-info-and-exit" not in args:
@@ -1276,7 +1277,10 @@ def decompress_dependencies(session):
                 if not os.path.isabs(resolved_link):
                     # Relative symlinks, resolve them
                     resolved_link = os.path.join(scan_path, resolved_link)
-                if not os.path.exists(resolved_link):
+                prefix_check = False
+                if platform == "windows":
+                    prefix_check = resolved_link.startswith("\\\\?")
+                if not os.path.exists(resolved_link) or prefix_check:
                     session.log("The symlink %r looks to be broken", resolved_link)
                     # This is a broken link, fix it
                     resolved_link_suffix = resolved_link.split(
@@ -1300,7 +1304,7 @@ def decompress_dependencies(session):
                 # Let's try to fix shebang's
                 try:
                     fpath = pathlib.Path(path)
-                    contents = fpath.read_text().splitlines()
+                    contents = fpath.read_text(encoding="utf-8").splitlines()
                     if (
                         contents[0].startswith("#!")
                         and contents[0].endswith("python")
@@ -1310,7 +1314,9 @@ def decompress_dependencies(session):
                             "Fixing broken shebang in %r",
                             str(fpath.relative_to(REPO_ROOT)),
                         )
-                        fpath.write_text("\n".join([fixed_shebang] + contents[1:]))
+                        fpath.write_text(
+                            "\n".join([fixed_shebang] + contents[1:]), encoding="utf-8"
+                        )
                 except UnicodeDecodeError:
                     pass
 
@@ -1467,48 +1473,26 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(
-    session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
-):
+def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        requirements_file = os.path.join(
+        base_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        lint_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "-r",
+            base_requirements_file,
+            "-r",
+            lint_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    if tee_output:
-        session.run("pylint", "--version")
-        pylint_report_path = os.environ.get("PYLINT_REPORT")
-
-    cmd_args = ["pylint", "--rcfile={}".format(rcfile)] + list(flags) + list(paths)
-
+    cmd_args = ["pylint", f"--rcfile={rcfile}"] + list(flags) + list(paths)
     cmd_kwargs = {"env": {"PYTHONUNBUFFERED": "1"}}
-
-    if tee_output:
-        stdout = tempfile.TemporaryFile(mode="w+b")
-        cmd_kwargs["stdout"] = Tee(stdout, sys.__stdout__)
-
-    lint_failed = False
-    try:
-        session.run(*cmd_args, **cmd_kwargs)
-    except CommandFailed:
-        lint_failed = True
-        raise
-    finally:
-        if tee_output:
-            stdout.seek(0)
-            contents = stdout.read()
-            if contents:
-                contents = contents.decode("utf-8")
-                sys.stdout.write(contents)
-                sys.stdout.flush()
-                if pylint_report_path:
-                    # Write report
-                    with open(pylint_report_path, "w") as wfh:
-                        wfh.write(contents)
-                    session.log("Report file written to %r", pylint_report_path)
-            stdout.close()
+    session.run(*cmd_args, **cmd_kwargs)
 
 
 def _lint_pre_commit(session, rcfile, flags, paths):
@@ -1527,26 +1511,17 @@ def _lint_pre_commit(session, rcfile, flags, paths):
     from nox.virtualenv import VirtualEnv
 
     # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
+    session._runner.venv = VirtualEnv(
+        os.environ["VIRTUAL_ENV"],
+        interpreter=session._runner.func.python,
+        reuse_existing=True,
+        venv=True,
+    )
     _lint(
         session,
         rcfile,
         flags,
         paths,
-        tee_output=False,
         upgrade_setuptools_and_pip=False,
     )
 
@@ -1554,30 +1529,30 @@ def _lint_pre_commit(session, rcfile, flags, paths):
 @nox.session(python="3")
 def lint(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
-    session.notify("lint-salt-{}".format(session.python))
-    session.notify("lint-tests-{}".format(session.python))
+    session.notify(f"lint-salt-{session.python}")
+    session.notify(f"lint-tests-{session.python}")
 
 
 @nox.session(python="3", name="lint-salt")
 def lint_salt(session):
     """
-    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt.
     """
     flags = ["--disable=I"]
     if session.posargs:
         paths = session.posargs
     else:
         # TBD replace paths entries when implement pyproject.toml
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
 @nox.session(python="3", name="lint-tests")
 def lint_tests(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
     flags = ["--disable=I"]
     if session.posargs:
@@ -1590,20 +1565,20 @@ def lint_tests(session):
 @nox.session(python=False, name="lint-salt-pre-commit")
 def lint_salt_pre_commit(session):
     """
-    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt.
     """
     flags = ["--disable=I"]
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tools/"]
     _lint_pre_commit(session, ".pylintrc", flags, paths)
 
 
 @nox.session(python=False, name="lint-tests-pre-commit")
 def lint_tests_pre_commit(session):
     """
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and it's test suite.
     """
     flags = ["--disable=I"]
     if session.posargs:
@@ -1621,7 +1596,7 @@ def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
-    session.notify("docs-html-{}(compress={})".format(session.python, compress))
+    session.notify(f"docs-html-{session.python}(compress={compress})")
     session.notify(
         find_session_runner(
             session,
@@ -1741,7 +1716,7 @@ class Recompress:
         d_targz = tempd.joinpath(targz.name)
         with tarfile.open(d_tar, "w|") as wfile:
             with tarfile.open(targz, "r:gz") as rfile:
-                rfile.extractall(d_src)
+                rfile.extractall(d_src)  # nosec
                 extracted_dir = next(pathlib.Path(d_src).iterdir())
                 for name in sorted(extracted_dir.rglob("*")):
                     wfile.add(
@@ -1830,13 +1805,24 @@ def ci_test_onedir_pkgs(session):
     session_warn(session, "Replacing VirtualEnv instance...")
 
     ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
-    session._runner.venv = VirtualEnv(
-        str(ci_test_onedir_path.relative_to(REPO_ROOT)),
-        interpreter=session._runner.func.python,
-        reuse_existing=True,
-        venv=session._runner.venv.venv_or_virtualenv == "venv",
-        venv_params=session._runner.venv.venv_params,
-    )
+    if hasattr(session._runner.venv, "venv_or_virtualenv"):
+        venv = session._runner.venv.venv_or_virtualenv == "venv"
+        session._runner.venv = VirtualEnv(
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=venv,
+            venv_params=session._runner.venv.venv_params,
+        )
+    else:
+        venv = session._runner.venv.venv_backend in ("venv", "virtualenv")
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            str(ci_test_onedir_path.relative_to(REPO_ROOT)),
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv_backend=session._runner.venv.venv_backend,
+            venv_params=session._runner.venv.venv_params,
+        )
     os.environ["VIRTUAL_ENV"] = session._runner.venv.location
     session._runner.venv.create()
 
@@ -1855,33 +1841,23 @@ def ci_test_onedir_pkgs(session):
         "--pkg-system-service",
     ]
 
+    # Upgrade and downgrade tests run with no-uninstall. The intergration tests
+    # will use the results of the upgrade downgrade tests. So, for upgrade
+    # tests the intergration tests will be testing the current version after
+    # and upgrade was performed. For downgrade tests, the integration tests are
+    # testing the previous version after a downgrade was performed.
     chunks = {
-        "install": [
-            "tests/pytests/pkg/",
-        ],
+        "install": [],
         "upgrade": [
             "--upgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
-        ],
-        "upgrade-classic": [
-            "--upgrade",
-            "--no-uninstall",
-            "tests/pytests/pkg/upgrade/",
         ],
         "downgrade": [
             "--downgrade",
             "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
-        ],
-        "downgrade-classic": [
-            "--downgrade",
-            "--no-uninstall",
-            "tests/pytests/pkg/downgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "tests/pytests/pkg/download/",
         ],
     }
 
@@ -1910,9 +1886,6 @@ def ci_test_onedir_pkgs(session):
         "PKG_TEST_TYPE": chunk,
     }
 
-    if chunk in ("upgrade-classic", "downgrade-classic"):
-        cmd_args.append("--classic")
-
     pytest_args = (
         common_pytest_args[:]
         + cmd_args[:]
@@ -1922,12 +1895,23 @@ def ci_test_onedir_pkgs(session):
         ]
         + session.posargs
     )
+    append_tests_path = True
+    test_paths = (
+        "tests/pytests/pkg/",
+        str(REPO_ROOT / "tests" / "pytests" / "pkg"),
+    )
+    for arg in session.posargs:
+        if arg.startswith(test_paths):
+            append_tests_path = False
+            break
+    if append_tests_path:
+        pytest_args.append("tests/pytests/pkg/")
     try:
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     except CommandFailed:
         if os.environ.get("RERUN_FAILURES", "0") == "0":
             # Don't rerun on failures
-            return
+            sys.exit(1)
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
@@ -1945,6 +1929,8 @@ def ci_test_onedir_pkgs(session):
             ]
             + session.posargs
         )
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         _pytest(
             session,
             coverage=False,
@@ -1953,6 +1939,8 @@ def ci_test_onedir_pkgs(session):
             on_rerun=True,
         )
 
+    # The upgrade/downgrad tests passed, now run the integration tests against
+    # the results.
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
@@ -1960,34 +1948,37 @@ def ci_test_onedir_pkgs(session):
             + cmd_args[:]
             + [
                 "--no-install",
-                f"--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
-                f"--log-file=artifacts/logs/runtests-install.log",
+                "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
+                "--log-file=artifacts/logs/runtests-install.log",
             ]
             + session.posargs
         )
         if "downgrade" in chunk:
             pytest_args.append("--use-prev-version")
-        if chunk in ("upgrade-classic", "downgrade-classic"):
-            pytest_args.append("--classic")
+        if append_tests_path:
+            pytest_args.append("tests/pytests/pkg/")
         try:
             _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
         except CommandFailed:
+            if os.environ.get("RERUN_FAILURES", "0") == "0":
+                # Don't rerun on failures
+                sys.exit(1)
             cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
                 + cmd_args[:]
                 + [
                     "--no-install",
-                    f"--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
-                    f"--log-file=artifacts/logs/runtests-install-rerun.log",
+                    "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
+                    "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",
                 ]
                 + session.posargs
             )
             if "downgrade" in chunk:
                 pytest_args.append("--use-prev-version")
-            if chunk in ("upgrade-classic", "downgrade-classic"):
-                pytest_args.append("--classic")
+            if append_tests_path:
+                pytest_args.append("tests/pytests/pkg/")
             _pytest(
                 session,
                 coverage=False,

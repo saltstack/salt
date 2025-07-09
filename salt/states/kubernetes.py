@@ -136,7 +136,7 @@ def deployment_absent(name, namespace="default", **kwargs):
         ret["changes"] = {"kubernetes.deployment": {"new": "absent", "old": "present"}}
         ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {}".format(res)
+        ret["comment"] = f"Something went wrong, response: {res}"
 
     return ret
 
@@ -148,7 +148,7 @@ def deployment_present(
     spec=None,
     source="",
     template="",
-    **kwargs
+    **kwargs,
 ):
     """
     Ensures that the named deployment is present inside of the specified
@@ -203,9 +203,9 @@ def deployment_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
-        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"][f"{namespace}.{name}"] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -222,7 +222,7 @@ def deployment_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
 
     ret["changes"] = {"metadata": metadata, "spec": spec}
@@ -237,7 +237,7 @@ def service_present(
     spec=None,
     source="",
     template="",
-    **kwargs
+    **kwargs,
 ):
     """
     Ensures that the named service is present inside of the specified namespace
@@ -292,9 +292,9 @@ def service_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
-        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"][f"{namespace}.{name}"] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -312,7 +312,7 @@ def service_present(
             template=template,
             old_service=service,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
 
     ret["changes"] = {"metadata": metadata, "spec": spec}
@@ -351,7 +351,7 @@ def service_absent(name, namespace="default", **kwargs):
         ret["changes"] = {"kubernetes.service": {"new": "absent", "old": "present"}}
         ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {}".format(res)
+        ret["comment"] = f"Something went wrong, response: {res}"
 
     return ret
 
@@ -391,7 +391,7 @@ def namespace_absent(name, **kwargs):
         else:
             ret["comment"] = "Terminating"
     else:
-        ret["comment"] = "Something went wrong, response: {}".format(res)
+        ret["comment"] = f"Something went wrong, response: {res}"
 
     return ret
 
@@ -506,9 +506,9 @@ def secret_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
-        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"][f"{namespace}.{name}"] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -525,7 +525,7 @@ def secret_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
 
     ret["changes"] = {
@@ -620,9 +620,9 @@ def configmap_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
-        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"][f"{namespace}.{name}"] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -639,7 +639,7 @@ def configmap_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
 
     ret["changes"] = {"data": res["data"]}
@@ -681,7 +681,7 @@ def pod_absent(name, namespace="default", **kwargs):
         else:
             ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {}".format(res)
+        ret["comment"] = f"Something went wrong, response: {res}"
 
     return ret
 
@@ -693,7 +693,7 @@ def pod_present(
     spec=None,
     source="",
     template="",
-    **kwargs
+    **kwargs,
 ):
     """
     Ensures that the named pod is present inside of the specified
@@ -748,9 +748,9 @@ def pod_present(
             source=source,
             template=template,
             saltenv=__env__,
-            **kwargs
+            **kwargs,
         )
-        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"][f"{namespace}.{name}"] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -896,7 +896,7 @@ def node_label_present(name, node, value, **kwargs):
     old_labels = copy.copy(labels)
     labels[name] = value
 
-    ret["changes"]["{}.{}".format(node, name)] = {"old": old_labels, "new": labels}
+    ret["changes"][f"{node}.{name}"] = {"old": old_labels, "new": labels}
     ret["result"] = True
 
     return ret

@@ -36,7 +36,7 @@ class UserInfo:
 
     @key_file.default
     def _default_key_file(self):
-        return ".{}_key".format(self.username)
+        return f".{self.username}_key"
 
     @key_path.default
     def _default_key_path(self):
@@ -144,11 +144,11 @@ def test_pub_not_allowed(
             time.sleep(0.5)
 
     # If we got the log message, we shouldn't get anything from the event bus
-    expected_tag = "salt/job/{}/*".format(jid)
+    expected_tag = f"salt/job/{jid}/*"
     event_pattern = (salt_master.id, expected_tag)
     events = event_listener.get_events([event_pattern], after_time=start_time)
     for event in events:
-        pytest.fail("This event should't have gone through: {}".format(event))
+        pytest.fail(f"This event should't have gone through: {event}")
 
     assert not tempfile.exists(), "Evil file created"
 

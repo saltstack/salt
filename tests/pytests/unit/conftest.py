@@ -3,6 +3,7 @@ import os
 import pytest
 
 import salt.config
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture
@@ -23,6 +24,9 @@ def minion_opts(tmp_path):
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/minion.log"
     opts["conf_file"] = os.path.join(opts["conf_dir"], "minion")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["encryption_algorithm"] = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+    opts["signing_algorithm"] = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     return opts
 
 
@@ -41,6 +45,10 @@ def master_opts(tmp_path):
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/master.log"
     opts["conf_file"] = os.path.join(opts["conf_dir"], "master")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["publish_signing_algorithm"] = (
+        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    )
     return opts
 
 

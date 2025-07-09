@@ -3,3 +3,4 @@
 
 pyzmq>=20.0.0
 pyzmq==25.0.2 ; sys_platform == "win32"
+pyzmq==25.1.2 ; sys_platform == "darwin"

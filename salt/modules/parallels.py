@@ -277,7 +277,7 @@ def exists(name, runas=None):
     """
     vm_info = list_vms(name, info=True, runas=runas).splitlines()
     for info_line in vm_info:
-        if "Name: {}".format(name) in info_line:
+        if f"Name: {name}" in info_line:
             return True
     return False
 
@@ -453,7 +453,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     name = salt.utils.data.decode(name)
     if not re.match(GUID_REGEX, snap_id):
         raise SaltInvocationError(
-            'Snapshot ID "{}" is not a GUID'.format(salt.utils.data.decode(snap_id))
+            f'Snapshot ID "{salt.utils.data.decode(snap_id)}" is not a GUID'
         )
 
     # Get the snapshot information of the snapshot having the requested ID
@@ -461,9 +461,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
 
     # Parallels desktop returned no information for snap_id
     if not info:
-        raise SaltInvocationError(
-            'No snapshots for VM "{}" have ID "{}"'.format(name, snap_id)
-        )
+        raise SaltInvocationError(f'No snapshots for VM "{name}" have ID "{snap_id}"')
 
     # Try to interpret the information
     try:
@@ -540,7 +538,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     # non-singular names
     if not named_ids:
         raise SaltInvocationError(
-            'No snapshots for VM "{}" have name "{}"'.format(name, snap_name)
+            f'No snapshots for VM "{name}" have name "{snap_name}"'
         )
     elif len(named_ids) == 1:
         return named_ids[0]
@@ -634,7 +632,7 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         ret = "{:<38}  {}\n".format("Snapshot ID", "Snapshot Name")
         for snap_id in snap_ids:
             snap_name = snapshot_id_to_name(name, snap_id, runas=runas)
-            ret += "{{{0}}}  {1}\n".format(snap_id, salt.utils.data.decode(snap_name))
+            ret += f"{{{snap_id}}}  {salt.utils.data.decode(snap_name)}\n"
         return ret
 
     # Return information directly from parallels desktop

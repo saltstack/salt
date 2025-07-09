@@ -17,6 +17,7 @@ Useful documentation:
 """
 
 import contextlib
+import importlib
 import os
 import sys
 
@@ -25,15 +26,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-try:
-    import importlib  # pylint: disable=minimum-python-version
-
-    HAS_IMPORTLIB = True
-except ImportError:
-    # Python < 2.7 does not have importlib
-    HAS_IMPORTLIB = False
-
 
 # Define the module's virtual name
 __virtualname__ = "virt"
@@ -50,14 +42,12 @@ def _check_xenapi():
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
             xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
-            xapipath = "/usr/lib/xen-{}/lib/python".format(xenversion)
+            xapipath = f"/usr/lib/xen-{xenversion}/lib/python"
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)
 
     try:
-        if HAS_IMPORTLIB:
-            return importlib.import_module("xen.xm.XenAPI")
-        return __import__("xen.xm.XenAPI").xm.XenAPI
+        return importlib.import_module("xen.xm.XenAPI")
     except (ImportError, AttributeError):
         return False
 
@@ -156,7 +146,7 @@ def _get_metrics_record(xapi, rectype, record):
     Internal, returns metrics record for a rectype
     """
     metrics_id = record["metrics"]
-    return getattr(xapi, "{}_metrics".format(rectype)).get_record(metrics_id)
+    return getattr(xapi, f"{rectype}_metrics").get_record(metrics_id)
 
 
 def _get_val(record, keys):
@@ -507,10 +497,10 @@ def vcpu_pin(vm_, vcpu, cpus):
         if cpus == "all":
             cpumap = cpu_make_map("0-63")
         else:
-            cpumap = cpu_make_map("{}".format(cpus))
+            cpumap = cpu_make_map(f"{cpus}")
 
         try:
-            xapi.VM.add_to_VCPUs_params_live(vm_uuid, "cpumap{}".format(vcpu), cpumap)
+            xapi.VM.add_to_VCPUs_params_live(vm_uuid, f"cpumap{vcpu}", cpumap)
             return True
         # VM.add_to_VCPUs_params_live() implementation in xend 4.1+ has
         # a bug which makes the client call fail.
@@ -518,7 +508,7 @@ def vcpu_pin(vm_, vcpu, cpus):
         # for that particular one, fallback to xm / xl instead.
         except Exception:  # pylint: disable=broad-except
             return __salt__["cmd.run"](
-                "{} vcpu-pin {} {} {}".format(_get_xtool(), vm_, vcpu, cpus),
+                f"{_get_xtool()} vcpu-pin {vm_} {vcpu} {cpus}",
                 python_shell=False,
             )
 
@@ -641,9 +631,7 @@ def start(config_):
     # This function does NOT use the XenAPI. Instead, it use good old xm / xl.
     # On Xen Source, creating a virtual machine using XenAPI is really painful.
     # XCP / XS make it really easy using xapi.Async.VM.start instead. Anyone?
-    return __salt__["cmd.run"](
-        "{} create {}".format(_get_xtool(), config_), python_shell=False
-    )
+    return __salt__["cmd.run"](f"{_get_xtool()} create {config_}", python_shell=False)
 
 
 def reboot(vm_):
@@ -816,7 +804,7 @@ def vm_cputime(vm_=None):
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
             return {
                 "cputime": int(cputime),
-                "cputime_percent": int("{:.0f}".format(cputime_percent)),
+                "cputime_percent": int(f"{cputime_percent:.0f}"),
             }
 
         info = {}

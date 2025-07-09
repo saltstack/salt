@@ -19,7 +19,7 @@ def fake_key():
 @pytest.fixture(scope="function")
 def reg_key(fake_key):
     win_reg.set_value(hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data")
-    yield "HKLM\\{}".format(fake_key)
+    yield f"HKLM\\{fake_key}"
     win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
 

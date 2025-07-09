@@ -53,7 +53,6 @@ returns a list of key/value pairs for all of the EC2 tags assigned to the
 instance.
 """
 
-
 import logging
 import re
 
@@ -185,9 +184,9 @@ def ext_pillar(
         find_id = minion_id
     elif tag_match_key:
         if tag_match_value == "uqdn":
-            find_filter = {"tag:{}".format(tag_match_key): minion_id.split(".", 1)[0]}
+            find_filter = {f"tag:{tag_match_key}": minion_id.split(".", 1)[0]}
         else:
-            find_filter = {"tag:{}".format(tag_match_key): minion_id}
+            find_filter = {f"tag:{tag_match_key}": minion_id}
         if grain_instance_id:
             # we have an untrusted grain_instance_id, use it to narrow the search
             # even more. Combination will be unique even if uqdn is set.

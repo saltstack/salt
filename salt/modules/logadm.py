@@ -119,7 +119,7 @@ def _parse_options(entry, options, include_unset=True):
             if "additional_options" not in log_cfg:
                 log_cfg["additional_options"] = []
             if " " in options[index]:
-                log_cfg["dditional_options"] = "'{}'".format(options[index])
+                log_cfg["dditional_options"] = f"'{options[index]}'"
             else:
                 log_cfg["additional_options"].append(options[index])
 
@@ -172,7 +172,7 @@ def show_conf(conf_file=default_conf, name=None):
     if name and name in cfg:
         return {name: cfg[name]}
     elif name:
-        return {name: "not found in {}".format(conf_file)}
+        return {name: f"not found in {conf_file}"}
     else:
         return cfg
 
@@ -212,7 +212,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     if log_file and log_file in cfg_parsed:
         return {log_file: cfg_parsed[log_file]}
     elif log_file:
-        return {log_file: "not found in {}".format(conf_file)}
+        return {log_file: f"not found in {conf_file}"}
     else:
         return cfg_parsed
 
@@ -286,7 +286,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
 
     ## build command
     log.debug("logadm.rotate - kwargs: %s", kwargs)
-    command = "logadm -f {}".format(conf_file)
+    command = f"logadm -f {conf_file}"
     for arg, val in kwargs.items():
         if arg in option_toggles.values() and val:
             command = "{} {}".format(
@@ -294,7 +294,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
                 _arg2opt(arg),
             )
         elif arg in option_flags.values():
-            command = "{} {} {}".format(command, _arg2opt(arg), shlex.quote(str(val)))
+            command = f"{command} {_arg2opt(arg)} {shlex.quote(str(val))}"
         elif arg != "log_file":
             log.warning("Unknown argument %s, don't know how to map this!", arg)
     if "log_file" in kwargs:
@@ -329,7 +329,7 @@ def remove(name, conf_file=default_conf):
 
       salt '*' logadm.remove myapplog
     """
-    command = "logadm -f {} -r {}".format(conf_file, name)
+    command = f"logadm -f {conf_file} -r {name}"
     result = __salt__["cmd.run_all"](command, python_shell=False)
     if result["retcode"] != 0:
         return dict(

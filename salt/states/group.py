@@ -33,7 +33,6 @@ In Windows, if no domain is specified in the user or group name (i.e.
           - user2
 """
 
-
 import sys
 
 import salt.utils.platform
@@ -173,7 +172,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Group {} is present and up to date".format(name),
+        "comment": f"Group {name} is present and up to date",
     }
 
     if members is not None and (addusers is not None or delusers is not None):
@@ -188,16 +187,16 @@ def present(
         # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "Error. Same user(s) can not be added and deleted simultaneously"
+            ret["comment"] = (
+                "Error. Same user(s) can not be added and deleted simultaneously"
+            )
             return ret
 
     changes = _changes(name, gid, addusers, delusers, members)
     if changes:
         ret["comment"] = "The following group attributes are set to be changed:\n"
         for key, val in changes.items():
-            ret["comment"] += "{}: {}\n".format(key, val)
+            ret["comment"] += f"{key}: {val}\n"
 
         if __opts__["test"]:
             ret["result"] = None
@@ -234,7 +233,7 @@ def present(
         # The group is not present, make it!
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {} set to be added".format(name)
+            ret["comment"] = f"Group {name} set to be added"
             return ret
 
         grps = __salt__["group.getent"]()
@@ -268,7 +267,7 @@ def present(
             sys.modules[__salt__["test.ping"].__module__].__context__.pop(
                 "group.getent", None
             )
-            ret["comment"] = "New group {} created".format(name)
+            ret["comment"] = f"New group {name} created"
             ret["changes"] = __salt__["group.info"](name)
             changes = _changes(name, gid, addusers, delusers, members)
             if changes:
@@ -280,7 +279,7 @@ def present(
                 ret["changes"] = {"Failed": changes}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create new group {}".format(name)
+            ret["comment"] = f"Failed to create new group {name}"
     return ret
 
 
@@ -306,15 +305,15 @@ def absent(name):
         # Group already exists. Remove the group.
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {} is set for removal".format(name)
+            ret["comment"] = f"Group {name} is set for removal"
             return ret
         ret["result"] = __salt__["group.delete"](name)
         if ret["result"]:
             ret["changes"] = {name: ""}
-            ret["comment"] = "Removed group {}".format(name)
+            ret["comment"] = f"Removed group {name}"
             return ret
         else:
-            ret["comment"] = "Failed to remove group {}".format(name)
+            ret["comment"] = f"Failed to remove group {name}"
             return ret
     else:
         ret["comment"] = "Group not present"

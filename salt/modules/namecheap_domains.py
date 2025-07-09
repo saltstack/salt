@@ -364,7 +364,7 @@ def create(domain_name, years, **kwargs):
     for requiredkey in require_opts:
         if requiredkey not in opts:
             log.error("Missing required parameter '%s'", requiredkey)
-            raise Exception("Missing required parameter '{}'".format(requiredkey))
+            raise Exception(f"Missing required parameter '{requiredkey}'")
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
@@ -402,9 +402,9 @@ def check(*domains_to_check):
     domains_checked = {}
     for result in response_xml.getElementsByTagName("DomainCheckResult"):
         available = result.getAttribute("Available")
-        domains_checked[
-            result.getAttribute("Domain").lower()
-        ] = salt.utils.namecheap.string_to_value(available)
+        domains_checked[result.getAttribute("Domain").lower()] = (
+            salt.utils.namecheap.string_to_value(available)
+        )
 
     return domains_checked
 

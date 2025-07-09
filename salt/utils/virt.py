@@ -11,6 +11,7 @@ import urllib
 import urllib.parse
 
 import salt.utils.files
+import salt.utils.verify
 
 # pylint: disable=E0611
 
@@ -28,7 +29,7 @@ def download_remote(url, dir):
     try:
         rand = hashlib.md5(os.urandom(32)).hexdigest()
         remote_filename = urllib.parse.urlparse(url).path.split("/")[-1]
-        full_directory = os.path.join(dir, "{}-{}".format(rand, remote_filename))
+        full_directory = os.path.join(dir, f"{rand}-{remote_filename}")
         with salt.utils.files.fopen(
             full_directory, "wb"
         ) as file, urllib.request.urlopen(url) as response:
@@ -64,10 +65,10 @@ class VirtKey:
         self.opts = opts
         self.hyper = hyper
         self.id = id_
-        path = os.path.join(self.opts["pki_dir"], "virtkeys", hyper)
+        path = salt.utils.verify.clean_join(self.opts["pki_dir"], "virtkeys", hyper)
         if not os.path.isdir(path):
             os.makedirs(path)
-        self.path = os.path.join(path, id_)
+        self.path = salt.utils.verify.clean_join(path, id_)
 
     def accept(self, pub):
         """
@@ -99,7 +100,7 @@ class VirtKey:
             )
             return False
 
-        pubfn = os.path.join(self.opts["pki_dir"], "minions", self.id)
+        pubfn = salt.utils.verify.clean_join(self.opts["pki_dir"], "minions", self.id)
         with salt.utils.files.fopen(pubfn, "w+") as fp_:
             fp_.write(pub)
         self.void()

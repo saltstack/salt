@@ -310,11 +310,11 @@ def create(vm_):
 
     name = vm_["name"]
     if not wait_until(name, "CREATED"):
-        return {"Error": "Unable to start {}, command timed out".format(name)}
+        return {"Error": f"Unable to start {name}, command timed out"}
     start(vm_["name"], call="action")
 
     if not wait_until(name, "STARTED"):
-        return {"Error": "Unable to start {}, command timed out".format(name)}
+        return {"Error": f"Unable to start {name}, command timed out"}
 
     def __query_node_data(vm_name):
         data = show_instance(vm_name, call="action")
@@ -391,7 +391,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
         path += action
 
     if command:
-        path += "/{}".format(command)
+        path += f"/{command}"
 
     if not type(args, dict):
         args = {}
@@ -404,7 +404,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
 
     if args:
         params = urllib.parse.urlencode(args)
-        req = urllib.request.Request(url="{}?{}".format(path, params), **kwargs)
+        req = urllib.request.Request(url=f"{path}?{params}", **kwargs)
     else:
         req = urllib.request.Request(url=path, **kwargs)
 
@@ -526,7 +526,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -536,7 +536,7 @@ def destroy(name, call=None):
     if node["state"] == "STARTED":
         stop(name, call="action")
         if not wait_until(name, "STOPPED"):
-            return {"Error": "Unable to destroy {}, command timed out".format(name)}
+            return {"Error": f"Unable to destroy {name}, command timed out"}
 
     data = query(action="ve", command=name, method="DELETE")
 
@@ -546,7 +546,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -557,7 +557,7 @@ def destroy(name, call=None):
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 
-    return {"Destroyed": "{} was destroyed.".format(name)}
+    return {"Destroyed": f"{name} was destroyed."}
 
 
 def start(name, call=None):
@@ -575,12 +575,12 @@ def start(name, call=None):
             "The show_instance action must be called with -a or --action."
         )
 
-    data = query(action="ve", command="{}/start".format(name), method="PUT")
+    data = query(action="ve", command=f"{name}/start", method="PUT")
 
     if "error" in data:
         return data["error"]
 
-    return {"Started": "{} was started.".format(name)}
+    return {"Started": f"{name} was started."}
 
 
 def stop(name, call=None):
@@ -598,9 +598,9 @@ def stop(name, call=None):
             "The show_instance action must be called with -a or --action."
         )
 
-    data = query(action="ve", command="{}/stop".format(name), method="PUT")
+    data = query(action="ve", command=f"{name}/stop", method="PUT")
 
     if "error" in data:
         return data["error"]
 
-    return {"Stopped": "{} was stopped.".format(name)}
+    return {"Stopped": f"{name} was stopped."}

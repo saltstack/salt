@@ -48,7 +48,7 @@ def _which(cmd):
     """
     _cmd = salt.utils.path.which(cmd)
     if not _cmd:
-        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
     return _cmd
 
 
@@ -83,7 +83,7 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
     """
     cmd = [_which("groupadd")]
     if gid:
-        cmd.append("-g {}".format(gid))
+        cmd.append(f"-g {gid}")
         if non_unique:
             cmd.append("-o")
     if system and __grains__["kernel"] != "OpenBSD":
@@ -349,11 +349,11 @@ def deluser(name, username, root=None):
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             elif __grains__["kernel"] == "OpenBSD":
                 out = __salt__["cmd.run_stdout"](
-                    "id -Gn {}".format(username), python_shell=False
+                    f"id -Gn {username}", python_shell=False
                 )
                 cmd = [_which("usermod"), "-S"]
                 cmd.append(",".join([g for g in out.split() if g != str(name)]))
-                cmd.append("{}".format(username))
+                cmd.append(f"{username}")
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             else:
                 log.error("group.deluser is not yet supported on this platform")
@@ -459,7 +459,7 @@ def _getgrnam(name, root=None):
                 comps[2] = int(comps[2])
                 comps[3] = comps[3].split(",") if comps[3] else []
                 return grp.struct_group(comps)
-    raise KeyError("getgrnam(): name not found: {}".format(name))
+    raise KeyError(f"getgrnam(): name not found: {name}")
 
 
 def _getgrall(root=None):

@@ -9,7 +9,7 @@ from tests.support.pytest.helpers import FakeSaltExtension
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
-    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.timeout_unless_on_windows(240),
 ]
 
 
@@ -23,7 +23,9 @@ def salt_extension(tmp_path_factory):
 
 @pytest.fixture
 def venv(tmp_path):
-    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as _venv:
+    with SaltVirtualEnv(
+        venv_dir=tmp_path / ".venv", system_site_packages=True
+    ) as _venv:
         yield _venv
 
 

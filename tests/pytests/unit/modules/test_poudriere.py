@@ -34,9 +34,9 @@ def test_make_pkgng_aware():
     """
     temp_dir = os.path.join("tmp", "salt")
     conf_file = os.path.join("tmp", "salt", "salt-make.conf")
-    ret1 = "Could not create or find required directory {}".format(temp_dir)
-    ret2 = "Looks like file {} could not be created".format(conf_file)
-    ret3 = {"changes": "Created {}".format(conf_file)}
+    ret1 = f"Could not create or find required directory {temp_dir}"
+    ret2 = f"Looks like file {conf_file} could not be created"
+    ret3 = {"changes": f"Created {conf_file}"}
     mock = MagicMock(return_value=temp_dir)
     mock_true = MagicMock(return_value=True)
     with patch.dict(

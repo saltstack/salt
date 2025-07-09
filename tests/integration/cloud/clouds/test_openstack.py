@@ -219,7 +219,7 @@ class RackspaceTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p rackspace-test {}".format(self.instance_name), timeout=TIMEOUT
+            f"-p rackspace-test {self.instance_name}", timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_val)
 

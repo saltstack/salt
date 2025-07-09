@@ -41,7 +41,7 @@ def __virtual__():
     else:
         return (
             False,
-            "{} state module can only be loaded on Solaris".format(__virtualname__),
+            f"{__virtualname__} state module can only be loaded on Solaris",
         )
 
 
@@ -70,7 +70,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
     ## check properties
     if name not in __salt__["user.list_users"]():
         ret["result"] = False
-        ret["comment"] = "User {} does not exist!".format(name)
+        ret["comment"] = f"User {name} does not exist!"
         return ret
     if roles and not isinstance(roles, (list)):
         ret["result"] = False

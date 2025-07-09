@@ -13,7 +13,6 @@ Generate baseline proxy minion grains for ESXi hosts.
 
 """
 
-
 import logging
 
 import salt.utils.proxy

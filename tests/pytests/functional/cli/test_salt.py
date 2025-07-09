@@ -59,7 +59,7 @@ def test_versions_report(salt_cli):
     ret_lines = [line.strip() for line in ret_lines]
 
     for header in expected:
-        assert "{}:".format(header) in ret_lines
+        assert f"{header}:" in ret_lines
 
     ret_dict = {}
     expected_keys = set()
@@ -99,9 +99,7 @@ def test_help_log(salt_cli):
     """
     ret = salt_cli.run("--help")
     count = 0
-    stdout = ret.stdout.split("\n")
-    for line in stdout:
-        if "sensitive data:" in line:
-            count += 1
-            assert line.strip() == "sensitive data: all, debug, garbage, profile, trace"
-    assert count == 2
+    # This can be dependent on COLUMNS environment variable
+    assert "sensitive data: all, debug, garbage, profile, trace" in " ".join(
+        ret.stdout.split()
+    )

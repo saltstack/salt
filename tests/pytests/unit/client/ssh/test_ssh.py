@@ -229,7 +229,7 @@ def test_update_targets_ip_address(opts):
     assert opts["tgt"] == user + host
     client._update_targets()
     assert opts["tgt"] == host
-    assert client.targets[host]["user"] == user.split("@")[0]
+    assert client.targets[host]["user"] == user.split("@", maxsplit=1)[0]
 
 
 def test_update_targets_dns(opts):
@@ -245,7 +245,7 @@ def test_update_targets_dns(opts):
     assert opts["tgt"] == user + host
     client._update_targets()
     assert opts["tgt"] == host
-    assert client.targets[host]["user"] == user.split("@")[0]
+    assert client.targets[host]["user"] == user.split("@", maxsplit=1)[0]
 
 
 def test_update_targets_no_user(opts):
@@ -282,7 +282,7 @@ def test_update_expand_target_dns(opts, roster):
         client._expand_target()
     client._update_targets()
     assert opts["tgt"] == host
-    assert client.targets[host]["user"] == user.split("@")[0]
+    assert client.targets[host]["user"] == user.split("@", maxsplit=1)[0]
 
 
 def test_parse_tgt(opts):
@@ -298,7 +298,7 @@ def test_parse_tgt(opts):
         assert not opts.get("ssh_cli_tgt")
         client = ssh.SSH(opts)
         assert client.parse_tgt["hostname"] == host
-        assert client.parse_tgt["user"] == user.split("@")[0]
+        assert client.parse_tgt["user"] == user.split("@", maxsplit=1)[0]
         assert opts.get("ssh_cli_tgt") == user + host
 
 

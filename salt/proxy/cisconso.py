@@ -171,7 +171,6 @@ responding:
     salt <id> test.ping
 """
 
-
 import logging
 
 from salt.exceptions import SaltSystemExit

@@ -11,6 +11,7 @@ import salt.exceptions
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.transport.tcp
+import salt.utils.platform
 from tests.support.mock import MagicMock, PropertyMock, patch
 
 tpytestmark = [
@@ -80,6 +81,24 @@ class ClientSocket:
 def client_socket():
     with ClientSocket() as _client_socket:
         yield _client_socket
+
+
+def test_get_socket():
+    socket = salt.transport.tcp._get_socket({"ipv6": True})
+
+    if salt.utils.platform.is_windows():
+        assert int(socket.family) == 23
+    else:
+        assert int(socket.family) == 10
+
+    socket = salt.transport.tcp._get_socket({"ipv6": False})
+    assert int(socket.family) == 2
+
+
+def test_get_bind_addr():
+    opts = {"interface": "192.168.0.1", "tcp": 1}
+    res = salt.transport.tcp._get_bind_addr(opts=opts, port_type="tcp")
+    assert res == ("192.168.0.1", 1)
 
 
 def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
@@ -255,7 +274,7 @@ def salt_message_client():
         client.close()
 
 
-# XXX we don't reutnr a future anymore, this needs a different way of testing.
+# XXX we don't return a future anymore, this needs a different way of testing.
 # def test_send_future_set_retry(salt_message_client):
 #    future = salt_message_client.send({"some": "message"}, tries=10, timeout=30)
 #
@@ -404,10 +423,11 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         "transport": "tcp",
         "acceptance_wait_time": 30,
         "acceptance_wait_time_max": 30,
+        "signing_algorithm": "MOCK",
     }
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
     assert client.master_pubkey_path == expected_pubkey_path
-    with patch("salt.crypt.verify_signature") as mock:
+    with patch("salt.crypt.PublicKey", return_value=MagicMock()) as mock:
         client.verify_signature("mockdata", "mocksig")
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
@@ -432,7 +452,11 @@ async def test_mixin_should_use_correct_path_when_syndic(
     }
     client = salt.channel.client.AsyncPubChannel.factory(opts, io_loop=mockloop)
     client.master_pubkey_path = expected_pubkey_path
-    payload = {"sig": "abc", "load": {"foo": "bar"}}
+    payload = {
+        "sig": "abc",
+        "load": {"foo": "bar"},
+        "sig_algo": salt.crypt.PKCS1v15_SHA224,
+    }
     with patch("salt.crypt.verify_signature") as mock:
         client._verify_master_signature(payload)
         assert mock.call_args_list[0][0][0] == expected_pubkey_path

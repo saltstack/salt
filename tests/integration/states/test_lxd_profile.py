@@ -1,6 +1,7 @@
 """
 Integration tests for the lxd states
 """
+
 import pytest
 
 import salt.modules.lxd

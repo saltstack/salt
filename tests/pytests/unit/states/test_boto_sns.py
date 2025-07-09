@@ -1,6 +1,7 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
 
 import salt.states.boto_sns as boto_sns
@@ -25,17 +26,17 @@ def test_present():
     with patch.dict(
         boto_sns.__salt__, {"boto_sns.exists": mock, "boto_sns.create": mock_bool}
     ):
-        comt = "AWS SNS topic {} present.".format(name)
+        comt = f"AWS SNS topic {name} present."
         ret.update({"comment": comt})
         assert boto_sns.present(name) == ret
 
         with patch.dict(boto_sns.__opts__, {"test": True}):
-            comt = "AWS SNS topic {} is set to be created.".format(name)
+            comt = f"AWS SNS topic {name} is set to be created."
             ret.update({"comment": comt, "result": None})
             assert boto_sns.present(name) == ret
 
         with patch.dict(boto_sns.__opts__, {"test": False}):
-            comt = "Failed to create {} AWS SNS topic".format(name)
+            comt = f"Failed to create {name} AWS SNS topic"
             ret.update({"comment": comt, "result": False})
             assert boto_sns.present(name) == ret
 
@@ -51,7 +52,7 @@ def test_absent():
     exists_mock = MagicMock(side_effect=[False, True, True, True, True, True, True])
     with patch.dict(boto_sns.__salt__, {"boto_sns.exists": exists_mock}):
         # tests topic already absent
-        comt = "AWS SNS topic {} does not exist.".format(name)
+        comt = f"AWS SNS topic {name} does not exist."
         ret.update({"comment": comt})
         assert boto_sns.absent(name) == ret
 
@@ -98,7 +99,7 @@ def test_absent():
                 with patch.dict(boto_sns.__salt__, {"boto_sns.delete": delete_mock}):
                     # tests topic present, unsubscribe flag True, unsubscribe succeeded,
                     # delete succeeded
-                    comt = "AWS SNS topic {} deleted.".format(name)
+                    comt = f"AWS SNS topic {name} deleted."
                     ret.update(
                         {
                             "changes": {
@@ -136,6 +137,6 @@ def test_absent():
                     assert boto_sns.absent(name) == ret
 
                     # tests topic present, unsubscribe flag False, delete failed
-                    comt = "Failed to delete {} AWS SNS topic.".format(name)
+                    comt = f"Failed to delete {name} AWS SNS topic."
                     ret.update({"changes": {}, "result": False, "comment": comt})
                     assert boto_sns.absent(name) == ret

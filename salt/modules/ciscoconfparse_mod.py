@@ -58,7 +58,7 @@ def _get_ccp(config=None, config_path=None, saltenv="base"):
     if config_path:
         config = __salt__["cp.get_file_str"](config_path, saltenv=saltenv)
         if config is False:
-            raise SaltException("{} is not available".format(config_path))
+            raise SaltException(f"{config_path} is not available")
     if isinstance(config, str):
         config = config.splitlines()
     ccp = ciscoconfparse.CiscoConfParse(config)

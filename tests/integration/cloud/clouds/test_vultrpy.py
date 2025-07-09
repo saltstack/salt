@@ -17,7 +17,7 @@ class VultrTest(CloudTest):
         """
         Tests the return of running the --list-images command for Vultr
         """
-        image_list = self.run_cloud("--list-images {}".format(self.PROVIDER))
+        image_list = self.run_cloud(f"--list-images {self.PROVIDER}")
 
         self.assertIn("Debian 10 x64 (buster)", [i.strip() for i in image_list])
 
@@ -25,14 +25,14 @@ class VultrTest(CloudTest):
         """
         Tests the return of running the --list-locations command for Vultr
         """
-        location_list = self.run_cloud("--list-locations {}".format(self.PROVIDER))
+        location_list = self.run_cloud(f"--list-locations {self.PROVIDER}")
         self.assertIn("New Jersey", [i.strip() for i in location_list])
 
     def test_list_sizes(self):
         """
         Tests the return of running the --list-sizes command for Vultr
         """
-        size_list = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
+        size_list = self.run_cloud(f"--list-sizes {self.PROVIDER}")
         self.assertIn(
             "2048 MB RAM,55 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
         )
@@ -84,7 +84,7 @@ class VultrTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p vultr-test {}".format(self.instance_name), timeout=TIMEOUT + 300
+            f"-p vultr-test {self.instance_name}", timeout=TIMEOUT + 300
         )
         self.assertInstanceExists(ret_val)
 

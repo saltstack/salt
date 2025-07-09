@@ -2,7 +2,6 @@
     :codeauthor: Eric Radman <ericshane@eradman.com>
 """
 
-
 import pytest
 
 import salt.modules.openbsdpkg as openbsdpkg

@@ -1,6 +1,7 @@
 """
 Test the bgp runner
 """
+
 import pytest
 
 import salt.runners.bgp as bgp

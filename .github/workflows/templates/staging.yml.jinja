@@ -30,6 +30,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       skip-test-pypi-publish:
         type: boolean
         default: false
@@ -51,9 +55,9 @@ on:
 
 <%- block concurrency %>
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
-  cancel-in-progress: false
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+#  cancel-in-progress: false
 
 <%- endblock concurrency %>
 
@@ -65,7 +69,7 @@ concurrency:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -86,20 +90,11 @@ concurrency:
     needs:
       - prepare-workflow
       - build-docs
-      - build-src-repo
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - name: Get Salt Project GitHub Actions Bot Environment
-        run: |
-          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
-          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
-          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -112,60 +107,20 @@ concurrency:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: artifacts/release
 
-      - name: Download Source Repository
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
-          path: artifacts/release
-
       - name: Download Release Documentation (HTML)
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
           path: artifacts/release
 
-      - name: Download Release Documentation (ePub)
-        uses: actions/download-artifact@v4
-        with:
-          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
-          path: artifacts/release
-
       - name: Show Release Artifacts
         run: |
           tree -a artifacts/release
 
-      {#-
-
-      - name: Download Release Documentation (PDF)
-        uses: actions/download-artifact@v4
-        with:
-          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.pdf
-          path: artifacts/release
-
-      #}
-
-      - name: Upload Release Artifacts
-        run: |
-          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
-
-      - name: Upload PyPi Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pypi-artifacts
-          path: |
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
-          retention-days: 7
-          if-no-files-found: error
-
-  <%- if includes.get("test-pkg-downloads", True) %>
-  <%- include "test-salt-pkg-repo-downloads.yml.jinja" %>
-  <%- endif %>
-
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
-    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
+    if: ${{ !cancelled() && inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
@@ -180,9 +135,7 @@ concurrency:
       <%- endfor %>
     environment: <{ gh_environment }>
     runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
+      - ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -202,19 +155,6 @@ concurrency:
           pinentry-mode loopback
           EOF
 
-      - name: Get Secrets
-        id: get-secrets
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-test-pypi \
-            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
-            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
-          echo "::add-mask::$TWINE_PASSWORD"
-          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
-
       - name: Download PyPi Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -223,8 +163,32 @@ concurrency:
 
       - name: Publish to Test PyPi
         env:
-          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+          TWINE_PASSWORD: "${{ secrets.PYPI_TEST_PASSWORD }}"
         run: |
           tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+  draft-release:
+    name: Draft Github Release
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.test-packages.result == 'success' || needs.test-packages.result == 'skipped') &&
+      needs.prepare-workflow.result == 'success' && needs.build-salt-onedir.result == 'success' &&
+      needs.build-pkgs-onedir.result == 'success' && needs.pre-commit.result == 'success' }}
+    needs:
+      - prepare-workflow
+      - pre-commit
+      - build-salt-onedir
+      - build-pkgs-onedir
+      - test-packages
+      - test
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    uses: ./.github/workflows/draft-release.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['artifact-matrix']) }}
+      build-matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+
 
 <%- endblock jobs %>
