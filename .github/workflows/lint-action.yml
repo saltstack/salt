@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      full:
+        required: true
+        type: boolean
+        description: When this is true lint will run against all files
 
 
 env:
@@ -19,7 +23,7 @@ jobs:
   Salt:
     name: Lint Salt's Source Code
     runs-on: ubuntu-22.04
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
@@ -49,7 +53,7 @@ jobs:
           nox --forcecolor -e lint-salt -- ${{ join(fromJSON(inputs.changed-files)['salt_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
+        if: inputs.full || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
@@ -59,7 +63,7 @@ jobs:
   Tests:
     name: Lint Salt's Test Suite
     runs-on: ubuntu-22.04
-    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ inputs.full || contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/python:3.10
@@ -89,7 +93,7 @@ jobs:
           nox --forcecolor -e lint-tests -- ${{ join(fromJSON(inputs.changed-files)['tests_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
+        if: inputs.full || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
