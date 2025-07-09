@@ -1,19 +1,29 @@
 import os
 
-import boto3
 import pytest
 import yaml
 
 # moto must be imported before boto3
-from moto import mock_s3
+try:
+    import boto3
+    from moto import mock_aws
+
+    HAS_BOTO = True
+except ImportError:
+    HAS_BOTO = False
 
 import salt.fileserver.s3fs as s3fs
 import salt.utils.s3
 
+pytestmark = [
+    pytest.mark.skipif(not HAS_BOTO, reason="Missing library moto or boto3"),
+    pytest.mark.windows_whitelisted,
+]
+
 
 @pytest.fixture
 def bucket():
-    with mock_s3():
+    with mock_aws():
         yield "mybucket"
 
 

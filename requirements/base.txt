@@ -12,16 +12,12 @@ certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
-packaging>=21.3,<=24.0
+packaging==24.0
 looseversion
 tornado>=6.4.1
 aiohttp>=3.9.0
-urllib3>=1.26.18
-jaraco.text>=4.0.0
-jaraco.functools>=4.1.0
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
@@ -50,5 +46,11 @@ croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
 # We need contextvars for salt-ssh
 contextvars
+
 cryptography>=42.0.0
-urllib3>=1.26.20,<2.0.0
+
+urllib3>=1.26.20,<2.0.0; python_version < '3.10'
+urllib3>=2.5.0; python_version >= '3.10'
+
+jaraco.text>=4.0.0
+jaraco.functools>=4.1.0
