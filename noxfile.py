@@ -1389,6 +1389,7 @@ def pre_archive_cleanup(session, pkg):
 
     cmdline = [
         "tools",
+        "--debug",
         "pkg",
         "pre-archive-cleanup",
     ]
