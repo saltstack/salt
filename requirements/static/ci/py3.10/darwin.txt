@@ -41,14 +41,15 @@ bcrypt==4.0.1
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.26.152
+boto3==1.39.4
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.29.152
+botocore==1.39.4
     # via
+    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -69,7 +70,6 @@ cffi==1.16.0
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
-    #   napalm
     #   pygit2
     #   pynacl
 charset-normalizer==3.2.0
@@ -136,9 +136,7 @@ frozenlist==1.4.1
     #   aiohttp
     #   aiosignal
 future==1.0.0
-    # via
-    #   napalm
-    #   textfsm
+    # via textfsm
 genshi==0.7.7
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
@@ -196,7 +194,6 @@ jinja2==3.1.6
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
-    #   napalm
 jmespath==1.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
@@ -209,9 +206,7 @@ jsonschema==3.2.0
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
 junos-eznc==2.6.7 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   napalm
+    # via -r requirements/static/ci/common.in
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
@@ -225,7 +220,6 @@ looseversion==1.3.0
 lxml==4.9.2
     # via
     #   junos-eznc
-    #   napalm
     #   ncclient
     #   xmldiff
 mako==1.2.4
@@ -249,7 +243,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==4.1.11
+moto==5.1.8
     # via -r requirements/static/ci/common.in
 msgpack==1.0.7 ; python_version < "3.13"
     # via
@@ -261,31 +255,18 @@ multidict==6.0.4
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   aiohttp
     #   yarl
-napalm==4.1.0 ; sys_platform != "win32"
-    # via -r requirements/static/ci/common.in
 ncclient==0.6.13
-    # via
-    #   junos-eznc
-    #   napalm
+    # via junos-eznc
 netaddr==0.8.0
-    # via
-    #   junos-eznc
-    #   napalm
-    #   pyeapi
-netmiko==4.2.0
-    # via napalm
-netutils==1.6.0
-    # via napalm
+    # via junos-eznc
 networkx==3.1
     # via
     #   -c requirements/constraints.txt
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
-ntc-templates==4.0.1
-    # via netmiko
 oscrypto==1.3.0
     # via certvalidator
-packaging==23.1
+packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
@@ -293,9 +274,7 @@ packaging==23.1
 paramiko==3.4.0
     # via
     #   junos-eznc
-    #   napalm
     #   ncclient
-    #   netmiko
     #   scp
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
@@ -330,8 +309,6 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/crypto.txt
-pyeapi==1.0.0
-    # via napalm
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.13.1
@@ -350,9 +327,7 @@ pyparsing==3.0.9
 pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via junos-eznc
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.12.29
@@ -420,8 +395,6 @@ pyyaml==6.0.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   napalm
-    #   netmiko
     #   pytest-salt-factories
     #   responses
     #   yamllint
@@ -440,7 +413,6 @@ requests==2.32.3 ; python_version >= "3.10"
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   napalm
     #   responses
     #   vcert
 responses==0.23.1
@@ -449,13 +421,10 @@ rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rsa==4.9
     # via google-auth
-s3transfer==0.6.1
+s3transfer==0.13.0
     # via boto3
 scp==0.14.5
-    # via
-    #   junos-eznc
-    #   napalm
-    #   netmiko
+    # via junos-eznc
 semantic-version==2.10.0
     # via etcd3-py
 setproctitle==1.3.2
@@ -491,11 +460,7 @@ tempora==5.3.0
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   portend
 textfsm==1.1.3
-    # via
-    #   -r requirements/static/ci/common.in
-    #   napalm
-    #   netmiko
-    #   ntc-templates
+    # via -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
@@ -512,19 +477,11 @@ transitions==0.9.0
     # via junos-eznc
 trustme==1.1.0
     # via -r requirements/pytest.txt
-ttp-templates==0.3.5
-    # via napalm
-ttp==0.9.5
-    # via
-    #   napalm
-    #   ttp-templates
 types-pyyaml==6.0.1
     # via responses
 typing-extensions==4.8.0
-    # via
-    #   napalm
-    #   pytest-system-statistics
-urllib3==1.26.20
+    # via pytest-system-statistics
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
