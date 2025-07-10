@@ -118,10 +118,10 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
             ),
             Linux(
-                slug="fedora-40",
-                display_name="Fedora 40",
+                slug="fedora-42",
+                display_name="Fedora 42",
                 arch="x86_64",
-                container="ghcr.io/saltstack/salt-ci-containers/testing:fedora-40",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:fedora-42",
             ),
             # Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
             Linux(
