@@ -743,6 +743,19 @@ fi
 - * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
 
 
+* Thu Jul 10 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.14
+
+# Fixed
+
+- Onedir packages include relenv 0.19.4.
+  - Update sqlite to 3500200
+  - Update libffi to 3.5.1
+  - Update python 3.13 to 3.13.5
+  - Load default openssl modules when no system openssl binary exists [#68014](https://github.com/saltstack/salt/issues/68014)
+- pkgrepo.managed not applying changes / account for 'name' attr being part of the state [#68107](https://github.com/saltstack/salt/issues/68107)
+- Fix `test mode` causing unintended execution when non-boolean values are passed. [#68121](https://github.com/saltstack/salt/issues/68121)
+
+
 * Thu Jun 26 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.13
 
 # Fixed
