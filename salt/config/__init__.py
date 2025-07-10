@@ -867,6 +867,8 @@ VALID_OPTS = immutabletypes.freeze(
         "rest_timeout": int,
         # If set, all minion exec module actions will be rerouted through sudo as this user
         "sudo_user": str,
+        # If set, this command will be used instead of sudo
+        "sudo_cmd": str,
         # HTTP connection timeout in seconds. Applied for tornado http fetch functions like cp.get_url
         # should be greater than overall download time
         "http_connect_timeout": float,
@@ -1301,6 +1303,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "cache_sreqs": True,
         "cmd_safe": True,
         "sudo_user": "",
+        "sudo_cmd": "",
         "http_connect_timeout": 20.0,  # tornado default - 20 seconds
         "http_request_timeout": 1 * 60 * 60.0,  # 1 hour
         "http_max_body": 100 * 1024 * 1024 * 1024,  # 100GB
