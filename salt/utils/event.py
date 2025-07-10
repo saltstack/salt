@@ -916,6 +916,7 @@ class SaltEvent:
         assert not self._run_io_loop_sync
         if not self.cpub:
             self.connect_pub()
+
         # This will handle reconnects
         self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
 
