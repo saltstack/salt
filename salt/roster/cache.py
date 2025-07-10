@@ -177,7 +177,7 @@ def _load_minion(minion_id, cache):
         6: sorted(ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])),
     }
 
-    mine = cache.fetch(f"minions/{minion_id}", "mine")
+    mine = cache.fetch("mine", minion_id)
 
     return grains, pillar, addrs, mine
 
