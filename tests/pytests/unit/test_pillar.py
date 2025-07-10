@@ -1012,17 +1012,20 @@ def test_get_opts_in_pillar_override_call(minion_opts, grains):
 
 
 def test_multiple_keys_in_opts_added_to_pillar(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "renderer": "json",
-        "path_to_add": "fake_data",
-        "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
-        "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "renderer": "json",
+            "path_to_add": "fake_data",
+            "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
+            "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
     assert pillar.extra_minion_data == {
         "path_to_add": "fake_data",
@@ -1068,16 +1071,19 @@ def test_pillar_file_client_master_remote(tmp_pki, grains):
     returns a remote file client.
     """
     mocked_minion = MagicMock()
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "file_client": "local",
-        "use_master_when_local": True,
-        "pillar_cache": None,
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "file_client": "local",
+            "use_master_when_local": True,
+            "pillar_cache": None,
+        }
+    )
     pillar = salt.pillar.get_pillar(opts, grains, mocked_minion)
     assert type(pillar) == salt.pillar.RemotePillar
     assert type(pillar) != salt.pillar.PillarCache
@@ -1262,15 +1268,18 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():
@@ -1282,15 +1291,18 @@ def test_remote_pillar_bad_return(grains, tmp_pki):
 
 
 async def test_async_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.AsyncRemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():

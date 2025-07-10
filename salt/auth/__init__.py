@@ -30,6 +30,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
+from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,11 @@ class LoadAuth:
         self.max_fail = 1.0
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
-        self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
+        self._ckminions = ckminions
+
+    @cached_property
+    def ckminions(self):
+        return self._ckminions or salt.utils.minions.CkMinions(self.opts)
 
     def load_name(self, load):
         """

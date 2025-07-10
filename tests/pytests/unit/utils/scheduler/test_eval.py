@@ -37,9 +37,8 @@ pytestmark = [
 
 def _check_last_run(schedule, job_name, runtime=None):
     """
-    Check that last_run time exists and
-    is not the previous run time if prev_runtime
-    is passed.
+    Check that _last_run time exists; if runtime is passed, check that
+    _last_run matches runtime.
     """
 
     # The number of times to
@@ -424,7 +423,7 @@ def test_eval_after(schedule):
 @pytest.mark.slow_test
 def test_eval_enabled(schedule):
     """
-    verify that scheduled job does not run
+    verify that scheduled job runs
     """
 
     job_name = "test_eval_enabled"
@@ -680,11 +679,7 @@ def test_eval_run_on_start(schedule):
     """
 
     job_name = "test_eval_run_on_start"
-    job = {
-        "schedule": {
-            job_name: {"function": "test.ping", "hours": "1", "run_on_start": True}
-        }
-    }
+    job = {"schedule": {job_name: {"function": "test.ping", "hours": "1"}}}
 
     # Add job to schedule
     schedule.opts.update(job)
@@ -693,6 +688,34 @@ def test_eval_run_on_start(schedule):
     run_time = dateutil.parser.parse("11/29/2017 2:00pm")
     schedule.eval(now=run_time)
     assert _check_last_run(schedule, job_name, run_time)
+
+    # eval at 3:00pm, will run.
+    run_time = dateutil.parser.parse("11/29/2017 3:00pm")
+    schedule.eval(now=run_time)
+    assert _check_last_run(schedule, job_name, run_time)
+
+
+@pytest.mark.slow_test
+def test_eval_disable_run_on_start(schedule):
+    """
+    verify that scheduled job is not run when minion starts
+    """
+
+    job_name = "test_eval_run_on_start"
+    job = {
+        "schedule": {
+            job_name: {"function": "test.ping", "hours": "1", "run_on_start": False}
+        }
+    }
+
+    # Add job to schedule
+    schedule.opts.update(job)
+
+    # eval at 2:00pm, will not run.
+    run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+    schedule.eval(now=run_time)
+    ret = schedule.job_status(job_name)
+    assert "_last_run" not in ret
 
     # eval at 3:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
@@ -717,9 +740,17 @@ def test_eval_splay(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
@@ -748,9 +779,17 @@ def test_eval_splay_range(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
@@ -776,9 +815,17 @@ def test_eval_splay_global(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
@@ -789,7 +836,7 @@ def test_eval_splay_global(schedule):
 @pytest.mark.slow_test
 def test_eval_seconds(schedule):
     """
-    verify that scheduled job run mutiple times with seconds
+    verify that scheduled job run multiple times with seconds
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -802,20 +849,19 @@ def test_eval_seconds(schedule):
         # Add job to schedule
         schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(seconds=30)
         jids = schedule.eval(now=run_time)
-        assert len(jids) == 0
+        assert len(jids) == 1
         ret = schedule.job_status(job_name)
-        assert ret["_next_fire_time"] == next_run_time
+        assert ret["_last_run"] == run_time
 
         # eval at 2:00:01pm, will not run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
         jids = schedule.eval(now=run_time)
         assert len(jids) == 0
         ret = schedule.job_status(job_name)
-        assert "_last_run" not in ret
         assert ret["_next_fire_time"] == next_run_time
 
         # eval at 2:00:30pm, will run.
@@ -849,7 +895,7 @@ def test_eval_seconds(schedule):
 @pytest.mark.slow_test
 def test_eval_minutes(schedule):
     """
-    verify that scheduled job run mutiple times with minutes
+    verify that scheduled job run multiple times with minutes
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -862,12 +908,13 @@ def test_eval_minutes(schedule):
         # Add job to schedule
         schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(minutes=30)
         jids = schedule.eval(now=run_time)
-        assert len(jids) == 0
+        assert len(jids) == 1
         ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == run_time
         assert ret["_next_fire_time"] == next_run_time
 
         # eval at 2:00:01pm, will not run.
@@ -875,7 +922,6 @@ def test_eval_minutes(schedule):
         jids = schedule.eval(now=run_time)
         assert len(jids) == 0
         ret = schedule.job_status(job_name)
-        assert "_last_run" not in ret
         assert ret["_next_fire_time"] == next_run_time
 
         # eval at 2:30:00pm, will run.
@@ -903,7 +949,7 @@ def test_eval_minutes(schedule):
 @pytest.mark.slow_test
 def test_eval_hours(schedule):
     """
-    verify that scheduled job run mutiple times with hours
+    verify that scheduled job run multiple times with hours
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -916,12 +962,13 @@ def test_eval_hours(schedule):
         # Add job to schedule
         schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(hours=2)
         jids = schedule.eval(now=run_time)
-        assert len(jids) == 0
+        assert len(jids) == 1
         ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == run_time
         assert ret["_next_fire_time"] == next_run_time
 
         # eval at 2:00:01pm, will not run.
@@ -929,7 +976,6 @@ def test_eval_hours(schedule):
         jids = schedule.eval(now=run_time)
         assert len(jids) == 0
         ret = schedule.job_status(job_name)
-        assert "_last_run" not in ret
         assert ret["_next_fire_time"] == next_run_time
 
         # eval at 4:00:00pm, will run.
@@ -959,7 +1005,7 @@ def test_eval_hours(schedule):
 @pytest.mark.slow_test
 def test_eval_days(schedule):
     """
-    verify that scheduled job run mutiple times with days
+    verify that scheduled job run multiple times with days
     """
 
     job_name = "job_eval_days"
@@ -967,17 +1013,15 @@ def test_eval_days(schedule):
         "schedule": {job_name: {"function": "test.ping", "days": "2", "dry_run": True}}
     }
 
-    if salt.utils.platform.is_darwin():
-        job["schedule"][job_name]["dry_run"] = True
-
     # Add job to schedule
     schedule.opts.update(job)
 
-    # eval at 11/23/2017 2:00pm to prime, simulate minion start up.
+    # eval at 11/23/2017 2:00pm to prime, simulate minion start up; will run.
     run_time = dateutil.parser.parse("11/23/2017 2:00pm")
     next_run_time = run_time + datetime.timedelta(days=2)
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+    assert ret["_last_run"] == run_time
     assert ret["_next_fire_time"] == next_run_time
 
     # eval at 11/25/2017 2:00:00pm, will run.

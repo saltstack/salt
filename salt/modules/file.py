@@ -1115,7 +1115,7 @@ def find(path, *args, **kwargs):
         regex   = path-regex                # case sensitive
         iregex  = path-regex                # case insensitive
         type    = file-types                # match any listed type
-        user    = users                     # match any listed user
+        owner   = users                     # match any listed user
         group   = groups                    # match any listed group
         size    = [+-]number[size-unit]     # default unit = byte
         mtime   = interval                  # modified since date
@@ -1205,7 +1205,7 @@ def find(path, *args, **kwargs):
         path:  file absolute path
         size:  file size in bytes
         type:  file type
-        user:  user name
+        owner: user name
 
     CLI Examples:
 
@@ -4144,7 +4144,7 @@ def readlink(path, canonicalize=False):
     if not os.path.isabs(path):
         raise SaltInvocationError(f"Path to link must be absolute: {path}")
 
-    if not os.path.islink(path):
+    if not salt.utils.path.islink(path):
         raise SaltInvocationError(f"A valid link was not specified: {path}")
 
     if canonicalize:
@@ -4233,9 +4233,10 @@ def stats(path, hash_type=None, follow_symlinks=True):
         salt '*' file.stats /etc/passwd
     """
     path = os.path.expanduser(path)
+    exists = os.path.exists if follow_symlinks else os.path.lexists
 
     ret = {}
-    if not os.path.exists(path):
+    if not exists(path):
         try:
             # Broken symlinks will return False for os.path.exists(), but still
             # have a uid and gid
@@ -4279,7 +4280,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
         ret["type"] = "pipe"
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
-    ret["target"] = os.path.realpath(path)
+    ret["target"] = os.path.realpath(path) if follow_symlinks else os.path.abspath(path)
     return ret
 
 
@@ -4681,7 +4682,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
         salt '*' file.apply_template_on_contents \\
             contents='This is a {{ template }} string.' \\
             template=jinja \\
-            "context={}" "defaults={'template': 'cool'}" \\
+            context="{}" defaults="{'template': 'cool'}" \\
             saltenv=base
     """
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -6413,7 +6414,7 @@ def manage_file(
     makes the appropriate modifications (if necessary).
 
     name
-        location to place the file
+        The location of the file to be managed, as an absolute path.
 
     sfn
         location of cached file on the minion
@@ -6432,39 +6433,114 @@ def manage_file(
         default structure.
 
     source
-        file reference on the master
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server (``salt://``), the salt minion
+        local file system (``/``), or on an HTTP or FTP server (``http(s)://``,
+        ``ftp://``).
+
+        Both HTTPS and HTTP are supported as well as downloading directly
+        from Amazon S3 compatible URLs with both pre-configured and automatic
+        IAM credentials. (see s3.get state documentation)
+        File retrieval from Openstack Swift object storage is supported via
+        swift://container/object_path URLs, see swift.get documentation.
+        For files hosted on the salt file server, if the file is located on
+        the master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs. If source is left blank or None
+        (use ~ in YAML), the file will be created as an empty file and
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
+
+        If the file is hosted on a HTTP or FTP server then the source_hash
+        argument is also required.
 
     source_sum
         sum hash for source
 
     user
-        user owner
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
 
     group
-        group owner
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion. On Windows, this is ignored
 
-    backup
-        backup_mode
+    mode
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
+
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     attrs
-        attributes to be set on file: '' means remove all of them
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``aAcCdDeijPsStTu``.
+
+        .. note::
+            This option is **not** supported on Windows.
 
         .. versionadded:: 2018.3.0
 
+    saltenv
+        Specify the environment from which to retrieve the file indicated
+        by the ``source`` parameter. If not provided, this defaults to the
+        environment from which the state is being executed.
+
+        .. note::
+            Ignored when the source file is from a non-``salt://`` source..
+
+    backup
+        Overrides the default backup mode for this specific file. See
+        :ref:`backup_mode documentation <file-state-backups>` for more details.
+
     makedirs
-        make directories if they do not exist
+        If set to ``True``, then the parent directories will be created to
+        facilitate the creation of the named file. If ``False``, and the parent
+        directory of the destination file doesn't exist, the state will fail.
 
     template
-        format of templating
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
+
+        .. note::
+
+            The template option is required when recursively applying templates.
 
     show_changes
-        Include diff in state return
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
 
     contents:
-        contents to be placed in the file
+        Specify the contents of the file. Cannot be used in combination with
+        ``source``. Ignores hashes and does not use a templating engine.
 
     dir_mode
-        mode for directories created with makedirs
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``,

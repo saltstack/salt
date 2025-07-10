@@ -262,8 +262,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path=None,
         pull_path_perms=0o600,
         pub_path_perms=0o600,
-        ssl=None,
         started=None,
+        ssl=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -285,8 +285,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.started = started
 
-    @property
+    @classmethod
+    def support_ssl(cls):
+        # Required from DaemonizedPublishServer
+        return True
+
     def topic_support(self):
+        # Required from DaemonizedPublishServer
         return not self.opts.get("order_masters", False)
 
     def __setstate__(self, state):
@@ -434,7 +439,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             )
         self._connecting = None
 
-    def connect(self):
+    def connect(self, timeout=None):
         log.debug("Connect pusher %s", self.pull_path)
         if self._connecting is None:
             self._connecting = asyncio.create_task(self._connect())
@@ -451,8 +456,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
         await self.pub_writer.drain()
 
-    async def publish_payload(self, package, *args):
-        payload = salt.payload.dumps(package, use_bin_type=True)
+    async def publish_payload(self, payload, topic_list=None):
+        payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:
                 await ws.send_bytes(payload)
@@ -522,6 +527,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             while self._run.is_set():
                 await asyncio.sleep(0.3)
             await self.site.stop()
+            self._socket.close()
 
         io_loop.spawn_callback(server)
 
@@ -549,6 +555,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     def close(self):
         self._run.clear()
+        self._socket.close()
 
 
 class RequestClient(salt.transport.base.RequestClient):

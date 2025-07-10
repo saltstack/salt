@@ -135,12 +135,8 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     """
-    contextkey = f"systemd._check_for_unit_changes.{name}"
-    if contextkey not in __context__:
-        if _untracked_custom_unit_found(name) or _unit_file_changed(name):
-            systemctl_reload()
-        # Set context key to avoid repeating this check
-        __context__[contextkey] = True
+    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+        systemctl_reload()
 
 
 def _check_unmask(name, unmask, unmask_runtime, root=None):
@@ -152,20 +148,6 @@ def _check_unmask(name, unmask, unmask_runtime, root=None):
         unmask_(name, runtime=False, root=root)
     if unmask_runtime:
         unmask_(name, runtime=True, root=root)
-
-
-def _clear_context():
-    """
-    Remove context
-    """
-    # Using list() here because modifying a dictionary during iteration will
-    # raise a RuntimeError.
-    for key in list(__context__):
-        try:
-            if key.startswith("systemd._systemctl_status."):
-                __context__.pop(key)
-        except AttributeError:
-            continue
 
 
 def _default_runlevel():
@@ -359,19 +341,14 @@ def _systemctl_cmd(
 
 def _systemctl_status(name):
     """
-    Helper function which leverages __context__ to keep from running 'systemctl
-    status' more than once.
+    Helper function to run 'systemctl status'.
     """
-    contextkey = "systemd._systemctl_status.%s" % name
-    if contextkey in __context__:
-        return __context__[contextkey]
-    __context__[contextkey] = __salt__["cmd.run_all"](
+    return __salt__["cmd.run_all"](
         _systemctl_cmd("status", name),
         python_shell=False,
         redirect_stderr=True,
         ignore_retcode=True,
     )
-    return __context__[contextkey]
 
 
 def _sysv_enabled(name, root):
@@ -428,7 +405,6 @@ def systemctl_reload():
         raise CommandExecutionError(
             "Problem performing systemctl daemon-reload: %s" % out["stdout"]
         )
-    _clear_context()
     return True
 
 

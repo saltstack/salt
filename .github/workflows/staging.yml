@@ -18,6 +18,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       skip-test-pypi-publish:
         type: boolean
         default: false
@@ -200,15 +204,6 @@ jobs:
         id: nox-archive-hash
         run: |
           echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
-
-      - name: Check Existing Releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
-          if [ "${{ github.event.repository.private }}" = "true" ]; then
-            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
-          fi
 
       - name: Write Changed Files To A Local File
         run:
@@ -469,8 +464,8 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.18.1"
-      python-version: "3.10.16"
+      relenv-version: "0.19.4"
+      python-version: "3.11.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -481,18 +476,19 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.1"
-      python-version: "3.10.16"
+      relenv-version: "0.19.4"
+      python-version: "3.11.11"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
+      sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
 
   build-pkgs-src:
     name: Build Packages
@@ -501,18 +497,19 @@ jobs:
       - prepare-workflow
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.18.1"
-      python-version: "3.10.16"
+      relenv-version: "0.19.4"
+      python-version: "3.11.11"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
       sign-macos-packages: false
+      sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
-    secrets: inherit
   build-ci-deps:
     name: CI Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-deps-ci'] }}
@@ -523,9 +520,9 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.10"
+      python-version: "3.11"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -541,8 +538,8 @@ jobs:
       nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
-      python-version: "3.10"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
+      python-version: "3.11"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
@@ -557,10 +554,10 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.10"
+      python-version: "3.11"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.16
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
       skip-code-coverage: true
       workflow-slug: staging
       default-timeout: 180
@@ -628,19 +625,6 @@ jobs:
           pinentry-mode loopback
           EOF
 
-      - name: Get Secrets
-        id: get-secrets
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-test-pypi \
-            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
-            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
-          echo "::add-mask::$TWINE_PASSWORD"
-          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
-
       - name: Download PyPi Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -649,7 +633,7 @@ jobs:
 
       - name: Publish to Test PyPi
         env:
-          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+          TWINE_PASSWORD: "${{ secrets.PYPI_TEST_PASSWORD }}"
         run: |
           tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 

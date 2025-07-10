@@ -17,10 +17,6 @@ aiosignal==1.3.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   aiohttp
-annotated-types==0.6.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   pydantic
 ansible-core==2.16.3
     # via ansible
 ansible==9.1.0 ; python_version >= "3.10"
@@ -184,10 +180,6 @@ importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-inflect==7.0.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   jaraco.text
 iniconfig==2.0.0
     # via pytest
 ipaddress==1.0.23
@@ -200,15 +192,17 @@ jaraco.context==4.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   jaraco.text
-jaraco.functools==3.7.0
+jaraco.functools==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.11.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -357,14 +351,6 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.16.3
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   pydantic
-pydantic==2.6.4
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   inflect
 pyeapi==1.0.0
     # via napalm
 pyfakefs==5.3.1
@@ -575,7 +561,7 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.3.3
+tornado==6.4.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -595,13 +581,9 @@ types-pyyaml==6.0.12.12
     # via responses
 typing-extensions==4.8.0
     # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   inflect
     #   napalm
-    #   pydantic
-    #   pydantic-core
     #   pytest-system-statistics
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt

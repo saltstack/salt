@@ -40,10 +40,6 @@ def _system_up_to_date(
             log.error("Salt gpg key is %s", fp.read())
     else:
         log.error("Salt gpg not present")
-    # download_file(
-    #    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
-    #    gpg_dest,
-    # )
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
@@ -140,6 +136,12 @@ def pytest_collection_modifyitems(config, items):
                 selected.append(item)
             else:
                 deselected.append(item)
+        # re-order test_salt_upgrade.py to last - this ensures that salt is
+        # set up correctly for integration tests
+        for idx, item in enumerate(selected):
+            if str(item.fspath).endswith("test_salt_upgrade.py"):
+                selected.append(selected.pop(idx))
+                break
     elif config.getoption("--downgrade"):
         for item in items:
             if str(item.fspath).startswith(str(pkg_tests_path / "downgrade")):
@@ -228,8 +230,12 @@ def salt_factories_config(salt_factories_root_dir):
 
 @pytest.fixture(scope="session")
 def install_salt(request, salt_factories_root_dir):
+    if platform.is_windows():
+        conf_dir = "c:/salt/etc/salt"
+    else:
+        conf_dir = salt_factories_root_dir / "etc" / "salt"
     with SaltPkgInstall(
-        conf_dir=salt_factories_root_dir / "etc" / "salt",
+        conf_dir=conf_dir,
         pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
@@ -253,8 +259,8 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        state_tree = "C:/salt/srv/salt"
-        pillar_tree = "C:/salt/srv/pillar"
+        state_tree = r"C:\salt\srv\salt"
+        pillar_tree = r"C:\salt\srv\pillar"
     elif platform.is_darwin():
         state_tree = "/opt/srv/salt"
         pillar_tree = "/opt/srv/pillar"
@@ -371,7 +377,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
-            random_string("master-"),
+            "pkg-test-master",
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMasterWindows,
@@ -380,7 +386,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         salt_factories.system_service = True
     else:
         factory = salt_factories.salt_master_daemon(
-            random_string("master-"),
+            "pkg-test-master",
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMaster,
@@ -438,7 +444,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-        "open_mode": True,
     }
     if platform.is_windows():
         config_overrides["winrepo_dir"] = (
@@ -474,6 +479,24 @@ def salt_minion(salt_factories, salt_master, install_salt):
                 if os.path.exists(path) is False:
                     continue
                 subprocess.run(["chown", "-R", "salt:salt", str(path)], check=False)
+
+    if platform.is_windows():
+        minion_pki = pathlib.Path("c:/salt/etc/salt/pki")
+        if minion_pki.exists():
+            salt.utils.files.rm_rf(minion_pki)
+
+        # Work around missing WMIC until 3008.10 has been released. Not sure
+        # why this doesn't work anymore on the master branch when it was enough
+        # on 3006.x and 3007.x. We had to add similar logic in
+        # tests/support/pkg.py to fix the upgrade/downgrade tests on master.
+        grainsdir = pathlib.Path("c:/salt/etc/grains")
+        grainsdir.mkdir(exist_ok=True)
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
+
+        grainsdir = pathlib.Path(
+            r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+        )
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
 
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
@@ -539,3 +562,23 @@ def api_request(pkg_tests_account, salt_api):
         port=salt_api.config["rest_cherrypy"]["port"], account=pkg_tests_account
     ) as session:
         yield session
+
+
+@pytest.fixture(scope="module")
+def debian_disable_policy_rcd(grains):
+    """
+    This fixture is used to disable the /usr/sbin/policy-rc.d file on
+    Debian-based systems. This is present on container images and prevents the
+    restart of services during package installation or upgrade.
+    This is needed where we want to test pkg behaviour exactly as it would be on
+    a real system.
+
+    """
+    if grains["os_family"] == "Debian":
+        policy_rcd_path = pathlib.Path("/usr/sbin/policy-rc.d")
+        if policy_rcd_path.exists():
+            policy_rcd_path.rename(policy_rcd_path.with_suffix(".disabled"))
+            yield
+            policy_rcd_path.with_suffix(".disabled").rename(policy_rcd_path)
+    else:
+        yield

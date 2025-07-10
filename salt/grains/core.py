@@ -790,6 +790,9 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
+    elif "Nutanix" in manufacturer and "AHV" in product_name:
+        grains["virtual"] = "kvm"
+        grains["virtual_subtype"] = "Nutanix AHV"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in product_name:
         grains["virtual"] = "kvm"
@@ -934,6 +937,10 @@ def _virtual(osdata):
                 grains["virtual"] = "container"
                 grains["virtual_subtype"] = "Podman"
                 break
+            elif "docker" in output:
+                grains["virtual"] = "container"
+                grains["virtual_subtype"] = "Docker"
+                break
             elif "amazon" in output:
                 grains["virtual"] = "Nitro"
                 grains["virtual_subtype"] = "Amazon EC2"
@@ -947,11 +954,19 @@ def _virtual(osdata):
                     grains["virtual"] = "container"
                     grains["virtual_subtype"] = "LXC"
                     break
+                elif "docker" in line:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "Docker"
+                    break
                 elif "vmware" in line:
                     grains["virtual"] = "VMware"
                     break
                 elif "parallels" in line:
                     grains["virtual"] = "Parallels"
+                    break
+                elif "nutanix" in line:
+                    grains["virtual"] = "kvm"
+                    grains["virtual_subtype"] = "Nutanix AHV"
                     break
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
@@ -1004,6 +1019,9 @@ def _virtual(osdata):
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual"] = "kvm"
+                grains["virtual_subtype"] = "Nutanix AHV"
             # Proxmox KVM
             elif "Vendor: SeaBIOS" in output:
                 grains["virtual"] = "kvm"
@@ -1260,6 +1278,7 @@ def _virtual(osdata):
         grains["virtual"] = "virtual"
 
     # Try to detect if the instance is running on Amazon EC2
+    # or Nutanix AHV
     if grains["virtual"] in ("qemu", "kvm", "xen", "amazon"):
         dmidecode = salt.utils.path.which("dmidecode")
         if dmidecode:
@@ -1278,6 +1297,9 @@ def _virtual(osdata):
                     grains["virtual_subtype"] = f"Amazon EC2 ({product[1]})"
             elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
+
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual_subtype"] = "Nutanix AHV"
 
     for command in failed_commands:
         log.info(
@@ -1785,6 +1807,7 @@ _OS_NAME_MAP = {
     "cloudlinux": "CloudLinux",
     "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
+    "almalinuxk": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1856,6 +1879,7 @@ _OS_FAMILY_MAP = {
     "CloudLinux": "RedHat",
     "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
+    "AlmaLinux Kitten": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1912,6 +1936,7 @@ _OS_FAMILY_MAP = {
     "Alinux": "RedHat",
     "Mendel": "Debian",
     "OSMC": "Debian",
+    "openEuler": "RedHat",
 }
 
 
@@ -2238,6 +2263,11 @@ def _linux_distribution_data():
 
     log.trace("Getting OS name, release, and codename from freedesktop_os_release")
     try:
+        # If using platform.freedesktop_os_release we must invalidate
+        # the internal platform os_release cache to allow grains to be
+        # actually recalculated during grains_refresh
+        if hasattr(platform, "_os_release_cache"):
+            platform._os_release_cache = None
         os_release = _freedesktop_os_release()
         grains.update(_os_release_to_grains(os_release))
 
@@ -2503,7 +2533,15 @@ def _osrelease_data(os, osfullname, osrelease):
             grains["osrelease_info"],
         )
 
-    if os in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian"):
+    if os in (
+        "Debian",
+        "FreeBSD",
+        "OpenBSD",
+        "NetBSD",
+        "Mac",
+        "Raspbian",
+        "AlmaLinux",
+    ):
         os_name = os
     else:
         os_name = osfullname
@@ -2688,6 +2726,7 @@ def os_data():
             osrelease_info[1] = osrelease_info[1].lstrip("R")
         else:
             osrelease_info = grains["osrelease"].split(".")
+        osrelease_info = [s for s in osrelease_info if s]
 
         for idx, value in enumerate(osrelease_info):
             if not value.isdigit():

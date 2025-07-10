@@ -66,22 +66,52 @@ xJLUpltwXLZSrJEXYjtJtnh0om71NXes0OyWE1cL4+U6WA9Hho6xedjk2bai
 -----END PGP PUBLIC KEY BLOCK-----
 ```
 
-The SaltStack Security Team is available at saltproject-security.pdl@broadcom.com for
-security-related bug reports or questions.
+## Reporting a Vulnerability - Private Disclosure Process
+
+The Salt Project Security Team is available at
+saltproject-security.pdl@broadcom.com for security-related bug reports or
+questions. Emails will be addressed within 3 business days.
 
 We request the disclosure of any security-related bugs or issues be reported
 non-publicly until such time as the issue can be resolved and a security-fix
 release can be prepared. At that time we will release the fix and make a public
 announcement with upgrade instructions and download locations.
 
+**IMPORTANT: Do not file public issues on GitHub for security vulnerabilities**
+
+## Proposed Email Content
+
+Provide a descriptive subject line and in the body of the email include the
+following information:
+
+* Basic identity information, such as your name and your affiliation or company.
+* Detailed steps to reproduce the vulnerability (POC scripts, screenshots, and
+  logs are all helpful to us).
+* Description of the effects of the vulnerability on Salt and the related
+  hardware and software configurations, so that the VMware Security Team can
+  reproduce it.
+* How the vulnerability affects Salt usage and an estimation of the attack
+  surface, if there is one.
+* List other projects or dependencies that were used in conjunction with Salt to
+  produce the vulnerability.
+
+
+## When to report a vulnerability
+
+* When you think Salt has a potential security vulnerability.
+* When you suspect a potential vulnerability but you are unsure that it impacts
+  Salt.
+* When you know of or suspect a potential vulnerability on another project that
+  is used by Salt.
+
 ## Security response procedure
 
-SaltStack takes security and the trust of our customers and users very
-seriously. Our disclosure policy is intended to resolve security issues as
-quickly and safely as is possible.
+We take security and the trust of our customers and users very seriously. Our
+disclosure policy is intended to resolve security issues as quickly and safely
+as is possible.
 
-1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned to a team
-    member. This person is the primary contact for questions and will
+1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned
+    to a team member. This person is the primary contact for questions and will
     coordinate the fix, release, and announcement.
 
 2.  The reported issue is reproduced and confirmed. A list of affected projects
@@ -91,21 +121,46 @@ quickly and safely as is possible.
     actively supported. Back-ports of the fix are made to any old releases that
     are actively supported.
 
-4.  Packagers are notified via the [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers) mailing list that an issue
-    was reported and resolved, and that an announcement is incoming.
-
-5.  A new release is created and pushed to all affected repositories. The
+4.  A new release is created and pushed to all affected repositories. The
     release documentation provides a full description of the issue, plus any
     upgrade instructions or other relevant details.
 
-6.  An announcement is made to the [salt-users](https://groups.google.com/forum/#!forum/salt-users) and [salt-announce](https://groups.google.com/forum/#!forum/salt-announce) mailing
-    lists. The announcement contains a description of the issue and a link to
-    the full release documentation and download locations.
+5.  An announcement is made to the
+    [salt-users](https://groups.google.com/forum/#!forum/salt-users) and
+    [salt-announce](https://groups.google.com/forum/#!forum/salt-announce)
+    mailing lists. The announcement contains a description of the issue and a
+    link to the full release documentation and download locations.
 
 ## Receiving security announcements
 
-The fastest place to receive security announcements is via the [salt-announce](https://groups.google.com/forum/#!forum/salt-announce)
-mailing list. This list is low-traffic.
+Keep an eye on the
+[Salt Project Security Announcements](https://saltproject.io/security-announcements/)
+landing page. Salt Project recommends subscribing to the
+[Salt Project Security RSS feed](https://saltproject.io/security-announcements/index.xml)
+to receive notification when new information is available regarding security
+announcements.
+
+Other channels to receive security announcements include the
+[Salt Project GitHub Discussions](https://github.com/saltstack/salt/discussions)
+and the
+[Salt Project Community Discord](https://discord.gg/J7b7EscrAs).
+
+## Confidentiality, integrity and availability
+
+We consider vulnerabilities leading to the compromise of data confidentiality,
+elevation of privilege, or integrity to be our highest priority concerns.
+Availability, in particular in areas relating to DoS and resource exhaustion, is
+also a serious security concern. The Salt Project Security Team takes all
+vulnerabilities, potential vulnerabilities, and suspected vulnerabilities
+seriously and will investigate them in an urgent and expeditious manner.
+
+Note that we do not currently consider the default settings for Salt to be
+secure-by-default. It is necessary for operators to explicitly configure
+settings, role based access control, and other resource related features in
+Salt to provide a hardened Salt environment. We will not act on any security
+disclosure that relates to a lack of safe defaults. Over time, we will work
+towards improved safe-by-default configuration, taking into account backwards
+compatibility.
 
 ## Guidance on Salt and security best practices
 

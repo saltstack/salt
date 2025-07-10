@@ -14,6 +14,7 @@ import urllib.parse
 from copy import deepcopy
 
 import salt.crypt
+import salt.defaults
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.features
@@ -162,7 +163,7 @@ VALID_OPTS = immutabletypes.freeze(
         "always_verify_signature": bool,
         # The name of the file in the masters pki-directory that holds the pre-calculated signature of
         # the masters public-key
-        "master_pubkey_signature": str,
+        "master_pubkey_signature": (type(None), str),
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
@@ -196,6 +197,8 @@ VALID_OPTS = immutabletypes.freeze(
         # to define where minion keys and the cluster private key will be
         # stored.
         "cluster_pki_dir": str,
+        # The port required to be open for a master cluster to properly function
+        "cluster_pool_port": int,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1014,6 +1017,11 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # the cache driver to be used to manage keys for both minion and master
+        "keys.cache_driver": (type(None), str),
+        "request_server_ttl": int,
+        "request_server_aes_session": int,
+        "ipc_write_timeout": int,
     }
 )
 
@@ -1323,6 +1331,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
     }
 )
 
@@ -1624,7 +1633,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_minions": 0,
         "master_sign_key_name": "master_sign",
         "master_sign_pubkey": False,
-        "master_pubkey_signature": "master_pubkey_signature",
+        "master_pubkey_signature": None,
         "master_use_pubkey_signature": False,
         "zmq_filtering": False,
         "zmq_monitor": False,
@@ -1674,8 +1683,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_id": None,
         "cluster_peers": [],
         "cluster_pki_dir": None,
+        "cluster_pool_port": 4520,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
+        "request_server_aes_session": 0,
+        "request_server_ttl": 0,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
     }
 )
 
@@ -2552,12 +2566,12 @@ def apply_sdb(opts, sdb_opts=None):
     """
     Recurse for sdb:// links for opts
     """
-    # Late load of SDB to keep CLI light
-    import salt.utils.sdb
-
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
+        # Late load of SDB to keep CLI light
+        import salt.utils.sdb
+
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
@@ -4116,7 +4130,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     prepend_root_dir(opts, prepend_root_dirs)
 
-    # When a cluster id is defined, make sure the other nessicery bits a
+    # When a cluster id is defined, make sure the other necessary bits are
     # defined.
     if "cluster_id" not in opts:
         opts["cluster_id"] = None
@@ -4134,7 +4148,7 @@ def apply_master_config(overrides=None, defaults=None):
             log.warning("Cluster peers defined without a cluster_id, ignoring.")
             opts["cluster_peers"] = []
         if opts.get("cluster_pki_dir", None):
-            log.warning("Cluster pki defined without a cluster_id, ignoring.")
+            log.warning("Cluster pki dir defined without a cluster_id, ignoring.")
             opts["cluster_pki_dir"] = None
 
     # Enabling open mode requires that the value be set to True, and

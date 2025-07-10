@@ -65,7 +65,7 @@ def _get_group_object(name):
     """
     with salt.utils.winapi.Com():
         nt = win32com.client.Dispatch("AdsNameSpaces")
-        return nt.GetObject("", "WinNT://./" + name + ",group")
+        return nt.GetObject("", f"WinNT://./{name},group")
 
 
 def _get_all_groups():

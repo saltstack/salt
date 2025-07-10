@@ -304,19 +304,19 @@ class Client:
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return {}
+        return {}  # pragma: no cover
 
     def is_cached(self, path, saltenv="base", cachedir=None):
         """
@@ -1478,8 +1478,6 @@ class RemoteClient(Client):
         Return the metadata derived from the master_tops system
         """
         load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
-        if self.auth:
-            load["tok"] = self.auth.gen_token(b"salt")
         return self._channel_send(
             load,
         )

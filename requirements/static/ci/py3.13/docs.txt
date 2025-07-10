@@ -100,12 +100,14 @@ jaraco.context==6.0.1
 jaraco.functools==4.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -160,7 +162,7 @@ networkx==3.1
     #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-packaging==24.1
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -271,7 +273,7 @@ tornado==6.4.1
     #   -r requirements/base.txt
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.2.3
+urllib3==1.26.20
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

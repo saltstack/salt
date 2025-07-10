@@ -54,11 +54,14 @@ jaraco.context==6.0.1
     # via jaraco.text
 jaraco.functools==4.1.0
     # via
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==4.0.0
-    # via jaraco.collections
+    # via
+    #   -r requirements/base.txt
+    #   jaraco.collections
 jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.0.1
@@ -69,8 +72,9 @@ markupsafe==3.0.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==10.5.0
+more-itertools==10.5.0 ; sys_platform == "darwin" and python_version >= "3.11"
     # via
+    #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
@@ -85,7 +89,7 @@ networkx==3.1
     # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
-packaging==24.1
+packaging==24.0
     # via -r requirements/base.txt
 portend==3.2.0
     # via cherrypy
@@ -124,7 +128,7 @@ timelib==0.3.0
     # via -r requirements/base.txt
 tornado==6.4.1
     # via -r requirements/base.txt
-urllib3==2.2.3
+urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests

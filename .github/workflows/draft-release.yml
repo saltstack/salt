@@ -49,12 +49,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_name: "Release v${{ inputs.salt-version }}"
+          release_name: "v${{ inputs.salt-version }}"
           tag_name: v${{ inputs.salt-version }}
           draft: true
           prerelease: false
       - name: Release Output
         run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> "$GITHUB_OUTPUT"
+
+  upload-release-patch:
+    needs:
+      - create-github-release
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}.patch
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
 
   upload-source-tarball:
     needs:
@@ -129,4 +137,12 @@ jobs:
     uses: ./.github/workflows/release-artifact.yml
     with:
       name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-docs:
+    needs:
+      - create-github-release
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-docs-html.tar.xz
       upload_url: ${{ needs.create-github-release.outputs.upload_url }}

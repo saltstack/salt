@@ -1273,6 +1273,27 @@ def decompress_dependencies(session):
 
     session.log("Finding broken 'python' symlinks under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
+        pyenv = REPO_ROOT.joinpath(".nox", dirname, "pyvenv.cfg")
+        pyenv_vars = []
+        if os.path.exists(pyenv):
+            # Update pyvenv.cnf configuration in case the location of
+            # everything changed.
+            with open(pyenv, encoding="utf-8") as fp:
+                for line in fp.readlines():
+                    k, v = (_.strip() for _ in line.split("=", 1))
+                    if k in [
+                        "home",
+                        "base-prefix",
+                        "base-exec-prefix",
+                        "base-executable",
+                    ]:
+                        root, _path = v.split("artifacts" + os.path.sep, 1)
+                        v = str(REPO_ROOT / "artifacts" / _path)
+                    pyenv_vars.append((k, v))
+            with open(pyenv, "w", encoding="utf-8") as fp:
+                for k, v in pyenv_vars:
+                    fp.write(f"{k} = {v}\n")
+
         scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
@@ -1878,6 +1899,11 @@ def ci_test_onedir_pkgs(session):
         "--pkg-system-service",
     ]
 
+    # Upgrade and downgrade tests run with no-uninstall. The intergration tests
+    # will use the results of the upgrade downgrade tests. So, for upgrade
+    # tests the intergration tests will be testing the current version after
+    # and upgrade was performed. For downgrade tests, the integration tests are
+    # testing the previous version after a downgrade was performed.
     chunks = {
         "install": [],
         "upgrade": [
@@ -1943,7 +1969,7 @@ def ci_test_onedir_pkgs(session):
     except CommandFailed:
         if os.environ.get("RERUN_FAILURES", "0") == "0":
             # Don't rerun on failures
-            return
+            sys.exit(1)
 
         # Don't print the system information, not the test selection on reruns
         global PRINT_TEST_SELECTION
@@ -1971,12 +1997,15 @@ def ci_test_onedir_pkgs(session):
             on_rerun=True,
         )
 
+    # The upgrade/downgrad tests passed, now run the integration tests against
+    # the results.
     if chunk not in ("install", "download-pkgs"):
-        cmd_args = chunks[chunk]
+        cmd_args = chunks["install"]
         pytest_args = (
             common_pytest_args[:]
             + cmd_args[:]
             + [
+                "--no-install",
                 "--junitxml=artifacts/xml-unittests-output/test-results-install.xml",
                 "--log-file=artifacts/logs/runtests-install.log",
             ]
@@ -1991,12 +2020,13 @@ def ci_test_onedir_pkgs(session):
         except CommandFailed:
             if os.environ.get("RERUN_FAILURES", "0") == "0":
                 # Don't rerun on failures
-                return
-            cmd_args = chunks[chunk]
+                sys.exit(1)
+            cmd_args = chunks["install"]
             pytest_args = (
                 common_pytest_args[:]
                 + cmd_args[:]
                 + [
+                    "--no-install",
                     "--junitxml=artifacts/xml-unittests-output/test-results-install-rerun.xml",
                     "--log-file=artifacts/logs/runtests-install-rerun.log",
                     "--lf",

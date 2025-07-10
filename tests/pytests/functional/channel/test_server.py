@@ -10,12 +10,12 @@ import time
 from pathlib import Path
 
 import pytest
-from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 import salt.channel.client
 import salt.channel.server
 import salt.config
+import salt.crypt
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -43,12 +43,12 @@ def root_dir(tmp_path):
     if salt.utils.platform.is_darwin():
         # To avoid 'OSError: AF_UNIX path too long'
         _root_dir = pathlib.Path("/tmp").resolve() / tmp_path.name
-        try:
-            yield _root_dir
-        finally:
-            shutil.rmtree(str(_root_dir), ignore_errors=True)
     else:
-        yield tmp_path
+        _root_dir = tmp_path
+    try:
+        yield _root_dir
+    finally:
+        shutil.rmtree(str(_root_dir), ignore_errors=True)
 
 
 def transport_ids(value):
@@ -69,38 +69,31 @@ def transport(request):
 
 
 @pytest.fixture
-def master_config(root_dir, transport):
-    master_conf = salt.config.master_config("")
-    master_conf.update(
+def master_config(master_opts, transport, root_dir):
+    master_opts.update(
         transport=transport,
         id="master",
-        root_dir=str(root_dir),
-        sock_dir=str(root_dir),
         interface="127.0.0.1",
-        publish_port=ports.get_unused_localhost_port(),
-        ret_port=ports.get_unused_localhost_port(),
-        pki_dir=str(root_dir / "pki"),
         fips_mode=FIPS_TESTRUN,
         publish_signing_algorithm=(
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        root_dir=str(root_dir),
     )
-    os.makedirs(master_conf["pki_dir"])
-    salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)
-    minions_keys = os.path.join(master_conf["pki_dir"], "minions")
-    os.makedirs(minions_keys)
-    yield master_conf
+    priv, pub = salt.crypt.gen_keys(4096)
+    path = pathlib.Path(master_opts["pki_dir"], "master")
+    path.with_suffix(".pem").write_text(priv, encoding="utf-8")
+    path.with_suffix(".pub").write_text(pub, encoding="utf-8")
+    yield master_opts
 
 
 @pytest.fixture
-def minion_config(master_config, channel_minion_id):
-    minion_conf = salt.config.minion_config(
-        "", minion_id=channel_minion_id, cache_minion_id=False
-    )
-    minion_conf.update(
+def minion_config(minion_opts, master_config, channel_minion_id):
+    minion_opts.update(
         transport=master_config["transport"],
         root_dir=master_config["root_dir"],
         id=channel_minion_id,
+        cachedir=master_config["cachedir"],
         sock_dir=master_config["sock_dir"],
         ret_port=master_config["ret_port"],
         interface="127.0.0.1",
@@ -112,12 +105,12 @@ def minion_config(master_config, channel_minion_id):
         encryption_algorithm="OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         signing_algorithm="PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     )
-    os.makedirs(minion_conf["pki_dir"])
-    salt.crypt.gen_keys(minion_conf["pki_dir"], "minion", 4096)
-    minion_pub = os.path.join(minion_conf["pki_dir"], "minion.pub")
+    os.makedirs(minion_opts["pki_dir"], exist_ok=True)
+    salt.crypt.AsyncAuth(minion_opts).get_keys()  # generate minion.pem/pub
+    minion_pub = os.path.join(minion_opts["pki_dir"], "minion.pub")
     pub_on_master = os.path.join(master_config["pki_dir"], "minions", channel_minion_id)
     shutil.copyfile(minion_pub, pub_on_master)
-    return minion_conf
+    return minion_opts
 
 
 @pytest.fixture
@@ -163,6 +156,28 @@ async def _connect_and_publish(
     io_loop.stop()
 
 
+@pytest.fixture
+def server_channel(master_config, process_manager):
+    server_channel = salt.channel.server.PubServerChannel.factory(
+        master_config,
+    )
+    server_channel.pre_fork(process_manager)
+    try:
+        yield server_channel
+    finally:
+        server_channel.close()
+
+
+@pytest.fixture
+def req_server_channel(master_config, process_manager):
+    channel = salt.channel.server.ReqServerChannel.factory(master_config)
+    channel.pre_fork(process_manager)
+    try:
+        yield channel
+    finally:
+        channel.close()
+
+
 def test_pub_server_channel(
     io_loop,
     channel_minion_id,
@@ -170,15 +185,11 @@ def test_pub_server_channel(
     minion_config,
     process_manager,
     master_secrets,
+    server_channel,
+    req_server_channel,
 ):
-    server_channel = salt.channel.server.PubServerChannel.factory(
-        master_config,
-    )
-    server_channel.pre_fork(process_manager)
     if not server_channel.transport.started.wait(30):
         pytest.fail("Server channel did not start within 30 seconds.")
-    req_server_channel = salt.channel.server.ReqServerChannel.factory(master_config)
-    req_server_channel.pre_fork(process_manager)
 
     async def handle_payload(payload):
         log.debug("Payload handler got %r", payload)
