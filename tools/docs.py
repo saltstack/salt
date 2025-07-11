@@ -65,9 +65,13 @@ def man(ctx: Context, no_clean: bool = False, no_color: bool = False):
         cwd="doc/",
         check=True,
     )
+    dockdir = "doc/man"
+    if not os.path.exists(docdir):
+        # doc/ always exists
+        os.mkdir("doc/man")
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
-            shutil.copy(os.path.join(root, file), os.path.join("doc/man", file))
+            shutil.copy(os.path.join(root, file), os.path.join(, file))
 
 
 @docs.command(
