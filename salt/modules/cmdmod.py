@@ -1215,6 +1215,9 @@ def run(
 
         .. versionadded:: 2016.3.0
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1229,6 +1232,9 @@ def run(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1289,6 +1295,9 @@ def run(
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -1297,6 +1306,9 @@ def run(
         the retcode and output is desired. Default is ``True``
 
         .. versionadded:: 3006.9
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
         Only applies to shell 'powershell' and 'pwsh'.
@@ -1536,6 +1548,9 @@ def shell(
     :param bool bg: If True, run command in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1550,6 +1565,9 @@ def shell(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1610,6 +1628,9 @@ def shell(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -1809,6 +1830,9 @@ def run_stdout(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1868,6 +1892,9 @@ def run_stdout(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -2043,6 +2070,9 @@ def run_stderr(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2102,6 +2132,9 @@ def run_stderr(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -2279,6 +2312,9 @@ def run_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2339,6 +2375,9 @@ def run_all(
     :param int timeout: A timeout in seconds for the executed process to
         return.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -2373,6 +2412,9 @@ def run_all(
 
         .. versionadded:: 2015.8.2
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2382,6 +2424,9 @@ def run_all(
         deliver its results
 
         .. versionadded:: 2016.3.6
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
@@ -2556,6 +2601,9 @@ def retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2600,6 +2648,9 @@ def retcode(
         skip logging the output if the command has a nonzero exit code.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
@@ -2843,6 +2894,9 @@ def script(
     :param bool bg: If True, run script in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -2857,6 +2911,9 @@ def script(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -2906,6 +2963,9 @@ def script(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -3161,6 +3221,9 @@ def script_retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
@@ -3200,6 +3263,9 @@ def script_retcode(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -3509,6 +3575,9 @@ def run_chroot(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param dict clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -3564,6 +3633,9 @@ def run_chroot(
 
     :param int timeout:
         A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt:
         Use VT utils (saltstack) to stream the command output more
@@ -4065,6 +4137,9 @@ def powershell(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4118,6 +4193,9 @@ def powershell(
         .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4407,6 +4485,9 @@ def powershell_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4452,6 +4533,9 @@ def powershell_all(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4776,6 +4860,9 @@ def run_bg(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4792,6 +4879,9 @@ def run_bg(
     :param str umask: The umask (in octal) to use when running the command.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3006.15
+            Supported on Windows when running a command as an alternate user.
 
     .. warning::
 
