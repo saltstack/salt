@@ -3815,9 +3815,26 @@ def is_hardlink(path):
     return res and res["st_nlink"] > 1
 
 
-def is_link(path):
+def is_link(path, nostat=False):
     """
     Check if the path is a symbolic link
+
+    Args:
+
+        path (str): The path to check if it is a link.
+
+        nostat (bool):
+            Use information from parent directory to determine if entry
+            is a symbolic link. This avoids the stat operation, which
+            may hang under certain circumstances. For example, NFS mounts
+            which have gone offline or are suffering some network issues.
+            This will make the check quite slower on parent directories
+            with a lot of files, but will reduce the chances of hanging.
+
+            .. versionadded:: 3008.0
+
+    Returns:
+        bool: ``True`` if a symbolic link, otherwise returns ``False``.
 
     CLI Example:
 
@@ -3829,6 +3846,14 @@ def is_link(path):
     # therefore a custom function will need to be called. This function
     # therefore helps API consistency by providing a single function to call for
     # both operating systems.
+    if nostat:
+        parent_directory = os.path.dirname(path)
+
+        with os.scandir(path=parent_directory) as directory_contents:
+            for item in directory_contents:
+                if item.path == path:
+                    return item.is_symlink()
+        return False
 
     return os.path.islink(os.path.expanduser(path))
 

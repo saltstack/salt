@@ -414,6 +414,19 @@ def _format_env_vars(env_vars):
     return ret
 
 
+def normalize(name):
+    """Normalize a package name according to the recommendations in PEP 503.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.normalize requests_ntlm
+
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
 def install(
     pkgs=None,  # pylint: disable=R0912,R0913,R0914
     requirements=None,
@@ -1366,12 +1379,14 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
+    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
+        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if pkg["name"].lower().startswith(prefix.lower()):
-                packages[pkg["name"]] = pkg["version"]
+            if normal_pkg_name.startswith(normal_prefix):
+                packages[normal_pkg_name] = pkg["version"]
         else:
-            packages[pkg["name"]] = pkg["version"]
+            packages[normal_pkg_name] = pkg["version"]
 
     return packages
 
