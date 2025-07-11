@@ -33,6 +33,7 @@ jobs:
          # - linkcheck
          # - spellcheck
           - html
+          - man
 
     steps:
       - uses: actions/checkout@v4
