@@ -167,6 +167,10 @@ jobs:
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     steps:
+      - name: Setup Python Version ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: "Throttle Builds"
         shell: bash
@@ -197,13 +201,6 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.ci-python-version }}
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.ci-python-version }}"
-
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
@@ -256,6 +253,10 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
+      - name: Setup Python Version ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: "Throttle Builds"
         shell: bash
@@ -290,12 +291,6 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.ci-python-version }}
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
