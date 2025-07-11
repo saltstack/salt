@@ -53,6 +53,9 @@ def __virtual__():
 
 
 def close_handle(handle):
+    """
+    Tries to close an object handle
+    """
     if handle is not None:
         try:
             win32api.CloseHandle(handle)
